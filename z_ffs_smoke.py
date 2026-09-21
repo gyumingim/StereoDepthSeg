@@ -27,7 +27,7 @@ def main():
     L = cv2.cvtColor(cv2.imread(str(lp)), cv2.COLOR_BGR2RGB); R = cv2.cvtColor(cv2.imread(str(rp)), cv2.COLOR_BGR2RGB)
     print(f"입력 {lp.name}/{rp.name} {L.shape[1]}x{L.shape[0]}")
     import torch
-    t = time.perf_counter(); model = lib_ffs.load(); print(f"모델 로드 {time.perf_counter()-t:.1f}s")
+    t = time.perf_counter(); model = lib_ffs.load(); print(f"모델 로드 {time.perf_counter()-t:.1f}s  [{lib_ffs._import_ffs.mode}]  보충한 args: {getattr(lib_ffs.load, 'filled_keys', [])}")
     for i, (sc, it) in enumerate([(1.0, 8), (1.0, 8), (0.5, 4), (0.5, 4)]):
         torch.cuda.synchronize(); t = time.perf_counter()
         disp = lib_ffs.infer(model, L, R, valid_iters=it, scale=sc)

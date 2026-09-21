@@ -81,7 +81,8 @@ AI가 대신할 수 없다.
 
 - [x] ~~2단계 게이트 실측~~ — RMS 0.2326px, 커버리지 16/16 로 통과
 - [ ] **4단계 게이트 실측** — 자로 잰 물체 치수 대비 오차 < 10%
-- [ ] **FFS 실물 실행** — venv_ffs 설치 완료 후 z_ffs_smoke → 합성 쌍 → 실물 쌍
+- [x] ~~FFS 실행~~ — 스모크·합성 쌍 통과 (문제점 13/15)
+- [ ] **FFS 실물 쌍** — 폰 고정 후 `z_capture.py --stereo` → `z_stereo_pose.py --provisional` → `z_object_depth.py --scale 0.5`
 - [ ] **왜곡 모델 확정** — k3 포함/제외에 따라 fx 가 794.31 ↔ 810.47 (2.03%) 차이.
       교차검증은 k3 포함이 우세(검증 RMS 0.2251 vs 0.2370)하나 f(r)이 비단조라
       결론이 엇갈린다. 4단계 실측 대조로 판정한다.
@@ -288,13 +289,15 @@ scrcpy 이슈 #4865/#5977 에 "삼성에서 끊긴다"고만 있고 원인은 �
 → `pkill -f 패턴` 은 그 패턴을 담은 자기 명령줄까지 죽인다(exit 144). `[s]crcpy` 처럼
   괄호로 자기 매칭을 막고, 스크립트 본문에 패턴을 넣은 heredoc 과 같은 명령에서 쓰지 않는다.
 
-### 13. 조밀 스테레오(Fast-FoundationStereo) + YOLO seg/bbox 경로 — 구현 중
+### 13. 조밀 스테레오(Fast-FoundationStereo) + YOLO seg/bbox 경로 — 해결 (실물 쌍 검증만 남음)
 
 목표: 희소 SIFT 경로의 한계(질감 필요, 경계 특징점 부족으로 크기 과소평가)를 조밀 시차로 넘는다.
 사실 확인(소스·모델카드 직접 읽음):
 - 저장소 NVlabs/Fast-FoundationStereo (CVPR 2026). 요구: python 3.12, torch 2.6.0+cu124, xformers.
   메인 venv(3.10, torch 2.14)와 양립 불가 → **별도 `venv_ffs`** 로 실행.
 - 가중치: HF `nvidia/c-fast-foundationstereo` (`model_best_bp2_serialize.pth` 71MB, 비게이트).
+  sha256 `7aee85948373da62b0503c2542507129a3e7cab9d97d10e6790d89512a7db214` (2026-09-21 다운로드),
+  cfg.yaml `d45afe99…d6bc` (max_disp 416, mixed_precision). 체크포인트와 저장소 코드 버전을 함께 고정할 것.
   직렬화된 모델 객체라 `torch.load(weights_only=False)` + 저장소 `core/` import 필요.
 - 라이선스: 코드 LICENSE.txt "non-commercially means for research purposes only";
   C 가중치는 NVIDIA Open Model Agreement. **본 프로젝트는 연구용(사용자 확인)** → 문제 없음.
@@ -319,7 +322,11 @@ scrcpy 이슈 #4865/#5977 에 "삼성에서 끊긴다"고만 있고 원인은 �
   결과(참값 300x200): 노이즈 1%+혼입 10% → 0.3%/0.1%, 노이즈 2% → 1.2%/0.5%, 노이즈 3%(스트레스) → 4.8%/1.2%.
   bbox 는 같은 조건에서 6.8% / 15.8% / 31.5% — 비교 기준선으로만 둔다.
 - 배경 혼입 대비: 평면 적합 전 깊이 중앙값±5·MAD 절단(3% 혼입만으로 SVD 법선이 뒤집혔던 문제).
-- 아직 안 한 것: FFS 실제 추론(설치 중), 실물 스테레오 쌍(폰 고정 필요) 검증.
+- **실제 모델 실행 (2026-09-21):** 정답을 아는 합성 쌍(실제 캘리 K, yaw 3°, baseline 150mm)에서
+  `z_object_depth.py --mode both`:
+    물체(1.501m) → seg 1.493 / bbox 1.494 (**오차 0.5~0.6%**), 배경벽(4.0m) → 4.01, scale 0.75/0.5 모두 동일.
+    정류 검사 pass(|dy| 중앙값 0.23px). 스모크(저장소 demo 960x540): 323ms/8회, scale0.5·4회 68ms, VRAM 4.4GB.
+- 아직 안 한 것: 실물 스테레오 쌍(폰 고정 필요) 검증.
 
 ### 14. GPT 코드 검토(doc_DEPTH_CODE_REVIEW.md) 12항목 처리 — 해결
 
@@ -357,6 +364,19 @@ provisional 저장 상태 유지, 2회째 rescale 거부, ROI y 밖 0px, 최종�
   |dy|<2px 비율 ≥70%**. RMS 는 참고값으로만 저장.
 - 평면성 지표: p2~p98 두께/짧은변 은 깊이 노이즈 꼬리에 부풀어 폰(짧은변 100mm)을 비평면으로 오판 →
   **강건 폭(2·1.4826·MAD)/짧은변 < 0.6**. 노이즈와 비평면을 완전히 가르진 못하므로 크게 비평면인 경우만 거른다.
+
+### 15. FFS 실행 환경 함정 3개 — 해결
+
+1. **Triton 컴파일 실패** `fatal error: Python.h` — deadsnakes python3.12 만 있고 `python3.12-dev` 가 없다.
+   저장소 코드는 `try: import triton` 실패 시 triton=None 으로 동작하고 우리는 `pytorch1` 볼륨 경로를 쓰므로,
+   `lib_ffs` 가 Python.h 부재를 감지하면 `sys.modules['triton']=None` + `torch._dynamo.config.disable=True`
+   로 **순수 PyTorch 경로**로 자동 우회한다. 헤더가 생기면 자동으로 triton 경로.
+   (`apt install python3.12-dev` 는 PPA 503 으로 대기 중 — 백그라운드 재시도.)
+2. **직렬화 args 에 `normalize` 없음** → forward 에서 ConfigAttributeError. 저장소 기본값 True
+   (make_plugin_onnx.py:123, submodule.py:377) 로 채우고 cfg.yaml 키도 보충 (`load.filled_keys` 에 기록).
+3. **1280x720 원해상도 OOM (8GB)** — 순수 PyTorch 경로는 6D 코스트 볼륨을 통째로 만든다. 960x540 은 4.4GB,
+   1280x720 은 초과. `--scale 0.75/0.5` 로 실행 (시차는 원해상도 단위로 복원되어 결과 동일). triton 경로면 해소.
+- 좌우 일관성 임계는 추론 해상도 px 로 정의 (scale 0.5 에서 원해상도 1.5px 그대로 쓰니 30% 탈락).
 
 ## 파라미터 변경 이력
 

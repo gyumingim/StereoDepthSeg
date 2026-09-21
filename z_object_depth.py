@@ -311,10 +311,15 @@ def main(a):
     lr_frac = None
     if a.lr_check:
         t1 = time.perf_counter()
-        cons, _ = lr_consistency(model, rgbL, rgbR, disp, a.iters, a.scale, a.lr_thr_px)
+        # 임계는 "추론 해상도" 픽셀로 정의한다 (doc_YOLO_..._RESEARCH §12). 시차는 원해상도 단위로
+        # 되돌려져 있으므로 비교 임계도 1/scale 배 한다. scale 0.5 에서 1.5px 그대로 쓰면 추론 기준
+        # 0.75px 로 지나치게 엄격해 유효 화소의 30% 가 떨어져 나갔다 (합성 검증).
+        thr_full = a.lr_thr_px / a.scale
+        cons, _ = lr_consistency(model, rgbL, rgbR, disp, a.iters, a.scale, thr_full)
         lr_frac = float(cons[valid].mean()) if valid.any() else None
         valid &= cons
-        print(f"좌우 일관성: 유효화소 중 {lr_frac*100:.1f}% 통과 (|dL-dR| <= {a.lr_thr_px}px), +{(time.perf_counter()-t1)*1000:.0f}ms")
+        print(f"좌우 일관성: 유효화소 중 {lr_frac*100:.1f}% 통과 (|dL-dR| <= {a.lr_thr_px}px@추론해상도 = {thr_full:.2f}px@원해상도), "
+              f"+{(time.perf_counter()-t1)*1000:.0f}ms")
     pts = lr.depth_to_points_cam1(np.where(valid, Z, np.nan).astype(np.float32), rp)
     print(f"FFS: {t_ffs*1000:.0f}ms (scale {a.scale}, iters {a.iters}, 첫 호출은 컴파일 포함)  "
           f"유효화소 {valid.mean()*100:.1f}%  시차 중앙값 {np.median(disp[valid]) if valid.any() else float('nan'):.1f}px")
@@ -394,7 +399,7 @@ if __name__ == "__main__":
     ap.add_argument("--scale", type=float, default=1.0, help="FFS 입력 축소 배율 (0<s<=1, 0.5 면 빠름)")
     ap.add_argument("--iters", type=int, default=8, help="refinement 반복 (4 or 8)")
     ap.add_argument("--lr-check", action="store_true", help="좌우 일관성 검사 (추론 2회)")
-    ap.add_argument("--lr-thr-px", type=float, default=1.5)
+    ap.add_argument("--lr-thr-px", type=float, default=1.5, help="좌우 일관성 임계 (추론 해상도 px)")
     ap.add_argument("--z-range", type=float, nargs=2, default=(0.1, 20.0), metavar=("MIN", "MAX"))
     ap.add_argument("--model", help="YOLO 가중치 (기본: seg 면 yolo11m-seg.pt, bbox 면 yolo11m.pt)")
     ap.add_argument("--conf", type=float, default=0.25)

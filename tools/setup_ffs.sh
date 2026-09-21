@@ -14,4 +14,5 @@ for f in cfg.yaml model_best_bp2_serialize.pth; do
   [ -s "$f" ] || curl -L "https://huggingface.co/nvidia/c-fast-foundationstereo/resolve/main/$f" -o "$f"
 done
 "$ROOT/venv_ffs/bin/python" -c "import torch, xformers, ultralytics; print('OK torch', torch.__version__, 'cuda', torch.cuda.is_available())"
+[ -f /usr/include/python3.12/Python.h ] || echo "주의: python3.12-dev 없음 -> triton 컴파일 불가, 순수 PyTorch 경로(--scale 0.5 권장). sudo apt install python3.12-dev"
 echo "완료. 실행: $ROOT/venv_ffs/bin/python $ROOT/z_ffs_smoke.py"
