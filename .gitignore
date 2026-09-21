@@ -1,0 +1,26 @@
+# 가상환경 (requirements.txt / tools/setup_ffs.sh 로 재현)
+venv/
+venv_ffs/
+__pycache__/
+*.pyc
+
+# 내려받은 도구·모델 (tools/setup_ffs.sh, tools/phonecam.sh 만 추적)
+tools/*
+!tools/phonecam.sh
+!tools/setup_ffs.sh
+*.pt
+
+# 촬영 원본·산출물 (재생성 가능, 용량 큼)
+calib_shots*/
+shots/
+out_dense/
+results.json
+calib_stereo.json
+detections.png
+live_*.png
+view_*.png
+truth_log.csv
+*.json.tmp
+
+# GPT 검토 재현의 실행 산출물 (기록본 observed/rechecked/after 는 추적)
+research/**/latest_results.json

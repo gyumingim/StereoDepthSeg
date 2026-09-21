@@ -1,0 +1,108 @@
+{
+  "rotated_epipolar": {
+    "n_epipolar": 100,
+    "n_depth": 100,
+    "n_final": 96,
+    "max_3d_err_m": 6.217248937900877e-15
+  },
+  "different_intrinsics": {
+    "n_epipolar": 100,
+    "n_depth": 100,
+    "n_final": 96,
+    "max_3d_err_m": 7.105427357601002e-15
+  },
+  "unrectified_disparity_gate": {
+    "n_epipolar": 30,
+    "n_depth": 30,
+    "n_final": 29,
+    "max_3d_err_m": 3.552713678800501e-15
+  },
+  "mask_topology": {
+    "input_pixels": 2800,
+    "output_pixels": 2800,
+    "false_added_pixels": 0,
+    "converted_depth_m": 1.0
+  },
+  "rectify_normal": {
+    "baseline_m": 0.1,
+    "tx_m": -0.1,
+    "formula_z_m": 2.0,
+    "q_z_m": 2.0
+  },
+  "rectify_reversed": "ValueError: \uc815\ub958 \ud6c4 2\ubc88 \uce74\uba54\ub77c\uac00 \uc67c\ucabd\uc5d0 \uc788\uc74c (Tx=+100.0mm). \uc2dc\ucc28 \uaddc\uc57d\uc740 2\ubc88\uc774 \uc624\ub978\ucabd. --index-l/--index-r",
+  "rectify_vertical": "ValueError: \uc0c1\ud558 \ubc30\uce58(\uc218\uc9c1 \uc2a4\ud14c\ub808\uc624)\ub85c \uc815\ub958\ub428 \u2014 \uc870\ubc00 \uc2a4\ud14c\ub808\uc624 \uc785\ub825 \uaddc\uc57d(\uc218\ud3c9)\uc5d0 \ub9de\uc9c0 \uc54a\uc74c",
+  "invalid_disparity": [
+    "nan",
+    "nan",
+    "nan",
+    "nan",
+    "nan",
+    "2.0"
+  ],
+  "rectify_size": "TypeError (\uc81c\uac70\ub428): rectify_maps() got an unexpected keyword argument 'size'",
+  "postcluster_distance": {
+    "diag_z_m": [
+      1.99826256793285,
+      2.0000463365333854,
+      2.00214921106416
+    ],
+    "diag_z_raw_m": [
+      1.99826256793285,
+      3.851079547279947,
+      4.191302512723925
+    ],
+    "center_cam_m": [
+      0.00024791075077729727,
+      0.00043244162510975236,
+      2.0000463365333854
+    ],
+    "final_points": 50
+  },
+  "stale_results": {
+    "rewritten": true,
+    "n_objects": 1,
+    "statuses": [
+      "fail:no_points"
+    ]
+  },
+  "failed_gate_saved": {
+    "status": "fail:reproj",
+    "gates": {
+      "reproj": "fail",
+      "points": "fail"
+    },
+    "n_ok_meta": 0
+  },
+  "repeat_rescale": {
+    "initial": 0.1,
+    "first": 0.05,
+    "second": "\uac70\ubd80: results.json \uc740 baseline 100.000mm \ub85c \ub9cc\ub4e0 \uacb0\uacfc\uc778\ub370 \ud604\uc7ac calib_stereo.",
+    "scale_status": "reference_scaled"
+  },
+  "right_roi_y_ignored": {
+    "valid_outside_right_y": 0
+  },
+  "dense_aggregate": {
+    "status": "ambiguous",
+    "depth_raw_m": 3.8510795472799444,
+    "depth_rect_m": 4.022064232330845,
+    "selected_fraction": 0.5454545454545454,
+    "selection_policy": "bbox:center-support",
+    "minority_fraction": 0.4545454545454546
+  },
+  "dense_nan_export": {
+    "saved": true,
+    "epipolar": "unavailable"
+  },
+  "provisional_method": {
+    "method": "essential+provisional",
+    "scale_status": "provisional"
+  },
+  "epipolar_single_descriptor": {
+    "status": "unavailable",
+    "n": 0,
+    "dy_med": null,
+    "dy_rms": null,
+    "pos_dx_frac": null
+  }
+}

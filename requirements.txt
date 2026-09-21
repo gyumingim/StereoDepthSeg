@@ -1,0 +1,12 @@
+# 메인 venv (python 3.10). 설치본에서 확인한 버전으로 고정한다.
+opencv-python==4.13.0.92
+open3d==0.20.0
+numpy==2.2.6
+loguru==0.7.3
+ultralytics==8.4.157
+# torch 는 CUDA 빌드가 pip 기본 인덱스에서 오므로 여기 고정만 한다 (설치본: 2.14.0+cu130)
+torch==2.14.0
+torchvision==0.29.0
+#
+# Fast-FoundationStereo 는 python 3.12 / torch 2.6.0+cu124 / xformers 가 필요해 별도 venv_ffs 를 쓴다.
+#   tools/setup_ffs.sh  (저장소 클론 + 가중치 HF nvidia/c-fast-foundationstereo)

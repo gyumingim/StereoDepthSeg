@@ -1,0 +1,202 @@
+{
+  "rotated_epipolar": {
+    "input_matches": 100,
+    "direct_max_error_m": 6.217248937900877e-15,
+    "diag": {
+      "n_knn": 100,
+      "n_ratio": 100,
+      "dy_rms_all": 42.150290202284694,
+      "n_epipolar": 0,
+      "n_depth": 0,
+      "n_final": 0
+    }
+  },
+  "different_intrinsics": {
+    "input_matches": 100,
+    "direct_max_error_m": 7.549516567451064e-15,
+    "diag": {
+      "n_knn": 100,
+      "n_ratio": 100,
+      "dy_rms_all": 21.0389178518585,
+      "n_epipolar": 12,
+      "n_depth": 12,
+      "dy_rms": 1.205811117391858,
+      "disp_px": [
+        -24.470396826306427,
+        25.265283258944976,
+        82.84423234502128
+      ],
+      "z_m": [
+        1.5110729940388257,
+        2.0062469694909426,
+        2.9218530441197816
+      ],
+      "reproj_px": 1.9241588244833852e-14,
+      "n_final": 9
+    }
+  },
+  "unrectified_disparity_gate": {
+    "input_matches": 30,
+    "direct_max_error_m": 3.552713678800501e-15,
+    "diag": {
+      "n_knn": 30,
+      "n_ratio": 30,
+      "dy_rms_all": 0.0026228116954505136,
+      "n_epipolar": 30,
+      "n_depth": 0,
+      "n_final": 0
+    }
+  },
+  "mask_topology": {
+    "input_pixels": 2800,
+    "output_pixels": 6400,
+    "false_added_pixels": 3600,
+    "original_depth_m": 1.0,
+    "converted_depth_m": 3.0
+  },
+  "rectify_normal": {
+    "baseline_m": 0.1,
+    "formula_z_m": 2.0,
+    "q_z_m": 2.0
+  },
+  "rectify_reversed": {
+    "baseline_m": 0.1,
+    "formula_z_m": 2.0,
+    "q_z_m": -2.0
+  },
+  "rectify_vertical": {
+    "baseline_m": 0.0,
+    "formula_z_m": 0.0,
+    "q_z_m": 2.0
+  },
+  "invalid_disparity": {
+    "output": [
+      "nan",
+      "0.0",
+      "nan",
+      "nan",
+      "nan",
+      "2.0"
+    ]
+  },
+  "rectify_size": {
+    "requested_size": [
+      320,
+      240
+    ],
+    "resulting_fx": 800.006103515625,
+    "full_fx": 800.0,
+    "output_cx": 320.0,
+    "sampled_source_x0": 0.0024413876235485077,
+    "sampled_source_xlast": 319.0
+  },
+  "postcluster_distance": {
+    "diag_z_m": [
+      1.99826256793285,
+      3.851079547279947,
+      4.191302512723925
+    ],
+    "final_points": 50,
+    "kept_depth_m": 2.0000463365333854,
+    "clusters": [
+      {
+        "n": 50,
+        "z_med": 2.0000463365333854
+      }
+    ]
+  },
+  "stale_results": [
+    {
+      "old": true
+    }
+  ],
+  "failed_gate_saved": [
+    {
+      "label": "roi1",
+      "conf": 1.0,
+      "roi": [
+        0,
+        0,
+        10,
+        10
+      ],
+      "center_map": [
+        0.0,
+        2.0,
+        0.0
+      ],
+      "distance_m": 2.0,
+      "dims_mm": [
+        200.0,
+        100.0,
+        10.0
+      ],
+      "method": "stub",
+      "n_points": 4,
+      "reproj_px": 5.0
+    }
+  ],
+  "repeat_rescale": {
+    "initial_baseline_m": 0.1,
+    "first_m": 0.05,
+    "repeated_m": 0.025
+  },
+  "upstream_trt_scaling": {
+    "correct_depth_m": 2.0,
+    "script_depth_m": 1.0
+  },
+  "right_roi_y_ignored": {
+    "right_roi": [
+      0,
+      100,
+      640,
+      200
+    ],
+    "row0_col100_valid": true,
+    "valid_outside_right_y": 167121
+  },
+  "dense_aggregate": {
+    "label": "synthetic",
+    "valid_count": 110,
+    "region_count": 110,
+    "valid_fraction": 1.0,
+    "status": "ok",
+    "depth_rect_m": 3.8510795472799444,
+    "p10_m": 1.9994536818250648,
+    "p90_m": 4.131397320516616,
+    "mad_m": 0.3128845588545972,
+    "mixed_depth": true,
+    "center_cam1_m": [
+      -0.0103,
+      0.0136,
+      4.0102
+    ],
+    "dist_m": 4.0102659152204945,
+    "center_map_m": [
+      -0.0103,
+      4.0102,
+      -0.0136
+    ],
+    "dims_mm": [
+      1679.1,
+      1354.7,
+      367.1
+    ],
+    "box_method": "planar+hull",
+    "n_box_points": 60
+  },
+  "dense_nan_export": "Out of range float values are not JSON compliant: nan",
+  "provisional_method": "essential+measured-baseline",
+  "epipolar_single_descriptor": "not enough values to unpack (expected 2, got 1)",
+  "sources_sha256": {
+    "lib_stereo.py": "649291c5e7377c61776fbd7d20b7e9f06fe8346326417deede37280546f169cb",
+    "lib_detect.py": "66bb1fcbfdf3780de044d385ee823494c456d0738efcd06ad422afa8037b1b9f",
+    "lib_rectify.py": "59ec8e6dc2eb96f3784dcdeb59d7fdc0a2f1d8609a9b47aba25563dd45245945",
+    "lib_ffs.py": "cf26c6f7b1940de3b4e4cb64577a0dc5fa40c555cf65b05cb018e6a8c89ddaf1",
+    "z_object_depth.py": "49700938bdab9883618472e7d683528fa06301775e938f771e1b825cd3e0e4cf",
+    "z_reconstruct.py": "9049719d40f52ad91890774800e1b29caba4dc0983e14ae7b6ff0666a3747d9c",
+    "z_stereo_pose.py": "22d3a91b9f99ec6bed40fdd399ef5a5628c9b39a75d54a2323cd9436de8e2fdd",
+    "z_capture.py": "9339c1344b504d9a1a9d788ab1fc30b37be678aa0dbb994e144fdfc2d10ac2fe",
+    "HARNESS.md": "d14ebab1effc58623c31d0fa670e96eccb042f5a349c908c87554665f3df5f24"
+  }
+}
