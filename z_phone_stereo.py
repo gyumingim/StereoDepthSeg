@@ -174,6 +174,9 @@ def main(a):
     # --still: 연속 프레임 차이(두 스트림) + 자이로로 '정지 순간' 판정. 두 렌즈는 timestamp 가 같아도 실제 노출이
     # 어긋날 수 있어(sync APPROXIMATE) 보드/폰이 움직이는 중에 찍힌 쌍은 캘리를 망친다 (STATUS 문제점 18).
     prev_small, still_count, last_saved_small, last_pair_ts = None, 0, None, None
+    board_corners, board_state = [None, None], ""          # --board-hud: 렌즈별 체커보드 코너(HUD 표시·저장 게이트)
+    if a.board_hud:
+        import lib_calib
     def small(f):
         return cv2.resize(cv2.cvtColor(f.bgr, cv2.COLOR_BGR2GRAY), (160, 120), interpolation=cv2.INTER_AREA).astype(np.float32)
     title = "Phone Stereo - USB to PC (Q: quit, S: paired PNG)"
@@ -200,11 +203,21 @@ def main(a):
                           else worker.submit(detect_frame, pair[0], a.yolo))
             if not a.headless:
                 tiles = []
-                for i, f in enumerate(frames):
+                show = list(pair[:2]) + list(frames[2:]) if (a.board_hud and pair) else frames   # HUD 는 코너를 찍은 그 쌍을 보여준다
+                for i, f in enumerate(show):
                     img = f.bgr.copy() if f else np.zeros((a.size[1], a.size[0], 3), np.uint8)
                     stale = received[i] is None or now - received[i] > 1
                     cv2.putText(img, f"Camera {a.physical[i]} {'WAIT / STALE' if stale else 'LIVE'}", (12,25),
                                 cv2.FONT_HERSHEY_SIMPLEX, .65, (0,0,255) if stale else (0,255,0), 2)
+                    if a.board_hud and i < 2:
+                        c = board_corners[i]
+                        if c is not None:
+                            cv2.drawChessboardCorners(img, tuple(lib_calib.PATTERN), c.astype(np.float32), True)
+                        cv2.putText(img, "BOARD OK" if c is not None else "NO BOARD", (12, 55), cv2.FONT_HERSHEY_SIMPLEX, .8,
+                                    (0, 255, 0) if c is not None else (0, 0, 255), 2)
+                        if i == 0:
+                            n_saved = len(list((out / "captures").iterdir())) if (out / "captures").exists() else 0
+                            cv2.putText(img, f"{board_state}  saved {n_saved}", (12, 85), cv2.FONT_HERSHEY_SIMPLEX, .7, (0, 220, 255), 2)
                     tiles.append(img)
                 canvas = np.hstack(tiles)
                 cv2.imshow(title, canvas)
@@ -219,6 +232,10 @@ def main(a):
             if a.save_interval and pair and pair[0].timestamp_ns != last_pair_ts:
                 last_pair_ts = pair[0].timestamp_ns
                 ok_to_save = True
+                if a.board_hud:
+                    # 절반 해상도 빠른 검출 (HUD·게이트용). 실제 캘리는 z_phone_calib 가 저장 PNG 에서 풀해상도로 다시 검출한다.
+                    board_corners = [lib_calib.find_corners(cv2.cvtColor(f.bgr, cv2.COLOR_BGR2GRAY), fast=True) for f in pair[:2]]
+                    ok_to_save = all(c is not None for c in board_corners)
                 if a.still:
                     cur = [small(f) for f in pair[:2]]
                     diffs = [float(np.mean(np.abs(c - p))) for c, p in zip(cur, prev_small)] if prev_small else [99.0]
@@ -226,8 +243,9 @@ def main(a):
                     gyro = float(np.linalg.norm(g[0])) if g else 0.0
                     still_count = still_count + 1 if max(diffs) < a.still_thr and gyro < 0.05 else 0
                     moved = last_saved_small is None or max(float(np.mean(np.abs(c - p))) for c, p in zip(cur, last_saved_small)) > 3 * a.still_thr
-                    ok_to_save = still_count >= 3 and moved                          # 3프레임(0.2s) 연속 정지 + 지난 저장과 다른 장면
+                    ok_to_save = ok_to_save and still_count >= 3 and moved          # 3프레임(0.2s) 연속 정지 + 지난 저장과 다른 장면
                     prev_small = cur
+                    board_state = ("STILL" if still_count >= 3 else "MOVING") + ("" if moved else " (same view)")
                 if ok_to_save and now - last_bundle >= a.save_interval:
                     save_pair(out / "captures" / str(pair[0].timestamp_ns), pair, a, receiver)
                     last_bundle = now
@@ -291,6 +309,7 @@ if __name__ == "__main__":
     ap.add_argument("--save-interval", type=float, default=0, help="초. >0 이면 쌍을 주기적으로 captures/<ts>/ 에 저장 (캘리 수집용)")
     ap.add_argument("--still", action="store_true", help="--save-interval 저장을 '정지 순간'(연속 프레임 차이·자이로 작음, 지난 저장과 다른 장면)으로 제한")
     ap.add_argument("--still-thr", type=float, default=1.5, help="정지 판정 프레임 차이 임계 (160x120 회색 평균 절대차)")
+    ap.add_argument("--board-hud", action="store_true", help="체커보드 검출 표시(BOARD OK/NO BOARD, 코너) + 양쪽 다 검출될 때만 저장")
     args = ap.parse_args()
     try:
         main(args)
