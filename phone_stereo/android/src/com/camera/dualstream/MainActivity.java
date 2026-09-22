@@ -44,6 +44,7 @@ public class MainActivity extends Activity {
     private String[] ids;
     private long[] counts;
     private int width, height;
+    private boolean rawTimestamps;      // intent extra raw_ts=true: send logical timestamps (old behaviour)
     private static final int MAGIC_FRAME = 0x53544552, MAGIC_SENSOR = 0x53454E53;   // "STER", "SENS"
 
     /** Sensor event timestamps and camera timestamps (SENSOR_INFO_TIMESTAMP_SOURCE_REALTIME on this device) are both
@@ -57,6 +58,43 @@ public class MainActivity extends Activity {
             if(!imuPending.offer(p)) { imuPending.poll(); imuPending.offer(p); }
         }
         @Override public void onAccuracyChanged(Sensor s,int accuracy) {}
+    };
+
+    /** Per-physical SENSOR_TIMESTAMP from the logical result: the only public way to see how far apart the two
+     *  sensors' exposures really are (sync type APPROXIMATE). Sent as sensor packet type 100 = "frame_timing":
+     *  [phys[0] offset ms, phys[1] offset ms, (phys[2] offset ms), exposure ms, frame duration ms, rolling shutter skew ms]
+     *  offsets are relative to the logical SENSOR_TIMESTAMP that the ImageReader frames carry. Also logged as RESULT lines. */
+    private long timingCount=0;
+    /** Latest per-physical (SENSOR_TIMESTAMP − logical timestamp) in ns. Measured on S24: ultrawide(2) exposes 72–89 ms
+     *  BEFORE the wide(5) whose timestamp the logical result carries, drifting ~4 ms/s (sensors free-run). Frames are sent
+     *  with the corrected physical timestamp so the PC pairs frames that were really exposed closest in time. */
+    private final long[] physOffsetNs=new long[3];
+    private volatile boolean physOffsetKnown=false;
+    private final CameraCaptureSession.CaptureCallback timing=new CameraCaptureSession.CaptureCallback() {
+        @Override public void onCaptureCompleted(CameraCaptureSession s,CaptureRequest r,TotalCaptureResult result) {
+            try {
+                Long ts=result.get(CaptureResult.SENSOR_TIMESTAMP); if(ts==null) return;
+                Map<String,CaptureResult> phys=result.getPhysicalCameraResults();
+                float[] v=new float[ids.length+3];
+                StringBuilder sb=new StringBuilder("RESULT ts="+ts);
+                for(int i=0;i<ids.length;i++) {
+                    CaptureResult p=phys.get(ids[i]); Long pts=p==null?null:p.get(CaptureResult.SENSOR_TIMESTAMP);
+                    v[i]=pts==null?Float.NaN:(pts-ts)/1e6f;
+                    if(pts!=null) physOffsetNs[i]=pts-ts;
+                    sb.append(" phys").append(ids[i]).append("=").append(pts==null?"null":String.valueOf(pts-ts));
+                }
+                Long exp=result.get(CaptureResult.SENSOR_EXPOSURE_TIME), dur=result.get(CaptureResult.SENSOR_FRAME_DURATION), skew=result.get(CaptureResult.SENSOR_ROLLING_SHUTTER_SKEW);
+                v[ids.length]=exp==null?Float.NaN:exp/1e6f; v[ids.length+1]=dur==null?Float.NaN:dur/1e6f; v[ids.length+2]=skew==null?Float.NaN:skew/1e6f;
+                sb.append(" exp=").append(exp).append(" dur=").append(dur).append(" skew=").append(skew);
+                physOffsetKnown=true;
+                if(timingCount++%30==0) Log.i(TAG,sb.toString());
+                if(client!=null) {
+                    ByteBuffer b=ByteBuffer.allocate(4*v.length); for(float f:v) b.putFloat(f);
+                    Packet pk=new Packet(100,ts,b.array());
+                    if(!imuPending.offer(pk)) { imuPending.poll(); imuPending.offer(pk); }
+                }
+            } catch(Exception e) { Log.e(TAG,"timing",e); }
+        }
     };
 
     private void startSensors() {
@@ -111,6 +149,7 @@ public class MainActivity extends Activity {
             Set<String> available=manager.getCameraCharacteristics(logical).getPhysicalCameraIds();
             for(String id:ids) if(!available.contains(id)) throw new IllegalArgumentException("Not in logical group: "+id);
             width=getIntent().getIntExtra("width",640); height=getIntent().getIntExtra("height",480);
+            rawTimestamps=getIntent().getBooleanExtra("raw_ts",false);
             running=true;
             server=new ServerSocket(8765,1,InetAddress.getByName("127.0.0.1"));
             new Thread(this::serve,"usb-writer").start();
@@ -196,7 +235,7 @@ public class MainActivity extends Activity {
                     @Override public void onConfigured(CameraCaptureSession s) {
                         session=s;
                         try {
-                            s.setRepeatingRequest(request.build(),null,handler);
+                            s.setRepeatingRequest(request.build(),timing,handler);
                             status("STREAMING logical="+camera.getId()+" physical="+Arrays.toString(ids)+" focus_diopters="+focus);
                         } catch(Exception e) { status("REQUEST_FAILED "+e); }
                     }
@@ -215,6 +254,7 @@ public class MainActivity extends Activity {
             if(counts[index]==1 || counts[index]%150==0)
                 Log.i(TAG,"FRAME physical="+ids[index]+" count="+counts[index]+" ts="+image.getTimestamp());
             if(client==null) return;
+            if(!rawTimestamps && !physOffsetKnown) return;      // first frames: offset unknown → would send an uncorrected (later) timestamp
             byte[] nv21=new byte[width*height*3/2];
             Image.Plane[] planes=image.getPlanes();
             // Plane buffers can have row padding and interleaved UV; never assume contiguous.
@@ -228,7 +268,9 @@ public class MainActivity extends Activity {
                 }
             }
             // Bound latency under USB/PC backpressure; discard oldest unsent packet.
-            Packet packet=new Packet(index,image.getTimestamp(),nv21);
+            // Physical exposure time = logical timestamp + last known per-physical offset (drift ~0.3 ms per frame, negligible).
+            long ts=image.getTimestamp()+(physOffsetKnown&&!rawTimestamps?physOffsetNs[index]:0L);
+            Packet packet=new Packet(index,ts,nv21);
             if(!pending.offer(packet)) { pending.poll(); pending.offer(packet); }
         } catch(Exception e) { Log.e(TAG,"frame",e); }
     }

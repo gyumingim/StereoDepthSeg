@@ -72,7 +72,7 @@ USB 디버깅을 허용한 폰을 연결하고 저장소 루트에서 실행한�
 
 직접 확인 (RTX 4060, venv_ffs, 640×480, 초점 1 m 고정): 오프라인 — 사람 seg 0.395/0.412 m (bbox 는 사람이 화면 대부분이라 배경 혼입 → seg 를 볼 것). 라이브 25초 — 367쌍 15.0 fps, FFS+YOLO(seg+bbox) 80회, 중앙값 258 ms, 첫 쌍 dy 0.32px·인라이어 0.95, 벽시계 1.80 m·183×60 mm.
 
-**두 렌즈는 하드웨어 동기가 아니다** (`SENSOR_SYNC_TYPE = APPROXIMATE`, timestamp 는 같게 보고됨). 정지 장면은 문제없지만 촬영 중 폰이나 대상이 움직이면 좌우가 다른 순간이 되어 거리가 틀린다 — 캘리 촬영은 `--still --board-hud`, 라이브에서는 정지 물체만 믿을 것 (STATUS 문제점 18).
+**두 렌즈는 하드웨어 동기가 아니다** (`SENSOR_SYNC_TYPE = APPROXIMATE`). 실측: 초광각이 광각보다 56~89 ms 먼저 노출되고(각자 free-run, 위상이 초당 ~4 ms 드리프트) 논리 timestamp 는 광각 것이다. 앱이 물리 `SENSOR_TIMESTAMP` 로 프레임 시각을 보정해 보내고 PC 가 실제로 가장 가까운 프레임끼리 묶어(`--max-skew-ms 35`) 좌우 노출차를 **중앙값 6 ms(p95 14 ms)** 로 줄였다. 남은 잔차 동안의 폰 회전은 자이로로 보상한다. 그래도 빠르게 움직이는 물체는 거리가 틀릴 수 있고, 캘리 촬영은 `--still --board-hud` 로 정지 순간만 쓴다 (STATUS 문제점 18). `frame_timing` 센서값(물리별 오프셋 ms, 노출, 프레임 주기, 롤링셔터 skew)이 `summary.json`/`pair.json` 에 기록된다.
 
 **거리 정확도 한계**: baseline 15.76 mm 라 1 m 에서 시차가 7px 뿐이다. 시차 0.5px 오차 → 깊이 오차 ≈ Z²×0.070 (0.5 m 18 mm, 1 m 70 mm, 2 m 0.28 m). 캘리 yaw 0.1° 오차는 시차 0.76px 편향 = 1 m 에서 11%. `metric` 이 아닌 상태의 결과에는 객체마다 `scale_not_validated:<status>` 경고가 붙는다.
 

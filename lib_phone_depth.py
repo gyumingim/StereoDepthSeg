@@ -75,6 +75,30 @@ def depth_colormap(depth, valid, zmin=0.3, zmax=3.0):
     return out
 
 
+def skew_rotation(st, imu):
+    """두 렌즈 노출 시각 사이 폰 회전(자이로 적분) → 이 쌍에 쓸 R' = R · Rg.
+
+    왼쪽(초광각) 노출 t_L, 오른쪽(광각) 노출 t_R. 세계점의 왼쪽 카메라 좌표는 X_L(t_R) = Rg X_L(t_L) (평행이동 무시),
+    스테레오 식 X_R = R X_L(t_R) + T 에 넣으면 X_R = (R Rg) X_L(t_L) + T. Rg 는 기기 프레임 자이로 적분을 Rs 로 카메라 프레임에 옮긴 것.
+    반환 (Rg, deg) 또는 (I, 0).
+    """
+    win = (imu or {}).get("gyro_window") or []
+    ts = (imu or {}).get("exposure_ts_ns")
+    Rs = st.get("R_sensor_to_left")
+    if len(win) < 2 or not ts or Rs is None or ts[0] == ts[1]:
+        return np.eye(3), 0.0
+    import lib_phone_motion as pm
+    tL, tR = int(ts[0]), int(ts[1])
+    Rg_dev = pm.gyro_integrated_rotation(win, min(tL, tR), max(tL, tR))          # X_dev(later) = Rg_dev X_dev(earlier)
+    if Rg_dev is None:
+        return np.eye(3), 0.0
+    if tL > tR:                                                                  # 왼쪽이 나중이면 방향 반대
+        Rg_dev = Rg_dev.T
+    Rs = np.asarray(Rs, float)
+    Rg = Rs @ Rg_dev @ Rs.T
+    return Rg, float(np.degrees(np.arccos(np.clip((np.trace(Rg) - 1) / 2, -1, 1))))
+
+
 class PhoneDepth:
     def __init__(self, a):
         import lib_rectify as lr
@@ -82,6 +106,7 @@ class PhoneDepth:
         cal = [dict(K=np.array(st[f"K{i}"]), dist=np.array(st[f"dist{i}"]), image_size=st["image_size"])
                for i in (1, 2)]
         self.rp = lr.rectify_maps(*cal, np.array(st["R"]), np.array(st["T"]))
+        self.cal, self.rp0 = cal, self.rp
         self.a, self.st = a, st
         # 캘리를 만든 번들의 초점 고정값과 다르면 광각 fx 가 달라져 dy·시차가 어긋난다
         self.focus_warning = None
@@ -98,6 +123,15 @@ class PhoneDepth:
         a, rp = self.a, self.rp
         t0 = time.perf_counter()
         fL, fR = (pair[1], pair[0]) if self.swap else (pair[0], pair[1])      # 캘리의 (왼,오른) 순서로
+        if self.swap and imu and imu.get("exposure_ts_ns"):
+            imu = dict(imu, exposure_ts_ns=list(reversed(imu["exposure_ts_ns"])))
+        # 동기 어긋남(두 노출 시각 차) 동안의 폰 회전을 자이로로 보상: 0.02° 넘으면 이 쌍만 정류 테이블을 다시 만든다 (~10ms)
+        Rg, skew_deg = skew_rotation(self.st, imu)
+        if skew_deg > 0.02:
+            rp = lr.rectify_maps(*self.cal, np.asarray(self.st["R"]) @ Rg, np.asarray(self.st["T"]))
+        else:
+            rp = self.rp0
+        self.rp = rp
         left, right = lr.rectify_pair(fL.bgr, fR.bgr, rp)
         if self.ep is None:
             self.ep = lr.epipolar_check(left, right)
@@ -149,6 +183,7 @@ class PhoneDepth:
         zr = getattr(a, "depth_range", None) or (0.3, 3.0)
         overlays.append(depth_colormap(depth, valid, float(zr[0]), float(zr[1])))
         report = dict(timestamp_ns=[fL.timestamp_ns, fR.timestamp_ns], physical_lr=self.st["phone"]["physical"],
+                      exposure_skew_ms=(fR.timestamp_ns - fL.timestamp_ns) / 1e6, gyro_skew_compensation_deg=round(skew_deg, 4),
                       mode=mode, device="cuda:0",
                       imu={k: v for k, v in (gf or {}).items() if k != "R_cam1_to_world"} if gf else dict(available=False),
                       imu_raw={k: v for k, v in (imu or {}).items() if k != "gravity"},

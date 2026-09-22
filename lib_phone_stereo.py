@@ -22,8 +22,10 @@ MAGIC = 0x53544552
 MAGIC_SENSOR = 0x53454E53
 # android.hardware.Sensor 타입 상수 (앱이 등록하는 것만)
 SENSOR_GYRO, SENSOR_PRESSURE, SENSOR_GRAVITY, SENSOR_LINEAR_ACC, SENSOR_ROTVEC, SENSOR_GAME_ROTVEC = 4, 6, 9, 10, 11, 15
+SENSOR_FRAME_TIMING = 100          # 앱 자체 타입: [물리별 SENSOR_TIMESTAMP − 논리 timestamp (ms)…, 노출 ms, 프레임 주기 ms, 롤링셔터 skew ms]
 SENSOR_NAMES = {SENSOR_GYRO: "gyroscope", SENSOR_PRESSURE: "pressure", SENSOR_GRAVITY: "gravity",
-                SENSOR_LINEAR_ACC: "linear_acceleration", SENSOR_ROTVEC: "rotation_vector", SENSOR_GAME_ROTVEC: "game_rotation_vector"}
+                SENSOR_LINEAR_ACC: "linear_acceleration", SENSOR_ROTVEC: "rotation_vector", SENSOR_GAME_ROTVEC: "game_rotation_vector",
+                SENSOR_FRAME_TIMING: "frame_timing"}
 
 
 @dataclass
@@ -104,6 +106,7 @@ class PhoneReceiver:
         self.skews = deque(maxlen=10000)
         self.sensors = {}                       # type -> deque[(timestamp_ns, values)]
         self.sensor_counts = {}
+        self.reordered = [0] * count            # 보정 timestamp 가 되돌아간 프레임(HAL 재짝짓기 순간) — 버리고 센다
         self.error = None
         self.stopped = False
         self.thread = threading.Thread(target=self._run, daemon=True)
@@ -123,7 +126,8 @@ class PhoneReceiver:
                 with self.lock:
                     i = f.index
                     if self.last_ts[i] is not None and f.timestamp_ns <= self.last_ts[i]:
-                        raise ValueError(f"Non-increasing sensor timestamp on stream {i}")
+                        self.reordered[i] += 1            # 물리 timestamp 보정 후 드물게 뒤로 감 → 치명 오류 대신 폐기
+                        continue
                     if self.first_ts[i] is None:
                         self.first_ts[i] = f.timestamp_ns
                     self.last_ts[i] = f.timestamp_ns
@@ -143,6 +147,13 @@ class PhoneReceiver:
     def snapshot(self):
         with self.lock:
             return list(self.latest), self.pair, self.pair_count, list(self.last_receive)
+
+    def sensor_window(self, stype, t0_ns, t1_ns, pad_ns=8_000_000):
+        """[t0, t1] (±pad) 사이 센서 샘플 [(ts, values)…]. 두 노출 시각 사이 자이로 적분(회전 보상)용."""
+        lo, hi = min(t0_ns, t1_ns) - pad_ns, max(t0_ns, t1_ns) + pad_ns
+        with self.lock:
+            q = self.sensors.get(stype)
+            return [(t, list(v)) for t, v in q if lo <= t <= hi] if q else []
 
     def sensor_at(self, stype, timestamp_ns, max_dt_ms=50.0):
         """timestamp_ns 에 가장 가까운 센서 샘플 (values, dt_ms). 없거나 너무 멀면 None."""
@@ -164,6 +175,15 @@ class PhoneReceiver:
                 out[name] = dict(values=[float(v) for v in s[0]], dt_ms=round(s[1], 2))
         return out
 
+    def imu_for_pair(self, pair):
+        """쌍의 첫 프레임 시각 센서값 + 두 노출 시각 사이 자이로 창(gyro_window) — 동기 어긋남 회전 보상용."""
+        out = self.imu_at(pair[0].timestamp_ns)
+        ts = [f.timestamp_ns for f in pair[:2]]
+        out["exposure_ts_ns"] = ts
+        out["exposure_skew_ms"] = (ts[1] - ts[0]) / 1e6
+        out["gyro_window"] = self.sensor_window(SENSOR_GYRO, ts[0], ts[1]) if ts[0] != ts[1] else []
+        return out
+
     def stats(self):
         with self.lock:
             fps = [(n - 1) * 1e9 / (b - a) if n > 1 and b > a else 0.0
@@ -177,7 +197,7 @@ class PhoneReceiver:
             # 같은 시계면 마지막 프레임과 마지막 센서 샘플의 차이가 수십 ms 안이어야 한다
             gap = (cam_last - imu_last) / 1e6 if cam_last is not None and imu_last is not None else None
             return dict(frames=list(self.counts), sensor_fps=fps, pairs=self.pair_count,
-                        unmatched_dropped=list(self.pairer.dropped), error=self.error,
+                        unmatched_dropped=list(self.pairer.dropped), reordered_dropped=list(self.reordered), error=self.error,
                         imu=imu, clock_gap_ms=None if gap is None else round(gap, 1),
                         skew_median_ms=float(np.median(self.skews)) if self.skews else None,
                         skew_p95_ms=float(np.percentile(self.skews, 95)) if self.skews else None,

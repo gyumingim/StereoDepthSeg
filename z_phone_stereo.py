@@ -41,7 +41,8 @@ def start_phone(a):
     if not a.list:
         args += ["--es", "logical", a.logical, "--es", "physical", ",".join(a.physical),
                  "--ei", "width", a.size[0], "--ei", "height", a.size[1], "--ei", "fps", a.fps,
-                 "--ef", "focus_diopters", (1.0 / a.focus_m) if a.focus_m > 0 else 0.0]
+                 "--ef", "focus_diopters", (1.0 / a.focus_m) if a.focus_m > 0 else 0.0,
+                 "--ez", "raw_ts", "true" if a.raw_ts else "false"]
     print(adb(*args).stdout.strip(), flush=True)
 
 
@@ -50,7 +51,7 @@ def save_pair(out, pair, a, receiver=None):
     meta = dict(logical=a.logical, physical=a.physical, image_size=a.size, focus_m=a.focus_m,
                 timestamp_ns=[f.timestamp_ns for f in pair], format="NV21 -> BGR PNG",
                 mode="phone_stereo", calibration="required_for_metric_depth",
-                imu=receiver.imu_at(pair[0].timestamp_ns) if receiver else {})   # 프레임 시각의 중력/자이로/회전벡터/기압
+                imu=receiver.imu_for_pair(pair) if receiver else {})   # 프레임 시각의 중력/자이로/회전벡터/기압 + 두 노출 사이 자이로 창
     for i, f in enumerate(pair):
         if not cv2.imwrite(str(out / f"camera_{a.physical[i]}.png"), f.bgr):
             raise IOError("Cannot save paired PNG")
@@ -200,7 +201,7 @@ def main(a):
                 future = None
             if (a.yolo != "none" or depth_worker) and pair and future is None and pair[0].timestamp_ns != last_inferred:
                 last_inferred = pair[0].timestamp_ns
-                future = (worker.submit(depth_worker, pair, receiver.imu_at(pair[0].timestamp_ns)) if depth_worker
+                future = (worker.submit(depth_worker, pair, receiver.imu_for_pair(pair)) if depth_worker
                           else worker.submit(detect_frame, pair[0], a.yolo))
             if not a.headless:
                 tiles = []
@@ -311,7 +312,10 @@ if __name__ == "__main__":
     ap.add_argument("--fps", type=int, default=15)
     ap.add_argument("--focus-m", type=float, default=1.0,
                     help="광각 렌즈 초점 고정 거리(m). 0 = 자동초점(초점거리가 변해 스테레오에 부적합). 캘리와 같은 값으로 쓸 것")
-    ap.add_argument("--max-skew-ms", type=float, default=10)
+    ap.add_argument("--max-skew-ms", type=float, default=35,
+                    help="쌍으로 묶을 두 프레임의 실제 노출 시각 차 상한. 앱이 물리 센서 timestamp 로 보정해 보내며(초광각이 광각보다 72~89ms "
+                         "먼저 노출, 15fps 주기 66.7ms) 가장 가까운 프레임끼리 묶으면 잔차 ≤33ms. 잔차 회전은 자이로로 보상")
+    ap.add_argument("--raw-ts", action="store_true", help="앱이 논리 timestamp(보정 전)로 보내게 함 (예전 동작)")
     ap.add_argument("--duration", type=float, default=0, help="0: run until Q/Ctrl-C")
     ap.add_argument("--headless", action="store_true")
     ap.add_argument("--yolo", choices=["none", "seg", "bbox", "both"], default="none",
