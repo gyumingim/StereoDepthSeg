@@ -287,6 +287,69 @@ Fast-FoundationStereo 로 화소마다 깊이를 구해 객체별 거리·크기
 한계: 정류 품질(캘리 왜곡계수, 특히 폰 초광각 가장자리 커버리지 8/16)과 (R,T) 정확도에 민감.
 `에피폴라 잔차` 가 1px 를 넘으면 (R,T) 나 캘리를 먼저 의심할 것. 두께 값은 노이즈 지표일 뿐이다.
 
+## 폰 두 렌즈만으로 (노트북 카메라 없이) — `z_phone_calib.py` + `z_phone_stereo.py`
+
+S24 후면 초광각(2)·광각(5) 프레임을 앱이 동시에 보내므로 폰 하나가 스테레오 카메라다. 두 렌즈 사이 거리는 15.76 mm 로
+고정돼 있어 캘리브레이션을 한 번만 하면 된다. 이미 `calib_phone_pair.json` (회전 보정, `factory_baseline_refined`) 이 있으니
+바로 depth 를 볼 수 있고, 거리 스케일을 확정하려면 아래 체커보드 단계를 한 번 한다.
+
+```bash
+# 0) 앱 설치·렌즈 목록 (최초 1회) — cameras.json 에 공장 캘리값이 저장된다
+./venv/bin/python z_phone_stereo.py --install --list
+
+# 1) 바로 depth (현재 파일: 회전 보정본, 스케일 미검증 경고 붙음). 초점은 기본 1 m 고정(--focus-m) — 캘리와 같은 값으로
+./venv_ffs/bin/python z_phone_stereo.py --physical 2 5 --calib-stereo calib_phone_pair.json --yolo both
+
+# 2) 정류가 맞는지 확인 (저장된 번들에서 dy 중앙값 < 1px, 인라이어 ≥ 0.7 이면 OK)
+./venv/bin/python z_phone_calib.py --check phone_stereo/runs/<번들>
+
+# 3) 회전 보정 다시 하기 (폰을 떨어뜨렸거나 dy 가 커졌을 때): 방 전체가 보이는 질감 있는 장면 쌍 3~6개
+./venv/bin/python z_phone_stereo.py --physical 2 5 --headless --save-interval 2 --duration 20   # 폰을 천천히 돌리며
+./venv/bin/python z_phone_calib.py --refine phone_stereo/runs/<실행시각>
+```
+
+### 절대거리 빠른 고정 (`known_distance_pinned`) — 자로 잰 거리 1개
+
+정류 dy 는 yaw(좌우 회전)를 못 본다. yaw 오차는 시차 편향으로 들어가 절대거리를 통째로 밀어낸다. 거리를 아는
+물체 하나면 고정된다.
+
+```bash
+# 질감 있는 물체(책, 상자)를 렌즈에서 자로 잰 거리 Z 에 놓고 번들 저장
+./venv/bin/python z_phone_stereo.py --physical 2 5 --headless --duration 4 --out phone_stereo/runs/known
+# ROI = 초광각(왼쪽) 정류영상에서 그 물체 영역 (x y w h). depth_both.png 나 captures 로 좌표 확인
+./venv/bin/python z_phone_calib.py --known phone_stereo/runs/known --known-m 0.80 --roi 220 150 200 180
+```
+
+출력의 `yaw 보정 ±x.xxx°` 와 `시차 before → after(목표)` 를 보고, 다른 거리의 물체 하나로 `depth.json` 의 `dist_m` 을 교차 확인한다.
+ROI 안 SIFT 대응점이 8개 미만이면 질감 부족으로 거부한다.
+
+### 스케일 확정 (`metric`) — 노트북 화면 체커보드
+
+```bash
+./venv/bin/python z_calibrate.py --make-target --screen laptop          # 노트북 전체화면에 보드 표시, 기준 막대 자로 실측
+./venv/bin/python z_phone_stereo.py --physical 2 5 --save-interval 1.5 --duration 60   # 폰을 25~40 cm 에서 보드에 향하게
+./venv/bin/python z_phone_calib.py --board phone_stereo/runs/<실행시각> --screen laptop --ruler-mm <실측 mm>
+```
+
+- 보드가 **두 렌즈 모두에 전부** 들어와야 그 쌍이 쓰인다. 초광각 640×480 에서 보드 한 칸이 15px 이상 되도록 25~40 cm.
+  기울기·위치를 바꿔 15장 이상. 뷰가 적으면 `--size 1280 960` 으로 찍고 `--target-size 640 480` 으로 저장해도 된다.
+- 통과 조건: rms ≤ 1 px, 뷰 ≥ 8, baseline 이 공장값 15.76 mm 의 ±15% 안. 하나라도 어긋나면 `board_unreliable` 로 기록하고
+  이유를 출력한다 (metric 으로 올리지 않는다).
+- 통과 뒤 실측 1개로 확인: 자로 잰 물체까지 거리와 `depth.json` 의 `dist_m` 비교.
+
+### 정확도를 미리 알고 볼 것
+
+baseline 15.76 mm, f ≈ 451 px(정류 후) 이면 시차 = 7.1 px / Z[m]. 시차 0.5 px 오차 → 깊이 오차 ≈ Z² × 0.070 m:
+
+| 거리 | 0.5 m | 1 m | 2 m | 3 m |
+|---|---|---|---|---|
+| 깊이 오차(시차 0.5px) | 18 mm | 70 mm | 0.28 m | 0.63 m |
+
+즉 **1 m 안쪽에서만** 쓸 만하다. 캘리 yaw 가 0.1° 틀리면 1 m 에서 11% 편향이 생기므로 `metric` 이 아닐 때의 절대값은 참고용이다.
+`--offline <번들>` 은 폰 없이 저장된 쌍으로 같은 파이프라인을 돌려 `depth_both.png` / `depth.json` 을 남긴다.
+
+---
+
 ## 결과 파일과 상태값 읽는 법
 
 - `results.json`(희소 경로)과 `out_dense/objects.json`(조밀 경로)은 **매 실행마다 새로 쓴다.**

@@ -2,6 +2,25 @@
 
 최종 갱신: 2026-09-22
 
+## 폰 두 렌즈(초광각 2 + 광각 5)만으로 metric depth — 동작 (2026-09-22, 스케일 검증 1단계 남음)
+
+- 추가: `lib_phone_calib.py` + `z_phone_calib.py` (공장 CameraCharacteristics → OpenCV 스테레오 캘리, 장면 대응점 회전 보정,
+  체커보드 `stereoCalibrate`, `--check`), `z_phone_stereo.py --offline/--save-interval`, `lib_phone_depth` 렌즈 순서 자동 스왑,
+  `z_selftest.py` 폰 규약 8항목(26/26 PASS), 추적 사본 `phone_stereo/cameras_s24.json`, 결과 `calib_phone_pair.json`.
+- 공장 포즈 규약 확정(NDK 문서 + 실쌍 검증): `X_B = R_B R_Aᵀ X_A + R_B(t_A − t_B)`, K 는 active array→640×480 비례,
+  왜곡 `[κ1,κ2,κ4,κ5,κ3]`. 초광각이 왼쪽, 광각이 오른쪽(Tx = −15.76mm). 공장 회전 그대로면 정류 dy 중앙값 1.6~2.3px.
+- **광각 자동초점이 스테레오를 깨뜨렸다**: AF 로 광각 fx 가 쌍마다 0.3~0.7% 변해(focus breathing) dy 의 y-기울기 부호가
+  촬영마다 뒤집혔다. 앱에 `LENS_FOCUS_DISTANCE` 고정(`--focus-m`, 기본 1 m; 광각 focus_calibration=CALIBRATED) 추가 후
+  roll/pitch 0.32° + 광각 fx ×0.991 보정 → 적합쌍(8) 0.36~0.84px, **별도 검증쌍 6개 0.43~0.56px 전부 합격, 시차>0 비율 ≥0.95**.
+  yaw 는 dy 로 관측되지 않아(자유로 두면 −0.87° 로 튀어 시차 반전) 공장값 고정. 초점값은 캘리 json 에 기록되고 실행값과 다르면 경고.
+- 실행 결과 (venv_ffs, RTX 4060, 초점 1 m 고정): 오프라인 — 사람 seg 0.395/0.412 m (bbox 는 배경 혼입으로 무의미, 문서화된 한계);
+  라이브 25초 — 367쌍 15.0 fps, FFS+YOLO(seg+bbox) 80회 **중앙값 258 ms**, 첫 쌍 dy 0.32px·인라이어 0.95, 벽시계 1.80 m·183×60 mm.
+- 한계(정직하게): baseline 15.76 mm → 시차 0.5px 오차의 깊이 오차 ≈ Z²×0.070 (0.5 m: 18 mm, 1 m: 70 mm, 2 m: 0.28 m).
+  yaw 0.1° 오차 = 시차 0.76px 편향 = 1 m 에서 11%. 현재 `scale_status: factory_baseline_refined` (baseline·yaw 공장값)
+  이므로 결과 JSON 에 `scale_not_validated` 경고가 붙는다. 절대거리 고정 두 길: `--known`(실측 거리 1개로 yaw 고정,
+  `known_distance_pinned`) 또는 `--board`(노트북 체커보드 stereoCalibrate → `metric`). 절차: doc_HOW_TO_RUN.md "폰 두 렌즈만으로".
+  **사용자가 자로 잰 거리 1개를 주면 `--known` 으로 바로 고정된다.**
+
 ## Phone Stereo 실기기 구현·검증 완료 (2026-09-22)
 
 - 최신 요청: 2개를 기본으로 먼저 구현하고 3개는 지원되면 시도. 사용자가 새 코드 작성·수정·실기기 실행 승인.
@@ -11,7 +30,8 @@
 - 3개도 성공: 640×480·15 FPS, 12초간 171/172/171프레임·171묶음. 기본 실행은 2개 유지.
 - bbox 전용: `venv_ffs` 환경에서 20초·582쌍, GPU 추론 447회, 중앙값 11.26ms. 이 시간은 FFS를 포함하지 않는다.
 - 테스트: 수신 패킷 손상/분할/EOF, 프레임 누락·재사용 방지, 잘못된 보정값 거부 등 7개 통과. Android APK 빌드·서명 검증 및 실제 설치 완료.
-- FFS: `--calib-stereo` 연결 코드 추가. **폰 두 렌즈의 보정값이 없어 실제 폰 depth 추론은 아직 미검증.** 노트북/폰 보정 재사용을 막고, 입력 렌즈 ID·순서·해상도를 검사한다. 다음 작업은 폰 쌍 보정과 정류·거리·FFS 지연 검증.
+- FFS: `--calib-stereo` 연결 코드 추가. 노트북/폰 보정 재사용을 막고, 입력 렌즈 ID·순서·해상도를 검사한다.
+  → 폰 두 렌즈 보정은 아래 "폰 두 렌즈 depth 동작" 절과 문제점 16 에서 해결 (GPT 작업 이후 Claude 가 이어서).
 - 관측 timestamp 차이 0ms는 HAL의 `APPROXIMATE` 등급을 정밀 동기화로 바꾸지 않는다. 장시간 안정성과 거리 정확도는 별도 검증 대상.
 
 ## 입력·연산 요구 확정 당시 기록 (2026-09-22, 구현 전)
@@ -412,6 +432,55 @@ provisional 저장 상태 유지, 2회째 rescale 거부, ROI y 밖 0px, 최종�
 
 - 합성 정답 쌍 생성기를 저장소에 둔다: `z_make_synth_pair.py` (임시 폴더가 세션 종료로 지워져 검증 자산이 사라졌던 일 재발 방지).
 
+### 16. 폰 두 렌즈(초광각 2 + 광각 5) 스테레오 캘리 — 해결 (metric 승격은 체커보드 1회 남음)
+
+배경: GPT 가 만든 `phone_stereo` 앱이 두 물리 렌즈 프레임을 동시에 주지만 두 렌즈 사이의 R,T 가 없어 depth 를 못 냈다.
+사실 확인:
+- Camera2 `CameraCharacteristics` 에 렌즈별 공장값이 있다 (`z_phone_stereo.py --list` → cameras.json):
+  intrinsics(active array px), distortion(κ1..κ5), poseRotation(쿼터니언 x,y,z,w), poseTranslation(m, PRIMARY_CAMERA 기준),
+  `distortionCorrection.availableModes = None` → 프레임은 왜곡 보정 안 된 원본.
+- NDK 문서(NdkCameraMetadataTags.h) 규약: poseRotation 은 센서좌표→카메라좌표 `p' = R p`, poseTranslation 은 광학중심 위치
+  ("needs to be negated to convert it to a translation from the camera to the origin") → `X_cam = R (X_w − t)`.
+  두 렌즈 A(왼), B(오른): **`R = R_B R_Aᵀ`, `T = R_B (t_A − t_B)`** (cv2.stereoCalibrate 규약 `X_B = R X_A + T`).
+  이전 시도 두 가지(a: `R_Bᵀ R_A`, b: `R_B R_Aᵀ` 에 `T = t_B − R t_A`)는 각각 Tx 부호 반전·수직 정류로 실쌍에서 거부됐다.
+- 수치 검증(합성, z_selftest `t_phone_calib`): 규약대로 만든 두 카메라의 정확한 대응점 Sampson 오차 8e-9 px,
+  좌우 자동 순서 (B,A), T=(−15.76,0,0)mm, 회전 0.47° 오차 + 0.3px 잡음 → 보정 후 잔여 (−0.005,−0.016,−0.005)°.
+- 실쌍 6개(519 SIFT 대응점): 공장 R 그대로 dy 중앙값 2.3~4.7px → 회전만 0.473° 보정(LM+Cauchy, scipy 없이) 후
+  0.42/1.32/1.62/0.43/0.61/0.66px. 1.3~1.6px 두 쌍은 10cm 내 케이블·거치대가 화면을 덮은 근접 장면(가림·동기 오차).
+  T 방향까지 적합하면 16° 움직이면서 비용은 거의 안 줌 → `--fit-t` 기본 끔.
+- 스트림 크롭 확인: 세 센서 모두 4:3 active array 이고 640×480 도 4:3 이라 비례 축소만 가정. 얼굴 위치로 초광각→광각
+  1.66배 매핑이 맞음을 눈으로 확인. 4:3 이 아닌 `--size` 는 `K_from_characteristics` 가 거부.
+- **자동초점 발견**: 위 회전 보정본으로 2초 간격 새 번들 4개를 검사하니 dy 0.75~1.40px 로 흔들렸다. signed dy 를
+  `a + b·x + c·y` 로 적합하면 c(y-기울기) 가 −1.5 ↔ +1.7 로 부호가 바뀜 = 오른쪽(광각) 초점거리 스케일이 쌍마다 다름.
+  광각 5 는 AF(min focus 10 디옵터, focus_calibration=2 CALIBRATED), 초광각 2 는 고정초점(0). 앱 요청에
+  `CONTROL_AF_MODE_OFF` + `LENS_FOCUS_DISTANCE = 1/focus_m` 추가 (기본 1 m: 640×480 출력에서 약 0.56~4.7 m 선명).
+  고정 후 새 8쌍의 dy 는 1.6~2.3px 로 **일정**해졌다(잔차는 있지만 흔들리지 않음).
+- **yaw 자유 적합 실패**: 고정초점 8쌍으로 회전 3축 적합 → (−0.18, −0.87, 0.00)°, Sampson 은 0.41px 로 줄었지만 정류 후
+  시차>0 비율이 0.97→0.48 로 무너짐(1 m 장면 시차 7px 를 yaw −0.87°≈−6.6px 가 상쇄). dy 가 yaw 를 못 보니 fx 불일치를
+  yaw 로 흡수한 것. 변형 4개 비교(적합 8쌍 → 별도 6쌍 평가):
+  | 변형 | 회전 | 광각 fx 스케일 | 검증쌍 dy 중앙값 | 시차>0 |
+  |---|---|---|---|---|
+  | yaw 자유, 스케일 없음 | (−0.18,−0.87,0.00)° | 1 | 0.51~0.76 | **0.49 (실패)** |
+  | yaw 고정, 스케일 없음 | (−0.21, 0, −0.05)° | 1 | 0.57~0.89 | 0.96 |
+  | yaw 자유, 스케일 | (−0.26,−0.14,−0.15)° | 0.9916 | 0.39~0.52 | 0.97 |
+  | **yaw 고정, 스케일 (채택)** | (−0.27, 0, −0.17)° | 0.9909 | **0.43~0.56** | 0.97 |
+  → `refine_pose(fix_yaw=True, fit_scale=True)` 기본. 광각 fx 가 초점 1 m 에서 공장값의 0.991 인 것은 초점 위치 차이로 설명된다.
+- **`--known`**: dy 가 못 보는 yaw 는 시차에 f·δ 편향으로 그대로 들어가므로, 거리를 아는 물체 하나의 ROI 시차 중앙값이
+  f·b/Z 가 되도록 오른쪽 카메라 y축 회전을 할선법으로 푼다(`pin_yaw_known_distance`). 대응점은 원본에서 한 번만 찾고
+  후보 yaw 마다 `undistortPoints(R=R1,P=P1)` 로 정류 좌표를 해석적으로 재계산(매번 SIFT 를 다시 돌리면 ±0.3px 잡음에 할선법이
+  흔들렸다). 사람 ROI 시험: 목표 0.395 m → 시차 16.54→17.95px(목표 17.95), yaw +0.148°, 3회 수렴; 목표 0.5 m → 14.18px, yaw −0.259°.
+  (실측이 아니라 동작 확인. ROI 의 SIFT 중앙값 0.429 m 와 FFS seg 중앙값 0.395 m 는 ROI 에 배경이 섞여 다르다.)
+관측 가능성 한계: 에피폴라 잔차는 roll/pitch 는 강하게, **yaw 는 약하게**만 제약한다 (yaw 0.1° → Sampson 중앙값 0.02px 인데
+  시차 편향은 0.76px). baseline 15.76mm 라 1 m 시차가 7px 뿐이어서 yaw 0.1° = 11% 깊이 편향. 그래서 refine 결과는
+  `factory_baseline_refined` 로 두고, **체커보드 stereoCalibrate(`--board`, K 고정, rms≤1px·뷰≥8·baseline 공장값 ±15%)** 를
+  통과해야 `metric`. 실측 거리 1개로 최종 확인 권장.
+결과: `calib_phone_pair.json` (phone.physical ["2","5"], image_size 640×480). 오프라인 3쌍·라이브 30초 결과는 맨 위 절.
+남은 일: (1) 사용자가 자로 잰 거리 1개 → `--known` 으로 yaw 고정(`known_distance_pinned`), 다른 거리 1개로 교차 확인;
+  (2) 또는 노트북 체커보드를 폰으로 25~40cm 에서 15장+ 찍어 `--board` → `metric`. 망원(6) 쌍(초광각+망원 32.4mm)은
+  공장값 변환은 되지만 망원 fx 1193px 라 겹치는 시야가 좁아 기본에서 제외. bbox 모드는 사람이 화면 대부분을 차지하면
+  배경이 연속으로 섞여 dims 2.5 m 같은 값이 나왔고 status 가 ok 였다 → `aggregate` 에 "bbox + 단일군집 + 혼합깊이(p90/p10>1.3)
+  = ambiguous(`bbox_mixed_depth_no_split`)" 게이트 추가. seg 모드를 기본으로 볼 것.
+
 ## 파라미터 변경 이력
 
 | 날짜 | 항목 | 이전 → 이후 | 이유 | 영향 파일 |
@@ -435,3 +504,9 @@ provisional 저장 상태 유지, 2회째 rescale 거부, ROI y 밖 0px, 최종�
 | 2026-09-21 | YOLO seg 마스크 | `masks.xy` fillPoly → **`retina_masks=True` + `masks.data`** | 문제점 14 R02 | `lib_detect.py` |
 | 2026-09-21 | `planar_box` 평면성 게이트 | (없음) → **두께/짧은변 < 0.5** 아니면 치수 None | 문제점 14 R12 | `lib_stereo.py`, `z_object_depth.py` |
 | 2026-09-21 | requirements.txt | 3개 → **ultralytics/torch/torchvision/numpy 고정** | 재현성 | `requirements.txt` |
+| 2026-09-22 | 폰 스테레오 렌즈 순서 | (5,2) 광각 왼 → **(2,5) 초광각 왼, 광각 오른** | 공장 포즈 Tx<0 규약; 수신기가 반대 순서면 자동 스왑 | `z_phone_calib.py`, `lib_phone_depth.py` |
+| 2026-09-22 | 폰 상대 회전 | 공장 쿼터니언 그대로 → **roll/pitch (−0.27,−0.17)° + 광각 fx ×0.991 보정, yaw 공장 고정** | dy 1.6~2.3px → 0.43~0.56px(검증쌍) | `calib_phone_pair.json` |
+| 2026-09-22 | `refine_pose` fit_t | — → **기본 False** | 15.76mm 에서 T 방향 관측 약함(16° 흔들림) | `lib_phone_calib.py` |
+| 2026-09-22 | `refine_pose` fix_yaw / fit_scale | — → **True / True** | yaw 자유 적합이 −0.87° 로 튀어 시차 반전; AF 초점 위치별 fx 변화 | `lib_phone_calib.py` |
+| 2026-09-22 | 폰 앱 초점 | 자동초점(TEMPLATE_PREVIEW 기본) → **`CONTROL_AF_MODE_OFF` + `LENS_FOCUS_DISTANCE` 1/focus_m, `--focus-m` 기본 1.0** | focus breathing 으로 dy 가 촬영마다 1~2px 흔들림 | `MainActivity.java`, `z_phone_stereo.py` |
+| 2026-09-22 | `scale_status` 값 | provisional/measured/reference_scaled → **+ factory_unverified / factory_baseline_refined / metric / board_unreliable** (폰용) | 폰 캘리 출처 구분 | `z_phone_calib.py`, `lib_phone_depth.py` |

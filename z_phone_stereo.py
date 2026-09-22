@@ -4,6 +4,9 @@
   venv/bin/python z_phone_stereo.py --install --list
   venv/bin/python z_phone_stereo.py --physical 5 2 --yolo both
   venv/bin/python z_phone_stereo.py --physical 5 2 6 --duration 15 --headless
+  venv_ffs/bin/python z_phone_stereo.py --physical 2 5 --calib-stereo calib_phone_pair.json --yolo both   # FFS depth
+  venv_ffs/bin/python z_phone_stereo.py --physical 2 5 --calib-stereo calib_phone_pair.json --offline phone_stereo/runs/probe_now
+  venv/bin/python z_phone_stereo.py --physical 2 5 --save-interval 2 --headless --duration 60   # 캘리용 번들 자동 저장
 
 Camera IDs are device-specific. --list queries them using the actual Camera2 API.
 """
@@ -37,19 +40,47 @@ def start_phone(a):
     args = ["shell", "am", "start", "-S", "-n", PACKAGE + "/.MainActivity"]
     if not a.list:
         args += ["--es", "logical", a.logical, "--es", "physical", ",".join(a.physical),
-                 "--ei", "width", a.size[0], "--ei", "height", a.size[1], "--ei", "fps", a.fps]
+                 "--ei", "width", a.size[0], "--ei", "height", a.size[1], "--ei", "fps", a.fps,
+                 "--ef", "focus_diopters", (1.0 / a.focus_m) if a.focus_m > 0 else 0.0]
     print(adb(*args).stdout.strip(), flush=True)
 
 
 def save_pair(out, pair, a):
     out.mkdir(parents=True, exist_ok=True)
-    meta = dict(logical=a.logical, physical=a.physical, image_size=a.size,
+    meta = dict(logical=a.logical, physical=a.physical, image_size=a.size, focus_m=a.focus_m,
                 timestamp_ns=[f.timestamp_ns for f in pair], format="NV21 -> BGR PNG",
                 mode="phone_stereo", calibration="required_for_metric_depth")
     for i, f in enumerate(pair):
         if not cv2.imwrite(str(out / f"camera_{a.physical[i]}.png"), f.bgr):
             raise IOError("Cannot save paired PNG")
     (out / "pair.json").write_text(json.dumps(meta, indent=2))
+
+
+def run_offline(bundle, depth_worker, a):
+    """저장된 번들(camera_<id>.png) 로 depth 파이프라인만 실행. 결과는 번들 폴더의 depth_<mode>.png / depth.json."""
+    from lib_phone_stereo import PhoneFrame
+    bundle = Path(bundle)
+    meta = json.loads((bundle / "pair.json").read_text()) if (bundle / "pair.json").exists() else {}
+    ts = meta.get("timestamp_ns") or [0, 0]
+    pair = []
+    for i, pid in enumerate(a.physical[:2]):
+        img = cv2.imread(str(bundle / f"camera_{pid}.png"))
+        if img is None:
+            raise FileNotFoundError(bundle / f"camera_{pid}.png")
+        if (img.shape[1], img.shape[0]) != tuple(a.size):
+            raise ValueError(f"{bundle}: 이미지 {img.shape[1]}x{img.shape[0]} 가 --size {a.size} 와 다름")
+        pair.append(PhoneFrame(index=i, timestamp_ns=int(ts[i] if i < len(ts) else 0), bgr=img))
+    depth_worker.ep = None            # 라이브는 첫 쌍에서 한 번만 검사하지만, 번들마다 다른 장면이므로 매번 다시
+    vis, report = depth_worker(pair)
+    cv2.imwrite(str(bundle / f"depth_{a.yolo}.png"), vis)
+    (bundle / "depth.json").write_text(json.dumps(report, indent=2, ensure_ascii=False))
+    print(f"[offline {bundle.name}] {report['ms']:.0f}ms  epipolar dy_med {report['epipolar'].get('dy_med')} "
+          f"inlier {report['epipolar'].get('inlier_frac')}  scale_status {report['scale_status']}")
+    for method, rows in report["objects"].items():
+        for r in rows:
+            print(f"   {method:4s} #{r.get('instance')} {r.get('label'):10s} {r.get('status'):12s} "
+                  f"dist {r.get('dist_m')}m  z {r.get('z_cam1_med_m')}m  dims_mm {r.get('dims_mm')}  warn {r.get('warnings')}")
+    return report
 
 
 def detect_frame(frame, mode):
@@ -77,6 +108,12 @@ def main(a):
     if a.calib_stereo:
         from lib_phone_depth import PhoneDepth
         depth_worker = PhoneDepth(a)
+    if a.offline:
+        if depth_worker is None:
+            raise ValueError("--offline 은 --calib-stereo 가 필요 (depth 만 오프라인 실행)")
+        for b in a.offline:
+            run_offline(b, depth_worker, a)
+        return
     if a.install:
         subprocess.run(["python3", str(ROOT / "phone_stereo/build_android.py")], check=True)
         print(adb("install", "-r", "-g", ROOT / "phone_stereo/android/build/phone-stereo.apk").stdout)
@@ -128,6 +165,7 @@ def main(a):
     report = None
     inference_times = []
     last_save = 0
+    last_bundle = 0
     title = "Phone Stereo - USB to PC (Q: quit, S: paired PNG)"
     print(f"Receiving {a.physical}; saving to {out}", flush=True)
     try:
@@ -167,6 +205,10 @@ def main(a):
                 if key == ord("s") and pair:
                     save_pair(out / "captures" / str(pair[0].timestamp_ns), pair, a)
                     print("Saved paired PNGs", flush=True)
+            if a.save_interval and pair and now - last_bundle >= a.save_interval:
+                save_pair(out / "captures" / str(pair[0].timestamp_ns), pair, a)
+                last_bundle = now
+                print(f"Saved bundle {pair[0].timestamp_ns}", flush=True)
             if now - last_print >= 5:
                 print(json.dumps(receiver.stats()), flush=True)
                 last_print = now
@@ -208,6 +250,8 @@ if __name__ == "__main__":
     ap.add_argument("--physical", nargs="+", default=["5", "2"])
     ap.add_argument("--size", type=int, nargs=2, default=[640, 480])
     ap.add_argument("--fps", type=int, default=15)
+    ap.add_argument("--focus-m", type=float, default=1.0,
+                    help="광각 렌즈 초점 고정 거리(m). 0 = 자동초점(초점거리가 변해 스테레오에 부적합). 캘리와 같은 값으로 쓸 것")
     ap.add_argument("--max-skew-ms", type=float, default=10)
     ap.add_argument("--duration", type=float, default=0, help="0: run until Q/Ctrl-C")
     ap.add_argument("--headless", action="store_true")
@@ -217,6 +261,8 @@ if __name__ == "__main__":
     ap.add_argument("--calib-stereo", help="Phone lens-pair calibration JSON; enables FFS. Run with venv_ffs.")
     ap.add_argument("--scale", type=float, default=1.0)
     ap.add_argument("--iters", type=int, default=4)
+    ap.add_argument("--offline", nargs="+", metavar="DIR", help="저장 번들로 depth 만 실행 (폰 불필요)")
+    ap.add_argument("--save-interval", type=float, default=0, help="초. >0 이면 쌍을 주기적으로 captures/<ts>/ 에 저장 (캘리 수집용)")
     args = ap.parse_args()
     try:
         main(args)

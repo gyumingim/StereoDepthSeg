@@ -158,8 +158,74 @@ def t_dense():
     check(f"배경 과반 bbox -> status {rec2['status']}, 선택비율 {rec2['selected_fraction']:.2f}", rec2["status"] in ("ambiguous", "ok") and (rec2["selected_fraction"] < 0.5 or abs(rec2["depth_rect_m"] - 1.5) < 0.1))
 
 
+def _R_to_q(m):
+    """회전행렬 -> Android 쿼터니언 (x, y, z, w). Shepperd 분기 (180° 근방도 안전)."""
+    tr = np.trace(m)
+    if tr > 0:
+        s = np.sqrt(tr + 1.0) * 2; return np.array([(m[2,1]-m[1,2])/s, (m[0,2]-m[2,0])/s, (m[1,0]-m[0,1])/s, s/4])
+    i = int(np.argmax(np.diag(m)))
+    if i == 0:
+        s = np.sqrt(1.0 + m[0,0] - m[1,1] - m[2,2]) * 2; return np.array([s/4, (m[0,1]+m[1,0])/s, (m[0,2]+m[2,0])/s, (m[2,1]-m[1,2])/s])
+    if i == 1:
+        s = np.sqrt(1.0 + m[1,1] - m[0,0] - m[2,2]) * 2; return np.array([(m[0,1]+m[1,0])/s, s/4, (m[1,2]+m[2,1])/s, (m[0,2]-m[2,0])/s])
+    s = np.sqrt(1.0 + m[2,2] - m[0,0] - m[1,1]) * 2; return np.array([(m[0,2]+m[2,0])/s, (m[1,2]+m[2,1])/s, s/4, (m[1,0]-m[0,1])/s])
+
+
+def t_phone_calib():
+    print("폰 두 렌즈: Android 포즈 규약(X_cam=R(X_w−t)) -> OpenCV 변환, 좌우 자동 순서, 장면 대응점 회전 보정")
+    import lib_phone_calib as pc
+    qA = [0.70710678, -0.70710678, 0.0, 0.0]                       # S24 광각과 같은 180° 회전
+    RA = pc.quat_to_R(qA)
+    check("쿼터니언 (0.7071,-0.7071,0,0) -> 180° 회전, det=1", abs(pc.rotation_deg(RA) - 180) < 1e-6 and abs(np.linalg.det(RA) - 1) < 1e-9)
+    R_true = cv2.Rodrigues(np.radians([0.3, -0.2, 0.1]))[0]         # B 의 진짜 상대 회전 (A 카메라 프레임 기준)
+    RB = R_true @ RA
+    check("회전행렬 -> 쿼터니언 -> 회전행렬 왕복", np.abs(pc.quat_to_R(_R_to_q(RB)) - RB).max() < 1e-9)
+    tB = np.array([0.0, 0.01576, 0.0])                            # 센서축: B 가 +y(폰 위쪽) 15.76mm
+    size = (640, 480)
+    inv = {"A": dict(id="A", intrinsics=[2780.0, 2784.0, 2048.0, 1547.0, 0], active_array="Rect(0, 0 - 4080, 3060)",
+                     distortion=[0.01, -0.02, 0.001, 0.0005, -0.0003], pose_rotation=qA, pose_translation=[0, 0, 0]),
+           "B": dict(id="B", intrinsics=[1637.0, 1639.0, 2025.0, 1492.0, 0], active_array="Rect(0, 0 - 4000, 3000)",
+                     distortion=[-0.005, 0.04, -0.02, 0.0002, -0.0001], pose_rotation=_R_to_q(RB).tolist(), pose_translation=tB.tolist())}
+    L, Rr = pc.order_left_right(inv, ["A", "B"], size)
+    check(f"좌우 자동 순서: A 프레임에서 B 는 x=-15.76mm(왼쪽) -> (왼,오른)=({L},{Rr})", (L, Rr) == ("B", "A"))
+    st = pc.factory_stereo(inv, "B", "A", size)
+    check(f"factory T = {np.round(st['T']*1000, 3).tolist()} mm (x 성분만, 음수)", abs(st["T"][0] + 0.01576) < 1e-9 and abs(st["T"][1]) < 1e-9 and abs(st["T"][2]) < 1e-9)
+    # 세계점(센서축): 카메라는 -z_sensor 를 본다. 두 카메라에 투영해 정확한 대응점을 만든다.
+    rng = np.random.default_rng(1)
+    Z = rng.uniform(0.5, 3.0, 400); X = np.column_stack([rng.uniform(-0.9, 0.9, 400) * Z, rng.uniform(-0.6, 0.6, 400) * Z, -Z])
+    def project(c, Rc, tc):
+        Xc = (Rc @ (X - tc).T).T
+        px, _ = cv2.projectPoints(Xc.astype(np.float64), np.zeros(3), np.zeros(3), pc.K_from_characteristics(c, size), pc.dist_from_characteristics(c))
+        return px.reshape(-1, 2), Xc
+    pB, XB = project(inv["B"], RB, tB); pA, XA = project(inv["A"], RA, np.zeros(3))
+    inside = np.all((pB > 0) & (pB < size), 1) & np.all((pA > 0) & (pA < size), 1) & (XA[:, 2] > 0) & (XB[:, 2] > 0)
+    pA, pB, XA, XB = pA[inside], pB[inside], XA[inside], XB[inside]
+    check(f"양쪽 카메라 앞·화면 안 점 {inside.sum()}개, X_A = R X_B + T 일치", inside.sum() > 150 and np.abs((st["R"] @ XB.T).T + st["T"] - XA).max() < 1e-9)
+    nL, nR = ls._to_normalized(pB, st["K1"], st["dist1"]), ls._to_normalized(pA, st["K2"], st["dist2"])
+    samp = ls.epipolar_sampson(nL, nR, st["R"], st["T"]) * st["K1"][0, 0]
+    check(f"정확한 대응점의 Sampson 오차 최대 {samp.max():.2e}px", samp.max() < 1e-4)
+    # 공장 roll/pitch 가 0.36° 틀리고 광각 fx 가 초점 이동으로 0.6% 다른 상황 + 0.3px 잡음 -> 기본 설정(yaw 고정, 스케일 적합)으로 회수되는가
+    R_wrong = cv2.Rodrigues(np.radians([0.3, 0.0, -0.2]))[0] @ st["R"]
+    K2_wrong = st["K2"].copy(); K2_wrong[0, 0] /= 1.006; K2_wrong[1, 1] /= 1.006      # 진짜 fx 는 이 K2 의 1.006배
+    pBn, pAn = pB + rng.normal(0, 0.3, pB.shape), pA + rng.normal(0, 0.3, pA.shape)
+    nLn, nRn = ls._to_normalized(pBn, st["K1"], st["dist1"]), ls._to_normalized(pAn, K2_wrong, st["dist2"])
+    Rf, Tf, s_w, info = pc.refine_pose(nLn, nRn, R_wrong, st["T"], float(st["K1"][0, 0]))
+    err = np.degrees(cv2.Rodrigues(Rf @ st["R"].T)[0].ravel())
+    check(f"roll/pitch 0.36° + fx 0.6% 오차 -> 잔여 (roll,pitch,yaw)=({err[0]:+.3f},{err[1]:+.3f},{err[2]:+.3f})°, 스케일 {s_w:.4f}(정답 1.006), Sampson 중앙값 {info['sampson_med_px']:.2f}px",
+          np.abs(err).max() < 0.05 and abs(s_w - 1.006) < 0.002 and info["sampson_med_px"] < 0.6)
+    # yaw 를 자유로 두면 잡음만으로도 훨씬 크게 흔들린다 (관측 약함의 수치 근거)
+    Rf2, _, _, info2 = pc.refine_pose(nLn, nRn, R_wrong, st["T"], float(st["K1"][0, 0]), fix_yaw=False)
+    err2 = np.degrees(cv2.Rodrigues(Rf2 @ st["R"].T)[0].ravel())
+    check(f"yaw 자유 적합 시 yaw 잔여 {err2[1]:+.3f}° (고정 시 0) — 합성 깨끗한 데이터라 작지만 실쌍에선 -0.87° 로 튐(STATUS 16)", abs(err2[1]) < 0.5)
+    # yaw(y축) 만 0.1° 틀리면 시차 편향 f·δ ≈ 0.8px: 이 편향은 dy 로 거의 안 보인다는 한계를 수치로 남긴다
+    R_yaw = cv2.Rodrigues(np.radians([0, 0.1, 0]))[0] @ st["R"]
+    s_yaw = ls.epipolar_sampson(nL, nR, R_yaw, st["T"]) * st["K1"][0, 0]
+    check(f"yaw 0.1° 오차의 Sampson 중앙값 {np.median(s_yaw):.3f}px (시차 편향 {st['K2'][0,0]*np.radians(0.1):.2f}px 인데 잔차는 작다 = yaw 는 dy 로 관측 약함)",
+          np.median(s_yaw) < 0.3)
+
+
 if __name__ == "__main__":
-    for t in (t_r01, t_r03, t_r05_r07, t_r08, t_r10, t_dense):
+    for t in (t_r01, t_r03, t_r05_r07, t_r08, t_r10, t_dense, t_phone_calib):
         try:
             t()
         except Exception as e:

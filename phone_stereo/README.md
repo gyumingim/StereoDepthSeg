@@ -49,13 +49,30 @@ USB 디버깅을 허용한 폰을 연결하고 저장소 루트에서 실행한�
   --calib-stereo calib_phone_pair.json --iters 4
 ```
 
-**현재 폰 렌즈 쌍의 보정 파일은 아직 없다. 따라서 이 폰 입력으로 FFS 거리 추론을 실행·검증한 상태는 아니다.** 기존 노트북/폰 보정값을 대신 넣지 않는다. 파일에는 기존 stereo 형식의 `K1, dist1, K2, dist2, R, T, image_size`와 입력 ID를 검증하는 아래 필드가 필요하다.
+보정 파일 `calib_phone_pair.json` 은 `z_phone_calib.py` 가 만든다 (2026-09-22, Claude). 출처는 세 단계다.
 
-```json
-"phone": {"logical": "0", "physical": ["5", "2"]}
+| 단계 | 명령 | `scale_status` | 의미 |
+|---|---|---|---|
+| 공장값 | `./venv/bin/python z_phone_calib.py --factory` | `factory_unverified` | Camera2 공장 포즈 그대로. 실쌍에서 정류 dy 2~5px → 쓰지 말 것 |
+| 회전 보정 | `./venv/bin/python z_phone_calib.py --refine phone_stereo/runs/<번들…>` | `factory_baseline_refined` | 장면 SIFT 대응점으로 roll/pitch + 광각 fx 스케일 보정(yaw 공장 고정), baseline 15.76mm 는 공장값. 검증쌍 dy 0.43~0.56px. **현재 저장소 파일** |
+| 실측 1개 | `./venv/bin/python z_phone_calib.py --known <번들> --known-m <m> --roi x y w h` | `known_distance_pinned` | 거리를 아는 물체의 ROI 시차로 yaw 고정. 자 하나면 된다 |
+| 체커보드 | `./venv/bin/python z_phone_calib.py --board phone_stereo/runs/<보드 번들> --screen laptop --ruler-mm <실측>` | `metric` (rms≤1px, 뷰≥8, baseline 공장값 ±15%) | 유일하게 yaw·baseline 을 데이터로 잡음. 절차는 `doc_HOW_TO_RUN.md` "폰 두 렌즈만으로" |
+
+**초점은 고정해야 한다.** 광각 5 는 AF 렌즈라 자동초점이면 초점거리가 프레임마다 0.3~0.7% 변해 정류가 1~2px 씩 흔들린다. 앱은 기본으로 `CONTROL_AF_MODE_OFF` + `LENS_FOCUS_DISTANCE` 1 m 로 고정하며(`--focus-m`, 0 이면 자동초점), 캘리 번들의 초점값이 json 에 기록되고 실행값과 다르면 객체마다 `focus_mismatch` 경고가 붙는다. 초광각 2 는 고정초점이다.
+
+공장값 변환 규약(NDK 문서 인용은 `lib_phone_calib.py` 머리): `X_B = R_B R_Aᵀ X_A + R_B(t_A − t_B)`, K 는 active array→출력 해상도 비례, 왜곡은 `[κ1,κ2,κ4,κ5,κ3]`. 초광각 2 가 왼쪽, 광각 5 가 오른쪽(Tx = −15.76mm)이라 파일의 `phone.physical` 은 `["2","5"]` 다. `--physical 5 2` 로 받아도 수신기가 같은 두 렌즈를 확인한 뒤 순서를 뒤집어 쓴다. 다른 렌즈(6)나 다른 해상도는 거부한다.
+
+```bash
+# 저장 번들로 depth 만 (폰 불필요): 번들 폴더에 depth_both.png / depth.json 생성
+./venv_ffs/bin/python z_phone_stereo.py --physical 2 5 --calib-stereo calib_phone_pair.json --yolo both \
+  --offline phone_stereo/runs/probe_now
+# 라이브 FFS + seg/bbox
+./venv_ffs/bin/python z_phone_stereo.py --physical 2 5 --calib-stereo calib_phone_pair.json --yolo both
 ```
 
-`R,T`는 `X2 = R·X1 + T`, T는 미터다. 렌즈 순서·수평 정류 부호가 맞지 않으면 기존 정류 코드가 거부한다. 보정에 맞춰 `--physical` 순서도 바꿔야 한다. 입력 해상도·렌즈 ID가 일치해야 하며 실제 거리 스케일을 검증한 경우에만 `scale_status: "metric"`로 기록한다. FFS 속도와 거리 정확도는 이 보정 완료 후 별도로 측정해야 한다.
+직접 확인 (RTX 4060, venv_ffs, 640×480, 초점 1 m 고정): 오프라인 — 사람 seg 0.395/0.412 m (bbox 는 사람이 화면 대부분이라 배경 혼입 → seg 를 볼 것). 라이브 25초 — 367쌍 15.0 fps, FFS+YOLO(seg+bbox) 80회, 중앙값 258 ms, 첫 쌍 dy 0.32px·인라이어 0.95, 벽시계 1.80 m·183×60 mm.
+
+**거리 정확도 한계**: baseline 15.76 mm 라 1 m 에서 시차가 7px 뿐이다. 시차 0.5px 오차 → 깊이 오차 ≈ Z²×0.070 (0.5 m 18 mm, 1 m 70 mm, 2 m 0.28 m). 캘리 yaw 0.1° 오차는 시차 0.76px 편향 = 1 m 에서 11%. `metric` 이 아닌 상태의 결과에는 객체마다 `scale_not_validated:<status>` 경고가 붙는다.
 
 ## 파일과 검증
 
@@ -64,6 +81,8 @@ USB 디버깅을 허용한 폰을 연결하고 저장소 루트에서 실행한�
 - `lib_phone_stereo.py`: 분할 TCP 패킷 처리·타임스탬프 pairing·수신 통계.
 - `z_phone_stereo.py`: 설치·시작·PC 표시·GPU 추론·원본 저장·종료.
 - `lib_phone_depth.py`: 폰 쌍의 보정값 검증 및 기존 FFS depth 파이프라인 연결.
+- `lib_phone_calib.py` / `z_phone_calib.py`: 공장 CameraCharacteristics → OpenCV 스테레오 캘리, 장면 회전 보정, 체커보드 stereoCalibrate, `--check`.
+- `phone_stereo/cameras_s24.json`: 이 S24 의 `--list` 결과 사본 (runs/ 는 git 에 없으므로).
 - `phone_stereo/test_receiver.py`: 잘린/손상된 패킷, 프레임 누락·재사용 방지, 다른 카메라 보정값 거부 테스트.
 
 ```bash

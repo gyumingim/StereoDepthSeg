@@ -74,8 +74,11 @@ class ReceiverTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             path=Path(d)/"calibration.json"
             path.write_text(json.dumps(st))
-            self.assertEqual(load_phone_calibration(path,"0",["5","2"],[640,480]),st)
-            for physical,size in [(["2","5"],[640,480]),(["5","2"],[1280,720]),(["5","6"],[640,480])]:
+            self.assertEqual(load_phone_calibration(path,"0",["5","2"],[640,480]),(st,False))
+            # 같은 두 렌즈를 반대 순서로 받으면 거부하지 않고 swap=True (수신 쌍을 뒤집어 쓴다)
+            self.assertEqual(load_phone_calibration(path,"0",["2","5"],[640,480]),(st,True))
+            self.assertEqual(load_phone_calibration(path,"0",["2","5","6"],[640,480]),(st,True))
+            for physical,size in [(["5","2"],[1280,720]),(["5","6"],[640,480]),(["2","6"],[640,480])]:
                 with self.assertRaises(ValueError):
                     load_phone_calibration(path,"0",physical,size)
             del st["phone"]

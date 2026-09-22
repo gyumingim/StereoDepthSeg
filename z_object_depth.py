@@ -219,8 +219,13 @@ def aggregate(rec, region, valid, Z, pts_cam1, rp=None, outline=False):
     # seg: 마스크 안 소수 군집 20% 초과면 혼입/가림 의심.
     # bbox: 소수 군집이 40% 를 넘으면(예: 물체 55% / 배경 45%) 어느 쪽이 물체인지 확정할 수 없다.
     #       중앙 지지로 고르긴 하지만 status 는 ambiguous 로 두고 depth_clusters 를 보게 한다.
+    # bbox: 깊이 군집이 갈라지지 않는데(single-cluster) 상자 안 깊이가 p90/p10 > 1.3 로 섞여 있으면 배경이 연속으로
+    #       들어온 것(예: 화면 대부분을 차지한 사람 + 뒤 벽·바닥 — 폰 실쌍에서 dims 2.5m, dist 1.57m 가 ok 로 나왔다).
+    #       seg 는 마스크가 물체만 잡으므로 깊이가 긴 물체(탁자)를 위해 이 조건을 걸지 않는다.
     thr = 0.2 if rec["method"] == "seg" else 0.4
     ambiguous = rec["minority_fraction"] > thr or frac < 0.5
+    if rec["method"] == "bbox" and rec["mixed_depth"] and rec["selection_policy"] == "single-cluster":
+        ambiguous = True; rec["warnings"].append("bbox_mixed_depth_no_split")
     rec["status"] = "ambiguous" if ambiguous else "ok"
     return rec
 

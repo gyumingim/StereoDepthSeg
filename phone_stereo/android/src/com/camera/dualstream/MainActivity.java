@@ -103,6 +103,9 @@ public class MainActivity extends Activity {
         j.put("pose_translation",array(c.get(CameraCharacteristics.LENS_POSE_TRANSLATION)));
         j.put("pose_rotation",array(c.get(CameraCharacteristics.LENS_POSE_ROTATION)));
         j.put("pose_reference",c.get(CameraCharacteristics.LENS_POSE_REFERENCE));
+        // 0 = fixed focus. Stereo needs a fixed focal length: autofocus breathing shifts fx/fy by ~0.5%.
+        j.put("min_focus_diopters",c.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE));
+        j.put("focus_calibration",c.get(CameraCharacteristics.LENS_INFO_FOCUS_DISTANCE_CALIBRATION));
         JSONArray sizes=new JSONArray();
         StreamConfigurationMap m=c.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         if(m!=null && m.getOutputSizes(ImageFormat.YUV_420_888)!=null)
@@ -133,6 +136,13 @@ public class MainActivity extends Activity {
             CaptureRequest.Builder request=camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             request.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE,CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_OFF);
             request.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE,CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_OFF);
+            // Fixed manual focus (diopters = 1/m). Autofocus changes the wide lens focal length between frames
+            // (focus breathing), which moved rectified dy by 1-2 px between captures. 0 keeps autofocus.
+            float focus=getIntent().getFloatExtra("focus_diopters",1.0f);
+            if(focus>0f) {
+                request.set(CaptureRequest.CONTROL_AF_MODE,CaptureRequest.CONTROL_AF_MODE_OFF);
+                request.set(CaptureRequest.LENS_FOCUS_DISTANCE,focus);
+            }
             int fps=getIntent().getIntExtra("fps",15);
             Range<Integer>[] ranges=manager.getCameraCharacteristics(camera.getId()).get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
             if(ranges!=null) for(Range<Integer> r:ranges)
@@ -151,7 +161,7 @@ public class MainActivity extends Activity {
                         session=s;
                         try {
                             s.setRepeatingRequest(request.build(),null,handler);
-                            status("STREAMING logical="+camera.getId()+" physical="+Arrays.toString(ids));
+                            status("STREAMING logical="+camera.getId()+" physical="+Arrays.toString(ids)+" focus_diopters="+focus);
                         } catch(Exception e) { status("REQUEST_FAILED "+e); }
                     }
                     @Override public void onConfigureFailed(CameraCaptureSession s) { status("CONFIGURE_FAILED"); }
