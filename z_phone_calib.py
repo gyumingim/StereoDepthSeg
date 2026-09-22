@@ -69,6 +69,16 @@ def main(a):
     st = pc.factory_stereo(inv, L, R, a.size, a.logical)
     print(f"공장값: baseline {st['baseline_m']*1000:.2f}mm, 상대회전 {st['factory_rotation_deg']:.2f}°, "
           f"fx L {st['K1'][0,0]:.1f} R {st['K2'][0,0]:.1f} @ {a.size}")
+    if a.base and (a.board or a.refine):
+        # 기존 보정본(예: 광각 fx 0.991 스케일이 들어간 refine 결과)의 K/dist 를 초기값·고정값으로. 캡처 해상도에 맞게 비례 조정.
+        base = scale_to(pc.load(a.base), a.size)
+        if base["phone"]["physical"] != [L, R]:
+            raise ValueError(f"--base {a.base} 는 {base['phone']['physical']} 용 — --physical 불일치")
+        for k in ("K1", "K2", "dist1", "dist2", "R", "T", "focal_scale_wide"):
+            if k in base:
+                st[k] = base[k]
+        st["intrinsics_source"] = f"base:{a.base}"
+        print(f"--base 적용: fx L {st['K1'][0,0]:.1f} R {st['K2'][0,0]:.1f} @ {a.size} (광각 스케일 {st.get('focal_scale_wide', 1.0):.4f})")
     if a.refine:
         pairs = pc.load_pairs(a.refine, L, R)
         nL, nR, counts = pc.collect_matches(pairs, st)
@@ -157,7 +167,7 @@ if __name__ == "__main__":
     ap.add_argument("--no-scale", action="store_true", help="광각 fx 스케일 적합 끔 (기본 켬: AF 렌즈 초점 위치별 fx 변화 보상)")
     ap.add_argument("--known", metavar="DIR", help="실측 거리로 yaw 고정: 이 번들의 --roi 안 물체가 --known-m 에 있음")
     ap.add_argument("--known-m", type=float)
-    ap.add_argument("--base", help="--known 단독 실행 때 바탕이 될 기존 json (기본: --out 과 같은 파일)")
+    ap.add_argument("--base", help="바탕 json: --known 단독이면 그 위에 yaw 만 고정, --board/--refine 이면 그 K/dist(광각 fx 스케일 포함)를 초기값으로")
     ap.add_argument("--roi", type=int, nargs=4, metavar=("X", "Y", "W", "H"), help="초광각(왼쪽) 정류영상 기준 ROI")
     ap.add_argument("--board", nargs="+", metavar="DIR", help="체커보드 번들로 stereoCalibrate")
     ap.add_argument("--screen", default="laptop", choices=sorted(lib_calib.SCREENS))

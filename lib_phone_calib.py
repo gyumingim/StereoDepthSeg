@@ -293,6 +293,19 @@ def pin_yaw_known_distance(st, imL, imR, roi, known_m, iters=8):
     return new, new["yaw_pin"]
 
 
+def evaluate_pairs(pairs, st):
+    """정류 후 쌍별 에피폴라 dy 통계 (lib_rectify.epipolar_check). 반환 (rows, rp)."""
+    cal = [dict(K=np.asarray(st[f"K{i}"]), dist=np.asarray(st[f"dist{i}"]), image_size=tuple(st["image_size"])) for i in (1, 2)]
+    rp = lr.rectify_maps(*cal, np.asarray(st["R"]), np.asarray(st["T"]))
+    rows = []
+    for name, imL, imR in pairs:
+        rL, rR = lr.rectify_pair(imL, imR, rp)
+        ep = lr.epipolar_check(rL, rR)
+        ep["pair"] = name
+        rows.append(ep)
+    return rows, rp
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # 3) 체커보드 stereoCalibrate
 # ══════════════════════════════════════════════════════════════════════════════
