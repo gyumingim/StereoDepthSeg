@@ -572,3 +572,25 @@ Camera2 가 두 물리 스트림에 같은 timestamp 를 주지만 `LOGICAL_MULT
 | 2026-09-22 | `calib_phone_pair.json` | refine(yaw 공장) → **체커보드 stereoCalibrate `metric`** (RMS 0.26px, 25뷰, baseline 15.53mm, yaw −0.255°) | 절대거리 −10.8% → −1.8% | `calib_phone_pair.json` |
 | 2026-09-22 | 보드 캘리 촬영 | 주기 저장 → **`--still --board-hud` 정지·양쪽 검출 시에만** | 문제점 18 | `z_phone_stereo.py` |
 | 2026-09-22 | `scale_status` 값 | provisional/measured/reference_scaled → **+ factory_unverified / factory_baseline_refined / metric / board_unreliable** (폰용) | 폰 캘리 출처 구분 | `z_phone_calib.py`, `lib_phone_depth.py` |
+
+### 2026-09-22: 이미지와 촬영 결과의 timestamp 정확 연결
+
+`phone_stereo` 앱에서 최신 물리 오프셋 재사용을 제거했다. `Image.getTimestamp()`와 같은 논리 `SENSOR_TIMESTAMP`의 결과에 있는 물리 timestamp만 전송한다. 두 콜백의 도착 순서를 모두 처리하고, 누락 데이터는 추정하지 않는다. 대기는 24개/1초로 제한한다. PC는 첫 렌즈 기준 앞뒤 후보 중 가까운 프레임을 선택하고 허용차 초과 묶음을 제외한다. 이전 §18의 6ms/p95 14ms는 이전 알고리즘의 측정치다.
+
+검증: 연결/수신 테스트 10개 통과, 기존 selftest 31/31 통과, APK 빌드 및 연결된 S24 설치 완료. 640×480, 15fps, 20초 실기기 시험(`phone_stereo/runs/exact_timestamp_probe/summary.json`): 프레임 289/290개, 287쌍, timestamp 차 중앙값 15.245ms / p95 32.349ms, 순서 역전 폐기 0, 수신 오류 없음. 마지막 주기 로그에서 matched=541, unmatched_dropped=0 (`matcher.log`; 종료 총계는 아님). 하드웨어 노출 동기화나 움직이는 물체의 거리 정확도를 입증한 시험은 아니다.
+
+### 2026-09-22: 객체별 지역 3D 점군 맵
+
+`--object-map` 추가. `lib_object_map.py`: SIFT+metric-depth PnP 위치 추적, 정류 전 좌표 변환, IMU 회전 일치 검사, 정지 객체 mask-depth voxel 누적, 객체 ID 및 카메라 경로 저장. 추적 실패 시 이전 포즈로 무작정 누적하지 않는다. `lib_object_map_view.py`: 독립 HTML orbit 뷰어. `PhoneDepth`/라이브 GUI/오프라인 번들 흐름에 연결했다. `imu_for_pair`에 렌즈별 노출 시각의 센서 표본을 추가해 stream 순서를 바꿔도 실제 왼쪽 렌즈의 IMU를 사용한다.
+
+S24 25초 시험(`phone_stereo/runs/object_map_probe`): 358쌍, FFS+seg+맵 53회, 중앙 처리시간 276.8ms, 추론 오류 없음. 53포즈를 추적했고 clock 객체 61점의 PLY/JSON/HTML 파일 생성 확인. 이 시험은 정지 상태이며 객체가 1회만 누적되어, 실제 이동 다면 복원 정확도를 검증한 것은 아니다. 알려진 카메라 이동(프레임당 3cm) 합성 텍스처 영상에서는 실제 특징점 추적으로 3뷰를 같은 객체에 누적하고 위치 오차 5mm 이내를 확인하는 테스트를 추가했다. 초기 카메라 좌표계의 지역 점군 구현이며, 전역 SLAM/메시/재실행 복구는 미구현이다.
+
+### 2026-09-22: RGB-D·IMU 통합 뷰어
+
+`--rgbd-viewer` 추가 (`lib_rgbd_viewer.py`). 같은 완료 프레임의 RGB/깊이/전체 장면 컬러 점군/노출 시각 IMU를 한 창에 표시. 3D 마우스 orbit·zoom·pan, 픽셀 Z/range/XYZ 조회, F 표시 고정, C 점군 컬러 전환, E 내보내기를 지원한다. 객체 맵 옵션과 동시 실행 가능. 프레임별 원본 RGB, uint16 mm 깊이, float 깊이/점 NPZ, PLY, 독립 HTML, 시각·좌표계·IMU JSON을 저장한다. IMU 기기 축과 점군 렌즈 축, 선가속도와 중력은 구분 표기한다.
+
+검증: 뷰어 신규 6개 포함 관련 테스트 26개 통과. 저장 번들 오프라인 및 S24 GUI 실기기 시험 완료(`phone_stereo/runs/rgbd_live_probe`): 20초, 281쌍, FFS+seg+맵 29회, 추론 중앙값 278.9ms, 추론 오류 없음. viewer.png 및 8종 결과 파일 확인. RealSense 하드웨어/SDK 호환 구현이 아니라 폰 데이터의 RGB-D·IMU 표현 기능이다.
+
+### 2026-09-22: 요청에 따라 객체 맵 누적 제거
+
+`--object-map` 및 맵 설정 옵션, 객체별 모델 누적/위치 추적 모듈과 전용 테스트를 제거했다. 기존 저장 결과는 유지한다. YOLO 객체 인식과 RGB-D/IMU 뷰어 및 단일 프레임 전체 장면 점군 내보내기는 유지하며, RGB 패널에도 객체 검출 overlay를 표시한다. 점군 내보내기와 HTML 표시는 독립 `lib_pointcloud_export.py`, `lib_pointcloud_view.py`로 분리했다. 남은 수신/뷰어/타임스탬프 테스트 16개 통과.

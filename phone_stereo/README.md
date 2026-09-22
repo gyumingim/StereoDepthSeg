@@ -38,7 +38,7 @@ USB 디버깅을 허용한 폰을 연결하고 저장소 루트에서 실행한�
 
 두 렌즈+YOLO 시험의 마지막 추론은 약 16.7ms였다. 전체 평균이나 FFS 포함 시간은 아니다. 수신 이미지들은 서로 다른 픽셀 배열이며 렌즈별 화각을 갖는다. 위 검증은 단기 실행이며 장시간 발열·배터리·고해상도 성능을 보증하지 않는다.
 
-관측된 Image timestamp 차이는 0ms지만 HAL의 sensor sync 등급은 `APPROXIMATE`다. 동일한 보고 timestamp가 정밀한 물리 노출 동기화를 입증하지는 않는다. 다른 시점 프레임을 재사용하지 않으며 기본 10ms 허용차를 넘으면 묶음에서 제외한다. `--max-skew-ms`로 변경할 수 있다.
+관측된 Image timestamp 차이는 0ms지만 HAL의 sensor sync 등급은 `APPROXIMATE`다. 동일한 보고 timestamp가 정밀한 물리 노출 동기화를 입증하지는 않는다. 다른 시점 프레임을 재사용하지 않으며 CLI 기본 35ms 허용차를 넘으면 묶음에서 제외한다. `--max-skew-ms`로 변경할 수 있다.
 
 ## FFS 객체 depth
 
@@ -72,7 +72,14 @@ USB 디버깅을 허용한 폰을 연결하고 저장소 루트에서 실행한�
 
 직접 확인 (RTX 4060, venv_ffs, 640×480, 초점 1 m 고정): 오프라인 — 사람 seg 0.395/0.412 m (bbox 는 사람이 화면 대부분이라 배경 혼입 → seg 를 볼 것). 라이브 25초 — 367쌍 15.0 fps, FFS+YOLO(seg+bbox) 80회, 중앙값 258 ms, 첫 쌍 dy 0.32px·인라이어 0.95, 벽시계 1.80 m·183×60 mm.
 
-**두 렌즈는 하드웨어 동기가 아니다** (`SENSOR_SYNC_TYPE = APPROXIMATE`). 실측: 초광각이 광각보다 56~89 ms 먼저 노출되고(각자 free-run, 위상이 초당 ~4 ms 드리프트) 논리 timestamp 는 광각 것이다. 앱이 물리 `SENSOR_TIMESTAMP` 로 프레임 시각을 보정해 보내고 PC 가 실제로 가장 가까운 프레임끼리 묶어(`--max-skew-ms 35`) 좌우 노출차를 **중앙값 6 ms(p95 14 ms)** 로 줄였다. 남은 잔차 동안의 폰 회전은 자이로로 보상한다. 그래도 빠르게 움직이는 물체는 거리가 틀릴 수 있고, 캘리 촬영은 `--still --board-hud` 로 정지 순간만 쓴다 (STATUS 문제점 18). `frame_timing` 센서값(물리별 오프셋 ms, 노출, 프레임 주기, 롤링셔터 skew)이 `summary.json`/`pair.json` 에 기록된다.
+**HAL의 동기 등급은 `APPROXIMATE`**이므로 동일한 논리 timestamp만으로 동시 노출을 보장할 수 없다. 앱은 `Image.getTimestamp()`와 **정확히 같은 논리 `SENSOR_TIMESTAMP`**의 촬영 결과를 찾아, 해당 렌즈의 물리 `SENSOR_TIMESTAMP`를 전송한다. 이미지/결과 콜백은 어느 쪽이 먼저 와도 연결하며, 결과 또는 물리 timestamp가 없으면 이전 오프셋을 재사용하지 않는다. 대기 항목은 24개/1초로 제한한다. Android `RESULT` 로그의 `matched`, `unmatched_dropped`로 연결 및 대기 이미지 폐기 수를 확인한다.
+
+PC는 첫 렌즈 프레임 시각을 기준으로 다른 렌즈의 앞뒤 후보가 도착할 때까지 기다린 뒤 가까운 후보를 선택한다(보통 최대 한 프레임의 추가 대기). 선택한 묶음의 최대 시각차가 `--max-skew-ms 35`를 넘으면 제외하고 프레임을 재사용하지 않는다. `--raw-ts`는 논리 timestamp를 그대로 보내는 비교용 옵션이다. 이 변경은 메타데이터 연결과 프레임 선택을 바로잡으며, 센서 노출 자체를 동기화하지 않는다. 빠른 물체 운동과 롤링셔터 오차는 남을 수 있다.
+
+이전 구현의 중앙값 6ms / p95 14ms는 **최신 오프셋을 재사용하던 코드의 과거 측정치**다. 새 구현의 결과로 해석하지 않는다. `frame_timing` 센서값(물리별 오프셋 ms, 노출, 프레임 주기, 롤링셔터 skew)은 계속 `summary.json`/`pair.json`에 기록된다. 캘리 촬영은 `--still --board-hud`로 정지 순간을 사용한다.
+
+연결 로직 회귀 테스트: `./venv/bin/python -m unittest phone_stereo.test_receiver phone_stereo.test_timestamp_matcher` (Java 테스트에 JDK 필요).
+
 
 **거리 정확도 한계**: baseline 15.76 mm 라 1 m 에서 시차가 7px 뿐이다. 시차 0.5px 오차 → 깊이 오차 ≈ Z²×0.070 (0.5 m 18 mm, 1 m 70 mm, 2 m 0.28 m). 캘리 yaw 0.1° 오차는 시차 0.76px 편향 = 1 m 에서 11%. `metric` 이 아닌 상태의 결과에는 객체마다 `scale_not_validated:<status>` 경고가 붙는다.
 
@@ -101,3 +108,26 @@ USB 디버깅을 허용한 폰을 연결하고 저장소 루트에서 실행한�
 ```
 
 구현 근거: [Android Camera2 multi-camera](https://developer.android.com/media/camera/camera2/multi-camera), [Image.Plane stride](https://developer.android.com/reference/android/media/Image.Plane), [Image timestamp](https://developer.android.com/reference/android/media/Image#getTimestamp()), [FFS 공식 코드](https://github.com/NVlabs/Fast-FoundationStereo).
+
+## RGB·깊이·3D·IMU 통합 뷰어
+
+```bash
+cd /home/karma/camera
+./venv_ffs/bin/python z_phone_stereo.py \
+  --physical 2 5 --calib-stereo calib_phone_pair.json --yolo seg \
+  --rgbd-viewer --out phone_stereo/runs/rgbd_view
+```
+
+`--yolo seg`는 객체 인식을 수행하고 RGB 패널에 표시한다. 객체별 3D 모델 생성·맵 누적 기능은 제거했다. 현재 **전체 장면**의 RGB/깊이/컬러 점군/IMU를 표시한다. [RealSense D435i의 RGB-D·IMU 보기](https://github.com/realsenseai/librealsense/blob/master/doc/d435i.md)를 참고한 폰 전용 뷰어이며, 입력은 기존 폰 스테레오와 FFS 추정 깊이다. RealSense SDK 장치 에뮬레이션은 하지 않는다.
+
+한 화면의 RGB·깊이·점군은 같은 완료된 추론 결과를 사용하고 IMU도 해당 왼쪽 렌즈 노출 시각에 대응한다. 카메라 수신 FPS와 별개로 추론이 끝날 때 갱신된다. 컬러 영상과 깊이는 정류된 왼쪽 영상 좌표로 정렬되어 있다.
+
+- 상단 RGB/깊이 클릭: 해당 픽셀의 rectified Z, 렌즈에서의 거리, 원래 왼쪽 렌즈 좌표계 XYZ(m). 무효 깊이는 `invalid depth`.
+- 왼쪽 아래 3D 패널: 드래그 회전, 휠 확대, Shift+드래그 이동, R 초기화.
+- C: 점군 RGB/깊이 색 전환. F: 표시 프레임 고정/해제(카메라와 추론은 계속).
+- IMU 패널: 자이로 rad/s, 중력 제거 선가속도 m/s², 중력 m/s², 센서-노출 시간차, 게임 회전벡터의 기기 방향 축.
+- E: 현재 표시 프레임을 `rgbd_captures/<timestamp>/`에 저장. Q: 종료.
+
+`rgbd/`에는 약 5초 간격과 종료 시 마지막 표시 프레임을 저장한다. `rgb.png`, `depth_color.png`, `viewer.png`, `depth_mm.png`(uint16, 1=1mm, 0=무효), `rgbd.npz`(float32 깊이 m·valid·원래 렌즈 좌표 점·K·R1), `scene.ply`, 회전 가능한 `scene.html`, `frame.json`(시각/단위/좌표계/IMU). PNG의 깊이는 정류 좌표 Z이고 PLY의 점은 원래 왼쪽 렌즈 좌표라 회전 R1이 메타데이터에 포함된다. IMU 벡터는 Android 기기 축이며 선가속도는 중력을 포함한 원시 가속도와 구분한다.
+
+`--depth-range 0.3 3`은 깊이 색 범위 및 표시/PLY 점군의 Z 범위를 정한다. NPZ와 uint16 깊이 PNG에는 이 표시 범위로 잘라내지 않은 유효 깊이가 들어간다. `--headless`에서도 파일 생성 가능. `--offline <bundle>`과 함께 쓰면 `--out` 아래 `rgbd/<bundle 이름>/`으로 저장한다.

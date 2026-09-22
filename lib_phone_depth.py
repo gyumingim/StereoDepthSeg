@@ -114,6 +114,7 @@ class PhoneDepth:
             self.focus_warning = f"focus_mismatch:calib {st['focus_m']}m vs run {a.focus_m}m"
         self.model = None
         self.ep = None
+        self.rgbd_snapshot = None
 
     def __call__(self, pair, imu=None):
         import lib_ffs
@@ -125,6 +126,13 @@ class PhoneDepth:
         fL, fR = (pair[1], pair[0]) if self.swap else (pair[0], pair[1])      # 캘리의 (왼,오른) 순서로
         if self.swap and imu and imu.get("exposure_ts_ns"):
             imu = dict(imu, exposure_ts_ns=list(reversed(imu["exposure_ts_ns"])))
+        if imu and imu.get("per_frame"):
+            # Pose validation must use the calibrated LEFT lens's exposure time,
+            # even when CLI stream order is reversed.
+            per_frame = imu["per_frame"]
+            sensors = per_frame[1 if self.swap else 0]
+            imu = {k: v for k, v in imu.items() if k in ("gyro_window", "exposure_ts_ns", "exposure_skew_ms")}
+            imu.update(sensors)
         # 동기 어긋남(두 노출 시각 차) 동안의 폰 회전을 자이로로 보상: 0.02° 넘으면 이 쌍만 정류 테이블을 다시 만든다 (~10ms)
         Rg, skew_deg = skew_rotation(self.st, imu)
         if skew_deg > 0.02:
@@ -189,4 +197,12 @@ class PhoneDepth:
                       imu_raw={k: v for k, v in (imu or {}).items() if k != "gravity"},
                       ms=(time.perf_counter()-t0)*1000, epipolar=self.ep, objects=results,
                       calibration=str(a.calib_stereo), scale_status=self.st.get("scale_status", "unverified"))
+        if getattr(a, "rgbd_viewer", False):
+            self.rgbd_snapshot = dict(rgb=left, rgb_overlay=overlays[0], depth=depth, valid=valid, points=points,
+                depth_color=depth_colormap(depth, valid, float(zr[0]), float(zr[1]))[:, :left.shape[1]],
+                depth_range=tuple(float(v) for v in zr), K_rect=rp["P1"][:, :3].copy(), R1=rp["R1"].copy(),
+                timestamp_ns=[int(fL.timestamp_ns), int(fR.timestamp_ns)],
+                skew_ms=report["exposure_skew_ms"], scale_status=self.st.get("scale_status", "unverified"),
+                imu=od._clean({k: v for k, v in (imu or {}).items()
+                              if k in ("gyroscope", "gravity", "linear_acceleration", "game_rotation_vector")}))
         return np.hstack(overlays), od._clean(report)

@@ -67,6 +67,22 @@ class ReceiverTests(unittest.TestCase):
         self.assertEqual(len(p.queues[0]),8)
         self.assertEqual(p.dropped,[92,0])
 
+    def test_nearest_pair_waits_for_later_candidate(self):
+        p = FramePairer(2, 35)
+        self.assertIsNone(p.add(frame(1, 66)))
+        self.assertIsNone(p.add(frame(0, 100)))
+        pair = p.add(frame(1, 132))
+        self.assertEqual([f.timestamp_ns for f in pair], [100000000, 132000000])
+        self.assertEqual(p.dropped, [0, 1])
+        self.assertIsNone(p.add(frame(0, 167)))  # frame 132 cannot be reused
+
+    def test_nearest_pair_keeps_earlier_when_closer(self):
+        p = FramePairer(2, 35)
+        p.add(frame(1, 90))
+        p.add(frame(0, 100))
+        pair = p.add(frame(1, 150))
+        self.assertEqual([f.timestamp_ns for f in pair], [100000000, 90000000])
+
     def test_calibration_rejects_other_lenses_and_size(self):
         st=dict(phone=dict(logical="0",physical=["5","2"]), image_size=[640,480],
                 K1=np.eye(3).tolist(),K2=np.eye(3).tolist(),dist1=[0]*5,dist2=[0]*5,

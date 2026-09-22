@@ -60,33 +60,32 @@ public class MainActivity extends Activity {
         @Override public void onAccuracyChanged(Sensor s,int accuracy) {}
     };
 
-    /** Per-physical SENSOR_TIMESTAMP from the logical result: the only public way to see how far apart the two
-     *  sensors' exposures really are (sync type APPROXIMATE). Sent as sensor packet type 100 = "frame_timing":
+    /** Per-physical SENSOR_TIMESTAMP from the logical result: the HAL-reported per-sensor exposure timestamps
+     *  associated with this capture (sync type APPROXIMATE). Sent as sensor packet type 100 = "frame_timing":
      *  [phys[0] offset ms, phys[1] offset ms, (phys[2] offset ms), exposure ms, frame duration ms, rolling shutter skew ms]
      *  offsets are relative to the logical SENSOR_TIMESTAMP that the ImageReader frames carry. Also logged as RESULT lines. */
     private long timingCount=0;
-    /** Latest per-physical (SENSOR_TIMESTAMP − logical timestamp) in ns. Measured on S24: ultrawide(2) exposes 72–89 ms
-     *  BEFORE the wide(5) whose timestamp the logical result carries, drifting ~4 ms/s (sensors free-run). Frames are sent
-     *  with the corrected physical timestamp so the PC pairs frames that were really exposed closest in time. */
-    private final long[] physOffsetNs=new long[3];
-    private volatile boolean physOffsetKnown=false;
+    private CaptureTimestampMatcher timestampMatcher;
     private final CameraCaptureSession.CaptureCallback timing=new CameraCaptureSession.CaptureCallback() {
         @Override public void onCaptureCompleted(CameraCaptureSession s,CaptureRequest r,TotalCaptureResult result) {
             try {
+                if(!running) return;
                 Long ts=result.get(CaptureResult.SENSOR_TIMESTAMP); if(ts==null) return;
                 Map<String,CaptureResult> phys=result.getPhysicalCameraResults();
                 float[] v=new float[ids.length+3];
+                Long[] physicalTimestamps=new Long[ids.length];
                 StringBuilder sb=new StringBuilder("RESULT ts="+ts);
                 for(int i=0;i<ids.length;i++) {
                     CaptureResult p=phys.get(ids[i]); Long pts=p==null?null:p.get(CaptureResult.SENSOR_TIMESTAMP);
                     v[i]=pts==null?Float.NaN:(pts-ts)/1e6f;
-                    if(pts!=null) physOffsetNs[i]=pts-ts;
+                    physicalTimestamps[i]=pts;
                     sb.append(" phys").append(ids[i]).append("=").append(pts==null?"null":String.valueOf(pts-ts));
                 }
                 Long exp=result.get(CaptureResult.SENSOR_EXPOSURE_TIME), dur=result.get(CaptureResult.SENSOR_FRAME_DURATION), skew=result.get(CaptureResult.SENSOR_ROLLING_SHUTTER_SKEW);
                 v[ids.length]=exp==null?Float.NaN:exp/1e6f; v[ids.length+1]=dur==null?Float.NaN:dur/1e6f; v[ids.length+2]=skew==null?Float.NaN:skew/1e6f;
                 sb.append(" exp=").append(exp).append(" dur=").append(dur).append(" skew=").append(skew);
-                physOffsetKnown=true;
+                if(!rawTimestamps) timestampMatcher.result(ts,physicalTimestamps,SystemClock.elapsedRealtimeNanos());
+                sb.append(" matched=").append(timestampMatcher.matched).append(" unmatched_dropped=").append(timestampMatcher.dropped);
                 if(timingCount++%30==0) Log.i(TAG,sb.toString());
                 if(client!=null) {
                     ByteBuffer b=ByteBuffer.allocate(4*v.length); for(float f:v) b.putFloat(f);
@@ -144,6 +143,7 @@ public class MainActivity extends Activity {
             String physical=getIntent().getStringExtra("physical");
             if(logical==null || physical==null) { status("Inventory ready. Select cameras from PC."); return; }
             ids=physical.split(","); counts=new long[ids.length];
+            timestampMatcher=new CaptureTimestampMatcher(ids.length,this::enqueueFrame);
             if(ids.length<2 || ids.length>3 || new HashSet<>(Arrays.asList(ids)).size()!=ids.length)
                 throw new IllegalArgumentException("Need 2 or 3 distinct physical IDs");
             Set<String> available=manager.getCameraCharacteristics(logical).getPhysicalCameraIds();
@@ -249,12 +249,11 @@ public class MainActivity extends Activity {
 
     private void receive(ImageReader reader,int index) {
         try (Image image=reader.acquireLatestImage()) {
-            if(image==null) return;
+            if(image==null || !running) return;
             counts[index]++;
             if(counts[index]==1 || counts[index]%150==0)
                 Log.i(TAG,"FRAME physical="+ids[index]+" count="+counts[index]+" ts="+image.getTimestamp());
             if(client==null) return;
-            if(!rawTimestamps && !physOffsetKnown) return;      // first frames: offset unknown → would send an uncorrected (later) timestamp
             byte[] nv21=new byte[width*height*3/2];
             Image.Plane[] planes=image.getPlanes();
             // Plane buffers can have row padding and interleaved UV; never assume contiguous.
@@ -267,12 +266,15 @@ public class MainActivity extends Activity {
                     nv21[dst]=b.get(base+y*row+x*pixel);
                 }
             }
-            // Bound latency under USB/PC backpressure; discard oldest unsent packet.
-            // Physical exposure time = logical timestamp + last known per-physical offset (drift ~0.3 ms per frame, negligible).
-            long ts=image.getTimestamp()+(physOffsetKnown&&!rawTimestamps?physOffsetNs[index]:0L);
-            Packet packet=new Packet(index,ts,nv21);
-            if(!pending.offer(packet)) { pending.poll(); pending.offer(packet); }
+            if(rawTimestamps) enqueueFrame(index,image.getTimestamp(),nv21);
+            else timestampMatcher.image(index,image.getTimestamp(),nv21,SystemClock.elapsedRealtimeNanos());
         } catch(Exception e) { Log.e(TAG,"frame",e); }
+    }
+
+    private void enqueueFrame(int index,long timestamp,byte[] data) {
+        if(!running || client==null) return;
+        Packet packet=new Packet(index,timestamp,data);
+        if(!pending.offer(packet)) { pending.poll(); pending.offer(packet); }
     }
 
     private void serve() {
@@ -307,6 +309,7 @@ public class MainActivity extends Activity {
     @Override public void onRestart() { super.onRestart(); recreate(); }
     private void stop() {
         running=false;
+        if(handler!=null) handler.post(() -> { if(timestampMatcher!=null) timestampMatcher.clear(); });
         if(sensors!=null) { sensors.unregisterListener(imu); sensors=null; }
         if(session!=null) { session.close(); session=null; }
         if(camera!=null) { camera.close(); camera=null; }

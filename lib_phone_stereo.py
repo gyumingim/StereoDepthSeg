@@ -82,12 +82,22 @@ class FramePairer:
             self.dropped[frame.index] += 1
         q.append(frame)
         while all(self.queues):
-            timestamps = [q[0].timestamp_ns for q in self.queues]
+            # Stream 0 is the reference. Wait until every other stream brackets its
+            # timestamp, so callback arrival order cannot select an earlier, worse match.
+            target = self.queues[0][0].timestamp_ns
+            if any(q[-1].timestamp_ns < target for q in self.queues[1:]):
+                return None
+            choices = [0] + [min(range(len(q)), key=lambda i: abs(q[i].timestamp_ns-target))
+                             for q in self.queues[1:]]
+            timestamps = [q[i].timestamp_ns for q, i in zip(self.queues, choices)]
             if max(timestamps) - min(timestamps) <= self.max_skew_ns:
+                for stream, (q, i) in enumerate(zip(self.queues, choices)):
+                    for _ in range(i):
+                        q.popleft()
+                        self.dropped[stream] += 1
                 return tuple(q.popleft() for q in self.queues)
-            oldest = timestamps.index(min(timestamps))
-            self.queues[oldest].popleft()
-            self.dropped[oldest] += 1
+            self.queues[0].popleft()
+            self.dropped[0] += 1
         return None
 
 
@@ -179,6 +189,7 @@ class PhoneReceiver:
         """쌍의 첫 프레임 시각 센서값 + 두 노출 시각 사이 자이로 창(gyro_window) — 동기 어긋남 회전 보상용."""
         out = self.imu_at(pair[0].timestamp_ns)
         ts = [f.timestamp_ns for f in pair[:2]]
+        out["per_frame"] = [self.imu_at(t) for t in ts]
         out["exposure_ts_ns"] = ts
         out["exposure_skew_ms"] = (ts[1] - ts[0]) / 1e6
         out["gyro_window"] = self.sensor_window(SENSOR_GYRO, ts[0], ts[1]) if ts[0] != ts[1] else []

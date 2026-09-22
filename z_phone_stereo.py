@@ -64,7 +64,20 @@ def run_offline(bundle, depth_worker, a):
     bundle = Path(bundle)
     meta = json.loads((bundle / "pair.json").read_text()) if (bundle / "pair.json").exists() else {}
     ts = meta.get("timestamp_ns") or [0, 0]
-    imu = meta.get("imu") or {}
+    imu = dict(meta.get("imu") or {})
+    source_ids = [str(p) for p in meta.get("physical", a.physical)]
+    if a.rgbd_viewer:
+        if (meta.get("logical") != a.logical or meta.get("image_size") != list(a.size)
+                or set(source_ids[:2]) != set(a.physical[:2])
+                or meta.get("focus_m") != a.focus_m or not meta.get("timestamp_ns")):
+            raise ValueError(f"{bundle}: mapping requires matching lens/size/focus metadata and real timestamps")
+    indices = [source_ids.index(pid) for pid in a.physical[:2]]
+    if imu.get("per_frame"):
+        imu["per_frame"] = [imu["per_frame"][i] for i in indices]
+    elif a.rgbd_viewer and indices[0] != 0:
+        # Legacy bundles have sensors at only their first lens timestamp.
+        imu = {k: v for k, v in imu.items() if k == "gyro_window"}
+    imu["exposure_ts_ns"] = [ts[i] if i < len(ts) else 0 for i in indices]
     pair = []
     for i, pid in enumerate(a.physical[:2]):
         img = cv2.imread(str(bundle / f"camera_{pid}.png"))
@@ -72,7 +85,7 @@ def run_offline(bundle, depth_worker, a):
             raise FileNotFoundError(bundle / f"camera_{pid}.png")
         if (img.shape[1], img.shape[0]) != tuple(a.size):
             raise ValueError(f"{bundle}: 이미지 {img.shape[1]}x{img.shape[0]} 가 --size {a.size} 와 다름")
-        pair.append(PhoneFrame(index=i, timestamp_ns=int(ts[i] if i < len(ts) else 0), bgr=img))
+        pair.append(PhoneFrame(index=i, timestamp_ns=int(ts[indices[i]] if indices[i] < len(ts) else 0), bgr=img))
     depth_worker.ep = None            # 라이브는 첫 쌍에서 한 번만 검사하지만, 번들마다 다른 장면이므로 매번 다시
     vis, report = depth_worker(pair, imu)
     cv2.imwrite(str(bundle / f"depth_{a.yolo}.png"), vis)
@@ -110,6 +123,14 @@ def main(a):
         raise ValueError("Need positive even image dimensions and nonnegative skew limit")
     if a.duration < 0 or a.fps <= 0 or not 0 < a.scale <= 1 or a.iters < 1:
         raise ValueError("Invalid duration/fps/scale/iters")
+    if a.rgbd_viewer and (not a.calib_stereo or a.raw_ts):
+        raise ValueError("--rgbd-viewer requires --calib-stereo and physical timestamps")
+    if a.rgbd_viewer and (not np.isfinite(a.depth_range).all() or not 0 < a.depth_range[0] < a.depth_range[1]):
+        raise ValueError("--depth-range requires finite 0 < near < far")
+    rgbd_viewer = None
+    if a.rgbd_viewer:
+        from lib_rgbd_viewer import RGBDViewer
+        rgbd_viewer = RGBDViewer()
     depth_worker = None
     if a.calib_stereo:
         from lib_phone_depth import PhoneDepth
@@ -119,6 +140,9 @@ def main(a):
             raise ValueError("--offline 은 --calib-stereo 가 필요 (depth 만 오프라인 실행)")
         for b in a.offline:
             run_offline(b, depth_worker, a)
+            if rgbd_viewer is not None:
+                rgbd_viewer.set_snapshot(depth_worker.rgbd_snapshot)
+                rgbd_viewer.save(Path(a.out or "phone_stereo/runs/offline_rgbd") / "rgbd" / Path(b).name)
         return
     if a.install:
         subprocess.run(["python3", str(ROOT / "phone_stereo/build_android.py")], check=True)
@@ -171,6 +195,7 @@ def main(a):
     report = None
     inference_times = []
     last_save = 0
+    last_rgbd_save = 0
     last_bundle = 0
     # --still: 연속 프레임 차이(두 스트림) + 자이로로 '정지 순간' 판정. 두 렌즈는 timestamp 가 같아도 실제 노출이
     # 어긋날 수 있어(sync APPROXIMATE) 보드/폰이 움직이는 중에 찍힌 쌍은 캘리를 망친다 (STATUS 문제점 18).
@@ -194,6 +219,11 @@ def main(a):
             if future and future.done():
                 result, report = future.result()
                 inference_times.append(report["ms"])
+                if rgbd_viewer is not None:
+                    rgbd_viewer.set_snapshot(depth_worker.rgbd_snapshot)
+                    if now-last_rgbd_save > 5:
+                        rgbd_viewer.save(out / "rgbd")
+                        last_rgbd_save = now
                 if now-last_save > 1:
                     (out / "inference.json").write_text(json.dumps(report, indent=2))
                     cv2.imwrite(str(out / "inference.png"), result)
@@ -223,10 +253,18 @@ def main(a):
                             cv2.putText(img, gate_reason[:70], (12, img.shape[0] - 14), cv2.FONT_HERSHEY_SIMPLEX, .7, gate_color, 2)
                     tiles.append(img)
                 canvas = np.hstack(tiles)
-                cv2.imshow(title, canvas)
-                if result is not None:
+                if rgbd_viewer is None:
+                    cv2.imshow(title, canvas)
+                if result is not None and rgbd_viewer is None:
                     cv2.imshow("PC inference - sampled frame (not raw live feed)", result)
+                if rgbd_viewer is not None:
+                    rgbd_viewer.show()
                 key = cv2.waitKey(1) & 255
+                if rgbd_viewer is not None:
+                    rgbd_viewer.key(key)
+                    if key == ord('e') and rgbd_viewer.snapshot is not None:
+                        rgbd_viewer.save(out / "rgbd_captures" / str(rgbd_viewer.snapshot['timestamp_ns'][0]))
+                        print("Saved RGB-D frame / scene PLY / IMU", flush=True)
                 if key in (27, ord("q")):
                     break
                 if key == ord("s") and pair:
@@ -285,6 +323,9 @@ def main(a):
                 (out / "inference.json").write_text(json.dumps(report, indent=2))
             except Exception as e:
                 inference_error = str(e)
+        if rgbd_viewer is not None:
+            rgbd_viewer.set_snapshot(depth_worker.rgbd_snapshot)
+            rgbd_viewer.save(out / "rgbd")
         _, pair, _, _ = receiver.snapshot()
         if pair:
             save_pair(out, pair, a, receiver)
@@ -303,6 +344,7 @@ def main(a):
 if __name__ == "__main__":
     os.environ.setdefault("QT_QPA_FONTDIR", "/usr/share/fonts/truetype/dejavu")
     ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--rgbd-viewer", action="store_true", help="RGB / depth / interactive scene point cloud / IMU dashboard")
     ap.add_argument("--install", action="store_true")
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--attach", action="store_true", help="Receive from an already started Phone Stereo app")
@@ -313,8 +355,8 @@ if __name__ == "__main__":
     ap.add_argument("--focus-m", type=float, default=1.0,
                     help="광각 렌즈 초점 고정 거리(m). 0 = 자동초점(초점거리가 변해 스테레오에 부적합). 캘리와 같은 값으로 쓸 것")
     ap.add_argument("--max-skew-ms", type=float, default=35,
-                    help="쌍으로 묶을 두 프레임의 실제 노출 시각 차 상한. 앱이 물리 센서 timestamp 로 보정해 보내며(초광각이 광각보다 72~89ms "
-                         "먼저 노출, 15fps 주기 66.7ms) 가장 가까운 프레임끼리 묶으면 잔차 ≤33ms. 잔차 회전은 자이로로 보상")
+                    help="같은 촬영 결과에서 찾은 물리 SENSOR_TIMESTAMP 차 상한(ms). 첫 렌즈를 기준으로 "
+                         "다른 렌즈의 앞뒤 후보 중 가까운 프레임을 선택. 하드웨어 동기화는 아님")
     ap.add_argument("--raw-ts", action="store_true", help="앱이 논리 timestamp(보정 전)로 보내게 함 (예전 동작)")
     ap.add_argument("--duration", type=float, default=0, help="0: run until Q/Ctrl-C")
     ap.add_argument("--headless", action="store_true")
