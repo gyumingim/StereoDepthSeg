@@ -300,6 +300,8 @@ Fast-FoundationStereo 로 화소마다 깊이를 구해 객체별 거리·크기
 - 조밀 경로 `ambiguous` 는 영역 안 깊이가 두 덩어리(물체+배경)라 물체를 확정하지 못한 경우다.
   `depth_clusters` 에 두 군집의 크기·깊이·중앙지지가 남으니 보고 판단하고, seg 모드를 쓰면 대개 사라진다.
 - 회귀 테스트: `./venv/bin/python z_selftest.py` (GPU·카메라 불필요, 18항목).
+- 조밀 경로 끝단 검증: `./venv/bin/python z_make_synth_pair.py` 로 정답 쌍을 만든 뒤
+  `./venv_ffs/bin/python z_object_depth.py --pose stereo --left synth_pair/L.png --right synth_pair/R.png --calib-l synth_pair/calib_l.json --calib-r synth_pair/calib_r.json --calib-stereo synth_pair/calib_stereo.json --known-m 1.501 --known-idx 2`
 
 ## 결과 읽을 때 반드시 알아야 할 한계
 

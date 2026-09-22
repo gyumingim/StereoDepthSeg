@@ -82,7 +82,7 @@ AI가 대신할 수 없다.
 - [x] ~~2단계 게이트 실측~~ — RMS 0.2326px, 커버리지 16/16 로 통과
 - [ ] **4단계 게이트 실측** — 자로 잰 물체 치수 대비 오차 < 10%
 - [x] ~~FFS 실행~~ — 스모크·합성 쌍 통과 (문제점 13/15)
-- [ ] **FFS 실물 쌍** — 폰 고정 후 `z_capture.py --stereo` → `z_stereo_pose.py --provisional` → `z_object_depth.py --scale 0.5`
+- [ ] **FFS 실물 쌍** — 폰 고정 후 `z_capture.py --stereo` → `z_stereo_pose.py --provisional` → `z_object_depth.py --mode seg` (triton 경로면 scale 1.0 가능)
 - [ ] **왜곡 모델 확정** — k3 포함/제외에 따라 fx 가 794.31 ↔ 810.47 (2.03%) 차이.
       교차검증은 k3 포함이 우세(검증 RMS 0.2251 vs 0.2370)하나 f(r)이 비단조라
       결론이 엇갈린다. 4단계 실측 대조로 판정한다.
@@ -371,12 +371,16 @@ provisional 저장 상태 유지, 2회째 rescale 거부, ROI y 밖 0px, 최종�
    저장소 코드는 `try: import triton` 실패 시 triton=None 으로 동작하고 우리는 `pytorch1` 볼륨 경로를 쓰므로,
    `lib_ffs` 가 Python.h 부재를 감지하면 `sys.modules['triton']=None` + `torch._dynamo.config.disable=True`
    로 **순수 PyTorch 경로**로 자동 우회한다. 헤더가 생기면 자동으로 triton 경로.
-   (`apt install python3.12-dev` 는 PPA 503 으로 대기 중 — 백그라운드 재시도.)
+   → 2026-09-22 새벽 PPA 복구 후 `python3.12-dev` 설치됨. 자동으로 `[triton]` 경로:
+     스모크 960x540 8회 **195ms** (순수 PyTorch 323ms), scale0.5·4회 **43ms**, VRAM **1109MB** (4449MB).
+     1280x720 원해상도도 OOM 없이 실행 (합성 쌍, 거리 오차 0.5~0.6% 동일). 첫 호출은 커널 컴파일로 2.5~4초.
 2. **직렬화 args 에 `normalize` 없음** → forward 에서 ConfigAttributeError. 저장소 기본값 True
    (make_plugin_onnx.py:123, submodule.py:377) 로 채우고 cfg.yaml 키도 보충 (`load.filled_keys` 에 기록).
 3. **1280x720 원해상도 OOM (8GB)** — 순수 PyTorch 경로는 6D 코스트 볼륨을 통째로 만든다. 960x540 은 4.4GB,
    1280x720 은 초과. `--scale 0.75/0.5` 로 실행 (시차는 원해상도 단위로 복원되어 결과 동일). triton 경로면 해소.
 - 좌우 일관성 임계는 추론 해상도 px 로 정의 (scale 0.5 에서 원해상도 1.5px 그대로 쓰니 30% 탈락).
+
+- 합성 정답 쌍 생성기를 저장소에 둔다: `z_make_synth_pair.py` (임시 폴더가 세션 종료로 지워져 검증 자산이 사라졌던 일 재발 방지).
 
 ## 파라미터 변경 이력
 
