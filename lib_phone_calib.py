@@ -325,10 +325,23 @@ def board_stereo_calibrate(pairs, st, square_m, pattern=lib_calib.PATTERN, fix_i
             skipped.append((name, "L" if cL is None else "", "R" if cR is None else ""))
             continue
         obj.append(objp); cL_list.append(cL.astype(np.float32)); cR_list.append(cR.astype(np.float32)); used.append(name)
-    if len(obj) < 5:
-        raise ValueError(f"체커보드가 양쪽 다 검출된 쌍 {len(obj)}개 — 최소 5, 권장 15+. 건너뜀: {skipped}")
     size = tuple(st["image_size"])
     K1, d1, K2, d2 = (np.asarray(st[k], np.float64).copy() for k in ("K1", "dist1", "K2", "dist2"))
+    # 동기 어긋남 거르기: 왼쪽 PnP 포즈 + 현재 (R,T) 로 오른쪽 코너를 예측한 오차. 정지 쌍은 서로 비슷하고(yaw 편향만큼 일정),
+    # 움직이는 중에 찍힌 쌍은 수 px~수십 px 로 튄다 → 중앙값의 2배+1px 를 넘는 쌍은 제외 (STATUS 문제점 18).
+    R0, T0 = np.asarray(st["R"], np.float64), np.asarray(st["T"], np.float64).reshape(3, 1)
+    errs = []
+    for cL, cR in zip(cL_list, cR_list):
+        _, rv, tv = cv2.solvePnP(objp, cL, K1, d1)
+        XL = (cv2.Rodrigues(rv)[0] @ objp.T + tv).T
+        proj, _ = cv2.projectPoints((R0 @ XL.T + T0).T, np.zeros(3), np.zeros(3), K2, d2)
+        errs.append(float(np.sqrt(np.mean(np.sum((proj.reshape(-1, 2) - cR.reshape(-1, 2)) ** 2, 1)))))
+    gate = 2.0 * float(np.median(errs)) + 1.0 if errs else 0.0
+    keep = [i for i, e in enumerate(errs) if e <= gate]
+    dropped = [(used[i], round(errs[i], 2)) for i in range(len(errs)) if i not in keep]
+    obj, cL_list, cR_list, used = [obj[i] for i in keep], [cL_list[i] for i in keep], [cR_list[i] for i in keep], [used[i] for i in keep]
+    if len(obj) < 5:
+        raise ValueError(f"쓸 수 있는 쌍 {len(obj)}개 — 최소 5, 권장 15+. 미검출: {len(skipped)}, 동기 불일치로 제외: {len(dropped)} {dropped[:5]}")
     flags = cv2.CALIB_FIX_INTRINSIC if fix_intrinsics else cv2.CALIB_USE_INTRINSIC_GUESS
     crit = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_MAX_ITER, 200, 1e-7)
     out = cv2.stereoCalibrateExtended(obj, cL_list, cR_list, K1, d1, K2, d2, size,
@@ -341,6 +354,7 @@ def board_stereo_calibrate(pairs, st, square_m, pattern=lib_calib.PATTERN, fix_i
     new.update(K1=K1n, dist1=np.asarray(d1n).ravel(), K2=K2n, dist2=np.asarray(d2n).ravel(), R=R, T=T,
                baseline_m=float(np.linalg.norm(T)), pose_source="board:cv2.stereoCalibrate",
                board=dict(rms_px=float(rms), n_views=len(obj), used=used, skipped=skipped, per_view_px=per_view,
+                          sync_dropped=dropped, sync_gate_px=gate, lr_predict_err_px=[round(e, 2) for e in errs],
                           square_m=float(square_m), pattern=list(pattern), fix_intrinsics=bool(fix_intrinsics)))
     return new
 

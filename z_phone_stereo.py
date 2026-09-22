@@ -171,6 +171,11 @@ def main(a):
     inference_times = []
     last_save = 0
     last_bundle = 0
+    # --still: 연속 프레임 차이(두 스트림) + 자이로로 '정지 순간' 판정. 두 렌즈는 timestamp 가 같아도 실제 노출이
+    # 어긋날 수 있어(sync APPROXIMATE) 보드/폰이 움직이는 중에 찍힌 쌍은 캘리를 망친다 (STATUS 문제점 18).
+    prev_small, still_count, last_saved_small, last_pair_ts = None, 0, None, None
+    def small(f):
+        return cv2.resize(cv2.cvtColor(f.bgr, cv2.COLOR_BGR2GRAY), (160, 120), interpolation=cv2.INTER_AREA).astype(np.float32)
     title = "Phone Stereo - USB to PC (Q: quit, S: paired PNG)"
     print(f"Receiving {a.physical}; saving to {out}", flush=True)
     try:
@@ -211,10 +216,25 @@ def main(a):
                 if key == ord("s") and pair:
                     save_pair(out / "captures" / str(pair[0].timestamp_ns), pair, a, receiver)
                     print("Saved paired PNGs", flush=True)
-            if a.save_interval and pair and now - last_bundle >= a.save_interval:
-                save_pair(out / "captures" / str(pair[0].timestamp_ns), pair, a, receiver)
-                last_bundle = now
-                print(f"Saved bundle {pair[0].timestamp_ns}", flush=True)
+            if a.save_interval and pair and pair[0].timestamp_ns != last_pair_ts:
+                last_pair_ts = pair[0].timestamp_ns
+                ok_to_save = True
+                if a.still:
+                    cur = [small(f) for f in pair[:2]]
+                    diffs = [float(np.mean(np.abs(c - p))) for c, p in zip(cur, prev_small)] if prev_small else [99.0]
+                    g = receiver.sensor_at(4, pair[0].timestamp_ns)                 # 자이로 (있으면)
+                    gyro = float(np.linalg.norm(g[0])) if g else 0.0
+                    still_count = still_count + 1 if max(diffs) < a.still_thr and gyro < 0.05 else 0
+                    moved = last_saved_small is None or max(float(np.mean(np.abs(c - p))) for c, p in zip(cur, last_saved_small)) > 3 * a.still_thr
+                    ok_to_save = still_count >= 3 and moved                          # 3프레임(0.2s) 연속 정지 + 지난 저장과 다른 장면
+                    prev_small = cur
+                if ok_to_save and now - last_bundle >= a.save_interval:
+                    save_pair(out / "captures" / str(pair[0].timestamp_ns), pair, a, receiver)
+                    last_bundle = now
+                    if a.still:
+                        last_saved_small = cur
+                    n_saved = len(list((out / "captures").iterdir()))
+                    print(f"Saved bundle {pair[0].timestamp_ns}  (총 {n_saved})", flush=True)
             if now - last_print >= 5:
                 print(json.dumps(receiver.stats()), flush=True)
                 last_print = now
@@ -269,6 +289,8 @@ if __name__ == "__main__":
     ap.add_argument("--iters", type=int, default=4)
     ap.add_argument("--offline", nargs="+", metavar="DIR", help="저장 번들로 depth 만 실행 (폰 불필요)")
     ap.add_argument("--save-interval", type=float, default=0, help="초. >0 이면 쌍을 주기적으로 captures/<ts>/ 에 저장 (캘리 수집용)")
+    ap.add_argument("--still", action="store_true", help="--save-interval 저장을 '정지 순간'(연속 프레임 차이·자이로 작음, 지난 저장과 다른 장면)으로 제한")
+    ap.add_argument("--still-thr", type=float, default=1.5, help="정지 판정 프레임 차이 임계 (160x120 회색 평균 절대차)")
     args = ap.parse_args()
     try:
         main(args)

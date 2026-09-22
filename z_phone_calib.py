@@ -124,6 +124,8 @@ def main(a):
         st = pc.board_stereo_calibrate(pairs, st, square_m, fix_intrinsics=not a.free_intrinsics)
         b = st["board"]
         ratio = st["baseline_m"] / st["factory_baseline_m"]
+        if b["sync_dropped"]:
+            print(f"   동기 불일치(움직이는 중 촬영)로 제외 {len(b['sync_dropped'])}쌍 (게이트 {b['sync_gate_px']:.1f}px): {[Path(n).name for n, _ in b['sync_dropped']][:6]}")
         print(f"stereoCalibrate: 뷰 {b['n_views']} (건너뜀 {len(b['skipped'])}), RMS {b['rms_px']:.3f}px, "
               f"baseline {st['baseline_m']*1000:.2f}mm (공장 {st['factory_baseline_m']*1000:.2f}mm, 비 {ratio:.3f}), "
               f"상대회전 {pc.rotation_deg(st['R']):.2f}°")
@@ -146,6 +148,12 @@ def main(a):
     if a.target_size:
         st = scale_to(st, a.target_size)
     st["history"] = st.get("history", []) + [dict(pose_source=st["pose_source"], scale_status=st["scale_status"])]
+    if st["scale_status"] == "board_unreliable":
+        # 실패한 보드 결과로 멀쩡한 보정본을 덮어쓰면 라이브 정류가 바로 깨진다 (실제로 dy 5px 로 죽었다) → 옆 파일에만 남긴다
+        alt = str(Path(a.out).with_suffix(".unreliable.json"))
+        pc.save(alt, st)
+        print(f"!! board_unreliable → {a.out} 은 그대로 두고 {alt} 에만 저장. 이유: {st['warnings']}")
+        return
     pc.save(a.out, st)
     print(f"저장: {a.out}  scale_status={st['scale_status']}  phone={st['phone']}  image_size={st['image_size']}")
     for w in st.get("warnings", []):
