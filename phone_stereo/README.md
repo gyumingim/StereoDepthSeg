@@ -115,7 +115,7 @@ PC는 첫 렌즈 프레임 시각을 기준으로 다른 렌즈의 앞뒤 후보
 cd /home/karma/camera
 ./venv_ffs/bin/python z_phone_stereo.py \
   --physical 2 5 --calib-stereo calib_phone_pair.json --yolo seg \
-  --rgbd-viewer --out phone_stereo/runs/rgbd_view
+  --rgbd-viewer --out phone_stereo/runs/my_view
 ```
 
 `--yolo seg`는 객체 인식을 수행하고 RGB 패널에 표시한다. 객체별 3D 모델 생성·맵 누적 기능은 제거했다. 현재 **전체 장면**의 RGB/깊이/컬러 점군/IMU를 표시한다. [RealSense D435i의 RGB-D·IMU 보기](https://github.com/realsenseai/librealsense/blob/master/doc/d435i.md)를 참고한 폰 전용 뷰어이며, 입력은 기존 폰 스테레오와 FFS 추정 깊이다. RealSense SDK 장치 에뮬레이션은 하지 않는다.
