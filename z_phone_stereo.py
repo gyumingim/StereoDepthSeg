@@ -175,6 +175,7 @@ def main(a):
     # 어긋날 수 있어(sync APPROXIMATE) 보드/폰이 움직이는 중에 찍힌 쌍은 캘리를 망친다 (STATUS 문제점 18).
     prev_small, still_count, last_saved_small, last_pair_ts = None, 0, None, None
     board_corners, board_state = [None, None], ""          # --board-hud: 렌즈별 체커보드 코너(HUD 표시·저장 게이트)
+    gate_reason, gate_color, last_saved_at, last_printed = "", (0, 220, 255), 0, ""   # 왜 저장하는지/안 하는지 HUD+터미널
     if a.board_hud:
         import lib_calib
     def small(f):
@@ -217,7 +218,8 @@ def main(a):
                                     (0, 255, 0) if c is not None else (0, 0, 255), 2)
                         if i == 0:
                             n_saved = len(list((out / "captures").iterdir())) if (out / "captures").exists() else 0
-                            cv2.putText(img, f"{board_state}  saved {n_saved}", (12, 85), cv2.FONT_HERSHEY_SIMPLEX, .7, (0, 220, 255), 2)
+                            cv2.putText(img, f"saved {n_saved}", (12, 85), cv2.FONT_HERSHEY_SIMPLEX, .7, (0, 220, 255), 2)
+                            cv2.putText(img, gate_reason[:70], (12, img.shape[0] - 14), cv2.FONT_HERSHEY_SIMPLEX, .7, gate_color, 2)
                     tiles.append(img)
                 canvas = np.hstack(tiles)
                 cv2.imshow(title, canvas)
@@ -231,11 +233,13 @@ def main(a):
                     print("Saved paired PNGs", flush=True)
             if a.save_interval and pair and pair[0].timestamp_ns != last_pair_ts:
                 last_pair_ts = pair[0].timestamp_ns
-                ok_to_save = True
+                ok_to_save, reasons = True, []                                     # reasons: 저장 안 되는 이유 (HUD·터미널)
                 if a.board_hud:
                     # 절반 해상도 빠른 검출 (HUD·게이트용). 실제 캘리는 z_phone_calib 가 저장 PNG 에서 풀해상도로 다시 검출한다.
                     board_corners = [lib_calib.find_corners(cv2.cvtColor(f.bgr, cv2.COLOR_BGR2GRAY), fast=True) for f in pair[:2]]
-                    ok_to_save = all(c is not None for c in board_corners)
+                    missing = [a.physical[i] for i, c in enumerate(board_corners) if c is None]
+                    if missing:
+                        ok_to_save = False; reasons.append(f"NO BOARD in cam {','.join(missing)}")
                 if a.still:
                     cur = [small(f) for f in pair[:2]]
                     diffs = [float(np.mean(np.abs(c - p))) for c, p in zip(cur, prev_small)] if prev_small else [99.0]
@@ -243,16 +247,27 @@ def main(a):
                     gyro = float(np.linalg.norm(g[0])) if g else 0.0
                     still_count = still_count + 1 if max(diffs) < a.still_thr and gyro < 0.05 else 0
                     moved = last_saved_small is None or max(float(np.mean(np.abs(c - p))) for c, p in zip(cur, last_saved_small)) > 3 * a.still_thr
-                    ok_to_save = ok_to_save and still_count >= 3 and moved          # 3프레임(0.2s) 연속 정지 + 지난 저장과 다른 장면
                     prev_small = cur
-                    board_state = ("STILL" if still_count >= 3 else "MOVING") + ("" if moved else " (same view)")
-                if ok_to_save and now - last_bundle >= a.save_interval:
+                    if still_count < 3:
+                        ok_to_save = False; reasons.append(f"MOVING (frame diff {max(diffs):.1f} > {a.still_thr}" + (f", gyro {gyro:.2f}" if gyro >= 0.05 else "") + f") hold still {3-still_count} more")
+                    elif not moved:
+                        ok_to_save = False; reasons.append("SAME VIEW as last save - move board/phone")
+                if ok_to_save and now - last_bundle < a.save_interval:
+                    ok_to_save = False; reasons.append(f"WAIT {a.save_interval - (now - last_bundle):.1f}s (interval)")
+                if ok_to_save:
                     save_pair(out / "captures" / str(pair[0].timestamp_ns), pair, a, receiver)
-                    last_bundle = now
+                    last_bundle = last_saved_at = now
                     if a.still:
                         last_saved_small = cur
                     n_saved = len(list((out / "captures").iterdir()))
+                    gate_reason, gate_color = f"SAVED #{n_saved}", (0, 255, 0)
                     print(f"Saved bundle {pair[0].timestamp_ns}  (총 {n_saved})", flush=True)
+                elif now - last_saved_at > 1.0:                                     # 저장 직후 1초는 SAVED 표시 유지
+                    gate_reason = " | ".join(reasons) or "READY"
+                    gate_color = (0, 220, 255) if reasons and reasons[0].startswith("WAIT") else (0, 0, 255)
+                key_reason = gate_reason.split(" (")[0].split(" hold")[0]
+                if key_reason != last_printed:                                       # 이유가 바뀔 때만 터미널에 (스팸 방지)
+                    print(f"[save gate] {gate_reason}", flush=True); last_printed = key_reason
             if now - last_print >= 5:
                 print(json.dumps(receiver.stats()), flush=True)
                 last_print = now
