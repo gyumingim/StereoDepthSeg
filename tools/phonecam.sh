@@ -70,7 +70,8 @@ case "${1:-list}" in
     # 읽는 쪽(OpenCV)은 잠깐 멈췄다 이어진다.
     # 화면이 꺼지면 백그라운드 카메라 접근이 회수되는 것으로 보여 화면을 켜둔다.
     # ── 끊김의 진짜 원인과 대책 (dumpsys media.camera 로 직접 확인) ──────────
-    # HAL 이 동시에 열 수 있는 조합은 {0 1} {0 3} 뿐 → 초광각(2)은 누구와도 공존 불가.
+    # 독립 CameraDevice 동시 조합은 {0 1} {0 3}. logical session 내부의
+    # physical output 동시 지원과는 별개다 (phone_stereo Camera2 실험).
     # 삼성 서비스 둘이 전면 카메라를 잠깐씩 여는데, 그 순간 우리(카메라 2)가 EVICT 된다:
     #   smartface = Smart Stay (intelligent_sleep_mode)      13초 주기
     #   sead      = 환경 적응형 디스플레이 (ead_enabled)      우리가 카메라를 여는 순간 반응

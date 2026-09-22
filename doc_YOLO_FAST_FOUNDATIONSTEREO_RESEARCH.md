@@ -280,3 +280,101 @@ Booster는 투명/반사 표면과 unbalanced stereo를 다루므로 웹캠+폰�
 - 외부 FFS 기준은 commit `476f4249561f7c79ca707326954f9255643412a6`; 로컬 `tools/Fast-FoundationStereo`의 HEAD도 이 값임을 확인했다. Project Aria 기준은 `1d9e472adccd587dd75a821a01a997eeb9bbc315`다.
 - 메인 venv에서 Ultralytics 8.4.157, OpenCV 4.13.0.92, Open3D 0.20.0을 확인했다. 별도 FFS 환경은 검토 중 변경되고 있어 설치/추론 완료를 주장하지 않는다.
 - [코드 검토](doc_DEPTH_CODE_REVIEW.md), [재현 스크립트](research/depth_review_20260921/reproduce.py), [관측 수치와 해시](research/depth_review_20260921/observed_results.json)를 함께 저장했다.
+
+## 15. 스마트폰 한 대의 후면 두 카메라 사용 가능성 — 2026-09-22 정정
+
+**노트북 카메라는 FFS에 필수가 아니다.** 초기 프로젝트의 웹캠 촬영 + 폰 체커보드 구성을 확장해 웹캠/폰 리그를 검토했으나, 폰 내부 두 카메라의 물리 스트림 접근을 먼저 확인했어야 했다.
+
+기존 STATUS의 독립 동시 오픈 조합 `{0,1}`, `{0,3}`만으로 “초광각은 어떤 카메라와도 동시 사용 불가”라고 결론 내릴 수 없다. Android는 서로 다른 CameraDevice를 동시에 여는 경로와 **하나의 logical CameraDevice/session에 두 physical output을 지정하는 경로**를 구분한다. 후자는 `getPhysicalCameraIds()`로 조합을 조회하고 `OutputConfiguration.setPhysicalCameraId()`로 출력 대상을 설정한다. [Android 공식 multi-camera 예제](https://developer.android.com/media/camera/camera2/multi-camera), [독립 동시 오픈 API의 범위](https://developer.android.com/reference/android/hardware/camera2/CameraManager#getConcurrentCameraIds())
+
+이번에 연결된 실제 기기를 읽기 전용으로 조회한 결과:
+
+- 모델 `SM-S921N`(Galaxy S24), Android 16.
+- 후면 logical camera 0: `LOGICAL_MULTI_CAMERA` capability와 physicalIds 항목 존재.
+- 동기화 metadata: `APPROXIMATE`. 정밀한 노출 동기화가 확인된 상태로 취급하면 안 된다.
+- [메타데이터 발췌](research/depth_review_20260921/phone_capabilities_20260922.txt) 저장. dumpsys의 physicalIds 출력은 byte 문자 표시이므로 정확한 ID 목록·렌즈 대응은 Camera2 API로 읽어 확인할 것.
+
+현재 카메라 세션을 중단하거나 새 카메라를 열지 않았다. 이 결과는 **듀얼 물리 스트림 경로를 검증할 근거**이며, 두 스트림 추출 성공이나 목표 해상도/FPS 지원의 실증은 아니다.
+
+다음 검증은 작은 Camera2 앱에서 후면 logical camera를 한 번 열고, 같은 크기의 YUV ImageReader 두 개를 각각 물리 카메라에 연결하는 것이다. 두 출력의 실제 렌즈, frame timestamp, 누락·skew, 지원 해상도를 확인한 뒤 PC로 전송한다. FFS/YOLO는 PC GPU에서 처리할 수 있으므로 노트북의 **연산 자원 사용**과 **노트북 카메라 사용**을 구분한다.
+
+후면 두 렌즈가 같은 장면을 볼 수 있어야 하며, 렌즈 간격과 양쪽 K/dist/R/T를 측정한다. 폰의 짧은 baseline은 먼 거리의 시차를 작게 만들므로 목표 거리에서 정확도를 검증해야 한다. 동시 프레임 획득이 성공하면 그 입력을 기존 seg/bbox 공통 depth 파이프라인에 연결하는 방향이 우선이다.
+
+## 16. Galaxy S24 후면 두 카메라: 웹 근거 재검증 — 2026-09-22
+
+### 16.1 삼성 기본 앱은 후면+후면 촬영과 개별 파일 저장을 지원한다
+
+삼성 CamCyclopedia의 공식 운영자 설명은 S24·S24+·S24 Ultra의 Dual Recording에서 **후면 두 렌즈 조합**을 지원하고, 저장 옵션에 따라 **렌즈별 MP4 두 개**를 얻을 수 있다고 명시한다. 따라서 “S24는 후면 두 카메라를 동시에 추출할 수 없다”는 포괄적인 판단은 잘못이다. 해당 안내의 UHD 지원은 S24 Ultra에 한정되어 있으므로 연결된 일반 S24에 그대로 적용하지 않는다. [삼성 Dual Recording 설명](https://r1.community.samsung.com/t5/camera-camcyclopedia/dual-recording/ba-p/27413620)
+
+삼성 S24 사용 안내의 진입 순서는 카메라 → 더보기 → 듀얼 레코딩 → 렌즈 선택이다. 선택 항목은 전면·초광각·광각·망원이며, 이번 목적은 같은 장면을 보는 후면 두 렌즈다. 실제 메뉴 위치는 설치된 One UI 버전에 따라 확인한다. [삼성 S24 사용 안내](https://www.samsung.com/us/support/answer/ANS10000932/)
+
+이 근거가 확인해 주는 것은 **기본 앱의 촬영·분리 저장 기능**이다. 두 파일이 정밀하게 노출 동기화되거나, 다른 앱에 두 개의 실시간 원본 프레임을 제공한다는 보장은 아니다. 이번 조사에서는 직접 듀얼 촬영하거나 파일을 추출하지 않았다.
+
+### 16.2 외부 앱의 실시간 입력: Camera2와 현재 CameraX 모두 조사 대상
+
+Camera2 공식 문서는 logical camera 하나를 열고 같은 세션에서 각각 physical ID를 지정한 두 출력으로 받는 방식을 설명한다. `getPhysicalCameraIds()`로 실제 그룹을 찾고 `OutputConfiguration.setPhysicalCameraId()`를 지정한다. 같은 종류·크기의 YUV/RAW 스트림 치환 조건을 따르고, 해당 기기의 스트림 구성 지원을 확인해야 한다. [Android multi-camera 문서와 Kotlin/Java 예제](https://developer.android.com/media/camera/camera2/multi-camera)
+
+현재 CameraX 공식 API에도 `CameraSelector.Builder.setPhysicalCameraId()`가 있으며 **1.4.0에 추가된 API**로 표시된다. 같은 logical camera에 속하는 두 physical camera를 서로 다른 selector로 구성할 수 있다. 다만 공식 문서는 기기별 성공을 보장하지 않으며, 구성 미지원 시 bind 과정에서 `IllegalArgumentException`이 발생할 수 있다고 명시한다. [CameraX API](https://developer.android.com/reference/androidx/camera/core/CameraSelector.Builder)
+
+AndroidX의 [LifecycleCameraProvider 소스 계약](https://android.googlesource.com/platform/frameworks/support/+/6d4c8a73db3f05daca142904394afb1b00a3e95d/camera/camera-lifecycle/src/main/java/androidx/camera/lifecycle/LifecycleCameraProvider.kt)도 physical camera별 `SingleCameraConfig`와 동일한 `LifecycleOwner`를 사용하도록 설명한다. 이는 구현 참고 근거이며 S24 실기기에서 실행한 결과는 아니다.
+
+검색 중 발견한 2024-09-05 [CameraX 개발자 답변](https://groups.google.com/a/android.com/g/camerax-developers/c/M3nCVRT59TU/m/WP26TxPIAQAJ)은 당시 S24 Ultra 기본 앱과 공개 API의 차이를 지적한다. 이 과거 답변을 근거로 **현재 CameraX 전체가 후면 두 물리 카메라를 지원하지 않는다**고 결론 내리면 현재 API 문서와 충돌한다. 반대로 현재 API가 존재한다는 사실만으로 SM-S921N의 원하는 렌즈·해상도 조합이 된다고 확정해서도 안 된다.
+
+### 16.3 이 프로젝트에서 선택할 수 있는 경로
+
+| 경로 | 확인된 근거 | 장점 | 남은 검증 |
+|---|---|---|---|
+| 기본 앱 Dual Recording → MP4 두 개 → PC 처리 | 삼성 S24 공식 지원 안내 | Android 앱을 만들기 전에 두 렌즈 데이터 확보 가능 | 실제 분리 저장, 시간 정렬, 같은 촬영 설정의 calibration |
+| Camera2 앱 → 두 YUV 출력 → PC 전송 | Android 공개 API 및 이 폰의 logical capability | 프레임 timestamp·capture metadata를 다루는 구조 설계 가능 | 물리 ID·렌즈 대응, session 성공, 실제 FPS·skew·누락 |
+| CameraX 앱 → 두 physical selector | 현재 CameraX 공식 API | lifecycle·use case 관리 활용 가능 | 기기 지원과 필요한 분석 출력 조합, timestamp 처리 |
+
+프로젝트 관점의 제안은 **저장 영상으로 먼저 stereo 입력을 검증하고, 실시간 요구는 Camera2 최소 실험으로 확인**하는 것이다. Camera2를 우선 검토하는 이유는 depth 입력에서 물리 카메라별 timestamp와 calibration 관련 metadata를 직접 확인하려는 목적이다. CameraX가 원천적으로 불가능하다는 뜻은 아니다.
+
+### 16.4 기존 코드에 반영해야 할 설계상 수정점
+
+아래는 이번 조사에 따른 수정 제안이며 아직 구현하지 않았다.
+
+1. **입력 장치를 고정하지 않기:** 노트북 웹캠+폰만 전제하지 말고 폰 후면 A/B의 영상 쌍도 기존 seg/bbox 공통 처리에 공급한다. FFS와 YOLO의 PC GPU 실행은 유지 가능하다.
+2. **동시 지원 판정 수정:** `getConcurrentCameraIds()`의 독립 CameraDevice 조합만으로 후면 두 물리 출력이 불가능하다고 판정하지 않는다. logical camera 내부 출력과 구분한다. [CameraManager API](https://developer.android.com/reference/android/hardware/camera2/CameraManager#getConcurrentCameraIds())
+3. **두 번 read했다고 동기 프레임으로 취급하지 않기:** 저장 영상은 각 파일의 PTS·offset·누락을 확인하고, 라이브 입력은 sensor timestamp 기반으로 짝을 구성한다. 같은 프레임 번호나 같은 PC 수신 시각만으로 노출 동시성을 보장할 수 없다. 앞서 실기기에서 관측한 sync는 `APPROXIMATE`다.
+4. **새 렌즈 쌍으로 재보정:** 기존 웹캠/폰 K·왜곡·R/T·baseline을 재사용하지 않는다. 촬영 해상도, crop, 손떨림 보정 상태를 포함해 실제 출력 기준으로 보정하고 정류 후 수직 오차를 확인한다. 저장 영상과 YUV 출력의 보정값도 자동으로 동일하다고 가정하지 않는다.
+5. **파일 분리 성공과 depth 성공을 별도로 판정:** MP4 두 개를 얻은 뒤에도 공통 시야·정류·유효 disparity·실제 거리 오차 검증이 필요하다. seg는 mask 내부, bbox는 배경 혼입을 처리한 영역에서 같은 depth 맵을 집계한다.
+
+이번 웹 조사의 확정 결과는 **S24 기본 앱의 후면 두 영상 분리 저장 지원**과 **외부 앱을 위한 공개 API 경로 존재**다. 연결된 SM-S921N의 실시간 두 스트림 획득 성공은 아직 확인하지 않았다.
+
+## 17. 사용자 확정 요구: 폰 후면 3개 → PC 표시·추론
+
+사용자 설명으로 “스마트폰만 사용”의 의미를 정정한다. **촬영 장치는 스마트폰 한 대이며, PC 연결과 PC에서의 추론을 사용한다.** 스마트폰 단독 추론 요구가 아니다. 목표는 S24의 초광각·광각·망원 영상을 PC에 동시에 표시하고, PC에서 YOLO seg/bbox 및 Fast FoundationStereo를 실행하는 것이다.
+
+```text
+Galaxy S24: 후면 초광각 / 광각 / 망원
+    → 각 렌즈의 프레임과 촬영 timestamp 전송
+    → PC: 영상 3개 동시 표시
+    → 선택한 두 렌즈의 시간 정렬·스테레오 정류
+    → Fast FoundationStereo의 공통 depth + YOLO seg/bbox별 객체 깊이
+```
+
+**후면 3개 동시 출력은 아직 미검증이다.** 삼성 Dual Recording의 2개 지원을 3개 지원의 근거로 확대하지 않는다. 현재 [CameraX selector 문서](https://developer.android.com/reference/androidx/camera/core/CameraSelector.Builder)는 같은 logical camera의 물리 카메라 두 개까지 허용한다고 명시한다. 따라서 3개를 요구하는 검증은 Camera2에서 수행하는 방향으로 설계한다. [Camera2 multi-camera 문서](https://developer.android.com/media/camera/camera2/multi-camera)의 최소 보장도 두 물리 스트림 치환이며, 추가 출력은 기기별 검증 대상이다. “출력 스트림 3개”라는 일반 문구를 “서로 다른 센서 3개의 동시 촬영”과 동일하게 해석하면 안 된다.
+
+구현 전 확인할 구체적인 항목:
+
+1. Camera2 API로 후면 logical group의 정확한 physical ID와 초광각·광각·망원 대응을 확인한다.
+2. 세 렌즈가 같은 logical group으로 노출되는 경우 physical output 세 개의 session 구성 가능 여부와 실제 프레임 수신을 검사한다. 공통 지원 저해상도에서 시작하고, 개별 프레임 timestamp·FPS·누락을 기록한다. metadata나 session 지원 조회만으로 성공 판정하지 않는다.
+3. 성공한 출력 구성을 USB를 통한 PC 수신과 3분할 표시에 연결한다. 각 스트림의 렌즈 ID·촬영 시각을 보존한다.
+4. FFS는 보정된 두 영상으로 추론한다. 세 영상을 한 번에 입력하는 모델로 취급하지 않는다. 세 번째 카메라 표시와 추가 stereo pair 추론은 별개이며, pair별 추론은 추가 연산·보정이 필요하다. [FFS 공식 구현](https://github.com/NVlabs/Fast-FoundationStereo)
+
+기기에서 3개 출력이 거부되면 해당 설정의 실패 근거를 기록하고 원인을 확인해야 한다. 두 카메라만 띄우거나 렌즈를 번갈아 전환하는 방식은 사용자의 “3개 동시 표시” 요구를 충족한 것으로 처리하지 않는다. 이번 정정은 요구사항과 검증 설계를 문서화한 것이며, Android 앱·전송·PC 3영상 표시는 아직 구현하지 않았다.
+
+## 18. 후속 실기기 결과: 2개와 3개 모두 동시 수신 성공
+
+사용자가 “2개를 먼저 하고 3개는 되면 시도”로 우선순위를 정하고 코드 작성·실행을 승인한 뒤, Camera2 Android 앱과 PC USB 수신·표시 코드를 구현했다. **15~17절의 미검증 상태 중 다중 영상 수신은 아래 실측으로 해소됐다.**
+
+- 실제 Camera2 조회: logical 0 → physical 5(광각), 2(초광각), 6(망원). dumpsys byte 문자열만으로 추정했던 ID와 달리 API 문자열을 직접 확인했다.
+- 후면 2개: 640×480·15 FPS, 15초간 각각 217프레임·217쌍.
+- 후면 3개: 640×480·15 FPS, 12초간 171/172/171프레임·171묶음.
+- 후면 2개 + PC GUI + YOLO seg/bbox: 640×480·30 FPS, 25초간 736/737프레임·735쌍. GPU `cuda:0`에서 실행.
+- bbox 전용 모델도 FFS용 Python 환경에서 실행해 20초·582쌍, 447회 추론 중앙값 11.26ms 확인. FFS 추론을 포함한 수치가 아니다.
+
+전송은 압축 MP4가 아닌 NV21 프레임과 Image timestamp를 ADB TCP 포워딩으로 보낸다. PC에서 BGR 변환 후 표시하고, 원본 쌍을 PNG로 저장한다. 수신 thread와 추론 worker를 분리해 추론 때문에 오래된 영상을 계속 대기열에 쌓지 않는다. 보고 timestamp 차이는 0ms였으나 실제 sensor sync 등급은 여전히 `APPROXIMATE`다.
+
+현재 사용 가능한 명령과 구현 파일은 [Phone Stereo 실행 안내](phone_stereo/README.md), 실측은 [검증 기록](phone_stereo/verification_20260922.json)에 저장했다. `--calib-stereo`로 FFS와 기존 seg/bbox 깊이 집계에 연결할 수 있도록 구현했지만, **폰 두 렌즈의 보정 파일이 없어 해당 depth 경로는 아직 실기기 검증하지 않았다.** 동시 영상·YOLO 성공을 미터 거리 정확도 성공으로 해석하지 않는다.

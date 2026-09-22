@@ -1,6 +1,31 @@
 # STATUS
 
-최종 갱신: 2026-09-21
+최종 갱신: 2026-09-22
+
+## Phone Stereo 실기기 구현·검증 완료 (2026-09-22)
+
+- 최신 요청: 2개를 기본으로 먼저 구현하고 3개는 지원되면 시도. 사용자가 새 코드 작성·수정·실기기 실행 승인.
+- 추가: Camera2 Android 앱(`com.camera.dualstream`), USB NV21 수신·timestamp pairing, PC 동시 표시, GPU YOLO seg/bbox. [실행 안내](phone_stereo/README.md), [수치 기록](phone_stereo/verification_20260922.json).
+- 실기기: SM-S921N / Android 16, logical 0 내부 physical **5=광각, 2=초광각, 6=망원**. 이전 dumpsys byte 표시의 모호함을 실제 API 조회로 해소했다.
+- 2개: 640×480·30 FPS 요청 + PC GUI + YOLO seg/bbox, 25초간 736/737프레임·735쌍, 약 30 FPS, `cuda:0` 확인.
+- 3개도 성공: 640×480·15 FPS, 12초간 171/172/171프레임·171묶음. 기본 실행은 2개 유지.
+- bbox 전용: `venv_ffs` 환경에서 20초·582쌍, GPU 추론 447회, 중앙값 11.26ms. 이 시간은 FFS를 포함하지 않는다.
+- 테스트: 수신 패킷 손상/분할/EOF, 프레임 누락·재사용 방지, 잘못된 보정값 거부 등 7개 통과. Android APK 빌드·서명 검증 및 실제 설치 완료.
+- FFS: `--calib-stereo` 연결 코드 추가. **폰 두 렌즈의 보정값이 없어 실제 폰 depth 추론은 아직 미검증.** 노트북/폰 보정 재사용을 막고, 입력 렌즈 ID·순서·해상도를 검사한다. 다음 작업은 폰 쌍 보정과 정류·거리·FFS 지연 검증.
+- 관측 timestamp 차이 0ms는 HAL의 `APPROXIMATE` 등급을 정밀 동기화로 바꾸지 않는다. 장시간 안정성과 거리 정확도는 별도 검증 대상.
+
+## 입력·연산 요구 확정 당시 기록 (2026-09-22, 구현 전)
+
+- 사용자 요구: 스마트폰 후면 초광각·광각·망원 3개를 PC에 동시에 표시하고, PC에서 YOLO seg/bbox + Fast FoundationStereo 추론. 스마트폰 단독 추론이나 노트북 카메라 사용을 요구한 것이 아니다.
+- 당시: [조사 문서 17절](doc_YOLO_FAST_FOUNDATIONSTEREO_RESEARCH.md)에 구성·검증 순서를 저장했다. 이후 위 실기기 시험에서 2개·3개 동시 수신을 확인했다.
+- 남은 작업: 선택한 폰 두 렌즈의 보정과 FFS 거리 추론 검증.
+
+## 스마트폰 후면 두 카메라 웹검증 당시 기록 (2026-09-22, 구현 전)
+
+- 완료: 삼성 공식 자료에서 S24의 후면+후면 Dual Recording과 렌즈별 MP4 두 개 저장 지원 확인. [조사 문서 16절](doc_YOLO_FAST_FOUNDATIONSTEREO_RESEARCH.md#16-galaxy-s24-후면-두-카메라-웹-근거-재검증--2026-09-22)에 출처·제약·코드 수정 제안 저장.
+- 확인: Camera2의 logical session/physical output과 현재 CameraX의 두 physical selector 경로 존재. 독립 동시 오픈 ID 목록만으로 후면 두 출력 불가 판정은 부정확하다.
+- 당시 미검증이던 실제 동시 수신·해상도/FPS는 위 Camera2 실기기 시험으로 확인했다. 웹 조사 단계에서는 촬영·앱 설치·코드 변경을 수행하지 않았으며 후속 사용자 승인으로 구현했다.
+- 남은 작업: 폰 두 렌즈의 보정·depth 검증. 노트북 카메라는 필수가 아니다.
 
 ## 추가 자료조사: YOLO + Fast FoundationStereo (2026-09-21)
 
@@ -264,8 +289,13 @@ SIFT 특징점이 물체 경계까지 닿지 않아 점군이 물체보다 작�
 scrcpy 이슈 #4865/#5977 에 "삼성에서 끊긴다"고만 있고 원인은 미확정이었다.
 폰의 카메라 서비스 이벤트 로그(`dumpsys media.camera`)로 기전을 직접 잡았다.
 
-- **HAL 동시 오픈 허용 조합이 `{0 1}`, `{0 3}` 뿐이다.** 초광각(카메라 2)은 어떤
-  카메라와도 동시에 못 연다.
+- **독립 CameraDevice 동시 오픈 조합은 `{0 1}`, `{0 3}`으로 보고됐다.** 이는
+  논리 카메라 한 세션에서 두 physical stream을 받는 지원 여부와 다르다.
+  2026-09-22 실기기(SM-S921N, Android 16) 재조회에서 후면 logical camera 0의
+  `LOGICAL_MULTI_CAMERA`, physicalIds, `APPROXIMATE` sync를 확인했다.
+  따라서 이전의 “초광각은 어떤 카메라와도 동시 사용 불가”라는 일반화는 정정한다.
+  실제 두 물리 스트림 세션 성공 여부는 아직 미검증이며,
+  [조사 문서 15절](doc_YOLO_FAST_FOUNDATIONSTEREO_RESEARCH.md)을 참고한다.
 - 삼성 시스템 서비스 두 개가 전면 카메라를 잠깐씩 연다:
     `com.samsung.android.smartface` (Smart Stay, 13초 주기, priority 990)
     `com.samsung.android.sead` = EnvironmentAdaptiveDisplay (priority 999).
