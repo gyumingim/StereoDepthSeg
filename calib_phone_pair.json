@@ -1,14 +1,14 @@
 {
   "K1": [
     [
-      261.9856640625,
+      261.98566406249995,
       0.0,
-      324.08404296875
+      324.08404296874994
     ],
     [
       0.0,
-      262.2859375,
-      238.67470703125
+      262.28593749999993,
+      238.67470703124997
     ],
     [
       0.0,
@@ -25,13 +25,13 @@
   ],
   "K2": [
     [
-      432.12167643448146,
+      432.1216764344814,
       0.0,
       321.23180912990193
     ],
     [
       0.0,
-      432.7680893397286,
+      432.76808933972853,
       242.71488204656862
     ],
     [
@@ -49,25 +49,25 @@
   ],
   "R": [
     [
-      0.9999749109918457,
-      -0.006713381035358315,
-      0.0022600667965592806
+      0.9999715395366776,
+      -0.007216392708128142,
+      -0.0022008618604614995
     ],
     [
-      0.006701028331800863,
-      0.9999628074302751,
-      0.00542954652427468
+      0.00722992985921722,
+      0.9999546046068876,
+      0.006206193657452967
     ],
     [
-      -0.0022964333535340172,
-      -0.00541426553070215,
-      0.9999827059117654
+      0.0021559756208172558,
+      -0.00622192910318698,
+      0.9999783194486556
     ]
   ],
   "T": [
-    -0.01576035469770432,
-    -3.499501732330116e-18,
-    0.0
+    -0.015525759416130137,
+    -0.00013923194911272341,
+    0.0003405403418995365
   ],
   "image_size": [
     640,
@@ -80,60 +80,9 @@
       "5"
     ]
   },
-  "baseline_m": 0.01576035469770432,
+  "baseline_m": 0.015530117794391271,
   "factory_baseline_m": 0.01576035469770432,
   "factory_rotation_deg": 0.569936217922025,
-  "pose_source": "factory_baseline + scene_refined(roll,pitch,wide_scale)",
-  "scale_status": "factory_baseline_refined",
-  "warnings": [
-    "baseline 15.76mm 는 공장값 그대로 (검증 안 됨)",
-    "yaw 는 공장값 그대로 (dy 로 관측 불가) -> 깊이 편향 가능. --known (실측 거리 1개) 또는 --board 로 고정",
-    "정류 dy 만 개선된 상태"
-  ],
-  "focal_scale_wide": 0.9909084056483255,
-  "refine": {
-    "n": 1027,
-    "sampson_med_px": 0.30971271557710073,
-    "inlier_frac_1px": 0.7575462512171373,
-    "inlier_frac_2px": 0.8432327166504382,
-    "delta_rot_deg_xyz": [
-      -0.2665,
-      0.0,
-      -0.1687
-    ],
-    "delta_rot_deg": 0.31537818954450886,
-    "fix_yaw": true,
-    "focal_scale_wide": 0.9909084056483255,
-    "delta_t_dir_deg": 0.0,
-    "fit_t": false,
-    "pairs": [
-      "phone_stereo/runs/fixed_focus_a",
-      "phone_stereo/runs/fixed_focus_a/captures/526058149071537",
-      "phone_stereo/runs/fixed_focus_a/captures/526060149088295",
-      "phone_stereo/runs/fixed_focus_a/captures/526062215771771",
-      "phone_stereo/runs/fixed_focus_a/captures/526064149139857",
-      "phone_stereo/runs/fixed_focus_a/captures/526066149145209",
-      "phone_stereo/runs/fixed_focus_a/captures/526068149160482",
-      "phone_stereo/runs/fixed_focus_a/captures/526070132527107"
-    ],
-    "counts": [
-      113,
-      135,
-      148,
-      129,
-      124,
-      145,
-      127,
-      106
-    ]
-  },
-  "focus_m": 1.0,
-  "history": [
-    {
-      "pose_source": "factory_baseline + scene_refined(roll,pitch,wide_scale)",
-      "scale_status": "factory_baseline_refined"
-    }
-  ],
   "R_sensor_to_left": [
     [
       -0.009656291849169007,
@@ -167,5 +116,203 @@
       0.0,
       -1.0000000000000004
     ]
+  ],
+  "pose_source": "board:cv2.stereoCalibrate",
+  "scale_status": "metric",
+  "warnings": [
+    "체커보드 stereoCalibrate 통과 — 실측 거리 1개로 최종 확인 권장"
+  ],
+  "focal_scale_wide": 0.9909084056483255,
+  "intrinsics_source": "base:calib_phone_pair.json",
+  "board": {
+    "rms_px": 0.26137242916311004,
+    "n_views": 25,
+    "used": [
+      "phone_stereo/runs/board2/captures/529168928171342",
+      "phone_stereo/runs/board2/captures/529171861538607",
+      "phone_stereo/runs/board2/captures/529173861563529",
+      "phone_stereo/runs/board2/captures/529177061571498",
+      "phone_stereo/runs/board2/captures/529180728271107",
+      "phone_stereo/runs/board2/captures/529185461640170",
+      "phone_stereo/runs/board2/captures/529190995017357",
+      "phone_stereo/runs/board2/captures/529195061714389",
+      "phone_stereo/runs/board2/captures/529196661729232",
+      "phone_stereo/runs/board2/captures/529200795096850",
+      "phone_stereo/runs/board2/captures/529206728473725",
+      "phone_stereo/runs/board2/captures/529214928541225",
+      "phone_stereo/runs/board2/captures/529216461887670",
+      "phone_stereo/runs/board2/captures/529221395303178",
+      "phone_stereo/runs/board2/captures/529228328643725",
+      "phone_stereo/runs/board2/captures/529241462082553",
+      "phone_stereo/runs/board2/captures/529249062149896",
+      "phone_stereo/runs/board2/captures/529253528851185",
+      "phone_stereo/runs/board2/captures/529258328886967",
+      "phone_stereo/runs/board2/captures/529268795643764",
+      "phone_stereo/runs/board2/captures/529272462345365",
+      "phone_stereo/runs/board2/captures/529277129044310",
+      "phone_stereo/runs/board2/captures/529282662419389",
+      "phone_stereo/runs/board2/captures/529285729103607",
+      "phone_stereo/runs/board2/captures/529287395786732"
+    ],
+    "skipped": [
+      [
+        "phone_stereo/runs/board2",
+        "L",
+        "R"
+      ],
+      [
+        "phone_stereo/runs/board2/captures/529259862236264",
+        "L",
+        ""
+      ]
+    ],
+    "per_view_px": [
+      [
+        0.16073604855155704,
+        0.1757935042156979
+      ],
+      [
+        0.4126548903797213,
+        0.2727104430049116
+      ],
+      [
+        0.18763345235212844,
+        0.15254158452497796
+      ],
+      [
+        0.2511727433666425,
+        0.1757873203785905
+      ],
+      [
+        0.14346683559651413,
+        0.16047457762973297
+      ],
+      [
+        0.20832872943996947,
+        0.17242004235929556
+      ],
+      [
+        0.19554917117486145,
+        0.20145762603416645
+      ],
+      [
+        0.17302470677009485,
+        0.18394871449658948
+      ],
+      [
+        0.1723457065795818,
+        0.20068473258727448
+      ],
+      [
+        0.11118590001800722,
+        0.12504651897381744
+      ],
+      [
+        0.26709442919468657,
+        0.18612349620857266
+      ],
+      [
+        0.1991989642610187,
+        0.2175089465516126
+      ],
+      [
+        0.38132230662423733,
+        0.3524940877623159
+      ],
+      [
+        0.40892958636363436,
+        0.362402574595041
+      ],
+      [
+        0.16413358400847383,
+        0.3086197692501107
+      ],
+      [
+        0.17637614586667769,
+        0.13687664891337278
+      ],
+      [
+        0.3314682156548564,
+        0.22449364609027422
+      ],
+      [
+        0.44967083243097394,
+        0.2758796654609217
+      ],
+      [
+        0.21062081996462034,
+        0.51183254755947
+      ],
+      [
+        0.3439838384933345,
+        0.30869775987121384
+      ],
+      [
+        0.19365983694078812,
+        0.16602212609679962
+      ],
+      [
+        0.2694174422817212,
+        0.3952535406913679
+      ],
+      [
+        0.2747598420707096,
+        0.2974300532380295
+      ],
+      [
+        0.1949140196098632,
+        0.15462586173156626
+      ],
+      [
+        0.3576644294628756,
+        0.24992747768145873
+      ]
+    ],
+    "sync_dropped": [],
+    "sync_gate_px": 6.525608663245181,
+    "lr_predict_err_px": [
+      2.74,
+      2.48,
+      3.08,
+      2.78,
+      2.94,
+      2.76,
+      2.76,
+      2.38,
+      2.32,
+      2.69,
+      3.21,
+      2.57,
+      3.16,
+      3.39,
+      2.48,
+      2.99,
+      3.43,
+      3.59,
+      2.99,
+      1.95,
+      2.37,
+      3.12,
+      2.2,
+      2.34,
+      3.41
+    ],
+    "square_m": 0.01595,
+    "pattern": [
+      15,
+      6
+    ],
+    "fix_intrinsics": true
+  },
+  "focus_m": 1.0,
+  "scaled_from": [
+    960,
+    720
+  ],
+  "history": [
+    {
+      "pose_source": "board:cv2.stereoCalibrate",
+      "scale_status": "metric"
+    }
   ]
 }

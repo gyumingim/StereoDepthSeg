@@ -54,9 +54,9 @@ USB 디버깅을 허용한 폰을 연결하고 저장소 루트에서 실행한�
 | 단계 | 명령 | `scale_status` | 의미 |
 |---|---|---|---|
 | 공장값 | `./venv/bin/python z_phone_calib.py --factory` | `factory_unverified` | Camera2 공장 포즈 그대로. 실쌍에서 정류 dy 2~5px → 쓰지 말 것 |
-| 회전 보정 | `./venv/bin/python z_phone_calib.py --refine phone_stereo/runs/<번들…>` | `factory_baseline_refined` | 장면 SIFT 대응점으로 roll/pitch + 광각 fx 스케일 보정(yaw 공장 고정), baseline 15.76mm 는 공장값. 검증쌍 dy 0.43~0.56px. **현재 저장소 파일** |
-| 실측 1개 | `./venv/bin/python z_phone_calib.py --known <번들> --known-m <m> --roi x y w h` | `known_distance_pinned` | 거리를 아는 물체의 ROI 시차로 yaw 고정. 자 하나면 된다 |
-| 체커보드 | `./venv/bin/python z_phone_calib.py --board phone_stereo/runs/<보드 번들> --screen laptop --ruler-mm <실측>` | `metric` (rms≤1px, 뷰≥8, baseline 공장값 ±15%) | 유일하게 yaw·baseline 을 데이터로 잡음. 절차는 `doc_HOW_TO_RUN.md` "폰 두 렌즈만으로" |
+| 회전 보정 | `./venv/bin/python z_phone_calib.py --refine phone_stereo/runs/<번들…>` | `factory_baseline_refined` | 장면 SIFT 대응점으로 roll/pitch + 광각 fx 스케일 보정(yaw 공장 고정). dy 는 맞지만 yaw 편향으로 거리가 11 % 짧았다 |
+| 실측 1개 | `./venv/bin/python z_phone_calib.py --known <번들> --known-m <m> --roi x y w h` | `known_distance_pinned` | 거리를 아는 물체의 ROI 시차로 yaw 고정. 보드 없을 때 대안 |
+| 체커보드 | `./venv/bin/python z_phone_calib.py --board phone_stereo/runs/<보드 번들> --screen laptop --ruler-mm <실측> --size 960 720 --target-size 640 480 --base calib_phone_pair.json` | `metric` (rms≤1px, 뷰≥8, baseline 공장값 ±15%) | **현재 저장소 파일**: RMS 0.26 px, 25뷰, baseline 15.53 mm. 보드 PnP 거리 대비 FFS 오차 −1.8 %(0.34~0.45 m). 촬영은 `--still --board-hud` 로 |
 
 **초점은 고정해야 한다.** 광각 5 는 AF 렌즈라 자동초점이면 초점거리가 프레임마다 0.3~0.7% 변해 정류가 1~2px 씩 흔들린다. 앱은 기본으로 `CONTROL_AF_MODE_OFF` + `LENS_FOCUS_DISTANCE` 1 m 로 고정하며(`--focus-m`, 0 이면 자동초점), 캘리 번들의 초점값이 json 에 기록되고 실행값과 다르면 객체마다 `focus_mismatch` 경고가 붙는다. 초광각 2 는 고정초점이다.
 
@@ -71,6 +71,8 @@ USB 디버깅을 허용한 폰을 연결하고 저장소 루트에서 실행한�
 ```
 
 직접 확인 (RTX 4060, venv_ffs, 640×480, 초점 1 m 고정): 오프라인 — 사람 seg 0.395/0.412 m (bbox 는 사람이 화면 대부분이라 배경 혼입 → seg 를 볼 것). 라이브 25초 — 367쌍 15.0 fps, FFS+YOLO(seg+bbox) 80회, 중앙값 258 ms, 첫 쌍 dy 0.32px·인라이어 0.95, 벽시계 1.80 m·183×60 mm.
+
+**두 렌즈는 하드웨어 동기가 아니다** (`SENSOR_SYNC_TYPE = APPROXIMATE`, timestamp 는 같게 보고됨). 정지 장면은 문제없지만 촬영 중 폰이나 대상이 움직이면 좌우가 다른 순간이 되어 거리가 틀린다 — 캘리 촬영은 `--still --board-hud`, 라이브에서는 정지 물체만 믿을 것 (STATUS 문제점 18).
 
 **거리 정확도 한계**: baseline 15.76 mm 라 1 m 에서 시차가 7px 뿐이다. 시차 0.5px 오차 → 깊이 오차 ≈ Z²×0.070 (0.5 m 18 mm, 1 m 70 mm, 2 m 0.28 m). 캘리 yaw 0.1° 오차는 시차 0.76px 편향 = 1 m 에서 11%. `metric` 이 아닌 상태의 결과에는 객체마다 `scale_not_validated:<status>` 경고가 붙는다.
 

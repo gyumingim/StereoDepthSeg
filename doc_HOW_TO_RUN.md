@@ -326,13 +326,14 @@ ROI 안 SIFT 대응점이 8개 미만이면 질감 부족으로 거부한다.
 ### 스케일 확정 (`metric`) — 노트북 화면 체커보드
 
 ```bash
-./venv/bin/python z_calibrate.py --make-target --screen laptop          # 노트북 전체화면에 보드 표시, 기준 막대 자로 실측
-./venv/bin/python z_phone_stereo.py --physical 2 5 --save-interval 1.5 --duration 60   # 폰을 25~40 cm 에서 보드에 향하게
-./venv/bin/python z_phone_calib.py --board phone_stereo/runs/<실행시각> --screen laptop --ruler-mm <실측 mm>
+./venv/bin/python z_calibrate.py --make-target --screen laptop     # 노트북/태블릿 전체화면에 보드 표시, 기준 막대를 자로 실측 (태블릿 145 mm 도 OK)
+./venv/bin/python z_phone_stereo.py --physical 2 5 --size 960 720 --save-interval 1.5 --still --board-hud --duration 180 --out phone_stereo/runs/board2
+./venv/bin/python z_phone_calib.py --board phone_stereo/runs/board2 --screen laptop --ruler-mm 145 --size 960 720 --target-size 640 480 --base calib_phone_pair.json
 ```
 
-- 보드가 **두 렌즈 모두에 전부** 들어와야 그 쌍이 쓰인다. 초광각 640×480 에서 보드 한 칸이 15px 이상 되도록 25~40 cm.
-  기울기·위치를 바꿔 15장 이상. 뷰가 적으면 `--size 1280 960` 으로 찍고 `--target-size 640 480` 으로 저장해도 된다.
+- 화면에 렌즈별 `BOARD OK / NO BOARD`, 아래에 저장/미저장 이유(`MOVING`, `SAME VIEW`, `WAIT`, `SAVED #n`)가 뜬다.
+  **찍히는 순간 폰도 보드도 정지**해야 한다(두 렌즈 노출 시각이 달라서, 문제점 18). 보드(태블릿)를 새 위치에 놓고 손 떼고 1초 →
+  `SAVED` 뜨면 다음 위치. 거리 35~50 cm, 위/아래/좌/우/기울기 섞어 20장 이상. 2026-09-22 실측: 26장 → RMS 0.26 px, `metric`.
 - 통과 조건: rms ≤ 1 px, 뷰 ≥ 8, baseline 이 공장값 15.76 mm 의 ±15% 안. 하나라도 어긋나면 `board_unreliable` 로 기록하고
   이유를 출력한다 (metric 으로 올리지 않는다).
 - 통과 뒤 실측 1개로 확인: 자로 잰 물체까지 거리와 `depth.json` 의 `dist_m` 비교.

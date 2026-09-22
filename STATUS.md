@@ -2,7 +2,16 @@
 
 최종 갱신: 2026-09-22
 
-## 폰 두 렌즈(초광각 2 + 광각 5)만으로 metric depth — 동작 (2026-09-22, 스케일 검증 1단계 남음)
+## 폰 두 렌즈(초광각 2 + 광각 5)만으로 metric depth — **metric 달성** (2026-09-22)
+
+- **체커보드 stereoCalibrate 통과**: 태블릿 화면 보드(기준막대 실측 145 mm → 칸 15.95 mm), 960×720 캡처 26장 중 25장 사용,
+  RMS 0.261 px, baseline 15.53 mm(공장 15.76), 회전 0.56°, 640×480 로 축소 저장 → `scale_status: metric`.
+  독립 정지장면 6쌍 dy 0.28~0.52 px 합격. 이전 refine 결과와의 차이는 **yaw −0.255° = 시차 1.9 px** (dy 로는 안 보이던 편향).
+- **절대거리 검증(보드를 정답으로)**: 보드 번들 8개에서 PnP 거리(0.34~0.45 m) vs FFS 보드영역 깊이 중앙값 —
+  metric 캘리 **오차 중앙값 −1.8 % (최대 5.3 %)**, 이전 refine 캘리 −10.8 %(최대 13.3 %). 같은 보드 사진이라 완전 독립은 아니지만
+  단안 PnP 와 조밀 스테레오라는 다른 경로의 일치다. 사람 0.395 → 0.476 m 로 바뀐 것이 이 편향 보정.
+- 첫 시도는 실패(RMS 5.3 px): 촬영 중 태블릿이 움직여 두 렌즈 노출 시각 차(sync APPROXIMATE)로 좌우가 다른 순간을 찍었다
+  (문제점 18). `--still --board-hud`(정지·양쪽 검출 시에만 저장) 로 다시 찍어 해결.
 
 - 추가: `lib_phone_calib.py` + `z_phone_calib.py` (공장 CameraCharacteristics → OpenCV 스테레오 캘리, 장면 대응점 회전 보정,
   체커보드 `stereoCalibrate`, `--check`), `z_phone_stereo.py --offline/--save-interval`, `lib_phone_depth` 렌즈 순서 자동 스왑,
@@ -16,10 +25,8 @@
 - 실행 결과 (venv_ffs, RTX 4060, 초점 1 m 고정): 오프라인 — 사람 seg 0.395/0.412 m (bbox 는 배경 혼입으로 무의미, 문서화된 한계);
   라이브 25초 — 367쌍 15.0 fps, FFS+YOLO(seg+bbox) 80회 **중앙값 258 ms**, 첫 쌍 dy 0.32px·인라이어 0.95, 벽시계 1.80 m·183×60 mm.
 - 한계(정직하게): baseline 15.76 mm → 시차 0.5px 오차의 깊이 오차 ≈ Z²×0.070 (0.5 m: 18 mm, 1 m: 70 mm, 2 m: 0.28 m).
-  yaw 0.1° 오차 = 시차 0.76px 편향 = 1 m 에서 11%. 현재 `scale_status: factory_baseline_refined` (baseline·yaw 공장값)
-  이므로 결과 JSON 에 `scale_not_validated` 경고가 붙는다. 절대거리 고정 두 길: `--known`(실측 거리 1개로 yaw 고정,
-  `known_distance_pinned`) 또는 `--board`(노트북 체커보드 stereoCalibrate → `metric`). 절차: doc_HOW_TO_RUN.md "폰 두 렌즈만으로".
-  **사용자가 자로 잰 거리 1개를 주면 `--known` 으로 바로 고정된다.**
+  yaw 0.1° 오차 = 시차 0.76px 편향 = 1 m 에서 11% — 실제로 refine 캘리의 yaw 가 0.255° 틀려 거리가 11% 짧게 나왔었다.
+  현재 파일은 `--board` 통과본(`metric`). `--known`(실측 거리 1개) 은 보드 없이 yaw 만 고정하는 대안으로 남겨둔다.
 
 ## 폰 센서(IMU·기압) 활용 — 스트리밍·중력 정렬 동작, 이동 스테레오는 수학 검증까지 (2026-09-22)
 
@@ -490,8 +497,7 @@ provisional 저장 상태 유지, 2회째 rescale 거부, ROI y 밖 0px, 최종�
   `factory_baseline_refined` 로 두고, **체커보드 stereoCalibrate(`--board`, K 고정, rms≤1px·뷰≥8·baseline 공장값 ±15%)** 를
   통과해야 `metric`. 실측 거리 1개로 최종 확인 권장.
 결과: `calib_phone_pair.json` (phone.physical ["2","5"], image_size 640×480). 오프라인 3쌍·라이브 30초 결과는 맨 위 절.
-남은 일: (1) 사용자가 자로 잰 거리 1개 → `--known` 으로 yaw 고정(`known_distance_pinned`), 다른 거리 1개로 교차 확인;
-  (2) 또는 노트북 체커보드를 폰으로 25~40cm 에서 15장+ 찍어 `--board` → `metric`. 망원(6) 쌍(초광각+망원 32.4mm)은
+결과(2026-09-22 오후): 사용자가 태블릿 보드 26장 촬영 → `--board --base` 통과, `metric`. 위 요약 절 참조. 망원(6) 쌍(초광각+망원 32.4mm)은
   공장값 변환은 되지만 망원 fx 1193px 라 겹치는 시야가 좁아 기본에서 제외. bbox 모드는 사람이 화면 대부분을 차지하면
   배경이 연속으로 섞여 dims 2.5 m 같은 값이 나왔고 status 가 ok 였다 → `aggregate` 에 "bbox + 단일군집 + 혼합깊이(p90/p10>1.3)
   = ambiguous(`bbox_mixed_depth_no_split`)" 게이트 추가. seg 모드를 기본으로 볼 것.
@@ -510,6 +516,21 @@ provisional 저장 상태 유지, 2회째 rescale 거부, ROI y 밖 0px, 최종�
   summary.json `clock_gap_ms` −60~−100 ms = 프레임 전송 지연 범위 (다른 시계면 초·시간 단위로 벌어진다).
 - 이동 스테레오 수학: X_camB = Rs R(q_B)ᵀ R(q_A) Rsᵀ X_camA; (x_B × R x_A)ᵀ t = 0 → 최소 특이벡터(Cauchy IRLS) + cheirality;
   X_B = R X_A + s t̂ 투영식을 점별 LS 로 풀어 s 중앙값. 한계: |T| 절대값은 15.76 mm 스테레오의 편향을 물려받는다.
+
+### 18. 두 렌즈 노출 시각이 다르다 (sync APPROXIMATE) — 캘리 절차로 우회, 움직이는 물체는 한계
+
+증상: 첫 보드 캘리 RMS 5.27 px, baseline 20.8 mm(32 % 오차). 렌즈별로는 완벽(PnP 재투영 0.05~0.27 px, 자유 캘리 fx 공장값 ±1 %)
+인데 **같은 번들의 좌우가 서로 안 맞음**: 번들별 PnP 상대포즈가 7~71 mm·0.6~8°로 튐(강체인데). IMU 는 촬영 순간 폰 정지
+(자이로 0.001~0.008 rad/s) → 사용자가 태블릿을 손으로 움직이며 찍었고, 두 렌즈의 실제 노출 시각이 달라 보드가 다른 위치에 찍힘.
+Camera2 가 두 물리 스트림에 같은 timestamp 를 주지만 `LOGICAL_MULTI_CAMERA_SENSOR_SYNC_TYPE = APPROXIMATE`(하드웨어 동기 아님).
+오프셋 크기는 미측정(최대 한 프레임 66 ms 추정; 20 cm/s × 66 ms = 13 mm = 0.5 m 에서 17 px, 관측 3~30 px 와 일치).
+대응:
+- `z_phone_stereo.py --still`: 연속 프레임 차(160×120 회색 평균차 < 1.5) 3프레임 + 자이로 < 0.05 rad/s + 직전 저장과 다른 장면일 때만 저장.
+  `--board-hud`: 렌즈별 BOARD OK/NO BOARD 코너 표시, 양쪽 검출 시에만 저장, 저장/미저장 이유를 HUD·터미널에 출력.
+- `board_stereo_calibrate`: 왼쪽 PnP + 현재 (R,T) 로 오른쪽 코너를 예측한 오차가 중앙값×2+1 px 를 넘는 쌍은 "동기 불일치" 로 제외.
+- 실패한 보드 결과(`board_unreliable`)는 보정본을 덮어쓰지 않고 `.unreliable.json` 에만 저장 (덮어써서 라이브가 dy 5 px 로 죽었던 일 재발 방지).
+남는 한계: 라이브 depth 에서 **움직이는 물체**(걷는 사람 0.5 m/s → 66 ms 에 33 mm = 1 m 에서 시차 15 px 오차 vs 참 시차 7 px)는 거리가
+틀린다. 정지 물체만 믿을 것. 오프셋 실측은 보드를 흔들며 전 프레임 저장 후 궤적 맞추기로 가능(미구현).
 
 ## 파라미터 변경 이력
 
@@ -539,4 +560,6 @@ provisional 저장 상태 유지, 2회째 rescale 거부, ROI y 밖 0px, 최종�
 | 2026-09-22 | `refine_pose` fit_t | — → **기본 False** | 15.76mm 에서 T 방향 관측 약함(16° 흔들림) | `lib_phone_calib.py` |
 | 2026-09-22 | `refine_pose` fix_yaw / fit_scale | — → **True / True** | yaw 자유 적합이 −0.87° 로 튀어 시차 반전; AF 초점 위치별 fx 변화 | `lib_phone_calib.py` |
 | 2026-09-22 | 폰 앱 초점 | 자동초점(TEMPLATE_PREVIEW 기본) → **`CONTROL_AF_MODE_OFF` + `LENS_FOCUS_DISTANCE` 1/focus_m, `--focus-m` 기본 1.0** | focus breathing 으로 dy 가 촬영마다 1~2px 흔들림 | `MainActivity.java`, `z_phone_stereo.py` |
+| 2026-09-22 | `calib_phone_pair.json` | refine(yaw 공장) → **체커보드 stereoCalibrate `metric`** (RMS 0.26px, 25뷰, baseline 15.53mm, yaw −0.255°) | 절대거리 −10.8% → −1.8% | `calib_phone_pair.json` |
+| 2026-09-22 | 보드 캘리 촬영 | 주기 저장 → **`--still --board-hud` 정지·양쪽 검출 시에만** | 문제점 18 | `z_phone_stereo.py` |
 | 2026-09-22 | `scale_status` 값 | provisional/measured/reference_scaled → **+ factory_unverified / factory_baseline_refined / metric / board_unreliable** (폰용) | 폰 캘리 출처 구분 | `z_phone_calib.py`, `lib_phone_depth.py` |
