@@ -57,6 +57,24 @@ def gravity_frame(st, imu):
                 frame="x=camera right (horizontal), y=forward (horizontal), z=up; origin=left lens")
 
 
+def depth_colormap(depth, valid, zmin=0.3, zmax=3.0):
+    """깊이맵 → 색: 가까움=빨강, 멂=파랑 (JET 역방향), 로그 스케일(스테레오 정밀도가 Z² 로 나빠지므로). 무효=검정. 오른쪽에 눈금 막대."""
+    z = np.where(valid, depth, np.nan).astype(np.float32)
+    t = (np.log(np.clip(z, zmin, zmax)) - np.log(zmin)) / (np.log(zmax) - np.log(zmin))     # 0=가까움 .. 1=멂
+    u8 = np.clip((1.0 - np.nan_to_num(t, nan=1.0)) * 255, 0, 255).astype(np.uint8)         # JET: 0 파랑 .. 255 빨강
+    img = cv2.applyColorMap(u8, cv2.COLORMAP_JET)
+    img[~valid] = 0
+    H, W = img.shape[:2]
+    bar = cv2.applyColorMap(np.linspace(255, 0, H - 40, dtype=np.uint8).reshape(-1, 1).repeat(22, 1), cv2.COLORMAP_JET)  # 위 빨강(가까움)
+    panel = np.zeros((H, 70, 3), np.uint8); panel[20:H - 20, 6:28] = bar
+    for frac, label in ((0.0, f"{zmin:g}m"), (0.5, f"{np.sqrt(zmin * zmax):.2g}m"), (1.0, f"{zmax:g}m")):
+        y = int(20 + frac * (H - 41))
+        cv2.putText(panel, label, (31, y + 5), cv2.FONT_HERSHEY_SIMPLEX, .42, (255, 255, 255), 1)
+    out = np.hstack([img, panel])
+    cv2.putText(out, "depth  red=near  blue=far", (12, 24), cv2.FONT_HERSHEY_SIMPLEX, .6, (255, 255, 255), 2)
+    return out
+
+
 class PhoneDepth:
     def __init__(self, a):
         import lib_rectify as lr
@@ -128,6 +146,8 @@ class PhoneDepth:
             cv2.putText(vis, f"{method} depth - {self.st.get('scale_status', 'unverified')}", (12,24),
                         cv2.FONT_HERSHEY_SIMPLEX, .6, (0,220,255), 2)
             overlays.append(vis)
+        zr = getattr(a, "depth_range", None) or (0.3, 3.0)
+        overlays.append(depth_colormap(depth, valid, float(zr[0]), float(zr[1])))
         report = dict(timestamp_ns=[fL.timestamp_ns, fR.timestamp_ns], physical_lr=self.st["phone"]["physical"],
                       mode=mode, device="cuda:0",
                       imu={k: v for k, v in (gf or {}).items() if k != "R_cam1_to_world"} if gf else dict(available=False),

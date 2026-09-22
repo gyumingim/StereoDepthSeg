@@ -321,6 +321,8 @@ if __name__ == "__main__":
     ap.add_argument("--scale", type=float, default=1.0)
     ap.add_argument("--iters", type=int, default=4)
     ap.add_argument("--offline", nargs="+", metavar="DIR", help="저장 번들로 depth 만 실행 (폰 불필요)")
+    ap.add_argument("--depth-range", type=float, nargs=2, default=[0.3, 3.0], metavar=("ZMIN", "ZMAX"),
+                    help="깊이 색상맵 범위(m): 가까움=빨강, 멂=파랑, 로그 스케일")
     ap.add_argument("--save-interval", type=float, default=0, help="초. >0 이면 쌍을 주기적으로 captures/<ts>/ 에 저장 (캘리 수집용)")
     ap.add_argument("--still", action="store_true", help="--save-interval 저장을 '정지 순간'(연속 프레임 차이·자이로 작음, 지난 저장과 다른 장면)으로 제한")
     ap.add_argument("--still-thr", type=float, default=1.5, help="정지 판정 프레임 차이 임계 (160x120 회색 평균 절대차)")
