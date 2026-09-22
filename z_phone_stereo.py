@@ -45,11 +45,12 @@ def start_phone(a):
     print(adb(*args).stdout.strip(), flush=True)
 
 
-def save_pair(out, pair, a):
+def save_pair(out, pair, a, receiver=None):
     out.mkdir(parents=True, exist_ok=True)
     meta = dict(logical=a.logical, physical=a.physical, image_size=a.size, focus_m=a.focus_m,
                 timestamp_ns=[f.timestamp_ns for f in pair], format="NV21 -> BGR PNG",
-                mode="phone_stereo", calibration="required_for_metric_depth")
+                mode="phone_stereo", calibration="required_for_metric_depth",
+                imu=receiver.imu_at(pair[0].timestamp_ns) if receiver else {})   # 프레임 시각의 중력/자이로/회전벡터/기압
     for i, f in enumerate(pair):
         if not cv2.imwrite(str(out / f"camera_{a.physical[i]}.png"), f.bgr):
             raise IOError("Cannot save paired PNG")
@@ -62,6 +63,7 @@ def run_offline(bundle, depth_worker, a):
     bundle = Path(bundle)
     meta = json.loads((bundle / "pair.json").read_text()) if (bundle / "pair.json").exists() else {}
     ts = meta.get("timestamp_ns") or [0, 0]
+    imu = meta.get("imu") or {}
     pair = []
     for i, pid in enumerate(a.physical[:2]):
         img = cv2.imread(str(bundle / f"camera_{pid}.png"))
@@ -71,15 +73,18 @@ def run_offline(bundle, depth_worker, a):
             raise ValueError(f"{bundle}: 이미지 {img.shape[1]}x{img.shape[0]} 가 --size {a.size} 와 다름")
         pair.append(PhoneFrame(index=i, timestamp_ns=int(ts[i] if i < len(ts) else 0), bgr=img))
     depth_worker.ep = None            # 라이브는 첫 쌍에서 한 번만 검사하지만, 번들마다 다른 장면이므로 매번 다시
-    vis, report = depth_worker(pair)
+    vis, report = depth_worker(pair, imu)
     cv2.imwrite(str(bundle / f"depth_{a.yolo}.png"), vis)
     (bundle / "depth.json").write_text(json.dumps(report, indent=2, ensure_ascii=False))
+    g = report.get("imu") or {}
     print(f"[offline {bundle.name}] {report['ms']:.0f}ms  epipolar dy_med {report['epipolar'].get('dy_med')} "
-          f"inlier {report['epipolar'].get('inlier_frac')}  scale_status {report['scale_status']}")
+          f"inlier {report['epipolar'].get('inlier_frac')}  scale_status {report['scale_status']}  "
+          f"tilt pitch {g.get('pitch_deg')} roll {g.get('roll_deg')}")
     for method, rows in report["objects"].items():
         for r in rows:
             print(f"   {method:4s} #{r.get('instance')} {r.get('label'):10s} {r.get('status'):12s} "
-                  f"dist {r.get('dist_m')}m  z {r.get('z_cam1_med_m')}m  dims_mm {r.get('dims_mm')}  warn {r.get('warnings')}")
+                  f"dist {r.get('dist_m')}m  z {r.get('z_cam1_med_m')}m  dims_mm {r.get('dims_mm')}  "
+                  f"world {r.get('center_world_m')}  warn {r.get('warnings')}")
     return report
 
 
@@ -186,7 +191,8 @@ def main(a):
                 future = None
             if (a.yolo != "none" or depth_worker) and pair and future is None and pair[0].timestamp_ns != last_inferred:
                 last_inferred = pair[0].timestamp_ns
-                future = worker.submit(depth_worker, pair) if depth_worker else worker.submit(detect_frame, pair[0], a.yolo)
+                future = (worker.submit(depth_worker, pair, receiver.imu_at(pair[0].timestamp_ns)) if depth_worker
+                          else worker.submit(detect_frame, pair[0], a.yolo))
             if not a.headless:
                 tiles = []
                 for i, f in enumerate(frames):
@@ -203,10 +209,10 @@ def main(a):
                 if key in (27, ord("q")):
                     break
                 if key == ord("s") and pair:
-                    save_pair(out / "captures" / str(pair[0].timestamp_ns), pair, a)
+                    save_pair(out / "captures" / str(pair[0].timestamp_ns), pair, a, receiver)
                     print("Saved paired PNGs", flush=True)
             if a.save_interval and pair and now - last_bundle >= a.save_interval:
-                save_pair(out / "captures" / str(pair[0].timestamp_ns), pair, a)
+                save_pair(out / "captures" / str(pair[0].timestamp_ns), pair, a, receiver)
                 last_bundle = now
                 print(f"Saved bundle {pair[0].timestamp_ns}", flush=True)
             if now - last_print >= 5:
@@ -227,7 +233,7 @@ def main(a):
                 inference_error = str(e)
         _, pair, _, _ = receiver.snapshot()
         if pair:
-            save_pair(out, pair, a)
+            save_pair(out, pair, a, receiver)
         stats = receiver.stats()
         stats.update(logical=a.logical, physical=a.physical, image_size=a.size,
                      elapsed_s=time.monotonic()-started, inference=report, inference_error=inference_error,

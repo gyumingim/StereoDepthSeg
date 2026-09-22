@@ -74,6 +74,14 @@ USB 디버깅을 허용한 폰을 연결하고 저장소 루트에서 실행한�
 
 **거리 정확도 한계**: baseline 15.76 mm 라 1 m 에서 시차가 7px 뿐이다. 시차 0.5px 오차 → 깊이 오차 ≈ Z²×0.070 (0.5 m 18 mm, 1 m 70 mm, 2 m 0.28 m). 캘리 yaw 0.1° 오차는 시차 0.76px 편향 = 1 m 에서 11%. `metric` 이 아닌 상태의 결과에는 객체마다 `scale_not_validated:<status>` 경고가 붙는다.
 
+## 폰 센서 (IMU·기압)
+
+앱이 자이로·중력·선가속도·게임 회전벡터·회전벡터(125 Hz), 기압(12.5 Hz)을 같은 소켓으로 보낸다(magic `SENS`, payload float32). 카메라와 같은 elapsedRealtimeNanos 시계라 프레임 시각의 센서값을 찍어 `pair.json`의 `imu` 와 depth 보고서 `imu`/`imu_raw` 에 넣는다. `summary.json` 의 `imu` 에 센서별 표본수·주기, `clock_gap_ms` 에 시계 일치 확인값이 있다.
+
+- **중력 정렬**: 객체 `center_world_m` (x 카메라 오른쪽 수평, y 수평 전방, z 위), `height_rel_camera_m`, 보고서 `imu.pitch_deg/roll_deg`.
+- **이동 스테레오** (`z_phone_motion.py`): GUI 에서 `S` 로 A 저장 → 폰을 10~20 cm 옆으로 옮겨 정지 → `S` 로 B 저장(10초 안에) → `./venv/bin/python z_phone_motion.py --a <A> --b <B>` (회전은 회전벡터, 이동방향은 영상, 크기는 15.76 mm 스테레오, 가속도 적분은 교차검증). `--dense` (venv_ffs) 면 이동 쌍을 정류해 FFS+seg 를 돌린다. 정지 상태 두 번들은 `baseline_unreliable` 로 거부된다.
+- IMU 는 두 렌즈 사이 기하(yaw·baseline)를 관측하지 못한다 — 그건 `--known`/`--board` 의 몫이다.
+
 ## 파일과 검증
 
 - `phone_stereo/android/src/com/camera/dualstream/MainActivity.java`: Camera2 촬영·물리 ID 조회·NV21 전송.
@@ -81,7 +89,8 @@ USB 디버깅을 허용한 폰을 연결하고 저장소 루트에서 실행한�
 - `lib_phone_stereo.py`: 분할 TCP 패킷 처리·타임스탬프 pairing·수신 통계.
 - `z_phone_stereo.py`: 설치·시작·PC 표시·GPU 추론·원본 저장·종료.
 - `lib_phone_depth.py`: 폰 쌍의 보정값 검증 및 기존 FFS depth 파이프라인 연결.
-- `lib_phone_calib.py` / `z_phone_calib.py`: 공장 CameraCharacteristics → OpenCV 스테레오 캘리, 장면 회전 보정, 체커보드 stereoCalibrate, `--check`.
+- `lib_phone_calib.py` / `z_phone_calib.py`: 공장 CameraCharacteristics → OpenCV 스테레오 캘리, 장면 회전 보정, 체커보드 stereoCalibrate, `--known`, `--check`.
+- `lib_phone_motion.py` / `z_phone_motion.py`: 회전벡터 + 영상 + 스테레오 스케일로 폰 이동 두 시점을 넓은 baseline 스테레오로.
 - `phone_stereo/cameras_s24.json`: 이 S24 의 `--list` 결과 사본 (runs/ 는 git 에 없으므로).
 - `phone_stereo/test_receiver.py`: 잘린/손상된 패킷, 프레임 누락·재사용 방지, 다른 카메라 보정값 거부 테스트.
 

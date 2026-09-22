@@ -28,6 +28,35 @@ def load_phone_calibration(path, logical, physical, size):
     return st, swap
 
 
+def gravity_frame(st, imu):
+    """중력 센서(기기 프레임, 위쪽을 가리키는 반작용 벡터) -> cam1(왼쪽 렌즈, 정류 전) 기준 Z-up 세계 프레임.
+
+    반환 dict(R_cam1_to_world(3x3), up_cam1, pitch_deg, roll_deg, ...) 또는 None (센서/캘리 회전 없음).
+      z_world = 위(−중력), x_world = 카메라 x축의 수평 투영(오른쪽), y_world = z × x (수평 전방).
+      pitch = 광축이 수평면에서 들린 각(+위), roll = 영상 가로축이 수평에서 기운 각.
+    Android TYPE_GRAVITY 는 정지 시 가속도계와 같아 화면을 위로 두면 z=+9.81, 즉 벡터가 '위' 를 가리킨다.
+    """
+    g = (imu or {}).get("gravity")
+    Rs = st.get("R_sensor_to_left")
+    if not g or Rs is None:
+        return None
+    up = np.asarray(Rs, float) @ np.asarray(g["values"], float)
+    n = np.linalg.norm(up)
+    if not 8.0 < n < 11.5:                      # 자유낙하/흔들림 중이면 신뢰 불가
+        return None
+    up /= n
+    x_cam, z_cam = np.array([1.0, 0, 0]), np.array([0, 0, 1.0])
+    xw = x_cam - (x_cam @ up) * up
+    if np.linalg.norm(xw) < 0.2:                # 카메라가 거의 수직으로 위/아래를 볼 때는 y축으로 기준
+        xw = np.array([0, 1.0, 0]) - (np.array([0, 1.0, 0]) @ up) * up
+    xw /= np.linalg.norm(xw); yw = np.cross(up, xw)
+    R = np.vstack([xw, yw, up])
+    return dict(R_cam1_to_world=R, up_cam1=up.round(5).tolist(), gravity_sensor=g["values"], dt_ms=g.get("dt_ms"),
+                pitch_deg=float(np.degrees(np.arcsin(np.clip(z_cam @ up, -1, 1)))),
+                roll_deg=float(np.degrees(np.arcsin(np.clip(x_cam @ up, -1, 1)))),
+                frame="x=camera right (horizontal), y=forward (horizontal), z=up; origin=left lens")
+
+
 class PhoneDepth:
     def __init__(self, a):
         import lib_rectify as lr
@@ -43,7 +72,7 @@ class PhoneDepth:
         self.model = None
         self.ep = None
 
-    def __call__(self, pair):
+    def __call__(self, pair, imu=None):
         import lib_ffs
         import lib_detect as ld
         import lib_rectify as lr
@@ -64,6 +93,7 @@ class PhoneDepth:
         points = lr.depth_to_points_cam1(np.where(valid, depth, np.nan).astype(np.float32), rp)
         mode = a.yolo if a.yolo != "none" else "both"
         dets = ld.detect_yolo(left, model=ld.DEFAULT_MODEL if mode == "bbox" else ld.DEFAULT_SEG_MODEL, device="0")
+        gf = gravity_frame(self.st, imu)
         overlays, results = [], {}
         for method in (["seg", "bbox"] if mode == "both" else [mode]):
             rows = []
@@ -85,7 +115,14 @@ class PhoneDepth:
                     region = np.zeros(depth.shape, np.uint8)
                     x, y, w, h = d["box"]
                     region[max(0,y):max(0,y+h), max(0,x):max(0,x+w)] = 255
-                rows.append(od.aggregate(rec, region, valid, depth, points, rp=rp, outline=method=="seg"))
+                rec = od.aggregate(rec, region, valid, depth, points, rp=rp, outline=method=="seg")
+                if gf and rec.get("center_cam1_m") is not None:
+                    w = gf["R_cam1_to_world"] @ np.asarray(rec["center_cam1_m"], float)
+                    rec["center_world_m"] = w.round(4).tolist()          # 중력 정렬: z = 카메라 기준 높이(+위)
+                    rec["height_rel_camera_m"] = round(float(w[2]), 4)
+                else:
+                    rec["center_world_m"] = None; rec["height_rel_camera_m"] = None
+                rows.append(rec)
             results[method] = rows
             vis = od.draw_overlay(left, dets, rows, method)
             cv2.putText(vis, f"{method} depth - {self.st.get('scale_status', 'unverified')}", (12,24),
@@ -93,6 +130,8 @@ class PhoneDepth:
             overlays.append(vis)
         report = dict(timestamp_ns=[fL.timestamp_ns, fR.timestamp_ns], physical_lr=self.st["phone"]["physical"],
                       mode=mode, device="cuda:0",
+                      imu={k: v for k, v in (gf or {}).items() if k != "R_cam1_to_world"} if gf else dict(available=False),
+                      imu_raw={k: v for k, v in (imu or {}).items() if k != "gravity"},
                       ms=(time.perf_counter()-t0)*1000, epipolar=self.ep, objects=results,
                       calibration=str(a.calib_stereo), scale_status=self.st.get("scale_status", "unverified"))
         return np.hstack(overlays), od._clean(report)

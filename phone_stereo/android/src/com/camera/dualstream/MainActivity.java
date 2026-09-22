@@ -3,6 +3,10 @@ package com.camera.dualstream;
 import android.app.Activity;
 import android.os.*;
 import android.graphics.ImageFormat;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.hardware.camera2.*;
 import android.hardware.camera2.params.*;
 import android.media.Image;
@@ -24,6 +28,10 @@ public class MainActivity extends Activity {
     private static final String TAG = "PhoneStereo";
     private final List<ImageReader> readers = new ArrayList<>();
     private final BlockingQueue<Packet> pending = new ArrayBlockingQueue<>(6);
+    // IMU/environment samples share the socket with a different magic; own queue so frame backpressure
+    // never drops motion samples and 100 Hz sensors never evict frames.
+    private final BlockingQueue<Packet> imuPending = new ArrayBlockingQueue<>(1024);
+    private SensorManager sensors;
     private HandlerThread cameraThread;
     private Handler handler;
     private CameraDevice camera;
@@ -36,6 +44,33 @@ public class MainActivity extends Activity {
     private String[] ids;
     private long[] counts;
     private int width, height;
+    private static final int MAGIC_FRAME = 0x53544552, MAGIC_SENSOR = 0x53454E53;   // "STER", "SENS"
+
+    /** Sensor event timestamps and camera timestamps (SENSOR_INFO_TIMESTAMP_SOURCE_REALTIME on this device) are both
+     *  SystemClock.elapsedRealtimeNanos(), so the PC can look up the IMU state at each frame's exposure time. */
+    private final SensorEventListener imu = new SensorEventListener() {
+        @Override public void onSensorChanged(SensorEvent e) {
+            if(client==null) return;
+            ByteBuffer b=ByteBuffer.allocate(4*e.values.length);          // big endian, like the frame header
+            for(float v:e.values) b.putFloat(v);
+            Packet p=new Packet(e.sensor.getType(),e.timestamp,b.array());
+            if(!imuPending.offer(p)) { imuPending.poll(); imuPending.offer(p); }
+        }
+        @Override public void onAccuracyChanged(Sensor s,int accuracy) {}
+    };
+
+    private void startSensors() {
+        sensors=(SensorManager)getSystemService(SENSOR_SERVICE);
+        int[] types={Sensor.TYPE_GYROSCOPE,Sensor.TYPE_GRAVITY,Sensor.TYPE_LINEAR_ACCELERATION,
+                     Sensor.TYPE_GAME_ROTATION_VECTOR,Sensor.TYPE_ROTATION_VECTOR,Sensor.TYPE_PRESSURE};
+        List<String> got=new ArrayList<>();
+        for(int t:types) {
+            Sensor s=sensors.getDefaultSensor(t);
+            // 10 ms period (100 Hz): below the 200 Hz HIGH_SAMPLING_RATE_SENSORS permission threshold.
+            if(s!=null && sensors.registerListener(imu,s,10000,handler)) got.add(t+":"+s.getName());
+        }
+        Log.i(TAG,"sensors "+got);
+    }
 
     private static class Packet {
         final int index;
@@ -85,6 +120,7 @@ public class MainActivity extends Activity {
                 @Override public void onDisconnected(CameraDevice d) { status("DISCONNECTED"); d.close(); }
                 @Override public void onError(CameraDevice d,int e) { status("CAMERA_ERROR "+e); d.close(); }
             },handler);
+            startSensors();
         } catch(Exception e) { status("ERROR "+e); Log.e(TAG,"startup",e); }
     }
 
@@ -203,10 +239,20 @@ public class MainActivity extends Activity {
                 s.setTcpNoDelay(true); client=s; pending.clear();
                 DataOutputStream out=new DataOutputStream(new BufferedOutputStream(s.getOutputStream(),1024*1024));
                 while(running) {
-                    Packet p=pending.poll(1,TimeUnit.SECONDS); if(p==null) continue;
-                    out.writeInt(0x53544552); out.writeInt(p.index);
-                    out.writeInt(width); out.writeInt(height); out.writeLong(p.timestamp);
-                    out.writeInt(p.data.length); out.write(p.data); out.flush();
+                    Packet p=pending.poll(5,TimeUnit.MILLISECONDS);
+                    if(p!=null) {
+                        out.writeInt(MAGIC_FRAME); out.writeInt(p.index);
+                        out.writeInt(width); out.writeInt(height); out.writeLong(p.timestamp);
+                        out.writeInt(p.data.length); out.write(p.data);
+                    }
+                    Packet q; int n=0;
+                    while(n<1024 && (q=imuPending.poll())!=null) {
+                        n++;
+                        out.writeInt(MAGIC_SENSOR); out.writeInt(q.index);            // index = android Sensor type
+                        out.writeInt(0); out.writeInt(0); out.writeLong(q.timestamp);
+                        out.writeInt(q.data.length); out.write(q.data);
+                    }
+                    if(p!=null || n>0) out.flush();
                 }
             } catch(Exception e) { if(running) Log.i(TAG,"USB client: "+e); }
             finally { client=null; }
@@ -219,6 +265,7 @@ public class MainActivity extends Activity {
     @Override public void onRestart() { super.onRestart(); recreate(); }
     private void stop() {
         running=false;
+        if(sensors!=null) { sensors.unregisterListener(imu); sensors=null; }
         if(session!=null) { session.close(); session=null; }
         if(camera!=null) { camera.close(); camera=null; }
         for(ImageReader r:readers) r.close(); readers.clear();

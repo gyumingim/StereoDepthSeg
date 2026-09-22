@@ -224,8 +224,48 @@ def t_phone_calib():
           np.median(s_yaw) < 0.3)
 
 
+def t_phone_motion():
+    print("폰 이동 스테레오: 회전벡터→R, R 고정 t̂, 스테레오 깊이로 스케일, 가속도 ZUPT 적분")
+    import lib_phone_calib as pc, lib_phone_motion as pm
+    rng = np.random.default_rng(3)
+    Rs = pc.quat_to_R([0.70710678, -0.70710678, 0, 0])                      # 센서→왼쪽 렌즈 (S24 값)
+    K = np.array([[262.0, 0, 324.0], [0, 262.0, 239.0], [0, 0, 1]]); d0 = np.zeros(5)
+    st = dict(R_sensor_to_left=Rs, K1=K, dist1=d0)
+    # 기기 자세: A 는 임의, B 는 A 에서 기기축 회전 (2°, -3°, 1°) ; 회전벡터 = 기기→세계
+    RwA = cv2.Rodrigues(np.radians([10, -20, 35]))[0]
+    R_dev = cv2.Rodrigues(np.radians([2, -3, 1]))[0]                        # X_devB = R_dev X_devA
+    RwB = RwA @ R_dev.T
+    q = lambda R: _R_to_q(R)
+    imuA, imuB = {pm.ROTVEC_KEY: dict(values=q(RwA).tolist())}, {pm.ROTVEC_KEY: dict(values=q(RwB).tolist())}
+    R = pm.relative_rotation_cam(st, imuA, imuB)
+    R_true = Rs @ R_dev @ Rs.T
+    check(f"회전벡터 두 개 → 카메라 프레임 상대회전 오차 {pc.rotation_deg(R @ R_true.T):.2e}°", pc.rotation_deg(R @ R_true.T) < 1e-6)
+    # 장면: 깊이 0.5~3m, 카메라 A→B 이동 T_true (카메라 프레임) 0.15m 옆 + 약간 앞
+    T_true = np.array([-0.15, 0.01, 0.02])
+    Z = rng.uniform(0.5, 3.0, 300); XA = np.column_stack([rng.uniform(-1.0, 1.0, 300) * Z, rng.uniform(-0.7, 0.7, 300) * Z, Z])
+    XB = XA @ R_true.T + T_true
+    nA, nB = XA[:, :2] / XA[:, 2:3], XB[:, :2] / XB[:, 2:3]
+    ok = np.all(np.abs(nA) < 1.2, 1) & np.all(np.abs(nB) < 1.2, 1) & (XB[:, 2] > 0.1)
+    nA, nB, Z = nA[ok], nB[ok], Z[ok]
+    nAn = nA + rng.normal(0, 0.3 / 262, nA.shape); nBn = nB + rng.normal(0, 0.3 / 262, nB.shape)
+    t_hat, info = pm.translation_direction(nAn, nBn, R_true, 262.0)
+    ang = np.degrees(np.arccos(np.clip(t_hat @ (T_true / np.linalg.norm(T_true)), -1, 1)))
+    check(f"R 고정 이동방향 t̂ 각오차 {ang:.2f}° (점 {len(nA)}, 잡음 0.3px), cheirality {info['cheirality_frac']:.2f}", ang < 1.0 and info["cheirality_frac"] > 0.9)
+    s, sinfo = pm.scale_from_depth(nAn, nBn, R_true, t_hat, Z * (1 + rng.normal(0, 0.05, len(Z))))   # 스테레오 깊이 잡음 5%
+    check(f"깊이 5% 잡음으로 |T| {s*1000:.1f}mm (정답 {np.linalg.norm(T_true)*1000:.1f}), MAD {sinfo['mad_rel']*100:.0f}%", abs(s - np.linalg.norm(T_true)) / np.linalg.norm(T_true) < 0.02)
+    # 가속도 적분: 1.2초 동안 세계 x 로 0.15m 부드럽게 이동 (sin² 프로파일) + 바이어스 0.05 m/s², 기기 자세 RwA 고정
+    t = np.arange(0, 1.2, 0.008); tau = t / 1.2
+    pos = 0.15 * (tau - np.sin(2 * np.pi * tau) / (2 * np.pi)); acc_w = np.gradient(np.gradient(pos, t), t)
+    a_w = np.column_stack([acc_w, np.zeros_like(t), np.zeros_like(t)]) + np.array([0.05, -0.03, 0.02])
+    acc_dev = [(int(ts * 1e9), (RwA.T @ a).tolist()) for ts, a in zip(t, a_w)]
+    rot = [(int(ts * 1e9), q(RwA).tolist()) for ts in t]
+    res = pm.accel_displacement(acc_dev, rot, 0, int(1.2e9), Rs)
+    err = np.linalg.norm(np.array(res["d_world"]) - np.array([0.15, 0, 0])) * 1000
+    check(f"가속도 2회 적분 + ZUPT: 변위 {np.round(np.array(res['d_world'])*1000,1).tolist()}mm (정답 150,0,0), 오차 {err:.1f}mm, 바이어스 0.05m/s² 제거", err < 10)
+
+
 if __name__ == "__main__":
-    for t in (t_r01, t_r03, t_r05_r07, t_r08, t_r10, t_dense, t_phone_calib):
+    for t in (t_r01, t_r03, t_r05_r07, t_r08, t_r10, t_dense, t_phone_calib, t_phone_motion):
         try:
             t()
         except Exception as e:

@@ -337,6 +337,18 @@ ROI 안 SIFT 대응점이 8개 미만이면 질감 부족으로 거부한다.
   이유를 출력한다 (metric 으로 올리지 않는다).
 - 통과 뒤 실측 1개로 확인: 자로 잰 물체까지 거리와 `depth.json` 의 `dist_m` 비교.
 
+### 더 정밀하게 — 폰을 옆으로 옮겨 baseline 키우기 (`z_phone_motion.py`, 자이로 사용)
+
+```bash
+./venv/bin/python z_phone_stereo.py --physical 2 5        # GUI. 정지 → S (A) → 10~20cm 옆으로 옮겨 정지 → S (B). 10초 안에
+./venv/bin/python z_phone_motion.py --a phone_stereo/runs/<t>/captures/<tsA> --b phone_stereo/runs/<t>/captures/<tsB>
+./venv_ffs/bin/python z_phone_motion.py --a ... --b ... --dense     # 이동 쌍 FFS + seg → motion_depth.png / motion.json
+```
+
+회전은 게임 회전벡터(자이로), 이동 방향은 영상 대응점, 크기는 15.76 mm 스테레오(3-뷰 삼각측량), 가속도 2회 적분은 교차검증.
+baseline 15 cm 면 1 m 에서 시차 0.5 px 오차가 깊이 0.7 % (두 렌즈 7 %). 절대값 편향은 15.76 mm 캘리의 yaw 를 물려받으니
+`--known`/`--board` 뒤에 쓰면 절대 미터. 결과 보고서의 `center_world_m` 은 중력으로 정렬한 Z-up 좌표(카메라 기준 높이 포함).
+
 ### 정확도를 미리 알고 볼 것
 
 baseline 15.76 mm, f ≈ 451 px(정류 후) 이면 시차 = 7.1 px / Z[m]. 시차 0.5 px 오차 → 깊이 오차 ≈ Z² × 0.070 m:

@@ -21,6 +21,21 @@
   `known_distance_pinned`) 또는 `--board`(노트북 체커보드 stereoCalibrate → `metric`). 절차: doc_HOW_TO_RUN.md "폰 두 렌즈만으로".
   **사용자가 자로 잰 거리 1개를 주면 `--known` 으로 바로 고정된다.**
 
+## 폰 센서(IMU·기압) 활용 — 스트리밍·중력 정렬 동작, 이동 스테레오는 수학 검증까지 (2026-09-22)
+
+- 사용자 질문 "IMU 로 보정 못 하냐": **두 렌즈 사이 기하(yaw·baseline)는 IMU 로 관측 불가** — 렌즈는 한 몸체에 고정, IMU 는 폰 전체
+  운동만 잰다. IMU 가 관측할 수 있는 것에만 쓴다 (문제점 17).
+- 앱: 자이로·중력·선가속도·게임 회전벡터·회전벡터(125 Hz)·기압(12.5 Hz) 을 같은 소켓에 magic "SENS" 패킷으로 전송.
+  카메라 timestamp(REALTIME) 와 같은 elapsedRealtimeNanos 시계 — 마지막 프레임 vs 마지막 센서 차 60~100 ms(전송 지연) 로 확인.
+  번들 pair.json 과 depth 보고서에 프레임 시각의 센서값이 들어간다.
+- 중력 정렬(동작): 객체 중심을 Z-up 세계좌표(`center_world_m`, `height_rel_camera_m`)로 보고, 카메라 기울기 pitch/roll 출력.
+  실측: 책상 위 폰 pitch +20.9°(천장이 보이는 것과 일치), 벽시계 카메라보다 +0.85 m 위, 사람 몸통 +0.17 m.
+- 이동 스테레오(`lib_phone_motion.py`, `z_phone_motion.py`): 폰을 10~20 cm 옆으로 옮긴 두 번들 → 게임 회전벡터로 R,
+  대응점으로 t̂(R 고정 선형해), 15.76 mm 스테레오 3-뷰 삼각측량으로 |T|, 가속도 2회 적분(ZUPT) 교차검증.
+  합성 검증 4항목 PASS(회전 0°, t̂ 0.25°, |T| 0.1%, 적분 0.2 mm). 정지 폰 두 번들에서는 회전벡터 드리프트 0.44° 만으로
+  baseline 16.6 mm·MAD 42% 가 나와 `baseline_unreliable` 게이트(MAD>25% 또는 흐름<5px) 추가. **실제 이동 촬영 검증은 사용자 손이 필요.**
+- 안 한 것: AF 초점거리로 거리 점검(광각 focus_calibration=CALIBRATED 라 가능하나 ±10~20%), 기압은 기록만.
+
 ## Phone Stereo 실기기 구현·검증 완료 (2026-09-22)
 
 - 최신 요청: 2개를 기본으로 먼저 구현하고 3개는 지원되면 시도. 사용자가 새 코드 작성·수정·실기기 실행 승인.
@@ -480,6 +495,21 @@ provisional 저장 상태 유지, 2회째 rescale 거부, ROI y 밖 0px, 최종�
   공장값 변환은 되지만 망원 fx 1193px 라 겹치는 시야가 좁아 기본에서 제외. bbox 모드는 사람이 화면 대부분을 차지하면
   배경이 연속으로 섞여 dims 2.5 m 같은 값이 나왔고 status 가 ok 였다 → `aggregate` 에 "bbox + 단일군집 + 혼합깊이(p90/p10>1.3)
   = ambiguous(`bbox_mixed_depth_no_split`)" 게이트 추가. seg 모드를 기본으로 볼 것.
+
+### 17. 폰 센서 활용 — IMU 가 볼 수 있는 것과 없는 것
+
+- **못 하는 것**: 초광각↔광각 상대 회전·baseline. 두 렌즈는 같은 몸체에 고정되어 폰이 어떻게 움직여도 상대 기하가 같고, IMU 는 그
+  공통 운동만 잰다. yaw 편향은 `--known`(실측 거리) 또는 `--board`(체커보드) 로만 잡힌다.
+- **하는 것 1 — 중력(TYPE_GRAVITY)**: 정지 시 가속도계와 같은 반작용 벡터(화면 위로 두면 z=+9.81) → 위 방향. 센서→카메라 회전은
+  공장 poseRotation(`R_sensor_to_left`). 세계 프레임 x=카메라 오른쪽 수평투영, y=수평 전방, z=위. 결과 `center_world_m`.
+- **하는 것 2 — 게임 회전벡터(자이로+가속도, 지자기 없음)**: 두 촬영 사이 폰 회전 → 이동 스테레오의 R. 지자기 없이 yaw 가 분당
+  ~0.1° 흐르므로 A,B 는 10초 안에. 원시 자이로 적분과 비교값(`gyro_vs_rotvec_deg`)을 진단으로 둘 수 있게 함수 준비.
+- **하는 것 3 — 선가속도 2회 적분**: 양끝 정지(ZUPT)로 상수 바이어스 제거. 합성 0.05 m/s² 바이어스·1.2 s·15 cm 에서 0.2 mm 오차지만
+  실제 손 이동은 바이어스가 상수가 아니라 1~3 cm 급 → 시각 스케일의 **교차검증** 전용.
+- 시계 일치: SensorEvent.timestamp 와 카메라 timestamp(SENSOR_INFO_TIMESTAMP_SOURCE_REALTIME=1) 모두 elapsedRealtimeNanos.
+  summary.json `clock_gap_ms` −60~−100 ms = 프레임 전송 지연 범위 (다른 시계면 초·시간 단위로 벌어진다).
+- 이동 스테레오 수학: X_camB = Rs R(q_B)ᵀ R(q_A) Rsᵀ X_camA; (x_B × R x_A)ᵀ t = 0 → 최소 특이벡터(Cauchy IRLS) + cheirality;
+  X_B = R X_A + s t̂ 투영식을 점별 LS 로 풀어 s 중앙값. 한계: |T| 절대값은 15.76 mm 스테레오의 편향을 물려받는다.
 
 ## 파라미터 변경 이력
 

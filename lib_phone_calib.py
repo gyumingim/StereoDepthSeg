@@ -114,6 +114,9 @@ def factory_stereo(inv, idL, idR, size, logical="0"):
               phone=dict(logical=str(logical), physical=[str(idL), str(idR)]),
               baseline_m=float(np.linalg.norm(T)), factory_baseline_m=float(np.linalg.norm(T)),
               factory_rotation_deg=rotation_deg(R),
+              # Android 센서 좌표계(SensorEvent: 세로 기준 x 오른쪽, y 위, z 화면 밖) -> 각 렌즈 카메라 좌표계.
+              # 중력/자이로 값을 카메라 프레임으로 옮길 때 쓴다 (lib_phone_depth.gravity_frame).
+              R_sensor_to_left=quat_to_R(cL["pose_rotation"]), R_sensor_to_right=quat_to_R(cR["pose_rotation"]),
               pose_source="factory:CameraCharacteristics", scale_status="factory_unverified",
               warnings=["공장 회전은 실제 쌍에서 dy 4~6px 남음 — refine 또는 board 필요",
                         "yaw/baseline 은 실측 검증 전"])
