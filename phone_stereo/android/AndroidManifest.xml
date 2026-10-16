@@ -1,7 +1,10 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.camera.dualstream">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.camera.dualstream"
+    android:versionCode="3" android:versionName="1.2-rec">
     <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="35" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 12+: sensor rates above 200 Hz (raw accel/gyro for VIO). Normal permission, granted at install. -->
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
     <uses-feature android:name="android.hardware.camera.any" android:required="true" />
     <application android:label="Phone Stereo" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:debuggable="true" android:allowBackup="false">
         <activity android:name=".MainActivity" android:exported="true">

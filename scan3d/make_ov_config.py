@@ -1,0 +1,328 @@
+"""OpenVINS 설정 3개 생성 (estimator_config.yaml, kalibr_imu_chain.yaml, kalibr_imucam_chain.yaml).
+
+입력: calib_phone_pair.json (스테레오 보정) + phone_stereo/cameras_s24.json (Camera2 렌즈 자세).
+VIO 에 넣는 영상은 **정류된** 640x480 gray (rect0 = 왼쪽 렌즈, rect1 = 오른쪽 렌즈) 라는 전제다 (SPEC 9.4).
+  -> intrinsics = 정류 P1 의 [f, f, cx, cy], distortion radtan [0,0,0,0], 내부 파라미터 보정 끔.
+
+축 규약
+- IMU 프레임 = Android 센서(기기) 좌표: 세로로 정면에서 볼 때 x 오른쪽, y 위, z 화면 밖.
+  https://developer.android.com/develop/sensors-and-location/sensors/sensors_overview#sensors-coords
+- 렌즈 카메라 좌표 = LENS_POSE_ROTATION 이 가리키는 좌표: x 센서 긴 변(영상 가로), y 짧은 변(영상 아래), z 광축
+  (OpenCV 와 같음). v_cam = quat_to_R(pose_rotation) @ v_sensor.
+  https://developer.android.com/reference/android/hardware/camera2/CameraCharacteristics#LENS_POSE_ROTATION
+- rect0 = R1 @ (왼쪽 렌즈 카메라), rect1 = R2 @ (오른쪽 렌즈 카메라). stereoRectify 에서 R2 @ R == R1.
+  R_I->C0 = R1 @ R_sensor_to_left,  R_I->C1 = R2 @ R @ R_sensor_to_left (= R_I->C0).
+- kalibr T_imu_cam = cam -> IMU: [R_C->I | p_CinI].
+- 평행이동: IMU 위치는 Camera2 가 알려 주지 않는다. --imu-origin lens5 (기본) = IMU 를 주 카메라(렌즈 5) 광학 중심에
+  둔다고 가정 -> p_C0inI = 왼쪽 렌즈 pose_translation (LENS_POSE_REFERENCE=PRIMARY_CAMERA, 센서 축). cam0 이면 0.
+  p_C1inI = p_C0inI + R_C0->I @ [baseline, 0, 0]. 둘 다 온라인 보정(calib_cam_extrinsics) 에 맡긴다.
+
+실행 (WSL): venv_ffs/bin/python scan3d/make_ov_config.py [--fps 30 --imu-rate 400 --init static]
+"""
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import json
+import sys
+from pathlib import Path
+
+import numpy as np
+
+REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
+
+
+def quat_to_R(q):
+    """Android 쿼터니언 (x, y, z, w) -> 회전행렬 (lib_phone_calib.quat_to_R 과 같은 식)."""
+    x, y, z, w = np.asarray(q, float) / np.linalg.norm(q)
+    return np.array([[1 - 2*y*y - 2*z*z, 2*x*y - 2*z*w, 2*x*z + 2*y*w],
+                     [2*x*y + 2*z*w, 1 - 2*x*x - 2*z*z, 2*y*z - 2*x*w],
+                     [2*x*z - 2*y*w, 2*y*z + 2*x*w, 1 - 2*x*x - 2*y*y]])
+
+
+def rot_deg(Ra, Rb):
+    c = (np.trace(Ra.T @ Rb) - 1) / 2
+    return float(np.degrees(np.arccos(np.clip(c, -1, 1))))
+
+
+def find_physical(cameras, logical, pid):
+    for cam in cameras:
+        if str(cam.get("id")) == str(logical):
+            for ph in cam.get("physical", []):
+                if str(ph.get("id")) == str(pid):
+                    return ph
+    raise ValueError(f"cameras json 에 logical {logical} / physical {pid} 없음")
+
+
+def rectify(st):
+    """lib_rectify.rectify_maps 와 같은 정류 (있으면 그것을 쓴다)."""
+    cal = [dict(K=np.array(st[f"K{i}"], float), dist=np.array(st[f"dist{i}"], float),
+                image_size=st["image_size"]) for i in (1, 2)]
+    R, T = np.array(st["R"], float), np.array(st["T"], float)
+    try:
+        import lib_rectify as lr
+        rp = lr.rectify_maps(cal[0], cal[1], R, T, alpha=0.0)
+    except ImportError:
+        import cv2
+        R1, R2, P1, P2, *_ = cv2.stereoRectify(cal[0]["K"], cal[0]["dist"], cal[1]["K"], cal[1]["dist"],
+                                               tuple(st["image_size"]), R, T.reshape(3, 1),
+                                               flags=cv2.CALIB_ZERO_DISPARITY, alpha=0.0)
+        f = float(P1[0, 0])
+        rp = dict(R1=R1, R2=R2, f=f, cx=float(P1[0, 2]), cy=float(P1[1, 2]), baseline_m=-float(P2[0, 3]) / f)
+    return rp, R
+
+
+def mat_rows(M, indent="    "):
+    return "\n".join(f"{indent}- [" + ", ".join(f"{v:.12g}" for v in row) + "]" for row in np.asarray(M))
+
+
+def T_block(R_CtoI, p_CinI):
+    T = np.eye(4)
+    T[:3, :3] = R_CtoI
+    T[:3, 3] = p_CinI
+    return mat_rows(T)
+
+
+# ---------------------------------------------------------------------------------------------------
+# IMU 잡음 기본값 (추정 — 실측 아님, 조정 대상)
+# 폰 MEMS 데이터시트 수준 (예: ST LSM6DSO: 자이로 3.8 mdps/√Hz ≈ 6.6e-5 rad/s/√Hz, 가속 70 µg/√Hz ≈ 6.9e-4 m/s²/√Hz,
+#   https://www.st.com/resource/en/datasheet/lsm6dso.pdf ; S24 의 실제 IMU 부품은 확인 안 됨)
+# 에 VIO 관례대로 ~10~15배 부풀림 (모델링 안 된 진동·온도·양자화·타임스탬프 지터 흡수, 추정).
+# 바이어스 random walk 는 데이터시트에 없어 경험적 값 (추정). SPEC 9.5 와 같은 값.
+IMU_NOISE = dict(
+    accelerometer_noise_density=1.0e-2,   # m/s^2/sqrt(Hz)
+    accelerometer_random_walk=1.0e-3,     # m/s^3/sqrt(Hz)
+    gyroscope_noise_density=1.0e-3,       # rad/s/sqrt(Hz)
+    gyroscope_random_walk=1.0e-4,         # rad/s^2/sqrt(Hz)
+)
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--calib", default=str(REPO / "calib_phone_pair.json"))
+    ap.add_argument("--cameras", default=str(REPO / "phone_stereo" / "cameras_s24.json"))
+    ap.add_argument("--out", default=str(REPO / "scan3d" / "config"))
+    ap.add_argument("--fps", type=float, default=30.0, help="카메라 프레임률 = track_frequency")
+    ap.add_argument("--imu-rate", type=float, default=400.0, help="실제 IMU 주기 Hz (sensors.json/수신 통계)")
+    ap.add_argument("--init", choices=["static", "dynamic"], default="static",
+                    help="static: 처음 1~2 s 가만히 든 뒤 움직이기. dynamic: 움직이면서 초기화")
+    ap.add_argument("--imu-origin", choices=["lens5", "cam0"], default="lens5",
+                    help="IMU 위치 가정 (lens5 = 주 카메라 광학 중심, cam0 = 왼쪽 렌즈 광학 중심)")
+    ap.add_argument("--mono", action="store_true", help="cam0 만 쓰는 mono 설정 (max_cameras 1)")
+    ap.add_argument("--exposure-ms", type=float, default=0.0,
+                    help="카메라 시각이 첫 행 노출 시작 그대로일 때만: 노출 시간 (timeshift 초기값에 /2 반영)")
+    ap.add_argument("--rs-skew-ms", type=float, default=0.0,
+                    help="카메라 시각이 첫 행 시작 그대로일 때만: SENSOR_ROLLING_SHUTTER_SKEW ms (/2 반영). "
+                         "클라이언트가 이미 노출 중앙으로 보정해 보내면 0 (기본, SPEC 9.4)")
+    ap.add_argument("--gravity", type=float, default=9.80, help="중력 크기 m/s^2 (서울 ≈ 9.80)")
+    ap.add_argument("--verbosity", default="INFO")
+    a = ap.parse_args()
+
+    st = json.loads(Path(a.calib).read_text(encoding="utf-8"))
+    cams = json.loads(Path(a.cameras).read_text(encoding="utf-8"))
+    logical = st["phone"]["logical"]
+    left_id, right_id = [str(p) for p in st["phone"]["physical"][:2]]
+    W, H = st["image_size"]
+
+    phL = find_physical(cams, logical, left_id)
+    phR = find_physical(cams, logical, right_id)
+    R_s2l = quat_to_R(phL["pose_rotation"])          # 센서 -> 왼쪽 렌즈 카메라 (Camera2 공장값)
+    R_s2r = quat_to_R(phR["pose_rotation"])
+    if "R_sensor_to_left" in st:
+        d = rot_deg(R_s2l, np.array(st["R_sensor_to_left"]))
+        print(f"[make_ov_config] pose_rotation(lens {left_id}) vs calib R_sensor_to_left: {d:.4f} deg")
+        if d > 1.0:
+            print("[make_ov_config] WARNING: 1° 넘게 다름 — cameras json 과 보정 json 의 렌즈가 맞는지 확인")
+
+    rp, R = rectify(st)
+    R1, R2 = np.asarray(rp["R1"]), np.asarray(rp["R2"])
+    f, cx, cy, b = float(rp["f"]), float(rp["cx"]), float(rp["cy"]), float(rp["baseline_m"])
+
+    R_I_C0 = R1 @ R_s2l
+    R_I_C1 = R2 @ R @ R_s2l
+    print(f"[make_ov_config] rect f={f:.2f} cx={cx:.2f} cy={cy:.2f} baseline={b*1000:.2f} mm, "
+          f"R_I->C1 vs R_I->C0 {rot_deg(R_I_C0, R_I_C1):.2e} deg, "
+          f"board R vs factory (R_s2r) {rot_deg(R @ R_s2l, R_s2r):.3f} deg")
+    R_C0_I, R_C1_I = R_I_C0.T, R_I_C1.T
+    if a.imu_origin == "lens5":
+        p_C0inI = np.asarray(phL.get("pose_translation", [0, 0, 0]), float)
+        if int(phL.get("pose_reference", 0)) != 0:
+            print("[make_ov_config] WARNING: pose_reference != PRIMARY_CAMERA — p_C0inI 를 0 으로")
+            p_C0inI = np.zeros(3)
+    else:
+        p_C0inI = np.zeros(3)
+    p_C1inI = p_C0inI + R_C0_I @ np.array([b, 0.0, 0.0])
+    timeshift = 0.5 * (a.exposure_ms + a.rs_skew_ms) * 1e-3   # t_imu = t_cam + timeshift
+
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    runs = REPO / "scan3d" / "runs"
+    stamp = dt.datetime.now().isoformat(timespec="seconds")
+    head = (f"# generated {stamp} by scan3d/make_ov_config.py\n"
+            f"# inputs: calib={a.calib} cameras={a.cameras} lenses L={left_id} R={right_id}\n"
+            f"# rect: f={f:.4f} cx={cx:.4f} cy={cy:.4f} baseline_m={b:.6f} size={W}x{H}\n"
+            f"# args: fps={a.fps} imu_rate={a.imu_rate} init={a.init} imu_origin={a.imu_origin} mono={a.mono} "
+            f"exposure_ms={a.exposure_ms} rs_skew_ms={a.rs_skew_ms}\n")
+    n_cams = 1 if a.mono else 2
+    dyn = a.init == "dynamic"
+
+    est = f"""%YAML:1.0 # need to specify the file type at the top!
+{head}
+verbosity: "{a.verbosity}" # ALL, DEBUG, INFO, WARNING, ERROR, SILENT
+
+use_fej: true
+integration: "rk4"
+use_stereo: {"false" if a.mono else "true"} # 정류 쌍 스테레오 KLT. 쌍 시각차가 크면 클라이언트가 cam0 만 보냄 (mono 추적)
+max_cameras: {n_cams}
+
+calib_cam_extrinsics: true   # R_ItoC, p_CinI 온라인 보정 (p 초기값은 가정값)
+calib_cam_intrinsics: false  # 정류 영상 -> 핀홀 고정
+calib_cam_timeoffset: true   # 카메라-IMU 시간 오프셋 온라인 보정 (같은 elapsedRealtime 시계라 초기 0 근처)
+calib_imu_intrinsics: false
+calib_imu_g_sensitivity: false
+
+max_clones: 11
+max_slam: 50
+max_slam_in_update: 25
+max_msckf_in_update: 40
+dt_slam_delay: 1
+
+gravity_mag: {a.gravity:.4f}
+
+feat_rep_msckf: "GLOBAL_3D"
+feat_rep_slam: "ANCHORED_MSCKF_INVERSE_DEPTH"
+feat_rep_aruco: "ANCHORED_MSCKF_INVERSE_DEPTH"
+
+# 정지(손에 들고 멈춤) 구간에서 드리프트 억제: 시차 기반 ZUPT
+try_zupt: true
+zupt_chi2_multipler: 0 # 0 = 시차만 사용
+zupt_max_velocity: 0.1
+zupt_noise_multiplier: 10
+zupt_max_disparity: 0.5
+zupt_only_at_beginning: false
+
+# ==================================================================
+# 초기화. static: 시작 때 폰을 1~2 s 가만히 둔 뒤 움직인다 (가속도 흔들림이 init_imu_thresh 를 넘는 순간 초기화).
+# 손떨림으로 실패하면 init_imu_thresh 를 올리거나 --init dynamic.
+init_window_time: {1.0 if dyn else 1.5}
+init_imu_thresh: {0.5 if dyn else 1.0} # 가속도 표준편차 m/s^2 (추정, 폰 잡음에 맞춰 조정)
+init_max_disparity: 15.0 # 정지 판정 최대 시차 px (640x480, 손떨림 여유)
+init_max_features: 50
+
+init_dyn_use: {"true" if dyn else "false"}
+init_dyn_mle_opt_calib: false
+init_dyn_mle_max_iter: 50
+init_dyn_mle_max_time: 0.05
+init_dyn_mle_max_threads: 4
+init_dyn_num_pose: 6
+init_dyn_min_deg: 10.0
+
+init_dyn_inflation_ori: 10
+init_dyn_inflation_vel: 100
+init_dyn_inflation_bg: 10
+init_dyn_inflation_ba: 100
+init_dyn_min_rec_cond: 1e-12
+
+init_dyn_bias_g: [ 0.0, 0.0, 0.0 ]
+init_dyn_bias_a: [ 0.0, 0.0, 0.0 ]
+
+# ==================================================================
+record_timing_information: false
+record_timing_filepath: "{runs / 'ov_timing.txt'}"
+
+save_total_state: false
+filepath_est: "{runs / 'ov_estimate.txt'}"
+filepath_std: "{runs / 'ov_estimate_std.txt'}"
+filepath_gt: "{runs / 'ov_groundtruth.txt'}"
+
+# ==================================================================
+use_klt: true
+num_pts: 200
+fast_threshold: 15 # 폰 소형 센서 영상 대비가 낮아 euroc(20) 보다 낮춤 (추정)
+grid_x: 5
+grid_y: 5
+min_px_dist: 10
+knn_ratio: 0.70
+track_frequency: {a.fps:.1f}
+downsample_cameras: false
+num_opencv_threads: 4
+histogram_method: "HISTOGRAM"
+
+use_aruco: false
+num_aruco: 1024
+downsize_aruco: true
+
+# ==================================================================
+up_msckf_sigma_px: 1
+up_msckf_chi2_multipler: 1
+up_slam_sigma_px: 1
+up_slam_chi2_multipler: 1
+up_aruco_sigma_px: 1
+up_aruco_chi2_multipler: 1
+
+use_mask: false
+
+relative_config_imu: "kalibr_imu_chain.yaml"
+relative_config_imucam: "kalibr_imucam_chain.yaml"
+"""
+
+    n = IMU_NOISE
+    imu = f"""%YAML:1.0
+{head}
+imu0:
+  T_i_b:
+{mat_rows(np.eye(4))}
+  # 잡음: 폰 MEMS 데이터시트 값 x ~10-15 (추정, 조정 대상). 근거는 make_ov_config.py IMU_NOISE 주석.
+  accelerometer_noise_density: {n['accelerometer_noise_density']:.4e}  # [ m / s^2 / sqrt(Hz) ]
+  accelerometer_random_walk: {n['accelerometer_random_walk']:.4e}    # [ m / s^3 / sqrt(Hz) ]
+  gyroscope_noise_density: {n['gyroscope_noise_density']:.4e}     # [ rad / s / sqrt(Hz) ]
+  gyroscope_random_walk: {n['gyroscope_random_walk']:.4e}       # [ rad / s^2 / sqrt(Hz) ]
+  rostopic: /imu0
+  time_offset: 0.0
+  update_rate: {a.imu_rate:.1f}
+  # IMU 프레임 = Android 센서 좌표 (x 오른쪽, y 위, z 화면 밖). 가속도는 중력 포함 원시 비력 (TYPE_ACCELEROMETER).
+  model: "kalibr"
+  Tw:
+{mat_rows(np.eye(3))}
+  R_IMUtoGYRO:
+{mat_rows(np.eye(3))}
+  Ta:
+{mat_rows(np.eye(3))}
+  R_IMUtoACC:
+{mat_rows(np.eye(3))}
+  Tg:
+{mat_rows(np.zeros((3, 3)))}
+"""
+
+    def cam_block(i, R_CtoI, p_CinI, overlaps, src):
+        ts = f"  timeshift_cam_imu: {timeshift:.6f} # t_imu = t_cam + timeshift (초기값, 온라인 보정)\n" if i == 0 else ""
+        return f"""cam{i}:
+  # {src}
+  T_imu_cam: # rotation from camera to IMU R_CtoI, position of camera in IMU p_CinI
+{T_block(R_CtoI, p_CinI)}
+  cam_overlaps: {overlaps}
+  camera_model: pinhole
+  distortion_coeffs: [0.0, 0.0, 0.0, 0.0] # 정류 영상
+  distortion_model: radtan
+  intrinsics: [{f:.6f}, {f:.6f}, {cx:.6f}, {cy:.6f}] # fu, fv, cu, cv (정류 P1)
+  resolution: [{W}, {H}]
+  rostopic: /cam{i}/image_raw
+{ts}"""
+
+    imucam = (f"%YAML:1.0\n{head}\n"
+              + cam_block(0, R_C0_I, p_C0inI, "[1]" if not a.mono else "[]",
+                          f"rect0 = R1 @ lens {left_id} camera; R_ItoC = R1 @ quat_to_R(pose_rotation lens {left_id})"))
+    if not a.mono:
+        imucam += cam_block(1, R_C1_I, p_C1inI, "[0]",
+                            f"rect1 = R2 @ lens {right_id} camera; origin = rect0 + (baseline, 0, 0)")
+
+    (out / "estimator_config.yaml").write_text(est, encoding="utf-8")
+    (out / "kalibr_imu_chain.yaml").write_text(imu, encoding="utf-8")
+    (out / "kalibr_imucam_chain.yaml").write_text(imucam, encoding="utf-8")
+    print(f"[make_ov_config] wrote {out}/estimator_config.yaml, kalibr_imu_chain.yaml, kalibr_imucam_chain.yaml")
+    print(f"[make_ov_config] R_I->C0 =\n{np.array2string(R_I_C0, precision=4)}\n p_C0inI={p_C0inI}, p_C1inI={p_C1inI}")
+
+
+if __name__ == "__main__":
+    main()

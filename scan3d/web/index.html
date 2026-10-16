@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>scan3d 복셀 맵</title>
+<style>
+  :root { --bg:#0f1318; --panel:#171e27; --line:#2a3542; --fg:#e6ebf1; --dim:#93a1b3; --acc:#3d8bfd; --ok:#3ccf7a; --bad:#ff5d5d; --warn:#f2b84b; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:13px/1.4 system-ui, "Segoe UI", "Malgun Gothic", sans-serif; overflow:hidden; }
+  #app { display:grid; grid-template-columns:320px 1fr; height:100%; }
+  aside { background:var(--panel); border-right:1px solid var(--line); overflow:auto; padding:12px; }
+  h1 { font-size:15px; margin:0 0 8px; }
+  h2 { font-size:12px; color:var(--dim); text-transform:uppercase; letter-spacing:.05em; margin:14px 0 6px; }
+  .row { display:flex; gap:6px; flex-wrap:wrap; margin:4px 0; align-items:center; }
+  button, select, input { background:#223042; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:5px 9px; font:inherit; }
+  button:hover { border-color:var(--acc); cursor:pointer; }
+  button.on { background:var(--acc); border-color:var(--acc); }
+  input[type=number] { width:64px; }
+  table { width:100%; border-collapse:collapse; }
+  td { padding:2px 4px; border-bottom:1px solid #1f2833; vertical-align:top; }
+  td:first-child { color:var(--dim); white-space:nowrap; }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+  #objs div { padding:4px 6px; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; gap:6px; }
+  #objs div:hover { background:#223042; }
+  #objs .sz { color:var(--dim); font-variant-numeric:tabular-nums; }
+  #main { position:relative; min-width:0; }
+  canvas#view { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  #labels { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+  #labels span { position:absolute; transform:translate(-50%,-100%); font-size:12px; padding:1px 5px; border-radius:4px; background:#000a; white-space:nowrap; }
+  #panel2d { position:absolute; right:10px; bottom:10px; width:340px; background:#000c; border:1px solid var(--line); border-radius:8px; padding:6px; }
+  #panel2d img { width:100%; display:block; border-radius:4px; min-height:40px; }
+  #help { position:absolute; left:10px; bottom:10px; color:var(--dim); font-size:12px; background:#0009; padding:4px 8px; border-radius:6px; }
+  #log { font:11px/1.35 ui-monospace, Consolas, monospace; color:var(--dim); white-space:pre-wrap; max-height:160px; overflow:auto; }
+  .ok { color:var(--ok); } .bad { color:var(--bad); } .warn { color:var(--warn); }
+  .prog { margin:6px 0; }
+  .prog .bar { height:8px; background:#223042; border-radius:4px; overflow:hidden; }
+  .prog .bar i { display:block; height:100%; width:0; background:var(--acc); transition:width .3s; }
+  .prog div:last-child { color:var(--dim); font-size:12px; margin-top:2px; }
+  #recs .rec { display:flex; justify-content:space-between; align-items:center; gap:6px; padding:3px 0; border-bottom:1px solid #1f2833; }
+  #recs .rec span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #recs .rec small { color:var(--dim); }
+  #recs h3 { font-size:12px; color:var(--dim); margin:8px 0 2px; font-weight:normal; }
+  #recs button { padding:2px 7px; font-size:12px; }
+  button:disabled { opacity:.45; cursor:default; }
+  @media (max-width:760px) { #app { grid-template-columns:1fr; grid-template-rows:45% 55%; } aside { order:2; } #panel2d { width:45%; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside>
+    <h1>scan3d 실시간 복셀 맵</h1>
+    <h2>모드</h2>
+    <div class="row">
+      <select id="sMode">
+        <option value="live">실시간 (PC 계산, 저장 안 함)</option>
+        <option value="record">녹화 (폰에만, PC 계산 없음)</option>
+        <option value="both">녹화 + 실시간</option>
+      </select>
+      <button id="bStart">시작</button>
+      <button id="bStop">정지</button>
+    </div>
+    <div class="row"><label><input type="checkbox" id="cStartApp" checked> 앱 시작·정지도 (adb)</label></div>
+    <table id="sess"></table>
+    <div class="prog" id="progReplay" hidden><div class="bar"><i id="barReplay"></i></div><div id="txtReplay"></div></div>
+    <div class="prog" id="progPull" hidden><div class="bar"><i id="barPull"></i></div><div id="txtPull"></div></div>
+
+    <h2>녹화본</h2>
+    <div class="row">
+      <button id="bRecList">폰 목록 새로고침</button>
+      <label><input type="checkbox" id="cEvery"> 모든 프레임 FFS</label>
+      <label>FFS 반복 <input id="iIters" type="number" min="1" max="32" value="8"></label>
+    </div>
+    <div id="recs"></div>
+
+    <h2>맵</h2>
+    <div class="row">
+      <button id="bPause">일시정지</button>
+      <button id="bResetMap">맵 초기화</button>
+      <button id="bResetVio">VIO 재시작</button>
+      <button id="bSave">저장</button>
+    </div>
+    <div class="row">색:
+      <button class="cm on" data-m="rgb">실제 색</button>
+      <button class="cm" data-m="class">클래스</button>
+      <button class="cm" data-m="inst">물체별</button>
+    </div>
+    <div class="row">
+      <label>복셀 <select id="sVoxel"><option>0.01</option><option>0.02</option><option selected>0.03</option><option>0.05</option><option>0.08</option></select> m</label>
+      <label>최소 관측 <input id="iHits" type="number" min="1" max="50" value="2"></label>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="cBoxes" checked> 물체 박스</label>
+      <label><input type="checkbox" id="cTraj" checked> 궤적</label>
+      <label><input type="checkbox" id="cFollow"> 카메라 따라가기</label>
+    </div>
+    <div class="row" id="saveMsg" style="color:var(--dim)"></div>
+
+    <h2>상태</h2>
+    <table id="stat"></table>
+
+    <h2>물체 <span id="nObj"></span></h2>
+    <div id="objs"></div>
+
+    <h2>로그</h2>
+    <div id="log"></div>
+  </aside>
+  <div id="main">
+    <canvas id="view"></canvas>
+    <div id="labels"></div>
+    <div id="panel2d">
+      <div class="row" style="margin:0 0 4px">
+        <button class="pk on" data-k="overlay">분할</button>
+        <button class="pk" data-k="depth">깊이</button>
+        <button class="pk" data-k="rgb">원본</button>
+        <button id="bHide2d">숨김</button>
+      </div>
+      <img id="img2d" alt="">
+    </div>
+    <div id="help">왼쪽 드래그: 회전 · 오른쪽/Shift 드래그: 이동 · 휠: 확대 · 물체 클릭: 이동</div>
+  </div>
+</div>
+<script src="three.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

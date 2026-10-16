@@ -21,9 +21,10 @@ HEADER = struct.Struct(">IIIIQI")
 MAGIC = 0x53544552
 MAGIC_SENSOR = 0x53454E53
 # android.hardware.Sensor 타입 상수 (앱이 등록하는 것만)
+SENSOR_ACCEL = 1                   # 원시 가속도계 (중력 포함 비력, VIO 용)
 SENSOR_GYRO, SENSOR_PRESSURE, SENSOR_GRAVITY, SENSOR_LINEAR_ACC, SENSOR_ROTVEC, SENSOR_GAME_ROTVEC = 4, 6, 9, 10, 11, 15
 SENSOR_FRAME_TIMING = 100          # 앱 자체 타입: [물리별 SENSOR_TIMESTAMP − 논리 timestamp (ms)…, 노출 ms, 프레임 주기 ms, 롤링셔터 skew ms]
-SENSOR_NAMES = {SENSOR_GYRO: "gyroscope", SENSOR_PRESSURE: "pressure", SENSOR_GRAVITY: "gravity",
+SENSOR_NAMES = {SENSOR_ACCEL: "accelerometer", SENSOR_GYRO: "gyroscope", SENSOR_PRESSURE: "pressure", SENSOR_GRAVITY: "gravity",
                 SENSOR_LINEAR_ACC: "linear_acceleration", SENSOR_ROTVEC: "rotation_vector", SENSOR_GAME_ROTVEC: "game_rotation_vector",
                 SENSOR_FRAME_TIMING: "frame_timing"}
 

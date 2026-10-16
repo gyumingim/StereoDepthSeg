@@ -1,0 +1,78 @@
+# ov_bridge 프로토콜
+
+`ov_bridge` = OpenVINS `VioManager` (ROS 없이 빌드한 `libov_msckf_lib.so`) 를 감싼 실행 파일.
+입력은 바이너리 레코드, 출력은 JSON 한 줄(`\n` 끝) 씩. 같은 기계 전용이라 **little-endian**.
+
+## 빌드·실행 (WSL)
+```bash
+cd /home/system/scanner/StereoDepthSeg/scan3d/ov_bridge
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j8
+# 설정 생성: venv_ffs/bin/python scan3d/make_ov_config.py  -> scan3d/config/*.yaml
+build/ov_bridge ../config/estimator_config.yaml --stdio            # 파이프 (기본)
+build/ov_bridge ../config/estimator_config.yaml --tcp 127.0.0.1:7600
+```
+옵션: `--max-cam-queue N` (기본 3, 넘으면 가장 오래된 카메라 레코드 버림, IMU 는 안 버림),
+`--max-speed M_S` (기본 5 m/s, 넘으면 `lost`), `--lost-frames N` (기본 15, 특징점 0 이 N 프레임 연속이면 `lost`),
+`--auto-reset` (`lost` 가 되면 VioManager 재생성), `--emit-features N` (pose 줄에 SLAM 특징점 최대 N 개).
+RPATH 가 `~/scanner/src/ovbuild`, `~/scanner/local/lib` 로 박혀 있어 `LD_LIBRARY_PATH` 불필요.
+
+## 채널
+- `--stdio`: 입력 = stdin, 출력 = stdout. OpenVINS 로그(printf)는 **stderr** 로 돌려 놓았다 (stdout 에는 JSON 만).
+- `--tcp HOST:PORT`: 서버. 클라이언트 1개씩, 같은 소켓으로 입출력. 연결이 끊겨도 VIO 상태는 유지 → 새 세션이면 RESET 을 먼저 보낼 것. QUIT 받으면 프로세스 종료.
+- 연결(또는 시작) 직후 bridge 가 `{"type":"ready","num_cameras":2,"use_stereo":true}` 를 보낸다.
+
+## 입력 레코드
+공통 헤더 12 B: `struct.pack("<III", 0x4F564252, type, payload_len)` (magic = "OVBR"). magic 이 틀리거나 payload > 64 MiB 면 에러 줄을 보내고 연결을 닫는다.
+
+| type | 이름 | payload (`struct` 형식) | 크기 |
+|---|---|---|---|
+| 1 | IMU | `<q3d3d`: t_ns (int64), gx gy gz (rad/s), ax ay az (m/s²) | 56 B |
+| 2 | STEREO | `<qIIB3x`: t_ns, w, h, n_cams (1/2), 패딩 3 B → 이어서 n_cams × (w·h) 8bit 회색 (행 우선, 빈틈 없음) | 20 + n·w·h |
+| 3 | RESET | 없음. VioManager 를 새로 만든다 (설정 그대로) | 0 |
+| 4 | QUIT | 없음. 종료 | 0 |
+
+- **시각**: `t_ns` 는 Android `elapsedRealtimeNanos` 시계 그대로(int64 ns). bridge 가 첫 레코드 시각 t0 을 빼서 `(t_ns − t0)·1e-9` 초로 OpenVINS 에 넣는다. IMU·카메라 모두 같은 시계여야 한다.
+- **IMU**: Android 센서(기기) 축 (세로로 볼 때 x 오른쪽, y 위, z 화면 밖). 자이로 = `TYPE_GYROSCOPE`, 가속도 = 중력 포함 원시 `TYPE_ACCELEROMETER` (정지 시 |a| ≈ 9.8, 위쪽 +). 한 레코드 = 같은 시각의 (gyro, accel) 쌍 → 클라이언트가 자이로 시각에 가속도를 보간해 만든다. 시각이 직전 IMU 이하이면 버림(`imu_dropped`).
+- **STEREO**: 이미지 0 = cam0 = **정류된 왼쪽(rect0, 렌즈 2)**, 이미지 1 = cam1 = 정류된 오른쪽(rect1, 렌즈 5). 640x480, `make_ov_config.py` 의 intrinsics(정류 P1)와 같은 정류표로 만든 영상이어야 한다. `n_cams=1` 이면 cam0 만 (mono 추적, 두 렌즈 시각차가 클 때). `t_ns` = 카메라 시각 (권장: 왼쪽 렌즈 물리 SENSOR_TIMESTAMP + (노출 + 롤링셔터 skew)/2 = 노출 중앙). 남은 상수 오프셋은 OpenVINS 가 `dt_cam_imu` 로 추정. 직전 카메라 이하 시각이면 버림.
+- **순서**: 클라이언트는 IMU 와 카메라를 시간 순서대로 섞어 보내면 된다. bridge 가 카메라를 큐에 넣고, ROS 노드(`ROS1Visualizer::callback_inertial`)와 같은 규칙 — `t_cam < t_last_imu − dt_cam_imu` 가 될 때(그 카메라보다 늦은 IMU 가 들어왔을 때) — 에만 `feed_measurement_camera` 한다. 따라서 카메라 레코드를 먼저 보내도 되지만 pose 는 그 뒤 IMU 가 도착해야 나온다.
+
+## 출력 (JSON 한 줄씩)
+| type | 언제 | 필드 |
+|---|---|---|
+| `ready` | 시작/연결 | `num_cameras`, `use_stereo` |
+| `pose` | 카메라 레코드 하나 처리할 때마다 | 아래 |
+| `reset` | RESET 처리 또는 auto-reset | `auto` (auto-reset 일 때 true) |
+| `error` | 잘못된 레코드 | `msg` |
+
+`pose` 필드:
+- `t_ns` (int, 입력 카메라 레코드의 t_ns 그대로 → 키프레임 매칭 키), `t` (s, t0 기준), `mono` (bool)
+- `t_state` (s, `t` 와 같은 기준): 이 줄을 쓸 때의 OpenVINS 상태 시각(`state->_timestamp`). 카메라를 처리하지 않고 넘겼으면 `t` 와 다르다 → 클라이언트는 `t` 와도 `t + dt_cam_imu` 와도 1 ms 넘게 다르면 stale 로 보고 키프레임에 안 쓴다 (REVIEW 9)
+- `status`: `"init"` (초기화 전, 이때 포즈 필드 없음·`T_world_cam0: null`) / `"tracking"` / `"lost"` (속도 > max-speed, p·v·R_CtoG·T 에 NaN/inf, 또는 특징점 0 이 lost-frames 연속), `init` (bool)
+- `p` [3]: IMU 위치 in 월드 (m) = p_IinG
+- `q` [x,y,z,w]: **Hamilton** 쿼터니언, 월드 ← IMU 회전 (`v_world = R(q)·v_imu`). (OpenVINS 내부 JPL 값은 `q_GtoI_jpl` 로 따로 줌)
+- `v` [3]: IMU 속도 in 월드 (m/s)
+- `T_world_cam0` [16]: 행 우선 4x4, cam0(rect0, OpenCV 축) 점 → 월드. `R = R_ItoG·R_ItoC0ᵀ`, `p = p_IinG − R·p_IinC0` (C++ 에서 계산, 추정된 외부 파라미터 사용)
+- `q_GtoI_jpl` [4], `bg` [3], `ba` [3], `R_ItoC0` [9 행 우선], `p_IinC0` [3]
+- `dt_cam_imu` (s): 추정된 시간 오프셋, OpenVINS 규약 `t_imu = t_cam + dt_cam_imu`
+- `n_slam`, `n_msckf`: 마지막 업데이트의 SLAM/MSCKF 특징 수, `ms`: 이 카메라 처리 시간
+- `cam_dropped`, `imu_dropped`: 누적 버린 수
+- `slam_pts` [[x,y,z],...]: `--emit-features N` 일 때만
+
+월드 좌표 G: 중력 정렬 **z 위**, 원점·yaw 는 초기화 시점 기준.
+
+## 파이썬 예 (stdio)
+```python
+import json, struct, subprocess
+p = subprocess.Popen(["scan3d/ov_bridge/build/ov_bridge", "scan3d/config/estimator_config.yaml", "--stdio"],
+                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, bufsize=0)
+H = struct.Struct("<III"); MAGIC = 0x4F564252
+def send_imu(t_ns, g, a):
+    p.stdin.write(H.pack(MAGIC, 1, 56) + struct.pack("<q3d3d", t_ns, *g, *a))
+def send_stereo(t_ns, g0, g1=None):            # g0/g1: (480,640) uint8 C-contiguous
+    imgs = [g0] if g1 is None else [g0, g1]
+    h, w = g0.shape
+    body = struct.pack("<qIIB3x", t_ns, w, h, len(imgs)) + b"".join(i.tobytes() for i in imgs)
+    p.stdin.write(H.pack(MAGIC, 2, len(body)) + body)
+# 출력은 별도 스레드에서: for line in p.stdout: msg = json.loads(line)
+```
+stdout 을 읽는 스레드를 따로 두어야 파이프가 막히지 않는다 (bridge 는 입력 처리 중에 출력 쓰기를 기다린다).
