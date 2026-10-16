@@ -499,11 +499,15 @@ def live_kbps(coeffs, caps, w, h, fps):
     return round(_clip_kbps(caps, max(H264_MIN_KBPS, k)))
 
 
+# 녹화 비트레이트 기준: 1440x1080 · 15 fps · 렌즈 하나 = 14 Mbps (2026-10-16 사용자 결정).
+# 근거: 폰 HW 인코더로 같은 정지 장면을 20/14/10 Mbps 녹화 → 깊이 유효 화소·시간 잡음 차이 없음, 14 M 의 깊이 차이 0.42 %
+# (같은 20 M 재녹화 0.39 %, 측정 잡음 수준). 오프라인 x264 재인코드(움직이는 녹화)는 14 M 0.73 %. 다른 크기·fps 는 픽셀률 비례.
+# 앱 caps 의 rec_kbps_default (앱 자체 식, 1440x1080·15 에서 약 20 Mbps) 는 쓰지 않고 이 값을 --ei rec_kbps 로 넘긴다.
+REC_KBPS_REF_1440_15 = 14000.0
+
+
 def rec_kbps(coeffs, caps, w, h, fps):
-    d = ((_pair(caps, w, h) or {}).get("rec_kbps_default") or {}).get(str(int(fps)))
-    if isinstance(d, (int, float)) and d > 0:
-        return int(d)                                  # 앱이 인코더 범위로 자른 기본값 (SPEC 14.5)
-    k = coeffs["rec_kbps_ref"] * (w * h * fps) / (640 * 480 * 30)
+    k = REC_KBPS_REF_1440_15 * (w * h * fps) / (1440 * 1080 * 15)
     k = max(500.0, k)                                  # 앱 Caps.autoKbps 와 같은 최소
     br = (caps.get("encoder") or {}).get("bitrate_range")
     if br:
