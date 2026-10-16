@@ -1,7 +1,7 @@
 """폰 녹화 폴더 읽기 (replay.py 용).
 
 형식 = scan3d/RECORDING_FORMAT.md (scan3d-phone-rec/1). 이 파일이 쓰는 것:
-  meta.json          physical ("2,5" 또는 ["2","5"]), width, height, complete (false 면 경고)
+  meta.json          physical ("2,5" 또는 ["2","5"]), width, height, fps, complete (false 면 경고)
   cam2.mp4, cam5.mp4 렌즈별 H.264, 회전 메타 없음 (파일 이름의 숫자 = meta.physical 의 id).
   frames_camN.csv    frame_idx, physical_ts_ns (= 실시간 STER timestamp), logical_ts_ns, exposure_ns, rolling_shutter_skew_ns, pts_us
                      (-1 = 없음). 행은 인코더에 넣을 때 쓴다 (frame_idx 연속, 큐에서 버린 프레임은 행 없음).
@@ -273,6 +273,7 @@ class Recording:
             phys = [p.strip() for p in phys.split(",")]
         self.physical = [str(p) for p in phys]
         self.size = (int(self.meta.get("width", 640)), int(self.meta.get("height", 480)))
+        self.fps = float(self.meta.get("fps") or 0) or None      # 앱이 쓴 요청 fps (없으면 None → scan3d --app-fps)
         self.streams = self._streams()
         self.sensors = self._load_imu()
         self.timing = self._timing()

@@ -1,7 +1,7 @@
 """OpenVINS 설정 3개 생성 (estimator_config.yaml, kalibr_imu_chain.yaml, kalibr_imucam_chain.yaml).
 
 입력: calib_phone_pair.json (스테레오 보정) + phone_stereo/cameras_s24.json (Camera2 렌즈 자세).
-VIO 에 넣는 영상은 **정류된** 640x480 gray (rect0 = 왼쪽 렌즈, rect1 = 오른쪽 렌즈) 라는 전제다 (SPEC 9.4).
+VIO 에 넣는 영상은 **정류된** W×H gray (기본 보정 크기 640x480, --size 로 다른 4:3 크기 — K 비례 변환) (rect0 = 왼쪽 렌즈, rect1 = 오른쪽 렌즈) 라는 전제다 (SPEC 9.4).
   -> intrinsics = 정류 P1 의 [f, f, cx, cy], distortion radtan [0,0,0,0], 내부 파라미터 보정 끔.
 
 축 규약
@@ -17,7 +17,9 @@ VIO 에 넣는 영상은 **정류된** 640x480 gray (rect0 = 왼쪽 렌즈, rect
   둔다고 가정 -> p_C0inI = 왼쪽 렌즈 pose_translation (LENS_POSE_REFERENCE=PRIMARY_CAMERA, 센서 축). cam0 이면 0.
   p_C1inI = p_C0inI + R_C0->I @ [baseline, 0, 0]. 둘 다 온라인 보정(calib_cam_extrinsics) 에 맡긴다.
 
-실행 (WSL): venv_ffs/bin/python scan3d/make_ov_config.py [--fps 30 --imu-rate 400 --init static]
+실행 (WSL): venv_ffs/bin/python scan3d/make_ov_config.py [--fps 15 --imu-rate 400 --init static]
+  -> scan3d/config/ (스테레오) + scan3d/config/mono/ (mono 설정, scan3d --vio-mode mono 용). --mono 면 mono 만 --out 에.
+scan3d.py 는 세션 시작 때 ensure_config((W,H), fps, mono) 로 scan3d/config/<W>x<H>_<fps>/ 캐시를 쓴다 (없거나 낡으면 만듦).
 """
 from __future__ import annotations
 
@@ -30,7 +32,10 @@ from pathlib import Path
 import numpy as np
 
 REPO = Path(__file__).resolve().parents[1]
+HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO))
+sys.path.insert(1, str(HERE))
+CONFIG_ROOT = HERE / "config"
 
 
 def quat_to_R(q):
@@ -103,7 +108,7 @@ def main():
     ap.add_argument("--calib", default=str(REPO / "calib_phone_pair.json"))
     ap.add_argument("--cameras", default=str(REPO / "phone_stereo" / "cameras_s24.json"))
     ap.add_argument("--out", default=str(REPO / "scan3d" / "config"))
-    ap.add_argument("--fps", type=float, default=30.0, help="카메라 프레임률 = track_frequency")
+    ap.add_argument("--fps", type=float, default=15.0, help="카메라 프레임률 = track_frequency")
     ap.add_argument("--imu-rate", type=float, default=400.0, help="실제 IMU 주기 Hz (sensors.json/수신 통계)")
     ap.add_argument("--init", choices=["static", "dynamic"], default="static",
                     help="static: 처음 1~2 s 가만히 든 뒤 움직이기. dynamic: 움직이면서 초기화")
@@ -117,13 +122,61 @@ def main():
                          "클라이언트가 이미 노출 중앙으로 보정해 보내면 0 (기본, SPEC 9.4)")
     ap.add_argument("--gravity", type=float, default=9.80, help="중력 크기 m/s^2 (서울 ≈ 9.80)")
     ap.add_argument("--verbosity", default="INFO")
+    ap.add_argument("--no-mono", action="store_true",
+                    help="스테레오 설정만 (기본은 <out>/mono/ 에 mono 설정도 같이 만든다, scan3d --vio-mode mono 용)")
+    ap.add_argument("--size", default=None,
+                    help="영상 크기 WxH (4:3 만, 기본 = 보정 크기). 보정 크기와 다르면 K 를 비례 변환 (calib_scale.py)")
     a = ap.parse_args()
+    write_configs(a)
+    if not a.mono and not a.no_mono:
+        b = argparse.Namespace(**vars(a))
+        b.mono, b.out = True, str(Path(a.out) / "mono")
+        write_configs(b)
 
+
+def config_dir(size, fps, mono=False, root=CONFIG_ROOT):
+    """크기·fps 별 캐시 폴더: config/<W>x<H>_<fps>/ (mono 는 그 아래 mono/)."""
+    W, H = (int(v) for v in size)
+    d = Path(root) / f"{W}x{H}_{int(round(float(fps)))}"
+    return d / "mono" if mono else d
+
+
+def ensure_config(size, fps, mono=False, calib=None, cameras=None, root=CONFIG_ROOT, log=print, **kw):
+    """scan3d 세션 시작 때 호출: (W,H,fps) 설정이 캐시에 없거나 입력(보정·카메라 json·이 파일)보다 오래되면 만든다.
+    반환 estimator_config.yaml 경로. kw 는 명령줄 인자 이름 그대로 (imu_rate, init, imu_origin …)."""
+    calib = str(calib or REPO / "calib_phone_pair.json")
+    cameras = str(cameras or REPO / "phone_stereo" / "cameras_s24.json")
+    out = config_dir(size, fps, mono, root)
+    est = out / "estimator_config.yaml"
+    files = [est, out / "kalibr_imu_chain.yaml", out / "kalibr_imucam_chain.yaml"]
+    srcs = [Path(calib), Path(cameras), Path(__file__)]
+    if all(f.is_file() for f in files):
+        t_out = min(f.stat().st_mtime for f in files)
+        if all(not s.is_file() or s.stat().st_mtime <= t_out for s in srcs):
+            return est
+    W, H = (int(v) for v in size)
+    a = argparse.Namespace(calib=calib, cameras=cameras, out=str(out), fps=float(fps), imu_rate=400.0, init="static",
+                           imu_origin="lens5", mono=bool(mono), exposure_ms=0.0, rs_skew_ms=0.0, gravity=9.80,
+                           verbosity="INFO", no_mono=True, size=f"{W}x{H}")
+    for k, v in kw.items():
+        setattr(a, k, v)
+    log(f"[ov] OpenVINS 설정 만듦: {out} ({W}x{H}, {float(fps):g} fps, {'mono' if mono else 'stereo'})")
+    write_configs(a)
+    return est
+
+
+def write_configs(a):
+    """a.mono / a.out 기준으로 설정 3개를 쓴다."""
     st = json.loads(Path(a.calib).read_text(encoding="utf-8"))
     cams = json.loads(Path(a.cameras).read_text(encoding="utf-8"))
     logical = st["phone"]["logical"]
     left_id, right_id = [str(p) for p in st["phone"]["physical"][:2]]
+    W0 = int(st["image_size"][0])
+    if getattr(a, "size", None):
+        import calib_scale
+        st = calib_scale.scale_calib(st, *calib_scale.parse_size(a.size))   # K 만 비례 변환 (4:3 아니면 오류)
     W, H = st["image_size"]
+    px = W / W0            # 화소 단위 문턱값(시차·특징 간격)도 같은 배율 (640x480 기준값 × px)
 
     phL = find_physical(cams, logical, left_id)
     phR = find_physical(cams, logical, right_id)
@@ -173,7 +226,7 @@ verbosity: "{a.verbosity}" # ALL, DEBUG, INFO, WARNING, ERROR, SILENT
 
 use_fej: true
 integration: "rk4"
-use_stereo: {"false" if a.mono else "true"} # 정류 쌍 스테레오 KLT. 쌍 시각차가 크면 클라이언트가 cam0 만 보냄 (mono 추적)
+use_stereo: {"false" if a.mono else "true"} # true = 정류 쌍 스테레오 KLT (클라이언트는 2장짜리만 보냄, 시각차 큰 쌍은 버림). false = cam0 만 (scan3d --vio-mode mono)
 max_cameras: {n_cams}
 
 calib_cam_extrinsics: true   # R_ItoC, p_CinI 온라인 보정 (p 초기값은 가정값)
@@ -199,7 +252,7 @@ try_zupt: true
 zupt_chi2_multipler: 0 # 0 = 시차만 사용
 zupt_max_velocity: 0.1
 zupt_noise_multiplier: 10
-zupt_max_disparity: 0.5
+zupt_max_disparity: {0.5 * px:.3g} # 640x480 기준 0.5 px × 크기 배율
 zupt_only_at_beginning: false
 
 # ==================================================================
@@ -207,7 +260,7 @@ zupt_only_at_beginning: false
 # 손떨림으로 실패하면 init_imu_thresh 를 올리거나 --init dynamic.
 init_window_time: {1.0 if dyn else 1.5}
 init_imu_thresh: {0.5 if dyn else 1.0} # 가속도 표준편차 m/s^2 (추정, 폰 잡음에 맞춰 조정)
-init_max_disparity: 15.0 # 정지 판정 최대 시차 px (640x480, 손떨림 여유)
+init_max_disparity: {15.0 * px:.1f} # 정지 판정 최대 시차 px (640x480 기준 15 × 크기 배율, 손떨림 여유)
 init_max_features: 50
 
 init_dyn_use: {"true" if dyn else "false"}
@@ -242,7 +295,7 @@ num_pts: 200
 fast_threshold: 15 # 폰 소형 센서 영상 대비가 낮아 euroc(20) 보다 낮춤 (추정)
 grid_x: 5
 grid_y: 5
-min_px_dist: 10
+min_px_dist: {max(3, int(round(10 * px)))} # 640x480 기준 10 px × 크기 배율
 knn_ratio: 0.70
 track_frequency: {a.fps:.1f}
 downsample_cameras: false

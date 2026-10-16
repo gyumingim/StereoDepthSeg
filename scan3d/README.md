@@ -1,11 +1,41 @@
 # scan3d — 실시간 3D 복셀 맵 스캐너
 
+> **가장 쉬운 사용법** (웹만 쓴다 — 바탕화면 아이콘 없음)
+> 1. 폰을 USB 로 꽂고, 브라우저에서 **http://localhost:8795** 를 연다 (서버는 Windows 로그인 때 저절로 켜져 있다).
+> 2. **[▶ 스캔 시작]** 을 누르고, 화면 위쪽 큰 글씨 안내대로 한다. 오른쪽 아래 작은 창 두 개가 폰 카메라 화면(초광각 / 광각).
+> 3. 끝나면 **[■ 정지]**.
+>
+> 화면만 미리 보기 (폰·GPU 없이, 가짜 데이터): `python scan3d/preview_server.py` → http://localhost:8796 (위쪽에 "미리보기 — 가짜 데이터" 띠).
+
 폰(Galaxy S24, 렌즈 2 초광각 + 렌즈 5 광각, NV21 640x480 + IMU) → (Windows 릴레이 | 우분투 adb forward) → 리눅스:
 OpenVINS(ROS 없음) 스테레오+IMU VIO 로 자세, Fast-FoundationStereo 깊이 + YOLO-seg 분할 → 복셀 맵(물체별 구분) → 웹 뷰어.
 폰에 녹화해 두었다가 PC 로 가져와 같은 파이프라인으로 천천히·정확하게 복원할 수도 있다.
 인터페이스 명세: `SPEC.md`. 코드 검토: `REVIEW.md`. 녹화 형식: `RECORDING_FORMAT.md` (scan3d-phone-rec/1, 앱 1.1-rec), 읽기: `recording.py`.
 
-## 모드 (웹 뷰어 왼쪽 위 "모드")
+## 사용법 (이 PC)
+
+1. 폰을 USB 로 꽂고 폰 화면을 켠다.
+2. 브라우저에서 **http://localhost:8795** 를 연다 (즐겨찾기 해 두기).
+3. **[▶ 스캔 시작]** 을 누르고, 화면 위쪽 큰 글씨 안내를 따른다 (폰 연결 → 카메라 켜짐 → 2초 가만히 → 천천히 움직이기).
+4. 끝나면 **[저장]**, **[■ 정지]**. 위치 추적이 꼬이면 **[↺ 처음부터 다시]**. 녹화본·색·세부 수치는 오른쪽 "고급".
+
+서버는 Windows 로그인 때 저절로 켜진다 (시작프로그램 `scan3d_server.vbs` → WSL `scan3d/serve_idle.sh`, 창 없음).
+대기 중에는 웹 서버와 상태 읽기만 하고 **GPU 를 쓰지 않는다**: 깊이 모델(FFS·YOLO)은 첫 [스캔 시작](실시간·녹화+실시간) 또는 복원 때 한 번 불러온다
+(화면에 "깊이 모델을 불러오는 중… 30초쯤", 그 뒤로는 서버가 꺼질 때까지 유지).
+[스캔 시작] 을 누르면 웹 서버가 Windows 쪽 중계(`win_relay.py`, interop 으로 Windows Python)·폰 앱·OpenVINS 브리지(`--ov auto`, 죽으면 2 초 뒤 자동으로 다시)를 켜고,
+[정지] 하면 중계를 끈다. USB 를 다시 꽂으면 중계를 다시 띄우고, 중계 자신도 폰 포트 접속이 실패하면 `adb forward` 를 다시 한다.
+중계·브리지가 계속 실패하면 다시 시도 간격을 늘린다 (중계 8→60 s, 브리지 2→30 s). 폰 온도(SKIN)는 10 초마다 읽어 42 °C 주황, 45 °C 빨강.
+오른쪽 아래 카메라 창 (`/api/cam.jpg?lens=0|1`): 초광각(렌즈 2) / 광각(렌즈 5) 최근 프레임을 약 3 fps 로 (스캔·복원 중이고 화면이 보일 때만).
+누르면 크게, "물체 표시" = 초광각에 최근 YOLO 마스크·상자, "90° 돌리기" = 누운 센서 영상을 세워 보기. 오른쪽 칸의 2D 화면은 깊이만.
+로그: `scan3d/runs/server_<날짜>.log`, `scan3d/runs/win_relay.log`.
+- 바탕화면 아이콘은 만들지 않는다 (웹만 쓴다). 서버를 손으로 켜고 끄는 스크립트만 남겨 둔다:
+  `scan3d\start_scanner.bat` (= `start_scanner.ps1`, 서버가 꺼져 있으면 켜고 브라우저 열기) / `scan3d\stop_scanner.bat` (= `start_scanner.ps1 -Stop`, 녹화 마무리 → 중계·스캐너·앱 끄기).
+- 서버가 이미 켜져 있을 때 `run_scan.sh` 를 또 띄우면 포트가 겹치므로 run_scan.sh 가 안내만 하고 끝난다 (먼저 `stop_scanner.bat`).
+- adb: `C:\Users\a3162\platform-tools\adb.exe` (WSL `/mnt/c/Users/a3162/platform-tools/adb.exe`) 를 맨 먼저 찾는다 (`phone_link.find_adb`, `win_relay.adb_exe`, `start_scanner.ps1`).
+- 자동 시작 끄기: `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\scan3d_server.vbs` 삭제.
+- 아래 명령줄 방법(run_scan.sh + win_relay.py 따로 띄우기)은 개발·문제 해결용.
+
+## 모드 (웹 [스캔 시작] 옆 선택)
 
 | 모드 | 앱 인자 | PC |
 |---|---|---|
@@ -21,6 +51,33 @@ OpenVINS(ROS 없음) 스테레오+IMU VIO 로 자세, Fast-FoundationStereo 깊�
   (WSL 은 interop 으로 Windows adb.exe, 우분투는 리눅스 adb). 명령줄은 `scan3d.py --mode ...`(native 는 앱도 시작) 또는 `win_relay.py --app-mode ...`.
   앱 status.txt 끝에 `mode=<값>` 이 붙는다. win_relay 의 자동 재시작은 status 의 mode 가 자기 `--app-mode` 와 같을 때만 한다
   (웹이 다른 모드로 띄운 녹화를 덮어쓰지 않게).
+
+## 화질(크기)·fps 고르기
+
+웹 [스캔 시작] 옆 **"화질"** 과 **"fps"** 목록에서 고른다. 기본은 **640x480 · 15 fps**.
+
+- **화질은 4:3 크기만** 나온다. 두 렌즈(2·5)가 함께 내는 크기만 (S24: 320x240, 640x480, 960x720, 1440x1080, 1920x1440, 4000x3000).
+  800x600·1280x960 은 폰이 안 내서 없다. 16:9 같은 다른 비율은 센서를 잘라 내므로 목록에서 뺀다.
+- **fps 는 15·20·24·30·60** (폰이 고정 노출 fps 로 받아 주는 값). S24 에는 10 이 없어서 10 은 회색이다 (앱이 거부함).
+- **크기마다 다시 캘리할 필요 없다.** 보정 파일(`calib_phone_pair.json`)의 640x480 값을 크기 비율로 늘리거나 줄여 쓴다
+  (초점거리·중심점만 바꾸고 왜곡 계수·두 렌즈 사이 위치는 그대로). 4:3 이고 센서 전체를 쓰는 크기라서 가능하다.
+  - 참고: 보드 촬영·보정은 원래 **960x720** 에서 했고(파일의 `scaled_from: [960, 720]`), 640x480 값도 그것을 줄인 것이다.
+    그래서 640x480 이 "원래 크기라 가장 정확" 한 것은 아니다. 960x720 은 960→640→960 으로 두 번 비례 변환되지만 차이는 작다(추정 0.25 px 이하).
+    다른 크기를 고르면 화면에 "보정은 640x480 값을 비례 변환" 이라고 나오고,
+    스캔을 시작할 때마다 정류 검증(세로 어긋남 px)을 그 크기로 다시 해서 보여 준다. 기준은 크기 배율만큼 (1440x1080 이면 2.25 px).
+    기준을 넘으면 폰이 그 크기에서 화각을 잘랐을 수 있으니, 그 크기로 따로 캘리하는 것이 좋다.
+- **안 되는 조합은 회색** + 이유 (마우스를 올리면 자세히). 판단 기준 (모두 만족해야 함):
+  - 폰 카메라가 그 크기·fps 를 냄 (폰 능력표 `caps.json`: 크기별 최대 fps, 고정 fps 목록)
+  - 녹화(녹화·녹화+실시간)면 폰 H.264 인코더가 그 크기·fps 를 두 개 동시에 지원
+  - 실시간이면: 폰 H.264 인코더 수·처리량이 되는지 (JPEG 이면 압축 합 ≤ 한 코어의 60 %), USB ≤ 8 MB/s, PC 영상 풀기 ≤ 60 %, PC 깊이 계산 ≥ 3 장/초 (고급 설정에서 바꿈)
+- **부하 계산은 측정을 따로 하지 않는다.** 처음 값은 추정치(`load_model.py` 주석에 근거)이고, 스캔하는 동안 폰이 1초마다 쓰는
+  `metrics.json`(렌즈별 JPEG 압축 시간·크기, 실제 fps, 버린 프레임, USB, 온도)과 PC 깊이 시간으로 조금씩 고쳐 간다 (`runs/load_coeffs.json`).
+  고급 설정 "화질·부하 계산" 에서 계수 표를 보고 초기화할 수 있다.
+- 스캔 중 과부하가 6초 넘게 이어지거나 폰이 뜨거우면 **"한 단계 낮추기"** 버튼이 뜬다 (fps 먼저, 그다음 크기).
+- 큰 크기에서도 PC 깊이 계산(FFS)은 자동으로 640x480 화소 수 정도로 줄여 넣는다 (`--ffs-max-px`, PC 부하는 그대로).
+- 폰 능력표: 앱(1.3-caps 이상)이 켜질 때마다 `/sdcard/Android/data/com.camera.dualstream/files/caps.json` 에 쓰고, PC 가 adb 로 읽어
+  `runs/phone_caps.json` 에 둔다. 아직 없으면 `phone_stereo/cameras_s24.json` 으로 추정 (최대 fps 30 으로 보수적).
+  형식: SPEC.md 14. 명령줄: `scan3d.py --app-size 960x720 --app-fps 15`, `win_relay.py --size 960x720 --fps 15`.
 
 ## 세 모드 사용법
 
@@ -110,7 +167,7 @@ WSL 이 아니면 `--native` 를 안 줘도 자동 (`/proc/version` 에 microsof
    bash scan3d/run_scan.sh --voxel 0.02 --yolo-rotate --iters 4 --stride 3   # 나머지 인자는 scan3d.py 로
    ```
    WSL 안의 scan3d 는 Windows adb.exe 를 interop 으로 불러 앱 모드 전환·녹화 목록·가져오기를 한다
-   (찾는 순서: `SCAN3D_ADB` → PATH 의 adb.exe → `C:\Users\*\AppData\Local\Android\Sdk\platform-tools\adb.exe` → …, `phone_link.py`).
+   (찾는 순서: `--adb`/`SCAN3D_ADB` → `C:\Users\a3162\platform-tools\adb.exe` → PATH 의 adb.exe → `C:\Users\*\platform-tools\adb.exe` → `C:\Users\*\AppData\Local\Android\Sdk\platform-tools\adb.exe` → …, `phone_link.py`).
    브리지 로그: `scan3d/runs/ov_bridge_<시각>.log`. 1 과 2 는 어느 쪽을 먼저 띄워도 된다.
 
 ### 브라우저: http://localhost:8795
@@ -151,17 +208,26 @@ venv_ffs/bin/python scan3d/replay.py recordings/<이름> --keep-web   # 끝난 �
 | `web_server.py`, `web/` | HTTP 서버(0.0.0.0:8795) + three.js 뷰어 (InstancedMesh 복셀, 증분 폴링, 모드·녹화 패널) |
 | `run_scan.sh` | 브리지 → scan3d.py 실행 (`--native`/`--relay`/`--replay`) |
 | `setup.sh` | 설치 재현 (uv, venv_ffs, torch, FFS, Ceres, OpenVINS, ov_bridge, 설정, platform-tools) |
-| `win_relay.py` | Windows 쪽 바이트 중계 + 앱 시작 (`--app-mode`) |
+| `win_relay.py` | Windows 쪽 바이트 중계 + 앱 시작 (`--app-mode`), 폰 포트 접속 실패 때 adb forward 다시 |
+| `preview_server.py` | 웹 화면 미리보기 (가짜 데이터, 포트 8796, 폰·GPU 불필요) |
 
 ## 주요 인자 (`scan3d.py --help`)
 - `--link auto|relay|native`, `--phone listen:8766 | 127.0.0.1:8765 | :18765 | HOST:PORT`, `--adb PATH`
-- `--mode live|record|both|idle` (시작 모드), `--start-app/--no-start-app` (native 기본 켬), `--app-fps 30 --app-imu-us 2500 --app-focus 1.0`
+- `--mode live|record|both|idle` (시작 모드), `--start-app/--no-start-app` (native 기본 켬), `--app-size 640x480 --app-fps 15 --app-imu-us 2500 --app-focus 1.0` (크기는 4:3 만)
 - `--ov 127.0.0.1:7600` | `pipe:<명령>` | `none`, `--ov-bridge`, `--ov-config`, `--on-vio-reset clear|keep`
 - 재생: `--replay DIR`, `--every-frame`, `--replay-iters 8`, `--replay-out DIR`, `--exit-after-replay`, `--rec-root recordings`
-- `--voxel 0.03`, `--min-hits 2`, `--depth-range 0.3 2.5` (최대 3 m), `--iters 4`, `--scale 1.0`, `--stride 3`
+- `--voxel 0.03`, `--min-hits 2`, `--depth-range 0.3 2.5` (최대 3 m), `--iters 4`, `--scale` (FFS 축소, 기본 자동) `--ffs-max-px 307200`, `--stride 3`
 - `--kf-trans 0.03 --kf-rot 5 --kf-dt 0`, `--yolo-model yolo11m-seg.pt`, `--yolo-rotate`, `--no-yolo`
-- `--port 8795`, `--save-on-exit`
+- `--port 8795`, `--save-on-exit`, `--pair-skew-ms 5` (쌍 묶기), `--vio-stereo-skew-ms` (기본 = `--pair-skew-ms`)
 - VIO 입력은 항상 정류 gray (`--ov-images rect`, raw 는 설정과 안 맞아 제거 — REVIEW 5)
+
+## 폰 스트림 형식 (USB 끊김 줄이기)
+- 앱은 기본으로 두 렌즈를 **H.264 (I+P, B-frame 없음, 키프레임 1초)** 로 보낸다 (앱 1.4-h264). 640x480·15 fps 에서 렌즈당 약 4 Mbps 이고, 크기·fps 에 비례해 늘어난다.
+  - 왜 H.264: 폰의 하드웨어 인코더가 압축하므로 JPEG 보다 폰 부하·발열이 작고 USB 로 보내는 양도 훨씬 적다 (추정, 측정 전).
+  - 왜 B-frame 없음: B 는 뒤 프레임을 기다려야 해서 지연이 생기고 화질이 프레임마다 출렁인다. 깊이·VIO 에는 일정한 화질이 낫다.
+  - PC 는 PyAV 로 렌즈별로 풀고 (venv_ffs 에 `av` 필요), 접속 직후·끊김 뒤에는 폰에 키프레임을 요청한다.
+- 고급 설정: 웹 "영상 형식" 또는 `--app-stream jpeg|nv21` (앱 인자 `--es stream_fmt jpeg`, 화질 `--ei jpeg_q 80`). NV21 원본(약 28 MB/s at 30 fps)은 이 폰에서 USB 가 끊겼다. 렌즈당 비트레이트는 `--ei live_kbps N`. 형식 자세히: SPEC.md 1.2.1·1.2.2.
+- 폰이 뜨겁거나 그래도 끊기면 **15 fps 권장**: `--app-fps 15` (scan3d.py) / `--fps 15` (win_relay.py). 전송량·발열이 절반.
 
 ## 좌표
 - 깊이·YOLO = 정류 왼쪽(rect0, 렌즈 2를 R1 로 돌린 OpenCV 카메라). 점 `p_rect0 = [(u-cx)/f·Z, (v-cy)/f·Z, Z]`.
@@ -174,7 +240,9 @@ venv_ffs/bin/python scan3d/replay.py recordings/<이름> --keep-web   # 끝난 �
   뷰어는 `t=`/`frames=` 가 있으면 그 값을, 없으면 원문 줄과 "앱 시작 후 경과 s" 를 보여 준다.
 - 영상 ↔ CSV: 처음 12 장으로 방식(PTS/순서)과 첫 행(0..4)을 정한다 (PTS 간격 무늬로 판정, 허용 오차 반 프레임). 드롭이 없어 간격이 일정하면
   첫 행을 가를 수 없어 0 으로 두고, meta `samples_written` ≠ 행 수면 경고한다 (미검증). 중간에 순서로 바꿔도 행 번호가 디코드 번호와 같이 움직인다.
-- 두 렌즈 노출 동기 APPROXIMATE → 시각차 > 1 ms 면 mono 로 VIO 에 보냄.
+- 두 렌즈 노출 동기 APPROXIMATE → 쌍 묶기(`--pair-skew-ms`)와 스테레오 VIO 거름(`--vio-stereo-skew-ms`)을 같은 기준(기본 5 ms)으로 둔다.
+  그보다 먼 프레임은 짝을 안 짓는다 (mono 로 섞어 보내지 않음 — 섞으면 OpenVINS TrackKLT 가 죽음). 웹 고급 → "렌즈 시각차" 줄에 두 기준과 버린 수가 보인다.
+  버림이 많아 추적이 끊기면 `--pair-skew-ms 10` 또는 `--vio-mode mono` 와 비교 (REVIEW4 B6, 미측정).
 - 원시 가속도계(TYPE_ACCELEROMETER) 는 수정된 앱(2026-10-16 설치)에서만 온다. 없으면 IMU 출력 0 → VIO 시작 안 됨 (뷰어 "IMU 동기" 줄 확인).
   실제 IMU 주기: `adb shell run-as com.camera.dualstream cat files/sensors.json`. 400 Hz 가 아니면 `make_ov_config.py --imu-rate` 로 다시 생성.
 - 카메라 SENSOR_TIMESTAMP 와 센서 timestamp 가 같은 시계(elapsedRealtimeNanos)라는 가정 (S24 timestamp source 미확인).

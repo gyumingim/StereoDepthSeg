@@ -4,27 +4,59 @@ GET  /api/state                  상태 JSON (VIO, 폰, 깊이, 맵, 물체, 클
 GET  /api/voxels?since=V&epoch=E 바뀐 복셀만: 헤더 <IIIf (epoch, version, M, voxel_m) + M × 17 B
                                  (<hhhBBBhiH: ix,iy,iz, r,g,b, cls, inst, hits). epoch 가 다르면 전체.
 GET  /api/trajectory             [[t, x, y, z], ...] (rect0 원점, 솎음) + 현재 자세
-GET  /api/frame.jpg?kind=rgb|overlay|depth   최근 키프레임 2D 패널
+GET  /api/frame.jpg?kind=rgb|overlay|depth   최근 키프레임 2D 패널 (웹은 depth 만 씀)
+GET  /api/cam.jpg?lens=0|1&overlay=0|1        가장 최근 수신 프레임 (0 = 초광각 렌즈 2 = 정류 왼쪽, 1 = 광각 렌즈 5).
+                                 JPEG 스트림이면 받은 바이트 그대로, overlay=1 이면 렌즈 0 에 최근 YOLO 마스크·박스. 없으면 204
 GET  /api/recordings?refresh=1   폰 녹화 목록(adb) + 가져온 녹화(recordings/) 목록
+GET  /api/combos?mode=live|record|both&kf=3&fmt=h264|jpeg|nv21
+                                 화질(4:3 해상도)·fps 조합별 가능 여부·이유·예상 부하 (load_model.py). fmt = 실시간 영상 형식 (기본 h264)
+                                 state.ui.stream = 지금 크기·fps·형식, state.ui.load = 실행 중 예상 대비 실측·과부하 신호·한 단계 낮추기 제안
 POST /api/cmd  {"cmd": pause|resume|reset_map|reset_vio|save|set, ...}
-               {"cmd": "mode", "mode": live|record|both, "start_app": true}   모드 시작 (앱 --es mode)
+               {"cmd": "mode", "mode": live|record|both, "start_app": true,
+                "size": "WxH", "fps": 15, "stream_fmt": "h264"}
+                                            모드 시작 (앱 --es mode). size·fps·형식은 부하 모델로 검사 (불가능하면 ok:false + reasons,
+                                            "force": true 면 그래도 시작). scanner.set_stream(w, h, fps, rec_kbps=, stream_fmt=,
+                                            live_kbps=) 가 있으면 그것으로 적용 (stream_fmt 인자를 못 받는 옛 set_stream 이면 빼고 부름)
+               {"cmd": "load_reset"}        부하 모델 계수 초기화 (runs/load_coeffs.json 지움)
+               {"cmd": "caps_refresh"}      폰 능력표 caps.json 다시 읽기 (adb)
                {"cmd": "stop", "stop_app": true}                              세션·재생 정지 (녹화 마무리 후 앱 정지)
                {"cmd": "pull", "name": ..., "replay": true, "every_frame": false, "iters": 8}   가져와서 복원
                {"cmd": "replay", "name": ..., "every_frame": false, "iters": 8}               가져온 녹화 복원
+               {"cmd": "restart"}   [처음부터 다시]: VIO 가 죽었으면 세션 다시 시작(브리지 새로), 아니면 VIO 재시작 + 맵 초기화
+
+쉬운 UI 도우미 (Helper, 이 파일 안의 별도 스레드, scan3d.py 로직은 안 건드림):
+  - 3 s 마다 adb devices -l → state.ui.usb (none | device | unauthorized | offline | noadb).
+    transport_id 가 바뀌면 3 s 사이에 뺐다 꽂은 것도 "다시 꽂음" 으로 본다 (REVIEW4 B2)
+  - 10 s 마다 adb shell dumpsys thermalservice 의 SKIN 온도 → state.ui.temp_c / temp_level (ok | warm >42 | hot >45 °C)
+  - WSL + Windows adb 면 [스캔 시작](live/both) 때 Windows 쪽 win_relay.py --no-start-app 을 interop
+    (powershell.exe Start-Process, 창 없음)으로 띄우고 [정지] 때 끈다. 죽거나 USB 를 다시 꽂으면 다시 띄운다
+    (adb forward 다시; 다시 꽂음은 래치해 두었다가 relay_next 가 지나면 처리, 연속 실패는 8→16→32→60 s 로 늘림).
+    win_relay 자신도 폰 포트 접속이 실패하면 adb forward 를 다시 한다. 로그 scan3d/runs/win_relay.log
 """
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+import inspect
 import json
+import os
+import re
+import shutil
 import struct
+import subprocess
 import threading
+import time
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
+
+try:
+    import load_model
+except ImportError:                     # 다른 위치에서 import 될 때
+    from scan3d import load_model       # type: ignore
 
 WEB = Path(__file__).parent / "web"
 CTYPE = {".html": "text/html; charset=utf-8", ".js": "application/javascript", ".css": "text/css",
          ".json": "application/json", ".png": "image/png", ".ico": "image/x-icon"}
 
 
-def make_handler(scanner):
+def make_handler(scanner, helper):
     class H(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
 
@@ -49,7 +81,9 @@ def make_handler(scanner):
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
             try:
                 if u.path == "/api/state":
-                    return self._json(scanner.state())
+                    st = scanner.state()
+                    st["ui"] = helper.ui()
+                    return self._json(st)
                 if u.path == "/api/voxels":
                     epoch, ver, rec = scanner.vmap.delta(int(q.get("since", 0)),
                                                          int(q["epoch"]) if "epoch" in q else None)
@@ -57,10 +91,23 @@ def make_handler(scanner):
                     return self._send(200, body, "application/octet-stream")
                 if u.path == "/api/recordings":
                     return self._json(scanner.recordings_json(refresh=q.get("refresh") == "1"))
+                if u.path == "/api/combos":
+                    try:
+                        kf = float(q["kf"]) if q.get("kf") else None
+                    except ValueError:
+                        kf = None
+                    return self._json(helper.combos(q.get("mode", "live"), kf, q.get("fmt")))
                 if u.path == "/api/trajectory":
                     return self._json(scanner.trajectory_json())
                 if u.path == "/api/frame.jpg":
                     jpg = scanner.frame_jpeg(q.get("kind", "overlay"))
+                    return self._send(200, jpg, "image/jpeg") if jpg else self._send(204, b"", "text/plain")
+                if u.path == "/api/cam.jpg":
+                    try:
+                        lens = int(q.get("lens", 0))
+                    except ValueError:
+                        lens = 0
+                    jpg = scanner.cam_jpeg(lens, q.get("overlay") == "1") if hasattr(scanner, "cam_jpeg") else None
                     return self._send(200, jpg, "image/jpeg") if jpg else self._send(204, b"", "text/plain")
                 path = "/index.html" if u.path in ("/", "") else u.path
                 f = (WEB / path.lstrip("/")).resolve()
@@ -85,7 +132,7 @@ def make_handler(scanner):
             if u.path != "/api/cmd":
                 return self._json({"error": "unknown"}, 404)
             try:
-                return self._json(scanner.command(body))
+                return self._json(helper.command(body))
             except Exception as e:
                 return self._json({"error": repr(e)}, 500)
 
@@ -104,7 +151,560 @@ def _default(o):
 
 
 def serve(scanner, host="0.0.0.0", port=8795):
-    srv = ThreadingHTTPServer((host, port), make_handler(scanner))
+    helper = Helper(scanner)
+    srv = ThreadingHTTPServer((host, port), make_handler(scanner, helper))
+    srv.helper = helper
     srv.daemon_threads = True
     threading.Thread(target=srv.serve_forever, daemon=True, name="http").start()
     return srv
+
+
+# ---------------- 쉬운 UI 도우미 ----------------
+TEMP_WARM, TEMP_HOT = 42.0, 45.0
+HERE = Path(__file__).resolve().parent
+
+
+def parse_skin_temp(text):
+    """dumpsys thermalservice → SKIN(mType=3) 온도 °C (HAL 현재값 구역 우선). 없으면 None."""
+    sec = text
+    i = text.find("Current temperatures from HAL")
+    if i >= 0:
+        sec = text[i:]
+        j = sec.find("Current cooling devices")
+        if j > 0:
+            sec = sec[:j]
+    vals = []
+    for m in re.finditer(r"Temperature\{mValue=([-\d.]+), mType=(\d+), mName=([^,}]+)", sec):
+        if m.group(2) == "3" or "skin" in m.group(3).lower():
+            try:
+                vals.append(float(m.group(1)))
+            except ValueError:
+                pass
+    vals = [v for v in vals if -20 < v < 120]
+    return max(vals) if vals else None
+
+
+def _wslpath_w(p):
+    if not p:
+        return None
+    try:
+        return subprocess.run(["wslpath", "-w", str(p)], capture_output=True, text=True, timeout=5).stdout.strip() or None
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+
+
+def _ps_exe():
+    for c in (shutil.which("powershell.exe"), "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"):
+        if c and os.path.exists(c):
+            return c
+    return None
+
+
+def _win_python():
+    """(windows_path, prefix) of py.exe / python.exe found from WSL, or (None, None).
+    Interop PowerShell from the logon wsl.exe has no LOCALAPPDATA/TEMP and a short PATH, so it cannot find them itself."""
+    import glob
+    pats = [("/mnt/c/Users/*/AppData/Local/Programs/Python/Launcher/py.exe", "-3 "), ("/mnt/c/Windows/py.exe", "-3 "),
+            ("/mnt/c/Users/*/AppData/Local/Programs/Python/Python3*/python.exe", ""),
+            ("/mnt/c/Program Files/Python3*/python.exe", "")]
+    for pat, pre in pats:
+        for c in sorted(glob.glob(pat)):
+            if "/Users/Public/" in c or "/Users/Default" in c:
+                continue
+            w = _wslpath_w(Path(c))
+            if w:
+                return w, pre
+    return None, None
+
+
+def _win_temp(py_w):
+    """A writable Windows working dir next to the found Python's user profile (C:\\Users\\<u>\\AppData\\Local\\Temp)."""
+    import re as _re
+    m = _re.match(r"([A-Za-z]:\\Users\\[^\\]+)\\", py_w or "")
+    return (m.group(1) + "\\AppData\\Local\\Temp") if m else "C:\\Windows\\Temp"
+
+
+def _psq(s):
+    return "'" + str(s).replace("'", "''") + "'"
+
+
+class Helper:
+    """폰 USB·온도 감시 + Windows 중계(win_relay.py) 켜기/끄기. 실패해도 스캐너는 그대로 돈다."""
+
+    KILL_ALL = ("Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -ne $PID -and $_.Name -notmatch '^(powershell|pwsh)' -and $_.CommandLine -like '*win_relay.py*' } | "
+                "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; ")
+
+    def __init__(self, scanner):
+        self.sc = scanner
+        self.lock = threading.RLock()
+        self.usb = "모름"
+        self.usb_t = 0.0
+        self.temp_c = None
+        self.temp_t = 0.0
+        self.want_relay = False
+        self.relay_pid = None
+        self.relay_state = "꺼짐"          # 꺼짐 | 켜는 중 | 켜짐 | 오류 | 해당 없음
+        self.relay_err = None
+        self.relay_starts = 0
+        self.relay_next = 0.0
+        self.relay_t = 0.0                 # 마지막 중계 시작 시각 (monotonic)
+        self.relay_fails = 0               # 연속 시작 실패·곧 죽음 수 → 다시 시도 간격 (B11)
+        self.replug_pending = False        # 다시 꽂음 래치 (B2: relay_next 창 안이면 나중에 처리)
+        self.transport = None              # adb devices -l 의 transport_id (바뀌면 다시 꽂음)
+        self.ps = _ps_exe()
+        link = getattr(scanner, "link", None)
+        a = getattr(scanner, "a", None)
+        self.relay_ok = bool(self.ps and link is not None and link.kind == "windows"
+                             and getattr(a, "link", "relay") in ("relay", "auto"))
+        if not self.relay_ok:
+            self.relay_state = "해당 없음"
+        self.relay_log = HERE / "runs" / "win_relay.log"
+        # 화질·fps 부하 모델 (load_model.py): 실패해도 스캐너는 돈다
+        self.lm = self.mon = None
+        try:
+            self.lm = load_model.LoadModel(log=scanner.log)
+            self.mon = load_model.LoadMonitor(self.lm)
+            # FFS 입력 축소: scan3d 와 같은 규칙 (--scale 고정, 없으면 --ffs-max-px 기준 자동 → 크기마다 다름)
+            self.lm.ffs_scale_fixed = getattr(a, "scale", None)
+            self.lm.ffs_max_px = int(getattr(a, "ffs_max_px", 640 * 480) or 640 * 480)
+            # 고정 VIO 설정(--ov-config)·외부 브리지면 그 크기 말고는 실시간 조합을 막는다 (REVIEW6 R1)
+            vf = getattr(scanner, "vio_fixed_size", None)
+            if callable(vf):
+                try:
+                    self.lm.vio_fixed_size = vf()
+                except Exception as e:
+                    scanner.log(f"[load] 고정 VIO 설정 크기를 못 읽음: {e!r}")
+        except Exception as e:
+            scanner.log(f"[load] 부하 모델을 못 켬: {e!r}")
+        self.perf = None                   # 폰 metrics.json (adb, SPEC 14.3) 또는 receiver/scanner 의 perf
+        self.perf_t = 0.0
+        self.perf_wall = None              # 지난번 metrics.json 의 t_wall_ms (안 바뀌면 낡은 값 → 안 씀)
+        self.sess_wall_ms = None           # 이번 세션 시작 시각 (ms) — 이보다 오래된 metrics.json 은 지난 세션 것 (REVIEW6 R4)
+        self.caps_idle_t = 0.0             # 대기 중 caps.json 을 다시 찾아볼 시각 (폰 값이 아직 없을 때만)
+        self.caps_try_t = 0.0              # 세션 시작 뒤 caps.json 을 읽어 볼 시각 (monotonic, 0 = 안 함)
+        self.kf_min = None                 # 웹이 고른 키프레임 목표 (없으면 load_model.LIMITS)
+        self.stream_fmt = None             # 웹이 고른 실시간 영상 형식 (없으면 scanner 값 → 기본 h264)
+        self.h264_err = None               # 폰 metrics.json 의 h264.error (실시간 압축기 오류, REVIEW7 H2) — 세션 끝나면 지움
+        self.h264_err_gen = None           # 그 오류를 낸 인코더 세대 (metrics h264.gen) — 세대가 바뀌면 지움
+        threading.Thread(target=self._loop, daemon=True, name="ui-helper").start()
+
+    # ---- 상태 ----
+    def ui(self):
+        t = self.temp_c
+        lvl = None if t is None else ("hot" if t > TEMP_HOT else "warm" if t > TEMP_WARM else "ok")
+        return dict(usb=self.usb, usb_age_s=round(time.time() - self.usb_t, 1) if self.usb_t else None,
+                    temp_c=t, temp_level=lvl, temp_age_s=round(time.time() - self.temp_t, 1) if self.temp_t else None,
+                    stream=self.stream(), load=self.mon.snapshot if self.mon else None, h264_error=self.h264_err,
+                    relay=dict(state=self.relay_state, pid=self.relay_pid, error=self.relay_err,
+                               starts=self.relay_starts, fails=self.relay_fails, wanted=self.want_relay,
+                               log_tail=self._relay_tail()))
+
+    def _relay_tail(self, n=3):
+        try:
+            with open(self.relay_log, "rb") as f:
+                f.seek(0, 2)
+                f.seek(max(0, f.tell() - 2000))
+                lines = f.read().decode("utf-8", "replace").splitlines()
+            return [ln for ln in lines if ln.strip()][-n:]
+        except OSError:
+            return []
+
+    # ---- 화질·fps (load_model) ----
+    def stream(self):
+        """지금 세션(또는 다음 세션)의 크기·fps. scanner.stream dict (통합 뒤) > scanner.a.size / app_fps."""
+        st = getattr(self.sc, "stream", None)
+        a = getattr(self.sc, "a", None)
+        if isinstance(st, dict) and st.get("w"):
+            w, h, fps = int(st["w"]), int(st["h"]), int(st.get("fps") or getattr(a, "app_fps", 15))
+        else:
+            size = getattr(a, "size", None) or load_model.DEFAULT_SIZE
+            w, h, fps = int(size[0]), int(size[1]), int(getattr(a, "app_fps", load_model.DEFAULT_FPS))
+        calib = tuple(self.lm.calib) if self.lm else load_model.DEFAULT_SIZE
+        sfmt = (st.get("stream_fmt") if isinstance(st, dict) else None) or getattr(a, "app_stream", None)
+        d = dict(size=load_model.size_str(w, h), w=w, h=h, fps=fps, calib=load_model.size_str(*calib),
+                 scaled_calib=(w, h) != calib, stream_fmt=load_model.norm_fmt(sfmt))
+        if isinstance(st, dict):
+            # 지금 세션의 실제 FFS 축소 비율 (부하 실측 환산용) · 보정 변환 문구 · 실시간 비트레이트
+            d.update(ffs_scale=st.get("ffs_scale"), calib_note=st.get("calib_note"), epi_gate_px=st.get("epi_gate_px"),
+                     live_kbps=st.get("live_kbps"))
+        return d
+
+    def _fmt_scale(self, running=False):
+        """(형식, FFS 축소). running=True = 지금 도는 세션의 형식 (실측 비교용), 아니면 웹이 고른 형식 (다음 시작용)."""
+        a = getattr(self.sc, "a", None)
+        sc_ = getattr(a, "scale", None)                 # None = 자동 (크기마다, load_model.LoadModel.ffs_scale)
+        fmt = self.stream()["stream_fmt"] if running or not self.stream_fmt else self.stream_fmt
+        return load_model.norm_fmt(fmt), (float(sc_) if sc_ else None)
+
+    def combos(self, mode, kf=None, fmt=None):
+        if self.lm is None:
+            return dict(error="부하 모델 없음")
+        if kf is not None:
+            self.kf_min = kf
+        if fmt:
+            self.stream_fmt = load_model.norm_fmt(fmt)
+        fmt, scale = self._fmt_scale()
+        st = self.stream()
+        return self.lm.table(mode, kf_min=self.kf_min, stream_fmt=fmt, scale=scale,
+                             current=dict(size=st["size"], fps=st["fps"], stream_fmt=st["stream_fmt"]))
+
+    def _apply_stream(self, body, mode):
+        """[스캔 시작] 의 size·fps → 검사 후 적용. 반환 (거절 dict 또는 None, 경고 문자열 또는 None)."""
+        if body.get("stream_fmt"):
+            self.stream_fmt = load_model.norm_fmt(body["stream_fmt"])
+        if self.lm is None or (body.get("size") is None and body.get("fps") is None and not body.get("stream_fmt")):
+            return None, None
+        st = self.stream()
+        try:
+            w, h = load_model.parse_size(body.get("size") or st["size"])
+            fps = int(body.get("fps") or st["fps"])
+        except (TypeError, ValueError):
+            return dict(ok=False, error="화질·fps 값이 잘못됐습니다"), None
+        fmt, scale = self._fmt_scale()
+        c = self.lm.combo(mode, w, h, fps, self.kf_min, fmt, scale)
+        warn = None
+        if not c["ok"] and c.get("load_only"):
+            # 부하 추정만 넘음 (장치 한계 아님) → 시작은 하고 경고만 (REVIEW6 R2: 튄 실측 하나로 시작이 막히지 않게)
+            warn = "예상 부하가 높습니다 (" + " · ".join(c["reasons"]) + ") — 느리거나 끊기면 화질·fps 를 낮추세요"
+        elif not c["ok"] and not body.get("force"):
+            return dict(ok=False, error=f"{w}x{h} · {fps} fps ({load_model.FMT_INFO[fmt]}) 는 지금 쓸 수 없습니다: "
+                        + " · ".join(c["reasons"]), reasons=c["reasons"]), None
+        sc = self.sc
+        a = getattr(sc, "a", None)
+        if hasattr(sc, "set_stream"):
+            # 통합(담당 2): 보정 비례 변환·정류 맵·수신 크기·앱 --ei width/height/fps/rec_kbps (+ --es stream·live_kbps)
+            try:
+                params = inspect.signature(sc.set_stream).parameters
+            except (TypeError, ValueError):
+                params = {}
+            kw = dict(rec_kbps=c.get("rec_kbps"))
+            if "stream_fmt" in params or any(p.kind == p.VAR_KEYWORD for p in params.values()):
+                kw.update(stream_fmt=fmt, live_kbps=c.get("live_kbps"))
+                if "live_kbps" not in params and not any(p.kind == p.VAR_KEYWORD for p in params.values()):
+                    kw.pop("live_kbps")
+                elif "live_kbps_auto" in params:
+                    kw["live_kbps_auto"] = True        # 부하 모델이 계산한 기본값 (사용자가 직접 준 값 아님, REVIEW7 H4)
+                sc.set_stream(w, h, fps, **kw)
+            else:                                      # 옛 set_stream (형식 인자 없음)
+                sc.set_stream(w, h, fps, **kw)
+                if a is not None and hasattr(a, "app_stream"):
+                    a.app_stream = fmt
+        else:
+            if a is not None:
+                a.app_fps = fps
+                if hasattr(a, "app_stream"):
+                    a.app_stream = fmt
+            if getattr(sc, "link", None) is not None:
+                sc.link.fps = fps
+            if (w, h) != (st["w"], st["h"]):
+                warn = (warn + " / " if warn else "") + f"크기 바꾸기는 아직 스캐너에 연결되지 않아 {st['size']} 로 시작합니다 (fps 만 적용)"
+        try:
+            ph = (f"실시간 H.264 {c['live_kbps']} kbps × 2 · 폰 복사 {c['phone_cpu_pct']}%" if fmt == "h264"
+                  else f"폰 부하 {c['phone_cpu_pct']}%")
+            sc.log(f"[load] 시작 화질 {w}x{h} · {fps} fps · {load_model.FMT_INFO[fmt]} · 예상 {ph} · USB {c['usb_mbs']} MB/s"
+                   f" · PC 깊이 {c['pc_ffs_fps']} /s" + (f" — {warn}" if warn else ""))
+        except Exception:
+            pass
+        return None, warn
+
+    def _load_tick(self):
+        """감시 루프마다 (3 s): 폰 perf·PC 깊이 지표 → LoadMonitor (계수 EWMA, 과부하 신호)."""
+        if self.mon is None:
+            return
+        sc = self.sc
+        mode = getattr(sc, "mode", "idle")
+        link = getattr(sc, "link", None)
+        now = time.monotonic()
+        if mode not in load_model.MODES:
+            self.perf = self.perf_wall = None
+            self.sess_wall_ms = None
+            self.h264_err = self.h264_err_gen = None
+            # 대기 중 1분마다 폰 caps.json 을 본다: 아직 없으면 찾고, 있으면 앱 버전·쓴 시각이 바뀌었을 때만 캐시 갱신
+            # (앱을 새로 설치해도 옛 능력표를 계속 쓰지 않게, REVIEW6 R8)
+            if (self.usb == "device" and link is not None
+                    and getattr(link, "available", False) and now >= self.caps_idle_t):
+                self.caps_idle_t = now + 60.0
+                self.lm.refresh_caps(link)
+            self.lm.save()
+            self.mon.update("idle", 0, 0, 0)
+            return
+        # 세션 시작 뒤 앱이 caps.json 을 썼으면 한 번 읽는다 (읽고 나면 다음 세션부터 폰 값으로)
+        if self.caps_try_t and now >= self.caps_try_t and self.usb == "device" and link is not None:
+            self.caps_try_t = 0.0
+            self.lm.refresh_caps(link)
+        rx = getattr(sc, "receiver", None)
+        phone_st = {}
+        if rx is not None:
+            try:
+                ps = rx.stats()
+                # decode_ms / decode_ms_max = H.264 한 장 풀기 (가정한 이름, 수신 담당과 통합 때 맞춤)
+                phone_st = dict(fps=ps.get("sensor_fps"), connected=True, decode_ms=ps.get("decode_ms"),
+                                decode_ms_max=ps.get("decode_ms_max"))
+                if isinstance(ps.get("perf"), dict) and ps["perf"]:
+                    self.perf, self.perf_t = ps["perf"], now
+            except Exception:
+                pass
+        sp = getattr(sc, "phone_perf", None)              # 통합 뒤 scanner 가 직접 들고 있으면 그것
+        if isinstance(sp, dict) and sp:
+            self.perf, self.perf_t = sp, now
+        elif now - self.perf_t > 2.5 and self.usb == "device" and link is not None and getattr(link, "available", False):
+            # 앱 1.3-caps metrics.json (1 s 마다 갱신, SPEC 14.3). t_wall_ms 가 지난번과 같으면 앱이 멈춘 것 → 안 씀
+            j = load_model._read_phone_json(link, "metrics.json", timeout=5)
+            tw = j.get("t_wall_ms") if isinstance(j, dict) else None
+            if self.sess_wall_ms is None:
+                self.sess_wall_ms = time.time() * 1000.0
+            # 세션 시작 전에 쓴 파일 = 지난 세션 값 → 안 씀 (폰·PC 시계 차이 5 s 여유, REVIEW6 R4)
+            old = isinstance(tw, (int, float)) and tw < self.sess_wall_ms - 5000.0
+            self.perf = j if j and not old and (tw is None or tw != self.perf_wall) else None
+            self.perf_wall = tw
+            self.perf_t = now
+        # 폰 실시간 압축기 오류 (metrics.json h264.error) → 웹 단계 표시줄에 진짜 원인 (REVIEW7 H2)
+        # 새 metrics 에 h264.error 가 없거나 인코더 세대(h264.gen)가 바뀌면 지움 (REVIEW7 확인 H2-2)
+        if isinstance(self.perf, dict):
+            hj = self.perf.get("h264")
+            if isinstance(hj, dict):
+                err, gen = hj.get("error"), hj.get("gen")
+                if self.h264_err is not None and gen is not None and gen != self.h264_err_gen:
+                    self.h264_err = None
+                if err:
+                    self.h264_err, self.h264_err_gen = str(err)[:200], gen
+                else:
+                    self.h264_err = None
+        sizes = []
+        if rx is not None:
+            for f in list(getattr(rx, "latest", None) or []):
+                j = getattr(f, "jpeg", None) if f is not None else None
+                if j is not None:
+                    sizes.append(len(j))
+        st = self.stream()
+        fmt, scale = self._fmt_scale(running=True)
+        t = self.temp_c
+        lvl = None if t is None else ("hot" if t > TEMP_HOT else "warm" if t > TEMP_WARM else "ok")
+        if st.get("ffs_scale"):
+            scale = float(st["ffs_scale"])             # 세션이 실제로 쓰는 FFS 축소 비율
+        self.mon.update(mode, st["w"], st["h"], st["fps"], perf=self.perf, depth=dict(getattr(sc, "dstats", {}) or {}),
+                        phone=phone_st, temp_level=lvl, jpeg_sizes=sizes if fmt == "jpeg" else None,
+                        scale=scale, kf_min=self.kf_min, stream_fmt=fmt)
+
+    # ---- 명령 ----
+    def command(self, body):
+        cmd = body.get("cmd")
+        sc = self.sc
+        if cmd == "load_reset":
+            if self.lm is None:
+                return dict(ok=False, error="부하 모델 없음")
+            self.lm.reset()
+            return dict(ok=True, coeffs=self.lm.coeffs_json())
+        if cmd == "caps_refresh":
+            if self.lm is None:
+                return dict(ok=False, error="부하 모델 없음")
+            link = getattr(sc, "link", None)
+            src = self.lm.refresh_caps(link) if link is not None else self.lm.caps_src
+            return dict(ok=True, caps_src=src)
+        if cmd == "mode":
+            mode = body.get("mode", "live")
+            bad, warn = self._apply_stream(body, mode)
+            if bad:
+                return bad
+            self.sess_wall_ms = time.time() * 1000.0     # 새 세션: 이보다 오래된 metrics.json 은 안 씀 (REVIEW6 R4)
+            if self.lm is not None and not self.lm.caps_src.startswith("폰"):
+                self.caps_try_t = time.monotonic() + 15.0
+            if mode in ("live", "both"):
+                self.relay_on()
+            else:
+                self.relay_off()
+            r = sc.command(body)
+            return dict(r, warn=warn) if warn and isinstance(r, dict) else r
+        if cmd == "stop":
+            r = sc.command(body)
+            self.relay_off()
+            return r
+        if cmd == "restart":
+            # [처음부터 다시]: VIO(브리지)가 죽었으면 세션을 새로 (pipe 브리지 새 프로세스), 아니면 VIO 재시작 + 맵 초기화
+            mode = getattr(sc, "mode", "idle")
+            vio_err = None
+            try:
+                vio_err = sc.vio.stats().get("error") or getattr(sc, "vio_error", None)
+            except Exception:
+                pass
+            if mode in ("live", "both") and vio_err:
+                if self.relay_ok and self.relay_state != "켜짐":
+                    self.relay_on()
+                r = sc.start_session(mode, start_app=False)
+                return dict(r, how="session")
+            if mode in ("live", "both"):
+                return dict(sc.command({"cmd": "reset_vio"}), how="reset_vio")
+            return dict(sc.command({"cmd": "reset_map"}), how="reset_map")
+        return sc.command(body)
+
+    # ---- Windows 중계 ----
+    def _ps(self, script, timeout=30):
+        try:
+            r = subprocess.run([self.ps, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
+                               capture_output=True, timeout=timeout, cwd="/mnt/c" if os.path.isdir("/mnt/c") else None)
+            return r.returncode, (r.stdout + r.stderr).decode("utf-8", "replace").strip()
+        except (OSError, subprocess.TimeoutExpired) as e:
+            return -1, repr(e)
+
+    def relay_on(self):
+        self.want_relay = True
+        self.relay_fails = 0
+        if self.relay_ok:
+            threading.Thread(target=self._relay_start, daemon=True, name="relay-start").start()
+
+    def relay_off(self):
+        self.want_relay = False
+        if self.relay_ok:
+            threading.Thread(target=self._relay_stop, daemon=True, name="relay-stop").start()
+
+    def _relay_start(self):
+        with self.lock:
+            if not self.want_relay:
+                return
+            self.relay_state, self.relay_err = "켜는 중", None
+            self.relay_next = time.monotonic() + 8.0
+            script = _wslpath_w(HERE / "win_relay.py")
+            adb = _wslpath_w(self.sc.link.adb)
+            out = _wslpath_w(self.relay_log)
+            if not (script and adb and out):
+                self.relay_state, self.relay_err = "오류", "wslpath 실패 (WSL interop 확인)"
+                return
+            args = " ".join('"%s"' % x for x in ("-u", script, "--no-start-app", "--adb", adb))
+            py_w, py_pre = _win_python()
+            if not py_w:
+                self.relay_state, self.relay_err = "오류", "Windows 에 Python 이 없습니다 (py.exe / python.exe)"
+                self.relay_fails += 1
+                self.relay_next = time.monotonic() + self._backoff()
+                return
+            ps = (self.KILL_ALL +
+                  f"$py = {_psq(py_w)}; $pre = {_psq(py_pre)}; "
+                  "$env:PYTHONIOENCODING = 'utf-8'; "
+                  f"$p = Start-Process -FilePath $py -ArgumentList ($pre + {_psq(args)}) -WindowStyle Hidden "
+                  f"-WorkingDirectory {_psq(_win_temp(py_w))} -RedirectStandardOutput {_psq(out)} "
+                  f"-RedirectStandardError {_psq(out[:-4] + '_err.log')} -PassThru; "
+                  "Write-Output ('PID ' + $p.Id)")
+            rc, txt = self._ps(ps)
+            m = re.search(r"PID (\d+)", txt)
+            if m:
+                self.relay_pid = int(m.group(1))
+                self.relay_state = "켜짐"
+                self.relay_starts += 1
+                self.relay_t = time.monotonic()
+                self.sc.log(f"[relay] Windows win_relay.py 시작 pid={self.relay_pid}")
+            else:
+                self.relay_pid = None
+                self.relay_state = "오류"
+                self.relay_fails += 1
+                wait = self._backoff()
+                self.relay_next = time.monotonic() + wait
+                self.relay_err = ("Windows 에 Python 이 없습니다 (py.exe / python.exe)" if "no-python" in txt
+                                  else f"중계 시작 실패: {txt[-200:]}")
+                self.sc.log(f"[relay] {self.relay_err} — {wait:.0f} 초 뒤 다시 시도")
+
+    def _backoff(self):
+        """연속 실패 수 → 다음 시도까지 (s): 8 → 16 → 32 → 60 (B11)."""
+        return min(60.0, 8.0 * (2 ** max(0, min(self.relay_fails - 1, 3))))
+
+    def _relay_stop(self):
+        with self.lock:
+            if self.want_relay:
+                return
+            self._ps(self.KILL_ALL)
+            if self.relay_pid:
+                self.sc.log(f"[relay] Windows win_relay.py 정지 pid={self.relay_pid}")
+            self.relay_pid = None
+            self.relay_state = "꺼짐"
+
+    def _relay_alive(self):
+        if not self.relay_pid:
+            return False
+        rc, txt = self._ps(f"if (Get-Process -Id {self.relay_pid} -ErrorAction SilentlyContinue) "
+                           "{ 'ALIVE' } else { 'DEAD' }", timeout=15)
+        if "ALIVE" in txt:
+            return True
+        if "DEAD" in txt:
+            return False
+        return None
+
+    # ---- 감시 루프 ----
+    def _usb_poll(self):
+        link = self.sc.link
+        if link is None or not link.available:
+            return "noadb"
+        rc, out = link.run("devices", "-l", timeout=8)
+        if rc != 0:
+            return "모름"
+        rows = [ln.split() for ln in out.splitlines()[1:] if len(ln.split()) >= 2]
+        states = [r[1] for r in rows]
+        if "device" in states:
+            r = next(r for r in rows if r[1] == "device")
+            tid = next((x.split(":", 1)[1] for x in r if x.startswith("transport_id:")), None)
+            if tid is not None and self.transport is not None and tid != self.transport:
+                self.replug_pending = True                # 3 s 사이에 뺐다 꽂음 (B2 a)
+            self.transport = tid
+            return "device"
+        if "unauthorized" in states:
+            return "unauthorized"
+        return "offline" if states else "none"
+
+    def _temp_poll(self):
+        rc, out = self.sc.link.run("shell", "dumpsys", "thermalservice", timeout=10)
+        if rc == 0:
+            t = parse_skin_temp(out)
+            if t is not None:
+                self.temp_c = round(t, 1)
+                self.temp_t = time.time()
+
+    def _loop(self):
+        last_temp = last_alive = 0.0
+        while not getattr(self.sc, "stopped", False):
+            try:
+                self._load_tick()
+            except Exception as e:
+                try:
+                    self.sc.log(f"[load] {e!r}")
+                except Exception:
+                    pass
+            try:
+                prev = self.usb
+                self.usb = self._usb_poll()
+                self.usb_t = time.time()
+                if self.usb != "device":
+                    if self.temp_t and time.time() - self.temp_t > 60:
+                        self.temp_c = None
+                else:
+                    now = time.monotonic()
+                    if now - last_temp >= 10.0:
+                        last_temp = now
+                        self._temp_poll()
+                    if prev in ("none", "offline", "unauthorized") and self.usb == "device":
+                        self.replug_pending = True                # 래치: relay_next 창 안이어도 잃지 않음 (B2 b)
+                    if not (self.relay_ok and self.want_relay):
+                        self.replug_pending = False
+                    elif self.relay_state != "켜는 중":
+                        replug = self.replug_pending
+                        dead = False
+                        if now - last_alive >= 12.0 and self.relay_state == "켜짐":   # powershell 을 덜 띄움 (B11)
+                            last_alive = now
+                            dead = self._relay_alive() is False
+                            if dead:
+                                # 막 켠 중계가 곧(30 s 안) 죽으면 연속 실패로 세고 간격을 늘린다 (B11).
+                                # 오래 돌다 죽은 것은 바로 다시 띄운다.
+                                if now - self.relay_t < 30.0:
+                                    self.relay_fails += 1
+                                    self.relay_next = max(self.relay_next, now + self._backoff())
+                                else:
+                                    self.relay_fails = 0
+                                self.relay_pid = None
+                                self.relay_state, self.relay_err = "오류", "중계가 꺼졌습니다 (로그 scan3d/runs/win_relay.log)"
+                        if (replug or dead or self.relay_state == "오류") and now >= self.relay_next:
+                            self.replug_pending = False
+                            self.sc.log("[relay] " + ("USB 다시 연결 → 중계 다시 시작" if replug
+                                                      else "중계가 꺼져 있음 → 다시 시작"))
+                            self._relay_start()
+            except Exception as e:
+                try:
+                    self.sc.log(f"[ui-helper] {e!r}")
+                except Exception:
+                    pass
+            time.sleep(3.0)

@@ -70,8 +70,10 @@ class Replayer:
             P["state"] = "읽는 중"
             rec = recording.Recording(self.rec_dir, self._log)
             P.update(total_s=round(rec.duration_s, 2), frames_total=rec.n_frames)
-            if rec.size != tuple(sc.a.size):
-                raise ValueError(f"녹화 크기 {rec.size} ≠ 보정 크기 {tuple(sc.a.size)}")
+            # 정류맵·OpenVINS 설정은 start_replay 가 meta.json 의 width/height/fps 로 이미 맞춰 둠 (scan3d.apply_geometry)
+            if rec.size != tuple(sc.geom["size"]):
+                raise ValueError(f"녹화 크기 {rec.size} ≠ 재생 정류 크기 {tuple(sc.geom['size'])}")
+            P.update(size=list(rec.size), fps=sc.geom["fps"], calib_note=sc.geom["note"])
             if [str(p) for p in rec.physical[:2]] != [str(p) for p in sc.a.physical]:
                 self._log(f"주의: 녹화 렌즈 {rec.physical} ≠ --physical {sc.a.physical}")
             P["state"] = "브리지 시작"
@@ -82,12 +84,12 @@ class Replayer:
             P["state"] = "모델 대기"
             while not self._stop.is_set() and not (sc.dstats.get("ready") and sc.ds is not None
                                                    and sc.ds.iters == sc.want_iters):
-                if sc.dstats.get("error"):
+                if str(sc.dstats.get("error") or "").startswith("init:"):   # 모델 초기화 실패만 (지난 키프레임 오류는 무시, REVIEW5 N6)
                     raise RuntimeError(f"깊이 모델 오류: {sc.dstats['error']}")
                 time.sleep(0.2)
             P["state"] = "재생 중"
             self._log(f"{self.rec_dir} · {rec.n_frames} 프레임 · {rec.duration_s:.1f} s · every_frame={self.every_frame} "
-                      f"iters={self.iters} → {self.out_dir}")
+                      f"iters={self.iters} · {rec.size[0]}x{rec.size[1]} {sc.geom['fps']:g} fps · {sc.geom['note']} → {self.out_dir}")
             imu = rec.sensors
             k = 0
             t_start = time.monotonic()

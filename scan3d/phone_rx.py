@@ -1,5 +1,7 @@
 """폰 스트림 수신 (WSL/리눅스 쪽). 앱 시작(adb)은 phone_link.py(우분투 직접·WSL interop) 또는 Windows 릴레이가 한다.
 
+- 프레임은 H.264("STEH", 앱 기본) · JPEG("STEJ") · NV21("STER") — 모두 lps.read_frame 이 같은 BGR 로 풀어 준다 (SPEC 1.2).
+  H.264 는 접속마다 새 lps.H264Decoders(렌즈별 PyAV 디코더, self.h264) → 재접속하면 키프레임부터 다시 ("keyframe <렌즈>" 요청).
 - lib_phone_stereo.PhoneReceiver 를 상속해 그대로 재사용 (역행 timestamp 폐기, 쌍 skew, stats()).
   _run 만 덮어써서 센서·쌍을 **도착 순서대로** 콜백으로 넘긴다 (원본은 최신 쌍 폴링만 가능).
   콜백 예외는 로그만 남기고 수신을 계속한다 (REVIEW 2). 그 밖의 예외는 self.error 에 남겨 재접속하게 한다.
@@ -173,7 +175,7 @@ class StreamReceiver(lps.PhoneReceiver):
     def _run(self):
         try:
             while not self.stopped:
-                f = lps.read_frame(self.sock, self.count, self.size)
+                f = lps.read_frame(self.sock, self.count, self.size, self.h264)
                 if isinstance(f, lps.SensorSample):
                     with self.lock:
                         self.sensors.setdefault(f.type, deque(maxlen=6000)).append((f.timestamp_ns, f.values))

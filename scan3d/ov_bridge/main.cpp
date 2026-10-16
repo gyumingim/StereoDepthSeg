@@ -2,7 +2,11 @@
 // 프로토콜: PROTOCOL.md. 입력 = stdin 또는 TCP, 출력 = 같은 채널로 JSON 한 줄씩.
 //
 //   ov_bridge <estimator_config.yaml> [--stdio | --tcp HOST:PORT] [--max-cam-queue N]
-//             [--max-speed M_S] [--lost-frames N] [--auto-reset] [--emit-features N]
+//             [--max-speed M_S] [--lost-frames N] [--auto-reset] [--emit-features N] [--imu-hold S]
+//
+// 방어: OpenVINS 호출에서 난 예외(cv::Exception 포함)는 잡아서 VioManager 를 새로 만들고
+// {"type":"reset","auto":true,"reason":"exception"} 를 보낸다 (프로세스는 계속 산다).
+// use_stereo=true 설정이면 2장짜리 STEREO 레코드만 받는다 (mono 섞임 = TrackKLT levels2 단언 원인).
 //
 // stdio 모드에서는 OpenVINS 로그(printf -> fd 1)를 stderr 로 돌리고, 결과만 원래 stdout 으로 쓴다.
 
@@ -55,7 +59,27 @@ struct Args {
   int lost_frames = 15;     // 특징점 0 이 연속 N 프레임이면 lost
   bool auto_reset = false;
   int emit_features = 0;    // JSON 에 SLAM 특징점 최대 N 개
+  double imu_hold_s = 0.25; // 카메라를 기다리며 IMU 를 붙잡아 두는 최대 시간 (IMU·카메라 시간 순서 유지)
 };
+
+// JSON 문자열 이스케이프 (예외 메시지에 따옴표·줄바꿈이 들어 있음)
+std::string jstr(const std::string &s) {
+  std::string o = "\"";
+  for (char ch : s) {
+    unsigned char c = static_cast<unsigned char>(ch);
+    if (c == '"' || c == '\\') {
+      o += '\\';
+      o += ch;
+    } else if (c < 0x20) {
+      char b[8];
+      std::snprintf(b, sizeof(b), "\\u%04x", c);
+      o += b;
+    } else {
+      o += ch;
+    }
+  }
+  return o + "\"";
+}
 
 // ---------- I/O ----------
 bool read_full(int fd, void *buf, size_t n) {
@@ -138,6 +162,7 @@ public:
 
   bool ok() const { return ok_; }
 
+  // VioManager 새로 만들기. 붙잡아 둔 IMU(imu_hold_) 는 새 시스템에 그대로 넣을 수 있으므로 남긴다.
   void make_system() {
     sys_ = std::make_shared<ov_msckf::VioManager>(params_);
     cams_.clear();
@@ -161,6 +186,8 @@ public:
       return true;
     case kReset:
       make_system();
+      imu_hold_.clear();
+      newest_imu_t_ = -1e300;
       out += "{\"type\":\"reset\"}\n";
       return true;
     case kQuit:
@@ -174,7 +201,8 @@ public:
   std::string ready_line() const {
     std::ostringstream o;
     o << "{\"type\":\"ready\",\"num_cameras\":" << params_.state_options.num_cameras
-      << ",\"use_stereo\":" << (params_.use_stereo ? "true" : "false") << "}\n";
+      << ",\"use_stereo\":" << (params_.use_stereo ? "true" : "false") << ",\"imu_hold_s\":" << args_.imu_hold_s
+      << "}\n";
     return o.str();
   }
 
@@ -188,15 +216,29 @@ private:
   }
 
   static std::string err_line(const std::string &m) {
-    std::ostringstream o;
-    o << "{\"type\":\"error\",\"msg\":\"" << m << "\"}\n";
-    return o.str();
+    return "{\"type\":\"error\",\"msg\":" + jstr(m) + "}\n";
+  }
+
+  // OpenVINS 안에서 난 예외 (예: TrackKLT 의 cv::Exception) → 프로세스를 죽이지 않고 VioManager 를 새로 만든다.
+  // 클라이언트에는 auto-reset 과 같은 줄을 보내 맵·궤적 초기화 규칙(on-vio-reset)을 그대로 타게 한다.
+  void on_exception(const char *where, const char *what, std::string &out) {
+    n_exceptions_++;
+    std::fprintf(stderr, "[ov_bridge] exception in %s: %s -> VioManager reset (#%llu)\n", where, what,
+                 static_cast<unsigned long long>(n_exceptions_));
+    try {
+      make_system();
+    } catch (const std::exception &e) {
+      std::fprintf(stderr, "[ov_bridge] make_system failed too: %s\n", e.what());
+      throw;
+    }
+    out += "{\"type\":\"reset\",\"auto\":true,\"reason\":\"exception\",\"where\":" + jstr(where) +
+           ",\"msg\":" + jstr(std::string(what).substr(0, 300)) + "}\n";
   }
 
   void on_imu(const uint8_t *p, std::string &out) {
     int64_t t_ns = rd<int64_t>(p);
     double t = to_sec(t_ns);
-    if (t <= last_imu_t_) {  // 역행/중복은 버림
+    if (t <= newest_imu_t_) {  // 역행/중복은 버림
       n_imu_dropped_++;
       return;
     }
@@ -204,9 +246,13 @@ private:
     m.timestamp = t;
     m.wm << rd<double>(p + 8), rd<double>(p + 16), rd<double>(p + 24);
     m.am << rd<double>(p + 32), rd<double>(p + 40), rd<double>(p + 48);
-    sys_->feed_measurement_imu(m);
-    last_imu_t_ = t;
-    process_cams(out);
+    if (!m.wm.allFinite() || !m.am.allFinite()) {
+      n_imu_dropped_++;
+      return;
+    }
+    imu_hold_.push_back(m);
+    newest_imu_t_ = t;
+    pump(out);
   }
 
   void on_stereo(const std::vector<uint8_t> &buf, std::string &out) {
@@ -224,6 +270,22 @@ private:
       return;
     }
     if (n > params_.state_options.num_cameras) n = static_cast<uint8_t>(params_.state_options.num_cameras);
+    // 스테레오 설정에서 mono/stereo 를 섞으면 TrackKLT 가 깨진다: mono 프레임은 cam1 의 이전 피라미드를 갱신하지 않으므로
+    // 처음 몇 프레임이 mono 이고 그다음 stereo 가 오면 img_pyramid_last[1] 이 빈 벡터인 채로
+    // calcOpticalFlowPyrLK(…, img1pyr=빈 벡터) → "levels2 >= 0" 단언 (cv::Exception) → 프로세스 종료.
+    // 그래서 use_stereo=true 면 2장짜리만 받는다 (클라이언트도 섞어 보내지 않음).
+    if (params_.use_stereo && params_.state_options.num_cameras >= 2 && n != 2) {
+      n_cam_rejected_++;
+      return;
+    }
+    // 크기가 바뀌어도 이전 피라미드와 맞지 않아 KLT 가 깨진다 → 처음 크기만 받는다.
+    if (img_w_ == 0) {
+      img_w_ = w;
+      img_h_ = h;
+    } else if (w != img_w_ || h != img_h_) {
+      n_cam_rejected_++;
+      return;
+    }
     CamMsg c;
     c.t_ns = t_ns;
     c.t = to_sec(t_ns);
@@ -247,25 +309,58 @@ private:
       cams_.pop_front();
       n_cam_dropped_++;
     }
-    process_cams(out);
+    pump(out);
   }
 
-  // ROS1Visualizer::callback_inertial 과 같은 규칙: 카메라 시각(IMU 시계로) 보다 늦은 IMU 가 있어야 feed.
-  void process_cams(std::string &out) {
-    while (!cams_.empty()) {
+  // IMU 와 카메라를 시간 순서대로 VioManager 에 넣는다 (ROS1Visualizer::callback_inertial 과 같은 규칙 + IMU 붙잡기).
+  //  1) 맨 앞 카메라보다 늦은 IMU 가 이미 들어갔으면 (t_cam + dt_cam_imu < last_imu) 그 카메라를 넣는다.
+  //  2) 기다리는 카메라가 있으면 그 카메라를 넘을 때까지 IMU 를 넣는다.
+  //  3) 기다리는 카메라가 없으면 IMU 를 imu_hold_s 동안 붙잡아 둔다 (늦게 오는 카메라보다 IMU 가 한참 앞서 들어가면
+  //     초기화 직후 ZUPT 의 IMU 버퍼가 그 카메라 구간을 못 덮어 "No IMU measurements to propagate with (0 of 2)" 경고가 난다:
+  //     ZUPT 는 초기화 뒤에 들어온 IMU 만 갖고 있기 때문).
+  void pump(std::string &out) {
+    while (true) {
       double dt = sys_->get_state()->_calib_dt_CAMtoIMU->value()(0);
-      if (!(cams_.front().t < last_imu_t_ - dt)) break;
-      CamMsg c = std::move(cams_.front());
-      cams_.pop_front();
-      auto t0 = std::chrono::steady_clock::now();
-      sys_->feed_measurement_camera(c.data);
-      double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
-      out += pose_line(c, ms);
-      if (lost_ && args_.auto_reset) {
-        make_system();
-        out += "{\"type\":\"reset\",\"auto\":true}\n";
-        break;
+      if (!cams_.empty() && cams_.front().t < last_imu_t_ - dt) {
+        CamMsg c = std::move(cams_.front());
+        cams_.pop_front();
+        feed_camera(c, out);
+        continue;
       }
+      if (!imu_hold_.empty() && (!cams_.empty() || imu_hold_.front().timestamp < newest_imu_t_ - args_.imu_hold_s)) {
+        ov_core::ImuData m = imu_hold_.front();
+        imu_hold_.pop_front();
+        try {
+          sys_->feed_measurement_imu(m);
+        } catch (const std::exception &e) {
+          on_exception("feed_measurement_imu", e.what(), out);
+          continue;
+        }
+        last_imu_t_ = m.timestamp;
+        continue;
+      }
+      break;
+    }
+  }
+
+  void feed_camera(const CamMsg &c, std::string &out) {
+    auto t0 = std::chrono::steady_clock::now();
+    try {
+      sys_->feed_measurement_camera(c.data);
+    } catch (const std::exception &e) {  // cv::Exception 도 std::exception
+      on_exception("feed_measurement_camera", e.what(), out);
+      return;
+    }
+    double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+    try {
+      out += pose_line(c, ms);
+    } catch (const std::exception &e) {
+      on_exception("pose_line", e.what(), out);
+      return;
+    }
+    if (lost_ && args_.auto_reset) {
+      make_system();
+      out += "{\"type\":\"reset\",\"auto\":true,\"reason\":\"lost\"}\n";
     }
   }
 
@@ -332,7 +427,9 @@ private:
     jnum(o, st->_calib_dt_CAMtoIMU->value()(0));
     o << ",\"n_slam\":" << n_slam << ",\"n_msckf\":" << n_msckf << ",\"ms\":";
     jnum(o, ms);
-    o << ",\"cam_dropped\":" << n_cam_dropped_ << ",\"imu_dropped\":" << n_imu_dropped_;
+    o << ",\"cam_dropped\":" << n_cam_dropped_ << ",\"imu_dropped\":" << n_imu_dropped_
+      << ",\"cam_rejected\":" << n_cam_rejected_ << ",\"exceptions\":" << n_exceptions_
+      << ",\"imu_held\":" << imu_hold_.size();
     if (args_.emit_features > 0 && init) {
       o << ",\"slam_pts\":[";
       size_t k = std::min(slam.size(), static_cast<size_t>(args_.emit_features));
@@ -354,10 +451,13 @@ private:
   std::deque<CamMsg> cams_;
   bool have_t0_ = false;
   int64_t t0_ns_ = 0;
-  double last_imu_t_ = -1e300;
+  double last_imu_t_ = -1e300;    // VioManager 에 마지막으로 넣은 IMU 시각
+  double newest_imu_t_ = -1e300;  // 받은 IMU 중 가장 새 시각 (붙잡아 둔 것 포함)
+  std::deque<ov_core::ImuData> imu_hold_;
+  uint32_t img_w_ = 0, img_h_ = 0;
   int zero_feat_frames_ = 0;
   bool lost_ = false;
-  uint64_t n_cam_dropped_ = 0, n_imu_dropped_ = 0;
+  uint64_t n_cam_dropped_ = 0, n_imu_dropped_ = 0, n_cam_rejected_ = 0, n_exceptions_ = 0;
 };
 
 // 한 연결(또는 stdin) 을 끝까지 처리. 반환 false = QUIT 받음.
@@ -374,7 +474,13 @@ bool serve(Bridge &b, int in_fd, int out_fd, bool is_socket) {
     buf.resize(hdr[2]);
     if (hdr[2] && !read_full(in_fd, buf.data(), hdr[2])) break;
     out.clear();
-    bool cont = b.handle(hdr[1], buf, out);
+    bool cont = true;
+    try {
+      cont = b.handle(hdr[1], buf, out);
+    } catch (const std::exception &e) {  // 마지막 방어선: 어떤 예외로도 프로세스가 죽지 않게
+      std::fprintf(stderr, "[ov_bridge] unhandled exception: %s\n", e.what());
+      out += "{\"type\":\"error\",\"msg\":" + jstr(std::string("exception: ") + e.what()) + "}\n";
+    }
     if (!out.empty() && !write_full(out_fd, out, is_socket)) return true;
     if (!cont) return false;
   }
@@ -384,7 +490,8 @@ bool serve(Bridge &b, int in_fd, int out_fd, bool is_socket) {
 void usage() {
   std::fprintf(stderr,
                "usage: ov_bridge <estimator_config.yaml> [--stdio | --tcp HOST:PORT] [--max-cam-queue N]\n"
-               "                 [--max-speed M_S] [--lost-frames N] [--auto-reset] [--emit-features N]\n");
+               "                 [--max-speed M_S] [--lost-frames N] [--auto-reset] [--emit-features N]\n"
+               "                 [--imu-hold S]\n");
 }
 
 }  // namespace
@@ -421,6 +528,7 @@ int main(int argc, char **argv) {
     else if (s == "--lost-frames") a.lost_frames = std::stoi(next());
     else if (s == "--auto-reset") a.auto_reset = true;
     else if (s == "--emit-features") a.emit_features = std::stoi(next());
+    else if (s == "--imu-hold") a.imu_hold_s = std::max(0.0, std::stod(next()));
     else {
       usage();
       return 2;

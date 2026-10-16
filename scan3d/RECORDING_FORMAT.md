@@ -17,7 +17,7 @@
 
 | 인자 | 기본 | 뜻 |
 |---|---|---|
-| `--ei rec_kbps N` | 8000 | H.264 목표 비트레이트 (kbps), 렌즈마다 |
+| `--ei rec_kbps N` | 자동 (앱 1.3-caps: 4000 × (w·h·fps)/(640·480·15), 640x480·15 fps = 4000, SPEC.md 14.5) | H.264 목표 비트레이트 (kbps), 렌즈마다 |
 | `--ez rec_raw true` | false | mp4 와 함께 `camN.h264` (Annex-B 원시 스트림, 1 s 마다 flush) 도 저장 — 강제 종료 대비 백업 |
 
 나머지 인자(`logical`, `physical`, `width`, `height`, `fps`, `focus_diopters`, `raw_ts`, `imu_us`)는 스트림과 같다.
@@ -81,7 +81,7 @@ adb pull /sdcard/Android/data/com.camera.dualstream/files/rec_20261016_153012 .
 
 - H.264 (video/avc), 640x480 (인자 width/height), 인코더 입력 `COLOR_FormatYUV420Flexible`
   (NV21 → 인코더 `Image` 평면에 stride 를 지켜 복사; `getInputImage` 가 null 이면 NV12 = `YUV420SemiPlanar` 로 직접 씀).
-- 비트레이트 `rec_kbps` (기본 8 Mbps, 기기 기본 비트레이트 모드), I-프레임 간격 1 s, `KEY_FRAME_RATE = fps`.
+- 비트레이트 `rec_kbps` (기본 = 크기·fps 비례 자동, SPEC.md 14.5; 기기 기본 비트레이트 모드), I-프레임 간격 1 s, `KEY_FRAME_RATE = fps`.
 - 회전 메타데이터 없음: 센서 원래 방향(가로) 그대로. 안정화(OIS/EIS) 끔, 초점 고정 — 스트림과 같은 캡처 요청이다.
 - PTS(µs) = (그 프레임의 physical SENSOR_TIMESTAMP − 녹화 첫 프레임의 physical timestamp(두 렌즈 공통)) / 1000.
   두 mp4 가 같은 시간축을 쓴다. 단조 증가를 보장하려고 같거나 작으면 이전 + 1 µs 로 민다.

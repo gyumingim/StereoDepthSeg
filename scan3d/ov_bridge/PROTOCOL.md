@@ -11,6 +11,16 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j8
 build/ov_bridge ../config/estimator_config.yaml --stdio            # 파이프 (기본)
 build/ov_bridge ../config/estimator_config.yaml --tcp 127.0.0.1:7600
 ```
+**방어 동작 (2026-10-16)**
+- OpenVINS 호출(`feed_measurement_imu/camera`) 예외(cv::Exception 포함)는 잡아서 VioManager 를 새로 만들고
+  `{"type":"reset","auto":true,"reason":"exception","where":..,"msg":..}` 를 보낸다 (프로세스는 안 죽음). `lost` auto-reset 은 `"reason":"lost"`.
+- `use_stereo: true` 설정이면 `n_cams=2` 레코드만 받는다 (1장짜리는 `cam_rejected` 로 셈). mono/stereo 를 섞으면 TrackKLT 가
+  cam1 의 빈 이전 피라미드로 `calcOpticalFlowPyrLK` 를 불러 `levels2 >= 0` 단언으로 죽기 때문. 첫 레코드와 크기가 다른 영상도 버림.
+- `--imu-hold S` (기본 0.25): 기다리는 카메라가 없으면 IMU 를 최대 S 초 붙잡아 두고, 카메라가 오면 그 카메라를 넘는 IMU 까지만 넣은 뒤
+  카메라를 넣는다 (시간 순서 유지 → 초기화 직후 ZUPT "No IMU measurements to propagate with (0 of 2)" 방지).
+- pose 줄 추가 필드: `cam_rejected`, `exceptions`, `imu_held`. ready 줄: `imu_hold_s`.
+- scan3d 는 기본 `--ov auto` 로 이 브리지를 `--stdio` 자식 프로세스로 띄우고, 죽으면 `--bridge-restart-s`(2 s) 뒤 다시 띄운다.
+
 옵션: `--max-cam-queue N` (기본 3, 넘으면 가장 오래된 카메라 레코드 버림, IMU 는 안 버림),
 `--max-speed M_S` (기본 5 m/s, 넘으면 `lost`), `--lost-frames N` (기본 15, 특징점 0 이 N 프레임 연속이면 `lost`),
 `--auto-reset` (`lost` 가 되면 VioManager 재생성), `--emit-features N` (pose 줄에 SLAM 특징점 최대 N 개).

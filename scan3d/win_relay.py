@@ -11,7 +11,8 @@ WSL(NAT) 안에서는 Windows 127.0.0.1 의 adb forward 포트가 안 보인다.
    WSL 이 0.0.0.0:<wsl-port> 에 listen 하면 Windows 127.0.0.1:<wsl-port> 로 붙을 수 있다.
      a. 127.0.0.1:<wsl-port> 에 connect (0.5 s 간격 재시도, --connect-timeout 초)
      b. WSL 이 1 바이트 b"G" 를 보내면 127.0.0.1:<phone-port> (adb forward) 에 connect → 폰→WSL 복사,
-        WSL→폰 방향은 그대로 폰에 전달 (폰 앱은 읽지 않음).  b"Q" 면 릴레이 종료.
+        WSL→폰 방향도 그대로 폰에 전달 (H.264 키프레임 요청 "keyframe <렌즈>\n" 한 줄, SPEC 1.2.2).  b"Q" 면 릴레이 종료.
+        스트림 형식(STEH/STEJ/STER)과 무관하게 바이트를 해석 없이 넘긴다.
      c. 어느 쪽이든 끊기면 양쪽 닫고 a 로 돌아감 (재연결 무제한).
    py -3 win_relay.py --wsl-port 8766 --phone-port 8765
 
@@ -28,8 +29,9 @@ WSL(NAT) 안에서는 Windows 127.0.0.1 의 adb forward 포트가 안 보인다.
 WSL 안에서는 USB 가 안 보이므로 forward 는 이 릴레이가 맡는다. 앱 시작·정지·녹화 목록은 WSL scan3d 가
 interop 으로 Windows adb.exe 를 불러 직접 할 수도 있다 (웹 뷰어 모드 버튼; 그때는 --no-start-app 로 띄워도 됨).
 폰 쪽이 바로 끊기면(앱이 죽음) 앱을 다시 시작하고 forward 를 다시 한다 (앱을 이 릴레이가 시작했을 때, 백오프).
+폰 포트(adb forward) 접속이 실패하면 --no-start-app 이어도 adb forward 를 스스로 다시 한다 (USB 다시 꽂음, REVIEW4 B2).
 Ctrl+C 로 언제든 끝난다 (모든 대기에 1 s 타임아웃).
-adb 경로: --adb > 환경변수 SCAN3D_ADB > PATH 의 adb > %LOCALAPPDATA%\\Android\\Sdk\\platform-tools\\adb.exe.
+adb 경로: --adb > 환경변수 SCAN3D_ADB > C:\\Users\\a3162\\platform-tools\\adb.exe > PATH 의 adb > %LOCALAPPDATA%\\Android\\Sdk\\platform-tools\\adb.exe.
 짝: scan3d.py 기본 --phone listen:8766 (reverse). listen 모드면 scan3d 쪽 --phone :18765.
 """
 import argparse
@@ -52,9 +54,12 @@ def log(*a):
 APP = "com.camera.dualstream"
 
 
+ADB_FIXED = r"C:\Users\a3162\platform-tools\adb.exe"     # 이 PC 의 오래 남는 platform-tools (REVIEW4 B5)
+
+
 def adb_exe(adb):
-    """--adb > SCAN3D_ADB > PATH > Android SDK 기본 위치."""
-    cands = [adb, os.environ.get("SCAN3D_ADB"), shutil.which("adb")]
+    """--adb > SCAN3D_ADB > 고정 경로(ADB_FIXED) > PATH > Android SDK 기본 위치."""
+    cands = [adb, os.environ.get("SCAN3D_ADB"), ADB_FIXED, shutil.which("adb")]
     la = os.environ.get("LOCALAPPDATA")
     if la:
         cands.append(os.path.join(la, "Android", "Sdk", "platform-tools", "adb.exe"))
@@ -77,6 +82,23 @@ def adb_forward(exe, phone_port, device_port):
     log("adb forward", phone_port, "->", device_port, "rc", rc, out)
     if rc:
         raise SystemExit("adb forward failed (USB 연결·adb 경로 확인: --adb 또는 SCAN3D_ADB)")
+
+
+def try_forward(args):
+    """REVIEW4 B2: USB 를 다시 꽂으면 adb 가 forward 를 지운다 → 폰 포트 접속이 실패할 때마다 스스로 다시 한다 (실패해도 계속)."""
+    if not args.forward:
+        return False
+    try:
+        adb_forward(args.adb_exe, args.phone_port, args.device_port)
+        return True
+    except SystemExit as e:
+        log(e)
+        return False
+
+
+def retry_wait(fails):
+    """연속 실패 수에 따른 대기 (REVIEW4 B11): 0.5 → 1 → 2 → 4 → 8 s."""
+    return min(8.0, 0.5 * (2 ** min(fails, 4)))
 
 
 OK_STATES = ("STREAMING", "RECORDING", "READY", "WAITING", "IDLE")
@@ -158,9 +180,10 @@ def start_app(exe, args):
     adb_run(exe, "shell", "run-as", APP, "rm", "-f", "files/status.txt", "files/cameras.json")
     rc, out = adb_run(exe, "shell", "am", "start", "-S", "-n", APP + "/.MainActivity",
                       "--es", "logical", "0", "--es", "physical", args.physical,
-                      "--ei", "width", "640", "--ei", "height", "480", "--ei", "fps", str(args.fps),
+                      "--ei", "width", str(args.width), "--ei", "height", str(args.height), "--ei", "fps", str(args.fps),
                       "--ef", "focus_diopters", str(args.focus), "--ez", "raw_ts", "false",
-                      "--ei", "imu_us", str(args.imu_us), "--es", "mode", args.app_mode)
+                      "--ei", "imu_us", str(args.imu_us), "--es", "mode", args.app_mode,
+                      "--es", "stream_fmt", args.stream_fmt, "--ei", "jpeg_q", str(args.jpeg_q))
     log("am start rc", rc, out.splitlines()[-1] if out else "")
     t_end = time.monotonic() + 12.0
     st = ""
@@ -262,6 +285,11 @@ class AppKeeper:
             # 웹 뷰어(scan3d 의 phone_link)가 다른 모드로 앱을 띄움 → 재시작은 그쪽이 맡는다 (녹화를 덮어쓰지 않게)
             log("app mode=%s (relay --app-mode %s) -> not restarting" % (m.group(1), self.args.app_mode))
             return
+        sz = re.search(r"\b(\d{3,4})x(\d{3,4})\b", st or "")
+        if sz and (int(sz.group(1)), int(sz.group(2))) != (self.args.width, self.args.height):
+            # 웹 뷰어가 다른 크기로 앱을 띄움 → 릴레이 --size 로 덮어쓰지 않는다
+            log("app size=%sx%s (relay --size %s) -> not restarting" % (sz.group(1), sz.group(2), self.args.size))
+            return
         first = first_word(st)
         if is_recording(st):
             # REVIEW2 5: RECORDING / RECORDING+STREAMING(both) → 재시작하면 녹화가 끊김. 접속만 다시 시도.
@@ -279,11 +307,7 @@ class AppKeeper:
         self.next_try = now + backoff
         log("phone side closed immediately (status: %s) -> restart app (next retry >= %.0f s)" % (st or "-", backoff))
         start_app(self.exe, self.args)
-        if self.args.forward:
-            try:
-                adb_forward(self.exe, self.args.phone_port, self.args.device_port)
-            except SystemExit as e:
-                log(e)
+        try_forward(self.args)
 
 
 def connect_retry(host, port, timeout_s):
@@ -310,6 +334,7 @@ def wait_cmd(w):
 
 
 def run_reverse(args, keeper=None):
+    fails = 0                                                 # 폰 포트 연속 접속 실패 (B2·B11)
     while True:
         try:
             w = connect_retry("127.0.0.1", args.wsl_port, args.connect_timeout)
@@ -326,7 +351,13 @@ def run_reverse(args, keeper=None):
             p = connect_retry("127.0.0.1", args.phone_port, 5.0)
             p.settimeout(None)
         except TimeoutError as e:
-            log(e); w.close(); time.sleep(0.5); continue
+            fails += 1
+            log(e, "-> adb forward 다시 (연속 실패 %d)" % fails)
+            w.close()
+            try_forward(args)                                 # B2: USB 다시 꽂음 → forward 가 지워졌을 수 있음
+            time.sleep(retry_wait(fails))
+            continue
+        fails = 0
         log("phone 127.0.0.1:%d <-> WSL relay running" % args.phone_port)
         counts = bridge(p, w, "phone->wsl", "wsl->phone")
         if keeper:
@@ -343,6 +374,7 @@ def run_listen(args, keeper=None):
     srv.listen(1)
     srv.settimeout(1.0)
     log("listening on %s:%d -> phone 127.0.0.1:%d" % (host, args.listen_port, args.phone_port))
+    fails = 0
     while True:
         try:
             w, addr = srv.accept()
@@ -355,7 +387,13 @@ def run_listen(args, keeper=None):
             p = connect_retry("127.0.0.1", args.phone_port, 5.0)
             p.settimeout(None)
         except TimeoutError as e:
-            log(e); w.close(); continue
+            fails += 1
+            log(e, "-> adb forward 다시 (연속 실패 %d)" % fails)
+            w.close()
+            try_forward(args)
+            time.sleep(retry_wait(fails))
+            continue
+        fails = 0
         counts = bridge(p, w, "phone->wsl", "wsl->phone")     # 한 번에 하나; 끝나면 다음 accept
         if keeper:
             keeper.after_session(counts.get("phone->wsl", 0))
@@ -374,21 +412,36 @@ def main():
     ap.add_argument("--adb", default=None)
     ap.add_argument("--no-start-app", action="store_true", help="앱 시작(pm enable, am start, status 대기) 생략")
     ap.add_argument("--physical", default="2,5", help="앱 physical 인자 (스트림 0 = 왼쪽 렌즈 2)")
-    ap.add_argument("--fps", type=int, default=30)
+    ap.add_argument("--fps", type=int, default=15)
+    ap.add_argument("--size", default="640x480",
+                    help="앱 스트림 크기 WxH (4:3 만, S24: 320x240, 640x480, 960x720, 1440x1080, 1920x1440). scan3d --app-size 와 같게")
     ap.add_argument("--focus", type=float, default=1.0, help="focus_diopters (0 = AF)")
     ap.add_argument("--imu-us", type=int, default=2500, help="가속도·자이로 주기 µs (0 = FASTEST)")
+    ap.add_argument("--stream-fmt", choices=["h264", "jpeg", "nv21"], default="h264",
+                    help="앱 스트림 형식 (SPEC 1.2): h264 = 기본, 640x480@15 렌즈당 약 4 Mbps (I+P, 키 1 s), "
+                         "jpeg = 약 2~3 MB/s (추정), nv21 = 원본 약 28 MB/s")
+    ap.add_argument("--jpeg-q", type=int, default=90, help="jpeg 품질 1~100 (stream-fmt jpeg 일 때만)")
     ap.add_argument("--app-mode", choices=["live", "record", "both"], default="live",
                     help="앱 --es mode: live = 스트림만, record = 폰에 녹화만, both = 녹화 + 스트림")
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--forward", dest="forward", action="store_true", default=True, help="adb forward (기본)")
     g.add_argument("--no-forward", dest="forward", action="store_false")
     args = ap.parse_args()
+    try:
+        w, _, h = args.size.lower().partition("x")
+        args.width, args.height = int(w), int(h)
+    except ValueError:
+        ap.error("--size 는 WxH (예 640x480)")
+    if args.width * 3 != args.height * 4 or args.width % 2 or args.height % 2:
+        ap.error("--size 는 4:3 짝수 크기만 (예 640x480, 1280x960)")
     exe = adb_exe(args.adb)
+    args.adb_exe = exe
     log("adb:", exe)
     if not args.no_start_app:
         start_app(exe, args)
-    if args.forward:
-        adb_forward(exe, args.phone_port, args.device_port)
+    if args.forward and not try_forward(args):
+        # B2: 시작 때 폰이 빠져 있어도 끝내지 않는다 — 폰 포트 접속이 실패할 때마다 다시 forward 한다
+        log("adb forward 실패 — 폰을 꽂으면 접속 때 다시 시도합니다")
     if args.app_mode == "record":
         log("app-mode record: 폰에만 녹화 (스트림 없음). 정지는 WSL 웹 뷰어 '정지' 또는 "
             "adb shell am broadcast -a %s.STOP" % APP)

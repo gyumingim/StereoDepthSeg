@@ -9,6 +9,8 @@ import android.util.Log;
 import org.json.JSONObject;
 import java.io.*;
 import java.nio.ByteBuffer;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -21,8 +23,13 @@ final class Recorder {
     private static final int QUEUE = 4;
     final File dir;
     private final int width, height, fps, bitrate;
+    /** Codec chosen by Caps.findAvcEncoder (supports this size/fps); null = createEncoderByType (old behaviour). */
+    private final String encoderName;
     private final Lens[] lenses;
     private final ImuWriter imu;
+    /** mode=both + stream_fmt=h264: the live stream shares this encoder's output (one encoder per lens, not two).
+     *  null = recording only. Settings come from H264.configure (B=0, I every 1 s, realtime). */
+    private final H264.Sink live;
     private volatile boolean stopping;
     /** First frame timestamp (any lens): common PTS origin so both MP4s share one timebase. */
     private long t0 = Long.MIN_VALUE;
@@ -33,11 +40,12 @@ final class Recorder {
     }
     private static final Frame EOS = new Frame(0,0,0,0,null);
 
-    Recorder(File dir, String[] ids, int width, int height, int fps, int kbps, boolean rawH264) throws IOException {
-        this.dir=dir; this.width=width; this.height=height; this.fps=fps; this.bitrate=kbps*1000;
+    Recorder(File dir, String[] ids, int width, int height, int fps, int kbps, boolean rawH264, String encoderName, H264.Sink live) throws IOException {
+        this.live=live;
+        this.dir=dir; this.width=width; this.height=height; this.fps=fps; this.bitrate=kbps*1000; this.encoderName=encoderName;
         if(!dir.isDirectory() && !dir.mkdirs()) throw new IOException("mkdir "+dir);
         lenses=new Lens[ids.length];
-        for(int i=0;i<ids.length;i++) lenses[i]=new Lens(ids[i],rawH264);
+        for(int i=0;i<ids.length;i++) lenses[i]=new Lens(i,ids[i],rawH264);
         imu=new ImuWriter(new File(dir,"imu.csv"));
         for(Lens l:lenses) l.start();
         imu.start();
@@ -48,7 +56,7 @@ final class Recorder {
         if(stopping || index<0 || index>=lenses.length) return;
         synchronized(this) { if(t0==Long.MIN_VALUE) t0=physical; }
         Lens l=lenses[index];
-        if(!l.queue.offer(new Frame(physical,logical,exposure,skew,nv21))) l.dropped++;
+        if(!l.queue.offer(new Frame(physical,logical,exposure,skew,nv21))) { l.dropped++; if(live!=null) live.h264Drop(index); }
     }
 
     /** Sensor thread. Never blocks. */
@@ -59,8 +67,17 @@ final class Recorder {
 
     long frames(int i) { return lenses[i].encoded; }
     long drops(int i) { return lenses[i].dropped; }
+    /** Frames the encoder had no input buffer for (hardware encoder too slow). */
+    long busy(int i) { return lenses[i].busy; }
     long imuSamples() { return imu.written; }
+    /** Encoder settings applied (lens 0), null until the encoder is configured. */
+    JSONObject encoderInfo() { return lenses.length>0?lenses[0].settings:null; }
+    /** Keyframe as soon as possible on lens (or all when lens < 0); used for the shared live stream. */
+    void requestKey(int lens) { for(int i=0;i<lenses.length;i++) if(lens<0||lens==i) lenses[i].keyReq=true; }
     long imuDrops() { return imu.dropped; }
+    /** Any encoder output frame was a B slice (slice_type check of every output, REVIEW7 H5). No Baseline re-configure:
+     *  a recording already being muxed cannot switch profile mid-file, and the PC warns (b_frames_seen) instead. */
+    boolean bFramesSeen() { for(Lens l:lenses) if(l.bFrames>0) return true; return false; }
 
     /** Drain queues, finish encoders (EOS), close muxers and CSVs. Blocks up to ~timeoutMs. Idempotent.
      *  Returns true when every lens has closed (muxer stopped); false = some encoder still finishing (see whenFinished). */
@@ -104,6 +121,8 @@ final class Recorder {
             s.put("video","cam"+l.id+".mp4"); s.put("frames_csv","frames_cam"+l.id+".csv");
             s.put("frames",l.encoded); s.put("dropped_queue",l.dropped); s.put("dropped_encoder_busy",l.busy);
             s.put("samples_written",l.samples); s.put("muxer_ok",l.muxerOk); s.put("encoder",l.codecName);
+            s.put("b_frames_seen",l.bFrames>0); s.put("b_frames",l.bFrames);
+            if(l.settings!=null) s.put("encoder_settings",l.settings);
             if(l.error!=null) s.put("error",l.error);
             j.put(l.id,s);
         }
@@ -114,9 +133,17 @@ final class Recorder {
     private final class Lens extends Thread {
         final String id;
         final BlockingQueue<Frame> queue=new ArrayBlockingQueue<>(QUEUE);
-        volatile long encoded, dropped, busy, samples;
+        volatile long encoded, dropped, busy, samples, bFrames;
         volatile boolean muxerOk;
         volatile String codecName, error;
+        volatile JSONObject settings;
+        volatile boolean keyReq;
+        private byte[] csd;
+        private int seq;
+        /** pts -> {physical ts, System.nanoTime at queue}: sensor time + encode latency for the shared live stream. */
+        private final LinkedHashMap<Long,long[]> ptsMeta=new LinkedHashMap<Long,long[]>(32,0.75f,false) {
+            @Override protected boolean removeEldestEntry(Map.Entry<Long,long[]> e) { return size()>32; }
+        };
         private final File mp4, csv, raw;
         private MediaCodec codec;
         private MediaMuxer muxer;
@@ -127,9 +154,10 @@ final class Recorder {
         private OutputStream rawOut;
         private final MediaCodec.BufferInfo info=new MediaCodec.BufferInfo();
 
-        Lens(String id, boolean rawH264) {
+        final int index;
+        Lens(int index, String id, boolean rawH264) {
             super("rec-cam"+id);
-            this.id=id;
+            this.index=index; this.id=id;
             mp4=new File(dir,"cam"+id+".mp4"); csv=new File(dir,"frames_cam"+id+".csv");
             raw=rawH264?new File(dir,"cam"+id+".h264"):null;
         }
@@ -139,26 +167,25 @@ final class Recorder {
                 rows=new BufferedWriter(new FileWriter(csv),1<<16);
                 rows.write("frame_idx,physical_ts_ns,logical_ts_ns,exposure_ns,rolling_shutter_skew_ns,pts_us\n");
                 if(raw!=null) rawOut=new BufferedOutputStream(new FileOutputStream(raw),1<<20);
-                MediaFormat f=MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC,width,height);
-                f.setInteger(MediaFormat.KEY_COLOR_FORMAT,MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
-                f.setInteger(MediaFormat.KEY_BIT_RATE,bitrate);
-                f.setInteger(MediaFormat.KEY_FRAME_RATE,fps);
-                f.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL,1);
-                codec=MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
+                codec=encoderName!=null?MediaCodec.createByCodecName(encoderName)
+                        :MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
                 codecName=codec.getName();
-                codec.configure(f,null,null,MediaCodec.CONFIGURE_FLAG_ENCODE);
+                // I+P only (B=0), keyframe 1 s, realtime priority; latency keys only when the live stream shares it.
+                settings=H264.configure(codec,width,height,fps,bitrate/1000,live!=null);
                 codec.start();
                 muxer=new MediaMuxer(mp4.getAbsolutePath(),MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
                 long lastFlush=System.nanoTime();
                 while(true) {
                     Frame fr=queue.poll(10,TimeUnit.MILLISECONDS);
                     if(fr==EOS) { endOfStream(); break; }
+                    if(keyReq) { keyReq=false; try { H264.requestSync(codec); } catch(Exception e) { Log.w(TAG,"sync",e); } }
                     if(fr!=null) feed(fr);
                     drain(0);
                     if(System.nanoTime()-lastFlush>1_000_000_000L) { rows.flush(); if(rawOut!=null) rawOut.flush(); lastFlush=System.nanoTime(); }
                 }
             } catch(Throwable e) {
                 error=e.toString(); Log.e(TAG,"lens "+id,e);
+                if(live!=null) try { live.h264Error(index,id+": "+error); } catch(Throwable ignored) {}
             } finally {
                 close();
             }
@@ -172,15 +199,16 @@ final class Recorder {
                 in=codec.dequeueInputBuffer(10_000);
                 if(in<0) drain(0);
             }
-            if(in<0) { busy++; return; }
+            if(in<0) { busy++; if(live!=null) live.h264Drop(index); return; }
             long t0v; synchronized(Recorder.this) { t0v=t0; }
             long pts=(fr.physical-t0v)/1000;
             if(pts<=lastPts) pts=lastPts+1;   // MP4 needs strictly increasing PTS per track
             lastPts=pts;
             Image img=codec.getInputImage(in);
             int size;
-            if(img!=null) { fill(img,fr.nv21); size=width*height*3/2; }
+            if(img!=null) { H264.fillImage(img,fr.nv21,width,height); size=width*height*3/2; }
             else size=fillBuffer(codec.getInputBuffer(in),fr.nv21);
+            if(live!=null) ptsMeta.put(pts,new long[]{fr.physical,System.nanoTime()});
             codec.queueInputBuffer(in,0,size,pts,0);
             rows.write(encoded+","+fr.physical+","+fr.logical+","+fr.exposure+","+fr.skew+","+pts+"\n");
             encoded++;
@@ -230,23 +258,6 @@ final class Recorder {
             return Math.max(size,need);
         }
 
-        /** NV21 (Y, then VU interleaved) -> encoder Image with arbitrary row/pixel strides. */
-        private void fill(Image img, byte[] nv21) {
-            Image.Plane[] p=img.getPlanes();
-            ByteBuffer y=p[0].getBuffer(); int yr=p[0].getRowStride(), yp=p[0].getPixelStride();
-            for(int r=0;r<height;r++) {
-                if(yp==1) { y.position(r*yr); y.put(nv21,r*width,width); }
-                else for(int c=0;c<width;c++) y.put(r*yr+c*yp,nv21[r*width+c]);
-            }
-            ByteBuffer u=p[1].getBuffer(), v=p[2].getBuffer();
-            int ur=p[1].getRowStride(), up=p[1].getPixelStride(), vr=p[2].getRowStride(), vp=p[2].getPixelStride();
-            int base=width*height, cw=width/2, ch=height/2;
-            for(int r=0;r<ch;r++) for(int c=0;c<cw;c++) {
-                int s=base+r*width+2*c;           // nv21[s]=V, nv21[s+1]=U
-                v.put(r*vr+c*vp,nv21[s]); u.put(r*ur+c*up,nv21[s+1]);
-            }
-        }
-
         private void endOfStream() throws IOException {
             for(int tries=0;tries<50;tries++) {
                 int in=codec.dequeueInputBuffer(20_000);
@@ -273,6 +284,20 @@ final class Recorder {
                     ob.position(info.offset); ob.limit(info.offset+info.size);
                     if(rawOut!=null) {                   // Annex-B elementary stream (SPS/PPS included)
                         byte[] tmp=new byte[info.size]; ob.duplicate().get(tmp); rawOut.write(tmp);
+                    }
+                    if(!config && H264.isBSlice(ob,info.offset,info.offset+info.size)) bFrames++;   // REVIEW7 H5
+                    if(config) csd=H264.copy(ob,info);
+                    else if(live!=null) {               // shared live stream: copy before the muxer reads the buffer
+                        long[] m=ptsMeta.remove(info.presentationTimeUs);
+                        if(m!=null) {
+                            boolean key=(info.flags&MediaCodec.BUFFER_FLAG_KEY_FRAME)!=0;
+                            byte[] data=H264.frameBytes(ob,info,csd,key);
+                            int flags=(key?H264.FLAG_KEY:0)|(key&&H264.hasSps(data)?H264.FLAG_CONFIG:0);
+                            try { live.h264(index,m[0],data,flags,seq++,System.nanoTime()-m[1]); } catch(Exception e) { Log.w(TAG,"live sink",e); }
+                        } else {
+                            seq++;                       // dropped output: PC sees the seq gap, lens waits for a keyframe (REVIEW7 H1)
+                            try { live.h264Lost(index); } catch(Exception e) { Log.w(TAG,"live sink",e); }
+                        }
                     }
                     if(!config && muxing) { muxer.writeSampleData(track,ob,info); samples++; }
                 }

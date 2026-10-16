@@ -58,15 +58,70 @@ WSL Ubuntu-22.04 ─ scan3d/run_scanner.py (venv_ffs)
 | length | u32 | w*h*3/2 = 460800 | 4 × 값 개수 |
 | payload | bytes | NV21 | float32 big-endian 값들 |
 
-- NV21: Y 평면 w*h, 이어서 VU 교차(V 먼저) w*h/2. 앱이 plane stride 를 풀어 연속 배열로 만든다 (MainActivity.java:257-268).
+- NV21 (STER): Y 평면 w*h, 이어서 VU 교차(V 먼저) w*h/2. 앱이 plane stride 를 풀어 연속 배열로 만든다 (MainActivity.java:257-268).
   디코드: `np.frombuffer(buf, np.uint8).reshape(h*3//2, w)` → `cv2.cvtColor(..., cv2.COLOR_YUV2BGR_NV21)`.
 - **이미지 회전 없음**: 센서 원래 방향(가로 640x480, SENSOR_ORIENTATION 90). 폰을 세로로 들면 영상이 90° 누워 있다. 보정·정류·OpenVINS 는 이 원 방향 그대로 쓴다. YOLO 정확도를 위해 회전이 필요하면 YOLO 입력만 `cv2.rotate(ROTATE_90_CLOCKWISE)` 하고 마스크를 되돌려 쓴다 (선택).
 - 센서 패킷 검증 (read_frame, lib_phone_stereo.py:61): `width=height=0`, `length % 4 == 0`, `4 <= length <= 64` (값 1~16개). 새 센서(가속도 3값, uncalibrated 6값)도 이 범위 안이다.
 - 프레임 패킷 검증: `index < stream_count`, `(w,h) == size`, 짝수 크기, `length == w*h*3/2`. 하나라도 어긋나면 `ValueError` → 수신 스레드 종료.
 - 앱 큐: 프레임 큐 6 (가득 차면 오래된 것 버림), 센서 큐 1024 (가득 차면 오래된 것 버림). writer 스레드가 프레임 1개 + 센서 최대 1024개씩 번갈아 쓴다 (MainActivity.java:280-304).
 
+#### 1.2.1 JPEG 프레임 패킷 "STEJ" (2026-10-16 추가, 앱 1.4-h264 부터는 고급 설정 — 기본은 1.2.2 H.264)
+- 이유: NV21 원본 640x480 두 렌즈 30 fps = 약 28 MB/s. 첫 실행에서 78 초에 2.18 GB 를 보낸 뒤 폰이 adb 에서 사라졌다. JPEG q90 이면 약 2~3 MB/s (추정, 측정 안 함).
+- 앱 인텐트 extra: `--es stream_fmt jpeg` (1.4-h264 부터 기본은 h264, 1.2.2), `--ei jpeg_q 90` (1~100). 녹화(record/both 의 MP4)는 이와 무관하게 H.264 그대로.
+- 헤더는 STER 와 같고 magic 만 다르다:
+
+| 필드 | 값 |
+|---|---|
+| magic | `0x5354454A` "STEJ" |
+| index / width / height / timestamp | STER 와 같음 (물리 렌즈 SENSOR_TIMESTAMP, 640x480) |
+| length | JPEG 바이트 수 (가변, PC 는 1 B ~ 8 MiB 만 받음) |
+| payload | baseline JPEG 한 장 (`YuvImage(NV21).compressToJpeg`, 회전·크기 변경 없음) |
+
+- 앱: 렌즈마다 단일 스레드 인코더(`jpeg-0`, `jpeg-1`)가 인코딩 → 렌즈별 순서 유지, 카메라 스레드를 막지 않음. 렌즈당 대기 2장 넘으면 새 프레임을 버린다 (logcat `jpeg dropped=`). 인코딩된 패킷은 기존 프레임 큐(6, 오래된 것 버림)로 들어간다.
+- PC (`lib_phone_stereo.read_frame`): `cv2.imdecode(buf, cv2.IMREAD_COLOR)` → STER 와 똑같은 BGR `PhoneFrame`. 그 뒤 짝 맞추기·역행 폐기·IMU 처리는 바뀌지 않는다 (`scan3d/phone_rx.py` 도 그대로).
+  디코드 실패나 크기 불일치 패킷은 건너뛰고 `stats()["jpeg_decode_errors"]` 로 센다 (길이로 경계가 맞으니 재접속 안 함). index/크기/길이 범위가 틀리면 STER 와 같이 `ValueError`.
+- 한 스트림 안에 STER·STEJ·SENS 가 섞여도 된다 → 옛 앱(NV21 만)도 그대로 받는다. 옛 PC 코드는 STEJ 를 `ValueError` 로 거부하므로 옛 PC 와 쓰려면 `--es stream_fmt nv21`.
+- JPEG 은 손실 압축이라 FFS 깊이·OpenVINS 특징점에 약간 영향이 있을 수 있다 (q90 에서 작다고 추정, 측정 안 함). 의심되면 `stream_fmt nv21` + `fps 15` 로 비교.
+
+#### 1.2.2 H.264 프레임 패킷 "STEH" (2026-10-16 추가, 앱 1.4-h264 / versionCode 5, **실시간 기본**)
+- 사용자 결정: 실시간 스트림도 녹화도 H.264. I+P 만 (B-frame 0), 키프레임 1 s 간격, 실시간 우선, 하드웨어 인코더 우선. JPEG·NV21 은 고급 설정.
+- 기본을 H.264 로 한 이유: 압축을 폰의 하드웨어 인코더가 하므로 CPU 로 JPEG 을 만드는 것보다 폰 부하·발열이 작고, 같은 화질에서 USB 로 보내는 양이 훨씬 적다 (640x480@15 렌즈당 약 4 Mbps ≈ 0.5 MB/s, JPEG 은 2~3 MB/s 추정, NV21 은 약 14 MB/s). 측정 전 추정.
+- B-frame 을 쓰지 않는 이유: B 는 뒤 프레임을 먼저 받아야 풀 수 있어 그만큼 지연이 생기고 (출력 순서 ≠ 입력 순서), 프레임 종류마다 화질이 출렁여 스테레오 깊이·VIO 특징점에 불리하다. I+P 면 패킷 하나 = 바로 풀리는 프레임 하나.
+- 앱 인텐트 extra: `--es stream_fmt h264|jpeg|nv21` (기본 **h264**), `--ei live_kbps N` (렌즈당 kbps, 없으면 14.5 와 같은 자동값: 640x480@15 = 4000).
+- 헤더는 1.2 의 28 바이트 공통 헤더 그대로 (`>IIIIQI`), payload 앞 8 바이트만 추가:
+
+| 위치 | 필드 | 형 | 값 |
+|---|---|---|---|
+| 0 | magic | u32 | `0x53544548` "STEH" |
+| 4 | index | u32 | 렌즈 번호 0..n-1 (`physical` 순서, 예 0 = 렌즈 2, 1 = 렌즈 5) |
+| 8 / 12 | width / height | u32 | 인코딩 크기 (예 640 / 480) |
+| 16 | timestamp | u64 | 그 프레임의 **물리 렌즈 SENSOR_TIMESTAMP** ns (1.4, STER/STEJ 와 같은 값) |
+| 24 | length | u32 | 8 + NAL 바이트 수 |
+| 28 | flags | u32 | bit0 = 키프레임 (IDR), bit1 = 이 payload 안에 SPS+PPS 있음 |
+| 32 | seq | u32 | 렌즈별 인코더 출력 번호 (0 부터 +1). 건너뛰면 그 사이 프레임이 앱에서 버려진 것 |
+| 36 | NAL | bytes | Annex-B (start code `00 00 00 01`) 접근 단위 1개 = 프레임 1장 |
+
+- **키프레임마다 SPS/PPS 가 앞에 붙는다** (인코더가 다시 내지 않으면 앱이 첫 codec-config 버퍼를 붙임) → PC 디코더는 아무 키프레임에서나 시작 가능. 따로 오는 설정 전용 패킷은 없다.
+- B-frame 0 이므로 출력 순서 = 입력 순서 = timestamp 증가 순서. 디코드한 프레임에 그 패킷의 timestamp 를 그대로 붙이면 된다.
+- 렌즈마다 독립 스트림 (인코더 1개씩). PC 는 렌즈별 디코더 2개를 둔다: `lib_phone_stereo.H264Decoders` (PyAV `CodecContext.create("h264","r")`, SLICE 스레드, `flags=low_delay`; venv_ffs 에 `av==19.0.1`, 실제 스트림으로는 아직 확인 안 함). 키프레임 전 P 는 버리고 그 렌즈에 `keyframe <n>` 을 보낸다 (렌즈별 0.5 s 에 한 번까지). 디코딩 오류·깨진 프레임·출력 4 장 넘게 밀림 → 디코더 리셋 + 키프레임 요청. seq 가 건너뛰면 `seq_gaps` 로 센다. 결과는 BGR `PhoneFrame` 이라 쌍 묶기·OpenVINS·FFS·카메라 창은 그대로. 지표: `stats()["h264"]` (렌즈별) 와 `stats()["decode_ms"/"decode_ms_max"]` (렌즈 평균, 웹 부하 표시).
+- 앱 쪽 버림 규칙: 프레임 큐 12 (가득 차면 가장 오래된 것 버림). H.264 패킷이 버려지면 그 렌즈는 다음 키프레임까지 P 프레임을 보내지 않고 (`h264_dropped_wait_key`) 즉시 키프레임을 요청한다. 새 클라이언트 접속 때도 모든 렌즈를 키프레임부터 보낸다.
+- **PC → 폰 명령** (같은 TCP 소켓의 역방향, UTF-8 한 줄, `\n` 끝): `keyframe` (모든 렌즈) 또는 `keyframe 1` (렌즈 번호). 앱이 `PARAMETER_KEY_REQUEST_SYNC_FRAME` 으로 다음 프레임을 키프레임으로 만든다. 모르는 명령은 logcat 경고만. 아무것도 안 보내는 예전 PC 도 그대로 동작. win_relay 는 양방향 중계 (`pump` 두 방향).
+- 인코더 설정 (`H264.java`): `KEY_MAX_B_FRAMES=0` (API 29+), 프로파일 High (목록에 있으면, B 0) → 실패하면 Baseline, `KEY_I_FRAME_INTERVAL=1`, `KEY_PRIORITY=0`, `KEY_LATENCY=1` (API 30+), `KEY_LOW_LATENCY=1` (코덱이 FEATURE_LowLatency 를 알릴 때만), 비트레이트 모드 VBR (지원 시, 아니면 CBR).
+  VBR 을 고른 이유: CBR 은 초당 비트를 고정해서 손떨림·빠른 움직임 프레임의 화질이 떨어지고, VBR 은 같은 평균에서 그런 프레임에 비트를 더 줘 화질이 더 일정하다. USB 여유가 커서 VBR 의 짧은 순간 증가는 문제 없다 (추론, 이 폰에서 측정 안 함).
+  설정이 거부되면 순서대로 낮춰 다시 시도 (High → Baseline → 지연 키 없이 → 인코더 기본). 실제 적용값은 metrics.json `h264.settings`.
+- 입력 경로: ImageReader YUV → NV21 복사 → 인코더 입력 Image (YUV420Flexible). 인코더 입력 Surface 를 카메라 출력에 바로 붙이지 않은 이유: 논리 멀티카메라의 물리 스트림에서 Surface 로 들어가는 버퍼 timestamp 가 물리/논리 중 어느 것인지 문서에 없어 "정확한 센서 시각" 을 보장할 수 없고, 출력 4개(YUV 2 + 인코더 2)가 보장 스트림 조합을 넘을 수 있다 (LiveEncoder.java 주석).
+- 녹화+실시간 (`mode=both`, h264): 실시간 스트림이 **녹화 인코더 출력을 공유** → 렌즈당 인코더 1개. 녹화만 먼저 끝나면 (STOP 방송) 그때 실시간 전용 인코더로 넘어간다 (첫 패킷은 키프레임). 녹화도 B 0 · I 1 s (meta.json `max_b_frames: 0` = 요청값, `b_frames_seen` = 인코더 출력 slice_type 검사 결과 (렌즈별 `lenses.<id>.b_frames_seen`), `live_shares_encoder`, `lenses.<id>.encoder_settings`).
+- caps.json 추가: `live_h264` {default_stream_fmt, magic, input: "buffer", shared_with_record: true, b_frames: 0, i_interval_s: 1, priority: 0, encoders_per_lens, instances_needed, max_b_frames_key_api,
+  encoder_640x480_15, hardware, profile, bitrate_mode, low_latency (그 인코더에서 처음 시도할 값)} (이름은 scan3d/load_model.py 의 가정 필드에 맞춤),
+  `avc_encoders[]` 에 {low_latency_feature, profile_high, profile_baseline, b_frames_possible, max_b_frames_key, bitrate_modes {vbr,cbr,cq}, live_bitrate_mode}, `pairs[]` 에 {live_encoder, live_kbps_default}. (`hardware`, `max_instances` 는 원래 있음.)
+- metrics.json 추가: `stream_fmt: "h264"`, `live_kbps` (목표, 렌즈 하나), `h264` {encoder, shared_with_recorder, kbps_target, settings (적용된 프로파일·모드·지연 키·하드웨어 여부), key_requests, key_requests_limited (렌즈별 0.4 s 제한에 걸린 요청), gen (실시간 소스 세대), error?},
+  렌즈별 {h264_fps, h264_kbps (최근 2 s 인코더 출력), h264_enc_ms_avg/max (입력 넣고 → 출력 나올 때까지), h264_frames, h264_keyframes, h264_dropped (인코더 큐 가득·입력 버퍼 없음), h264_dropped_wait_key}.
+- 지원 안 되는 조합: 실시간 h264 인데 쓸 인코더가 없으면 `ERROR UNSUPPORTED ... reason=no H.264 encoder for live ... (try stream_fmt=jpeg)` (14.4 와 같은 규칙).
+- PC 쪽 기본도 h264: `phone_link.PhoneLink(stream_fmt="h264", live_kbps=None)` (→ `--es stream_fmt`, 값이 있을 때만 `--ei live_kbps`), `scan3d.py --app-stream h264|jpeg|nv21`, `win_relay.py --stream-fmt`, 웹 고급 설정 "영상 형식" (→ `scanner.set_stream(..., stream_fmt=, live_kbps=)`, 다음 세션부터).
+- 녹화 복원(replay): 녹화 MP4 도 B 0 이라 디코드 순서 = PTS 순서. `recording.py` 의 PTS 맞추기는 그대로 쓴다.
+
 ### 1.3 파이썬 수신 API (lib_phone_stereo.py, import 해서 재사용)
-- `read_frame(sock, stream_count, size) -> PhoneFrame | SensorSample` — 블로킹, 패킷 1개.
+- `read_frame(sock, stream_count, size, h264=None) -> PhoneFrame | SensorSample` — 블로킹, 패킷 1개. STEH 를 받으려면 `h264=H264Decoders(stream_count, sock)` (PhoneReceiver·phone_rx 는 알아서 만든다).
   - `PhoneFrame(index:int, timestamp_ns:int, bgr:np.ndarray HxWx3 uint8)`
   - `SensorSample(type:int, timestamp_ns:int, values:tuple[float])`
 - `FramePairer(count=2, max_skew_ms=10)`: `.add(frame) -> tuple[PhoneFrame,...] | None`. 스트림 0 이 기준, 다른 스트림이 그 시각을 앞뒤로 감쌀 때까지 기다렸다 가장 가까운 것을 고름. 묶음 시각차 > max_skew 이면 기준 프레임 버림. 큐 길이 8.
@@ -284,7 +339,7 @@ WSL2 localhost forwarding 은 **Windows → WSL** 방향(WSL 에서 0.0.0.0/127.
 2. `phone_link` 가 interop 으로 릴레이를 띄운다: `py.exe -3 \\wsl.localhost\Ubuntu-22.04\home\system\scanner\StereoDepthSeg\scan3d\win_relay.py --wsl-port 8766 --phone-port 8765` (실패하면 사용자에게 Windows 에서 직접 실행하라고 안내). 릴레이 stdout/stderr 는 phone_link 가 로그로 받는다.
 3. 릴레이: `127.0.0.1:8766` 에 connect (0.5 s 간격 재시도, 최대 30 s) — 이것이 WSL 로 가는 터널.
 4. `phone_link` 가 1.5 절 1~6 (adb.exe 로 앱 시작, forward, status.txt 대기) 을 끝내고 `STREAMING` 을 보면, 릴레이 연결에 **1 바이트 `b"G"`** 를 보낸다.
-5. 릴레이는 `G` 를 받으면 `127.0.0.1:8765` (adb forward) 에 connect 하고 폰→WSL 방향 바이트를 그대로 복사한다 (`recv_into` 1 MiB 버퍼, `TCP_NODELAY`, 해석·재조립 없음). WSL→폰 방향은 이후 읽고 버린다 (폰은 입력을 안 읽음).
+5. 릴레이는 `G` 를 받으면 `127.0.0.1:8765` (adb forward) 에 connect 하고 폰→WSL 방향 바이트를 그대로 복사한다 (`recv_into` 1 MiB 버퍼, `TCP_NODELAY`, 해석·재조립 없음). WSL→폰 방향도 그대로 폰에 넘긴다 (H.264 키프레임 요청 `keyframe <n>`, 1.2.2).
 6. 어느 쪽이든 EOF/오류 → 양쪽 소켓 닫고 3번으로 돌아감 (재시작 가능). `b"Q"` 를 받으면 릴레이 종료.
 7. 릴레이 자체는 adb 를 부르지 않는다 (adb 제어는 전부 WSL 쪽 phone_link 가 interop 으로).
 
@@ -410,3 +465,97 @@ venv_ffs/bin/python -m scan3d.run_scanner --calib calib_phone_pair.json --fps 30
 - 정지 초기화가 손떨림에 실패할 수 있음 → `init_imu_thresh` 조정 또는 `init_dyn_use: true` 시도.
 - 영상이 90° 누운 채라 YOLO 검출률이 떨어질 수 있음 (6절 회전 옵션).
 - 앱 재서명 시 기존 설치본과 서명 충돌 가능 (2.2).
+
+---------------------------------------------------------------------------------------------------
+
+## 14. 폰 능력 조회·부하 지표 (`caps.json`, `metrics.json`, 앱 1.3-caps / versionCode 4, 2026-10-16)
+
+소스: `phone_stereo/android/src/com/camera/dualstream/Caps.java`(조회·검사), `Metrics.java`(실행 지표), `MainActivity.java`, `Recorder.java`.
+둘 다 **조회·자기 계측만** 한다 (별도 측정 부하 없음). 값은 실기기에서 아직 읽어 보지 않았다 (빌드만 확인).
+
+### 14.1 파일 위치 (run-as 없이 읽기)
+| 파일 | 외부 (adb 바로 cat) | 내부 (run-as) | 언제 |
+|---|---|---|---|
+| caps.json | `/sdcard/Android/data/com.camera.dualstream/files/caps.json` | `files/caps.json` | 앱 시작마다 1회 (인자 없이 시작해도), 배경 스레드 |
+| metrics.json | `/sdcard/Android/data/com.camera.dualstream/files/metrics.json` | `files/metrics.json` | 카메라 동작 중 1 s 마다 |
+| status.txt | (기존과 같음) | (기존과 같음) | 상태 바뀔 때 |
+
+- 둘 다 `이름.tmp` 에 쓰고 rename → 반쯤 쓴 파일을 읽지 않는다. PC 는 `adb shell cat /sdcard/Android/data/com.camera.dualstream/files/metrics.json`.
+- metrics.json 은 앱이 멈추면 더 이상 갱신되지 않는다 → `t_wall_ms` 가 3 s 넘게 안 바뀌면 낡은 값으로 본다.
+- status.txt 형식은 바뀌지 않았다 (첫 낱말 규칙 그대로). 추가된 것: `OPEN ... 640x480 fps=15 ...` 에 `fps=` 가 붙고, 아래 14.4 의 `ERROR UNSUPPORTED` 줄.
+
+### 14.2 caps.json (`format: "scan3d-phone-caps/1"`)
+조회 대상 렌즈 = 인텐트 `physical` (없으면 `2,5`), 논리 카메라 = `logical` (없으면 `0`).
+```
+{ "format","written_wall_ms","written_wall","app_version","app_version_code",
+  "device": {manufacturer, model, device, hardware, android, sdk, soc_manufacturer, soc_model (API31+), cpu_cores},
+  "logical": {id, physical_ids[], logical_multi_camera, sync_type, hardware_level,
+              ae_fps_ranges [[lo,hi],...], fixed_fps [15,20,24,30,60] (lo==hi 인 AE 범위)},
+  "lenses": { "2": {active_array [l,t,r,b], pixel_array [w,h], active_array_4_3,
+                    yuv: [{w,h, aspect_4_3, full_active_array, min_frame_ns, max_fps (=1e9/min_frame_ns, 모르면 null), stall_ns}, ...]},
+              "5": {...} },
+  "pair_lenses": ["2","5"],
+  "pairs": [ {w,h, aspect_4_3, max_fps (두 렌즈 중 작은 값),        // 두 렌즈 모두 가진 YUV 크기, 픽셀 수 큰 것부터
+              camera_fps [..]        // FPS 후보 {10,15,20,24,30,60} 중 앱이 실시간으로 받아 주는 값 (14.4 검사 통과)
+              record_encoder {"10": "c2.xxx.avc.encoder"|null, "15": ..., ...}   // 녹화(record/both) 때 쓸 인코더, null = 거부
+              rec_kbps_default {"15": 4000, ...} }, ... ],                  // 14.5
+  "avc_encoders": [ {name, hardware, software_only, vendor (API29+), max_instances, yuv420_flexible,
+                     bitrate_range [lo,hi] bps, widths, heights, frame_rates, width_align, height_align,
+                     performance_points ["...", ...] (API29+, 하드웨어 인코더 처리 능력 문자열),
+                     sizes: [{w,h, size_rate_supported {"10":bool,...,"60":bool}, achievable_fps [lo,hi]|null}]}, ... ],  // 하드웨어 먼저
+  "session_support": {api, available, why?,                // API 35 CameraDeviceSetup, 카메라를 열지 않고 HAL 에 물음
+                      results: [{w,h, supported (렌즈마다 YUV 출력 1개씩, 한 세션), max_fps_checked, supported_at_max_fps, error?}]} }
+```
+- S24 의 4:3 공통 크기 (cameras_s24.json 기준): 4000x3000, 1920x1440, 1440x1080, 960x720, 640x480, 320x240. 800x600·1280x960 은 폰이 제공하지 않는다.
+  렌즈 2·5 의 active array 가 모두 4:3 (4000x3000, 4080x3060) → 4:3 출력은 센서 전체 영역 (`full_active_array=true`).
+- `max_fps` 는 StreamConfigurationMap 의 크기별 최소 프레임 간격에서 나온 값 (출처: developer.android.com/reference/android/hardware/camera2/params/StreamConfigurationMap#getOutputMinFrameDuration(int,%20android.util.Size)).
+  두 물리 출력이 한 요청에 묶이므로 쌍의 최대 fps = 1e9 / max(렌즈별 최소 간격). JPEG 압축·USB 한계는 여기 들어 있지 않다 (14.3 실측으로 PC 가 계산).
+- 인코더: `areSizeAndRateSupported(w,h,fps)` 와 `getAchievableFrameRatesFor` 는 제조사가 적은 능력값 (developer.android.com/reference/android/media/MediaCodecInfo.VideoCapabilities). 렌즈 2개를 동시에 인코딩하므로 `max_instances ≥ 2` 도 요구한다. 두 인코더 합산 처리량은 `performance_points` 와 실행 중 `rec_encoder_busy` 로 판단.
+
+### 14.3 metrics.json (`format: "scan3d-phone-metrics/1"`, 1 s 마다)
+```
+{ "format","t_wall_ms","elapsed_ns", "state" (status 첫 낱말), "mode","width","height","fps","physical":["2","5"],
+  "stream_fmt" ("h264"|"jpeg"|"nv21"|"none"), "jpeg_q", "window_s": 2.0,
+  "rec","rec_kbps","rec_encoder",                       // 녹화 중일 때만
+  "lenses": { "2": {
+      cam_fps            최근 2 s 카메라 실제 fps (렌즈별 이미지 timestamp 간격)
+      cam_frames         누적 받은 이미지 수
+      cam_gap_drops      누적 빠진 프레임 수 추정 (timestamp 간격 > 1.5 주기 → round(간격/주기)-1)
+      cam_buffer_lost    누적 onCaptureBufferLost
+      copy_ms_avg/max    카메라 스레드의 YUV→NV21 복사 시간 (최근 2 s)
+      jpeg_fps           최근 2 s JPEG 완료 수 / 2
+      jpeg_ms_avg/max    compressToJpeg 시간 (렌즈별 단일 스레드, 최근 2 s)
+      jpeg_core_pct      최근 2 s 동안 JPEG 압축이 쓴 한 코어 시간 비율 % (= Σ압축시간 / 2 s × 100)
+      jpeg_kb_avg        JPEG 한 장 평균 크기 KiB
+      jpeg_frames, jpeg_dropped   누적 (대기 2장 초과·압축 실패로 버린 것)
+      rec_frames, rec_fps, rec_dropped_queue, rec_encoder_busy   // 녹화 중: 누적 인코딩 수, 1 s 간 fps, 큐 가득 버림, 인코더 입력 버퍼 없음 버림
+    }, "5": {...} },
+  "jpeg_core_pct_total",                                // 두 렌즈 합 (100 = 한 코어 꽉 참)
+  "capture_failed" (누적 onCaptureFailed), "matcher_unmatched_dropped",
+  "usb": {client, bytes_total, MBps (지난 1 s 실제 전송, 헤더 포함), frame_queue_evicted (프레임 큐 6 가득 → 오래된 것 버림)},
+  "phone": {proc_cpu_pct_one_core (앱 프로세스 전체 CPU, 한 코어=100), cpu_cores, battery_temp_c,
+            thermal_status (PowerManager, 0 없음 … 6 종료), thermal_headroom_10s (1.0 = 스로틀 시작, 10 s 마다 갱신)} }
+```
+- PC 부하 모델(EWMA) 입력 권장: `jpeg_ms_avg / (w·h)` → 픽셀당 압축 시간, `jpeg_kb_avg·1024·8 / (w·h)` → 비트/픽셀, `usb.MBps`, `rec_encoder_busy` 증가율, `cam_fps` vs `fps`, `thermal_status`.
+- 온도: 루트 없이 CPU 온도는 못 읽는다 → 배터리 온도와 thermal status/headroom 으로 대신.
+
+### 14.4 지원 안 되는 조합 = ERROR (가장 가까운 크기로 바꾸지 않음)
+시작 시 `Caps.checkCamera` (실시간·녹화 공통) + 녹화(record/both)면 `Caps.findAvcEncoder` 를 통과해야 카메라를 연다:
+1. 크기가 짝수·양수, 선택한 모든 렌즈의 YUV_420_888 목록에 있음.
+2. `fps ≤ 쌍 max_fps`.
+3. 논리 카메라에 고정 AE 범위 `[fps,fps]` 가 있음 (S24: 15, 20, 24, 30, 60 → **10 은 거부**). 예전에는 없으면 조용히 기본 범위로 돌았다.
+4. (녹화) H.264 인코더 중 하드웨어 먼저, `areSizeAndRateSupported(w,h,fps)` ∧ YUV420Flexible 입력 ∧ `max_instances ≥ 렌즈 수` 인 첫 인코더. 녹화는 그 인코더를 이름으로 만든다 (`meta.json` 의 `encoder`).
+
+실패하면 카메라를 열지 않고 status.txt 에:
+`ERROR UNSUPPORTED 1280x960@30 mode=live reason=lens 2 has no YUV 1280x960 | see caps.json`
+(첫 낱말에 `ERROR` → win_relay / phone_link 의 기존 오류 처리 그대로 걸린다.)
+
+### 14.5 녹화 비트레이트 기본
+- `rec_kbps` 인자가 있으면 그 값 (렌즈마다). 없으면 `4000 × (w·h·fps) / (640·480·15)` kbps, 최소 500, 인코더 `bitrate_range` 안으로 자름.
+  예: 640x480@15 = 4000, 640x480@30 = 8000, 960x720@15 = 9000, 1440x1080@30 = 40500 (범위 안이면). 이전 기본은 크기와 무관하게 8000.
+- `meta.json` 에 `rec_kbps`, `rec_kbps_source` ("auto"|"extra"), `encoder` 가 남는다.
+  `scan3d/RECORDING_FORMAT.md` 의 "기본 8000" 문구는 이 절로 대체된다 (그 파일은 이 작업에서 고치지 않음).
+
+### 14.6 크기별 보정 (참고, PC 담당)
+같은 4:3·센서 전체 영역(`full_active_array=true`)이면 640x480 보정을 비례 변환해 쓴다: fx, fy, cx, cy 에 (새 폭/640) 을 곱하고 왜곡 계수·두 렌즈 R,T 는 그대로.
+엄밀히는 픽셀 중심 규약 때문에 cx' = (cx+0.5)·s − 0.5 (s = 크기 비율) 이 맞다 (단순 곱과의 차이 = 0.5·(s−1) px: 960x720 0.25 px, 1920x1440 1 px).

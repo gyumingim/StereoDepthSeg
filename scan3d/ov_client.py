@@ -33,9 +33,10 @@ INFLIGHT_STALE_S = 2.0          # 이만큼 pose 가 안 오면 브리지가 버
 
 class OVClient:
     def __init__(self, addr, on_pose=None, log=print, max_inflight=3, max_pending_cams=30, on_event=None,
-                 max_cam_wait_s=1.0, stderr_path=None):
+                 max_cam_wait_s=1.0, stderr_path=None, connect_timeout_s=30.0):
         self.addr, self.on_pose, self.on_event, self.log = addr, on_pose, on_event, log
         self.stderr_path = stderr_path       # pipe: 브리지 stderr(OpenVINS 로그) 파일, None 이면 그대로 상속
+        self.connect_timeout_s = connect_timeout_s
         self.max_inflight, self.max_pending, self.max_cam_wait_ns = max_inflight, max_pending_cams, int(max_cam_wait_s * 1e9)
         self.lock = threading.Condition()
         self.imu_q = deque()
@@ -51,7 +52,9 @@ class OVClient:
         self.latest = None
         self.ready = None
         self.events = deque(maxlen=20)
-        self.error = None
+        self.error = None                    # 연결/프로세스가 죽었을 때만 (scan3d 가 이것으로 브리지를 다시 띄움)
+        self.bridge_msg = None               # 브리지 "error" 줄 (잘못된 레코드 등, 연결은 살아 있음)
+        self.exceptions = 0                  # 브리지가 OpenVINS 예외를 잡고 내부 리셋한 횟수
         self.cb_errors = 0
         self.stopped = False
         self.proc = None
@@ -76,7 +79,7 @@ class OVClient:
             self.log(f"[ov] 브리지 프로세스 시작: {cmd}")
             return
         host, _, port = self.addr.rpartition(":")
-        t_end = time.monotonic() + 30
+        t_end = time.monotonic() + self.connect_timeout_s
         while True:
             try:
                 s = socket.create_connection((host or "127.0.0.1", int(port)), timeout=5)
@@ -124,7 +127,18 @@ class OVClient:
         with self.lock:
             return len(self.cam_q) + len(self.inflight)
 
+    def dead(self):
+        """브리지 연결이 끊겼거나 (pipe 면) 프로세스가 끝났으면 True."""
+        if self.stopped:
+            return False
+        if self.error is not None:
+            return True
+        return self.proc is not None and self.proc.poll() is not None
+
     def close(self):
+        if self.proc is not None and self.proc.poll() is not None:     # 이미 죽은 브리지: 기다릴 것 없음
+            self.stopped = True
+            return
         with self.lock:
             self.ctrl_q.append(T_QUIT)
             self.lock.notify_all()
@@ -223,8 +237,11 @@ class OVClient:
                     if typ == "ready":
                         self.ready = msg
                     elif typ == "error":
-                        self.error = f"bridge: {msg.get('msg')}"
+                        # 레코드 하나가 잘못된 것뿐 (연결은 살아 있음) → self.error(= 연결 죽음, 재시작 기준)에 넣지 않는다
+                        self.bridge_msg = f"bridge: {msg.get('msg')}"
                     elif typ == "reset":
+                        if msg.get("reason") == "exception":
+                            self.exceptions += 1
                         with self.lock:
                             self.poses.clear(); self.latest = None
                             if msg.get("auto"):          # auto-reset: 브리지 큐의 카메라가 pose 없이 사라짐
@@ -281,6 +298,9 @@ class OVClient:
                     dt_cam_imu=L.get("dt_cam_imu"), imu_sent=self.imu_sent, cams_sent=self.cams_sent,
                     poses=self.poses_got, cams_dropped=self.cams_dropped, bridge_cam_dropped=L.get("cam_dropped"),
                     bridge_imu_dropped=L.get("imu_dropped"), inflight=n_inflight, cam_wait=n_wait,
+                    bridge_cam_rejected=L.get("cam_rejected"), bridge_exceptions=self.exceptions,
+                    imu_held=L.get("imu_held"), bridge_pid=self.proc.pid if self.proc else None,
+                    bridge_log=self.stderr_path, bridge_msg=self.bridge_msg,
                     ready=self.ready, error=self.error,
                     events=[e if isinstance(e, str) else json.dumps(e)[:200] for e in list(self.events)[-5:]])
 

@@ -113,14 +113,28 @@ class DepthSeg:
             self.yolo.reset()
         self.log(f"[depth] 워밍업 {1000 * (time.perf_counter() - t):.0f} ms")
 
-    def __call__(self, bgrL, bgrR):
-        """원본 BGR 쌍 (렌즈 2, 렌즈 5) → dict(rectL, disp, Z, valid, dets, us, vs, Zs, rgb, cls, track, det_idx, ms...)."""
+    def set_geometry(self, rp, scale=None):
+        """세션 해상도 변경: 정류맵·정류 K (rp) 와 FFS 입력 축소 비율. 진행 중인 호출은 시작 때 잡은 rp 를 그대로 쓴다."""
+        self.rp = rp
+        if scale is not None:
+            self.scale = float(scale)
+        W, H = rp["size"]
+        self.log(f"[depth] 해상도 {W}x{H} · FFS 입력 {int(W * self.scale)}x{int(H * self.scale)} (scale {self.scale:g})")
+
+    def __call__(self, bgrL, bgrR, rp=None, scale=None):
+        """원본 BGR 쌍 (렌즈 2, 렌즈 5) → dict(rectL, disp, Z, valid, dets, us, vs, Zs, rgb, cls, track, det_idx, ms...).
+        rp/scale 을 주면 그 값 (세션 해상도가 바뀌는 순간에도 한 호출 안에서는 같은 정류맵), 아니면 self 값.
+        영상 크기가 rp 크기와 다르면 ValueError (해상도 바뀌기 전 프레임)."""
+        rp = rp or self.rp
+        scale = float(scale or self.scale)
+        if (bgrL.shape[1], bgrL.shape[0]) != tuple(rp["size"]) or bgrL.shape != bgrR.shape:
+            raise ValueError(f"프레임 {bgrL.shape[1]}x{bgrL.shape[0]} ≠ 정류 크기 {tuple(rp['size'])}")
         t0 = time.perf_counter()
-        rectL, rectR = lr.rectify_pair(bgrL, bgrR, self.rp)
+        rectL, rectR = lr.rectify_pair(bgrL, bgrR, rp)
         disp = lib_ffs.infer(self.model, cv2.cvtColor(rectL, cv2.COLOR_BGR2RGB), cv2.cvtColor(rectR, cv2.COLOR_BGR2RGB),
-                             valid_iters=self.iters, scale=self.scale)
+                             valid_iters=self.iters, scale=scale)
         t1 = time.perf_counter()
-        valid, Z = valid_mask(disp, self.rp, self.z_range)
+        valid, Z = valid_mask(disp, rp, self.z_range)
         valid &= ~uncertain_mask(disp)
         dets = self.yolo(rectL) if self.yolo else []
         t2 = time.perf_counter()
@@ -146,6 +160,6 @@ class DepthSeg:
             di[bad] = -1
         rgb = rectL[vs, us][:, ::-1].copy()                 # BGR → RGB
         cls = np.where(di >= 0, np.array([d["class_id"] for d in dets] + [-1], np.int16)[di], -1).astype(np.int16)
-        pts = frames.rect0_points(Zs, self.rp, us.astype(np.float32), vs.astype(np.float32))
+        pts = frames.rect0_points(Zs, rp, us.astype(np.float32), vs.astype(np.float32))
         return dict(rectL=rectL, disp=disp, Z=Z, valid=valid, dets=dets, pts_rect0=pts, rgb=rgb, cls=cls, det_idx=di,
-                    ffs_ms=1000 * (t1 - t0), yolo_ms=1000 * (t2 - t1), n=len(pts))
+                    ffs_ms=1000 * (t1 - t0), yolo_ms=1000 * (t2 - t1), n=len(pts), size=tuple(rp["size"]), ffs_scale=scale)

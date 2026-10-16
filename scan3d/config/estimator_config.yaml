@@ -1,14 +1,14 @@
 %YAML:1.0 # need to specify the file type at the top!
-# generated 2026-10-16T09:30:24 by scan3d/make_ov_config.py
+# generated 2026-10-16T11:30:34 by scan3d/make_ov_config.py
 # inputs: calib=/home/system/scanner/StereoDepthSeg/calib_phone_pair.json cameras=/home/system/scanner/StereoDepthSeg/phone_stereo/cameras_s24.json lenses L=2 R=5
 # rect: f=462.9355 cx=339.4814 cy=239.8733 baseline_m=0.015530 size=640x480
-# args: fps=30.0 imu_rate=400.0 init=static imu_origin=lens5 mono=False exposure_ms=0.0 rs_skew_ms=0.0
+# args: fps=15.0 imu_rate=400.0 init=static imu_origin=lens5 mono=False exposure_ms=0.0 rs_skew_ms=0.0
 
 verbosity: "INFO" # ALL, DEBUG, INFO, WARNING, ERROR, SILENT
 
 use_fej: true
 integration: "rk4"
-use_stereo: true # 정류 쌍 스테레오 KLT. 쌍 시각차가 크면 클라이언트가 cam0 만 보냄 (mono 추적)
+use_stereo: true # true = 정류 쌍 스테레오 KLT (클라이언트는 2장짜리만 보냄, 시각차 큰 쌍은 버림). false = cam0 만 (scan3d --vio-mode mono)
 max_cameras: 2
 
 calib_cam_extrinsics: true   # R_ItoC, p_CinI 온라인 보정 (p 초기값은 가정값)
@@ -79,7 +79,7 @@ grid_x: 5
 grid_y: 5
 min_px_dist: 10
 knn_ratio: 0.70
-track_frequency: 30.0
+track_frequency: 15.0
 downsample_cameras: false
 num_opencv_threads: 4
 histogram_method: "HISTOGRAM"
