@@ -4,6 +4,9 @@ Wire format: big endian magic/index/width/height/timestamp_ns/length + payload.
 프레임 payload: magic "STEH" = H.264 Annex-B 접근 단위 (앱 기본, --es stream_fmt h264, I+P 만),
 "STEJ" = 같은 프레임의 JPEG (--es stream_fmt jpeg), "STER" = NV21 원본 (--es stream_fmt nv21).
 셋 다 같은 BGR PhoneFrame 으로 바뀌어 나간다. 크기 변경·회전·노출 시각 추정은 없다.
+헤더 timestamp (scan3d/SPEC.md 1.2): 앱 1.7-mid 부터 그 렌즈 사진 전체 노출의 가운데 시각
+= 물리 SENSOR_TIMESTAMP + 노출/2 + 롤링셔터 skew/2 (시계는 그대로 elapsedRealtimeNanos). 앱이 센서 타입 101
+(stream_info, [1.0]) 을 보내면 이 기준이고 ts_ref = "mid_exposure", 옛 앱(없음)은 첫 줄 노출 시작 (ts_ref = None).
 H.264 는 렌즈별 PyAV 디코더(H264Decoders)가 풀고, 키프레임이 필요하면 같은 소켓으로 "keyframe <렌즈>\n" 한 줄을 폰에 보낸다.
 
 센서 패킷(magic "SENS"): index = Android Sensor 타입, width=height=0, payload = float32 big-endian 값들.
@@ -27,7 +30,7 @@ MAGIC_JPEG = 0x5354454A            # "STEJ": payload = JPEG 한 장 (scan3d/SPEC
 JPEG_MAX_BYTES = 8 << 20
 jpeg_decode_errors = 0             # 깨진 JPEG 은 건너뛰고 센다 (스트림 경계는 길이로 맞으므로 재접속 불필요)
 MAGIC_H264 = 0x53544548            # "STEH" (scan3d/SPEC.md 1.2.2, 앱 1.4-h264 Main/LiveEncoder 기준)
-# STEH: 28 B 공통 헤더 (index = 렌즈 번호, width/height = 프레임 크기, timestamp = 물리 렌즈 센서 ns,
+# STEH: 28 B 공통 헤더 (index = 렌즈 번호, width/height = 프레임 크기, timestamp = 렌즈 노출 가운데 ns (1.7-mid, 옛 앱은 물리 센서 ns),
 # length = 8 + NAL 바이트 수) 뒤에 [u32 flags][u32 seq][Annex-B NAL 바이트 = 프레임 1장].
 H264_PREFIX = struct.Struct(">II")
 H264_MAX_BYTES = 8 << 20
@@ -40,6 +43,8 @@ KEYREQ_MIN_INTERVAL_S = 0.5       # 렌즈별 키프레임 요청 최소 간격 
 SENSOR_ACCEL = 1                   # 원시 가속도계 (중력 포함 비력, VIO 용)
 SENSOR_GYRO, SENSOR_PRESSURE, SENSOR_GRAVITY, SENSOR_LINEAR_ACC, SENSOR_ROTVEC, SENSOR_GAME_ROTVEC = 4, 6, 9, 10, 11, 15
 SENSOR_FRAME_TIMING = 100          # 앱 자체 타입: [물리별 SENSOR_TIMESTAMP − 논리 timestamp (ms)…, 노출 ms, 프레임 주기 ms, 롤링셔터 skew ms]
+SENSOR_STREAM_INFO = 101          # 앱 자체 타입 (1.7-mid): [ts_ref 부호] 1.0 = 프레임 헤더 timestamp 가 노출 가운데 시각
+TS_REF_MID = "mid_exposure"
 SENSOR_NAMES = {SENSOR_ACCEL: "accelerometer", SENSOR_GYRO: "gyroscope", SENSOR_PRESSURE: "pressure", SENSOR_GRAVITY: "gravity",
                 SENSOR_LINEAR_ACC: "linear_acceleration", SENSOR_ROTVEC: "rotation_vector", SENSOR_GAME_ROTVEC: "game_rotation_vector",
                 SENSOR_FRAME_TIMING: "frame_timing"}
@@ -386,6 +391,7 @@ class PhoneReceiver:
         self.sensors = {}                       # type -> deque[(timestamp_ns, values)]
         self.sensor_counts = {}
         self.reordered = [0] * count            # 보정 timestamp 가 되돌아간 프레임(HAL 재짝짓기 순간) — 버리고 센다
+        self.ts_ref = None                      # "mid_exposure" = stream_info(101) 를 받음 (앱 1.7-mid), None = 옛 앱 (노출 시작)
         self.h264 = H264Decoders(count, sock)   # 렌즈별 H.264 디코더 (첫 STEH 패킷 때 PyAV import)
         self.error = None
         self.stopped = False
@@ -402,6 +408,8 @@ class PhoneReceiver:
                     with self.lock:
                         self.sensors.setdefault(f.type, deque(maxlen=6000)).append((f.timestamp_ns, f.values))
                         self.sensor_counts[f.type] = self.sensor_counts.get(f.type, 0) + 1
+                        if f.type == SENSOR_STREAM_INFO and f.values and round(f.values[0]) == 1:
+                            self.ts_ref = TS_REF_MID
                     continue
                 with self.lock:
                     i = f.index
@@ -456,7 +464,8 @@ class PhoneReceiver:
         return out
 
     def imu_for_pair(self, pair):
-        """쌍의 첫 프레임 시각 센서값 + 두 노출 시각 사이 자이로 창(gyro_window) — 동기 어긋남 회전 보상용."""
+        """쌍의 첫 프레임 시각 센서값 + 두 노출 시각 사이 자이로 창(gyro_window) — 동기 어긋남 회전 보상용.
+        노출 시각 = 프레임 timestamp (앱 1.7-mid 부터 노출 가운데, 옛 앱은 노출 시작)."""
         out = self.imu_at(pair[0].timestamp_ns)
         ts = [f.timestamp_ns for f in pair[:2]]
         out["per_frame"] = [self.imu_at(t) for t in ts]
@@ -487,7 +496,7 @@ class PhoneReceiver:
                         jpeg_decode_errors=jpeg_decode_errors, h264=h, imu=imu, clock_gap_ms=None if gap is None else round(gap, 1),
                         skew_median_ms=float(np.median(self.skews)) if self.skews else None,
                         skew_p95_ms=float(np.percentile(self.skews, 95)) if self.skews else None,
-                        first_timestamp_ns=list(self.first_ts), last_timestamp_ns=list(self.last_ts))
+                        first_timestamp_ns=list(self.first_ts), last_timestamp_ns=list(self.last_ts), ts_ref=self.ts_ref)
 
     def close(self):
         self.stopped = True

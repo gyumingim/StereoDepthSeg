@@ -1,11 +1,17 @@
 """폰 녹화 폴더 읽기 (replay.py 용).
 
 형식 = scan3d/RECORDING_FORMAT.md (scan3d-phone-rec/1). 이 파일이 쓰는 것:
-  meta.json          physical ("2,5" 또는 ["2","5"]), width, height, fps, complete (false 면 경고)
+  meta.json          physical ("2,5" 또는 ["2","5"], 비교용 3렌즈 녹화는 "2,5,6"), width, height, fps, complete (false 면 경고)
   cam2.mp4, cam5.mp4 렌즈별 H.264, 회전 메타 없음 (파일 이름의 숫자 = meta.physical 의 id).
-  frames_camN.csv    frame_idx, physical_ts_ns (= 실시간 STER timestamp), logical_ts_ns, exposure_ns, rolling_shutter_skew_ns, pts_us
+                     렌즈가 3개면 Recording(pair=["2","6"]) 처럼 쓸 두 렌즈를 고른다 (기본 = physical 앞 2개,
+                     pair="all" = 모두 — 카메라 창 그림 thumbs 용). 스트림 번호 0, 1 = 고른 순서.
+  frames_camN.csv    앱 1.7-mid: frame_idx, t_mid_ns (= 실시간 헤더 timestamp = 노출 가운데), physical_ts_ns, logical_ts_ns,
+                     exposure_ns, rolling_shutter_skew_ns, pts_us. 옛 앱: t_mid_ns 열 없음 (physical_ts_ns = 노출 시작).
                      (-1 = 없음). 행은 인코더에 넣을 때 쓴다 (frame_idx 연속, 큐에서 버린 프레임은 행 없음).
-                     노출 중앙 보정 = 0.5·(exposure + skew), 실시간 phone_rx 와 같은 식.
+                     노출 가운데 = physical_ts_ns + 0.5·(exposure + skew).
+  프레임 시각 기준 (meta timestamp_ref): "mid_exposure" (1.7-mid) 또는 t_mid_ns 열 → 그대로 쓴다.
+                     없음 (옛 녹화) → exposure/rs 열로 가운데 시각을 계산해 바꾼다 (값이 없는 행은 마지막으로 알던 값).
+                     노출 열이 없으면 노출 시작 그대로 + 경고 (그때만 imu.csv frame_timing 보정을 재생 중에 더함).
   imu.csv            type, t_ns, v0.. (행 길이 가변, 실시간 SENS 패킷과 같은 값, 100 = frame_timing, t_ns = logical ts)
 시계: 모든 *_ns 는 elapsedRealtimeNanos (실시간 스트림과 같은 기준) → 프레임·IMU 를 바로 비교.
 영상 프레임 ↔ CSV 행 맞추기 (Stream.iter_frames):
@@ -32,7 +38,7 @@ NAME_TO_TYPE = {"accelerometer": 1, "accel": 1, "acc": 1, "gyroscope": 4, "gyro"
                 "gyroscope_uncalibrated": 16, "gyro_uncal": 16, "accelerometer_uncalibrated": 35, "accel_uncal": 35,
                 "frame_timing": 100, "pressure": 6, "gravity": 9, "linear_acceleration": 10, "rotation_vector": 11,
                 "game_rotation_vector": 15}
-T_COLS = ("physical_ts_ns", "t_ns", "timestamp_ns", "sensor_ts_ns", "ts_ns", "timestamp")
+T_COLS = ("t_mid_ns", "physical_ts_ns", "t_ns", "timestamp_ns", "sensor_ts_ns", "ts_ns", "timestamp")
 IDX_COLS = ("frame", "frame_idx", "idx", "index", "frame_index")
 
 
@@ -60,6 +66,7 @@ class Stream:
         ti = _col(header, T_COLS)
         if ti is None:
             raise ValueError(f"{self.frames_csv.name}: 시각 열(t_ns) 없음, 머리줄 {header}")
+        self.mid_col = header[ti].strip().lower() == "t_mid_ns"   # 앱 1.7-mid: 시각 열이 이미 노출 가운데
         ii = _col(header, IDX_COLS)
         en, em = _col(header, ("exposure_ns", "exp_ns")), _col(header, ("exposure_ms", "exp_ms"))
         sn = _col(header, ("rolling_shutter_skew_ns", "rs_skew_ns", "skew_ns"))
@@ -92,6 +99,25 @@ class Stream:
 
     def __len__(self):
         return len(self.recs)
+
+    def to_mid(self):
+        """옛 녹화(노출 시작 시각) → 노출 가운데 = t + 0.5·(노출 + skew). 값이 없는 행은 마지막으로 알던 값
+        (처음부터 없으면 다음에 처음 나오는 값). 반환 (바꾼 행, 대체값을 쓴 행). 노출 열이 없으면 (0, 0) 이고 그대로."""
+        if not self.has_exposure:
+            return 0, 0
+        first_e = next((e for _, _, e, _ in self.recs if e is not None), 0.0)
+        first_r = next((r for _, _, _, r in self.recs if r is not None), 0.0)
+        le, lr = first_e, first_r
+        out, fb = [], 0
+        for idx, t, e, r in self.recs:
+            if e is None or r is None:
+                fb += 1
+            le = e if e is not None else le
+            lr = r if r is not None else lr
+            out.append((idx, t + int(round(0.5 * (le + lr) * 1e6)), e, r))
+        self.recs = out
+        self.mid_col = True
+        return len(out), fb
 
     PROBE = 12               # 맞추기 방식·오프셋을 정할 때 보는 처음 디코드 프레임 수
     MAX_OFF = 4              # 첫 디코드 프레임이 맞을 수 있는 CSV 행 (0..MAX_OFF, 인코더가 앞 프레임을 안 내보낸 경우)
@@ -254,8 +280,17 @@ class Stream:
             cap.release()
 
 
+def physical_of(meta):
+    """meta.json physical → ["2", "5"] (옛 녹화·없으면 2,5). 비교용 3렌즈 녹화는 ["2", "5", "6"]."""
+    phys = (meta or {}).get("physical") or ["2", "5"]
+    if isinstance(phys, str):
+        phys = [p.strip() for p in phys.split(",") if p.strip()]
+    return [str(p) for p in phys]
+
+
 class Recording:
-    def __init__(self, path, log=print):
+    def __init__(self, path, log=print, pair=None):
+        """pair = None (physical 앞 2개, 옛 동작) | ["2", "6"] · "2+6" · "2,6" (그 두 렌즈만) | "all" (모든 렌즈)."""
         self.path = Path(path)
         self.log = log
         if not self.path.is_dir():
@@ -268,39 +303,60 @@ class Recording:
                         if self.meta.get("finishing") else ""))
         cp = self.path / "cameras.json"
         self.cameras = json.loads(cp.read_text()) if cp.is_file() else None
-        phys = self.meta.get("physical") or ["2", "5"]
-        if isinstance(phys, str):
-            phys = [p.strip() for p in phys.split(",")]
-        self.physical = [str(p) for p in phys]
+        self.physical_all = physical_of(self.meta)
+        self.physical = self._want(pair)         # 이 Recording 이 쓰는 렌즈 (스트림 0, 1, …)
         self.size = (int(self.meta.get("width", 640)), int(self.meta.get("height", 480)))
         self.fps = float(self.meta.get("fps") or 0) or None      # 앱이 쓴 요청 fps (없으면 None → scan3d --app-fps)
         self.streams = self._streams()
         self.sensors = self._load_imu()
         self.timing = self._timing()
+        self.ts_ref = self._to_mid()
         t_all = [r[1] for s in self.streams for r in s.recs]
         self.t_first = min(t_all) if t_all else 0
         self.t_last = max(t_all) if t_all else 0
         self.duration_s = (self.t_last - self.t_first) * 1e-9
         self.n_frames = min(len(s) for s in self.streams) if self.streams else 0
 
+    def _want(self, pair):
+        allp = self.physical_all
+        if pair is None:
+            return allp[:2]
+        if isinstance(pair, str):
+            if pair == "all":
+                return list(allp)
+            pair = pair.replace("+", ",").split(",")
+        want = [str(p).strip() for p in pair if str(p).strip()]
+        miss = [p for p in want if p not in allp]
+        if miss or len(want) < 2:
+            raise ValueError(f"녹화 렌즈 {allp} 에 {'+'.join(want)} 쌍이 없음")
+        return want
+
     def _streams(self):
+        """self.physical 순서대로 스트림 (index 0, 1, …). slot = 앱 녹화 순서 (meta physical 안 위치, imu.csv frame_timing 값 순서)."""
         out = []
         spec = self.meta.get("streams")
+        by_phys = {}
         if spec:
             for i, s in enumerate(spec):
                 idx = int(s.get("index", i))
-                out.append(Stream(idx, str(s.get("physical", self.physical[idx] if idx < len(self.physical) else idx)),
-                                  self.path / s["video"], self.path / s["frames"]))
-        else:
-            for i, p in enumerate(self.physical[:2]):
+                ph = str(s.get("physical", self.physical_all[idx] if idx < len(self.physical_all) else idx))
+                by_phys[ph] = (idx, self.path / s["video"], self.path / s["frames"])
+        for i, p in enumerate(self.physical):
+            if p in by_phys:
+                slot, v, fc = by_phys[p]
+            else:
+                slot = self.physical_all.index(p) if p in self.physical_all else i
                 v = self.path / f"cam{p}.mp4"
                 fc = self.path / f"frames_cam{p}.csv"
-                if not v.is_file() or not fc.is_file():
-                    raise FileNotFoundError(f"렌즈 {p}: {v.name} / {fc.name} 없음")
-                out.append(Stream(i, p, v, fc))
-        out.sort(key=lambda s: s.index)
+            if not Path(v).is_file() or not Path(fc).is_file():
+                raise FileNotFoundError(f"렌즈 {p}: {Path(v).name} / {Path(fc).name} 없음")
+            st = Stream(i, p, v, fc)
+            st.slot = slot
+            out.append(st)
         if len(out) < 2:
             raise ValueError("스트림이 2개 필요 (렌즈 2, 5)")
+        if len(self.physical_all) > 2:
+            self.log(f"[rec] 녹화 렌즈 {'+'.join(self.physical_all)} 중 {'+'.join(self.physical)} 를 씀")
         lens_meta = self.meta.get("lenses") or {}
         for s in out:
             lm = lens_meta.get(str(s.physical)) or {}
@@ -360,9 +416,20 @@ class Recording:
 
     def _timing(self):
         ti = phone_rx.FrameTimingIndex(len(self.streams), keep=1 << 30)
-        for smp in self.sensors:                                 # imu.csv frame_timing (실시간 SENS 100 과 같은 값)
-            if smp.type == phone_rx.SENSOR_FRAME_TIMING:
-                ti.add(smp.timestamp_ns, smp.values)
+        slots = [getattr(s, "slot", s.index) for s in self.streams]
+        if slots != list(range(len(self.streams))):
+            # 3렌즈 녹화에서 일부만 쓰면: frame_timing 값은 앱 순서(slot) → 앱 순서로 모은 뒤 스트림 번호로 옮김
+            full = phone_rx.FrameTimingIndex(max(len(self.physical_all), max(slots) + 1), keep=1 << 30)
+            for smp in self.sensors:
+                if smp.type == phone_rx.SENSOR_FRAME_TIMING:
+                    full.add(smp.timestamp_ns, smp.values)
+            for i, sl in enumerate(slots):
+                ti.ts[i], ti.val[i] = full.ts[sl], full.val[sl]
+            ti.latest = full.latest
+        else:
+            for smp in self.sensors:                             # imu.csv frame_timing (실시간 SENS 100 과 같은 값)
+                if smp.type == phone_rx.SENSOR_FRAME_TIMING:
+                    ti.add(smp.timestamp_ns, smp.values)
         if self.meta.get("raw_ts") is True:
             self.log("[rec] raw_ts=true 녹화: physical_ts_ns 열 = logical 값 (frame_timing 조회가 안 맞을 수 있음)")
         for s in self.streams:                                   # frames CSV 의 프레임별 값이 있으면 그것으로 덮어씀
@@ -370,6 +437,35 @@ class Recording:
                 if e is not None:
                     ti.put(s.index, t, e, r or 0.0)
         return ti
+
+    def _to_mid(self):
+        """프레임 시각을 노출 가운데로 맞춘다 (실시간 앱 1.7-mid 헤더와 같은 기준). 반환 "mid_exposure" | "start"."""
+        ref = self.meta.get("timestamp_ref")
+        if ref == lps.TS_REF_MID or all(s.mid_col for s in self.streams):
+            if ref != lps.TS_REF_MID:
+                self.log(f"[rec] meta timestamp_ref={ref!r} 지만 frames CSV 에 t_mid_ns 열 → 노출 가운데로 봄")
+            elif not all(s.mid_col for s in self.streams):
+                self.log("[rec] 경고: timestamp_ref=mid_exposure 인데 t_mid_ns 열이 없는 CSV 가 있음 — 시각 열을 그대로 씀")
+            self.timing.set_mid()
+            self.log("[rec] 프레임 시각 = 노출 가운데 (timestamp_ref=mid_exposure)")
+            return lps.TS_REF_MID
+        if ref is not None:
+            self.log(f"[rec] 경고: 모르는 timestamp_ref={ref!r} → 노출 시작으로 보고 바꿈")
+        done = []
+        for s in self.streams:
+            if s.mid_col:
+                done.append(s.index)
+                continue
+            n, fb = s.to_mid()
+            if n:
+                done.append(s.index)
+                self.log(f"[rec] 옛 녹화 렌즈 {s.physical}: 노출 시작 → 노출 가운데 (exposure/rs 열, {n} 행"
+                         + (f", 값 없는 {fb} 행은 마지막으로 알던 값" if fb else "") + ")")
+            else:
+                self.log(f"[rec] 경고: 옛 녹화 렌즈 {s.physical}: frames CSV 에 노출 열이 없어 노출 시작 시각 그대로 "
+                         "(imu.csv frame_timing 이 있으면 재생 중 그 값으로만 보정)")
+        self.timing.set_mid(done)
+        return lps.TS_REF_MID if len(done) == len(self.streams) else "start"
 
     def iter_frames(self):
         """두 스트림 프레임을 시각 순서로 합쳐서 (실시간 도착 순서 근사)."""

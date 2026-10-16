@@ -51,10 +51,10 @@ WSL Ubuntu-22.04 ─ scan3d/run_scanner.py (venv_ffs)
 | 필드 | 형 | 프레임 패킷 | 센서 패킷 |
 |---|---|---|---|
 | magic | u32 | `0x53544552` "STER" | `0x53454E53` "SENS" |
-| index | u32 | 스트림 번호 0..n-1 (`--physical` 순서) | Android `Sensor.getType()` 값 (앱 자체 100 = frame_timing) |
+| index | u32 | 스트림 번호 0..n-1 (`--physical` 순서) | Android `Sensor.getType()` 값 (앱 자체 100 = frame_timing, 101 = stream_info) |
 | width | u32 | 640 | 0 |
 | height | u32 | 480 | 0 |
-| timestamp | u64 | ns, 아래 1.4 | ns, `SensorEvent.timestamp` |
+| timestamp | u64 | ns, 그 렌즈 사진의 **노출 가운데 시각** (앱 1.7-mid, 아래 1.4) | ns, `SensorEvent.timestamp` |
 | length | u32 | w*h*3/2 = 460800 | 4 × 값 개수 |
 | payload | bytes | NV21 | float32 big-endian 값들 |
 
@@ -73,7 +73,7 @@ WSL Ubuntu-22.04 ─ scan3d/run_scanner.py (venv_ffs)
 | 필드 | 값 |
 |---|---|
 | magic | `0x5354454A` "STEJ" |
-| index / width / height / timestamp | STER 와 같음 (물리 렌즈 SENSOR_TIMESTAMP, 640x480) |
+| index / width / height / timestamp | STER 와 같음 (렌즈 노출 가운데 시각 1.4, 640x480) |
 | length | JPEG 바이트 수 (가변, PC 는 1 B ~ 8 MiB 만 받음) |
 | payload | baseline JPEG 한 장 (`YuvImage(NV21).compressToJpeg`, 회전·크기 변경 없음) |
 
@@ -95,7 +95,7 @@ WSL Ubuntu-22.04 ─ scan3d/run_scanner.py (venv_ffs)
 | 0 | magic | u32 | `0x53544548` "STEH" |
 | 4 | index | u32 | 렌즈 번호 0..n-1 (`physical` 순서, 예 0 = 렌즈 2, 1 = 렌즈 5) |
 | 8 / 12 | width / height | u32 | 인코딩 크기 (예 640 / 480) |
-| 16 | timestamp | u64 | 그 프레임의 **물리 렌즈 SENSOR_TIMESTAMP** ns (1.4, STER/STEJ 와 같은 값) |
+| 16 | timestamp | u64 | 그 프레임의 **노출 가운데 시각** ns (1.4, 앱 1.7-mid 부터; STER/STEJ 와 같은 값. 1.6 까지는 물리 SENSOR_TIMESTAMP) |
 | 24 | length | u32 | 8 + NAL 바이트 수 |
 | 28 | flags | u32 | bit0 = 키프레임 (IDR), bit1 = 이 payload 안에 SPS+PPS 있음 |
 | 32 | seq | u32 | 렌즈별 인코더 출력 번호 (0 부터 +1). 건너뛰면 그 사이 프레임이 앱에서 버려진 것 |
@@ -132,9 +132,22 @@ WSL Ubuntu-22.04 ─ scan3d/run_scanner.py (venv_ffs)
 ### 1.4 타임스탬프 기준
 - 카메라: `SENSOR_INFO_TIMESTAMP_SOURCE = 1 (REALTIME)` (cameras_s24.json, 모든 물리 렌즈 ts=1) → `SystemClock.elapsedRealtimeNanos()` 시계.
 - 센서: `SensorEvent.timestamp` 도 같은 elapsedRealtimeNanos 시계 (MainActivity.java:50-51 주석, `stats()["clock_gap_ms"]` 로 확인하는 구조).
-- 기본 모드(`raw_ts=false`): 프레임 timestamp = **물리 렌즈별 SENSOR_TIMESTAMP** (CaptureTimestampMatcher 가 논리 결과의 `getPhysicalCameraResults()` 와 이미지 timestamp 를 정확히 짝지은 뒤 물리 값으로 바꿔 보냄). `raw_ts=true` 면 논리 timestamp(두 렌즈 같음).
-- SENSOR_TIMESTAMP 의 뜻 = 첫 행 노출 시작. 롤링셔터·노출 중앙 시각은 아래 frame_timing 으로 계산.
-- 센서 타입 100 "frame_timing" (MainActivity.java:63-97): timestamp = 논리 SENSOR_TIMESTAMP, values = `[phys[0]-logical ms, phys[1]-logical ms, exposure ms, frame duration ms, rolling shutter skew ms]` (렌즈 2개 기준 5값).
+- **프레임 timestamp (STER/STEJ/STEH 헤더, 녹화 frames CSV `t_mid_ns`) = 그 렌즈 사진 전체 노출의 가운데 시각** (앱 1.7-mid / versionCode 11, 2026-10-16):
+  `t_mid = 물리 SENSOR_TIMESTAMP + SENSOR_EXPOSURE_TIME/2 + SENSOR_ROLLING_SHUTTER_SKEW/2`. 첫 줄은 [t, t+노출], 마지막 줄은 [t+skew, t+skew+노출]
+  이므로 모든 줄 노출 구간의 가운데. 시계는 그대로 elapsedRealtimeNanos (IMU 와 같음) → PC 는 더할 것 없이 IMU 와 바로 비교.
+  - 노출·skew 는 **렌즈별 물리 결과** (`getPhysicalCameraResults()`) 값. 그 렌즈 결과에 없으면 논리 결과 값, 그것도 없으면 그 렌즈의 마지막으로
+    알던 값 (처음부터 모르면 0 → 노출 시작). metrics.json / meta.json `mid_ts` {ref, from_physical, from_logical, last_known, unknown, no_result}
+    = 그렇게 계산한 프레임 수 (`no_result` = 결과를 못 찾은 프레임(raw_ts 에서 이미지가 결과보다 먼저 옴) → 그 렌즈 마지막 오프셋).
+  - 기본 모드(`raw_ts=false`): t = **물리 렌즈별 SENSOR_TIMESTAMP** (CaptureTimestampMatcher 가 논리 결과의 `getPhysicalCameraResults()` 와 이미지 timestamp 를
+    정확히 짝지은 뒤 물리 값으로 바꿈). `raw_ts=true` 면 논리 timestamp(두 렌즈 같음) 에 같은 오프셋.
+  - 앱이 기준을 알리는 곳: status 꼬리 ` ts_ref=mid` (실행 상태 줄, 15.4), 센서 타입 101 "stream_info" (아래), caps.json / meta.json
+    `timestamp_ref: "mid_exposure"`, metrics.json `timestamp_ref`. 1.6 까지(이 표시들이 없음)는 t = SENSOR_TIMESTAMP (첫 줄 노출 시작).
+  - PC: `phone_rx.StreamReceiver` 가 101 을 받으면 (또는 scan3d 가 앱 status 의 `ts_ref=mid` 를 보면) `FrameTimingIndex.set_mid()` → 노출 보정 0.
+    옛 앱(101 없음)만 예전처럼 frame_timing 으로 0.5·(노출 + skew) 를 더한다. 녹화 재생은 RECORDING_FORMAT.md (옛 녹화는 노출 열로 바꿈).
+- SENSOR_TIMESTAMP 의 뜻 = 첫 행 노출 시작 (frame_timing 의 오프셋은 이 값 기준 그대로).
+- 센서 타입 100 "frame_timing" (MainActivity.java:63-97): timestamp = 논리 SENSOR_TIMESTAMP, values = `[phys[0]-logical ms, phys[1]-logical ms, exposure ms, frame duration ms, rolling shutter skew ms]` (렌즈 2개 기준 5값, 노출·skew 는 논리 결과 값). 1.7-mid 에서도 바뀌지 않음 (물리 오프셋 = 노출 시작 기준).
+- 센서 타입 101 "stream_info" (앱 1.7-mid): timestamp = 보낸 시각 (elapsedRealtimeNanos), values = `[ts_ref]` (1.0 = 프레임 timestamp 가 노출 가운데).
+  접속 직후 한 번, 그 뒤 frame_timing 30 개마다 한 번. 녹화 imu.csv 에는 안 씀 (녹화는 meta `timestamp_ref`). 옛 PC 는 모르는 센서로 받아 넘김.
 - 동기 등급 `LOGICAL_MULTI_CAMERA_SENSOR_SYNC_TYPE = 0 (APPROXIMATE)` → 두 렌즈 노출이 하드웨어로 묶였다는 보장은 없다. 과거 측정(raw_ts) skew 0 ms, 물리 timestamp 모드의 skew 분포는 이 명세 작성 시점에 기록 없음.
 
 ### 1.5 시작 절차 (z_phone_stereo.py:38-48, 186-208 그대로, adb 만 Windows adb.exe)
@@ -167,6 +180,7 @@ WSL Ubuntu-22.04 ─ scan3d/run_scanner.py (venv_ffs)
 | 11 | TYPE_ROTATION_VECTOR | | 지자기 포함 |
 | 6 | TYPE_PRESSURE | hPa | |
 | 100 | (앱) frame_timing | 1.4 참조 | 프레임마다 |
+| 101 | (앱) stream_info | [ts_ref] 1.0 = 노출 가운데 (1.4) | 접속 때 + 약 2 s 마다 (1.7-mid) |
 
 **원시 가속도계(TYPE_ACCELEROMETER = 1)는 지금 등록되어 있지 않다.** OpenVINS 는 중력 포함 원시 비력(specific force) + 자이로가 필요하다.
 
@@ -401,7 +415,7 @@ stdout: CAM 1개 처리마다 JSON 한 줄 (stderr = OpenVINS 로그):
 ### 9.4 카메라 입력 규칙
 - cam0/cam1 = **정류된** 영상 (`rectify_pair` 후 gray). 이유: 두 렌즈 fx 가 262 vs 432 로 1.65 배 달라 원영상끼리 KLT 스테레오 매칭이 어렵다. 정류 후 둘 다 f=462.9 핀홀, 왜곡 0.
 - 스테레오 전송 조건: 쌍의 물리 timestamp 차 `|t5 − t2| <= 1 ms` (`--vio-stereo-skew-ms`, 기본 1.0). 넘으면 cam0 만 보냄 (n_cams=1). VIO 는 쌍마다 한 timestamp 만 받기 때문.
-- 카메라 시각: `t_cam = t_lens2_ns + 0.5·(exposure_ms + rolling_skew_ms)·1e6` (가장 최근 frame_timing 값, 없으면 보정 없이) → `(t − t0_ns)·1e-9`. 나머지 상수 오프셋은 OpenVINS `calib_cam_timeoffset` 가 추정.
+- 카메라 시각: `t_cam` = 왼쪽 렌즈 노출 가운데 시각 = 앱 1.7-mid 헤더 timestamp 그대로 (보정 0). 옛 앱만 `t_lens2_ns + 0.5·(exposure_ms + rolling_skew_ms)·1e6` (그 프레임 frame_timing 값, 없으면 최신값, 프레임 간격 안으로 자름) → `(t − t0_ns)·1e-9`. 나머지 상수 오프셋은 OpenVINS `calib_cam_timeoffset` 가 추정.
 
 ### 9.5 설정 파일 (calib_vio.py 가 생성, `scan3d/vio/config/phone_s24/`)
 - `estimator_config.yaml`: config/euroc_mav 것을 바탕으로 `use_stereo: true`, `max_cameras: 2`, `calib_cam_extrinsics: true`, `calib_cam_intrinsics: false` (정류 영상이라 고정), `calib_cam_timeoffset: true`, `gravity_mag: 9.81`, `init_dyn_use: false` (정지 초기화: 시작 때 폰을 2 s 정지 후 움직이기, `init_window_time 2.0`, `init_imu_thresh` 는 폰 잡음에 맞춰 조정), `track_frequency` = 실제 fps (30), `num_pts 200`, `histogram_method HISTOGRAM`, `use_mask: false`, `relative_config_imu`, `relative_config_imucam`, `filepath_*` 는 `scan3d/runs/` 아래.
@@ -559,3 +573,82 @@ venv_ffs/bin/python -m scan3d.run_scanner --calib calib_phone_pair.json --fps 30
 ### 14.6 크기별 보정 (참고, PC 담당)
 같은 4:3·센서 전체 영역(`full_active_array=true`)이면 640x480 보정을 비례 변환해 쓴다: fx, fy, cx, cy 에 (새 폭/640) 을 곱하고 왜곡 계수·두 렌즈 R,T 는 그대로.
 엄밀히는 픽셀 중심 규약 때문에 cx' = (cx+0.5)·s − 0.5 (s = 크기 비율) 이 맞다 (단순 곱과의 차이 = 0.5·(s−1) px: 960x720 0.25 px, 1920x1440 1 px).
+
+## 15. 렌즈 위상 맞추기 (앱 1.7-mid / versionCode 11: 위상 = 노출 가운데 차이; 1.6-sync / 10: 방법 C; 처음 1.5-sync / 9)
+
+### 15.1 문제 (측정, 메인 세션 2026-10-16 13:40, 앱 1.4.3-h264, 640x480 live h264)
+- 논리 카메라 `LOGICAL_MULTI_CAMERA_SENSOR_SYNC_TYPE = 0 (APPROXIMATE)` → 두 물리 렌즈(2, 5)는 하드웨어 동기 없이 따로 돈다.
+- 렌즈 5 − 렌즈 2 물리 SENSOR_TIMESTAMP 차이(= 렌즈 위상)는 앱을 켤 때마다 무작위: 15 fps +26.2 ms, 20 fps −1.16 ms, 24 fps −10.26 ms,
+  30 fps +5.4 ms. 30 fps 는 두 센서 주기가 조금 달라 약 4 ms/s 로 미끄러지고, 15·20·24 fps 도 0.05~0.08 ms/s.
+- PC 쌍 묶기 기준 5 ms 밖이면 짝 0 → "짝 안 맞음 100 %". 기준을 넓히는 건 답이 아님 (기선 15.5 mm: 26 ms × 0.3 m/s = 8 mm 어긋남).
+- **1.5-sync 실측 (메인 세션, 15 fps, 25 s)**: 방법 A — S24 는 물리 요청 키에 SENSOR_FRAME_DURATION·AE 키를 다 갖고 있지만 위상이
+  따라오지 않음 ("requested −58.7 ms, moved 0.2 ms in 3 s"). 방법 B — 반복 요청 재시작 1번 + 세션 재생성 9번에도 위상 29.2 → 30.2 ms
+  (자연 미끄러짐만). 반면 앱을 껐다 켜면 (CameraDevice close → open) 위상이 무작위로 바뀜. → 센서는 장치가 열려 있는 동안 계속 돌고,
+  위상은 장치를 열 때 정해진다. 1.6-sync 부터 auto = 방법 C.
+
+### 15.2 위상 재기 (`PhaseSync.java`, 카메라 스레드)
+- 매 논리 결과의 `getPhysicalCameraResults()` SENSOR_TIMESTAMP: 대상 렌즈 = "5" (없으면 ids[1]), 기준 = 다른 하나.
+- 주기 T = 기준 렌즈 연속 timestamp(노출 시작) 차이의 중앙값 (0.5~1.5 × 1/fps 만, 5개 전에는 1/fps).
+- **1.7-mid: 위상 = wrap(t_mid5 − t_mid2)** ∈ [−T/2, T/2) — 두 렌즈 노출 가운데 시각 차이 (1.4 의 식, 렌즈별 물리 노출·skew).
+  두 렌즈 노출 시간·skew 가 다르면 (렌즈 5 와 2 의 센서·AE 가 다름) 노출 시작이 같아도 찍힌 순간이 다르므로, PC 쌍 묶기·VIO 가 쓰는
+  헤더 시각과 같은 기준으로 맞춘다. 1.6 까지의 위상 = wrap(t5 − t2) (노출 시작 차이) 도 계속 재서 `phase_start_ms` 로 보고.
+  판단·표시·문턱(2.5 / 4 ms)은 가운데 위상. 표시·판단은 최근 9개 중앙값. 펼친(unwrap) 위상을 덮어쓰기 없는 구간 4 s 로 직선 맞춤 → 미끄러짐 ms/s.
+
+### 15.3 맞추기
+- **방법 C (auto 기본, 1.6-sync)**: |위상| ≥ 2.5 ms 이면 CameraDevice 를 닫고 다시 연다 (`MainActivity.doReopen`: 세션·장치 close →
+  같은 논리 id 로 openCamera → 새 장치로 요청 다시 만들고 같은 ImageReader 로 세션). ImageReader·인코더·녹화기·소켓은 그대로.
+  새 장치 첫 결과 2 개는 버리고 3~5 프레임으로 새 위상을 잰다: 3 개 중앙값이 6 ms 넘게 밖이면 바로 다음 시도, 5 개 중앙값 < 2.5 ms 면 locked.
+  한 바퀴 최대 25 번. 위상이 열 때마다 [−T/2, T/2) 에 고르게 정해진다고 보면 한 번에 들어올 확률 5 ms / T: 15 fps 7.5 %
+  (기대 ~13 번, 25 번 안에 ~86 %), 30 fps 15 % (기대 ~7 번, ~98 %). 25 번 실패 → `failed` 30 s 쉬고 다시 (가장 작았던 위상에서 멈추지 않음:
+  다시 열면 어차피 바뀜). 한 번 걸린 시간 (요청 → 판정 `c_try_ms_*`, 요청 → 새 장치 첫 결과 `c_open_ms_*`), 지난 맞춤 걸린 시간
+  `c_last_align_s` 기록. 열기 실패 → 0.7 s 뒤 다시 (3 번), 5 s 안에 장치·세션이 안 생기면 다시 → 그래도 안 되면 `ERROR CAMERA_REOPEN_FAILED`.
+- locked 뒤 |위상| > 4 ms 로 미끄러지면 다시 C (잠근 뒤 20 s 안에는 안 함: 30 fps 의 4 ms/s 미끄러짐으로 끝없이 다시 여는 것 방지).
+  **MP4 에 프레임이 들어가는 중이면 다시 열지 않음** → 상태 `drift` (경고만, `hold_reason`). 녹화가 끝나면 (both → 실시간 계속) 다시 C.
+- **방법 A (`sync=a` 만)**: S24 에서 안 먹힘 (15.1). `Caps.methodA` 조건·제어는 1.5-sync 그대로 (렌즈 5 SENSOR_FRAME_DURATION ±2 %,
+  P 0.15 + 미끄러짐 보정, 맞추는 동안 렌즈 5 AE 끔). 1.6: 물리 id 빌더가 렌즈별 값을 템플릿 기본값으로 채우므로 AF 끔·초점 거리·OIS 끔·
+  영상 안정화 끔·AE fps 범위를 물리 키면 두 렌즈 모두에 복사 (REVIEW8 H1). 되돌리기 실패 → 다음 프레임마다 다시 (M5). A 가 안 되면 B 로
+  가지 않고 `failed` (M4). "요청을 안 따름"만 영구 실패 (`method_a_failed`), 시간 초과는 그 회차만.
+- **방법 B (`sync=b` 만)**: S24 에서 안 먹힘 (15.1). 반복 요청 재시작 → 세션 재생성, 최대 10 번. 녹화 중에는 안 함. 세션 재생성이
+  CONFIGURE_FAILED 면 0.3 s 뒤 한 번 더, 그래도 실패면 `ERROR CONFIGURE_FAILED (phase sync)` (REVIEW8 L2).
+- A·B 측정 결과는 caps.json `phase_sync.method_a_measured / method_b_measured`, metrics `sync.method_a_measured / method_b_measured`.
+- 인자 (intent extra): `sync=auto|c|a|b|off` (기본 auto = c), `rec_wait_sync_s` (기본 40 = 15 fps 에서 C 약 25 번).
+  PC: `phone_link.PhoneLink(sync=, rec_wait_sync_s=)` → `--es sync … --ei rec_wait_sync_s …`, scan3d `--app-sync`, `--app-rec-wait-sync-s`.
+
+### 15.4 status.txt 꼬리 (첫 낱말 그대로)
+실행 상태(STREAMING / RECORDING / RECORDING+STREAMING) 줄 끝에 붙음, 바뀔 때만 다시 씀 (맞추는 중에는 0.5 ms 넘게·1 s 넘게 지나야, C 는 시도마다):
+`STREAMING logical=0 … mode=live ts_ref=mid sync=aligning phase=+12.3ms method=C try=7` / `… ts_ref=mid sync=locked phase=+0.4ms method=C|A|B|none` /
+`sync=measuring` / `sync=failed phase=… method=C` / `sync=drift phase=… method=C`, 녹화기가 맞춤을 기다리는 동안 ` rec_wait=1`.
+` ts_ref=mid` (1.7-mid) = 프레임 timestamp 가 노출 가운데 (1.4); sync=off 여도 실행 상태 줄에 붙음. `phase=` 는 가운데 위상.
+`warn=` 이 있으면 ts_ref·sync 꼬리는 그 앞. 첫 낱말이 바뀌지 않으므로 phone_link / win_relay 의 상태 판단은 그대로. `method=none` = 처음부터 맞았음.
+status 는 한 잠금 안에서 쓰고, sync 만 바뀌면 꼬리 없는 마지막 줄(base)에 새 꼬리를 붙여 다시 씀 (옛 줄이 RECORD_DONE 을 덮지 않음, REVIEW8 L1).
+PhaseSync 는 자기 잠금을 쥔 채 status 를 부르지 않음 (카메라 스레드로 post).
+
+### 15.5 녹화
+- `mode=record`·`both`: 위상이 맞을 때까지 (최대 `rec_wait_sync_s`, 기본 40 s) 프레임을 녹화기에 안 넣음 → MP4 는 맞춘 뒤부터.
+  `both` 는 실시간 스트림이 녹화 인코더를 같이 쓰므로 실시간 영상도 그때부터. IMU·frame_timing 은 처음부터.
+  `meta.json`: `sync_mode`, `rec_wait_sync_s`, `sync_gate_wait_ms`, `sync_at_record_start` (아래 sync 객체), 끝날 때 `sync`.
+- 녹화기에 프레임이 들어가기 시작하면 카메라를 다시 열지 않음 (C·B, MP4 끊김 방지) → 미끄러지면 `drift` 경고만. 매 프레임 가운데 위상은
+  두 렌즈 frames CSV `t_mid_ns` 차이, 노출 시작 위상은 frame_timing (센서 type 100) 행의 두 렌즈 물리 오프셋 차이로 언제든 다시 계산할 수 있다.
+
+### 15.6 metrics.json `sync` / 웹
+```
+"sync": {"state": "off|measuring|aligning|locked|failed|drift", "method": "C|A|B|none|null", "phase_ms" (마지막 값, 다시 여는 동안 유지; = phase_mid_ms),
+         "phase_mid_ms" (1.7-mid: 노출 가운데 위상 = 판단 기준), "phase_start_ms" (노출 시작 위상, 1.6 까지의 정의), "phase_ref": "mid_exposure",
+         "slip_ms_s" (1.6 에서 1000 배 오류 고침, REVIEW8 M1), "adjustments" (A 주기 요청 수), "restarts" (B 다시 시작 수), "episodes",
+         "tries" (이번 회차 시도), "period_ms", "lens_ref", "lens_target", "mode", "auto_method": "C",
+         "reopens", "reopen_fails", "c_try", "c_max_tries" 25, "c_rounds_failed", "c_locks", "c_lock_ms" 2.5, "c_realign_ms" 4,
+         "c_expected_tries" (T / 5 ms), "c_try_ms_last|avg|max", "c_open_ms_last|avg|max", "c_last_align_s", "align_s" (맞추는 중),
+         "retry_in_s" (failed), "hold_reason" (drift), "rec_wait", "rec_wait_sync_s",
+         "method_a_possible", "method_a_ae_key", "method_a_reason", "method_a_failed", "method_a_fail_reason",
+         "method_a_measured", "method_b_measured", "override_on", "target_dur_req_ms", "target_dur_ms", "session_recreate", "events" (처음 40 개)}
+```
+- caps.json: `logical.physical_request_keys` (이름 목록), `logical.request_keys_has`, `logical.session_keys`, `logical.manual_sensor`,
+  렌즈별 `sync_type`, `manual_sensor`, `exposure_ns_range`, `sensitivity_range`, `max_frame_duration_ns`,
+  `phase_sync{target_lens, sync_type, physical_request_keys_has{…}, method_a_possible, method_a_ae_key, method_a_reason, auto_method,
+  method_a_measured, method_b_measured}`.
+- web_server: metrics.json `sync` (events 뺀 전부) → `ui.sync`. 부하 모델이 꺼져 있어도 읽고, sync 가 없거나 metrics 를 못 읽으면 지움
+  (REVIEW8 L3). scan3d: status 꼬리 → `session.sync` (녹화 모드만; 앱 시작 때 찍은 app_status 는 안 씀).
+- 웹 단계 표시줄: 맞추는 중이면 "두 렌즈 시각 맞추는 중 — 카메라 다시 여는 중 (N 번째) · 지금 위상 X ms" (노랑). 그동안 영상이 끊기고
+  짝이 0 이어도 빨간 경고 대신 이 안내. 25 번 실패 뒤 쉬는 중이면 "N 초 뒤 다시 시도". 녹화 대기(`rec_wait`)면 "맞추면 바로 녹화 시작".
+  `drift` 면 녹화 중 어긋남 경고. 고급 → "렌즈 위상" 줄 (상태·위상·미끄러짐·방법·다시 열기 횟수·한 번 평균 시간·지난 맞춤 시간).
+- 쌍 묶기 기준 `--pair-skew-ms 5` 는 그대로.

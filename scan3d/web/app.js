@@ -1,6 +1,8 @@
 // 3D 스캐너 웹 화면 — three.js r128, 월드 z-up (OpenVINS). 복셀 = InstancedMesh 정육면체, 증분 폴링.
 // 위쪽 "단계 표시줄" 은 /api/state 의 vio·phone·depth·session·ui(USB·온도·중계) 로 지금 할 일을 한 줄로 계산한다 (stepFrom).
 // 오른쪽 아래 카메라 창 2개 (/api/cam.jpg?lens=0|1) — 스캔·복원 중이고 화면이 보일 때만 약 3 fps 로 갱신.
+// 깊이 렌즈 '3개 모두 녹화 (비교용)' ([폰에 녹화만] 에서만) → 녹화 목록에서 쌍별 [2+5 보기] [2+6 보기], 리플레이 위쪽에서 쌍 바꾸기 + 비교 숫자.
+// 녹화본 목록(오른쪽 칸, /api/recordings items)에서 [▶ 보기] → 리플레이 (최종 맵 · 시간 따라 보기, /api/replay/*). 카메라 창은 그 시각의 녹화 프레임.
 // state.preview 가 참이면 (scan3d/preview_server.py) 위쪽에 "미리보기 — 가짜 데이터" 띠를 띄운다.
 'use strict';
 const $ = id => document.getElementById(id);
@@ -142,7 +144,7 @@ const labelsEl = $('labels');
 function drawLabels() {
   const W = canvas.clientWidth, H = canvas.clientHeight;
   let html = '';
-  if ($('cBoxes').checked) {
+  if ($('cBoxes').checked && !RV.on) {
     const v = new THREE.Vector3();
     for (const o of objects) {
       v.set(o.box_center[0], o.box_center[1], o.box_center[2] + o.box_size[2] / 2).project(cam);
@@ -159,6 +161,7 @@ trajLine.frustumCulled = false; scene.add(trajLine);
 const frustum = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x44ddff }));
 frustum.frustumCulled = false; scene.add(frustum);
 async function pollTraj() {
+  if (RV.on) { setTimeout(pollTraj, 500); return; }      // 리플레이 중에는 리플레이 궤적·절두체만
   try {
     const j = await (await fetch('/api/trajectory', { cache: 'no-store' })).json();
     const pos = new Float32Array(j.points.length * 3);
@@ -188,7 +191,36 @@ async function pollTraj() {
 // 반환: { step: 1..4 (지금 단계, 0 = 없음), done: 끝난 단계 수, level: ok|warn|bad|'', main, sub }
 const MODE_KO = { idle: '대기', live: '실시간', record: '폰에 녹화', both: '녹화 + 실시간', replay: '녹화 복원' };
 let sessT0 = 0, lastMode = 'idle', camSeenT = 0;
-const PAIR_DROP_WARN = 50, PAIR_DROP_BAD = 80;   // 최근 10초 짝 없어 버린 비율 % (REVIEW5 N1)
+// 최근 10초 짝 없어 버린 비율 % (REVIEW5 N1). 쌍 묶기 기준이 반 프레임 주기(0.45·T)라 위상과 상관없이 거의 다 짝이 됨 →
+// 버림은 한쪽 렌즈 프레임이 빠졌다는 뜻 (USB·발열). 그래서 예전(50/80)보다 낮게 잡는다.
+const PAIR_DROP_WARN = 20, PAIR_DROP_BAD = 50;
+// 렌즈 위상 맞추기 (앱 1.5-sync, SPEC 15): ui.sync = metrics.json sync, se.sync = status 줄 꼬리 (녹화 모드)
+const SYNC_KO = { off: '끔', measuring: '재는 중', aligning: '맞추는 중', locked: '맞음', failed: '못 맞춤 (잠깐 쉼)',
+  drift: '어긋남 (녹화 중이라 다시 안 맞춤)' };
+const METHOD_KO = { C: 'C (카메라 다시 열기)', A: 'A (한 렌즈 찍는 주기 조절)', B: 'B (촬영 다시 시작)', none: '처음부터 맞음' };
+function syncOf(s) { const ui = s.ui || {}, se = s.session || {}; return ui.sync || se.sync || null; }
+function syncTry(sy) { const n = sy.method === 'C' && sy.c_try !== undefined && sy.c_try !== null ? sy.c_try : sy.tries; return n || 0; }
+// 맞추는 중 안내 (1.6-sync 방법 C: 카메라를 닫았다 다시 열 때마다 찍는 순간이 새로 정해짐, SPEC 15.3)
+function syncMain(sy) {
+  const ph = sy.phase_ms !== null && sy.phase_ms !== undefined ? `지금 위상 ${f(Math.abs(sy.phase_ms), 1)} ms` : '위상 재는 중';
+  if (sy.state === 'failed') return `두 렌즈 시각을 아직 못 맞췄습니다 — ${sy.retry_in_s != null ? sy.retry_in_s + '초 뒤' : '잠시 뒤'} 다시 시도합니다 (${ph})`;
+  if (sy.state === 'measuring') return `두 렌즈 시각 재는 중… (${ph})`;
+  if (sy.method === 'C') return `두 렌즈 시각 맞추는 중 — 카메라 다시 여는 중 (${syncTry(sy)}번째) · ${ph}`;
+  if (sy.method === 'B') return `두 렌즈 시각 맞추는 중 — 촬영 다시 시작 (${syncTry(sy)}번째) · ${ph}`;
+  return `두 렌즈 시각 맞추는 중… (${ph})`;
+}
+function syncSub(sy, extra) {
+  const parts = ['폰을 그대로 두세요.'];
+  if (sy.method === 'C' || sy.state === 'failed') {
+    parts.push('카메라를 다시 열 때마다 두 렌즈가 찍는 순간이 새로 정해지고, 2.5 ms 안에 들어오면 멈춥니다.');
+    const e = sy.c_expected_tries, t = sy.c_try_ms_avg;
+    if (e) parts.push(`보통 ${Math.round(e)}번쯤${t ? ` (한 번에 약 ${(t / 1000).toFixed(1)}초)` : ''} 걸립니다.`);
+    if (sy.state === 'failed') parts.push(`${sy.c_max_tries || 25}번 해도 안 맞으면 30초 쉬었다가 다시 합니다.`);
+  }
+  parts.push(extra || '그동안 영상이 잠깐씩 끊기고 짝이 0 이어도 정상입니다.');
+  return parts.join(' ');
+}
+function phaseTxt(sy) { return sy && sy.phase_ms !== null && sy.phase_ms !== undefined ? `${f(Math.abs(sy.phase_ms), 1)} ms` : '재는 중'; }
 function loadSec(s, dp) {                        // 깊이 모델 로드 경과 초 (서버 시각 기준, REVIEW5 N2)
   if (!dp || !dp.load_t0) return '';
   const el = Math.max(0, (s.t || Date.now() / 1000) - dp.load_t0);
@@ -253,13 +285,23 @@ function stepFrom(s) {
       esc(relay.error || '') + (relay.fails > 1 ? ` — 자동으로 다시 시도 중 (${relay.fails}번째)` : ' — 자동으로 다시 시도합니다. 계속되면 [정지] 후 다시 [▶ 스캔 시작]'));
   }
 
+  const sy = syncOf(s);
+  const recWaitTxt = sy ? `맞추면 바로 녹화가 시작됩니다 (최대 ${sy.rec_wait_sync_s || 40}초 기다림).` : '';
   if (mode === 'record') {
     const r = rec;
     if (!recOn) return R('warn', 2, 1, '폰 녹화를 켜는 중…', '폰 화면을 켜 두세요.');
-    if (since < 3) return R('warn', 3, 2, '폰을 2초 가만히 두세요', '');
+    // 녹화기가 아직 위상 맞춤을 기다릴 때만 (녹화가 시작된 뒤에는 다시 맞추지 않음, REVIEW8 L3)
+    if (sy && sy.rec_wait) return R('warn', 3, 2, syncMain(sy), syncSub(sy, recWaitTxt));
     const t = r.elapsed_s !== undefined ? ` · ${r.elapsed_s} s` : '';
+    if (sy && sy.state === 'drift') return R('warn', 4, 3, `폰에 녹화 중${t} — 두 렌즈 시각이 조금 어긋났습니다 (${phaseTxt(sy)})`,
+      '녹화가 끊기지 않게 녹화 중에는 다시 맞추지 않습니다. 복원 때 짝이 조금 덜 맞을 수 있습니다.');
+    if (since < 3) return R('warn', 3, 2, '폰을 2초 가만히 두세요', '');
     return R('ok', 4, 3, `천천히 움직이세요 — 폰에 녹화 중${t}`, '끝나면 [■ 정지]. 나중에 고급 → 녹화본 에서 3D 로 복원합니다.');
   }
+  // 실시간: 앱이 카메라를 다시 열며 위상을 맞추는 동안은 영상이 끊기고 짝이 0 이어도 정상 → 빨간 경고 대신 안내 (SPEC 15.6)
+  if (sy && (sy.state === 'aligning' || (sy.state === 'failed' && sy.method === 'C') || sy.rec_wait))
+    return R('warn', 3, 2, syncMain(sy), syncSub(sy, mode === 'both' && sy.rec_wait
+      ? recWaitTxt + ' 실시간 영상도 그때부터 들어옵니다.' : ''));
   // 실시간 (live / both)
   // B9: 브리지 시작 자체가 실패했으면 "카메라 켜는 중" 대신 진짜 원인을 먼저
   if (!camOn && vio.error && /시작 실패|다시 띄우기 실패/.test(vio.error))
@@ -274,17 +316,24 @@ function stepFrom(s) {
   if (ph.error) return R('bad', 2, 1, '폰 영상 수신 오류', esc(ph.error));
   const imuOut = ph.imu_sync ? ph.imu_sync.out : 0;
   if (!imuOut && (ph.pairs || 0) > 150) return R('bad', 3, 2, '폰 움직임 센서 값이 안 들어옵니다', '폰 앱이 최신이 아닐 수 있습니다 (README 알려진 한계). 위치 추적을 할 수 없습니다.');
-  // REVIEW5 N1: 두 렌즈 시각차가 쌍 묶기 기준보다 커서 짝을 못 지으면 원인을 보여 준다 (기준은 자동으로 넓히지 않음)
+  // REVIEW5 N1: 짝을 많이 버리면 원인을 보여 준다. 쌍 묶기 기준은 반 프레임 주기(0.45·T, 15 fps 면 30 ms)라
+  // 두 렌즈가 어긋나 찍어도(10~28 ms) 가장 가까운 프레임끼리 짝이 된다 → 버림이 많으면 한쪽 렌즈 프레임이 빠지는 것
   const pd = ph.pair_drop_pct, pairLow = pd !== null && pd !== undefined && pd >= PAIR_DROP_WARN;
-  const pairMsg = pairLow ? `두 렌즈 시각 차이가 커서 짝이 안 맞음 — 기준 ${f(ph.pair_skew_ms, 1)} ms, 버린 비율 ${f(pd, 0)} %` : '';
-  const pairHelp = '짝이 적으면 위치 추적·깊이가 멈춥니다. 기준은 자동으로 넓히지 않습니다. 계속되면 스캐너를 '
-    + '--pair-skew-ms 10 --vio-stereo-skew-ms ' + f(vio.skew_limit_ms, 0) + ' 로 다시 켜세요 (쌍 묶기만 넓히고 추적 기준은 그대로). 자세히: 고급 → 렌즈 시각차.';
+  const pairMsg = pairLow ? `한쪽 렌즈 영상이 자주 빠져 짝이 안 맞음 — 기준 ${f(ph.pair_skew_ms, 1)} ms, 버린 비율 ${f(pd, 0)} %` : '';
+  const pairHelp = '두 렌즈는 서로 맞춰 찍지 않지만, 가장 가까운 프레임끼리 짝을 짓고 그 사이 폰 움직임은 깊이 계산에서 보정합니다. '
+    + '그런데도 짝을 많이 버리면 한쪽 렌즈 영상이 끊기는 것입니다 — 케이블을 확인하고, 폰이 뜨거우면 쉬었다가, '
+    + '계속되면 [■ 정지] → [▶ 스캔 시작]. 자세히: 고급 → 렌즈 시각차.';
   if (pairLow && (!vio.init || pd >= PAIR_DROP_BAD)) return R('bad', 3, 2, pairMsg, pairHelp);
   if (vio.error) return R('warn', 3, 2, '위치 추적을 다시 켜는 중… 폰을 2초 가만히 두세요',
     `자동으로 다시 켭니다${vio.bridge_restarts ? ` (${vio.bridge_restarts}번째)` : ''}. 1분 넘게 이 줄이 그대로면 [↺ 처음부터 다시]. (${esc(vio.error)})`);
   if (vio.status === 'lost') return R('bad', 4, 3, '위치 추적을 잃었습니다 — 천천히 움직이거나 [↺ 처음부터 다시]', '빠르게 돌리거나 무늬 없는 벽만 비추면 잃기 쉽습니다.');
-  if (!vio.init) return R('warn', 3, 2, '폰을 2초 가만히 두세요', '위치 추적을 준비하는 중입니다. 책상 위에 내려놓아도 됩니다.'
-    + (!dp.ready && dp.loading ? ` · 깊이 모델 불러오는 중…${loadSec(s, dp)}` : ''));
+  // 한쪽 렌즈(mono) 위치 추적은 처음에 움직임이 있어야 시작된다 (OpenVINS static init: 잠깐 멈췄다가 움직이는 순간)
+  if (!vio.init) return vio.vio_mode === 'mono'
+    ? R('warn', 3, 2, '폰을 1초 멈췄다가, 처음 1~2초 천천히 움직이세요',
+      '한쪽 렌즈로 위치를 잡으려면 처음에 조금 움직여야 합니다. 좌우로 10 cm쯤 천천히 옮기면 됩니다. 시작되면 이 줄이 바뀝니다.'
+      + (!dp.ready && dp.loading ? ` · 깊이 모델 불러오는 중…${loadSec(s, dp)}` : ''))
+    : R('warn', 3, 2, '폰을 2초 가만히 두세요', '위치 추적을 준비하는 중입니다. 책상 위에 내려놓아도 됩니다.'
+      + (!dp.ready && dp.loading ? ` · 깊이 모델 불러오는 중…${loadSec(s, dp)}` : ''));
   let sub = '물체를 0.3~2.5 m 거리에서 여러 방향으로 비추세요.';
   if (dp.error) return R('bad', 4, 3, '깊이 계산에 오류가 났습니다', esc(dp.error));
   // REVIEW5 N2: 첫 세션 모델 로드 동안에는 키프레임이 쌓이지 않으므로 기다리게 하고 진행(경과 초·단계)을 보여 준다
@@ -332,7 +381,8 @@ async function pollState() {
     adbOk = !!(se.adb && se.adb.available);
     if (sessMode !== lastMode) { sessT0 = sessMode === 'idle' ? 0 : Date.now() / 1000; camSeenT = 0; lastMode = sessMode; }
     paused = s.paused; $('bPause').textContent = paused ? '재개' : '일시정지'; $('bPause').classList.toggle('on', paused);
-    renderStep(stepFrom(s), ui);
+    renderStep(RV.on ? rvStep() : stepFrom(s), ui);
+    rvOnState();
     renderPreview(s);
     camLenses(se.cams);
     Q.state = s; renderLoad();
@@ -412,6 +462,46 @@ function h264Rows(h) {
   return rows;
 }
 
+// 고급 → 렌즈 위상 줄 (SPEC 15.6)
+function syncRow(sy) {
+  if (!sy) return '정보 없음 (폰 앱이 1.5-sync 보다 옛 버전이거나 아직 못 읽음)';
+  const st = SYNC_KO[sy.state] || esc(sy.state || '-');
+  const cls = sy.state === 'locked' ? 'ok' : sy.state === 'failed' ? 'bad' : sy.state === 'off' ? '' : 'warn';
+  const parts = [`<span class="${cls}">${st}</span>`];
+  if (sy.phase_ms !== null && sy.phase_ms !== undefined) parts.push(`위상 ${f(sy.phase_ms, 2)} ms`);
+  if (sy.slip_ms_s !== null && sy.slip_ms_s !== undefined) parts.push(`미끄러짐 ${f(sy.slip_ms_s, 3)} ms/s`);
+  if (sy.method) parts.push(`방법 ${esc(METHOD_KO[sy.method] || sy.method)}`);
+  if (sy.reopens) parts.push(`카메라 다시 열기 ${sy.reopens}번` + (sy.c_try_ms_avg ? ` (한 번 평균 ${f(sy.c_try_ms_avg / 1000, 1)}초)` : ''));
+  if (sy.c_last_align_s !== null && sy.c_last_align_s !== undefined) parts.push(`지난번 맞추는 데 ${f(sy.c_last_align_s, 1)}초`);
+  if (sy.c_rounds_failed) parts.push(`<span class="warn">${sy.c_max_tries || 25}번 해도 못 맞춤 ${sy.c_rounds_failed}회</span>`);
+  if (sy.adjustments) parts.push(`주기 조절 ${sy.adjustments}번`);
+  if (sy.restarts) parts.push(`촬영 다시 시작 ${sy.restarts}번`);
+  if (sy.hold_reason) parts.push(`<small>${esc(sy.hold_reason)}</small>`);
+  if (sy.lens_ref && sy.lens_target) parts.push(`렌즈 ${esc(sy.lens_target)} − ${esc(sy.lens_ref)}`);
+  if (sy.method_a_possible === false && sy.mode === 'a') parts.push(`<small>A 못 씀: ${esc(sy.method_a_reason || '')}</small>`);
+  if (sy.method_a_failed) parts.push(`<small class="warn">A 안 먹힘: ${esc(sy.method_a_fail_reason || '')}</small>`);
+  return parts.join(' · ');
+}
+
+// 고급 → 움직임 보정 줄: 두 렌즈 촬영 순간 사이 폰 움직임을 키프레임마다 보정해 정류 (scan3d motion_rect.py)
+function motionRow(m) {
+  if (!m) return '-';
+  if (!m.on) return '꺼짐 (보정값 고정 정류)';
+  const parts = [];
+  if (m.dt_med_ms !== null && m.dt_med_ms !== undefined) parts.push(`dt(렌즈5−렌즈2) ${f(m.dt_med_ms, 1)} ms (${f(m.dt_min_ms, 1)}~${f(m.dt_max_ms, 1)})`);
+  parts.push(`보정 ${m.motion || 0} · 고정 ${m.fixed || 0} · <span class="${m.skipped ? 'warn' : ''}">건너뜀 ${m.skipped || 0}</span>`);
+  const l = m.last;
+  if (l) {
+    const bits = [`dt ${f(l.dt_ms, 1)} ms`];
+    if (l.rot_deg !== undefined) bits.push(`회전 ${f(l.rot_deg, 3)}°`);
+    if (l.trans_mm !== undefined) bits.push(`이동 ${f(l.trans_mm, 2)} mm`);
+    if (l.rect_ms !== undefined) bits.push(`정류맵 ${f(l.rect_ms, 1)} ms`);
+    if (l.why) bits.push(esc(l.why));
+    parts.push(`<small>마지막 키프레임: ${bits.join(', ')}</small>`);
+  }
+  return parts.join(' · ');
+}
+
 // 고급 → 세부 상태 (열려 있을 때만 그림)
 function renderDetails(s, se, ui, vio, ph, dp, mp) {
   const relay = ui.relay || {};
@@ -421,6 +511,10 @@ function renderDetails(s, se, ui, vio, ph, dp, mp) {
   if (relay.log_tail && relay.log_tail.length) srows.push(['중계 로그', `<small>${relay.log_tail.map(esc).join('<br>')}</small>`]);
   if (ui.stream) srows.push(['영상', `${esc(ui.stream.size)} · ${ui.stream.fps} fps · ${esc(FMT_KO[ui.stream.stream_fmt] || ui.stream.stream_fmt || '-')}`
     + (ui.stream.live_kbps ? ` · ${(ui.stream.live_kbps / 1000).toFixed(1)} Mbps × 2` : '')]);
+  if (s.stream && s.stream.pair) srows.push(['깊이 렌즈', `${esc(PAIR_KO[s.stream.pair] || s.stream.pair)} (렌즈 ${esc((s.stream.physical || []).join('·'))}) · 두 렌즈 사이 ${f(s.stream.baseline_mm, 1)} mm · 정류 초점 ${f(s.stream.rect && s.stream.rect.f, 0)} px`
+    + ` · <small>${esc(s.stream.calib_file || '')} ${esc(s.stream.calib_src || '')}</small>`
+    + (s.stream.want && s.stream.want.pair && s.stream.want.pair !== s.stream.pair ? ` · 다음 시작: ${esc(PAIR_KO[s.stream.want.pair] || s.stream.want.pair)}` : '')
+    + (s.stream.rec3 ? ` · <b>녹화: 렌즈 3개 모두 (앱 ${esc(s.stream.app_physical || '')})</b>` : '')]);
   if (se.app) srows.push(['앱',`${esc(se.app.state || '')} <small>${esc(se.app.raw || '')}</small>`]);
   if (se.rec) srows.push(['녹화', `<small>${esc(se.rec.raw || se.rec.state || '')}</small>`]);
   if (ui.temp_c !== null && ui.temp_c !== undefined) srows.push(['폰 온도', `${f(ui.temp_c)} °C (SKIN)${s.preview ? ' <span class="warn">가짜</span>' : ''}`]);
@@ -428,13 +522,16 @@ function renderDetails(s, se, ui, vio, ph, dp, mp) {
   const rates = Object.entries(ph.imu_rates || {}).map(([k, v]) => `${k.replace('_uncalibrated', '_u')} ${v}`).join(', ');
   const rows = [
     ['위치 추적', `${vio.error ? `<span class="bad">${esc(vio.error)}</span>` : esc(vio.status || '-')} · init ${vio.init ? '예' : '아니오'} · ${f(vio.ms)} ms · SLAM ${f(vio.n_slam, 0)} / MSCKF ${f(vio.n_msckf, 0)}${vio.auto_resets ? ` · 자동 재시작 ${vio.auto_resets}` : ''}${vio.bridge_restarts ? ` · 브리지 다시 띄움 ${vio.bridge_restarts}` : ''}${vio.bridge_exceptions ? ` · 브리지 내부 오류 ${vio.bridge_exceptions}` : ''}`],
-    ['추적 입력', `${vio.vio_mode === 'mono' ? '한쪽 렌즈(mono)' : '두 렌즈(stereo)'} · 스테레오 ${vio.stereo_frames || 0} / mono ${vio.mono_frames || 0} · 버림 ${vio.cams_dropped || 0} · IMU ${vio.imu_sent || 0}`],
+    ['추적 입력', `${vio.vio_mode === 'mono' ? '한쪽 렌즈 + IMU (mono, 기본)' : '두 렌즈 (stereo)'} · 스테레오 ${vio.stereo_frames || 0} / mono ${vio.mono_frames || 0} · 버림 ${vio.cams_dropped || 0} · IMU ${vio.imu_sent || 0}`],
     ['렌즈 시각차', (vio.skew_n ? `중앙 ${f(vio.skew_med_ms, 2)} ms · p95 ${f(vio.skew_p95_ms, 2)} ms · ` : '')
-      + `기준: 쌍 묶기 ${f(vio.pair_skew_ms ?? ph.pair_skew_ms, 1)} ms · 추적(VIO) ${f(vio.skew_limit_ms, 1)} ms`
+      + `기준: 쌍 묶기 ${f(vio.pair_skew_ms ?? ph.pair_skew_ms, 1)} ms (반 프레임 미만)`
+      + (vio.vio_mode === 'stereo' ? ` · 추적(VIO) ${f(vio.skew_limit_ms, 1)} ms` : '')
       + ` · 짝 없어 버림 ${Array.isArray(ph.dropped) ? ph.dropped.reduce((a, b) => a + b, 0) : (ph.dropped || 0)}`
       + (ph.pair_drop_pct !== null && ph.pair_drop_pct !== undefined
-        ? ` (최근 ${f(ph.pair_drop_window_s, 0)}초 <span class="${ph.pair_drop_pct >= PAIR_DROP_WARN ? 'bad' : ph.pair_drop_pct >= 20 ? 'warn' : 'ok'}">${f(ph.pair_drop_pct, 0)} %</span>)` : '')
-      + ` · 추적 기준 넘어 버림 ${vio.skew_dropped || 0}`],
+        ? ` (최근 ${f(ph.pair_drop_window_s, 0)}초 <span class="${ph.pair_drop_pct >= PAIR_DROP_BAD ? 'bad' : ph.pair_drop_pct >= PAIR_DROP_WARN ? 'warn' : 'ok'}">${f(ph.pair_drop_pct, 0)} %</span>)` : '')
+      + (vio.vio_mode === 'stereo' ? ` · 추적 기준 넘어 버림 ${vio.skew_dropped || 0}` : '')],
+    ['움직임 보정', motionRow(dp.motion)],
+    ['렌즈 위상', syncRow(syncOf(s))],
     ['폰 영상', ph.connected ? `${(ph.fps || []).map(v => v.toFixed(1)).join(' / ')} fps · 쌍 ${ph.pairs} · 렌즈 시각차 ${f(ph.skew_ms, 2)} ms` : '접속 대기'],
     ...h264Rows(ph.h264),
     ['IMU Hz', rates || '-'],
@@ -461,15 +558,24 @@ async function startScan(askMsg) {
   if (sessMode !== 'idle' && !confirm(askMsg || `지금 스캔(${MODE_KO[sessMode] || sessMode})을 멈추고 새로 시작할까요?`)) return;
   $('bStart').disabled = true;
   try {
-    const r = await cmd({ cmd: 'mode', mode: m, start_app: $('cStartApp').checked && adbOk, size: Q.size, fps: Q.fps, stream_fmt: Q.fmt });
+    const all = Q.pair === 'all' && m === 'record';            // 3개 모두 녹화 (비교용) — 폰에 녹화만
+    const pair = all ? 'all' : (Q.pair === 'all' ? '2+6' : Q.pair);
+    const r = await cmd({ cmd: 'mode', mode: m, start_app: $('cStartApp').checked && adbOk, size: Q.size, fps: Q.fps, stream_fmt: Q.fmt, pair, live_pair: '2+6' });
     if (r.ok === false || r.error) alert(r.error || '시작 실패');
-    else toast(r.warn ? `시작합니다 — ${r.warn}` : `시작합니다 (${Q.size} · ${Q.fps} fps${Q.fmt !== 'h264' ? ' · ' + (FMT_KO[Q.fmt] || Q.fmt) : ''}) — 폰 화면을 켜 두세요`, r.warn ? 8000 : 4000);
+    else toast(r.warn ? `시작합니다 — ${r.warn}` : `시작합니다 (${Q.size} · ${Q.fps} fps${Q.fmt !== 'h264' ? ' · ' + (FMT_KO[Q.fmt] || Q.fmt) : ''}${pair !== '2+5' ? ' · ' + PAIR_KO[pair] : ''}) — 폰 화면을 켜 두세요`
+      + (all ? '. 끝나면 두 쌍(초광각+망원, 초광각+광각)으로 따로 복원합니다' : ''), r.warn || all ? 8000 : 4000);
   } catch (e) { alert('서버에 연결할 수 없습니다'); }
   $('bStart').disabled = false;
 }
 $('bStart').onclick = () => startScan();
 $('bStop').onclick = async () => {
-  try { await cmd({ cmd: 'stop', stop_app: $('cStartApp').checked && adbOk }); } catch (e) { }
+  try {
+    const r = await cmd({ cmd: 'stop', stop_app: $('cStartApp').checked && adbOk });
+    // 녹화를 멈췄으면: 폰이 영상 마무리 → PC 로 가져오기 → (켜져 있으면) 자동 복원 → 목록에 [보기] (rec_sync.py)
+    if (r && r.pull) toast(r.pull.auto_pull
+      ? `녹화를 마무리하고 PC 로 가져옵니다${r.pull.auto_recon ? ' → 끝나면 자동으로 3D 복원 → 오른쪽 목록에서 [보기]' : ''}`
+      : '녹화를 멈췄습니다 — 자동 가져오기가 꺼져 있어 오른쪽 목록에서 [가져오기] 를 누르세요', 8000);
+  } catch (e) { }
   loadRecs(false);
 };
 $('bRestart').onclick = async () => {
@@ -512,8 +618,15 @@ function renderRecs(j) {
     if (!r.ok) alert(r.error || '실패');
   });
 }
+let lastRecsSig = '';
 async function loadRecs(refresh) {
-  try { renderRecs(await (await fetch(`/api/recordings${refresh ? '?refresh=1' : ''}`, { cache: 'no-store' })).json()); }
+  try {
+    const j = await (await fetch(`/api/recordings${refresh ? '?refresh=1' : ''}`, { cache: 'no-store' })).json();
+    const sig = JSON.stringify([j, sessMode]);
+    if (sig === lastRecsSig && !refresh) return;          // 바뀐 게 없으면 다시 안 그림 (버튼이 깜박이지 않게)
+    lastRecsSig = sig;
+    renderRecs(j); renderItems(j);
+  }
   catch (e) { $('recs').innerHTML = '<div class="bad">목록을 못 읽었습니다</div>'; }
 }
 $('bRecList').onclick = () => { $('recs').innerHTML = '<div class="warn">읽는 중…</div>'; loadRecs(true); };
@@ -522,7 +635,7 @@ $('bRecList').onclick = () => { $('recs').innerHTML = '<div class="warn">읽는 
 $('bPause').onclick = () => cmd({ cmd: paused ? 'resume' : 'pause' });
 $('bResetMap').onclick = () => { if (confirm('3D 맵을 지울까요?')) cmd({ cmd: 'reset_map' }); };
 $('bResetVio').onclick = () => { if (confirm('위치 추적과 맵을 다시 시작할까요? 폰을 2초 가만히 두세요.')) cmd({ cmd: 'reset_vio' }); };
-document.querySelectorAll('.cm').forEach(b => b.onclick = () => { V.mode = b.dataset.m; document.querySelectorAll('.cm').forEach(x => x.classList.toggle('on', x === b)); recolorAll(); });
+document.querySelectorAll('.cm').forEach(b => b.onclick = () => { V.mode = b.dataset.m; document.querySelectorAll('.cm').forEach(x => x.classList.toggle('on', x === b)); recolorAll(); rvRecolor(); });
 $('sVoxel').onchange = e => cmd({ cmd: 'set', voxel_m: parseFloat(e.target.value) });
 $('iHits').onchange = e => cmd({ cmd: 'set', min_hits: parseInt(e.target.value) });
 $('cBoxes').onchange = e => { objGroup.visible = e.target.checked; };
@@ -530,12 +643,12 @@ $('cTraj').onchange = e => { trajLine.visible = e.target.checked; };
 $('adv').addEventListener('toggle', () => { try { localStorage.setItem('scan3d.adv', $('adv').open ? '1' : '0'); } catch (e) { } });
 try { if (localStorage.getItem('scan3d.adv') === '1') $('adv').open = true; } catch (e) { }
 try { const m = localStorage.getItem('scan3d.mode'); if (m) $('sMode').value = m; } catch (e) { }
-$('sMode').onchange = () => { try { localStorage.setItem('scan3d.mode', $('sMode').value); } catch (e) { } loadCombos(); };
+$('sMode').onchange = () => { try { localStorage.setItem('scan3d.mode', $('sMode').value); } catch (e) { } renderPairSel(true); loadCombos(); };
 
 // ---------- 깊이 화면 (2D, 최근 키프레임) — 물체·원본 영상은 오른쪽 아래 카메라 창이 맡는다 ----------
 function poll2d() {
   const hidden = $('img2d').style.display === 'none' || document.hidden;
-  if (!hidden && (sessMode === 'live' || sessMode === 'both' || sessMode === 'replay')) {   // 녹화 중엔 깊이 그림 없음 (REVIEW5 N3)
+  if (!hidden && !RV.on && (sessMode === 'live' || sessMode === 'both' || sessMode === 'replay')) {   // 녹화 중엔 깊이 그림 없음 (REVIEW5 N3)
     const img = new Image();
     img.onload = () => { $('img2d').src = img.src; };
     img.src = `/api/frame.jpg?kind=depth&_=${Date.now()}`;
@@ -554,7 +667,7 @@ const CAM = { busy: [false, false], urls: [null, null], fps: 3, overlay: false, 
 try { CAM.overlay = localStorage.getItem('scan3d.camOverlay') === '1'; CAM.rot = localStorage.getItem('scan3d.camRot') !== '0';
   CAM.hidden = localStorage.getItem('scan3d.camHidden') === '1'; } catch (e) { }
 function camLenses(cams) {
-  if (!Array.isArray(cams)) return;
+  if (!Array.isArray(cams) || RV.on) return;            // 리플레이 중에는 녹화 렌즈 이름 (rvOpen)
   for (const c of cams) { const el = $('camName' + c.lens); if (el) el.textContent = `${c.name} (렌즈 ${c.physical})`; }
 }
 function camApplyUi() {
@@ -583,7 +696,8 @@ function camFetch(lens) {
     .finally(() => { CAM.busy[lens] = false; });
 }
 function camLoop() {
-  if (camActive()) { camFetch(0); camFetch(1); }
+  if (RV.on) { /* 리플레이: rvCamLoop 가 그 시각의 녹화 프레임을 넣음 */ }
+  else if (camActive()) { camFetch(0); camFetch(1); }
   else if (!CAM.hidden) for (const l of [0, 1]) $('cam' + l).classList.add('empty');
   setTimeout(camLoop, 1000 / CAM.fps);
 }
@@ -608,9 +722,22 @@ function renderPreview(s) {
 // 막대: 한계 = 막대의 2/3 지점 눈금, 흰 줄 = 스캔 중 실측. 과부하가 6초 넘게 이어지면 [한 단계 낮추기] 제안.
 // 영상 형식 (고급): H.264 = 기본·권장 (폰 하드웨어 압축), JPEG·NV21 은 예전 방식.
 const FMT_KO = { h264: 'H.264', jpeg: 'JPEG', nv21: 'NV21 (압축 없음)' };
-const Q = { tab: null, size: '640x480', fps: 15, fmt: 'h264', state: null, sigS: '', sigF: '', kf: null };
+const Q = { tab: null, size: '1440x1080', fps: 15, fmt: 'h264', pair: '2+5', state: null, sigS: '', sigF: '', kf: null };
+// 깊이 렌즈 쌍: 2+5 = 초광각+광각 (기본), 2+6 = 초광각+망원 (기선 2배, 거의 동시 촬영, 화면 가운데만)
+const PAIR_KO = { '2+5': '초광각+광각', '2+6': '초광각+망원', all: '렌즈 3개 모두 녹화 (비교용)' };
+// '3개 모두 녹화 (비교용)' 은 [폰에 녹화만] 에서만 고를 수 있다 (실시간 깊이는 한 쌍만). 다른 방식으로 바꾸면 초광각+망원 으로.
+function renderPairSel(changed) {
+  const rec = $('sMode').value === 'record', o = $('sPair').querySelector('option[value="all"]');
+  if (o) { o.disabled = !rec; o.textContent = rec ? '3개 모두 녹화 (비교용)' : '3개 모두 녹화 (비교용) — 폰에 녹화만에서'; }
+  if (!rec && Q.pair === 'all') {
+    Q.pair = '2+5'; $('sPair').value = Q.pair;
+    if (changed) toast('3개 모두 녹화는 [폰에 녹화만] 에서만 됩니다 — 깊이 렌즈를 초광각+광각 으로 바꿨습니다', 6000);
+  }
+}
 try {
-  Q.size = localStorage.getItem('scan3d.size') || Q.size;
+  const pr = localStorage.getItem('scan3d.pair.v2'); if (pr && PAIR_KO[pr]) Q.pair = pr;
+  $('sPair').value = Q.pair; renderPairSel(false);
+  Q.size = localStorage.getItem('scan3d.size.v2') || Q.size;
   Q.fps = parseInt(localStorage.getItem('scan3d.fps')) || Q.fps;
   const fm = localStorage.getItem('scan3d.fmt'); if (fm && FMT_KO[fm]) Q.fmt = fm;
   $('sFmt').value = Q.fmt;
@@ -631,11 +758,12 @@ function shortWhy(c) {
   if (/^녹화/.test(r)) return '녹화가 안 됨';
   return r;
 }
-function saveQ() { try { localStorage.setItem('scan3d.size', Q.size); localStorage.setItem('scan3d.fps', String(Q.fps)); } catch (e) { } }
+function saveQ() { try { localStorage.setItem('scan3d.size.v2', Q.size); localStorage.setItem('scan3d.fps', String(Q.fps)); } catch (e) { } }
 async function loadCombos() {
   try {
     const kf = Q.kf ? `&kf=${Q.kf}` : '';
-    const j = await (await fetch(`/api/combos?mode=${encodeURIComponent($('sMode').value)}${kf}&fmt=${encodeURIComponent(Q.fmt)}`, { cache: 'no-store' })).json();
+    const l3 = Q.pair === 'all' && $('sMode').value === 'record' ? '&lenses=3' : '';
+    const j = await (await fetch(`/api/combos?mode=${encodeURIComponent($('sMode').value)}${kf}&fmt=${encodeURIComponent(Q.fmt)}${l3}`, { cache: 'no-store' })).json();
     if (j && j.combos) { Q.tab = j; renderQSel(); renderLoad(); renderCoeffs(); }
   } catch (e) { }
 }
@@ -680,6 +808,14 @@ function renderQSel() {
 }
 $('sSize').onchange = e => { Q.size = e.target.value; renderQSel(); renderLoad(); };
 $('sFps').onchange = e => { Q.fps = parseInt(e.target.value) || Q.fps; saveQ(); renderLoad(); };
+$('sPair').onchange = e => {
+  Q.pair = PAIR_KO[e.target.value] ? e.target.value : '2+5';
+  renderPairSel(true);
+  try { localStorage.setItem('scan3d.pair.v2', Q.pair); } catch (x) { }
+  if (Q.pair === '2+6') toast('초광각+망원: 깊이는 화면 가운데(망원이 보는 곳)만 나옵니다. 다음 [▶ 스캔 시작] 부터 적용', 6000);
+  if (Q.pair === 'all') toast('렌즈 3개를 한꺼번에 녹화합니다. 끝나면 초광각+망원, 초광각+광각 두 쌍으로 따로 복원해 리플레이에서 비교할 수 있습니다', 8000);
+  loadCombos();                                    // 녹화 압축기 3개로 다시 계산
+};
 $('sFmt').onchange = e => {
   Q.fmt = FMT_KO[e.target.value] ? e.target.value : 'h264';
   try { localStorage.setItem('scan3d.fmt', Q.fmt); } catch (x) { }
@@ -728,7 +864,7 @@ function renderLoad() {
     `${f(p.pc_ffs_fps, 1)} 장/초${meas(me.pc_ffs_fps, ' 장/초', 1)}`, live);
   setBar('lbLive', 0, null, p.live_kbps ? `${(p.live_kbps / 1000).toFixed(1)} Mbps × 2${me.live_kbps ? ` <small>실제 ${(me.live_kbps / 1000).toFixed(1)}</small>` : ''}` : '-',
     live && fmt === 'h264');
-  setBar('lbRec', 0, null, p.rec_kbps ? `${(p.rec_kbps / 1000).toFixed(1)} Mbps × 2` : '-', rec);
+  setBar('lbRec', 0, null, p.rec_kbps ? `${(p.rec_kbps / 1000).toFixed(1)} Mbps × ${p.n_rec || 2}` : '-', rec);
   $('lbJpeg').title = fmt === 'jpeg'
     ? `폰 JPEG 압축: 두 렌즈 합, 한 코어 시간 대비 (한계 ${L.phone_jpeg_pct || 60}%). 한 장 ${f(p.phone_jpeg_ms)} ms${me.phone_jpeg_ms_max ? ` · 실제 최대 ${me.phone_jpeg_ms_max} ms` : ''}`
     : `폰 CPU: 영상을 ${fmt === 'h264' ? '압축 칩에' : 'USB 로'} 넘기는 복사 시간, 두 렌즈 합 (한계 ${L.phone_jpeg_pct || 60}%)${p.h264_surface ? ' — 카메라가 압축 칩에 바로 연결돼 거의 0' : ''}`;
@@ -820,6 +956,425 @@ $('iKf').onchange = e => {
   loadCombos();
 };
 
+// ---------- 녹화본 목록 (오른쪽 칸): 녹화마다 상태 한 줄 (rec_sync.py items) ----------
+const ST_KO = { pulling: '가져오는 중', recon: '3D 복원 중', ready: '리플레이 가능', recon_wait: '복원 대기', held: '복원 멈춤',
+  failed: '복원 실패', bad: '녹화 파일이 덜 끝남', pc_only: 'PC 에 있음', recording: '녹화 중', incomplete: '덜 끝난 녹화 (안 가져옴)',
+  pull_wait: '가져오기 대기', pull_failed: '가져오기 실패', phone_only: '폰에만 있음', mismatch: 'PC 사본이 폰과 다름' };
+const ST_CLS = { ready: 'ok', failed: 'bad', pull_failed: 'bad', bad: 'warn', mismatch: 'warn', held: 'warn', incomplete: 'warn' };
+const recPrev = {};
+function recLabel(n) {
+  const m = /^rec_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})$/.exec(n);
+  return m ? `${+m[2]}월 ${+m[3]}일 ${m[4]}:${m[5]}:${m[6]} 녹화` : n;
+}
+function renderItems(j) {
+  const items = j.items || [], au = j.auto || {};
+  if (document.activeElement !== $('cAutoPull')) $('cAutoPull').checked = au.pull !== false;
+  if (document.activeElement !== $('cAutoRecon')) $('cAutoRecon').checked = au.recon !== false;
+  const live = sessMode === 'live' || sessMode === 'both' || sessMode === 'record';
+  const notes = [];
+  if (!au.phone) notes.push('폰이 연결돼 있지 않음 — PC 에 있는 녹화만 보입니다');
+  if (au.paused) notes.push('스캔 중이라 가져오기·복원은 쉬는 중 (끝나면 이어서)');
+  $('recNote').textContent = notes.join(' · ');
+  if (!items.length) { $('recItems').innerHTML = '<div class="empty">녹화가 없습니다 — [폰에 녹화만] 또는 [녹화 + 실시간] 으로 찍으면 여기에 생깁니다</div>'; return; }
+  let h = '';
+  for (const it of items) {
+    const st = it.state || '', pct = it.pct !== undefined && it.pct !== null ? it.pct : null;
+    let stTxt = ST_KO[st] || st;
+    if (pct !== null && (st === 'pulling' || st === 'recon')) stTxt += ` ${pct.toFixed(0)}%`;
+    if (st === 'recon' && it.step && it.step !== '재생 중') stTxt += ` (${it.step})`;
+    if (st === 'recon' && it.recon_pair) stTxt += ` · ${it.recon_pair}`;
+    if (it.pair_recons && st === 'ready') stTxt = Object.values(it.pair_recons).every(Boolean) ? '두 쌍 비교 가능' : '리플레이 가능 (한 쌍)';
+    const where = [it.pair_recons ? '렌즈 3개' : '', it.on_phone ? `폰 ${it.phone_mb} MB` : '', it.on_pc ? `PC ${it.pc_mb} MB` : ''].filter(Boolean).join(' · ');
+    let btn = '';
+    const dis = live ? ' disabled title="실시간 스캔 중에는 볼 수 없습니다 — 먼저 [■ 정지]"' : '';
+    if (it.pair_recons) {
+      // 3렌즈 녹화 (비교용): 쌍마다 [2+5 보기] [2+6 보기] — 하나를 열면 리플레이 위쪽에서 다른 쌍으로 바로 바꿔 볼 수 있음
+      const parts = [];
+      let anyFail = false;
+      for (const p of ['2+5', '2+6']) {
+        if (!(p in it.pair_recons)) continue;
+        const rn = it.pair_recons[p], fe = (it.pair_failed || {})[p];
+        if (rn) parts.push(`<button class="go" data-view="${esc(it.name)}" data-recon="${esc(rn)}"${dis || ` title="${esc(PAIR_KO[p])} 로 복원한 결과 보기"`}>${p} 보기</button>`);
+        else if (st === 'recon' && it.recon_pair === p) parts.push(`<small>${p} 복원 중</small>`);
+        else if (fe) { anyFail = true; parts.push(`<small class="bad" title="${esc(fe)}">${p} 실패</small>`); }
+        else if ((it.pair_held || []).includes(p)) { anyFail = true; parts.push(`<small class="warn">${p} 멈춤</small>`); }
+        else parts.push(`<small>${p} 대기</small>`);
+      }
+      if (anyFail) parts.push(`<button data-retry="${esc(it.name)}" title="실패·멈춘 쌍을 다시 복원합니다">다시 복원</button>`);
+      btn = `<span class="pb">${parts.join(' ')}</span>`;
+    }
+    else if (st === 'ready') btn = `<button class="go" data-view="${esc(it.name)}" data-recon="${esc(it.recon)}"${live ? ' disabled title="실시간 스캔 중에는 볼 수 없습니다 — 먼저 [■ 정지]"' : ' title="리플레이 보기"'}>▶ 보기</button>`;
+    else if (st === 'failed' || st === 'held' || st === 'pc_only' || st === 'bad') btn = `<button data-retry="${esc(it.name)}" title="이 녹화를 3D 로 복원합니다 (스캔 중이 아닐 때)">복원</button>`;
+    else if (st === 'phone_only' || st === 'pull_failed') btn = `<button data-get="${esc(it.name)}">가져오기</button>`;
+    let sub = esc(where);
+    if (it.error) sub += ` · <span class="bad" title="${esc(it.error)}">${esc(String(it.error).slice(0, 60))}</span>`;
+    if (it.paused && (st === 'pull_wait' || st === 'recon_wait')) sub += ' · 스캔이 끝나면 이어서';
+    if (it.recons && it.recons.length && st !== 'ready' && st !== 'recon') sub += ` · 옛 복원 ${it.recons.length}개 (시간 정보 없음)`;
+    const del = it.can_delete_phone ? `<button class="del" data-del="${esc(it.name)}" title="PC 에 똑같은 사본이 있을 때만 폰에서 지웁니다">폰에서 지우기</button>` : '';
+    h += `<div class="ri ${esc(st)}"><div class="l1"><span class="nm" title="${esc(it.name)}">${esc(recLabel(it.name))}</span>`
+      + `<span class="st ${ST_CLS[st] || ''}">${esc(stTxt)}</span></div>`
+      + `<div class="l2"><span>${sub}</span><span>${del} ${btn}</span></div>`
+      + (pct !== null && (st === 'pulling' || st === 'recon') ? `<div class="bar"><i style="width:${Math.min(100, pct).toFixed(1)}%"></i></div>` : '')
+      + '</div>';
+    if (recPrev[it.name] && recPrev[it.name] !== 'ready' && st === 'ready') toast(`${recLabel(it.name)} — 리플레이 준비됨. 오른쪽 목록에서 [▶ 보기]`, 8000);
+    recPrev[it.name] = st;
+  }
+  $('recItems').innerHTML = h;
+  $('recItems').querySelectorAll('[data-view]').forEach(b => b.onclick = () => rvOpen(b.dataset.view, b.dataset.recon));
+  $('recItems').querySelectorAll('[data-retry]').forEach(b => b.onclick = async () => {
+    const r = await cmd({ cmd: 'rec_retry', name: b.dataset.retry });
+    toast(r.ok ? (sessMode === 'idle' ? '곧 복원을 시작합니다' : '스캔이 끝나면 복원합니다') : (r.error || '실패'));
+    lastRecsSig = ''; loadRecs(false);
+  });
+  $('recItems').querySelectorAll('[data-get]').forEach(b => b.onclick = async () => {
+    const r = await cmd({ cmd: 'pull', name: b.dataset.get, replay: false });
+    toast(r.ok ? (r.note || '가져오기를 시작합니다') : (r.error || '실패'));
+    lastRecsSig = ''; loadRecs(false);
+  });
+  $('recItems').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    if (!confirm(`${recLabel(b.dataset.del)} 을(를) 폰에서 지울까요?\nPC 에 똑같은 사본이 있는지 한 번 더 확인한 뒤 지웁니다. 되돌릴 수 없습니다.`)) return;
+    const r = await cmd({ cmd: 'rec_delete_phone', name: b.dataset.del });
+    toast(r.ok ? '폰에서 지웠습니다 (PC 사본은 그대로)' : (r.error || '실패'), 6000);
+    lastRecsSig = ''; loadRecs(true);
+  });
+}
+$('cAutoPull').onchange = e => cmd({ cmd: 'rec_auto', pull: e.target.checked }).then(() => { lastRecsSig = ''; loadRecs(false); });
+$('cAutoRecon').onchange = e => cmd({ cmd: 'rec_auto', recon: e.target.checked }).then(() => { lastRecsSig = ''; loadRecs(false); });
+
+// ---------- 복원 리플레이: [최종 맵] · [시간 따라 보기] (replay_view.py 의 timeline.json + voxels_t.bin) ----------
+// 복셀은 처음 보인 시각 순으로 정렬돼 오므로 시각 t 까지 보이는 수 = 이분 탐색 → InstancedMesh.count 만 바꾼다 (다시 안 만듦).
+// 비교용 3렌즈 녹화: 쌍마다 복원 결과 (RV.sets[쌍]) 를 불러 두고 위쪽 [초광각+광각 2+5] [초광각+망원 2+6] 로 바꿔 본다
+// (같은 시간 막대·보기 방식 유지, 카메라 창은 같은 녹화의 렌즈 2 + 그 쌍의 다른 렌즈). 비교 숫자는 #rpCmp.
+const RV = { on: false, rec: null, recon: null, pair: null, tl: null, info: null, sets: {}, mode: 'final', t: 0, dur: 0, playing: false,
+  speed: 1, mesh: null, M: 0, times: null, rgb: null, cls: null, inst: null, kfT: null, trajT: null, trajRows: null, trajPos: null,
+  depthKf: -1, cmpK: null, last: 0, drag: false,
+  cam: { want: 0, got: [null, null], busy: [false, false], urls: [null, null], retry: [0, 0] } };
+const rvTraj = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffcf57 }));
+rvTraj.frustumCulled = false; rvTraj.visible = false; scene.add(rvTraj);
+const rvFrustum = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x44ddff }));
+rvFrustum.frustumCulled = false; rvFrustum.visible = false; scene.add(rvFrustum);
+function upperBound(a, x) { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] <= x) lo = m + 1; else hi = m; } return lo; }
+function rvColorDs(ds, i) {
+  const r = ds.rgb[i * 3], g = ds.rgb[i * 3 + 1], b = ds.rgb[i * 3 + 2], cl = ds.cls[i], ins = ds.inst[i];
+  const dim = [r * 0.35, g * 0.35, b * 0.35];
+  const c = V.mode === 'class' ? (cl >= 0 ? clsRGB(cl) : dim) : V.mode === 'inst' ? (ins >= 0 && cl >= 0 ? instRGB(ins) : dim) : [r, g, b];
+  tmpC.setRGB(c[0] / 255, c[1] / 255, c[2] / 255);
+  ds.mesh.setColorAt(i, tmpC);
+}
+function rvRecolor() {
+  for (const ds of Object.values(RV.sets)) {
+    for (let i = 0; i < ds.M; i++) rvColorDs(ds, i);
+    if (ds.mesh.instanceColor) ds.mesh.instanceColor.needsUpdate = true;
+  }
+}
+function rvFrustumAt(row) {
+  // row = [t, r00 r01 r02 x, r10 r11 r12 y, r20 r21 r22 z] — rect0 카메라 (x 오른쪽, y 아래, z 앞) 의 0.12 m 절두체
+  const c = RV.tl.cam, d = 0.12;
+  const P = (x, y, z) => [row[1] * x + row[2] * y + row[3] * z + row[4], row[5] * x + row[6] * y + row[7] * z + row[8], row[9] * x + row[10] * y + row[11] * z + row[12]];
+  const o = P(0, 0, 0);
+  const cs = [[0, 0], [c.w, 0], [c.w, c.h], [0, c.h]].map(([u, v]) => P((u - c.cx) / c.f * d, (v - c.cy) / c.f * d, d));
+  const segs = [];
+  for (let i = 0; i < 4; i++) segs.push(...o, ...cs[i], ...cs[i], ...cs[(i + 1) % 4]);
+  const up = P(0, -d * 0.8, d); segs.push(...cs[0], ...up, ...up, ...cs[1]);
+  rvFrustum.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(segs), 3));
+  rvFrustum.visible = true;
+  if ($('cFollow').checked) orbit.target.set(o[0], o[1], o[2]);
+}
+// 복원 결과 하나 (timeline + voxels_t.bin) → 그릴 거리 (장면에는 아직 안 넣음)
+async function rvFetch(rec, recon) {
+  const q = `rec=${encodeURIComponent(rec)}${recon ? '&recon=' + encodeURIComponent(recon) : ''}`;
+  const tl = await (await fetch('/api/replay/info?' + q, { cache: 'no-store' })).json();
+  if (tl.error) throw new Error(tl.error);
+  const buf = await (await fetch(`/api/replay/voxels?rec=${encodeURIComponent(rec)}&recon=${encodeURIComponent(tl.recon)}`, { cache: 'no-store' })).arrayBuffer();
+  const dv = new DataView(buf);
+  const magic = String.fromCharCode(dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3));
+  if (magic !== 'S3VT') throw new Error('리플레이 파일 형식이 다릅니다');
+  const M = dv.getUint32(8, true), vm = dv.getFloat32(12, true);
+  const tOff = 24 + 17 * M + ((4 - ((24 + 17 * M) % 4)) % 4);
+  const mesh = new THREE.InstancedMesh(boxGeo, boxMat, Math.max(1, M));
+  mesh.frustumCulled = false;
+  mesh.setColorAt(0, new THREE.Color(1, 1, 1));
+  const ds = { rec, recon: tl.recon, pair: tl.pair || null, tl, mesh, M, times: new Float32Array(buf, tOff, M),
+    rgb: new Uint8Array(M * 3), cls: new Int16Array(M), inst: new Int32Array(M), lo: [1e9, 1e9, 1e9], hi: [-1e9, -1e9, -1e9] };
+  const s = vm * 0.92, lo = ds.lo, hi = ds.hi;
+  for (let k = 0, o = 24; k < M; k++, o += 17) {
+    const x = (dv.getInt16(o, true) + 0.5) * vm, y = (dv.getInt16(o + 2, true) + 0.5) * vm, z = (dv.getInt16(o + 4, true) + 0.5) * vm;
+    tmpM.makeScale(s, s, s); tmpM.setPosition(x, y, z); mesh.setMatrixAt(k, tmpM);
+    ds.rgb[k * 3] = dv.getUint8(o + 6); ds.rgb[k * 3 + 1] = dv.getUint8(o + 7); ds.rgb[k * 3 + 2] = dv.getUint8(o + 8);
+    ds.cls[k] = dv.getInt16(o + 9, true); ds.inst[k] = dv.getInt32(o + 11, true);
+    rvColorDs(ds, k);
+    if (x < lo[0]) lo[0] = x; if (y < lo[1]) lo[1] = y; if (z < lo[2]) lo[2] = z;
+    if (x > hi[0]) hi[0] = x; if (y > hi[1]) hi[1] = y; if (z > hi[2]) hi[2] = z;
+  }
+  mesh.instanceMatrix.needsUpdate = true; if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  const rows = tl.trajectory || [];
+  ds.trajPos = new Float32Array(rows.length * 3);
+  rows.forEach((r, i) => { ds.trajPos[i * 3] = r[4]; ds.trajPos[i * 3 + 1] = r[8]; ds.trajPos[i * 3 + 2] = r[12]; });
+  ds.trajRows = rows; ds.trajT = rows.map(r => r[0]);
+  ds.kfT = (tl.keyframes || []).map(k => k.t);
+  ds.dur = Math.max(tl.duration_s || 0, tl.t_max || 0, ds.trajT.length ? ds.trajT[ds.trajT.length - 1] : 0, 0.1);
+  return ds;
+}
+const dsKey = ds => ds.pair || 'one';
+async function rvOpen(rec, recon) {
+  if (sessMode === 'live' || sessMode === 'both' || sessMode === 'record') { toast('실시간 스캔 중에는 리플레이를 볼 수 없습니다 — 먼저 [■ 정지]', 6000); return; }
+  toast('리플레이 불러오는 중…', 20000);
+  let ds;
+  try { ds = await rvFetch(rec, recon); }
+  catch (e) { toast(''); alert(e && e.message ? e.message : '리플레이를 불러오지 못했습니다 (서버 연결)'); return; }
+  rvClose(true);
+  RV.rec = rec; RV.info = ds.tl; RV.sets = {}; RV.sets[dsKey(ds)] = ds;
+  RV.on = true; RV.mesh = null;
+  // 실시간 화면 숨김 (복셀·궤적·절두체·물체 상자)
+  if (V.mesh) V.mesh.visible = false;
+  trajLine.visible = false; frustum.visible = false; objGroup.visible = false;
+  rvUse(ds, true);
+  $('rpBar').hidden = false;
+  rvSetMode('final');
+  rvPairBtns();
+  const two = ds.tl.pair_recons && Object.values(ds.tl.pair_recons).filter(Boolean).length > 1;
+  toast((ds.tl.thumbs ? '리플레이를 열었습니다' : '리플레이를 열었습니다 — 카메라 화면은 준비 중 (잠시 뒤 보입니다)')
+    + (two ? ' · 위쪽 렌즈 쌍 버튼으로 다른 쌍 결과와 바꿔 볼 수 있습니다' : ''), 6000);
+  rvPreload();
+}
+// 보고 있는 결과를 ds 로 (시각·보기 방식은 그대로)
+function rvUse(ds, fit) {
+  if (RV.mesh && RV.mesh !== ds.mesh) scene.remove(RV.mesh);
+  if (RV.mesh !== ds.mesh) scene.add(ds.mesh);
+  Object.assign(RV, { recon: ds.recon, pair: ds.pair, tl: ds.tl, mesh: ds.mesh, M: ds.M, times: ds.times, rgb: ds.rgb, cls: ds.cls,
+    inst: ds.inst, trajRows: ds.trajRows, trajT: ds.trajT, kfT: ds.kfT, trajPos: ds.trajPos });
+  RV.dur = Math.max(...Object.values(RV.sets).map(x => x.dur), ds.dur);
+  rvTraj.geometry.setAttribute('position', new THREE.BufferAttribute(ds.trajPos, 3));
+  rvTraj.geometry.computeBoundingSphere();
+  RV.depthKf = -1; RV.cmpK = null; RV.cam.got = [null, null]; RV.cam.retry = [0, 0];
+  if (fit && ds.M) {
+    const lo = ds.lo, hi = ds.hi;
+    orbit.target.set((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2);
+    orbit.r = Math.max(0.6, 0.8 * Math.hypot(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]));
+  }
+  for (const L of ds.tl.lenses || []) { const el = $('camName' + L.lens); if (el) el.textContent = `${L.name} (렌즈 ${L.physical}) · 녹화`; }
+  const multi = !!(RV.info && RV.info.pair_recons);
+  $('rpTitle').textContent = `리플레이: ${recLabel(RV.rec)}${multi && ds.pair ? ` · ${PAIR_KO[ds.pair] || ds.pair} (${ds.pair})` : ''}`;
+  $('rpInfo').textContent = `복셀 ${ds.M.toLocaleString()} · 키프레임 ${ds.kfT.length} · ${RV.dur.toFixed(1)} s`;
+}
+async function rvSwitch(pair) {
+  if (!RV.on || pair === RV.pair) return;
+  let ds = RV.sets[pair];
+  if (!ds) {
+    const rn = ((RV.info || {}).pair_recons || {})[pair];
+    if (!rn) return;
+    toast('불러오는 중…', 10000);
+    try { ds = await rvFetch(RV.rec, rn); } catch (e) { toast(''); alert(e && e.message ? e.message : '불러오지 못했습니다'); return; }
+    if (!RV.on || RV.rec !== ds.rec) { ds.mesh.dispose(); return; }
+    RV.sets[pair] = ds;
+  }
+  rvUse(ds, false);
+  if (RV.mode === 'final') rvSetMode('final'); else rvSetT(RV.t);
+  rvPairBtns(); rvCmp(true);
+  toast(`${PAIR_KO[pair] || pair} (${pair}) 결과로 바꿨습니다`, 2500);
+}
+async function rvPreload() {
+  // 다른 쌍 결과도 미리 불러 둔다 (바꿀 때 바로, 이 시각 키프레임 비교 숫자도)
+  const pr = RV.info && RV.info.pair_recons, rec = RV.rec;
+  if (!pr) return;
+  for (const [p, rn] of Object.entries(pr)) {
+    if (!rn || RV.sets[p]) continue;
+    try {
+      const ds = await rvFetch(rec, rn);
+      if (!RV.on || RV.rec !== rec || RV.sets[p]) { ds.mesh.dispose(); return; }
+      RV.sets[p] = ds; RV.dur = Math.max(RV.dur, ds.dur);
+      rvPairBtns(); rvCmp(true);
+    } catch (e) { }
+  }
+}
+function rvPairBtns() {
+  const pr = RV.info && RV.info.pair_recons, el = $('rpPairs');
+  if (!pr) { el.innerHTML = ''; return; }
+  el.innerHTML = ['2+5', '2+6'].filter(p => p in pr).map(p => `<button data-rp="${p}" class="${p === RV.pair ? 'on' : ''}"`
+    + `${pr[p] ? ` title="${esc(PAIR_KO[p])} 로 복원한 결과"` : ' disabled title="이 쌍은 아직 복원 결과가 없습니다"'}>${esc(PAIR_KO[p])} ${p}</button>`).join('');
+  el.querySelectorAll('[data-rp]').forEach(b => b.onclick = () => rvSwitch(b.dataset.rp));
+}
+// ---- 비교 숫자 (replay_view.kf_quality / quality_summary / pair_compare) ----
+const BIN_KO = { '0-1': '0–1 m', '1-2': '1–2 m', '2+': '2 m 넘게' };
+const pct = v => v === null || v === undefined ? '-' : `${(100 * v).toFixed(0)}%`;
+function cmpTxt(c) {
+  if (!c) return '결과 없음';
+  const parts = [`키프레임 ${c.keyframes}`];
+  if (c.voxels_shown !== null && c.voxels_shown !== undefined)
+    parts.push(`복셀 ${c.voxels_shown.toLocaleString()}${c.voxels_total ? ` (전체 ${c.voxels_total.toLocaleString()})` : ''}`);
+  parts.push(`깊이 유효 ${pct(c.valid_med)}`);
+  if (c.plane_res_mm !== null && c.plane_res_mm !== undefined) {
+    const b = Object.entries(c.plane_bins || {}).map(([k, v]) => `${BIN_KO[k] || k} ${f(v.res_mm, 1)}`).join(' · ');
+    parts.push(`평면 오차 <b>${f(c.plane_res_mm, 1)} mm</b>${b ? ` (${b})` : ''}`);
+  } else parts.push('평면 못 찾음');
+  return parts.join(' · ');
+}
+function kfQTxt(q) {
+  if (!q) return '-';
+  return `유효 ${pct(q.valid)} · 평면 ${q.plane ? `<b>${f(q.plane.res_mm, 1)} mm</b>` : '못 찾음'}`;
+}
+function rvCmp(force) {
+  const el = $('rpCmp');
+  if (!RV.on) { el.hidden = true; return; }
+  const t = RV.mode === 'final' ? null : RV.t;
+  const sets = Object.entries(RV.sets).sort();
+  const key = JSON.stringify([RV.pair, t === null ? -1 : sets.map(([, ds]) => upperBound(ds.kfT, t))]);
+  if (!force && key === RV.cmpK) return;
+  RV.cmpK = key;
+  const pc = RV.info && RV.info.pair_compare, lines = [];
+  if (pc && pc.pairs) {
+    for (const p of ['2+5', '2+6']) {
+      if (!(p in pc.pairs)) continue;
+      const e = pc.pairs[p], cur = p === RV.pair;
+      lines.push(`<span class="${cur ? 'cur' : ''}">${cur ? '▶ ' : ''}${esc(PAIR_KO[p])} ${p}: ${e ? cmpTxt(e.compare) : '아직 결과 없음'}</span>`);
+    }
+    const cm = pc.common;
+    if (cm && cm.n) lines.push(`같은 키프레임 ${cm.n}개끼리: ` + ['2+5', '2+6'].filter(p => cm.by_pair[p]).map(p => {
+      const c = cm.by_pair[p];
+      return `${p} 평면 <b>${f(c.plane_res_mm, 1)} mm</b> · 유효 ${pct(c.valid_med)}`;
+    }).join(' / '));
+    const vr = Object.values(pc.pairs).find(e => e && e.vio_reused);
+    if (vr) lines.push(`위치 추적: 두 쌍이 같은 궤적 (${esc(vr.vio_reused)} 의 포즈를 다시 씀) — 깊이만 다릅니다`);
+    else if (Object.values(pc.pairs).every(Boolean)) lines.push('<span class="warn">위치 추적을 쌍마다 따로 돌렸습니다 — 궤적이 조금 다를 수 있음</span>');
+  } else if (RV.tl && RV.tl.compare) lines.push(cmpTxt(RV.tl.compare));
+  if (t !== null) {
+    const cur = [];
+    for (const [p, ds] of sets) {
+      const k = upperBound(ds.kfT, t) - 1, kf = k >= 0 ? ds.tl.keyframes[k] : null;
+      cur.push(`${p === 'one' ? '' : p + ' '}${kf ? `${kfQTxt(kf.q)} <small>(${kf.t.toFixed(1)} s)</small>` : '-'}`);
+    }
+    if (cur.length) lines.push('이 시각 키프레임: ' + cur.join(' / '));
+  }
+  if (lines.length) lines.push('<small>평면 오차 = 키프레임마다 가장 큰 평면(벽·바닥)에서 점들이 떨어진 거리의 중앙값, 작을수록 평평하게 나옴</small>');
+  el.innerHTML = lines.map(x => `<div>${x}</div>`).join('');
+  el.hidden = !lines.length;
+}
+function rvClose(silent) {
+  for (const ds of Object.values(RV.sets)) { scene.remove(ds.mesh); ds.mesh.dispose(); }
+  if (RV.mesh) { scene.remove(RV.mesh); RV.mesh = null; }
+  RV.sets = {}; RV.info = null; RV.pair = null;
+  const was = RV.on;
+  RV.on = false; RV.playing = false; RV.M = 0;
+  rvTraj.visible = false; rvFrustum.visible = false;
+  if (V.mesh) V.mesh.visible = true;
+  trajLine.visible = $('cTraj').checked; objGroup.visible = $('cBoxes').checked;
+  $('rpBar').hidden = true; $('rpCmp').hidden = true; $('rpPairs').innerHTML = '';
+  if (was && !silent) {
+    $('img2d').removeAttribute('src');
+    for (const l of [0, 1]) $('cam' + l).classList.add('empty');
+  }
+}
+function rvSetMode(m) {
+  RV.mode = m;
+  $('rpFinal').classList.toggle('on', m === 'final');
+  $('rpTime').classList.toggle('on', m === 'time');
+  $('rpCtl').hidden = m !== 'time';
+  if (m === 'final') {
+    RV.playing = false;
+    RV.mesh.count = RV.M;
+    rvTraj.geometry.setDrawRange(0, RV.trajRows.length); rvTraj.visible = $('cTraj').checked;
+    rvFrustum.visible = false;
+    RV.cam.want = RV.dur;
+    rvDepthAt(RV.dur);
+    rvCmp();
+  } else {
+    if (RV.t >= RV.dur - 1e-3) RV.t = 0;
+    rvSetT(RV.t);
+  }
+  rvPlayBtn();
+}
+function rvPlayBtn() { $('rpPlay').textContent = RV.playing ? '❚❚' : '▶'; }
+function rvDepthAt(t) {
+  const k = upperBound(RV.kfT, t) - 1;
+  if (k === RV.depthKf) return;
+  RV.depthKf = k;
+  const kf = k >= 0 ? RV.tl.keyframes[k] : null;
+  if (kf && kf.depth) $('img2d').src = `/api/replay/depth.jpg?rec=${encodeURIComponent(RV.rec)}&recon=${encodeURIComponent(RV.recon)}&kf=${kf.i}`;
+  else $('img2d').removeAttribute('src');
+}
+function rvSetT(t) {
+  RV.t = Math.max(0, Math.min(RV.dur, t));
+  RV.mesh.count = upperBound(RV.times, RV.t);
+  const k = upperBound(RV.trajT, RV.t);
+  rvTraj.geometry.setDrawRange(0, k); rvTraj.visible = $('cTraj').checked && k > 1;
+  if (k > 0) rvFrustumAt(RV.trajRows[k - 1]); else rvFrustum.visible = false;
+  if (!RV.drag) $('rpSlider').value = String(Math.round(1000 * RV.t / RV.dur));
+  $('rpClock').textContent = `${RV.t.toFixed(1)} / ${RV.dur.toFixed(1)} s · 복셀 ${RV.mesh.count.toLocaleString()}`;
+  RV.cam.want = RV.t;
+  rvDepthAt(RV.t);
+  rvCmp();
+}
+function rvTick() {
+  const now = performance.now();
+  const dt = Math.min(0.1, (now - (RV.last || now)) / 1000);
+  RV.last = now;
+  if (!RV.on || RV.mode !== 'time' || !RV.playing || RV.drag) return;
+  let t = RV.t + dt * RV.speed;
+  if (t >= RV.dur) { t = RV.dur; RV.playing = false; rvPlayBtn(); }
+  rvSetT(t);
+}
+// 카메라 창 2개: 그 시각의 녹화 프레임 (서버 thumbs/). 렌즈마다 요청 하나씩만, 100 ms 마다 (재생·끌기 중 최대 약 10 장/초)
+function rvCamLoop() {
+  if (RV.on && !CAM.hidden && !document.hidden) {
+    const tq = Math.round(RV.cam.want * 50) / 50;          // 0.02 s 단위 (브라우저 캐시가 잘 맞게)
+    for (const l of [0, 1]) {
+      if (RV.cam.busy[l] || RV.cam.got[l] === tq || performance.now() < RV.cam.retry[l]) continue;
+      RV.cam.busy[l] = true;
+      const rec = RV.rec, pair = RV.pair;
+      // 3렌즈 녹화: 카메라 창 = 보고 있는 쌍의 렌즈 (렌즈 2 + 5 또는 6)
+      const L = ((RV.tl || {}).lenses || [])[l], phys = L ? `&phys=${encodeURIComponent(L.physical)}` : '';
+      fetch(`/api/replay/frame.jpg?rec=${encodeURIComponent(rec)}&lens=${l}&t=${tq.toFixed(2)}${phys}`)
+        .then(r => r.status === 200 ? r.blob() : null)
+        .then(b => {
+          if (!RV.on || RV.rec !== rec || RV.pair !== pair) return;
+          const box = $('cam' + l);
+          if (!b) { box.classList.add('empty'); RV.cam.retry[l] = performance.now() + 2000; return; }
+          const u = URL.createObjectURL(b);
+          box.querySelector('img').src = u; box.classList.remove('empty');
+          if (RV.cam.urls[l]) URL.revokeObjectURL(RV.cam.urls[l]);
+          RV.cam.urls[l] = u; RV.cam.got[l] = tq;
+        })
+        .catch(() => { RV.cam.retry[l] = performance.now() + 2000; })
+        .finally(() => { RV.cam.busy[l] = false; });
+    }
+  }
+  setTimeout(rvCamLoop, 100);
+}
+function rvStep() {
+  const nm = recLabel(RV.rec || '');
+  if (RV.mode === 'final') return { level: 'ok', step: 0, done: 0, main: `리플레이 — ${nm} · 최종 맵`,
+    sub: '복원이 끝난 전체 맵과 지나온 길입니다. [시간 따라 보기] 를 누르면 맵이 채워지는 과정을 녹화 시간대로 다시 봅니다.' };
+  return { level: 'ok', step: 0, done: 0, main: `리플레이 — ${nm} · 시간 따라 보기`,
+    sub: '▶ 로 재생, 막대를 끌면 그 시각으로 갑니다. 하늘색 사각뿔 = 그때 폰 위치·방향, 오른쪽 아래 = 그 시각의 녹화 화면.' };
+}
+function rvOnState() {
+  // 실시간 스캔이 시작되면 리플레이를 닫는다 (두 화면이 섞이지 않게)
+  if (RV.on && (sessMode === 'live' || sessMode === 'both' || sessMode === 'record')) {
+    rvClose();
+    toast('스캔이 시작되어 리플레이를 닫았습니다', 6000);
+  }
+}
+$('rpFinal').onclick = () => rvSetMode('final');
+$('rpTime').onclick = () => rvSetMode('time');
+$('rpClose').onclick = () => rvClose();
+$('rpPlay').onclick = () => {
+  if (RV.mode !== 'time') rvSetMode('time');
+  if (!RV.playing && RV.t >= RV.dur - 1e-3) RV.t = 0;
+  RV.playing = !RV.playing; RV.last = performance.now(); rvPlayBtn();
+};
+$('rpSpeed').onchange = e => { RV.speed = parseFloat(e.target.value) || 1; };
+$('rpSlider').addEventListener('input', e => { RV.drag = true; rvSetT(RV.dur * (+e.target.value) / 1000); });
+$('rpSlider').addEventListener('change', () => { RV.drag = false; });
+$('rpSlider').addEventListener('pointerup', () => { RV.drag = false; });
+document.addEventListener('keydown', e => {
+  if (!RV.on || RV.mode !== 'time' || /INPUT|SELECT|TEXTAREA/.test((document.activeElement || {}).tagName || '')) return;
+  if (e.code === 'Space') { e.preventDefault(); $('rpPlay').click(); }
+  else if (e.code === 'ArrowRight') rvSetT(RV.t + 1);
+  else if (e.code === 'ArrowLeft') rvSetT(RV.t - 1);
+});
+$('cTraj').addEventListener('change', () => { if (RV.on) { trajLine.visible = false; rvTraj.visible = $('cTraj').checked; } });
+$('cBoxes').addEventListener('change', () => { if (RV.on) objGroup.visible = false; });
+
 // ---------- 렌더 루프 ----------
 function resize() {
   const w = canvas.clientWidth, h = canvas.clientHeight;
@@ -827,7 +1382,8 @@ function resize() {
     renderer.setSize(w, h, false); cam.aspect = w / Math.max(1, h); cam.updateProjectionMatrix();
   }
 }
-function loop() { resize(); applyOrbit(); renderer.render(scene, cam); drawLabels(); requestAnimationFrame(loop); }
+function loop() { resize(); rvTick(); applyOrbit(); renderer.render(scene, cam); drawLabels(); requestAnimationFrame(loop); }
 allocVoxels(65536);
-loop(); pollVoxels(); pollState(); pollTraj(); poll2d(); camLoop(); loadRecs(false); loadCombos();
+loop(); pollVoxels(); pollState(); pollTraj(); poll2d(); camLoop(); rvCamLoop(); loadRecs(false); loadCombos();
+setInterval(() => { if (!document.hidden) loadRecs(false); }, 2000);   // 녹화본 상태 (가져오는 중 · 복원 중 · 리플레이 가능)
 setInterval(() => { if (!document.hidden) loadCombos(); }, 10000);   // 계수가 실측으로 바뀌면 예상도 바뀐다

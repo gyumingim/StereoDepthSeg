@@ -32,6 +32,12 @@ fi
 mkdir -p "$HERE/runs"
 LOG="$HERE/runs/server_$(date +%Y%m%d).log"
 echo "===== $(date '+%F %T') serve_idle 시작 =====" >>"$LOG"
-exec "$PY" "$HERE/scan3d.py" --link relay --phone "${PHONE:-listen:8766}" --mode idle \
+# LINK=native (usbipd 로 폰 USB 를 WSL 에 붙였거나 우분투 직접): 리눅스 adb + adb forward, Windows 중계 없음.
+# 설정 파일 runs/link.conf 에 LINK=native 한 줄을 두면 로그인 자동 시작도 그 모드로.
+[ -f "$HERE/runs/link.conf" ] && . "$HERE/runs/link.conf"
+LINK="${LINK:-relay}"
+if [ "$LINK" = native ]; then PHONE="${PHONE:-127.0.0.1:8765}"; else PHONE="${PHONE:-listen:8766}"; fi
+echo "link=$LINK phone=$PHONE" >>"$LOG"
+exec "$PY" "$HERE/scan3d.py" --link "$LINK" --phone "$PHONE" --mode idle \
   --ov "$OV" ${OV_ARGS:+"--live-bridge-args=$OV_ARGS"} --ov-bridge "$OV_BRIDGE" ${OV_CFG_ARGS[@]+"${OV_CFG_ARGS[@]}"} \
   --port "$PORT" "$@" >>"$LOG" 2>&1

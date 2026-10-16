@@ -2,7 +2,8 @@
 // 프로토콜: PROTOCOL.md. 입력 = stdin 또는 TCP, 출력 = 같은 채널로 JSON 한 줄씩.
 //
 //   ov_bridge <estimator_config.yaml> [--stdio | --tcp HOST:PORT] [--max-cam-queue N]
-//             [--max-speed M_S] [--lost-frames N] [--auto-reset] [--emit-features N] [--imu-hold S]
+//             [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]
+//             [--imu-hold S]
 //
 // 방어: OpenVINS 호출에서 난 예외(cv::Exception 포함)는 잡아서 VioManager 를 새로 만들고
 // {"type":"reset","auto":true,"reason":"exception"} 를 보낸다 (프로세스는 계속 산다).
@@ -57,6 +58,7 @@ struct Args {
   size_t max_cam_queue = 3;
   double max_speed = 5.0;   // m/s 넘으면 lost (손에 든 폰 기준)
   int lost_frames = 15;     // 특징점 0 이 연속 N 프레임이면 lost
+  int startup_lost_frames = 45;  // 초기화 뒤 첫 특징 갱신 전에는 이만큼 (15 fps 에서 3 s) 기다린 뒤 lost
   bool auto_reset = false;
   int emit_features = 0;    // JSON 에 SLAM 특징점 최대 N 개
   double imu_hold_s = 0.25; // 카메라를 기다리며 IMU 를 붙잡아 두는 최대 시간 (IMU·카메라 시간 순서 유지)
@@ -168,6 +170,7 @@ public:
     cams_.clear();
     last_imu_t_ = -1e300;
     zero_feat_frames_ = 0;
+    feat_seen_ = false;
     lost_ = false;
   }
 
@@ -401,7 +404,11 @@ private:
       bool bad = !p_IinG.allFinite() || !v.allFinite() || !R_CtoG.allFinite() || !T.allFinite() ||
                  v.norm() > args_.max_speed;
       zero_feat_frames_ = (n_slam + n_msckf == 0) ? zero_feat_frames_ + 1 : 0;
-      lost_ = bad || zero_feat_frames_ >= args_.lost_frames;
+      if (n_slam + n_msckf > 0) feat_seen_ = true;
+      // 초기화 직후(정지 ZUPT 가 끝나고 처음 움직일 때)는 clone 창이 차고 시차가 생길 때까지 특징 갱신이 0 인 게 정상이다
+      // (rec_20261016_143702: 10~14 프레임, 천천히 움직이기 시작하면 더 길다). 첫 특징 갱신 전에는 startup_lost_frames 까지 기다린다.
+      int lim = feat_seen_ ? args_.lost_frames : std::max(args_.lost_frames, args_.startup_lost_frames);
+      lost_ = bad || zero_feat_frames_ >= lim;
 
       o << ",\"status\":\"" << (lost_ ? "lost" : "tracking") << "\",\"init\":true";
       o << ",\"p\":";
@@ -456,6 +463,7 @@ private:
   std::deque<ov_core::ImuData> imu_hold_;
   uint32_t img_w_ = 0, img_h_ = 0;
   int zero_feat_frames_ = 0;
+  bool feat_seen_ = false;  // 이 VioManager 가 특징 갱신(SLAM/MSCKF > 0)을 한 번이라도 했는지
   bool lost_ = false;
   uint64_t n_cam_dropped_ = 0, n_imu_dropped_ = 0, n_cam_rejected_ = 0, n_exceptions_ = 0;
 };
@@ -490,7 +498,7 @@ bool serve(Bridge &b, int in_fd, int out_fd, bool is_socket) {
 void usage() {
   std::fprintf(stderr,
                "usage: ov_bridge <estimator_config.yaml> [--stdio | --tcp HOST:PORT] [--max-cam-queue N]\n"
-               "                 [--max-speed M_S] [--lost-frames N] [--auto-reset] [--emit-features N]\n"
+               "                 [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]\n"
                "                 [--imu-hold S]\n");
 }
 
@@ -526,6 +534,7 @@ int main(int argc, char **argv) {
     } else if (s == "--max-cam-queue") a.max_cam_queue = static_cast<size_t>(std::max(1, std::stoi(next())));
     else if (s == "--max-speed") a.max_speed = std::stod(next());
     else if (s == "--lost-frames") a.lost_frames = std::stoi(next());
+    else if (s == "--startup-lost-frames") a.startup_lost_frames = std::stoi(next());
     else if (s == "--auto-reset") a.auto_reset = true;
     else if (s == "--emit-features") a.emit_features = std::stoi(next());
     else if (s == "--imu-hold") a.imu_hold_s = std::max(0.0, std::stod(next()));

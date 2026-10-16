@@ -3,6 +3,8 @@
 
 진짜 scan3d/web 파일을 그대로 보내고 /api/* 는 가짜로 답한다: 시간이 지나며 "자라는" 작은 방(복셀), 물체 목록,
 궤적, 카메라 창 두 개(/api/cam.jpg, 그라데이션 + 움직이는 상자 + 렌즈 이름), 깊이 화면(/api/frame.jpg?kind=depth).
+녹화본 목록(items: 가져오기 대기 · 복원 중 · 복원 대기 · 리플레이 가능)과 가짜 리플레이 (/api/replay/info·voxels·frame.jpg·depth.jpg:
+같은 방이 20 초 동안 채워지고 폰이 가운데서 돈다) — [▶ 보기] 로 최종 맵 · 시간 따라 보기를 확인.
 /api/combos 는 진짜 load_model.py 로 계산 (폰 능력표는 캐시·cameras_s24.json·기본값), 실행 중 부하(ui.load)는 예상값에
 흔들림을 준 가짜 실측 — 폰 압축 부하가 40 % 를 넘는 조합이면 20 초 뒤 과부하 + [한 단계 낮추기] 제안을 보여 준다.
 상태 JSON 에 preview:true 를 넣으므로 웹 위쪽에 "미리보기 — 가짜 데이터" 띠가 보이고, 폰 온도에도 "(가짜)" 가 붙는다.
@@ -121,7 +123,7 @@ def state():
     vio = dict(addr="pipe(가짜)", init=live and t >= 4, status=("tracking" if t >= 4 else "init") if live else "idle",
                mono=False, t=t, n_slam=24, n_msckf=40, ms=6.2, dt_cam_imu=-0.004,
                imu_sent=int(t * 400), cams_sent=int(t * 30), poses=int(t * 30), cams_dropped=0,
-               stereo_frames=int(t * 30) if live else 0, mono_frames=0, auto_resets=0, error=None, vio_mode="stereo",
+               stereo_frames=int(t * 30) if live else 0, mono_frames=0, auto_resets=0, error=None, vio_mode="mono",
                skew_med_ms=2.1, skew_p95_ms=4.4, skew_limit_ms=5.0, pair_skew_ms=5.0, skew_n=int(t * 30) if live else 0,
                skew_dropped=3, bridge_restarts=0, bridge_exceptions=0, bridge_fails=0,
                T_world_rect0=pose(t) if live else None)
@@ -315,6 +317,74 @@ def fake_depth():
     return img
 
 
+# ---------------- 가짜 리플레이 (녹화본 목록 [▶ 보기] → 최종 맵 · 시간 따라 보기) ----------------
+RP_REC, RP_RECON, RP_DUR = "rec_20261016_093000", "recon_20261016-094500", 20.0
+
+
+def _rp_T(t):
+    """가짜 폰 자세 T_world_rect0 (4x4): 방 가운데서 천천히 돌며 바깥을 봄 (rect0: x 오른쪽, y 아래, z 앞)."""
+    yaw = 0.35 * t
+    R0 = np.array([[1, 0, 0], [0, 0, 1], [0, -1, 0]], float)          # 열 = 카메라 x·y·z 축 (월드): z 앞 = +y, y 아래 = −z
+    c, s = math.cos(yaw), math.sin(yaw)
+    Rz = np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]], float)
+    T = np.eye(4)
+    T[:3, :3] = Rz @ R0
+    T[:3, 3] = [0.3 * math.sin(t / 5), 0.6 + 0.3 * math.sin(t / 7), 1.2]
+    return T
+
+
+def _rp_build():
+    rec = SCENE.copy()
+    t = np.linspace(0.8, RP_DUR - 0.5, len(rec)).astype(np.float32)   # SCENE 은 시작점에서 바깥 순 → 처음 보인 시각도 그 순서
+    kf_t = np.arange(0.5, RP_DUR, 0.5)
+    kf_of = np.searchsorted(kf_t, t, side="left").astype(np.int32) + 1
+    t = kf_t[np.minimum(kf_of - 1, len(kf_t) - 1)].astype(np.float32)
+    M = len(rec)
+    body = rec.tobytes()
+    pad = (-(24 + len(body))) % 4
+    blob = (struct.pack("<4sIIfff", b"S3VT", 1, M, VM, float(t[0]), float(t[-1])) + body + b"\0" * pad
+            + t.astype("<f4").tobytes() + kf_of.astype("<i4").tobytes())
+    kfs = [dict(i=i + 1, t=round(float(tt), 3), t_map=round(float(tt) + 0.7, 3), frames={"2": int(tt * 15), "5": int(tt * 15)},
+                T=_rp_T(tt).reshape(-1).round(5).tolist(), n_shown=int((kf_of <= i + 1).sum()), depth=f"d_{i + 1:05d}.jpg")
+           for i, tt in enumerate(kf_t)]
+    traj = [[round(tt, 3)] + _rp_T(tt)[:3, :].reshape(-1).round(5).tolist() for tt in np.arange(0.3, RP_DUR, 1 / 15)]
+    tl = dict(format="scan3d-timeline/1", created="2026-10-16 09:45:00 (가짜)", complete=True, recording=RP_REC, recon=RP_RECON,
+              duration_s=RP_DUR, t_ref="녹화 기준 초 (가짜)", t_offset_s=-0.7, voxels=M, voxel_m=VM, min_hits=2,
+              t_min=float(t[0]), t_max=float(t[-1]), voxels_file="voxels_t.bin", voxels_format="S3VT/1",
+              cam=dict(f=480.0, cx=320.0, cy=240.0, w=640, h=480), lenses=LENSES, keyframes=kfs, trajectory=traj,
+              thumbs=True, thumbs_busy=False, recons=[dict(name=RP_RECON, timeline=True, complete=True, voxels=M,
+                                                           keyframes=len(kfs), created="(가짜)", ready=True)])
+    return tl, blob
+
+
+RP_TL, RP_BLOB = _rp_build()
+
+
+def fake_rec_cam(lens, t):
+    """녹화 프레임 흉내: 시각 t 에 따라 움직이는 상자 + 시각 글자."""
+    w, h = 480, 360
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    base = np.array([70, 90, 120] if lens == 0 else [110, 90, 70], np.float32)
+    img = np.clip(base + 60 * (xx / w)[..., None] * np.array([1.0, 0.6, 0.2]) + 40 * (yy / h)[..., None], 0, 255).astype(np.uint8)
+    cx = 240 + 150 * math.sin(t / 2.5) + (30 if lens == 0 else 0)
+    cy = 180 + 90 * math.cos(t / 3.1)
+    rect(img, cx - 35, cy - 25, cx + 35, cy + 25, (235, 235, 235), fill=True)
+    put_text(img, (12, 8), f"{LENSES[lens]['name']} 녹화 — 가짜", 20)
+    put_text(img, (12, h - 34), f"t = {t:5.2f} s", 22, (255, 230, 120))
+    return img
+
+
+def fake_items():
+    st = [("rec_20261016_101500", dict(state="pull_wait", on_phone=True, on_pc=False, phone_mb=212.4)),
+          ("rec_20261016_095500", dict(state="recon", pct=min(99.0, (since_start() * 3) % 100), step="재생 중", on_phone=True,
+                                       on_pc=True, phone_mb=96.0, pc_mb=96.0)),
+          ("rec_20261016_094000", dict(state="recon_wait", on_phone=False, on_pc=True, pc_mb=51.3)),
+          (RP_REC, dict(state="ready", recon=RP_RECON, on_phone=True, on_pc=True, phone_mb=180.2, pc_mb=180.2,
+                        same=True, can_delete_phone=True))]
+    live = S["mode"] in ("live", "both", "record")
+    return [dict(dict(name=n, recons=[RP_RECON] if n == RP_REC else [], paused=live), **d) for n, d in st]
+
+
 class H(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
@@ -364,9 +434,24 @@ class H(BaseHTTPRequestHandler):
                 return self.js(dict(
                     phone=[dict(name="rec_20261016_101500", base="/sdcard/(가짜)", size_kb=217498, local=False)],
                     phone_error=None, phone_t=time.time(),
-                    local=[dict(name="rec_20261016_093000", path="recordings/rec_20261016_093000 (가짜)", size_mb=180.2,
-                                recon=["recon_20261016_094500"], has_video=True)],
-                    rec_root="recordings (가짜)"))
+                    local=[dict(name=RP_REC, path=f"recordings/{RP_REC} (가짜)", size_mb=180.2,
+                                recon=[RP_RECON], has_video=True, ready=RP_RECON)],
+                    rec_root="recordings (가짜)", items=fake_items(),
+                    auto=dict(pull=True, recon=True, phone=True, paused=S["mode"] in ("live", "both", "record"))))
+            if u.path == "/api/replay/info":
+                return self.js(RP_TL)
+            if u.path == "/api/replay/voxels":
+                return self.send(200, RP_BLOB, "application/octet-stream")
+            if u.path == "/api/replay/frame.jpg":
+                try:
+                    t = float(q.get("t", 0))
+                except ValueError:
+                    t = 0.0
+                body, ct = encode(fake_rec_cam(1 if q.get("lens") == "1" else 0, max(0.0, min(RP_DUR, t))))
+                return self.send(200, body, ct)
+            if u.path == "/api/replay/depth.jpg":
+                body, ct = encode(fake_depth())
+                return self.send(200, body, ct)
             if u.path == "/api/cam.jpg":
                 if S["mode"] not in ("live", "both", "replay"):
                     return self.send(204, b"", "text/plain")
@@ -428,8 +513,10 @@ class H(BaseHTTPRequestHandler):
                 return self.js(dict(ok=True, preview=True, note="미리보기 — 계수 파일은 건드리지 않음"))
             elif c == "caps_refresh":
                 return self.js(dict(ok=True, preview=True, caps_src=LM.caps_src if LM is not None else "가짜"))
-            elif c in ("pull", "replay"):
-                return self.js(dict(ok=False, error="미리보기에서는 녹화 가져오기·복원을 하지 않습니다", preview=True))
+            elif c in ("pull", "replay", "rec_retry", "rec_delete_phone"):
+                return self.js(dict(ok=False, error="미리보기에서는 녹화 가져오기·복원·지우기를 하지 않습니다 ([▶ 보기] 는 됩니다)", preview=True))
+            elif c == "rec_auto":
+                return self.js(dict(ok=True, preview=True, pull=True, recon=True))
         return self.js(dict(ok=True, preview=True, paused=S["paused"]))
 
 

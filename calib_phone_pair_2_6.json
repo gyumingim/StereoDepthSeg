@@ -1,0 +1,531 @@
+{
+  "K1": [
+    [
+      261.9856640625,
+      0.0,
+      324.08404296875
+    ],
+    [
+      0.0,
+      262.2859375,
+      238.67470703125
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "dist1": [
+    -0.004831163678318262,
+    0.039354924112558365,
+    0.0,
+    0.0,
+    -0.024243775755167007
+  ],
+  "K2": [
+    [
+      1237.402006571738,
+      0.0,
+      311.272979200932
+    ],
+    [
+      0.0,
+      1238.844620161612,
+      232.46624862938594
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "dist2": [
+    -0.4499664008617401,
+    7.850067615509033,
+    0.0,
+    0.0,
+    -42.29005432128906
+  ],
+  "R": [
+    [
+      0.9998823498472484,
+      0.003222590050993872,
+      0.014996712216620231
+    ],
+    [
+      -0.0034602351645687205,
+      0.9998684314004326,
+      0.01584760743598412
+    ],
+    [
+      -0.014943668778140566,
+      -0.015897635113513397,
+      0.9997619476461621
+    ]
+  ],
+  "T": [
+    -0.03235420150888983,
+    -0.00031360330509972844,
+    -0.00018318095480700597
+  ],
+  "image_size": [
+    640,
+    480
+  ],
+  "phone": {
+    "logical": "0",
+    "physical": [
+      "2",
+      "6"
+    ]
+  },
+  "baseline_m": 0.032356239855289466,
+  "factory_baseline_m": 0.032356239855289466,
+  "factory_rotation_deg": 1.1968278773956262,
+  "R_sensor_to_left": [
+    [
+      -0.009656291849169007,
+      -0.9999508266220722,
+      0.002258398892566378
+    ],
+    [
+      -0.9999530681843865,
+      0.0096580390190945,
+      0.0007640097755979894
+    ],
+    [
+      -0.0007857839112816391,
+      -0.0022509154004371782,
+      -0.9999971579577136
+    ]
+  ],
+  "R_sensor_to_right": [
+    [
+      0.00973621364131109,
+      -0.9999370029889522,
+      0.005585355620130648
+    ],
+    [
+      -0.9999221927261234,
+      -0.009692204857619199,
+      0.007853003169477152
+    ],
+    [
+      -0.007798374042876767,
+      -0.005661379555420137,
+      -0.9999535659938504
+    ]
+  ],
+  "pose_source": "factory + scene_refined(rot_x,rot_z,right_focal_scale) + yaw_from_2_5_board_range",
+  "scale_status": "yaw_from_2_5",
+  "warnings": [
+    "렌즈 2·6 체커보드 보정 없음 — 공장 값 + 장면 쌍으로 회전(x·z)·망원 초점 배율만 다듬음",
+    "기선 길이는 공장 값, yaw 는 같은 장면 2+5 (체커보드 보정) 거리에 맞춤 — 실측 거리 1개로 확인 권장"
+  ],
+  "factory_lens": {
+    "2": {
+      "intrinsics": [
+        1637.410400390625,
+        1639.287109375,
+        2025.5252685546875,
+        1491.7169189453125,
+        0
+      ],
+      "distortion": [
+        -0.004831163678318262,
+        0.039354924112558365,
+        -0.024243775755167007,
+        0,
+        0
+      ],
+      "active_array": "Rect(0, 0 - 4000, 3000)",
+      "focal_mm": [
+        2.200000047683716
+      ],
+      "pose_translation": [
+        0,
+        0.015760354697704315,
+        0
+      ],
+      "pose_rotation": [
+        0.7036768794059753,
+        -0.7105055451393127,
+        0.0005231756949797273,
+        -0.001071111997589469
+      ]
+    },
+    "6": {
+      "intrinsics": [
+        6802.109375,
+        6810.03955078125,
+        1774.2559814453125,
+        1325.0576171875,
+        0
+      ],
+      "distortion": [
+        -0.4499664008617401,
+        7.850067615509033,
+        -42.29005432128906,
+        0,
+        0
+      ],
+      "active_array": "Rect(0, 0 - 3648, 2736)",
+      "focal_mm": [
+        7
+      ],
+      "pose_translation": [
+        0,
+        -0.016595885157585144,
+        0
+      ],
+      "pose_rotation": [
+        0.710517942905426,
+        -0.7036488652229309,
+        -0.0007786487694829702,
+        -0.004755024798214436
+      ]
+    }
+  },
+  "focal_scale_right": 1.0369123824120965,
+  "created": "2026-10-16T16:03:17",
+  "made_by": "scan3d/tools/make_factory_pair_calib.py",
+  "inventory": "/home/system/scanner/StereoDepthSeg/phone_stereo/cameras_s24.json",
+  "rect_alpha0": {
+    "alpha": 0.0,
+    "f": 1286.6,
+    "cx": 301.76,
+    "cy": 233.87,
+    "baseline_mm": 32.356,
+    "size": [
+      640,
+      480
+    ],
+    "hfov_deg": 27.93,
+    "vfov_deg": 21.13,
+    "left_src_box": [
+      256.3,
+      187.8,
+      387.7,
+      287.1
+    ],
+    "left_valid_frac": 1.0,
+    "right_valid_frac": 0.9998,
+    "right_src_box": [
+      13.4,
+      15.9,
+      627.1,
+      479.2
+    ],
+    "zoom_left": 4.911,
+    "zoom_right": 1.04,
+    "ffs_max_disp": 192,
+    "z_min_ffs_m": 0.217,
+    "depth_table": [
+      {
+        "Z_m": 0.3,
+        "disp_px": 138.77,
+        "sigma_Z_cm_at_0p5px": 0.11
+      },
+      {
+        "Z_m": 0.5,
+        "disp_px": 83.26,
+        "sigma_Z_cm_at_0p5px": 0.3
+      },
+      {
+        "Z_m": 1.0,
+        "disp_px": 41.63,
+        "sigma_Z_cm_at_0p5px": 1.2
+      },
+      {
+        "Z_m": 2.0,
+        "disp_px": 20.81,
+        "sigma_Z_cm_at_0p5px": 4.8
+      },
+      {
+        "Z_m": 3.0,
+        "disp_px": 13.88,
+        "sigma_Z_cm_at_0p5px": 10.81
+      },
+      {
+        "Z_m": 5.0,
+        "disp_px": 8.33,
+        "sigma_Z_cm_at_0p5px": 30.03
+      }
+    ]
+  },
+  "factory_check": {
+    "R_diff_deg": 0.4255,
+    "R_diff_xyz_deg": [
+      -0.3106,
+      -0.2556,
+      -0.139
+    ],
+    "T_board_mm": [
+      -15.526,
+      -0.139,
+      0.341
+    ],
+    "T_factory_mm": [
+      -15.76,
+      -0.0,
+      0.0
+    ],
+    "T_diff_mm": 0.436,
+    "baseline_ratio": 0.9854,
+    "T_dir_diff_deg": 1.357,
+    "K1": {
+      "fx_ratio": 1.0,
+      "fy_ratio": 1.0,
+      "dcx_px": -0.0,
+      "dcy_px": -0.0
+    },
+    "K2": {
+      "fx_ratio": 0.99091,
+      "fy_ratio": 0.99091,
+      "dcx_px": 0.0,
+      "dcy_px": 0.0
+    },
+    "dist1_same": true,
+    "dist2_same": true,
+    "note": "체커보드 보정은 K1·dist 를 공장 값으로 고정하고 광각 fx 배율·R·T 만 맞춘 것 (board.fix_intrinsics) — 그래서 K1·dist 는 같고, 비교 의미가 있는 값은 R·T·K2 fx",
+    "pair": "2+5",
+    "board_file": "/home/system/scanner/StereoDepthSeg/calib_phone_pair.json",
+    "board_rms_px": 0.26137242916311004,
+    "dy_est_px_at_board_f": 2.51,
+    "this_pair_factory_vs_final_deg": 2.1268
+  },
+  "scene_refine": {
+    "rot_change_deg": 1.8523,
+    "rot_change_xyz_deg": [
+      -1.3074,
+      0.0009,
+      -1.3122
+    ],
+    "focal_scale_right": 1.03691,
+    "iters": [
+      {
+        "n": 300,
+        "f_rect": 1248.2,
+        "sampson_med_px": 0.53,
+        "inlier_frac_1px": 0.703,
+        "delta_rot_deg_xyz": [
+          -1.301,
+          0.0,
+          -1.2261
+        ],
+        "focal_scale_right": 1.03846
+      },
+      {
+        "n": 318,
+        "f_rect": 1299.9,
+        "sampson_med_px": 0.569,
+        "inlier_frac_1px": 0.711,
+        "delta_rot_deg_xyz": [
+          -0.0063,
+          0.0,
+          -0.0862
+        ],
+        "focal_scale_right": 0.99851
+      }
+    ],
+    "pairs_dir": "phone_stereo/runs/pair26_20261016/p26",
+    "n_pairs": 6,
+    "epi_factory": [
+      {
+        "pair": "L0.jpg",
+        "n": 20,
+        "dy_med": 24.354,
+        "inlier_frac": 0.0,
+        "pos_dx_frac": 0.87
+      },
+      {
+        "pair": "L1.jpg",
+        "n": 24,
+        "dy_med": 26.772,
+        "inlier_frac": 0.0,
+        "pos_dx_frac": 0.857
+      },
+      {
+        "pair": "L2.jpg",
+        "n": 21,
+        "dy_med": 25.786,
+        "inlier_frac": 0.0,
+        "pos_dx_frac": 0.724
+      },
+      {
+        "pair": "L3.jpg",
+        "n": 19,
+        "dy_med": 26.226,
+        "inlier_frac": 0.0,
+        "pos_dx_frac": 0.864
+      },
+      {
+        "pair": "L4.jpg",
+        "n": 18,
+        "dy_med": 25.385,
+        "inlier_frac": 0.0,
+        "pos_dx_frac": 0.818
+      },
+      {
+        "pair": "L5.jpg",
+        "n": 20,
+        "dy_med": 26.588,
+        "inlier_frac": 0.0,
+        "pos_dx_frac": 0.952
+      }
+    ],
+    "epi_refined": [
+      {
+        "pair": "L0.jpg",
+        "n": 21,
+        "dy_med": 0.522,
+        "inlier_frac": 0.905,
+        "pos_dx_frac": 0.955
+      },
+      {
+        "pair": "L1.jpg",
+        "n": 28,
+        "dy_med": 0.758,
+        "inlier_frac": 0.821,
+        "pos_dx_frac": 0.966
+      },
+      {
+        "pair": "L2.jpg",
+        "n": 25,
+        "dy_med": 0.609,
+        "inlier_frac": 0.72,
+        "pos_dx_frac": 0.893
+      },
+      {
+        "pair": "L3.jpg",
+        "n": 21,
+        "dy_med": 1.043,
+        "inlier_frac": 0.952,
+        "pos_dx_frac": 0.955
+      },
+      {
+        "pair": "L4.jpg",
+        "n": 22,
+        "dy_med": 0.809,
+        "inlier_frac": 0.818,
+        "pos_dx_frac": 1.0
+      },
+      {
+        "pair": "L5.jpg",
+        "n": 19,
+        "dy_med": 0.92,
+        "inlier_frac": 0.789,
+        "pos_dx_frac": 1.0
+      }
+    ],
+    "f_rect_factory": 1248.2,
+    "f_rect_refined": 1297.7
+  },
+  "yaw_pin": {
+    "n": 265,
+    "yaw_delta_deg": 1.0442,
+    "logratio_before": 0.8337,
+    "logratio_after": -0.0,
+    "range_ratio_before": 2.3019,
+    "range_med_m_before": 2.402,
+    "range_med_m_after": 1.024,
+    "logratio_mad_after": 0.0345,
+    "ref_file": "2·5 체커보드 보정 + SGBM",
+    "ref_valid": 301,
+    "matches": 301,
+    "ref_dir": "phone_stereo/runs/pair26_20261016/p25",
+    "epi_after": [
+      {
+        "pair": "L0.jpg",
+        "n": 17,
+        "dy_med": 0.475,
+        "inlier_frac": 0.941,
+        "pos_dx_frac": 0.944
+      },
+      {
+        "pair": "L1.jpg",
+        "n": 17,
+        "dy_med": 0.621,
+        "inlier_frac": 0.941,
+        "pos_dx_frac": 1.0
+      },
+      {
+        "pair": "L2.jpg",
+        "n": 18,
+        "dy_med": 0.658,
+        "inlier_frac": 0.833,
+        "pos_dx_frac": 1.0
+      },
+      {
+        "pair": "L3.jpg",
+        "n": 17,
+        "dy_med": 0.829,
+        "inlier_frac": 0.941,
+        "pos_dx_frac": 0.944
+      },
+      {
+        "pair": "L4.jpg",
+        "n": 17,
+        "dy_med": 0.795,
+        "inlier_frac": 0.882,
+        "pos_dx_frac": 0.944
+      },
+      {
+        "pair": "L5.jpg",
+        "n": 24,
+        "dy_med": 1.31,
+        "inlier_frac": 0.583,
+        "pos_dx_frac": 0.96
+      }
+    ]
+  },
+  "factory_R": [
+    [
+      0.999806430949321,
+      -0.019388920028337444,
+      -0.0033422167068551055
+    ],
+    [
+      0.019365003992252515,
+      0.9997876566406398,
+      -0.007045441746154216
+    ],
+    [
+      0.003478110515912356,
+      0.0069793559268125785,
+      0.9999695952068175
+    ]
+  ],
+  "factory_K2": [
+    [
+      1193.3525219298244,
+      0.0,
+      311.272979200932
+    ],
+    [
+      0.0,
+      1194.7437808388156,
+      232.46624862938594
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "history": [
+    {
+      "pose_source": "factory:CameraCharacteristics",
+      "scale_status": "factory_unverified"
+    },
+    {
+      "pose_source": "factory + scene_refined(rot_x,rot_z,right_focal_scale)",
+      "scale_status": "factory_baseline_refined"
+    },
+    {
+      "pose_source": "factory + scene_refined(rot_x,rot_z,right_focal_scale) + yaw_from_2_5_board_range",
+      "scale_status": "yaw_from_2_5"
+    }
+  ]
+}

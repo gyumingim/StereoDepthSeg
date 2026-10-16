@@ -8,8 +8,9 @@ adb 찾기 (find_adb):
      (WSL interop 로 Windows adb 실행)
   WSL 안의 리눅스 adb 는 USB 가 안 보이므로(usbipd 없으면) WSL 에서는 Windows adb.exe 를 먼저 쓴다.
 
-앱 시작 인자 (SPEC 1.5 + 모드): am start -S -n com.camera.dualstream/.MainActivity --es logical 0 --es physical 2,5
+앱 시작 인자 (SPEC 1.5 + 모드): am start -S -n com.camera.dualstream/.MainActivity --es logical 0 --es physical 2,5  (깊이 렌즈 쌍 2+6 이면 --es physical 2,6, scan3d.apply_geometry 가 바꿈)
   --ei width <W> --ei height <H> --ei fps <fps> (기본 640 480 15; scan3d 가 세션마다 width/height/fps 를 바꿈) --ef focus_diopters 1.0 --ez raw_ts false --ei imu_us 2500 --es mode <live|record|both> --es stream_fmt h264|jpeg|nv21 (기본 h264) --ei jpeg_q 90 [--ei live_kbps N] (SPEC 1.2)
+  --es sync off|auto|a|b (기본 off = 안 맞춤: S24 는 다시 열어도 위상이 안 맞아 PC 가 깊이에서 움직임 보정; auto = 카메라 다시 열기, 옵션) --ei rec_wait_sync_s 40 (녹화는 맞춘 뒤 시작, SPEC 15)
 녹화 위치 (RECORDING_FORMAT.md 2절): /sdcard/Android/data/com.camera.dualstream/files/rec_YYYYMMDD_HHMMSS/ (adb 로 바로 읽힘),
   예비로 앱 내부 files/rec_* (run-as). 환경변수 SCAN3D_REC_DIRS(':' 구분)로 덮어씀. 폴더 이름이 rec_ 로 시작하는 것만.
 status.txt (1절): STREAMING … | RECORDING rec=… | RECORDING+STREAMING rec=… | RECORD_DONE rec=… reason=… | STOPPED …
@@ -119,7 +120,7 @@ def parse_status(raw):
 
 class PhoneLink:
     def __init__(self, adb=None, log=print, physical="2,5", fps=15, focus=1.0, imu_us=2500, rec_dirs=None,
-                 stream_fmt="h264", jpeg_q=90, width=640, height=480, live_kbps=None):
+                 stream_fmt="h264", jpeg_q=90, width=1440, height=1080, live_kbps=None, sync="off", rec_wait_sync_s=40):
         self.adb, self.kind = find_adb(adb)
         self.log = log
         self.physical, self.fps, self.focus, self.imu_us = physical, fps, focus, imu_us
@@ -127,6 +128,8 @@ class PhoneLink:
         self.rec_kbps = None                                        # 녹화 H.264 kbps (None = 앱 자동, SPEC 14.5: 640x480·15 fps 에서 4000)
         self.stream_fmt, self.jpeg_q = stream_fmt, int(jpeg_q)      # 스트림 형식 (SPEC 1.2: 기본 h264, jpeg·nv21 은 고급)
         self.live_kbps = live_kbps                              # 렌즈당 H.264 스트림 kbps (None = 앱이 크기·fps 비례로 정함)
+        self.sync = sync or "off"                               # 렌즈 위상 맞추기 (앱 --es sync, SPEC 15.3: 기본 off, auto = 방법 C)
+        self.rec_wait_sync_s = int(rec_wait_sync_s)               # 녹화가 위상 맞춤을 기다리는 최대 초 (앱 --ei rec_wait_sync_s)
         env = os.environ.get("SCAN3D_REC_DIRS")
         self.rec_dirs = tuple(rec_dirs or (env.split(":") if env else DEFAULT_REC_DIRS))
         self.app_mode = None
@@ -208,9 +211,10 @@ class PhoneLink:
                              "--ef", "focus_diopters", str(self.focus), "--ez", "raw_ts", "false",
                              "--ei", "imu_us", str(self.imu_us), "--es", "mode", mode,
                              "--es", "stream_fmt", str(self.stream_fmt), "--ei", "jpeg_q", str(self.jpeg_q),
+                             "--es", "sync", str(self.sync), "--ei", "rec_wait_sync_s", str(int(self.rec_wait_sync_s)),
                              *(("--ei", "live_kbps", str(int(self.live_kbps))) if self.live_kbps else ()),   # 앱 MainActivity live_kbps
                              *(("--ei", "rec_kbps", str(int(self.rec_kbps))) if self.rec_kbps else ()), timeout=20)
-        self.log(f"[adb] am start mode={mode} {self.width}x{self.height} {self.fps} fps rc={rc} "
+        self.log(f"[adb] am start mode={mode} {self.width}x{self.height} {self.fps} fps sync={self.sync} rc={rc} "
                  f"{out.splitlines()[-1] if out else ''}")
         self.app_mode, self.app_started = mode, time.time()
         t_end = time.monotonic() + wait_s

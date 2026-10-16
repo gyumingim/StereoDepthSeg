@@ -118,9 +118,25 @@ public class MainActivity extends Activity {
     /** Saved across recreate() (screen off/on): the recording already ended in onStop, do not open a new folder. */
     private static final String STATE_REC_DONE = "rec_done_name";
     private BroadcastReceiver stopReceiver;
-    /** Per lens: physical (or logical when raw_ts) SENSOR_TIMESTAMP -> {logical ts, exposure ns, rs skew ns}.
+    /** Per lens: physical (or logical when raw_ts) SENSOR_TIMESTAMP -> {logical ts, exposure ns, rs skew ns,
+     *  mid offset ns, source}. Filled for every result (the mid-exposure frame time needs it, not only the recorder).
      *  Written and read on the camera handler thread only. */
     private List<LinkedHashMap<Long,long[]>> frameMeta;
+    /** Frame time since 1.7-mid (scan3d/SPEC.md 1.2): mid-exposure = physical SENSOR_TIMESTAMP + SENSOR_EXPOSURE_TIME/2
+     *  + SENSOR_ROLLING_SHUTTER_SKEW/2 of that lens. Clock unchanged (elapsedRealtimeNanos, same as the IMU). */
+    static final String TS_REF = "mid_exposure";
+    /** Sensor packet type 101 "stream_info" (SPEC 1.4): values [ts_ref code] (1 = mid exposure). Sent at connect and
+     *  every 30 results, so the PC knows the frame headers are already mid-exposure times. */
+    private static final int SENSOR_STREAM_INFO = 101;
+    private static final float TS_REF_CODE_MID = 1f;
+    /** mid offset value source per frame: 0 physical result, 1 logical result (lens result had no value),
+     *  2 last known value of that lens (this result had none), 3 none known yet (mid = start). Camera thread. */
+    static final int MID_PHYS = 0, MID_LOGICAL = 1, MID_LAST = 2, MID_NONE = 3;
+    private long[] lastExpNs, lastSkewNs, lastMidOffNs;  // per lens, -1 = never known (camera thread)
+    /** Frames sent/recorded per mid offset source + frames with no result entry (raw_ts image before its result or
+     *  expired entry -> last offset of that lens). metrics.json / meta.json "mid_ts". */
+    private final java.util.concurrent.atomic.AtomicLongArray midSrc = new java.util.concurrent.atomic.AtomicLongArray(4);
+    private final java.util.concurrent.atomic.AtomicLong midNoResult = new java.util.concurrent.atomic.AtomicLong();
 
     /** Sensor event timestamps and camera timestamps (SENSOR_INFO_TIMESTAMP_SOURCE_REALTIME on this device) are both
      *  SystemClock.elapsedRealtimeNanos(), so the PC can look up the IMU state at each frame's exposure time. */
@@ -143,6 +159,29 @@ public class MainActivity extends Activity {
      *  offsets are relative to the logical SENSOR_TIMESTAMP that the ImageReader frames carry. Also logged as RESULT lines. */
     private long timingCount=0;
     private CaptureTimestampMatcher timestampMatcher;
+    /** Lens phase alignment (scan3d/SPEC.md 15). null = off (intent sync=off). */
+    private volatile PhaseSync phaseSync;
+    private String syncMode="auto";                    // intent extra sync=auto|c|a|b|off (auto = c, SPEC 15.3)
+    /** intent extra rec_wait_sync_s (default 40 = about 25 camera re-opens at 15 fps): mode=record|both wait for the lock. */
+    private int recWaitSyncS=40;
+    /** mode=record|both: frames go to the recorder only after the lenses are in phase (or rec_wait_sync_s passed).
+     *  Written on the camera thread, read by PhaseSync.mayRestart / withSync on other threads. */
+    private volatile boolean recGate;
+    private long recGateUntilNs, recGateT0Ns;
+    private String lastSyncSuffix="";                  // guarded by statusLock
+    /** status() / syncChanged() / h264Error rewrite run under this lock; lastBase = last status line without the sync
+     *  suffix, so a sync rewrite never brings back an older line (REVIEW8 L1). Lock order: statusLock -> PhaseSync. */
+    private final Object statusLock=new Object();
+    private String lastBase="";
+    private float focusDiopters=1.0f;
+    private CaptureRequest currentRequest;             // what the repeating request runs now (camera thread)
+    private Range<Integer> sensRange;                  // target lens SENSOR_INFO_SENSITIVITY_RANGE (method A iso clamp)
+    private List<CaptureRequest.Key<?>> physKeys;      // logical getAvailablePhysicalCameraRequestKeys (method A, REVIEW8 H1)
+    private String logicalId;
+    /** Method C camera re-open (camera thread only): reopening = waiting for onOpened of the new device. */
+    private boolean reopening;
+    private int reopenSeq, reopenOpenFails;
+    private CameraDevice.StateCallback deviceCb;
     private final CameraCaptureSession.CaptureCallback timing=new CameraCaptureSession.CaptureCallback() {
         @Override public void onCaptureCompleted(CameraCaptureSession s,CaptureRequest r,TotalCaptureResult result) {
             try {
@@ -161,14 +200,36 @@ public class MainActivity extends Activity {
                 Long exp=result.get(CaptureResult.SENSOR_EXPOSURE_TIME), dur=result.get(CaptureResult.SENSOR_FRAME_DURATION), skew=result.get(CaptureResult.SENSOR_ROLLING_SHUTTER_SKEW);
                 v[ids.length]=exp==null?Float.NaN:exp/1e6f; v[ids.length+1]=dur==null?Float.NaN:dur/1e6f; v[ids.length+2]=skew==null?Float.NaN:skew/1e6f;
                 sb.append(" exp=").append(exp).append(" dur=").append(dur).append(" skew=").append(skew);
-                if(recorder!=null) {                    // before the matcher emits, so enqueueFrame finds it
-                    long[] m={ts,exp==null?-1:exp,skew==null?-1:skew};
-                    for(int i=0;i<ids.length;i++) {
-                        Long key=rawTimestamps?ts:physicalTimestamps[i];
-                        if(key!=null) frameMeta.get(i).put(key,m);
-                    }
+                // Mid-exposure offset per lens (before the matcher emits, so enqueueFrame finds it): the lens's own
+                // physical exposure / skew, else the logical value, else the last known value of that lens.
+                long[] midOff=new long[ids.length];
+                for(int i=0;i<ids.length;i++) {
+                    CaptureResult p=phys.get(ids[i]);
+                    Long pe=p==null?null:p.get(CaptureResult.SENSOR_EXPOSURE_TIME);
+                    Long pk=p==null?null:p.get(CaptureResult.SENSOR_ROLLING_SHUTTER_SKEW);
+                    int src=MID_PHYS;
+                    if(pe==null || pk==null) src=MID_LOGICAL;
+                    if(pe==null) pe=exp;
+                    if(pk==null) pk=skew;
+                    if(pe!=null && pe>=0) lastExpNs[i]=pe; else src=MID_LAST;
+                    if(pk!=null && pk>=0) lastSkewNs[i]=pk; else src=MID_LAST;
+                    long e=lastExpNs[i], k=lastSkewNs[i];
+                    if(src==MID_LAST && e<0 && k<0) src=MID_NONE;
+                    midOff[i]=(Math.max(0,e)+Math.max(0,k))/2;
+                    lastMidOffNs[i]=midOff[i];
+                    long[] m={ts,e,k,midOff[i],src};
+                    Long key=rawTimestamps?ts:physicalTimestamps[i];
+                    if(key!=null) frameMeta.get(i).put(key,m);
                 }
                 if(!rawTimestamps) timestampMatcher.result(ts,physicalTimestamps,SystemClock.elapsedRealtimeNanos());
+                PhaseSync ps=phaseSync;
+                if(ps!=null && physicalTimestamps[ps.ref]!=null && physicalTimestamps[ps.tgt]!=null) {
+                    CaptureResult tr=phys.get(ids[ps.tgt]);
+                    long tR=physicalTimestamps[ps.ref], tT=physicalTimestamps[ps.tgt];
+                    ps.onResult(tR,tT,tR+midOff[ps.ref],tT+midOff[ps.tgt],SystemClock.elapsedRealtimeNanos(),
+                            tr==null?null:tr.get(CaptureResult.SENSOR_EXPOSURE_TIME),tr==null?null:tr.get(CaptureResult.SENSOR_SENSITIVITY),
+                            tr==null?null:tr.get(CaptureResult.SENSOR_FRAME_DURATION));
+                }
                 sb.append(" matched=").append(timestampMatcher.matched).append(" unmatched_dropped=").append(timestampMatcher.dropped);
                 if(timingCount++%30==0) Log.i(TAG,sb.toString());
                 Recorder rec=recorder;
@@ -177,6 +238,10 @@ public class MainActivity extends Activity {
                     ByteBuffer b=ByteBuffer.allocate(4*v.length); for(float f:v) b.putFloat(f);
                     Packet pk=new Packet(100,ts,b.array());
                     if(!imuPending.offer(pk)) { imuPending.poll(); imuPending.offer(pk); }
+                    if(timingCount%30==1) {             // stream_info again now and then (a lost first one is not fatal)
+                        Packet si=streamInfo();
+                        if(!imuPending.offer(si)) { imuPending.poll(); imuPending.offer(si); }
+                    }
                 }
             } catch(Exception e) { Log.e(TAG,"timing",e); }
         }
@@ -188,6 +253,11 @@ public class MainActivity extends Activity {
             for(int i=0;i<readers.size();i++) if(target.equals(readers.get(i).getSurface())) mt.bufferLost(i);
         }
     };
+
+    /** Sensor packet type 101 "stream_info" (SPEC 1.4): [1.0] = frame header timestamps are mid-exposure times. */
+    private static Packet streamInfo() {
+        return new Packet(SENSOR_STREAM_INFO,SystemClock.elapsedRealtimeNanos(),ByteBuffer.allocate(4).putFloat(TS_REF_CODE_MID).array());
+    }
 
     private void startSensors() {
         sensors=(SensorManager)getSystemService(SENSOR_SERVICE);
@@ -270,11 +340,13 @@ public class MainActivity extends Activity {
                     // suffix here; the error text goes to metrics.json h264.error (REVIEW7 확인 H2-1).
                     if(rec==null) return;                      // recording is being stopped: metrics only, status untouched
                                                                // (else this line could overwrite RECORD_DONE; REVIEW7 확인2)
-                    String base=lastStatus==null?"":lastStatus;
-                    if(!base.startsWith("RECORDING")) base=runningState();
-                    int w=base.indexOf(" warn=");
-                    if(w>=0) base=base.substring(0,w);
-                    status(base+" warn=LIVE_ENCODER lens="+lens);
+                    synchronized(statusLock) {                 // read-modify-write under the status lock (REVIEW8 L1)
+                        String base=lastBase==null?"":lastBase;
+                        if(!base.startsWith("RECORDING")) base=runningState();
+                        int w=base.indexOf(" warn=");
+                        if(w>=0) base=base.substring(0,w);
+                        status(base+" warn=LIVE_ENCODER lens="+lens);
+                    }
                 } else status("ERROR LIVE_ENCODER lens="+lens+" "+error+" | try stream_fmt=jpeg");
             }
         };
@@ -332,16 +404,60 @@ public class MainActivity extends Activity {
         } else Log.w(TAG,"unknown command: "+line);
     }
 
+    private static String stripSync(String s) {
+        return s==null?null:s.replaceAll("\\s+ts_ref=\\S+","").replaceAll("\\s+sync=\\S+(\\s+(?:phase|method|try|rec_wait)=\\S+)*","");
+    }
+
+    /** mode=record|both and the recorder still waits for the lock: " rec_wait=1" (PC shows "맞춘 뒤 녹화 시작"). */
+    private String gateTag() { return recGate && recorder!=null ? " rec_wait=1" : ""; }
+
+    /** Running states (STREAMING / RECORDING / RECORDING+STREAMING) get the lens phase suffix
+     *  " sync=aligning phase=+3.2ms method=C try=4 [rec_wait=1]" or " sync=locked phase=+0.4ms method=C" (SPEC 15.4).
+     *  The first word never changes, so phone_link / win_relay parse the line as before; an older suffix is replaced. */
+    private String withSync(String s) {
+        if(s==null) return s;
+        String t=s.trim();
+        String first=t.isEmpty()?"":t.split("\\s+",2)[0];
+        boolean run=false;
+        for(String part:first.split("\\+")) if(part.equals("STREAMING")||part.equals("RECORDING")) run=true;
+        if(!run || first.contains("ERROR")) return s;
+        String base=stripSync(s);
+        PhaseSync ps=phaseSync;
+        // " ts_ref=mid": frame timestamps are mid-exposure times (1.7-mid, SPEC 1.2); old apps have no ts_ref
+        String suf=" ts_ref=mid"+(ps==null?"":ps.suffix()+gateTag());
+        int w=base.indexOf(" warn=");                     // keep warn=... last (h264Error strips from there)
+        return w>=0?base.substring(0,w)+suf+base.substring(w):base+suf;
+    }
+
+    /** PhaseSync state/phase changed (posted to the camera thread, never called with the PhaseSync lock held):
+     *  rewrite the current running status line from lastBase with the new suffix (REVIEW8 L1). */
+    private void syncChanged() {
+        PhaseSync ps=phaseSync; if(ps==null) return;
+        synchronized(statusLock) {
+            String suf=ps.suffix()+gateTag();
+            if(suf.equals(lastSyncSuffix)) return;
+            lastSyncSuffix=suf;
+            Log.i(TAG,"sync"+suf);
+            String b=lastBase;
+            if(b!=null && !b.isEmpty()) { String n=withSync(b); if(!n.equals(lastStatus)) status(b); }
+        }
+    }
+
     private void status(String s) {
-        Log.i(TAG, s);
-        lastStatus = s;
-        runOnUiThread(() -> text.setText("Phone Stereo\n\n" + s + "\n\nUSB → PC\n화면을 켜둔 상태에서 사용합니다."));
-        try (FileOutputStream f = openFileOutput("status.txt", MODE_PRIVATE)) {
-            f.write(s.getBytes("UTF-8"));
-        } catch (IOException e) { Log.e(TAG,"status write",e); }
-        // Copy readable without run-as: /sdcard/Android/data/com.camera.dualstream/files/status.txt
-        File ext=getExternalFilesDir(null);
-        if(ext!=null) try { writeFile(new File(ext,"status.txt"),s); } catch(IOException e) { Log.w(TAG,"ext status",e); }
+        synchronized(statusLock) {
+            lastBase = stripSync(s);
+            s = withSync(lastBase);
+            Log.i(TAG, s);
+            lastStatus = s;
+            final String shown = s;
+            runOnUiThread(() -> text.setText("Phone Stereo\n\n" + shown + "\n\nUSB → PC\n화면을 켜둔 상태에서 사용합니다."));
+            try (FileOutputStream f = openFileOutput("status.txt", MODE_PRIVATE)) {
+                f.write(s.getBytes("UTF-8"));
+            } catch (IOException e) { Log.e(TAG,"status write",e); }
+            // Copy readable without run-as: /sdcard/Android/data/com.camera.dualstream/files/status.txt
+            File ext=getExternalFilesDir(null);
+            if(ext!=null) try { writeFile(new File(ext,"status.txt"),s); } catch(IOException e) { Log.w(TAG,"ext status",e); }
+        }
     }
 
     private static void writeFile(File f,String s) throws IOException {
@@ -367,10 +483,6 @@ public class MainActivity extends Activity {
         int kbps=kbpsExtra>0?kbpsExtra:Caps.autoKbps(width,height,fps,recEncoder);
         recKbps=kbps;
         boolean raw=getIntent().getBooleanExtra("rec_raw",false);
-        frameMeta=new ArrayList<>();
-        for(int i=0;i<ids.length;i++) frameMeta.add(new LinkedHashMap<Long,long[]>(64,0.75f,false) {
-            @Override protected boolean removeEldestEntry(Map.Entry<Long,long[]> e) { return size()>64; }
-        });
         Recorder rec=new Recorder(dir,ids,width,height,fps,kbps,raw,recEncoder,liveShared?liveSink(++liveGen):null);
         recMeta=new JSONObject();
         recMeta.put("format","scan3d-phone-rec/1");
@@ -382,7 +494,13 @@ public class MainActivity extends Activity {
         recMeta.put("rec_kbps_source",kbpsExtra>0?"extra":"auto"); recMeta.put("encoder",recEncoder==null?"default":recEncoder);
         recMeta.put("i_frame_interval_s",1); recMeta.put("max_b_frames",0); recMeta.put("codec","video/avc");
         recMeta.put("live_shares_encoder",liveShared);
+        recMeta.put("sync_mode",phaseSync==null?"off":syncMode);
+        // mode=record|both: frames reach the MP4s after the lens phase lock (max rec_wait_sync_s). Per-frame phase is also
+        // in the frame_timing (type 100) sensor rows: physical offsets of both lenses (SPEC 15.5)
+        recMeta.put("rec_wait_sync_s",phaseSync!=null?recWaitSyncS:0);
         recMeta.put("timestamp_clock","SystemClock.elapsedRealtimeNanos (camera SENSOR_TIMESTAMP and SensorEvent.timestamp)");
+        // frames CSV t_mid_ns (frame time) = physical_ts_ns + exposure_ns/2 + rolling_shutter_skew_ns/2 (1.7-mid)
+        recMeta.put("timestamp_ref",TS_REF);
         recMeta.put("start_wall_ms",System.currentTimeMillis());
         recMeta.put("start_wall",new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ",Locale.US).format(new Date()));
         recMeta.put("start_elapsed_ns",SystemClock.elapsedRealtimeNanos());
@@ -418,6 +536,9 @@ public class MainActivity extends Activity {
             meta.put("end_wall",new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ",Locale.US).format(new Date()));
             meta.put("end_elapsed_ns",SystemClock.elapsedRealtimeNanos());
             meta.put("matcher_unmatched_dropped",timestampMatcher==null?0:timestampMatcher.dropped);
+            meta.put("mid_ts",midJson());
+            PhaseSync ps=phaseSync;
+            synchronized(meta) { meta.put("sync",ps==null?JSONObject.NULL:ps.json()); }
             writeFinalMeta(rec,meta,done);
         } catch(Exception e) { Log.e(TAG,"meta.json",e); }
         if(!done) {
@@ -484,6 +605,12 @@ public class MainActivity extends Activity {
             if(logical==null || physical==null) { status("Inventory ready. Select cameras from PC."); return; }
             ids=physical.split(","); counts=new long[ids.length];
             timestampMatcher=new CaptureTimestampMatcher(ids.length,this::enqueueFrame);
+            frameMeta=new ArrayList<>();
+            for(int i=0;i<ids.length;i++) frameMeta.add(new LinkedHashMap<Long,long[]>(64,0.75f,false) {
+                @Override protected boolean removeEldestEntry(Map.Entry<Long,long[]> e) { return size()>64; }
+            });
+            lastExpNs=new long[ids.length]; lastSkewNs=new long[ids.length]; lastMidOffNs=new long[ids.length];
+            Arrays.fill(lastExpNs,-1); Arrays.fill(lastSkewNs,-1);
             if(ids.length<2 || ids.length>3 || new HashSet<>(Arrays.asList(ids)).size()!=ids.length)
                 throw new IllegalArgumentException("Need 2 or 3 distinct physical IDs");
             Set<String> available=manager.getCameraCharacteristics(logical).getPhysicalCameraIds();
@@ -535,6 +662,18 @@ public class MainActivity extends Activity {
                 status("ERROR UNSUPPORTED "+width+"x"+height+"@"+fps+" mode="+mode+" reason="+why+" | see caps.json");
                 return;
             }
+            String sm=getIntent().getStringExtra("sync");
+            syncMode=sm==null?"auto":sm.trim().toLowerCase(Locale.US);
+            if(syncMode.equals("c")) syncMode="auto";
+            if(!syncMode.equals("auto") && !syncMode.equals("a") && !syncMode.equals("b") && !syncMode.equals("off"))
+                throw new IllegalArgumentException("sync must be auto|c|a|b|off: "+sm);
+            recWaitSyncS=Math.max(0,getIntent().getIntExtra("rec_wait_sync_s",40));
+            focusDiopters=getIntent().getFloatExtra("focus_diopters",1.0f);
+            logicalId=logical;
+            if(!syncMode.equals("off")) phaseSync=createPhaseSync(logical);
+            // record and both: align (camera re-open) BEFORE the MP4s get frames; no re-open once they do (SPEC 15.5).
+            // both: the live stream rides the recorder encoder, so it also starts after the lock.
+            recGate=recordEnabled && phaseSync!=null && recWaitSyncS>0;
             metrics=new Metrics(ids);
             running=true;
             startMetrics();
@@ -578,13 +717,104 @@ public class MainActivity extends Activity {
             status("OPEN mode="+mode+" logical="+logical+" physical="+physical+" "+width+"x"+height+" fps="+fps
                     +(streamEnabled?" stream_fmt="+(streamJpeg?"jpeg q="+jpegQuality:streamH264?"h264 enc="+liveEncoderName
                         +" kbps="+(liveShared?recKbps+" (shared with recording)":String.valueOf(liveKbps)):"nv21"):""));
-            manager.openCamera(logical,new CameraDevice.StateCallback() {
-                @Override public void onOpened(CameraDevice d) { camera=d; configure(); }
-                @Override public void onDisconnected(CameraDevice d) { status("DISCONNECTED"); d.close(); }
-                @Override public void onError(CameraDevice d,int e) { status("CAMERA_ERROR "+e); d.close(); }
-            },handler);
+            deviceCb=new CameraDevice.StateCallback() {
+                @Override public void onOpened(CameraDevice d) {
+                    if(!running) { d.close(); return; }
+                    camera=d;
+                    if(reopening) reopened(); else configure();
+                }
+                @Override public void onDisconnected(CameraDevice d) {
+                    if(d!=camera && camera!=null) { d.close(); return; }          // an old device of a re-open
+                    status("DISCONNECTED"); d.close();
+                }
+                @Override public void onError(CameraDevice d,int e) {
+                    if(reopening && camera==null) { d.close(); reopenOpenFailed(reopenSeq,"CAMERA_ERROR "+e); return; }
+                    status("CAMERA_ERROR "+e); d.close();
+                }
+            };
+            manager.openCamera(logical,deviceCb,handler);
             startSensors();
         } catch(Exception e) { status("ERROR "+e); Log.e(TAG,"startup",e); }
+    }
+
+    /** Lens phase alignment for the pair (target = lens "5" when selected, else ids[1]; SPEC 15). */
+    private PhaseSync createPhaseSync(String logical) throws Exception {
+        int t=1; for(int i=0;i<ids.length;i++) if(ids[i].equals("5")) t=i;
+        String target=ids[t];
+        Caps.MethodA a=Caps.methodA(manager,logical,target);
+        CameraCharacteristics tc=manager.getCameraCharacteristics(target);
+        long minDur=Math.max(0,Caps.minFrameNs(tc,width,height));
+        Long maxDur=tc.get(CameraCharacteristics.SENSOR_INFO_MAX_FRAME_DURATION);
+        sensRange=tc.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE);
+        try { physKeys=manager.getCameraCharacteristics(logical).getAvailablePhysicalCameraRequestKeys(); }
+        catch(Exception e) { physKeys=null; }
+        Log.i(TAG,"phase sync mode="+syncMode+" target="+target+" method_a="+a.possible+" ae_key="+a.aeKey+" ("+a.reason+")");
+        return new PhaseSync(ids,fps,syncMode,a,minDur,maxDur==null?0:maxDur,new PhaseSync.Actions() {
+            @Override public boolean applyDuration(long durNs,long expNs,int iso) { return applyLensDuration(durNs,expNs,iso); }
+            @Override public boolean restartRepeating() { return restartRepeatingRequest(); }
+            @Override public boolean recreateSession() { return recreateCaptureSession(); }
+            @Override public boolean reopenCamera() { Handler h=handler; return h!=null && running && h.post(MainActivity.this::doReopen); }
+            @Override public boolean mayRestart() { return mayRestartCamera(); }
+            // posted: PhaseSync calls this with its own lock held; syncChanged takes statusLock (REVIEW8 L1 lock order)
+            @Override public void changed() { Handler h=handler; if(h!=null) h.post(MainActivity.this::syncChanged); }
+        });
+    }
+
+    /** false once frames go into an MP4 (no gate, or the gate opened): restarting the camera would cut the MP4. */
+    private boolean mayRestartCamera() { return recorder==null || recGate; }
+
+    /** Method C step (camera thread): close the CameraDevice, open it again. ImageReaders, encoders, the recorder and
+     *  the socket stay; the new device gets a new session on the same surfaces (reopened()). */
+    private void doReopen() {
+        PhaseSync ps=phaseSync;
+        long now=SystemClock.elapsedRealtimeNanos();
+        if(ps==null) return;
+        if(!running || camera==null || reopening) { ps.cancelReopen(now,"camera not running"); return; }
+        if(!mayRestartCamera()) { ps.cancelReopen(now,"recording started"); return; }
+        final int seq=++reopenSeq;
+        reopening=true; reopenOpenFails=0;
+        CameraCaptureSession s=session; session=null;
+        CameraDevice d=camera; camera=null;
+        try { if(s!=null) s.close(); } catch(Exception e) { Log.w(TAG,"reopen: session close",e); }
+        try { d.close(); } catch(Exception e) { Log.w(TAG,"reopen: device close",e); }
+        if(timestampMatcher!=null) timestampMatcher.clear();     // half pairs of the old device
+        ps.reopenClosed();
+        openForReopen(seq);
+        handler.postDelayed(() -> reopenWatchdog(seq),5000);
+    }
+
+    private void openForReopen(int seq) {
+        if(seq!=reopenSeq || !running || !reopening) return;
+        try { manager.openCamera(logicalId,deviceCb,handler); }
+        catch(Exception e) { Log.w(TAG,"reopen: openCamera",e); reopenOpenFailed(seq,e.toString()); }
+    }
+
+    /** Open of the new device failed: try again (max 3), then ERROR (the PC restarts the app). */
+    private void reopenOpenFailed(int seq,String why) {
+        if(seq!=reopenSeq || !running) return;
+        if(++reopenOpenFails<=3) { handler.postDelayed(() -> openForReopen(seq),700); return; }
+        reopening=false;
+        PhaseSync ps=phaseSync; if(ps!=null) ps.reopenFailed(SystemClock.elapsedRealtimeNanos(),why);
+        status("ERROR CAMERA_REOPEN_FAILED "+why);
+    }
+
+    /** 5 s after a re-open: no device -> open again; device but no session -> new session once more. */
+    private void reopenWatchdog(int seq) {
+        if(seq!=reopenSeq || !running) return;
+        if(camera==null) { Log.w(TAG,"reopen: no onOpened in 5 s"); reopenOpenFailed(seq,"open timeout"); }
+        else if(session==null) {
+            Log.w(TAG,"reopen: no session in 5 s");
+            try { createSession(false,1); } catch(Exception e) { status("ERROR CONFIGURE_FAILED (phase sync) "+e); }
+        }
+    }
+
+    /** onOpened of a re-opened device (camera thread): new request for this device, session on the same readers. */
+    private void reopened() {
+        reopening=false; reopenOpenFails=0;
+        try {
+            currentRequest=buildRequest(0,0,0);
+            createSession(false,0);
+        } catch(Exception e) { status("ERROR CONFIGURE_FAILED (phase sync) "+e); Log.e(TAG,"reopen session",e); }
     }
 
     /** caps.json (scan3d/SPEC.md 14.2): query only, background thread so the camera start is not delayed.
@@ -624,6 +854,18 @@ public class MainActivity extends Activity {
             writeMetrics();
             h.postDelayed(this,1000);
         }});
+    }
+
+    /** "mid_ts" counters (metrics.json / meta.json): frames by mid offset source (SPEC 1.2). Any thread. */
+    private JSONObject midJson() throws JSONException {
+        JSONObject o=new JSONObject();
+        o.put("ref",TS_REF);
+        o.put("from_physical",midSrc.get(MID_PHYS));
+        o.put("from_logical",midSrc.get(MID_LOGICAL));
+        o.put("last_known",midSrc.get(MID_LAST));      // this result had no exposure/skew -> last known value of that lens
+        o.put("unknown",midSrc.get(MID_NONE));         // nothing known yet -> mid = start
+        o.put("no_result",midNoResult.get());          // no result entry for the frame -> last offset of that lens
+        return o;
     }
 
     /** metrics.json (scan3d/SPEC.md 14.3), metrics thread only. */
@@ -671,6 +913,13 @@ public class MainActivity extends Activity {
             j.put("capture_failed",mt.captureFailed.get());
             CaptureTimestampMatcher tm=timestampMatcher;
             j.put("matcher_unmatched_dropped",tm==null?0:tm.dropped);
+            j.put("timestamp_ref",TS_REF);
+            j.put("mid_ts",midJson());
+            PhaseSync ps=phaseSync;
+            JSONObject sj=ps==null?new JSONObject().put("state","off").put("mode",syncMode):ps.json();
+            sj.put("rec_wait",recGate && recorder!=null);           // recorder still waits for the lock
+            sj.put("rec_wait_sync_s",recordEnabled?recWaitSyncS:0);
+            j.put("sync",sj);
             JSONObject usb=new JSONObject();
             long ub=mt.usbBytes.get();
             usb.put("client",client!=null);
@@ -745,45 +994,140 @@ public class MainActivity extends Activity {
         return all;
     }
 
+    /** Base repeating request; durNs > 0 = method A override on the target lens: SENSOR_FRAME_DURATION (+ AE off with
+     *  the last AE exposure/iso of that lens when those are physical keys). Camera thread. */
+    private CaptureRequest buildRequest(long durNs,long expNs,int iso) throws CameraAccessException {
+        PhaseSync ps=phaseSync;
+        boolean override=durNs>0 && ps!=null;
+        // setPhysicalCameraKey needs a builder created with the physical id set (API 28); the normal request stays
+        // the plain template request exactly as before 1.5.
+        CaptureRequest.Builder request=override
+                ?camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW,new HashSet<>(Arrays.asList(ids)))
+                :camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+        // A builder with physical ids gets per-lens settings filled from the template: copy every logical value that is a
+        // physical request key to each lens too, or AF/OIS/fps range of BOTH lenses go back to defaults (REVIEW8 H1).
+        setKey(request,override,CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE,CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_OFF);
+        setKey(request,override,CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE,CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_OFF);
+        // Fixed manual focus (diopters = 1/m). Autofocus changes the wide lens focal length between frames
+        // (focus breathing), which moved rectified dy by 1-2 px between captures. 0 keeps autofocus.
+        if(focusDiopters>0f) {
+            setKey(request,override,CaptureRequest.CONTROL_AF_MODE,CaptureRequest.CONTROL_AF_MODE_OFF);
+            setKey(request,override,CaptureRequest.LENS_FOCUS_DISTANCE,focusDiopters);
+        }
+        // Fixed AE fps range [fps,fps]: AE never changes the frame duration by itself (the phase control relies on it).
+        Range<Integer>[] ranges=manager.getCameraCharacteristics(camera.getId()).get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
+        if(ranges!=null) for(Range<Integer> r:ranges)
+            if(r.getLower()==fps && r.getUpper()==fps) { setKey(request,override,CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,r); break; }
+        for(ImageReader reader:readers) request.addTarget(reader.getSurface());
+        if(override) {
+            String id=ids[ps.tgt];
+            request.setPhysicalCameraKey(CaptureRequest.SENSOR_FRAME_DURATION,durNs,id);
+            if(ps.aeKey && expNs>0 && iso>0) {
+                // exposure must stay below the (shorter) frame duration or the HAL stretches the frame: clamp, keep
+                // brightness with iso (within the lens sensitivity range)
+                long exp=Math.min(expNs,durNs-500_000L);
+                int is=(int)Math.round(iso*(double)expNs/Math.max(1,exp));
+                if(sensRange!=null) is=Math.max(sensRange.getLower(),Math.min(sensRange.getUpper(),is));
+                request.setPhysicalCameraKey(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_OFF,id);
+                request.setPhysicalCameraKey(CaptureRequest.SENSOR_EXPOSURE_TIME,exp,id);
+                request.setPhysicalCameraKey(CaptureRequest.SENSOR_SENSITIVITY,is,id);
+            }
+        }
+        return request.build();
+    }
+
+    /** Logical value; with physical=true also the same value on every selected lens when it is a physical key. */
+    private <T> void setKey(CaptureRequest.Builder b,boolean physical,CaptureRequest.Key<T> k,T v) {
+        b.set(k,v);
+        if(physical && physKeys!=null && physKeys.contains(k)) for(String id:ids) b.setPhysicalCameraKey(k,v,id);
+    }
+
     private void configure() {
         try {
-            List<OutputConfiguration> outputs=new ArrayList<>();
-            CaptureRequest.Builder request=camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            request.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE,CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_OFF);
-            request.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE,CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_OFF);
-            // Fixed manual focus (diopters = 1/m). Autofocus changes the wide lens focal length between frames
-            // (focus breathing), which moved rectified dy by 1-2 px between captures. 0 keeps autofocus.
-            float focus=getIntent().getFloatExtra("focus_diopters",1.0f);
-            if(focus>0f) {
-                request.set(CaptureRequest.CONTROL_AF_MODE,CaptureRequest.CONTROL_AF_MODE_OFF);
-                request.set(CaptureRequest.LENS_FOCUS_DISTANCE,focus);
-            }
-            Range<Integer>[] ranges=manager.getCameraCharacteristics(camera.getId()).get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
-            if(ranges!=null) for(Range<Integer> r:ranges)
-                if(r.getLower()==fps && r.getUpper()==fps) { request.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,r); break; }
             for(int i=0;i<ids.length;i++) {
                 final int index=i;
                 ImageReader reader=ImageReader.newInstance(width,height,ImageFormat.YUV_420_888,3);
                 readers.add(reader);
                 reader.setOnImageAvailableListener(r -> receive(r,index),handler);
-                OutputConfiguration out=new OutputConfiguration(reader.getSurface());
-                out.setPhysicalCameraId(ids[i]); outputs.add(out); request.addTarget(reader.getSurface());
             }
-            SessionConfiguration config=new SessionConfiguration(SessionConfiguration.SESSION_REGULAR,outputs,
-                command -> handler.post(command),new CameraCaptureSession.StateCallback() {
-                    @Override public void onConfigured(CameraCaptureSession s) {
-                        session=s;
-                        try {
-                            s.setRepeatingRequest(request.build(),timing,handler);
-                            status(runningState()+" logical="+camera.getId()+" physical="+Arrays.toString(ids)+" focus_diopters="+focus+" mode="+mode);
-                        } catch(Exception e) { status("REQUEST_FAILED "+e); }
-                    }
-                    @Override public void onConfigureFailed(CameraCaptureSession s) { status("CONFIGURE_FAILED"); }
-                });
+            currentRequest=buildRequest(0,0,0);
+            createSession(true,0);
+        } catch(Exception e) { status("CONFIGURE_ERROR "+e); Log.e(TAG,"configure",e); }
+    }
+
+    /** One regular session, one physical YUV output per lens (the existing ImageReaders). first=false: method B
+     *  re-creation (creating a session closes the previous one) or method C (new device). attempt: 0, retry 1.
+     *  Camera thread. */
+    private void createSession(final boolean first,final int attempt) throws CameraAccessException {
+        List<OutputConfiguration> outputs=new ArrayList<>();
+        for(int i=0;i<ids.length;i++) {
+            OutputConfiguration out=new OutputConfiguration(readers.get(i).getSurface());
+            out.setPhysicalCameraId(ids[i]); outputs.add(out);
+        }
+        SessionConfiguration config=new SessionConfiguration(SessionConfiguration.SESSION_REGULAR,outputs,
+            command -> handler.post(command),new CameraCaptureSession.StateCallback() {
+                @Override public void onConfigured(CameraCaptureSession s) {
+                    if(!running || camera==null) { s.close(); return; }
+                    session=s;
+                    try {
+                        s.setRepeatingRequest(currentRequest,timing,handler);
+                        if(first) status(runningState()+" logical="+camera.getId()+" physical="+Arrays.toString(ids)+" focus_diopters="+focusDiopters+" mode="+mode);
+                        else Log.i(TAG,"session re-created (phase sync)");
+                    } catch(Exception e) { status("REQUEST_FAILED "+e); }
+                }
+                @Override public void onConfigureFailed(CameraCaptureSession s) {
+                    if(first) { status("CONFIGURE_FAILED"); return; }
+                    // phase sync re-creation failed: one more try, then a clear ERROR (REVIEW8 L2; the PC restarts the app)
+                    if(attempt<1 && running && camera!=null) {
+                        Log.w(TAG,"session re-create failed, retry");
+                        handler.postDelayed(() -> {
+                            if(!running || camera==null || session!=null) return;
+                            try { createSession(false,attempt+1); }
+                            catch(Exception e) { status("ERROR CONFIGURE_FAILED (phase sync) "+e); }
+                        },300);
+                    } else status("ERROR CONFIGURE_FAILED (phase sync)");
+                }
+            });
+        if(first) {
             try { Log.i(TAG,"session_supported="+camera.isSessionConfigurationSupported(config)); }
             catch(Exception e) { Log.i(TAG,"session query unavailable: "+e); }
-            camera.createCaptureSession(config);
-        } catch(Exception e) { status("CONFIGURE_ERROR "+e); Log.e(TAG,"configure",e); }
+        }
+        camera.createCaptureSession(config);
+    }
+
+    /** PhaseSync method A (camera thread). durNs <= 0 = back to the normal request. */
+    private boolean applyLensDuration(long durNs,long expNs,int iso) {
+        CameraCaptureSession s=session;
+        if(s==null || camera==null || !running) return false;
+        try {
+            CaptureRequest r=buildRequest(durNs,expNs,iso);
+            s.setRepeatingRequest(r,timing,handler);
+            currentRequest=r;
+            return true;
+        } catch(Exception e) {
+            Log.w(TAG,"phase sync: duration request failed",e);
+            if(durNs>0) try { currentRequest=buildRequest(0,0,0); s.setRepeatingRequest(currentRequest,timing,handler); } catch(Exception ignored) {}
+            return false;
+        }
+    }
+
+    /** PhaseSync method B step 1: stop and start the repeating request (camera thread). */
+    private boolean restartRepeatingRequest() {
+        CameraCaptureSession s=session;
+        if(s==null || !running) return false;
+        try { s.stopRepeating(); s.setRepeatingRequest(currentRequest,timing,handler); return true; }
+        catch(Exception e) { Log.w(TAG,"phase sync: repeating restart failed",e); return false; }
+    }
+
+    /** PhaseSync method B step 2: new capture session on the same outputs (camera thread). */
+    private boolean recreateCaptureSession() {
+        if(camera==null || !running) return false;
+        try {
+            CameraCaptureSession old=session; session=null;
+            if(old!=null) { try { old.stopRepeating(); } catch(Exception ignored) {} }
+            createSession(false,0);
+            return true;
+        } catch(Exception e) { Log.w(TAG,"phase sync: session re-create failed",e); return false; }
     }
 
     private void receive(ImageReader reader,int index) {
@@ -818,21 +1162,47 @@ public class MainActivity extends Activity {
         } catch(Exception e) { Log.e(TAG,"frame",e); }
     }
 
-    /** Camera handler thread. timestamp = physical SENSOR_TIMESTAMP (logical when raw_ts). The same read-only
-     *  NV21 array goes to the stream queue and the recorder. */
+    /** Camera handler thread. timestamp = physical SENSOR_TIMESTAMP (logical when raw_ts). The frame goes on with its
+     *  mid-exposure time (SPEC 1.2, 1.7-mid). The same read-only NV21 array goes to the stream queue and the recorder. */
     private void enqueueFrame(int index,long timestamp,byte[] data) {
         if(!running) return;
+        long[] m=frameMeta.get(index).remove(timestamp);
+        long mid;
+        if(m!=null) { mid=timestamp+m[3]; midSrc.incrementAndGet((int)m[4]); }
+        else { mid=timestamp+lastMidOffNs[index]; midNoResult.incrementAndGet(); }   // raw_ts image before its result
         Recorder rec=recorder;
+        if(rec!=null && recGate) {
+            // mode=record: start the MP4s once the lenses are in phase (SPEC 15.5); frameMeta entries expire by themselves
+            long now=SystemClock.elapsedRealtimeNanos();
+            if(recGateT0Ns==0) { recGateT0Ns=now; recGateUntilNs=now+recWaitSyncS*1_000_000_000L; }
+            PhaseSync ps=phaseSync;
+            if(ps==null || ps.locked() || now>=recGateUntilNs) openRecGate(now);
+            else rec=null;
+        }
         if(rec!=null) {
-            long[] m=frameMeta.get(index).remove(timestamp);
-            if(m==null) rec.frame(index,timestamp,rawTimestamps?timestamp:-1,-1,-1,data);
-            else rec.frame(index,timestamp,m[0],m[1],m[2],data);
+            if(m==null) rec.frame(index,mid,timestamp,rawTimestamps?timestamp:-1,-1,-1,data);
+            else rec.frame(index,mid,timestamp,m[0],m[1],m[2],data);
         }
         if(client==null) return;
-        if(streamH264) { LiveEncoder le=liveEncoder; if(le!=null) le.frame(index,timestamp,data); return; }   // shared: done by rec.frame
+        if(streamH264) { LiveEncoder le=liveEncoder; if(le!=null) le.frame(index,mid,data); return; }   // shared: done by rec.frame
         ExecutorService[] enc=jpegEncoders;                 // local copy: stop() may null the field
-        if(streamJpeg) { if(enc!=null) encodeJpeg(enc[index],index,timestamp,data); return; }
-        offerFrame(new Packet(index,timestamp,data));
+        if(streamJpeg) { if(enc!=null) encodeJpeg(enc[index],index,mid,data); return; }
+        offerFrame(new Packet(index,mid,data));
+    }
+
+    private void openRecGate(long now) {
+        recGate=false;
+        JSONObject meta=recMeta;
+        if(meta==null) return;
+        try {
+            synchronized(meta) {
+                meta.put("sync_gate_wait_ms",(now-recGateT0Ns)/1_000_000L);
+                PhaseSync ps=phaseSync;
+                meta.put("sync_at_record_start",ps==null?JSONObject.NULL:ps.json());
+            }
+        } catch(JSONException e) { Log.w(TAG,"meta sync",e); }
+        Log.i(TAG,"recording frames start after "+(now-recGateT0Ns)/1_000_000L+" ms (phase sync)");
+        syncChanged();                                     // drop " rec_wait=1" from the status line
     }
 
     private void offerFrame(Packet packet) {
@@ -897,6 +1267,7 @@ public class MainActivity extends Activity {
                 },"usb-cmd");
                 cmd.setDaemon(true); cmd.start();
                 DataOutputStream out=new DataOutputStream(new BufferedOutputStream(s.getOutputStream(),1024*1024));
+                imuPending.offer(streamInfo());       // early packet of the connection: ts_ref (SPEC 1.4 type 101)
                 while(running) {
                     Packet p=pending.poll(5,TimeUnit.MILLISECONDS);
                     if(p!=null && p.kind==KIND_H264) {
@@ -945,6 +1316,7 @@ public class MainActivity extends Activity {
     @Override public void onRestart() { super.onRestart(); recreate(); }
     private void stop() {
         running=false;
+        PhaseSync ps=phaseSync; if(ps!=null) ps.stop();
         if(handler!=null) handler.post(() -> { if(timestampMatcher!=null) timestampMatcher.clear(); });
         if(sensors!=null) { sensors.unregisterListener(imu); sensors=null; }
         if(imuThread!=null) { imuThread.quitSafely(); imuThread=null; }

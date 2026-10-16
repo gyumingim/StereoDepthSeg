@@ -74,7 +74,7 @@ CALIB = ROOT / "calib_phone_pair.json"
 APP_ID = "com.camera.dualstream"
 APP_EXT_DIR = f"/sdcard/Android/data/{APP_ID}/files"      # 앱 1.3-caps: caps.json·metrics.json (run-as 없이 cat)
 
-DEFAULT_SIZE = (640, 480)
+DEFAULT_SIZE = (1440, 1080)                     # 2026-10-16 사용자 결정 (2+5 · 1440x1080, 3렌즈 비교 뒤)
 DEFAULT_FPS = 15
 FPS_CANDIDATES = (10, 15, 20, 24, 30, 60)
 MIN_W, MAX_W = 320, 4000
@@ -399,19 +399,21 @@ def fps_ok_ae(caps, fps, w=None, h=None):
 ENC_LABEL = dict(record="녹화 인코더", live="실시간 영상 인코더", both="영상 인코더 (녹화+실시간)")
 
 
-def enc_need(caps, mode, stream_fmt):
+def enc_need(caps, mode, stream_fmt, n_rec=2):
     """동시에 쓰는 H.264 인코더 수와 종류. (n, kind 'record'|'live'|'both'|None, 공유?)
-    실시간 H.264 = 렌즈마다 1 (2개). 녹화 = 2개. both + h264 = 4개, 앱이 한 인코더 출력을 녹화·실시간에 같이 쓰면 2개
+    실시간 H.264 = 렌즈마다 1 (2개). 녹화 = 렌즈 수 (보통 2개, '3개 모두 녹화 (비교용)' 이면 n_rec=3).
+    both + h264 = 2 + 녹화 수, 앱이 한 인코더 출력을 녹화·실시간에 같이 쓰면 녹화 수
     (caps live_h264.shared_with_record — 가정한 필드)."""
     live_h = mode in ("live", "both") and norm_fmt(stream_fmt) == "h264"
     rec = mode in ("record", "both")
+    n_rec = max(2, int(n_rec or 2))
     shared = bool((caps.get("live_h264") or {}).get("shared_with_record"))
     if live_h and rec:
-        return (2 if shared else 4), "both", shared
+        return (n_rec if shared else 2 + n_rec), "both", shared
     if live_h:
         return 2, "live", False
     if rec:
-        return 2, "record", False
+        return n_rec, "record", False
     return 0, None, False
 
 
@@ -609,7 +611,7 @@ class LoadModel:
         """앱이 카메라 → 인코더를 Surface 로 바로 잇는가 (caps live_h264.input, 가정한 필드). 모르면 False (복사 비용을 넣음)."""
         return str((self.caps.get("live_h264") or {}).get("input", "")).lower() == "surface"
 
-    def predict(self, w, h, fps, stream_fmt=DEFAULT_STREAM_FMT, scale=None, mode="live"):
+    def predict(self, w, h, fps, stream_fmt=DEFAULT_STREAM_FMT, scale=None, mode="live", n_rec=2):
         fmt = norm_fmt(stream_fmt)
         scale = self.ffs_scale(w, h, scale)
         c = self.coeffs
@@ -632,7 +634,7 @@ class LoadModel:
             pc_dec_ms = 0.0
         ffs_ms = c["ffs_ms_per_mpx"] * m * scale * scale
         kf_ms = ffs_ms + c["yolo_ms"]
-        n_enc, enc_kind, enc_shared = enc_need(self.caps, mode, fmt)
+        n_enc, enc_kind, enc_shared = enc_need(self.caps, mode, fmt, n_rec)
         return dict(
             stream_fmt=fmt,
             phone_jpeg_ms=round(jpeg_ms, 1),
@@ -648,13 +650,15 @@ class LoadModel:
             pc_ffs_fps=round(1000.0 / max(1.0, kf_ms), 1),
             rec_kbps=rec_kbps(c, self.caps, w, h, fps), ffs_scale=scale,
             enc_n=n_enc, enc_kind=enc_kind, enc_shared=enc_shared, h264_surface=self.h264_surface(),
+            n_rec=max(2, int(n_rec or 2)),                                     # 녹화 렌즈 수 (3 = 비교용 3개 모두)
         )
 
-    def combo(self, mode, w, h, fps, kf_min=None, stream_fmt=DEFAULT_STREAM_FMT, scale=None):
+    def combo(self, mode, w, h, fps, kf_min=None, stream_fmt=DEFAULT_STREAM_FMT, scale=None, n_rec=2):
+        """n_rec = 녹화 렌즈 수 (3 = '3개 모두 녹화 (비교용)': 인코더 3개만 더 본다 — 실측 1440x1080 15 fps 3렌즈 녹화 됨)."""
         kf_min = LIMITS["kf_min"] if kf_min is None else kf_min
         live = mode in ("live", "both")
         stream_fmt = norm_fmt(stream_fmt)
-        p = self.predict(w, h, fps, stream_fmt, scale, mode)
+        p = self.predict(w, h, fps, stream_fmt, scale, mode, n_rec)
         reasons, notes = [], []
         ok_cam, fmax, guess = cam_max_fps(self.caps, w, h)
         if not ok_cam:
@@ -702,7 +706,7 @@ class LoadModel:
         return dict(ok=not reasons, load_only=load_only, reasons=reasons, notes=notes,
                     cam_max_fps=None if not ok_cam or fmax == math.inf else round(fmax, 1), **p)
 
-    def table(self, mode="live", kf_min=None, stream_fmt=DEFAULT_STREAM_FMT, scale=None, current=None):
+    def table(self, mode="live", kf_min=None, stream_fmt=DEFAULT_STREAM_FMT, scale=None, current=None, n_rec=2):
         mode = mode if mode in MODES else "live"
         stream_fmt = norm_fmt(stream_fmt)
         sizes = self.sizes()
@@ -710,8 +714,8 @@ class LoadModel:
         combos = {}
         for w, h in sizes:
             for fp in fpss:
-                combos[f"{w}x{h}@{fp}"] = self.combo(mode, w, h, fp, kf_min, stream_fmt, scale)
-        return dict(mode=mode, stream_fmt=stream_fmt, default_fmt=DEFAULT_STREAM_FMT,
+                combos[f"{w}x{h}@{fp}"] = self.combo(mode, w, h, fp, kf_min, stream_fmt, scale, n_rec)
+        return dict(mode=mode, stream_fmt=stream_fmt, default_fmt=DEFAULT_STREAM_FMT, n_rec=max(2, int(n_rec or 2)),
                     fmts=[dict(id=k, label=FMT_INFO[k]) for k in STREAM_FMTS],
                     h264=dict(surface=self.h264_surface(), headroom=H264_USB_HEADROOM,
                               settings=self.caps.get("live_h264")),

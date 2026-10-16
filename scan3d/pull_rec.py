@@ -2,12 +2,12 @@
 """폰 녹화본 목록·가져오기 (표준 라이브러리만 — WSL/우분투/Windows 어디서나).
 
   python3 scan3d/pull_rec.py list                       # 폰 녹화 목록 (+ 이미 가져온 것 표시)
-  python3 scan3d/pull_rec.py pull rec_20261016_120000   # → <저장소>/recordings/rec_20261016_120000/
+  python3 scan3d/pull_rec.py pull rec_20261016_120000   # → <저장소>/scan3d/recordings/rec_20261016_120000/
   python3 scan3d/pull_rec.py pull --latest              # 가장 최근 것
   python3 scan3d/pull_rec.py pull --all                 # 아직 안 가져온 것 전부
   python3 scan3d/pull_rec.py local                      # 가져온 녹화 목록
 옵션: --adb PATH (기본 SCAN3D_ADB > PATH > tools/platform-tools/adb > WSL 이면 Windows adb.exe 를 interop 으로),
-      --dest DIR (기본 <저장소>/recordings). Windows 에서 실행하면 \\\\wsl.localhost\\Ubuntu-22.04\\... 경로로 바로 들어간다.
+      --dest DIR (기본 <저장소>/scan3d/recordings). Windows 에서 실행하면 \\\\wsl.localhost\\Ubuntu-22.04\\... 경로로 바로 들어간다.
 전송: adb exec-out [run-as com.camera.dualstream] tar -cf - -C <녹화 위치> <이름> 을 풀어서 저장 (실패하면 파일별 cat).
 녹화 위치: /sdcard/Android/data/com.camera.dualstream/files/rec_*/ (RECORDING_FORMAT.md), 예비 앱 내부 files/rec_* — phone_link.py.
 녹화 중인 폴더는 먼저 정지(웹 '정지' 또는 adb shell am broadcast -a com.camera.dualstream.STOP)한 뒤 가져올 것.
@@ -20,7 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import phone_link   # noqa: E402
 
-DEFAULT_DEST = phone_link.REPO / "recordings"
+DEFAULT_DEST = phone_link.REPO / "scan3d" / "recordings"   # scan3d.py --rec-root 기본과 같음
 
 
 def _progress(name):

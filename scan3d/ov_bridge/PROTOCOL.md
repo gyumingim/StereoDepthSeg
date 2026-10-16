@@ -23,6 +23,9 @@ build/ov_bridge ../config/estimator_config.yaml --tcp 127.0.0.1:7600
 
 옵션: `--max-cam-queue N` (기본 3, 넘으면 가장 오래된 카메라 레코드 버림, IMU 는 안 버림),
 `--max-speed M_S` (기본 5 m/s, 넘으면 `lost`), `--lost-frames N` (기본 15, 특징점 0 이 N 프레임 연속이면 `lost`),
+`--startup-lost-frames N` (기본 45, 2026-10-16: 초기화 뒤 **첫 특징 갱신 전**에는 이 프레임 수까지 기다림 — 정지 ZUPT 가
+끝나고 움직이기 시작하면 clone 창이 차고 시차가 생길 때까지 10~14 프레임 동안 SLAM/MSCKF 갱신이 0 인 게 정상이라, 15 로
+자르면 막 시작한 추적을 lost 로 끊고 다시 정지하기 전까지 초기화를 못 한다; rec_20261016_143702 재생에서 확인),
 `--auto-reset` (`lost` 가 되면 VioManager 재생성), `--emit-features N` (pose 줄에 SLAM 특징점 최대 N 개).
 RPATH 가 `~/scanner/src/ovbuild`, `~/scanner/local/lib` 로 박혀 있어 `LD_LIBRARY_PATH` 불필요.
 
@@ -43,7 +46,9 @@ RPATH 가 `~/scanner/src/ovbuild`, `~/scanner/local/lib` 로 박혀 있어 `LD_L
 
 - **시각**: `t_ns` 는 Android `elapsedRealtimeNanos` 시계 그대로(int64 ns). bridge 가 첫 레코드 시각 t0 을 빼서 `(t_ns − t0)·1e-9` 초로 OpenVINS 에 넣는다. IMU·카메라 모두 같은 시계여야 한다.
 - **IMU**: Android 센서(기기) 축 (세로로 볼 때 x 오른쪽, y 위, z 화면 밖). 자이로 = `TYPE_GYROSCOPE`, 가속도 = 중력 포함 원시 `TYPE_ACCELEROMETER` (정지 시 |a| ≈ 9.8, 위쪽 +). 한 레코드 = 같은 시각의 (gyro, accel) 쌍 → 클라이언트가 자이로 시각에 가속도를 보간해 만든다. 시각이 직전 IMU 이하이면 버림(`imu_dropped`).
-- **STEREO**: 이미지 0 = cam0 = **정류된 왼쪽(rect0, 렌즈 2)**, 이미지 1 = cam1 = 정류된 오른쪽(rect1, 렌즈 5). 640x480, `make_ov_config.py` 의 intrinsics(정류 P1)와 같은 정류표로 만든 영상이어야 한다. `n_cams=1` 이면 cam0 만 (mono 추적, 두 렌즈 시각차가 클 때). `t_ns` = 카메라 시각 (권장: 왼쪽 렌즈 물리 SENSOR_TIMESTAMP + (노출 + 롤링셔터 skew)/2 = 노출 중앙). 남은 상수 오프셋은 OpenVINS 가 `dt_cam_imu` 로 추정. 직전 카메라 이하 시각이면 버림.
+- **STEREO**: 이미지 0 = cam0 = **정류된 왼쪽(rect0, 렌즈 2)**, 이미지 1 = cam1 = 정류된 오른쪽(rect1, 렌즈 5). 640x480, `make_ov_config.py` 의 intrinsics(정류 P1)와 같은 정류표로 만든 영상이어야 한다. `n_cams=1` 이면 cam0 만 (mono 추적, 두 렌즈 시각차가 클 때). **mono 설정(2026-10-16 이후 기본)의 cam0 는 rect0 가 아니라
+lens0u** = 렌즈 2 를 왜곡만 편 핀홀 (f = K1, 넓은 화각, `calib_scale.vio_lens0_K`; 설정 파일 `# scan3d_vio_cam0: lens0u`).
+그때 pose 의 `T_world_cam0`·`R_ItoC0`·`p_IinC0` 도 lens0u 기준이고, scan3d 가 `frames.pose_cam0_to_rect0` 로 rect0 기준으로 바꿔 쓴다. `t_ns` = 카메라 시각 (권장: 왼쪽 렌즈 물리 SENSOR_TIMESTAMP + (노출 + 롤링셔터 skew)/2 = 노출 중앙. 앱 1.7-mid 는 헤더 timestamp 가 이미 이 값이라 scan3d 가 그대로 넣음). 남은 상수 오프셋은 OpenVINS 가 `dt_cam_imu` 로 추정. 직전 카메라 이하 시각이면 버림.
 - **순서**: 클라이언트는 IMU 와 카메라를 시간 순서대로 섞어 보내면 된다. bridge 가 카메라를 큐에 넣고, ROS 노드(`ROS1Visualizer::callback_inertial`)와 같은 규칙 — `t_cam < t_last_imu − dt_cam_imu` 가 될 때(그 카메라보다 늦은 IMU 가 들어왔을 때) — 에만 `feed_measurement_camera` 한다. 따라서 카메라 레코드를 먼저 보내도 되지만 pose 는 그 뒤 IMU 가 도착해야 나온다.
 
 ## 출력 (JSON 한 줄씩)

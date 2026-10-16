@@ -6,6 +6,8 @@
   _run 만 덮어써서 센서·쌍을 **도착 순서대로** 콜백으로 넘긴다 (원본은 최신 쌍 폴링만 가능).
   콜백 예외는 로그만 남기고 수신을 계속한다 (REVIEW 2). 그 밖의 예외는 self.error 에 남겨 재접속하게 한다.
 - FrameTimingIndex: frame_timing 패킷(논리 ts + 물리 오프셋)으로 **그 프레임의** 노출·롤링셔터 값을 찾는다 (REVIEW 6).
+  앱 1.7-mid 부터 프레임 timestamp 자체가 노출 가운데 시각 (SPEC 1.2) → stream_info(101) 를 받으면 그 렌즈 보정 0
+  (mid_streams). 옛 앱(101 없음)만 예전처럼 frame_timing 으로 0.5·(노출 + skew) 를 더한다.
 - ImuSync: 자이로 시각 기준으로 가속도를 선형 보간해 (t, gyro, accel) 쌍을 만든다 (명세 2.3).
 """
 from collections import deque
@@ -100,6 +102,11 @@ class FrameTimingIndex:
         self.ts = [[] for _ in range(n_streams)]          # 정렬된 물리 ts
         self.val = [dict() for _ in range(n_streams)]     # 물리 ts → (exp_ms, rs_ms)
         self.latest = None
+        self.mid_streams = set()                          # 프레임 timestamp 가 이미 노출 가운데인 스트림 → 보정 0
+
+    def set_mid(self, streams=None):
+        """프레임 timestamp = 노출 가운데 (앱 1.7-mid 스트림, timestamp_ref=mid_exposure 녹화, 재생에서 바꾼 옛 녹화)."""
+        self.mid_streams.update(range(self.n) if streams is None else streams)
 
     def add(self, logical_ts, values):
         v = list(values)
@@ -148,7 +155,9 @@ class FrameTimingIndex:
         return self.latest
 
     def offset_ns(self, stream, t_ns):
-        """노출 중앙 보정: 0.5·(노출 + 롤링셔터 skew)."""
+        """노출 중앙 보정: 0.5·(노출 + 롤링셔터 skew). 프레임 시각이 이미 노출 가운데인 스트림은 0."""
+        if stream in self.mid_streams:
+            return 0
         r = self.lookup(stream, t_ns)
         return 0 if r is None else int(0.5 * (r[0] + r[1]) * 1e6)
 
@@ -183,6 +192,11 @@ class StreamReceiver(lps.PhoneReceiver):
                     if f.type == SENSOR_FRAME_TIMING:
                         self.frame_timing = f.values
                         self.timing.add(f.timestamp_ns, f.values)
+                    elif f.type == lps.SENSOR_STREAM_INFO and f.values and round(f.values[0]) == 1:
+                        if self.ts_ref != lps.TS_REF_MID:
+                            self.log("[phone] 앱 프레임 시각 = 노출 가운데 (stream_info ts_ref=mid) → PC 노출 보정 안 더함")
+                        self.ts_ref = lps.TS_REF_MID
+                        self.timing.set_mid()
                     self._cb(self.on_sensor, f)
                     continue
                 pair = None
@@ -216,9 +230,12 @@ class StreamReceiver(lps.PhoneReceiver):
                 self.error = "수신 스레드 종료"
 
     def camera_time_offset_ns(self, frame=None):
-        """노출 중앙 보정 ns. frame(PhoneFrame) 을 주면 그 프레임의 frame_timing 값 (REVIEW 6), 없으면 최신값."""
+        """노출 중앙 보정 ns. frame(PhoneFrame) 을 주면 그 프레임의 frame_timing 값 (REVIEW 6), 없으면 최신값.
+        앱 1.7-mid (ts_ref=mid_exposure) 는 프레임 시각이 이미 노출 가운데라 0."""
         if frame is not None:
             return self.timing.offset_ns(frame.index, frame.timestamp_ns)
+        if self.ts_ref == lps.TS_REF_MID:
+            return 0
         r = self.timing.latest
         return 0 if r is None else int(0.5 * (r[0] + r[1]) * 1e6)
 

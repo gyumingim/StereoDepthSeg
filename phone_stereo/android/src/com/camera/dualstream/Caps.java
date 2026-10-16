@@ -124,6 +124,58 @@ final class Caps {
     }
 
     // ---------------------------------------------------------------------------------------------------------
+    /** Lens phase alignment method A (scan3d/SPEC.md 15): can the app change ONE lens' frame duration?
+     *  Needs SENSOR_FRAME_DURATION in the logical camera's getAvailablePhysicalCameraRequestKeys() (API 28) and
+     *  MANUAL_SENSOR on that lens or the logical camera (frame duration is a MANUAL_SENSOR control). With AE on, the
+     *  HAL normally ignores SENSOR_FRAME_DURATION, so aeKey = CONTROL_AE_MODE + SENSOR_EXPOSURE_TIME +
+     *  SENSOR_SENSITIVITY are physical request keys too (AE off on that lens only while nudging). Without aeKey the app
+     *  still tries (frame duration only) and falls back to method B when the phase does not move within 3 s. */
+    static final class MethodA {
+        boolean possible, aeKey;
+        String reason;
+        JSONObject keys = new JSONObject();
+    }
+
+    static final CaptureRequest.Key<?>[] PHASE_KEYS = {CaptureRequest.SENSOR_FRAME_DURATION, CaptureRequest.SENSOR_EXPOSURE_TIME,
+            CaptureRequest.SENSOR_SENSITIVITY, CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,
+            CaptureRequest.CONTROL_MODE};
+
+    static boolean hasCap(CameraCharacteristics c, int cap) {
+        int[] caps = c.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
+        if (caps != null) for (int x : caps) if (x == cap) return true;
+        return false;
+    }
+
+    static MethodA methodA(CameraManager mgr, String logical, String target) {
+        MethodA m = new MethodA();
+        try {
+            CameraCharacteristics lc = mgr.getCameraCharacteristics(logical);
+            List<CaptureRequest.Key<?>> pk = lc.getAvailablePhysicalCameraRequestKeys();
+            for (CaptureRequest.Key<?> k : PHASE_KEYS) m.keys.put(k.getName(), pk != null && pk.contains(k));
+            if (pk == null || pk.isEmpty()) { m.reason = "no physical request keys (getAvailablePhysicalCameraRequestKeys empty)"; return m; }
+            if (!pk.contains(CaptureRequest.SENSOR_FRAME_DURATION)) { m.reason = "SENSOR_FRAME_DURATION is not a physical request key"; return m; }
+            boolean manual = hasCap(lc, CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR)
+                    || hasCap(mgr.getCameraCharacteristics(target), CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR);
+            if (!manual) { m.reason = "no MANUAL_SENSOR capability (logical or lens " + target + ")"; return m; }
+            m.possible = true;
+            m.aeKey = pk.contains(CaptureRequest.CONTROL_AE_MODE) && pk.contains(CaptureRequest.SENSOR_EXPOSURE_TIME)
+                    && pk.contains(CaptureRequest.SENSOR_SENSITIVITY);
+            m.reason = m.aeKey ? "ok: frame duration + AE off on lens " + target + " only while nudging"
+                    : "frame duration only (CONTROL_AE_MODE/EXPOSURE/SENSITIVITY not physical keys; AE on may ignore it -> B after 3 s)";
+        } catch (Exception e) { m.reason = "error " + e; m.possible = false; }
+        return m;
+    }
+
+    static JSONArray keyNames(List<?> keys) {
+        JSONArray a = new JSONArray();
+        if (keys != null) for (Object k : keys) {
+            if (k instanceof CaptureRequest.Key) a.put(((CaptureRequest.Key<?>) k).getName());
+            else if (k instanceof CaptureResult.Key) a.put(((CaptureResult.Key<?>) k).getName());
+            else a.put(String.valueOf(k));
+        }
+        return a;
+    }
+
     /** Full caps.json document. Slow parts (session queries) included; call off the main thread. */
     static JSONObject build(Context ctx, CameraManager mgr, String logical, String[] ids) throws Exception {
         JSONObject j = new JSONObject();
@@ -134,6 +186,10 @@ final class Caps {
             android.content.pm.PackageInfo pi = ctx.getPackageManager().getPackageInfo(ctx.getPackageName(), 0);
             j.put("app_version", pi.versionName); j.put("app_version_code", pi.versionCode);
         } catch (Exception e) { j.put("app_version", "unknown"); }
+        // frame header / frames CSV timestamps = mid-exposure (1.7-mid, SPEC 1.2); same clock as the IMU
+        j.put("timestamp_ref", MainActivity.TS_REF);
+        j.put("timestamp_ref_formula", "physical SENSOR_TIMESTAMP + SENSOR_EXPOSURE_TIME/2 + SENSOR_ROLLING_SHUTTER_SKEW/2 (per lens)");
+        j.put("timestamp_clock", "SystemClock.elapsedRealtimeNanos");
         JSONObject dev = new JSONObject();
         dev.put("manufacturer", Build.MANUFACTURER); dev.put("model", Build.MODEL); dev.put("device", Build.DEVICE);
         dev.put("hardware", Build.HARDWARE); dev.put("android", Build.VERSION.RELEASE); dev.put("sdk", Build.VERSION.SDK_INT);
@@ -158,7 +214,30 @@ final class Caps {
         JSONArray fixed = new JSONArray();
         for (int f : fixedFps(lc)) fixed.put(f);
         lj.put("fixed_fps", fixed);
+        // Lens phase alignment inputs (SPEC 15): which per-lens (physical) request keys this logical camera accepts.
+        List<CaptureRequest.Key<?>> pk = lc.getAvailablePhysicalCameraRequestKeys();
+        lj.put("physical_request_keys", pk == null ? JSONObject.NULL : keyNames(pk));
+        List<CaptureRequest.Key<?>> rk = lc.getAvailableCaptureRequestKeys();
+        JSONObject rkHas = new JSONObject();
+        for (CaptureRequest.Key<?> k : PHASE_KEYS) rkHas.put(k.getName(), rk != null && rk.contains(k));
+        lj.put("request_keys_has", rkHas);
+        lj.put("session_keys", keyNames(lc.getAvailableSessionKeys()));
+        lj.put("manual_sensor", hasCap(lc, CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR));
         j.put("logical", lj);
+        String target = ids.length > 1 ? ids[1] : ids[0];
+        for (String id : ids) if (id.equals("5")) target = id;
+        MethodA ma = methodA(mgr, logical, target);
+        JSONObject ps = new JSONObject();
+        ps.put("target_lens", target);
+        ps.put("sync_type", lc.get(CameraCharacteristics.LOGICAL_MULTI_CAMERA_SENSOR_SYNC_TYPE));   // 0 APPROXIMATE, 1 CALIBRATED
+        ps.put("physical_request_keys_has", ma.keys);
+        ps.put("method_a_possible", ma.possible);
+        ps.put("method_a_ae_key", ma.aeKey);
+        ps.put("method_a_reason", ma.reason);
+        ps.put("auto_method", "C");                         // 1.6-sync: auto = camera re-open (SPEC 15.3)
+        ps.put("method_a_measured", PhaseSync.MEASURED_A);
+        ps.put("method_b_measured", PhaseSync.MEASURED_B);
+        j.put("phase_sync", ps);
 
         // Per lens: every YUV size with min frame duration -> max fps.
         JSONObject lenses = new JSONObject();
@@ -172,6 +251,14 @@ final class Caps {
             if (pa != null) o.put("pixel_array", new JSONArray().put(pa.getWidth()).put(pa.getHeight()));
             boolean aa43 = aa != null && is43(aa.width(), aa.height());
             o.put("active_array_4_3", aa43);
+            o.put("sync_type", c.get(CameraCharacteristics.LOGICAL_MULTI_CAMERA_SENSOR_SYNC_TYPE));
+            o.put("manual_sensor", hasCap(c, CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR));
+            Range<Long> er = c.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
+            Range<Integer> sr = c.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE);
+            Long mfd = c.get(CameraCharacteristics.SENSOR_INFO_MAX_FRAME_DURATION);
+            o.put("exposure_ns_range", er == null ? JSONObject.NULL : range(er));
+            o.put("sensitivity_range", sr == null ? JSONObject.NULL : range(sr));
+            o.put("max_frame_duration_ns", mfd == null ? JSONObject.NULL : (Object) mfd);
             JSONArray yuv = new JSONArray();
             Set<String> set = new LinkedHashSet<>();
             StreamConfigurationMap m = c.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);

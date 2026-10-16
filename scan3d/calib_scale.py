@@ -81,7 +81,29 @@ def load_geometry(path, physical, size, logical="0"):
     scaled = (W, H) != base
     note = (f"보정은 {base[0]}x{base[1]} 값을 비례 변환 (×{W / base[0]:.3g})" if scaled else
             f"보정 크기 그대로 ({W}x{H})")
-    return dict(st=st, swap=swap, rp=rp, size=(W, H), base_size=base, scale=W / base[0], scaled=scaled, note=note)
+    return dict(st=st, swap=swap, rp=rp, size=(W, H), base_size=base, scale=W / base[0], scaled=scaled, note=note,
+                vio=vio_lens0_maps(st))
+
+
+def vio_lens0_K(st):
+    """mono VIO 입력 카메라 'lens0u' = 왼쪽 렌즈(K1, 렌즈 2 초광각)를 왜곡만 편 핀홀 (정류 R1 없음, 원래 렌즈 축).
+    f = K1 의 (fx+fy)/2, 주점 = K1 그대로 → 원래 초광각 화각(640 폭에서 수평 약 100°)을 거의 다 쓴다.
+    정류 rect0 (f ≈ 463 @640, 수평 약 69°) 는 두 렌즈 공통 영역으로 잘려 화각이 좁고 같은 회전에 화소 이동이 1.5~1.8배라
+    빠른 손 회전·민무늬 천장에서 특징점이 끊긴다 (rec_20261016_143702: rect0 mono = 13 s 만에 lost, lens0u = 26 s 끝까지,
+    특징 0 프레임 59 → 12, 2026-10-16 오프라인 재생). make_ov_config.py mono 설정과 scan3d mono VIO 입력이 이 함수를 같이 쓴다."""
+    K1 = np.asarray(st["K1"], float)
+    f = 0.5 * (K1[0, 0] + K1[1, 1])
+    return np.array([[f, 0.0, K1[0, 2]], [0.0, f, K1[1, 2]], [0.0, 0.0, 1.0]])
+
+
+def vio_lens0_maps(st):
+    """lens0u 왜곡 펴기 맵 dict(K, map=(mapx, mapy), size). 원래 렌즈 2 영상 → lens0u (R = I)."""
+    import cv2
+    W, H = (int(x) for x in st["image_size"])
+    K = vio_lens0_K(st)
+    mx, my = cv2.initUndistortRectifyMap(np.asarray(st["K1"], float), np.asarray(st["dist1"], float), np.eye(3), K,
+                                         (W, H), cv2.CV_32FC1)
+    return dict(K=K, map=(mx, my), size=(W, H))
 
 
 def auto_ffs_scale(W, H, max_px=640 * 480):

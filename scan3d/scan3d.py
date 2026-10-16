@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """scan3d — 실시간 3D 복셀 맵 스캐너 (WSL/우분투, venv_ffs).
 
-폰(렌즈 2+5 NV21 + IMU) ──릴레이/adb forward──▶ 수신 ─┬─ IMU 동기화 ───────────────┐
+폰(렌즈 2+5 / 2+6 + IMU) ──릴레이/adb forward──▶ 수신 ─┬─ IMU 동기화 ───────────────┐
                                                    └─ 프레임 쌍 → 정류 gray ────┴▶ OpenVINS 브리지 → 포즈
                                             키프레임 쌍 + 포즈 → FFS 깊이 + YOLO-seg → 복셀 맵 (클래스·물체)
 녹화 재생: 폰 녹화 폴더(영상 + 센서 CSV) → 같은 파이프라인 (replay.py, --replay DIR).
@@ -20,7 +20,7 @@ adb 는 phone_link.find_adb (리눅스 adb 또는 WSL interop 으로 Windows adb
 
 실행 예:
   venv_ffs/bin/python scan3d/scan3d.py --phone listen:8766          # 브리지는 자동 (--ov auto, 죽으면 재시작)
-  venv_ffs/bin/python scan3d/scan3d.py --vio-mode mono              # 왼쪽 렌즈만 VIO (config/mono 설정)
+  venv_ffs/bin/python scan3d/scan3d.py --vio-mode stereo            # 두 렌즈 쌍 VIO (기본 mono = 왼쪽 렌즈 + IMU)
   venv_ffs/bin/python scan3d/scan3d.py --ov none        # VIO 없이 깊이·분할만 (고정 포즈)
   venv_ffs/bin/python scan3d/scan3d.py --mode idle --replay recordings/rec_20261016_120000 --every-frame
 """
@@ -51,20 +51,76 @@ from lib_phone_depth import depth_colormap   # noqa: E402
 import calib_scale              # noqa: E402
 import frames                   # noqa: E402
 import make_ov_config           # noqa: E402
+import motion_rect              # noqa: E402
 import ov_client                # noqa: E402
 import phone_link               # noqa: E402
 import phone_rx                 # noqa: E402
+import rec_sync                 # noqa: E402
+import replay_view              # noqa: E402
 from voxel_map import VoxelMap, class_color   # noqa: E402
 import web_server               # noqa: E402
 
 PHONE_MODES = ("live", "record", "both")
 
+# 깊이 스테레오 렌즈 쌍: 왼쪽(스트림 0) = 렌즈 2 초광각 고정, 오른쪽만 바꾼다 (2026-10-16 사용자 결정 1단계).
+#   2+5 = 초광각 + 광각 (기본, 체커보드 보정 calib_phone_pair.json, 기선 15.5 mm, 두 렌즈 시각차 약 -26~-33 ms)
+#   2+6 = 초광각 + 망원 (공장 값 보정 calib_phone_pair_2_6.json — scan3d/tools/make_factory_pair_calib.py,
+#         기선 32.4 mm, 시각차 약 +1~+3 ms = 거의 동시. 정류 화각 = 망원 화각 (약 29°x22°, 초광각 가운데를 약 4.8배 확대))
+# 모노 VIO 는 렌즈 2 (lens0u) 만 쓰므로 쌍과 상관없이 같은 설정 (make_ov_config 는 늘 --calib = 2+5 보정으로 만든다).
+LENS_PAIRS = ("2+5", "2+6")
+# 비교용: '폰에 녹화만' 에서 렌즈 3개(2,5,6)를 동시에 녹화 (앱 --es physical 2,5,6, 실측 1440x1080 15 fps 됨).
+# 복원은 두 쌍(2+6, 2+5)을 따로 → recon_<시각>_p26 / _p25 (replay_view.rec_pairs). 실시간 깊이는 한 쌍만.
+ALL_LENSES = ("all", "2+5+6", "2,5,6")
+ALL_REC_PHYSICAL = ("2", "5", "6")
+
+
+def norm_pair(v):
+    """'2+6' | '2,6' | ['2', '6'] → '2+6'. None·'' → None. 모르는 쌍이면 ValueError."""
+    if v is None or v == "":
+        return None
+    if isinstance(v, (list, tuple)):
+        s = "+".join(str(x).strip() for x in v[:2])
+    else:
+        s = str(v).strip().replace(",", "+").replace(" ", "")
+    if s not in LENS_PAIRS:
+        raise ValueError(f"렌즈 쌍 {v!r}: {' / '.join(LENS_PAIRS)} 중 하나여야 함")
+    return s
+
+
+def pair_physical(pair):
+    """'2+6' → ['2', '6'] (앱 --es physical 순서 = 스트림 0, 1)."""
+    return norm_pair(pair).split("+")
+
+
+def sync_from_status(st):
+    """앱 status 줄 꼬리 'sync=aligning phase=+3.2ms method=C try=4 rec_wait=1' / 'sync=locked phase=+0.4ms method=C'
+    → dict (SPEC 15.4). status 를 읽는 녹화 모드용 (실시간은 web_server 가 metrics.json sync 를 씀). 없으면 None."""
+    if not isinstance(st, dict) or not st.get("sync"):
+        return None
+    ph = str(st.get("phase") or "").replace("ms", "")
+    try:
+        phase = float(ph) if ph else None
+    except ValueError:
+        phase = None
+    try:
+        tries = int(st.get("try")) if st.get("try") else None
+    except ValueError:
+        tries = None
+    return dict(state=st.get("sync"), phase_ms=phase, method=st.get("method"), c_try=tries,
+                rec_wait=st.get("rec_wait") == "1", src="status")
+
 
 def parse_args(argv=None):
     p = argparse.ArgumentParser(description="실시간 3D 복셀 맵 스캐너 (OpenVINS + FFS + YOLO-seg)")
     p.add_argument("--calib", default=str(ROOT / "calib_phone_pair.json"))
-    p.add_argument("--physical", nargs=2, default=["2", "5"], help="앱 --physical 순서 (스트림 0 = 왼쪽 렌즈 2)")
-    p.add_argument("--app-size", default="640x480",
+    p.add_argument("--physical", nargs=2, default=["2", "5"], help="앱 --physical 순서 (스트림 0 = 왼쪽 렌즈 2). --pair 를 주면 그 쌍")
+    p.add_argument("--pair", choices=LENS_PAIRS, default=None,
+                   help="깊이 렌즈 쌍 (시작 기본값, 웹에서 세션마다 바꿈): 2+5 = 초광각+광각 (기본, 체커보드 보정), "
+                        "2+6 = 초광각+망원 (공장 값 보정 --calib-26, 기선 32 mm, 거의 동시 촬영)")
+    p.add_argument("--calib-26", default=str(ROOT / "calib_phone_pair_2_6.json"),
+                   help="렌즈 2+6 보정 (scan3d/tools/make_factory_pair_calib.py 가 공장 값으로 만듦). --calib 는 2+5 보정이고 "
+                        "모노 VIO 설정(렌즈 2)도 늘 --calib 로 만든다")
+    p.add_argument("--app-size", default="1440x1080",
                    help="폰 스트림·녹화 크기 WxH (4:3 만: 640x480, 800x600, 960x720, 1280x960 …). 보정 크기와 다르면 "
                         "보정값을 비례 변환 (calib_scale.py, 다시 캘리 안 함). 웹에서 세션마다 바꿀 수 있음")
     p.add_argument("--size", nargs=2, type=int, default=None, help="(예전 인자) W H — --app-size 와 같음")
@@ -86,10 +142,16 @@ def parse_args(argv=None):
                    help="앱 스트림 형식 (SPEC 1.2): h264 = 기본 (I+P, 키 1 s, PC 에서 PyAV 로 풀기), "
                         "jpeg = USB 대역 약 1/10 (추정), nv21 = 원본 (USB 끊김·발열 큼)")
     p.add_argument("--app-jpeg-q", type=int, default=90, help="jpeg 품질 1~100 (--app-stream jpeg 일 때만)")
+    p.add_argument("--app-sync", choices=["auto", "a", "b", "off"], default="off",
+                   help="렌즈 위상 맞추기 (앱 --es sync, SPEC 15.3). 기본 off = 안 맞춤 (S24 는 다시 열어도 위상이 안 맞음 — 실측 "
+                        "19번 실패; 대신 깊이를 쌍마다 움직임 보정 정류). auto = 카메라 다시 열기 (방법 C, 옵션), a·b = 시험용")
+    p.add_argument("--app-rec-wait-sync-s", type=int, default=40,
+                   help="녹화(record·both)가 위상 맞춤을 기다리는 최대 초 (앱 --ei rec_wait_sync_s, 0 = 안 기다림)")
     p.add_argument("--restart-app", action="store_true", default=True,
                    help="폰 쪽이 연달아 바로 끊기면 앱 다시 시작 (adb 있을 때, REVIEW 11)")
-    p.add_argument("--pair-skew-ms", type=float, default=5.0,
-                   help="쌍 묶기 허용 두 렌즈 시각차 ms (이보다 먼 프레임은 짝을 안 지음). --vio-stereo-skew-ms 기본값도 이 값")
+    p.add_argument("--pair-skew-ms", type=float, default=None,
+                   help="쌍 묶기 허용 두 렌즈 시각차 ms. 기본 = 프레임 주기의 0.45배 (15 fps 면 30 ms) — 반 주기 미만이라 "
+                        "가장 가까운 프레임끼리만 짝이 된다. 쌍마다 dt = t(lens1) − t(lens0) 를 같이 넘겨 깊이에서 움직임 보정")
     p.add_argument("--ov", default="auto",
                    help="auto = scan3d 가 브리지를 직접 띄움 (죽으면 자동 재시작, 로그 runs/ov_bridge_live_*.log) | "
                         "HOST:PORT (따로 띄운 TCP 브리지) | pipe:<명령> | none")
@@ -103,15 +165,18 @@ def parse_args(argv=None):
     p.add_argument("--replay-bridge-args", default="--auto-reset", help="재생용 브리지 추가 인자")
     p.add_argument("--bridge-restart-s", type=float, default=2.0, help="브리지가 죽으면 이만큼 뒤 다시 띄움 (s)")
     p.add_argument("--ov-images", choices=["rect"], default="rect",
-                   help="VIO 입력 영상: rect = 정류 gray (명세 9.4, make_ov_config.py 설정과 짝). raw 는 설정과 안 맞아 제거 (REVIEW 5)")
+                   help="VIO 입력 영상: rect = 정류 gray (명세 9.4, make_ov_config.py 설정과 짝). raw 는 설정과 안 맞아 제거 (REVIEW 5). "
+                        "단 mono 는 설정 파일의 '# scan3d_vio_cam0: lens0u' 표시를 따라 렌즈 2 왜곡만 편 영상 (2026-10-16)")
     p.add_argument("--on-vio-reset", choices=["clear", "keep"], default="clear",
                    help="브리지 auto-reset (월드 원점이 바뀜) 때 맵을 지울지 (재생 중이면 지우기 전 조각 저장)")
-    p.add_argument("--vio-mode", choices=["stereo", "mono"], default="stereo",
-                   help="stereo = 두 렌즈 쌍만 VIO 에 보냄 (시각차 큰 쌍은 버림), mono = 왼쪽 렌즈만 (mono 설정으로 브리지). "
-                        "섞어 보내지 않는다 (섞으면 OpenVINS TrackKLT 가 죽음)")
-    p.add_argument("--vio-stereo-skew-ms", type=float, default=None,
-                   help="stereo 모드: 두 렌즈 시각차가 이보다 크면 그 쌍을 VIO 에 안 보냄 "
-                        "(기본 = --pair-skew-ms, 쌍 묶기보다 크면 거르는 효과가 없음 — REVIEW4 B6)")
+    p.add_argument("--vio-mode", choices=["stereo", "mono"], default="mono",
+                   help="mono (기본) = 왼쪽 렌즈(lens0) + IMU 만 VIO 에 (mono 설정으로 브리지; 두 렌즈가 동시에 안 찍혀서). "
+                        "stereo = 두 렌즈 쌍 (시각차 큰 쌍은 버림, 옵션). 섞어 보내지 않는다 (섞으면 OpenVINS TrackKLT 가 죽음)")
+    p.add_argument("--vio-stereo-skew-ms", type=float, default=5.0,
+                   help="stereo 모드만: 두 렌즈 시각차가 이보다 크면 그 쌍을 VIO 에 안 보냄 (REVIEW4 B6)")
+    p.add_argument("--motion-rect", choices=["on", "off"], default="on",
+                   help="깊이 정류를 쌍마다 움직임 보정 (on, 기본): 두 촬영 순간 사이 폰 움직임(자이로 적분 회전 + VIO 속도×dt) "
+                        "으로 실제 두 카메라 상대자세를 구해 그 쌍만 stereoRectify. off = 보정 (R,T) 고정 (예전 방식)")
     p.add_argument("--gyro-type", type=int, default=phone_rx.SENSOR_GYRO, help="4 = 자이로, 16 = uncalibrated")
     p.add_argument("--accel-type", type=int, default=phone_rx.SENSOR_ACCEL, help="1 = 가속도계, 35 = uncalibrated")
     p.add_argument("--voxel", type=float, default=0.03, help="복셀 크기 m")
@@ -126,7 +191,9 @@ def parse_args(argv=None):
     p.add_argument("--yolo-model", default="yolo11m-seg.pt")
     p.add_argument("--yolo-conf", type=float, default=0.25)
     p.add_argument("--yolo-rotate", action="store_true", help="YOLO 입력만 시계 90° 회전 (영상이 누워 있을 때)")
-    p.add_argument("--no-yolo", action="store_true")
+    p.add_argument("--no-yolo", dest="no_yolo", action="store_true", default=True,
+                   help="물체 구분(YOLO-seg) 끔 — 기본 (2026-10-16 사용자: 인식률이 낮아 뺌)")
+    p.add_argument("--yolo", dest="no_yolo", action="store_false", help="물체 구분(YOLO-seg) 켜기")
     p.add_argument("--device", default="0")
     p.add_argument("--kf-trans", type=float, default=0.03, help="키프레임 이동 m")
     p.add_argument("--kf-rot", type=float, default=5.0, help="키프레임 회전 deg")
@@ -134,7 +201,9 @@ def parse_args(argv=None):
     p.add_argument("--host", default="0.0.0.0")
     p.add_argument("--port", type=int, default=8795)
     p.add_argument("--out", default=str(HERE / "runs"), help="저장 버튼 결과 폴더")
-    p.add_argument("--rec-root", default=str(ROOT / "recordings"), help="가져온 녹화 폴더 위치")
+    p.add_argument("--rec-root", default=str(HERE / "recordings"), help="가져온 녹화 폴더 위치 (기본 scan3d/recordings)")
+    p.add_argument("--no-rec-auto", action="store_true",
+                   help="폰 녹화 자동 가져오기·자동 복원 대기열 끄기 (rec_sync.py, 웹에서도 켜고 끔)")
     p.add_argument("--replay", default=None, metavar="DIR", help="시작하자마자 이 녹화 폴더를 재생 (이름이면 --rec-root 아래)")
     p.add_argument("--replay-out", default=None, help="재생 결과 폴더 (기본 <녹화>/recon_<시각>)")
     p.add_argument("--every-frame", action="store_true", help="재생: 키프레임 기준 없이 포즈가 있는 모든 쌍에 FFS")
@@ -144,6 +213,10 @@ def parse_args(argv=None):
     p.add_argument("--save-on-exit", action="store_true")
     a = p.parse_args(argv)
     a.depth_range[1] = min(a.depth_range[1], 3.0)      # 3 m 넘는 깊이는 쓰지 않는다 (baseline 15.5 mm)
+    if a.pair is None:
+        a.pair = "2+6" if sorted(str(x) for x in a.physical) == ["2", "6"] else "2+5"
+    if sorted(str(x) for x in a.physical) != sorted(pair_physical(a.pair)):
+        a.physical = pair_physical(a.pair)
     if a.size:
         a.app_size = f"{a.size[0]}x{a.size[1]}"
     try:
@@ -159,9 +232,14 @@ def parse_args(argv=None):
         a.phone = "listen:8766" if a.link == "relay" else "127.0.0.1:8765"
     if a.start_app is None:
         a.start_app = a.link == "native"
-    if a.vio_stereo_skew_ms is None:
-        a.vio_stereo_skew_ms = a.pair_skew_ms                 # 두 기준을 같은 값으로 (기본 5 ms, REVIEW4 B6)
     return a
+
+
+def pair_skew_ms_for(a, fps):
+    """쌍 묶기 기준 ms: --pair-skew-ms 를 주면 그 값, 아니면 0.45 × 프레임 주기 (반 주기 미만 → 가장 가까운 프레임끼리만)."""
+    if a.pair_skew_ms is not None:
+        return float(a.pair_skew_ms)
+    return round(0.45 * 1000.0 / max(1, int(fps)), 2)
 
 
 class IdleVIO:
@@ -194,14 +272,15 @@ class Scanner:
         # 보정·정류맵은 세션 해상도마다 apply_geometry 가 만든다 (__init__ 끝에서 --app-size/--app-fps 로 처음 한 번)
         self.geom = None                                 # dict(st, swap, rp, size, fps, ffs_scale, base_size, scale, scaled, note)
         self.st = self.swap = self.rp = None
-        self.want = dict(size=tuple(a.size), fps=int(a.app_fps), ffs_scale=a.scale)   # 실시간·녹화 세션에 쓸 값 (웹이 바꿈)
+        self.want = dict(size=tuple(a.size), fps=int(a.app_fps), ffs_scale=a.scale,   # 실시간·녹화 세션에 쓸 값 (웹이 바꿈)
+                         pair=a.pair)
         self.boot_size = tuple(a.size)                   # 외부 브리지(--ov HOST:PORT)가 쓰는 크기로 본다 (REVIEW6 R1)
         self.vio_cfg_used = None                         # 지금 브리지가 쓰는 estimator_config.yaml (저장 때 복사)
         self.vmap = VoxelMap(a.voxel, a.min_hits)
         self.paused = False
         self.t0_ns = None
         self.last_cam_ns = -1
-        self.recent = OrderedDict()                      # 카메라 t_ns → pair
+        self.recent = OrderedDict()                      # 카메라 t_ns (lens0 노출 가운데) → (pair, dt_ns = t(lens1) − t(lens0))
         self.recent_lock = threading.Lock()
         self.vio_in = deque(maxlen=2)
         self.vio_evt = threading.Event()
@@ -225,8 +304,12 @@ class Scanner:
         self.objects, self.objects_t = [], 0.0
         self.epi = None
         self.vio_mono = self.vio_stereo = 0
-        self.vio_skew_dropped = 0                         # stereo 모드에서 시각차가 커서 VIO 에 안 보낸 쌍
+        self.vio_cam0 = frames.VIO_CAM0_RECT0              # 브리지 설정의 cam0 종류 (_bridge_cmd 가 설정 표시로 정함)
+        self.vio_skew_dropped = 0                        # stereo 모드에서 시각차가 커서 VIO 에 안 보낸 쌍
         self.skew_ms = deque(maxlen=600)                  # 최근 쌍의 두 렌즈 시각차 (ms) → 중앙값·p95 를 웹에
+        self.dt_ms = deque(maxlen=600)                    # 최근 쌍의 부호 있는 dt = t(lens1) − t(lens0) (ms)
+        self.gyro_buf = deque(maxlen=12000)               # (t_ns, gyro) 약 30 s — ImuSync 출력 (실시간·재생 같음), 움직임 보정 정류용
+        self.mrect = dict(motion=0, fixed=0, skipped=0, last=None, recent=deque(maxlen=12))   # 키프레임 움직임 보정 통계
         self.pair_hist = deque(maxlen=64)                 # (monotonic, 프레임 합, 짝 없어 버린 합) → 최근 버린 비율 (REVIEW5 N1)
         self.vio_auto_resets = 0
         self.bridge_restarts = 0
@@ -253,20 +336,31 @@ class Scanner:
         self.replay_finished = False
         self.last_result = None
         self._phone_recs, self._phone_recs_t = None, 0.0
+        self.replay_tl = []                               # 복원 키프레임 [{i, t, fr: [(스트림, t_ns)], T}] → timeline.json
+        self.replay_depth = {}                            # 키프레임 번호 → 작은 깊이 JPEG (복원만)
+        self._best_seg = None                             # 복원 중 VIO 리셋 전 가장 큰 조각 (restore_best_segment)
+        self.pose_log = None                              # 복원: 브리지 포즈·이벤트 기록 (3렌즈 녹화 → 다른 쌍 복원이 다시 씀, replay.py)
+        self.rec3 = False                                 # 지금(또는 마지막) 녹화 세션이 렌즈 3개 모두 녹화인가
         self.link = phone_link.PhoneLink(a.adb, self.log, physical=",".join(a.physical), fps=a.app_fps,
                                          focus=a.app_focus, imu_us=a.app_imu_us,
-                                         stream_fmt=a.app_stream, jpeg_q=a.app_jpeg_q, width=a.size[0], height=a.size[1])
+                                         stream_fmt=a.app_stream, jpeg_q=a.app_jpeg_q, width=a.size[0], height=a.size[1],
+                                         sync=a.app_sync, rec_wait_sync_s=a.app_rec_wait_sync_s)
         self.log(f"[link] {a.link} · phone {a.phone} · adb {self.link.adb or '없음'} ({self.link.kind or '-'})")
         self.live_vio = None
         self.vio = IdleVIO()
         self.vio_error = None
         self.imu = phone_rx.ImuSync(self.on_imu, a.gyro_type, a.accel_type)
-        self.apply_geometry(tuple(a.size), a.app_fps, a.scale)
+        self.apply_geometry(tuple(a.size), a.app_fps, a.scale, a.pair)
+        self.recsync = rec_sync.RecSync(self, enabled=not a.no_rec_auto)   # 폰 녹화 자동 가져오기 + 자동 복원 대기열
 
     def log(self, msg):
         line = time.strftime("%H:%M:%S ") + msg
         print(line, flush=True)
         self.log_lines.append(line)
+
+    def pair_skew_ms(self):
+        """지금 세션 fps 의 쌍 묶기 기준 ms (기본 0.45 × 프레임 주기)."""
+        return pair_skew_ms_for(self.a, self.geom["fps"] if self.geom else self.a.app_fps)
 
     # ---------------- 해상도·fps (세션마다) ----------------
     def _norm_geometry(self, size, fps, ffs_scale):
@@ -281,9 +375,19 @@ class Scanner:
                 raise ValueError(f"ffs_scale {ffs_scale}: (0,1] 이어야 함")
         return (W, H), fps, ffs_scale
 
-    def apply_geometry(self, size, fps=None, ffs_scale=None):
-        """세션 해상도·fps 적용 (세션이 멈춘 상태에서, session_lock 안 또는 __init__ 에서 부른다).
+    def calib_for(self, pair):
+        """렌즈 쌍의 보정 파일: 2+5 = --calib (체커보드), 2+6 = --calib-26 (공장 값). 없으면 ValueError (쉬운 말)."""
+        pair = norm_pair(pair)
+        path = Path(self.a.calib if pair == "2+5" else self.a.calib_26)
+        if not path.is_file():
+            raise ValueError(f"렌즈 {pair} 보정 파일이 없습니다: {path} — "
+                             f"'venv_ffs/bin/python scan3d/tools/make_factory_pair_calib.py' 로 만드세요")
+        return path
 
+    def apply_geometry(self, size, fps=None, ffs_scale=None, pair=None):
+        """세션 해상도·fps·렌즈 쌍 적용 (세션이 멈춘 상태에서, session_lock 안 또는 __init__ 에서 부른다).
+
+        - 렌즈 쌍 (pair, None = 지금 쌍): 2+5 | 2+6 → 보정 파일 (calib_for)·앱 --es physical·카메라 이름.
         - 보정: calib_phone_pair.json (보정 크기) → W×H 비례 변환 (K 만, dist·R·T 그대로) → 정류맵·정류 K (rp).
         - FFS 입력 축소: ffs_scale 또는 자동 (--scale, 없으면 --ffs-max-px 기준).
         - 앱 인자 (PhoneLink width/height/fps), VIO 설정 키 (_vio_key; 다르면 다음 _ensure_live_vio 가 브리지 재시작).
@@ -292,21 +396,28 @@ class Scanner:
         if ffs_scale is None:
             ffs_scale = calib_scale.auto_ffs_scale(W, H, self.a.ffs_max_px)
         g = self.geom
-        if g is not None and g["size"] == (W, H) and g["fps"] == fps and abs(g["ffs_scale"] - ffs_scale) < 1e-9:
+        pair = norm_pair(pair) or (g["pair"] if g is not None else self.a.pair)
+        same_pair = g is not None and g.get("pair") == pair
+        if same_pair and g["size"] == (W, H) and g["fps"] == fps and abs(g["ffs_scale"] - ffs_scale) < 1e-9:
             return g
-        if g is not None and g["size"] == (W, H):
+        if same_pair and g["size"] == (W, H):
             ng = dict(g, fps=fps, ffs_scale=ffs_scale)
         else:
-            ng = calib_scale.load_geometry(self.a.calib, self.a.physical, (W, H))
-            ng.update(fps=fps, ffs_scale=ffs_scale)
-            self.epi = None                                   # 새 크기로 정류 검증 다시 (기준 dy 도 크기 배율)
+            phys = pair_physical(pair)
+            calib = self.calib_for(pair)
+            ng = calib_scale.load_geometry(str(calib), phys, (W, H))
+            ng.update(fps=fps, ffs_scale=ffs_scale, pair=pair, physical=phys, calib=str(calib),
+                      calib_src=f"{ng['st'].get('pose_source', '-')} ({ng['st'].get('scale_status', '-')})")
+            self.epi = None                                   # 새 크기·쌍으로 정류 검증 다시 (기준 dy 도 크기 배율)
+            self.a.physical = list(phys)
+            self.link.physical = ",".join(phys)              # 앱 --es physical (다음 앱 시작부터)
         self.st, self.swap, self.rp = ng["st"], ng["swap"], ng["rp"]
         self.geom = ng
         self.a.size = [W, H]
         self.link.width, self.link.height, self.link.fps = W, H, fps
         rp = ng["rp"]
-        self.log(f"[calib] {W}x{H} {fps} fps · {ng['note']} · f={rp['f']:.1f} cx={rp['cx']:.1f} cy={rp['cy']:.1f} "
-                 f"baseline={rp['baseline_m'] * 1000:.2f} mm swap={ng['swap']} · FFS 입력 "
+        self.log(f"[calib] 렌즈 {pair} · {W}x{H} {fps} fps · {ng['note']} · f={rp['f']:.1f} cx={rp['cx']:.1f} cy={rp['cy']:.1f} "
+                 f"baseline={rp['baseline_m'] * 1000:.2f} mm swap={ng['swap']} · {Path(ng['calib']).name} {ng['calib_src']} · FFS 입력 "
                  f"{int(round(W * ffs_scale))}x{int(round(H * ffs_scale))} (scale {ffs_scale:g})")
         if self.ds is not None:
             self.ds.set_geometry(rp, ffs_scale)
@@ -364,7 +475,11 @@ class Scanner:
                     calib_size=list(g["base_size"]), calib_scaled=bool(g["scaled"]), calib_scale=g["scale"],
                     calib_note=g["note"], rect=dict(f=g["rp"]["f"], cx=g["rp"]["cx"], cy=g["rp"]["cy"]),
                     epi_gate_px=round(1.0 * g["scale"], 3),
-                    want=dict(size=list(w["size"]), fps=w["fps"], ffs_scale=w["ffs_scale"]),
+                    want=dict(size=list(w["size"]), fps=w["fps"], ffs_scale=w["ffs_scale"], pair=w.get("pair")),
+                    rec3=self.rec3, app_physical=str(self.link.physical),
+                    pair=g.get("pair"), physical=list(g.get("physical") or self.a.physical),
+                    baseline_mm=round(g["rp"]["baseline_m"] * 1000, 2), calib_file=Path(g.get("calib") or "").name,
+                    calib_src=g.get("calib_src"), pairs=list(LENS_PAIRS),
                     stream_fmt=self.link.stream_fmt, live_kbps=self.link.live_kbps,
                     vio_config=str(self.vio_cfg_used) if self.vio_cfg_used else None)
 
@@ -391,7 +506,7 @@ class Scanner:
             return None
 
     def set_stream(self, size=None, h=None, fps=None, rec_kbps=None, ffs_scale=None, keep_ffs=False,
-                   stream_fmt=None, live_kbps=None, live_kbps_auto=False):
+                   stream_fmt=None, live_kbps=None, live_kbps_auto=False, pair=None):
         """다음 실시간·녹화 세션의 크기·fps 를 정한다 (검증만, 적용은 start_session). 반환 want.
         size = "WxH" | (W,H) | W (그때 h 도 줌, web_server 의 set_stream(w, h, fps, rec_kbps=…) 호출).
         rec_kbps = 녹화 H.264 비트레이트 (앱 --ei rec_kbps, None = 앱 기본).
@@ -399,7 +514,10 @@ class Scanner:
         (앱 --ei live_kbps, None/0 = 앱이 크기·fps 비례로 정함). 둘 다 다음 세션(앱 시작)부터.
         live_kbps_auto = True 면 live_kbps 는 부하 모델이 계산한 기본값 (웹 [스캔 시작]), False 면 사용자가 직접 준 값.
         크기·fps 만 바뀌고 live_kbps 가 없으면: 사용자가 직접 준 값만 유지하고, 아니면 새 크기 기준 기본값으로 다시 계산
-        (REVIEW7 H4: 1280x960 의 16 Mbps 가 640x480 에 남지 않게)."""
+        (REVIEW7 H4: 1280x960 의 16 Mbps 가 640x480 에 남지 않게).
+        pair = 깊이 렌즈 쌍 '2+5' | '2+6' (None = 지난 값). 보정 파일이 없으면 ValueError."""
+        pair = norm_pair(pair) or self.want.get("pair") or self.a.pair
+        self.calib_for(pair)                              # 보정 파일 확인 (없으면 세션을 멈추기 전에 ValueError)
         if stream_fmt is not None and stream_fmt not in ("h264", "jpeg", "nv21"):
             raise ValueError(f"stream_fmt {stream_fmt}")
         if h is not None and size is not None and not isinstance(size, (str, tuple, list)):
@@ -408,7 +526,7 @@ class Scanner:
         old_geo = (tuple(w["size"]), int(w["fps"]))
         sz, f, fs = self._norm_geometry(size if size is not None else w["size"], fps if fps is not None else w["fps"],
                                         ffs_scale if ffs_scale is not None else (w["ffs_scale"] if keep_ffs else None))
-        self.want = dict(size=sz, fps=f, ffs_scale=fs)
+        self.want = dict(size=sz, fps=f, ffs_scale=fs, pair=pair)
         if rec_kbps is not None:
             self.link.rec_kbps = max(500, int(rec_kbps))
         if stream_fmt is not None:
@@ -437,6 +555,8 @@ class Scanner:
             self.start_replay(self.a.replay, self.a.every_frame, self.a.replay_iters, self.a.replay_out)
         elif self.a.mode != "idle":
             self.start_session(self.a.mode, start_app=self.a.start_app)
+        if not self.a.replay:                             # 명령줄 한 번 재생(replay.py)에서는 자동 대기열을 안 띄움
+            self.recsync.start()
 
     def _ensure_depth(self):
         """FFS·YOLO 로드 + 깊이 스레드: 처음 필요할 때 한 번만 (그 뒤로는 계속 둔다). 웹은 dstats.loading 으로
@@ -453,20 +573,30 @@ class Scanner:
             self.depth_thread.start()
 
     # ---------------- 세션 (모드) ----------------
-    def start_session(self, mode, start_app=True, size=None, fps=None, ffs_scale=None):
+    def start_session(self, mode, start_app=True, size=None, fps=None, ffs_scale=None, pair=None, rec3=False):
         """size(WxH 4:3)·fps·ffs_scale 를 주면 그 값으로 (self.want 갱신), 안 주면 self.want. 크기·fps 가 바뀌면
-        정류맵·FFS 입력·앱 인자를 다시 정하고, 실시간 브리지는 그 크기·fps 설정(config/<W>x<H>_<fps>/)으로 다시 띄운다."""
+        정류맵·FFS 입력·앱 인자를 다시 정하고, 실시간 브리지는 그 크기·fps 설정(config/<W>x<H>_<fps>/)으로 다시 띄운다.
+        rec3 = 렌즈 3개(2,5,6) 모두 녹화 (비교용, '폰에 녹화만' 에서만). pair 는 그때 쓰지 않는 깊이 쌍 (기본 2+6)."""
         if mode not in PHONE_MODES:
             raise ValueError(f"mode {mode}")
-        if size is not None or fps is not None or ffs_scale is not None:
-            self.set_stream(size=size, fps=fps, ffs_scale=ffs_scale, keep_ffs=size is None)    # 잘못된 값이면 세션을 멈추기 전에 ValueError
+        if rec3 and mode != "record":
+            raise ValueError("렌즈 3개 모두 녹화는 '폰에 녹화만' 에서만 됩니다 — 실시간 깊이는 초광각+광각 또는 초광각+망원 중 하나를 고르세요")
+        if size is not None or fps is not None or ffs_scale is not None or pair is not None:
+            self.set_stream(size=size, fps=fps, ffs_scale=ffs_scale, keep_ffs=size is None, pair=pair)   # 잘못된 값이면 세션을 멈추기 전에 ValueError
+        if mode in ("live", "both") and self.a.vio_mode == "stereo" and self.want.get("pair") != "2+5":
+            raise ValueError("두 렌즈 위치 추적(--vio-mode stereo)은 렌즈 2+5 설정만 있습니다 — 렌즈 쌍을 2+5 로 고르세요")
         if mode in ("live", "both"):
             self._check_vio_size(self.want["size"])      # 고정 VIO 설정·외부 브리지와 크기가 다르면 거절 (REVIEW6 R1)
             self._ensure_depth()
         with self.session_lock:
             self._stop_session_locked(stop_app=False)
             w = self.want
-            self.apply_geometry(w["size"], w["fps"], w["ffs_scale"])
+            self.apply_geometry(w["size"], w["fps"], w["ffs_scale"], w.get("pair"))
+            # 앱 --es physical: 3개 모두 녹화면 2,5,6, 아니면 깊이 쌍 (apply_geometry 가 쌍이 같으면 안 건드리므로 늘 다시 정함)
+            self.rec3 = bool(rec3)
+            self.link.physical = ",".join(ALL_REC_PHYSICAL if self.rec3 else self.geom["physical"])
+            if self.rec3:
+                self.log(f"[link] 렌즈 3개 모두 녹화 (비교용): 앱 --es physical {self.link.physical}")
             self.mode = mode
             self.replay_finished = False
             stop = threading.Event()
@@ -479,8 +609,16 @@ class Scanner:
     def stop_session(self, stop_app=True):
         with self.session_lock:
             was = self.mode
+            rec = (self.rec_status or {}).get("rec") or (self.app_status or {}).get("rec")
+            if was == "replay":
+                self.recsync.on_user_stop()               # 사용자가 멈춘 자동 복원은 [다시 시도] 전까지 다시 안 함
             self._stop_session_locked(stop_app=stop_app)
-        return dict(ok=True, was=was)
+            stopper = self.app_stop_thread
+        pull = None
+        if was in ("record", "both"):
+            # [정지] → (앱 정지 = mp4 마무리 끝나면) 폰 녹화를 PC 로 가져오고 → 자동 복원 대기열 (rec_sync)
+            pull = self.recsync.after_record_stop(rec, stopper if stop_app else None)
+        return dict(ok=True, was=was, rec=rec, pull=pull)
 
     def _stop_session_locked(self, stop_app):
         was = self.mode
@@ -564,6 +702,7 @@ class Scanner:
         if not cfg.is_file():
             raise FileNotFoundError(f"OpenVINS 설정 없음: {cfg} (venv_ffs/bin/python scan3d/make_ov_config.py)")
         self.vio_cfg_used = cfg
+        self.vio_cam0 = make_ov_config.vio_cam0_kind(cfg)   # 'lens0u' (mono 기본) | 'rect0' → VIO 입력 영상·포즈 변환
         cmd = f"pipe:{shlex.quote(str(bridge))} {shlex.quote(str(cfg))} --stdio {extra_args}".strip()
         Path(self.a.out).mkdir(parents=True, exist_ok=True)
         errlog = Path(self.a.out) / f"ov_bridge_{tag}_{time.strftime('%Y%m%d-%H%M%S')}.log"
@@ -579,6 +718,9 @@ class Scanner:
             v.geom_key = key                               # 크기·fps·모드가 바뀌면 _ensure_live_vio 가 다시 띄운다
             self.log(f"[ov] 브리지 로그: {errlog} (모드 {self.a.vio_mode}, {key[0][0]}x{key[0][1]} {key[1]} fps)")
             return v
+        # 따로 띄운 브리지: 그쪽 설정을 모르므로 이 모드의 기본(또는 --ov-config) 설정 표시를 따른다
+        self.vio_cam0 = make_ov_config.vio_cam0_kind(self._vio_config())
+        self.log(f"[ov] 외부 브리지 {self.a.ov}: VIO cam0 = {self.vio_cam0} 로 가정 (브리지도 같은 설정이어야 함)")
         return ov_client.OVClient(self.a.ov, self.on_pose, self.log, on_event=self.on_vio_event, connect_timeout_s=10.0)
 
     @staticmethod
@@ -729,7 +871,10 @@ class Scanner:
             if sock is None:
                 break
             rx = phone_rx.StreamReceiver(sock, self.on_sensor, self.on_pair, 2, tuple(self.geom["size"]),
-                                         self.a.pair_skew_ms, log=self.log)
+                                         self.pair_skew_ms(), log=self.log)
+            if (self.app_status or {}).get("ts_ref") == "mid":     # 앱 status 꼬리 ts_ref=mid (1.7-mid): stream_info 전에도
+                rx.ts_ref = phone_rx.lps.TS_REF_MID
+                rx.timing.set_mid()
             with self.session_lock:
                 if stop.is_set():
                     rx.stopped = True
@@ -784,6 +929,10 @@ class Scanner:
         self.vio_mono = self.vio_stereo = 0
         self.vio_skew_dropped = 0
         self.skew_ms.clear()
+        self.dt_ms.clear()
+        self.gyro_buf.clear()
+        self.mrect.update(motion=0, fixed=0, skipped=0, last=None)
+        self.mrect["recent"].clear()
         self.pair_hist.clear()
         self.vio_auto_resets = 0
         # 지난 세션(또는 복원)의 카메라 창·깊이 그림·물체 상자를 새 세션에 남기지 않는다 (REVIEW5 N3)
@@ -793,6 +942,8 @@ class Scanner:
         with self.pose_cv:
             self.pose_seen_ns = -1
         self._replay_kf = None
+        self.replay_tl, self.replay_depth = [], {}
+        self._best_seg = None
         if self.ds is not None and self.ds.yolo:
             self.ds.yolo.reset()
         if vio_reset:
@@ -805,7 +956,10 @@ class Scanner:
             p = Path(self.a.rec_root) / name
         return p
 
-    def start_replay(self, name, every_frame=False, iters=None, out=None):
+    def start_replay(self, name, every_frame=False, iters=None, out=None, auto=False, pair=None):
+        """auto=True: 자동 복원 대기열 (rec_sync) — 중간에 멈추면(실시간 시작 등) 저장하지 않고 나중에 다시.
+        pair = 깊이 렌즈 쌍 '2+5'|'2+6' (3렌즈 녹화에서 고름, 없으면 2+6). 2렌즈 녹화는 녹화한 쌍만 (다르면 ValueError).
+        3렌즈 녹화 결과 폴더 = recon_<시각>_p26 / _p25."""
         import replay
         path = self.resolve_rec(name)
         if not path.is_dir():
@@ -819,6 +973,27 @@ class Scanner:
         rsize = (int(meta.get("width", 640)), int(meta.get("height", 480)))
         rfps = meta.get("fps") or self.a.app_fps
         self._norm_geometry(rsize, rfps, None)            # 4:3 아니면 세션을 멈추기 전에 ValueError
+        # 녹화 렌즈 쌍 (meta.json physical "2,6" 또는 ["2","6"], 없으면 옛 녹화 = 2+5) → 그 쌍의 보정으로 복원
+        mphys = meta.get("physical") or ["2", "5"]
+        if isinstance(mphys, str):
+            mphys = [x.strip() for x in mphys.split(",") if x.strip()]
+        mphys = [str(x) for x in mphys]
+        multi = len(mphys) > 2
+        want = norm_pair(pair)
+        if multi:
+            rpair = want or ("2+6" if "6" in mphys else None)
+            if rpair is None or not all(x in mphys for x in pair_physical(rpair)):
+                raise ValueError(f"녹화 렌즈 {'+'.join(mphys)} 에 렌즈 쌍 {rpair} 가 없습니다")
+            if out is None:
+                out = path / (time.strftime("recon_%Y%m%d-%H%M%S") + replay_view.PAIR_SUFFIX[rpair])
+        else:
+            try:
+                rpair = norm_pair(mphys[:2])
+            except ValueError:
+                raise ValueError(f"녹화 렌즈 {mphys} 는 복원할 수 없습니다 (렌즈 쌍 {' / '.join(LENS_PAIRS)} 만)")
+            if want and want != rpair:
+                raise ValueError(f"이 녹화는 렌즈 {rpair} 만 있습니다 (렌즈 {want} 로 복원할 수 없음)")
+        self.calib_for(rpair)                             # 보정 파일 없으면 세션을 멈추기 전에 ValueError
         self._check_vio_size(rsize, replay=True)          # 고정 VIO 설정이 다른 크기용이면 거절 (REVIEW6 R1)
         if self.dstats.get("ready") and not str(self.dstats.get("error") or "").startswith("init:"):
             self.dstats["error"] = None                   # 지난 실시간 키프레임 오류가 복원을 바로 끝내지 않게 (REVIEW5 N6)
@@ -826,13 +1001,15 @@ class Scanner:
         with self.session_lock:
             self._stop_session_locked(stop_app=False)
             # 재생은 self.want(실시간 세션 값)를 바꾸지 않는다. FFS 축소는 --scale 또는 자동
-            self.apply_geometry(rsize, rfps, self.a.scale)
+            self.apply_geometry(rsize, rfps, self.a.scale, rpair)
             self.replay_finished = False
             self.replayer = replay.Replayer(self, path, every_frame=bool(every_frame),
-                                            iters=int(iters or self.a.replay_iters), out_dir=out)
+                                            iters=int(iters or self.a.replay_iters), out_dir=out,
+                                            save_partial=not auto, auto=auto,
+                                            pair=pair_physical(rpair) if multi else None)
             self.mode = "replay"
             self.replayer.start()
-        return dict(ok=True, dir=str(path))
+        return dict(ok=True, dir=str(path), pair=rpair, out=str(self.replayer.out_dir))
 
     def make_replay_vio(self):
         """재생 전용 브리지 (pipe, 새 프로세스 = 깨끗한 상태·시각 기준)."""
@@ -872,6 +1049,13 @@ class Scanner:
                 self.pose_cv.wait(left)
         return True
 
+    def mark_pose_seen(self, t_ns):
+        """포즈 없이 그 시각까지 본 것으로 (replay.PoseReplayVIO: 저장한 포즈에 없는 프레임)."""
+        with self.pose_cv:
+            if t_ns > self.pose_seen_ns:
+                self.pose_seen_ns = int(t_ns)
+            self.pose_cv.notify_all()
+
     def take_replay_kf(self):
         kf, self._replay_kf = self._replay_kf, None
         return kf
@@ -887,6 +1071,7 @@ class Scanner:
         if self.t0_ns is None:
             self.t0_ns = t_ns
             self.log("[imu] 첫 IMU 샘플")
+        self.gyro_buf.append((t_ns, w))                  # 움직임 보정 정류 (두 렌즈 촬영 순간 사이 자이로 적분)
         self.vio.push_imu(t_ns, w, acc)                  # 브리지가 t0 를 빼므로 원래 ns 그대로
 
     def on_pair(self, pair):
@@ -922,19 +1107,24 @@ class Scanner:
                 return None                                       # IMU 가 먼저 와야 시각 기준이 생김
         # 두 렌즈 시각차: 통계는 항상, stereo 모드에서 기준을 넘는 쌍은 VIO 에 안 보낸다 (mono 로 섞어 보내지 않음:
         # 스테레오 설정에 mono 프레임이 섞이면 OpenVINS TrackKLT 가 "levels2 >= 0" 단언으로 죽는다)
-        skew_ns = abs(fR.timestamp_ns - fL.timestamp_ns)
+        if timing is None:
+            timing = self.timing_src or (self.receiver.timing if self.receiver else None)
+        # 앱 1.7-mid·새 녹화·바꾼 옛 녹화는 프레임 시각이 이미 노출 가운데 → off = 0 (FrameTimingIndex.mid_streams, SPEC 1.2).
+        # 옛 앱 스트림만 그 프레임 노출 값으로 0.5·(노출 + skew) 를 더한다 (REVIEW 6)
+        # 노출 중앙 보정은 프레임 간격 안으로 제한: 엉뚱한 frame_timing 값(최신값 대체 등)이 카메라 시각을
+        # 실제보다 한참 뒤로 밀면 IMU 를 기다리는 시간이 늘고 dt_cam_imu 추정도 흔들린다
+        cap = 1e9 / max(1, g["fps"])
+        off = int(np.clip(timing.offset_ns(fL.index, fL.timestamp_ns), 0, cap)) if timing is not None else 0
+        offR = int(np.clip(timing.offset_ns(fR.index, fR.timestamp_ns), 0, cap)) if timing is not None else 0
+        t_ns = int(fL.timestamp_ns + off)                # 왼쪽 렌즈 노출 가운데 시각
+        dt_ns = int(fR.timestamp_ns + offR) - t_ns       # 쌍의 dt = t(lens1) − t(lens0) (노출 가운데끼리) → 움직임 보정 정류
+        skew_ns = abs(dt_ns)
         self.skew_ms.append(skew_ns * 1e-6)
+        self.dt_ms.append(dt_ns * 1e-6)
         stereo = self.a.vio_mode == "stereo"
         if stereo and skew_ns > self.a.vio_stereo_skew_ms * 1e6:
             self.vio_skew_dropped += 1
             return None
-        if timing is None:
-            timing = self.timing_src or (self.receiver.timing if self.receiver else None)
-        off = timing.offset_ns(fL.index, fL.timestamp_ns) if timing is not None else 0   # 그 프레임 노출 (REVIEW 6)
-        # 노출 중앙 보정은 프레임 간격 안으로 제한: 엉뚱한 frame_timing 값(최신값 대체 등)이 카메라 시각을
-        # 실제보다 한참 뒤로 밀면 IMU 를 기다리는 시간이 늘고 dt_cam_imu 추정도 흔들린다
-        off = int(np.clip(off, 0, 1e9 / max(1, g["fps"])))
-        t_ns = int(fL.timestamp_ns + off)                # 왼쪽 렌즈 물리 SENSOR_TIMESTAMP + 노출 중앙 보정
         if t_ns <= self.last_cam_ns:
             return None
         self.last_cam_ns = t_ns
@@ -950,31 +1140,43 @@ class Scanner:
                      f"(기준 {gate:.2f} px) inlier={epi.get('inlier_frac')} · {g['note']}"
                      + ("" if ok else "  ← 정류 검증 실패: 보정/초점(focus_diopters 1.0) 확인"
                         + (" — 비례 변환한 보정이 이 크기에 안 맞을 수 있음 (폰이 화각을 잘랐는지)" if g["scaled"] else "")))
-        rl, rr = lr.rectify_pair(fL.bgr, fR.bgr, rp)
-        g0 = np.ascontiguousarray(cv2.cvtColor(rl, cv2.COLOR_BGR2GRAY))
-        g1 = np.ascontiguousarray(cv2.cvtColor(rr, cv2.COLOR_BGR2GRAY)) if stereo else None
+        if not stereo and self.vio_cam0 == frames.VIO_CAM0_LENS0U:
+            # mono 설정 cam0 = lens0u (렌즈 2 왜곡만 편 넓은 화각, calib_scale.vio_lens0_K — make_ov_config 와 같은 K)
+            g0 = np.ascontiguousarray(cv2.cvtColor(cv2.remap(fL.bgr, *g["vio"]["map"], interpolation=cv2.INTER_LINEAR),
+                                                   cv2.COLOR_BGR2GRAY))
+            g1 = None
+        else:
+            rl, rr = lr.rectify_pair(fL.bgr, fR.bgr, rp)
+            g0 = np.ascontiguousarray(cv2.cvtColor(rl, cv2.COLOR_BGR2GRAY))
+            g1 = np.ascontiguousarray(cv2.cvtColor(rr, cv2.COLOR_BGR2GRAY)) if stereo else None
         if stereo:
             self.vio_stereo += 1
         else:
             self.vio_mono += 1
         with self.recent_lock:
-            self.recent[t_ns] = pair
+            self.recent[t_ns] = (pair, dt_ns)
             while len(self.recent) > 90:
                 self.recent.popitem(last=False)
         self.vio.push_cam(t_ns, [g0, g1] if stereo else [g0])
         return t_ns
 
     def _pair_for(self, t_ns):
+        """(pair, dt_ns) 또는 None."""
         with self.recent_lock:
             return self.recent.get(int(t_ns))           # 브리지가 t_ns 를 그대로 돌려줌
 
     # ---------------- 포즈 → 키프레임 ----------------
     def on_pose(self, msg):
+        pl = self.pose_log
+        if pl is not None:
+            pl.append(("p", msg))                        # 브리지가 준 그대로 (rect0 로 바꾸기 전)
         try:
             t_ns = int(msg.get("t_ns", -1))
         except (TypeError, ValueError):
             t_ns = -1
         try:
+            # cam0 = lens0u (mono 기본) 이면 포즈·외부 파라미터를 rect0 기준으로 바꿔 둔다 (아래는 모두 rect0 전제)
+            msg = frames.pose_cam0_to_rect0(msg, self.rp, self.vio_cam0)
             self._on_pose(msg, t_ns)
         finally:
             with self.pose_cv:
@@ -1009,26 +1211,49 @@ class Scanner:
         if self.mode == "replay":
             if not (self.replay_every or self._want_kf(T, t)):
                 return
-            pair = self._pair_for(t_ns)
-            if pair is not None:
+            got = self._pair_for(t_ns)
+            if got is not None:
                 self.last_kf = (t, T)
-                self._replay_kf = (pair, T, t, self.vmap.epoch)
+                self._replay_kf = (got[0], T, t, self.vmap.epoch, self._motion_of(msg, t_ns, got[1]))
             return
         if self.paused or self.worker_busy or self.kf_queue.qsize():
             return
         if not self._want_kf(T, t):
             return
-        pair = self._pair_for(t_ns)
-        if pair is None:
+        got = self._pair_for(t_ns)
+        if got is None:
             return
         try:
-            self.kf_queue.put_nowait((pair, T, t, self.vmap.epoch))
+            self.kf_queue.put_nowait((got[0], T, t, self.vmap.epoch, self._motion_of(msg, t_ns, got[1])))
             self.last_kf = (t, T)
         except queue.Full:
             pass
 
+    @staticmethod
+    def _motion_of(msg, t_ns, dt_ns):
+        """키프레임 움직임 보정 재료 (lens0 시각 t_ns 의 VIO 상태): 속도 v_G, R_GtoI, 자이로 바이어스, IMU→cam0 외부 파라미터.
+        NullVIO(--ov none) 는 static=True (이동 0 으로 보고 회전만 자이로)."""
+        mot = dict(t0_ns=int(t_ns), dt_ns=int(dt_ns), static=bool(msg.get("static")))
+        try:
+            if msg.get("v") is not None and msg.get("q_GtoI_jpl") is not None:
+                v = np.asarray(msg["v"], float).reshape(3)
+                R = frames.jpl_quat_to_R(msg["q_GtoI_jpl"])
+                if np.isfinite(v).all() and np.isfinite(R).all():
+                    mot.update(v_G=v, R_GtoI=R)
+            for k, n in (("bg", 3), ("R_ItoC0", 9), ("p_IinC0", 3)):
+                if msg.get(k) is not None:
+                    x = np.asarray(msg[k], float).reshape(-1)
+                    if x.size == n and np.isfinite(x).all():
+                        mot[k] = x
+        except (TypeError, ValueError):
+            pass
+        return mot
+
     def on_vio_event(self, msg):
         """브리지 auto-reset: 월드 원점이 바뀜 → 궤적·키프레임 기준 초기화, 맵은 --on-vio-reset (REVIEW 10)."""
+        pl = self.pose_log
+        if pl is not None and msg.get("type") == "reset":
+            pl.append(("e", msg))
         if msg.get("type") != "reset" or not msg.get("auto"):
             return
         self.vio_auto_resets += 1
@@ -1036,6 +1261,7 @@ class Scanner:
                "bridge_restart": "브리지 다시 띄움"}.get(msg.get("reason"), "추적 실패 → VIO 재시작")
         self.log(f"[ov] auto-reset #{self.vio_auto_resets} ({why}, 폰을 잠시 멈추면 다시 초기화)")
         with self.traj_lock:
+            traj_before = self.traj
             self.traj, self.cur_T = [], None
         self.last_kf = None
         if self.a.on_vio_reset == "clear" and self.vmap.n:
@@ -1045,8 +1271,36 @@ class Scanner:
                     self.save(Path(rp.out_dir) / f"segment_{self.vio_auto_resets:02d}", include_cfg=False)
                 except Exception as e:
                     self.log(f"[save] 조각 저장 실패 {e!r}")
-            self.vmap.reset()
+            if self.mode == "replay":
+                # 복원: 리셋 전 조각이 지금까지 가장 크면 (맵·시간 정보·궤적·물체) 를 통째로 보관하고 새 맵으로 이어 감.
+                # 끝날 때 restore_best_segment() 가 마지막 조각보다 크면 이것을 결과로 씀.
+                best = self._best_seg
+                if best is None or self.vmap.n > best["vmap"].n:
+                    self._best_seg = dict(vmap=self.vmap, tl=self.replay_tl, depth=self.replay_depth,
+                                          traj=traj_before, objects=self.objects, seg=self.vio_auto_resets)
+                old_vm = self.vmap
+                self.vmap = VoxelMap(self.a.voxel, self.a.min_hits, names=old_vm.names)
+                self.vmap.epoch = old_vm.epoch + 1            # 리셋 전에 만든 키프레임은 새 맵에 안 들어가게 (REVIEW 8)
+            else:
+                self.vmap.reset()
             self.objects = []
+            self.replay_tl, self.replay_depth = [], {}     # 리플레이 시간 정보는 새 맵(지금 조각)만
+
+    def restore_best_segment(self, log=None):
+        """복원 끝: 리셋 전 보관한 조각이 마지막 조각보다 크면 그것을 결과로 되돌림. 되돌렸으면 조각 번호, 아니면 None."""
+        best = self._best_seg
+        self._best_seg = None
+        if best is None or best["vmap"].n <= self.vmap.n:
+            return None
+        if log:
+            log(f"VIO 리셋으로 맵이 나뉨 → 가장 큰 조각 (리셋 #{best['seg']} 전, 복셀 {best['vmap'].n}) 을 결과로 씀 "
+                f"(마지막 조각 복셀 {self.vmap.n})")
+        best["vmap"].epoch = self.vmap.epoch + 1
+        self.vmap = best["vmap"]
+        self.replay_tl, self.replay_depth, self.objects = best["tl"], best["depth"], best["objects"]
+        with self.traj_lock:
+            self.traj = best["traj"]
+        return best["seg"]
 
     def _depth_worker(self):
         import depth_seg
@@ -1091,7 +1345,49 @@ class Scanner:
             finally:
                 self.worker_busy = False
 
-    def _process_keyframe(self, pair, T, t, epoch):
+    def _pair_rect(self, g, mot):
+        """키프레임 쌍의 정류맵 정하기 (움직임 보정, motion_rect.py). 반환 (rp, R_rect0_from_pair 또는 None, info) —
+        rp None = 이 키프레임은 깊이를 만들지 않음 (ΔT 를 모르고 |dt| 도 커서 고정 보정이면 깊이가 틀어짐)."""
+        rp0 = g["rp"]
+        dt_ms = (mot or {}).get("dt_ns", 0) * 1e-6
+        if self.a.motion_rect == "off" or mot is None:
+            return rp0, None, dict(mode="fixed", dt_ms=round(dt_ms, 3), why="--motion-rect off" if mot else "dt 없음")
+        # 실시간: lens1 이 lens0 보다 늦게 찍혔으면 (dt > 0) 그 시각까지의 자이로가 아직 안 왔을 수 있다 → 잠깐 (최대 0.2 s) 기다림
+        t_need = mot["t0_ns"] + max(0, int(mot.get("dt_ns") or 0))
+        t_wait = time.monotonic() + 0.2
+        while (not self.gyro_buf or self.gyro_buf[-1][0] < t_need) and time.monotonic() < t_wait and not self.stopped:
+            time.sleep(0.005)
+        try:
+            gyro = list(self.gyro_buf)
+        except RuntimeError:                              # 다른 스레드가 append 중 → 한 번 더
+            gyro = list(self.gyro_buf)
+        dT, info = motion_rect.motion_delta(g["st"], rp0, mot, gyro)
+        if dT is None:
+            # ΔT 모름 (자이로 창 없음·VIO 속도 없음): |dt| 가 아주 작을 때만 고정 보정 (FIXED_MAX_DT_MS 주석), 아니면 버림
+            if abs(dt_ms) <= motion_rect.FIXED_MAX_DT_MS:
+                return rp0, None, dict(info, mode="fixed")
+            return None, None, dict(info, mode="skipped")
+        if motion_rect.tiny(info):
+            return rp0, None, dict(info, mode="fixed", why="움직임 작음")
+        ok, binfo = motion_rect.baseline_check(g["st"], dT)
+        info.update(binfo)
+        if not ok:
+            return None, None, dict(info, mode="skipped", why="너무 빨리 움직임 (기선이 크게 돎)")
+        try:
+            rpp = motion_rect.rectify_with_delta(g["st"], dT)
+        except ValueError as e:                           # 상하 배치 등: 그 키프레임만 버림
+            return None, None, dict(info, mode="skipped", why=str(e)[:80])
+        info.update(mode="motion", rect_ms=round(rpp["rect_ms"], 2))
+        return rpp, motion_rect.R_rect0_from(rp0, rpp), info
+
+    def _note_mrect(self, info, t):
+        m = self.mrect
+        m[info["mode"]] = m.get(info["mode"], 0) + 1
+        info = dict(info, t=round(t, 3))
+        m["last"] = info
+        m["recent"].append(info)
+
+    def _process_keyframe(self, pair, T, t, epoch, mot=None):
         t_start = time.perf_counter()
         fL, fR = pair
         if epoch != self.vmap.epoch:
@@ -1099,10 +1395,19 @@ class Scanner:
         g = self.geom                                         # 한 키프레임 안에서는 같은 정류맵·FFS 축소
         if (fL.bgr.shape[1], fL.bgr.shape[0]) != tuple(g["rp"]["size"]):
             return                                            # 해상도 바뀌기 전 키프레임
-        r = self.ds(fL.bgr, fR.bgr, rp=g["rp"], scale=g["ffs_scale"])
+        # 움직임 보정 정류: 이 쌍의 두 촬영 순간 사이 폰 움직임 ΔT 로 그 쌍만의 정류맵 (깊이는 lens0 시각 기준)
+        rp, R_fix, info = self._pair_rect(g, mot)
+        self._note_mrect(info, t)
+        if rp is None:
+            return
+        r = self.ds(fL.bgr, fR.bgr, rp=rp, scale=g["ffs_scale"])
         if self.paused and self.mode != "replay":
             return
-        pts_w = frames.transform(T, r["pts_rect0"])
+        pts = r["pts_rect0"]
+        if R_fix is not None:
+            # 쌍별 정류 좌표 rect0' → 기본 rect0 (T_world_rect0 는 기본 R1 기준, lens0 시각 포즈)
+            pts = (pts @ R_fix.T.astype(np.float32)).astype(np.float32)
+        pts_w = frames.transform(T, pts)
         # 물체 인스턴스 (2D 트랙 id 우선) → 점마다 전역 id. 리셋과 겹치지 않게 맵 lock 안에서 (REVIEW 8)
         inst = np.full(len(pts_w), -1, np.int32)
         di = r["det_idx"]
@@ -1115,7 +1420,24 @@ class Scanner:
                 iid = self.vmap.tracker.associate(d["class_id"], pts_w[sel], d["track_id"], t)
                 inst[sel] = iid
                 d["inst"] = iid
+            nf0 = self.vmap.frames
             self.vmap.integrate(pts_w, r["rgb"], r["cls"], inst, t, epoch=epoch)
+            kf_i = self.vmap.frames if self.vmap.frames != nf0 else None
+        if kf_i is not None and self.mode == "replay":
+            # 리플레이 시간 정보: 키프레임 번호 = 복셀의 kf_shown 과 같은 번호 (voxel_map.frames)
+            ent = dict(i=kf_i, t=t, fr=[(fL.index, fL.timestamp_ns), (fR.index, fR.timestamp_ns)], T=np.array(T, float))
+            try:
+                # 깊이 렌즈 쌍 비교 숫자: 유효 화소 비율, 가장 큰 평면의 잔차 (거리 구간별) — replay_view.kf_quality
+                ent["q"] = replay_view.kf_quality(r["pts_rect0"], r["valid"], seed=int(fL.timestamp_ns) & 0xFFFFFFFF)
+            except Exception as e:
+                self.log(f"[replay] 비교 숫자 실패 {e!r}")
+            self.replay_tl.append(ent)
+            try:
+                jpg = replay_view.depth_jpeg(r["Z"], r["valid"], self.a.depth_range[0], self.a.depth_range[1])
+                if jpg:
+                    self.replay_depth[kf_i] = jpg
+            except Exception as e:
+                self.log(f"[replay] 깊이 그림 실패 {e!r}")
         now = time.monotonic()
         if now - self.objects_t > 1.0:
             self.objects = self.vmap.objects()
@@ -1141,7 +1463,7 @@ class Scanner:
                      clock_gap_ms=ph.get("clock_gap_ms"), error=ph.get("error"),
                      imu_rates={k: v["rate_hz"] for k, v in (ph.get("imu") or {}).items()},
                      imu_sync=dict(out=self.imu.n_out, dropped=self.imu.n_drop),
-                     pair_skew_ms=self.a.pair_skew_ms, connected=rx is not None)
+                     pair_skew_ms=self.pair_skew_ms(), connected=rx is not None)
         phone.update(self._pair_drop(ph))
         h = ph.get("h264")
         if isinstance(h, dict):
@@ -1155,13 +1477,25 @@ class Scanner:
             sk = np.array(self.skew_ms.copy(), float) if self.skew_ms else None   # 다른 스레드가 append 중이면 다음에
         except RuntimeError:
             sk = None
-        vio.update(stereo_frames=self.vio_stereo, mono_frames=self.vio_mono, images="rect",
+        vio.update(stereo_frames=self.vio_stereo, mono_frames=self.vio_mono,
+                   images="rect" if self.a.vio_mode == "stereo" else self.vio_cam0,   # mono 기본 lens0u (왜곡만 편 렌즈 2)
                    auto_resets=self.vio_auto_resets, vio_mode=self.a.vio_mode, bridge_restarts=self.bridge_restarts,
                    skew_dropped=self.vio_skew_dropped, skew_limit_ms=self.a.vio_stereo_skew_ms,
-                   pair_skew_ms=self.a.pair_skew_ms, bridge_fails=self.bridge_fails,
+                   pair_skew_ms=self.pair_skew_ms(), bridge_fails=self.bridge_fails,
                    skew_med_ms=None if sk is None else round(float(np.median(sk)), 2),
                    skew_p95_ms=None if sk is None else round(float(np.percentile(sk, 95)), 2),
                    skew_n=0 if sk is None else int(sk.size))
+        try:
+            dts = np.array(self.dt_ms.copy(), float) if self.dt_ms else None
+        except RuntimeError:
+            dts = None
+        m = self.mrect
+        motion = dict(on=self.a.motion_rect == "on", motion=m["motion"], fixed=m["fixed"], skipped=m["skipped"],
+                      last=m["last"], recent=list(m["recent"]), fixed_max_dt_ms=motion_rect.FIXED_MAX_DT_MS,
+                      dt_med_ms=None if dts is None else round(float(np.median(dts)), 2),
+                      dt_min_ms=None if dts is None else round(float(dts.min()), 2),
+                      dt_max_ms=None if dts is None else round(float(dts.max()), 2),
+                      gyro_buf=len(self.gyro_buf))
         if self.vio_error and self.mode in ("live", "both"):
             # 다시 띄우기·시작 실패의 진짜 원인을 닫힌 옛 브리지 오류보다 먼저 (REVIEW5 N5)
             old = vio.get("error")
@@ -1175,9 +1509,12 @@ class Scanner:
         rp = self.replayer
         session = dict(mode=self.mode, link=self.a.link, phone_spec=self.a.phone, adb=self.link.info(),
                        app=self.app_status, rec=self.rec_status, pull=self.pull_progress,
+                       # 녹화 모드만: 1 s 마다 읽는 status 꼬리. 앱 시작 때 한 번 찍은 app_status 는 낡아서 안 씀 (REVIEW8 L3)
+                       sync=sync_from_status(self.rec_status) if self.mode == "record" else None,
                        replay=dict(rp.progress) if rp is not None else None, last_result=self.last_result,
-                       rec_root=self.a.rec_root, cams=self.cams_info())
-        return dict(t=time.time(), paused=self.paused, vio=vio, phone=phone, depth=dict(self.dstats), session=session,
+                       rec_root=self.a.rec_root, cams=self.cams_info(), recsync=self.recsync.snapshot())
+        return dict(t=time.time(), paused=self.paused, vio=vio, phone=phone, depth=dict(self.dstats, motion=motion),
+                    session=session,
                     map=dict(epoch=self.vmap.epoch, version=self.vmap.version, voxels=self.vmap.n,
                              shown=self.vmap.count_shown(), voxel_m=self.vmap.voxel_m, min_hits=self.vmap.min_hits,
                              frames=self.vmap.frames),
@@ -1228,7 +1565,10 @@ class Scanner:
         names = {r["name"] for r in local}
         for r in phone or []:
             r["local"] = r["name"] in names
-        return dict(phone=phone, phone_error=err, phone_t=self._phone_recs_t, local=local, rec_root=self.a.rec_root)
+        for r in local:
+            r["ready"] = replay_view.best_recon(r["path"])
+        return dict(phone=phone, phone_error=err, phone_t=self._phone_recs_t, local=local, rec_root=self.a.rec_root,
+                    items=self.recsync.items(), auto=self.recsync.snapshot())
 
     def trajectory_json(self):
         with self.traj_lock:
@@ -1263,11 +1603,11 @@ class Scanner:
         ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 80])
         return buf.tobytes() if ok else None
 
-    LENS_NAMES = {"2": "초광각", "5": "광각"}
+    LENS_NAMES = {"2": "초광각", "5": "광각", "6": "망원"}
 
     def cam_jpeg(self, lens, overlay=False):
         """/api/cam.jpg — 가장 최근 수신 프레임 (센서 방향 그대로 640x480; 웹이 90° 돌려 보여 줄 수 있음).
-        lens 0 = 정류 왼쪽 (렌즈 2 초광각), 1 = 오른쪽 (렌즈 5 광각). JPEG 스트림이면 받은 바이트 그대로,
+        lens 0 = 정류 왼쪽 (렌즈 2 초광각), 1 = 오른쪽 (렌즈 5 광각 또는 6 망원 — 렌즈 쌍). JPEG 스트림이면 받은 바이트 그대로,
         아니면 cv2.imencode q80. overlay=True 면 렌즈 0 을 정류해 최근 키프레임의 YOLO 마스크·박스를 겹친다."""
         lens = 1 if int(lens) == 1 else 0
         f = None
@@ -1319,22 +1659,6 @@ class Scanner:
             phys = phys[::-1]
         return [dict(lens=i, physical=p, name=self.LENS_NAMES.get(str(p), f"렌즈 {p}")) for i, p in enumerate(phys)]
 
-    def _pull_and_replay(self, name, do_replay, every_frame, iters):
-        prog = dict(name=name, state="가져오는 중", done=0, total=0, t0=time.time())
-        self.pull_progress = prog
-
-        def cb(done, total):
-            prog.update(done=done, total=total)
-        try:
-            path = self.link.pull(name, self.a.rec_root, progress=cb)
-            prog.update(state="완료", path=str(path))
-            self._phone_recs = None
-            if do_replay:
-                self.start_replay(str(path), every_frame, iters)
-        except Exception as e:
-            prog.update(state="오류", error=repr(e))
-            self.log(f"[pull] 실패: {e!r}")
-
     def command(self, body):
         cmd = body.get("cmd")
         if cmd == "pause":
@@ -1358,20 +1682,26 @@ class Scanner:
         elif cmd == "save":
             return dict(ok=True, dir=str(self.save()))
         elif cmd == "mode":
-            # body: mode, start_app, size ("1280x960" 또는 [W,H], 4:3 만), fps, ffs_scale (없으면 지난 값)
+            # body: mode, start_app, size ("1280x960" 또는 [W,H], 4:3 만), fps, ffs_scale, pair ("2+5"|"2+6") (없으면 지난 값)
+            #       pair "all" = 렌즈 3개 모두 녹화 (비교용, mode record 만) — 그때 live_pair (기본 2+6) 는 다음 실시간용으로만 둠
+            pair = body.get("pair")
+            rec3 = str(pair or "") in ALL_LENSES
+            if rec3:
+                pair = body.get("live_pair") or "2+6"
             try:
                 return self.start_session(body.get("mode", "live"), start_app=bool(body.get("start_app", True)),
-                                          size=body.get("size"), fps=body.get("fps"), ffs_scale=body.get("ffs_scale"))
+                                          size=body.get("size"), fps=body.get("fps"), ffs_scale=body.get("ffs_scale"),
+                                          pair=pair, rec3=rec3)
             except ValueError as e:
                 return dict(ok=False, error=str(e))
         elif cmd == "stream":
             # 다음 실시간·녹화 세션의 크기·fps 만 정함 (검증; 적용은 다음 '시작')
             try:
                 w = self.set_stream(size=body.get("size"), fps=body.get("fps"), ffs_scale=body.get("ffs_scale"),
-                                    keep_ffs=body.get("size") is None)
+                                    keep_ffs=body.get("size") is None, pair=body.get("pair"))
             except ValueError as e:
                 return dict(ok=False, error=str(e))
-            return dict(ok=True, want=dict(size=list(w["size"]), fps=w["fps"], ffs_scale=w["ffs_scale"]),
+            return dict(ok=True, want=dict(size=list(w["size"]), fps=w["fps"], ffs_scale=w["ffs_scale"], pair=w.get("pair")),
                         stream=self.stream_info())
         elif cmd == "stop":
             return self.stop_session(stop_app=bool(body.get("stop_app", True)))
@@ -1386,13 +1716,23 @@ class Scanner:
             rs = self.rec_status or {}
             if rs.get("rec") == name and str(rs.get("state", "")).startswith("RECORDING"):
                 return dict(ok=False, error="녹화 중인 폴더 — 먼저 '정지' (mp4 마무리) 후 가져오기")
-            threading.Thread(target=self._pull_and_replay, daemon=True, name="pull",
-                             args=(name, bool(body.get("replay", True)), bool(body.get("every_frame", False)),
-                                   int(body.get("iters") or self.a.replay_iters))).start()
-            return dict(ok=True, name=name)
+            # 가져오기는 rec_sync 한 줄(직렬)로: 자동 가져오기와 겹치지 않고, PC 에 같은 사본이 있으면 다시 안 가져온다
+            return self.recsync.request_pull(name, replay=bool(body.get("replay", True)),
+                                             every_frame=bool(body.get("every_frame", False)),
+                                             iters=int(body.get("iters") or self.a.replay_iters))
+        elif cmd == "rec_auto":
+            return self.recsync.set_cfg(pull=body.get("pull"), recon=body.get("recon"))
+        elif cmd == "rec_retry":
+            return self.recsync.retry(str(body.get("name") or ""))
+        elif cmd == "rec_delete_phone":
+            return self.recsync.delete_phone(str(body.get("name") or ""))
         elif cmd == "replay":
-            return self.start_replay(str(body.get("name") or body.get("dir") or ""), bool(body.get("every_frame", False)),
-                                     int(body.get("iters") or self.a.replay_iters))
+            # pair: 3렌즈 녹화에서 '2+5' | '2+6' (없으면 2+6). 2렌즈 녹화는 생략 (녹화한 쌍)
+            try:
+                return self.start_replay(str(body.get("name") or body.get("dir") or ""), bool(body.get("every_frame", False)),
+                                         int(body.get("iters") or self.a.replay_iters), pair=body.get("pair") or None)
+            except ValueError as e:
+                return dict(ok=False, error=str(e))
         elif cmd == "set":
             if "voxel_m" in body:
                 v = float(body["voxel_m"])

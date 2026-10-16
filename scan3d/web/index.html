@@ -81,7 +81,7 @@
   #help { position:absolute; left:10px; bottom:10px; color:var(--dim); font-size:12px; background:#0009;
           padding:4px 8px; border-radius:6px; }
   #toast { position:absolute; left:50%; top:12px; transform:translateX(-50%); background:#000d; border:1px solid var(--line);
-           padding:8px 14px; border-radius:8px; font-size:14px; display:none; max-width:90%; }
+           padding:8px 14px; border-radius:8px; font-size:14px; display:none; max-width:90%; z-index:5; }
 
   aside { background:var(--panel); border-left:1px solid var(--line); overflow:auto; padding:10px 12px; }
   h2 { font-size:12px; color:var(--dim); margin:12px 0 6px; font-weight:600; }
@@ -141,6 +141,44 @@
   #recs h4 { font-size:12px; color:var(--dim); margin:8px 0 2px; font-weight:normal; }
   #recs button { padding:2px 7px; font-size:12px; }
 
+  /* ---- 녹화본 · 리플레이 목록 (오른쪽 칸) ---- */
+  #recAuto { display:flex; gap:10px; flex-wrap:wrap; font-size:12px; color:var(--dim); margin:2px 0 4px; }
+  #recNote { font-size:12px; color:var(--dim); margin-bottom:4px; }
+  #recItems .ri { padding:5px 6px; border-radius:6px; border:1px solid #1f2833; margin:4px 0; font-size:12px; }
+  #recItems .ri.ready { border-color:#2b6a45; background:#13261b; }
+  #recItems .ri .l1 { display:flex; justify-content:space-between; gap:6px; align-items:center; }
+  #recItems .ri .nm { font-weight:600; color:var(--fg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #recItems .ri .st { white-space:nowrap; }
+  #recItems .ri .l2 { display:flex; justify-content:space-between; gap:6px; align-items:center; margin-top:3px; color:var(--dim); }
+  #recItems .ri .bar { height:4px; background:var(--btn); border-radius:2px; overflow:hidden; margin-top:4px; }
+  #recItems .ri .bar i { display:block; height:100%; background:var(--acc); }
+  #recItems button { padding:2px 8px; font-size:12px; }
+  #recItems button.go { background:#1f7a46; border-color:#2a9a5a; font-weight:700; }
+  #recItems button.del { background:none; color:var(--dim); border-color:#2a3542; }
+
+  /* ---- 리플레이 막대 (3D 화면 위쪽) ---- */
+  #rpBar { position:absolute; left:10px; right:10px; top:10px; background:#000c; border:1px solid var(--line); border-radius:10px;
+           padding:8px 10px; display:flex; flex-direction:column; gap:6px; }
+  #rpBar[hidden], #rpCtl[hidden] { display:none; }
+  #rpBar .rpTop { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  #rpBar .rpTop b { font-size:14px; margin-right:6px; }
+  #rpCtl { display:flex; gap:10px; align-items:center; }
+  #rpCtl input[type=range] { flex:1; min-width:120px; accent-color:var(--acc); }
+  #rpPlay { min-width:46px; font-size:16px; font-weight:700; }
+  #rpClock { font-variant-numeric:tabular-nums; white-space:nowrap; font-size:13px; }
+  #rpInfo { color:var(--dim); font-size:12px; white-space:nowrap; }
+  #rpBar button.on { background:var(--acc); border-color:var(--acc); }
+  #rpPairs { display:flex; gap:4px; } #rpPairs button { padding:3px 8px; font-size:12px; }
+  #rpCmp { font-size:12px; color:var(--dim); line-height:1.4; font-variant-numeric:tabular-nums; }
+  #rpCmp[hidden] { display:none; } #rpCmp b { color:var(--fg); font-weight:600; } #rpCmp .cur { color:var(--fg); }
+  #recItems .pb { display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end; align-items:center; }
+  #recItems .pb small { color:var(--dim); }
+  #rpPairs { display:flex; gap:4px; } #rpPairs button { padding:3px 8px; font-size:12px; }
+  #rpCmp { font-size:12px; color:var(--dim); line-height:1.4; font-variant-numeric:tabular-nums; }
+  #rpCmp[hidden] { display:none; } #rpCmp b { color:var(--fg); font-weight:600; } #rpCmp .cur { color:var(--fg); }
+  #recItems .pb { display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end; align-items:center; }
+  #recItems .pb small { color:var(--dim); }
+
   @media (max-width:820px) {
     html,body { overflow:auto; }
     #app { height:auto; }
@@ -178,6 +216,8 @@
         <select id="sSize"><option value="640x480">640x480</option></select></label>
       <label class="qsel" title="1초에 찍는 장 수. 회색은 이 화질에서 쓸 수 없는 값 (이유가 옆에 적혀 있음)">fps
         <select id="sFps"><option value="15">15 fps</option></select></label>
+      <label class="qsel" title="깊이를 재는 두 렌즈 (다음 [▶ 스캔 시작] 부터). 초광각+광각 = 기본 (체커보드로 보정한 값). 초광각+망원 = 두 렌즈 사이가 2배 넓고 거의 같은 순간에 찍혀 깊이에 유리하지만, 깊이가 나오는 범위가 화면 가운데(망원이 보는 곳)뿐이고 보정은 폰 공장 값입니다. 녹화를 복원할 때는 녹화한 렌즈로 자동으로 맞춥니다. '3개 모두 녹화 (비교용)' = [폰에 녹화만] 에서 세 렌즈를 한꺼번에 녹화해, 같은 움직임을 두 쌍(초광각+광각, 초광각+망원)으로 따로 복원해 비교합니다">깊이 렌즈
+        <select id="sPair"><option value="2+5">초광각+광각</option><option value="2+6">초광각+망원</option><option value="all">3개 모두 녹화 (비교용)</option></select></label>
       <button id="bStart" class="big">▶ 스캔 시작</button>
       <button id="bStop" class="big">■ 정지</button>
       <button id="bRestart" class="big" title="위치 추적과 3D 맵을 처음부터 다시 시작합니다">↺ 처음부터 다시</button>
@@ -201,6 +241,27 @@
       <div id="labels"></div>
       <div id="toast"></div>
       <div id="help">마우스 왼쪽: 돌리기 · 오른쪽: 옮기기 · 휠: 확대</div>
+      <div id="rpBar" hidden>
+        <div class="rpTop">
+          <b id="rpTitle">리플레이</b>
+          <button id="rpFinal" title="복원이 끝난 전체 맵과 지나온 길 전체">최종 맵</button>
+          <button id="rpTime" title="녹화한 시간 순서대로 맵이 채워지는 과정을 다시 봅니다">시간 따라 보기</button>
+          <span id="rpInfo"></span>
+          <span id="rpPairs" title="같은 녹화를 다른 깊이 렌즈 쌍으로 복원한 결과로 바꿔 봅니다 (시간·보기 방식은 그대로)"></span>
+          <span class="sep"></span>
+          <button id="rpClose" title="리플레이를 닫고 실시간 화면으로 돌아갑니다">✕ 리플레이 닫기</button>
+        </div>
+        <div id="rpCmp" hidden></div>
+        <div id="rpCmp" hidden></div>
+        <div id="rpCtl" hidden>
+          <button id="rpPlay" title="재생 / 일시정지 (스페이스)">▶</button>
+          <select id="rpSpeed" title="재생 속도">
+            <option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option>
+          </select>
+          <input type="range" id="rpSlider" min="0" max="1000" step="1" value="0" title="끌면 그 시각으로 갑니다">
+          <span id="rpClock">0.0 / 0.0 s</span>
+        </div>
+      </div>
       <div id="camDock">
         <div id="camBar">
           <label title="초광각 화면에 최근에 찾은 물체(마스크·상자)를 겹쳐 보여 줍니다"><input type="checkbox" id="cCamOverlay"> 물체 표시</label>
@@ -217,6 +278,14 @@
     <aside>
       <h2>찾은 물체 <span id="nObj"></span></h2>
       <div id="objs"><div class="empty">아직 없음</div></div>
+
+      <h2>녹화본 · 리플레이</h2>
+      <div id="recAuto">
+        <label title="폰을 연결하거나 녹화를 [■ 정지] 하면 끝난 녹화를 PC 로 자동으로 가져옵니다"><input type="checkbox" id="cAutoPull" checked> 자동으로 가져오기</label>
+        <label title="가져온 녹화를 하나씩 자동으로 3D 복원합니다 (실시간 스캔 중에는 쉬었다가 끝나면 이어서)"><input type="checkbox" id="cAutoRecon" checked> 자동으로 복원</label>
+      </div>
+      <div id="recNote"></div>
+      <div id="recItems"><div class="empty">읽는 중…</div></div>
 
       <h2>깊이 화면 <small style="font-weight:400">(최근 키프레임 · 카메라 영상은 3D 화면 오른쪽 아래)</small></h2>
       <div class="row" style="margin-top:0">

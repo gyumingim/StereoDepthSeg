@@ -7,8 +7,14 @@ GET  /api/trajectory             [[t, x, y, z], ...] (rect0 원점, 솎음) + �
 GET  /api/frame.jpg?kind=rgb|overlay|depth   최근 키프레임 2D 패널 (웹은 depth 만 씀)
 GET  /api/cam.jpg?lens=0|1&overlay=0|1        가장 최근 수신 프레임 (0 = 초광각 렌즈 2 = 정류 왼쪽, 1 = 광각 렌즈 5).
                                  JPEG 스트림이면 받은 바이트 그대로, overlay=1 이면 렌즈 0 에 최근 YOLO 마스크·박스. 없으면 204
-GET  /api/recordings?refresh=1   폰 녹화 목록(adb) + 가져온 녹화(recordings/) 목록
-GET  /api/combos?mode=live|record|both&kf=3&fmt=h264|jpeg|nv21
+GET  /api/recordings?refresh=1   폰 녹화 목록(adb) + 가져온 녹화(recordings/) 목록 + items (녹화마다 상태 한 줄, rec_sync.py)
+GET  /api/replay/info?rec=NAME[&recon=R|&pair=2+6]  복원 리플레이 timeline.json (+ thumbs 준비 여부, 복원 목록,
+                                              3렌즈 녹화면 pair_recons {쌍: 복원} · pair_compare 같은 키프레임 비교) — replay_view.py
+GET  /api/replay/voxels?rec=NAME[&recon=R]    voxels_t.bin (S3VT: 17 B 레코드 처음 보인 시각 순 + float32 시각 + int32 키프레임)
+GET  /api/replay/frame.jpg?rec=NAME&lens=0|1&t=SEC[&phys=2|5|6]   그 시각(녹화 기준 초)의 녹화 프레임 (thumbs/, 없으면
+                                              만들기 시작하고 204). phys = 물리 렌즈 (3렌즈 녹화에서 보는 쌍의 렌즈)
+GET  /api/replay/depth.jpg?rec=NAME&recon=R&kf=I     키프레임 I 의 깊이 그림
+GET  /api/combos?mode=live|record|both&kf=3&fmt=h264|jpeg|nv21[&lenses=3]   (lenses=3 = 3개 모두 녹화, 녹화 인코더 3개)
                                  화질(4:3 해상도)·fps 조합별 가능 여부·이유·예상 부하 (load_model.py). fmt = 실시간 영상 형식 (기본 h264)
                                  state.ui.stream = 지금 크기·fps·형식, state.ui.load = 실행 중 예상 대비 실측·과부하 신호·한 단계 낮추기 제안
 POST /api/cmd  {"cmd": pause|resume|reset_map|reset_vio|save|set, ...}
@@ -22,6 +28,9 @@ POST /api/cmd  {"cmd": pause|resume|reset_map|reset_vio|save|set, ...}
                {"cmd": "stop", "stop_app": true}                              세션·재생 정지 (녹화 마무리 후 앱 정지)
                {"cmd": "pull", "name": ..., "replay": true, "every_frame": false, "iters": 8}   가져와서 복원
                {"cmd": "replay", "name": ..., "every_frame": false, "iters": 8}               가져온 녹화 복원
+               {"cmd": "rec_auto", "pull": bool, "recon": bool}   자동 가져오기·자동 복원 켜고 끔 (runs/rec_auto.json)
+               {"cmd": "rec_retry", "name": ...}                  실패·멈춘 복원 다시
+               {"cmd": "rec_delete_phone", "name": ...}           PC 사본이 똑같을 때만 폰에서 지움 (웹이 먼저 물어봄)
                {"cmd": "restart"}   [처음부터 다시]: VIO 가 죽었으면 세션 다시 시작(브리지 새로), 아니면 VIO 재시작 + 맵 초기화
 
 쉬운 UI 도우미 (Helper, 이 파일 안의 별도 스레드, scan3d.py 로직은 안 건드림):
@@ -48,8 +57,10 @@ from urllib.parse import urlparse, parse_qs
 
 try:
     import load_model
+    import replay_view
 except ImportError:                     # 다른 위치에서 import 될 때
     from scan3d import load_model       # type: ignore
+    from scan3d import replay_view      # type: ignore
 
 WEB = Path(__file__).parent / "web"
 CTYPE = {".html": "text/html; charset=utf-8", ".js": "application/javascript", ".css": "text/css",
@@ -96,7 +107,8 @@ def make_handler(scanner, helper):
                         kf = float(q["kf"]) if q.get("kf") else None
                     except ValueError:
                         kf = None
-                    return self._json(helper.combos(q.get("mode", "live"), kf, q.get("fmt")))
+                    n_rec = 3 if q.get("lenses") == "3" else 2
+                    return self._json(helper.combos(q.get("mode", "live"), kf, q.get("fmt"), n_rec))
                 if u.path == "/api/trajectory":
                     return self._json(scanner.trajectory_json())
                 if u.path == "/api/frame.jpg":
@@ -109,6 +121,8 @@ def make_handler(scanner, helper):
                         lens = 0
                     jpg = scanner.cam_jpeg(lens, q.get("overlay") == "1") if hasattr(scanner, "cam_jpeg") else None
                     return self._send(200, jpg, "image/jpeg") if jpg else self._send(204, b"", "text/plain")
+                if u.path.startswith("/api/replay/"):
+                    return self._replay(u.path[len("/api/replay/"):], q)
                 path = "/index.html" if u.path in ("/", "") else u.path
                 f = (WEB / path.lstrip("/")).resolve()
                 if WEB.resolve() not in f.parents or not f.is_file():
@@ -121,6 +135,60 @@ def make_handler(scanner, helper):
                     self._json({"error": repr(e)}, 500)
                 except Exception:
                     pass
+
+        def _replay(self, what, q):
+            """복원 리플레이 (replay_view.py 형식). rec = 녹화 이름, recon = 복원 폴더 이름 (없으면 가장 최근 리플레이 가능한 것)."""
+            try:
+                rec = replay_view.safe_name(q.get("rec"))
+                rdir = Path(scanner.a.rec_root) / rec
+                recon = q.get("recon") or replay_view.best_recon(rdir, q.get("pair") or None)
+                cdir = rdir / replay_view.safe_name(recon) if recon else None
+            except ValueError as e:
+                return self._json({"error": str(e)}, 400)
+            if not rdir.is_dir():
+                return self._json({"error": f"녹화 없음: {rec}"}, 404)
+            if what == "frame.jpg":
+                try:
+                    lens, t = int(q.get("lens", 0)), float(q.get("t", 0))
+                except ValueError:
+                    return self._json({"error": "lens·t 값"}, 400)
+                if not replay_view.thumbs_ready(rdir):
+                    _thumbs_bg(rdir, scanner.log)
+                    return self._send(204, b"", "text/plain")
+                jpg, ft = replay_view.thumb_at(rdir, lens, t, q.get("phys") or None)
+                if not jpg:
+                    return self._send(204, b"", "text/plain")
+                self.send_response(200)
+                self.send_header("Content-Type", "image/jpeg")
+                self.send_header("Content-Length", str(len(jpg)))
+                self.send_header("Cache-Control", "max-age=3600")
+                self.send_header("X-Frame-T", f"{ft:.4f}")
+                self.end_headers()
+                self.wfile.write(jpg)
+                return
+            if cdir is None or not cdir.is_dir():
+                return self._json({"error": "리플레이할 복원본이 없음 (시간 정보가 있는 복원이 필요)"}, 404)
+            if what == "info":
+                tl = replay_view.read_timeline(cdir)
+                if tl is None:
+                    return self._json({"error": f"{recon} 에 timeline.json 없음 (옛 복원)"}, 404)
+                if not replay_view.thumbs_ready(rdir):
+                    _thumbs_bg(rdir, scanner.log)
+                return self._json(dict(tl, thumbs=replay_view.thumbs_ready(rdir), thumbs_busy=str(rdir) in _thumb_busy,
+                                       recons=replay_view.list_recons(rdir), pair_recons=replay_view.pair_recons(rdir),
+                                       pair_compare=replay_view.pair_compare(rdir)))
+            if what == "voxels":
+                p = cdir / "voxels_t.bin"
+                if not p.is_file():
+                    return self._json({"error": "voxels_t.bin 없음"}, 404)
+                return self._send(200, p.read_bytes(), "application/octet-stream")
+            if what == "depth.jpg":
+                try:
+                    p = cdir / "kf" / f"d_{int(q.get('kf', 0)):05d}.jpg"
+                except ValueError:
+                    return self._json({"error": "kf 값"}, 400)
+                return self._send(200, p.read_bytes(), "image/jpeg") if p.is_file() else self._send(204, b"", "text/plain")
+            return self._json({"error": "unknown"}, 404)
 
         def do_POST(self):
             u = urlparse(self.path)
@@ -137,6 +205,27 @@ def make_handler(scanner, helper):
                 return self._json({"error": repr(e)}, 500)
 
     return H
+
+
+_thumb_busy = set()
+ALL_LENS_PAIRS = ("all", "2+5+6", "2,5,6")      # 웹 '깊이 렌즈' = 3개 모두 녹화 (scan3d.ALL_LENSES 와 같은 값)
+
+
+def _thumbs_bg(rdir, log):
+    """녹화 카메라 화면 그림(thumbs/)이 없으면 뒤에서 한 번 만든다 (옛 복원·직접 가져온 녹화)."""
+    k = str(rdir)
+    if k in _thumb_busy:
+        return
+    _thumb_busy.add(k)
+
+    def run():
+        try:
+            replay_view.ensure_thumbs(rdir, log)
+        except Exception as e:
+            log(f"[replay] 카메라 화면 그림 실패 {rdir.name}: {e!r}")
+        finally:
+            _thumb_busy.discard(k)
+    threading.Thread(target=run, daemon=True, name="thumbs").start()
 
 
 def _default(o):
@@ -286,6 +375,7 @@ class Helper:
         self.stream_fmt = None             # 웹이 고른 실시간 영상 형식 (없으면 scanner 값 → 기본 h264)
         self.h264_err = None               # 폰 metrics.json 의 h264.error (실시간 압축기 오류, REVIEW7 H2) — 세션 끝나면 지움
         self.h264_err_gen = None           # 그 오류를 낸 인코더 세대 (metrics h264.gen) — 세대가 바뀌면 지움
+        self.phone_sync = None             # 폰 metrics.json 의 sync (렌즈 위상 맞추기, SPEC 15) — 세션 끝나면 지움
         threading.Thread(target=self._loop, daemon=True, name="ui-helper").start()
 
     # ---- 상태 ----
@@ -295,6 +385,7 @@ class Helper:
         return dict(usb=self.usb, usb_age_s=round(time.time() - self.usb_t, 1) if self.usb_t else None,
                     temp_c=t, temp_level=lvl, temp_age_s=round(time.time() - self.temp_t, 1) if self.temp_t else None,
                     stream=self.stream(), load=self.mon.snapshot if self.mon else None, h264_error=self.h264_err,
+                    sync=self.phone_sync,
                     relay=dict(state=self.relay_state, pid=self.relay_pid, error=self.relay_err,
                                starts=self.relay_starts, fails=self.relay_fails, wanted=self.want_relay,
                                log_tail=self._relay_tail()))
@@ -336,7 +427,7 @@ class Helper:
         fmt = self.stream()["stream_fmt"] if running or not self.stream_fmt else self.stream_fmt
         return load_model.norm_fmt(fmt), (float(sc_) if sc_ else None)
 
-    def combos(self, mode, kf=None, fmt=None):
+    def combos(self, mode, kf=None, fmt=None, n_rec=2):
         if self.lm is None:
             return dict(error="부하 모델 없음")
         if kf is not None:
@@ -346,7 +437,7 @@ class Helper:
         fmt, scale = self._fmt_scale()
         st = self.stream()
         return self.lm.table(mode, kf_min=self.kf_min, stream_fmt=fmt, scale=scale,
-                             current=dict(size=st["size"], fps=st["fps"], stream_fmt=st["stream_fmt"]))
+                             current=dict(size=st["size"], fps=st["fps"], stream_fmt=st["stream_fmt"]), n_rec=n_rec)
 
     def _apply_stream(self, body, mode):
         """[스캔 시작] 의 size·fps → 검사 후 적용. 반환 (거절 dict 또는 None, 경고 문자열 또는 None)."""
@@ -361,7 +452,8 @@ class Helper:
         except (TypeError, ValueError):
             return dict(ok=False, error="화질·fps 값이 잘못됐습니다"), None
         fmt, scale = self._fmt_scale()
-        c = self.lm.combo(mode, w, h, fps, self.kf_min, fmt, scale)
+        n_rec = 3 if str(body.get("pair") or "") in ALL_LENS_PAIRS else 2   # '3개 모두 녹화 (비교용)' = 녹화 인코더 3개
+        c = self.lm.combo(mode, w, h, fps, self.kf_min, fmt, scale, n_rec)
         warn = None
         if not c["ok"] and c.get("load_only"):
             # 부하 추정만 넘음 (장치 한계 아님) → 시작은 하고 경고만 (REVIEW6 R2: 튄 실측 하나로 시작이 막히지 않게)
@@ -408,9 +500,8 @@ class Helper:
         return None, warn
 
     def _load_tick(self):
-        """감시 루프마다 (3 s): 폰 perf·PC 깊이 지표 → LoadMonitor (계수 EWMA, 과부하 신호)."""
-        if self.mon is None:
-            return
+        """감시 루프마다 (3 s): 폰 perf·PC 깊이 지표 → LoadMonitor (계수 EWMA, 과부하 신호).
+        부하 모델이 꺼져 있어도 metrics.json 은 읽는다 (렌즈 위상·압축기 오류 표시, REVIEW8 L3)."""
         sc = self.sc
         mode = getattr(sc, "mode", "idle")
         link = getattr(sc, "link", None)
@@ -419,8 +510,11 @@ class Helper:
             self.perf = self.perf_wall = None
             self.sess_wall_ms = None
             self.h264_err = self.h264_err_gen = None
+            self.phone_sync = None
             # 대기 중 1분마다 폰 caps.json 을 본다: 아직 없으면 찾고, 있으면 앱 버전·쓴 시각이 바뀌었을 때만 캐시 갱신
             # (앱을 새로 설치해도 옛 능력표를 계속 쓰지 않게, REVIEW6 R8)
+            if self.mon is None:
+                return
             if (self.usb == "device" and link is not None
                     and getattr(link, "available", False) and now >= self.caps_idle_t):
                 self.caps_idle_t = now + 60.0
@@ -429,7 +523,7 @@ class Helper:
             self.mon.update("idle", 0, 0, 0)
             return
         # 세션 시작 뒤 앱이 caps.json 을 썼으면 한 번 읽는다 (읽고 나면 다음 세션부터 폰 값으로)
-        if self.caps_try_t and now >= self.caps_try_t and self.usb == "device" and link is not None:
+        if self.lm is not None and self.caps_try_t and now >= self.caps_try_t and self.usb == "device" and link is not None:
             self.caps_try_t = 0.0
             self.lm.refresh_caps(link)
         rx = getattr(sc, "receiver", None)
@@ -470,6 +564,17 @@ class Helper:
                     self.h264_err, self.h264_err_gen = str(err)[:200], gen
                 else:
                     self.h264_err = None
+        # 렌즈 위상 맞추기 상태 (앱 1.5-sync metrics.json sync, SPEC 15.6) → 웹 단계 표시줄·고급
+        sj = self.perf.get("sync") if isinstance(self.perf, dict) else None
+        if isinstance(sj, dict):
+            # events(긴 글) 만 빼고 그대로 (1.6-sync: 방법 C 의 다시 열기 횟수·한 번 걸린 시간·녹화 대기 등)
+            self.phone_sync = {k: v for k, v in sj.items() if k != "events"}
+            self.phone_sync["src"] = "metrics"
+        else:
+            # metrics.json 을 못 읽음·멈춤, 또는 sync 가 없는 옛 앱 → 낡은 위상 값은 안 보여 줌 (REVIEW8 L3)
+            self.phone_sync = None
+        if self.mon is None:
+            return
         sizes = []
         if rx is not None:
             for f in list(getattr(rx, "latest", None) or []):
@@ -503,6 +608,8 @@ class Helper:
             return dict(ok=True, caps_src=src)
         if cmd == "mode":
             mode = body.get("mode", "live")
+            if str(body.get("pair") or "") in ALL_LENS_PAIRS and mode != "record":
+                return dict(ok=False, error="렌즈 3개 모두 녹화는 '폰에 녹화만' 에서만 됩니다 — 실시간 깊이는 한 쌍을 고르세요")
             bad, warn = self._apply_stream(body, mode)
             if bad:
                 return bad

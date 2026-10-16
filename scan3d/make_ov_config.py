@@ -1,8 +1,13 @@
 """OpenVINS 설정 3개 생성 (estimator_config.yaml, kalibr_imu_chain.yaml, kalibr_imucam_chain.yaml).
 
 입력: calib_phone_pair.json (스테레오 보정) + phone_stereo/cameras_s24.json (Camera2 렌즈 자세).
-VIO 에 넣는 영상은 **정류된** W×H gray (기본 보정 크기 640x480, --size 로 다른 4:3 크기 — K 비례 변환) (rect0 = 왼쪽 렌즈, rect1 = 오른쪽 렌즈) 라는 전제다 (SPEC 9.4).
-  -> intrinsics = 정류 P1 의 [f, f, cx, cy], distortion radtan [0,0,0,0], 내부 파라미터 보정 끔.
+VIO 에 넣는 영상 (W×H gray, 기본 보정 크기 640x480, --size 로 다른 4:3 크기 — K 비례 변환):
+  - stereo: **정류된** rect0 (왼쪽 렌즈) / rect1 (오른쪽 렌즈) (SPEC 9.4) -> intrinsics = 정류 P1 의 [f, f, cx, cy].
+  - mono (기본 --mono-cam lens0u, 2026-10-16): 왼쪽 렌즈(렌즈 2) 를 **왜곡만 편** 핀홀 (R1 없음, f = K1, 초광각 화각 유지,
+    calib_scale.vio_lens0_K). 정류 rect0 는 화각이 좁아 실제 손 회전 녹화에서 특징점이 끊겼다 (vio_lens0_K 주석).
+    설정 파일에 `# scan3d_vio_cam0: lens0u` 표시 → scan3d 가 같은 맵으로 영상을 만들고 포즈를 rect0 로 바꿔 쓴다.
+    --mono-cam rect0 = 옛 방식.
+  distortion radtan [0,0,0,0], 내부 파라미터 보정 끔.
 
 축 규약
 - IMU 프레임 = Android 센서(기기) 좌표: 세로로 정면에서 볼 때 x 오른쪽, y 위, z 화면 밖.
@@ -36,6 +41,8 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO))
 sys.path.insert(1, str(HERE))
 CONFIG_ROOT = HERE / "config"
+# 설정 형식 버전 (ensure_config 캐시 판정). 2026-10-16b: mono cam0 = lens0u, 정지 판정 문턱 각도 기준
+CFG_VERSION = "2026-10-16b"
 
 
 def quat_to_R(q):
@@ -95,6 +102,9 @@ def T_block(R_CtoI, p_CinI):
 #   https://www.st.com/resource/en/datasheet/lsm6dso.pdf ; S24 의 실제 IMU 부품은 확인 안 됨)
 # 에 VIO 관례대로 ~10~15배 부풀림 (모델링 안 된 진동·온도·양자화·타임스탬프 지터 흡수, 추정).
 # 바이어스 random walk 는 데이터시트에 없어 경험적 값 (추정). SPEC 9.5 와 같은 값.
+# 실측 (S24 LSM6DSV, rec_20261016_143702 처음 2.5 s 정지, 500 Hz): 가속 축별 std 0.008~0.024 m/s² → 밀도 5e-4~1.5e-3,
+#   자이로 std 0.001~0.003 rad/s → 밀도 6.5e-5~1.8e-4, 자이로 평균(=바이어스) |0.0011| rad/s (TYPE_GYROSCOPE 는 이미 보정값).
+#   → 아래 값은 실측의 약 7~15배. 오프라인 재생에서 0.5배로 줄이면 12 s 에 lost, 2배는 lost 없음 (1배와 비슷) → 그대로 둔다.
 IMU_NOISE = dict(
     accelerometer_noise_density=1.0e-2,   # m/s^2/sqrt(Hz)
     accelerometer_random_walk=1.0e-3,     # m/s^3/sqrt(Hz)
@@ -115,6 +125,8 @@ def main():
     ap.add_argument("--imu-origin", choices=["lens5", "cam0"], default="lens5",
                     help="IMU 위치 가정 (lens5 = 주 카메라 광학 중심, cam0 = 왼쪽 렌즈 광학 중심)")
     ap.add_argument("--mono", action="store_true", help="cam0 만 쓰는 mono 설정 (max_cameras 1)")
+    ap.add_argument("--mono-cam", choices=["lens0u", "rect0"], default="lens0u",
+                    help="mono cam0 영상: lens0u = 렌즈 2 왜곡만 편 핀홀 (기본, 넓은 화각), rect0 = 정류 왼쪽 (옛 방식)")
     ap.add_argument("--exposure-ms", type=float, default=0.0,
                     help="카메라 시각이 첫 행 노출 시작 그대로일 때만: 노출 시간 (timeshift 초기값에 /2 반영)")
     ap.add_argument("--rs-skew-ms", type=float, default=0.0,
@@ -149,15 +161,20 @@ def ensure_config(size, fps, mono=False, calib=None, cameras=None, root=CONFIG_R
     out = config_dir(size, fps, mono, root)
     est = out / "estimator_config.yaml"
     files = [est, out / "kalibr_imu_chain.yaml", out / "kalibr_imucam_chain.yaml"]
-    srcs = [Path(calib), Path(cameras), Path(__file__)]
+    srcs = [Path(calib), Path(cameras), Path(__file__), HERE / "calib_scale.py"]   # calib_scale.vio_lens0_K = mono intrinsics
     if all(f.is_file() for f in files):
         t_out = min(f.stat().st_mtime for f in files)
-        if all(not s.is_file() or s.stat().st_mtime <= t_out for s in srcs):
+        try:
+            same_ver = f"# scan3d_cfg_version: {CFG_VERSION}" in est.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            same_ver = False
+        # 버전 표시까지 봐야 한다: 옛 코드로 돌던 프로세스가 mtime 만 보고 옛 형식으로 다시 써 둔 캐시를 새 코드가 그대로 쓰지 않게
+        if same_ver and all(not s.is_file() or s.stat().st_mtime <= t_out for s in srcs):
             return est
     W, H = (int(v) for v in size)
     a = argparse.Namespace(calib=calib, cameras=cameras, out=str(out), fps=float(fps), imu_rate=400.0, init="static",
                            imu_origin="lens5", mono=bool(mono), exposure_ms=0.0, rs_skew_ms=0.0, gravity=9.80,
-                           verbosity="INFO", no_mono=True, size=f"{W}x{H}")
+                           verbosity="INFO", no_mono=True, size=f"{W}x{H}", mono_cam="lens0u")
     for k, v in kw.items():
         setattr(a, k, v)
     log(f"[ov] OpenVINS 설정 만듦: {out} ({W}x{H}, {float(fps):g} fps, {'mono' if mono else 'stereo'})")
@@ -208,6 +225,31 @@ def write_configs(a):
     p_C1inI = p_C0inI + R_C0_I @ np.array([b, 0.0, 0.0])
     timeshift = 0.5 * (a.exposure_ms + a.rs_skew_ms) * 1e-3   # t_imu = t_cam + timeshift
 
+    # mono cam0: lens0u (렌즈 2 왜곡만 편 핀홀, R1 없음 → R_I->C0 = 공장 pose_rotation 그대로) 또는 rect0
+    # R_I->C·시간 검증 (rec_20261016_143702, 렌즈 2 원영상 프레임 간 essential 회전 vs 자이로 적분, 345 쌍):
+    #   공장 pose_rotation 과 추정 R 의 차이 2.3° (프레임당 잔차 중앙값 0.33° — 영상 회전 추정 잡음 수준),
+    #   최적 시간 오프셋 −0.5 ms (±5 ms 에서 잔차 +4%) → 축·부호·시각(t_mid = IMU 와 같은 시계) 모두 맞음, 고칠 것 없음.
+    cam0_kind = "lens0u" if (a.mono and getattr(a, "mono_cam", "lens0u") == "lens0u") else "rect0"
+    if cam0_kind == "lens0u":
+        import calib_scale
+        Kv = calib_scale.vio_lens0_K(st)
+        f0, cx0, cy0 = float(Kv[0, 0]), float(Kv[0, 2]), float(Kv[1, 2])
+        R_C0_I_cfg = R_s2l.T
+        cam0_src = (f"lens0u = lens {left_id} undistorted pinhole (calib_scale.vio_lens0_K, no R1); "
+                    f"R_ItoC = quat_to_R(pose_rotation lens {left_id})")
+    else:
+        f0, cx0, cy0 = f, cx, cy
+        R_C0_I_cfg = R_C0_I
+        cam0_src = f"rect0 = R1 @ lens {left_id} camera; R_ItoC = R1 @ quat_to_R(pose_rotation lens {left_id})"
+    # 정지 판정 시차는 각도로 정해 cam0 초점거리로 화소 환산 (cam0 마다 f 가 달라서: rect0 463, lens0u 262 @640)
+    #  init: 0.3° (전에는 15 px = rect0 에서 1.9°). 실시간 로그 runs/ov_bridge_live_20261016-143155.log 의 초기화 9번 중
+    #   7번이 시차 2.6~14.8 px (= 천천히 도는 중) 에서 성공해 자이로 바이어스를 0.016~0.035 rad/s 로 잡았다 (실제 바이어스
+    #   ≈0.001, 정지 구간 실측). 0.03 rad/s 바이어스 오차 = 1.7°/s 기울기 표류 → 중력이 새어 속도 ~0.3 m/s 로 흐름 (증상 그대로).
+    #   진짜 정지일 때 시차는 0.04~0.09 px 라 0.3° 면 여유가 충분하다.
+    #  zupt: 0.05°/프레임 (≈0.75°/s @15fps). ZUPT 갱신은 자이로 = 바이어스 로 보므로 느린 회전을 정지로 받으면 바이어스가 틀어진다.
+    init_disp_px = f0 * np.tan(np.radians(0.3))
+    zupt_disp_px = f0 * np.tan(np.radians(0.05))
+
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     runs = REPO / "scan3d" / "runs"
@@ -215,6 +257,9 @@ def write_configs(a):
     head = (f"# generated {stamp} by scan3d/make_ov_config.py\n"
             f"# inputs: calib={a.calib} cameras={a.cameras} lenses L={left_id} R={right_id}\n"
             f"# rect: f={f:.4f} cx={cx:.4f} cy={cy:.4f} baseline_m={b:.6f} size={W}x{H}\n"
+            f"# scan3d_cfg_version: {CFG_VERSION}\n"
+            f"# scan3d_vio_cam0: {cam0_kind}\n"
+            f"# cam0: f={f0:.4f} cx={cx0:.4f} cy={cy0:.4f} ({cam0_kind})\n"
             f"# args: fps={a.fps} imu_rate={a.imu_rate} init={a.init} imu_origin={a.imu_origin} mono={a.mono} "
             f"exposure_ms={a.exposure_ms} rs_skew_ms={a.rs_skew_ms}\n")
     n_cams = 1 if a.mono else 2
@@ -252,17 +297,20 @@ try_zupt: true
 zupt_chi2_multipler: 0 # 0 = 시차만 사용
 zupt_max_velocity: 0.1
 zupt_noise_multiplier: 10
-zupt_max_disparity: {0.5 * px:.3g} # 640x480 기준 0.5 px × 크기 배율
+zupt_max_disparity: {zupt_disp_px:.3g} # 0.05° × cam0 f (make_ov_config.py 주석: 느린 회전을 정지로 받으면 바이어스가 틀어짐)
 zupt_only_at_beginning: false
 
 # ==================================================================
-# 초기화. static: 시작 때 폰을 1~2 s 가만히 둔 뒤 움직인다 (가속도 흔들림이 init_imu_thresh 를 넘는 순간 초기화).
-# 손떨림으로 실패하면 init_imu_thresh 를 올리거나 --init dynamic.
+# 초기화. try_zupt=true 면 OpenVINS 는 "정지 판정"(두 반쪽 창 모두 시차·가속 흔들림이 문턱 아래) 순간 정적 초기화한다
+# (VioManager: wait_for_jerk = (ZUPT 없음)). 시작 때 폰을 1.5 s 넘게 가만히 들고 있어야 한다.
+# 문턱이 느슨하면 천천히 도는 중에 초기화돼 그 회전을 자이로 바이어스로 잡는다 → 속도 표류 (make_ov_config.py 주석, 실측).
 init_window_time: {1.0 if dyn else 1.5}
-init_imu_thresh: {0.5 if dyn else 1.0} # 가속도 표준편차 m/s^2 (추정, 폰 잡음에 맞춰 조정)
-init_max_disparity: {15.0 * px:.1f} # 정지 판정 최대 시차 px (640x480 기준 15 × 크기 배율, 손떨림 여유)
+init_imu_thresh: {0.5 if dyn else 0.3} # 가속도 표준편차 m/s^2. 실측: 정지 0.015~0.05, 살짝 건드림 0.1, 손 움직임 0.4~0.9 (전에는 1.0)
+init_max_disparity: {init_disp_px:.2f} # 정지 판정 최대 평균 시차 px = 0.3° × cam0 f (전에는 15 px, 실측 근거는 make_ov_config.py)
 init_max_features: 50
 
+# dynamic: rec_20261016_143702 를 5 s 부터(움직이는 중) 재생하면 21 s 동안 한 번도 성공 못 함 (opt 반복 한도·공분산 실패 —
+# 손 회전 위주라 이동이 작아 축척이 안 잡힘). 손에 든 폰은 정지 시작(static)이 현실적.
 init_dyn_use: {"true" if dyn else "false"}
 init_dyn_mle_opt_calib: false
 init_dyn_mle_max_iter: 50
@@ -348,7 +396,7 @@ imu0:
 {mat_rows(np.zeros((3, 3)))}
 """
 
-    def cam_block(i, R_CtoI, p_CinI, overlaps, src):
+    def cam_block(i, R_CtoI, p_CinI, overlaps, src, K=(f, cx, cy), what="정류 P1"):
         ts = f"  timeshift_cam_imu: {timeshift:.6f} # t_imu = t_cam + timeshift (초기값, 온라인 보정)\n" if i == 0 else ""
         return f"""cam{i}:
   # {src}
@@ -356,16 +404,16 @@ imu0:
 {T_block(R_CtoI, p_CinI)}
   cam_overlaps: {overlaps}
   camera_model: pinhole
-  distortion_coeffs: [0.0, 0.0, 0.0, 0.0] # 정류 영상
+  distortion_coeffs: [0.0, 0.0, 0.0, 0.0] # 왜곡 편 영상
   distortion_model: radtan
-  intrinsics: [{f:.6f}, {f:.6f}, {cx:.6f}, {cy:.6f}] # fu, fv, cu, cv (정류 P1)
+  intrinsics: [{K[0]:.6f}, {K[0]:.6f}, {K[1]:.6f}, {K[2]:.6f}] # fu, fv, cu, cv ({what})
   resolution: [{W}, {H}]
   rostopic: /cam{i}/image_raw
 {ts}"""
 
     imucam = (f"%YAML:1.0\n{head}\n"
-              + cam_block(0, R_C0_I, p_C0inI, "[1]" if not a.mono else "[]",
-                          f"rect0 = R1 @ lens {left_id} camera; R_ItoC = R1 @ quat_to_R(pose_rotation lens {left_id})"))
+              + cam_block(0, R_C0_I_cfg, p_C0inI, "[1]" if not a.mono else "[]", cam0_src, K=(f0, cx0, cy0),
+                          what="정류 P1" if cam0_kind == "rect0" else "calib_scale.vio_lens0_K"))
     if not a.mono:
         imucam += cam_block(1, R_C1_I, p_C1inI, "[0]",
                             f"rect1 = R2 @ lens {right_id} camera; origin = rect0 + (baseline, 0, 0)")
@@ -374,7 +422,25 @@ imu0:
     (out / "kalibr_imu_chain.yaml").write_text(imu, encoding="utf-8")
     (out / "kalibr_imucam_chain.yaml").write_text(imucam, encoding="utf-8")
     print(f"[make_ov_config] wrote {out}/estimator_config.yaml, kalibr_imu_chain.yaml, kalibr_imucam_chain.yaml")
-    print(f"[make_ov_config] R_I->C0 =\n{np.array2string(R_I_C0, precision=4)}\n p_C0inI={p_C0inI}, p_C1inI={p_C1inI}")
+    print(f"[make_ov_config] cam0={cam0_kind} f={f0:.2f} init_max_disparity={init_disp_px:.2f}px "
+          f"zupt_max_disparity={zupt_disp_px:.3g}px R_I->C0 =\n{np.array2string(R_C0_I_cfg.T, precision=4)}\n"
+          f" p_C0inI={p_C0inI}, p_C1inI={p_C1inI}")
+
+
+def vio_cam0_kind(cfg):
+    """설정 폴더(estimator_config.yaml 경로 또는 폴더)의 '# scan3d_vio_cam0: X' 표시 → 'lens0u' | 'rect0'.
+    표시가 없으면 옛 설정 = 'rect0'."""
+    import re
+    cfg = Path(cfg)
+    d = cfg if cfg.is_dir() else cfg.parent
+    for name in ("kalibr_imucam_chain.yaml", "estimator_config.yaml"):
+        try:
+            m = re.search(r"#\s*scan3d_vio_cam0:\s*(\w+)", (d / name).read_text(encoding="utf-8", errors="replace"))
+        except OSError:
+            continue
+        if m:
+            return m.group(1)
+    return "rect0"
 
 
 if __name__ == "__main__":

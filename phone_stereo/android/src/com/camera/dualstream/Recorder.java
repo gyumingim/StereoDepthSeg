@@ -34,11 +34,12 @@ final class Recorder {
     /** First frame timestamp (any lens): common PTS origin so both MP4s share one timebase. */
     private long t0 = Long.MIN_VALUE;
 
+    /** mid = mid-exposure time (frame time since 1.7-mid, SPEC 1.2), physical = physical SENSOR_TIMESTAMP (start). */
     private static final class Frame {
-        final long physical, logical, exposure, skew; final byte[] nv21;
-        Frame(long p, long l, long e, long s, byte[] d) { physical=p; logical=l; exposure=e; skew=s; nv21=d; }
+        final long mid, physical, logical, exposure, skew; final byte[] nv21;
+        Frame(long m, long p, long l, long e, long s, byte[] d) { mid=m; physical=p; logical=l; exposure=e; skew=s; nv21=d; }
     }
-    private static final Frame EOS = new Frame(0,0,0,0,null);
+    private static final Frame EOS = new Frame(0,0,0,0,0,null);
 
     Recorder(File dir, String[] ids, int width, int height, int fps, int kbps, boolean rawH264, String encoderName, H264.Sink live) throws IOException {
         this.live=live;
@@ -51,12 +52,12 @@ final class Recorder {
         imu.start();
     }
 
-    /** Camera thread. Never blocks. */
-    void frame(int index, long physical, long logical, long exposure, long skew, byte[] nv21) {
+    /** Camera thread. Never blocks. mid = frame time (PTS, CSV t_mid_ns, live header), physical = start of exposure. */
+    void frame(int index, long mid, long physical, long logical, long exposure, long skew, byte[] nv21) {
         if(stopping || index<0 || index>=lenses.length) return;
-        synchronized(this) { if(t0==Long.MIN_VALUE) t0=physical; }
+        synchronized(this) { if(t0==Long.MIN_VALUE) t0=mid; }
         Lens l=lenses[index];
-        if(!l.queue.offer(new Frame(physical,logical,exposure,skew,nv21))) { l.dropped++; if(live!=null) live.h264Drop(index); }
+        if(!l.queue.offer(new Frame(mid,physical,logical,exposure,skew,nv21))) { l.dropped++; if(live!=null) live.h264Drop(index); }
     }
 
     /** Sensor thread. Never blocks. */
@@ -140,7 +141,7 @@ final class Recorder {
         volatile boolean keyReq;
         private byte[] csd;
         private int seq;
-        /** pts -> {physical ts, System.nanoTime at queue}: sensor time + encode latency for the shared live stream. */
+        /** pts -> {mid-exposure ts, System.nanoTime at queue}: frame time + encode latency for the shared live stream. */
         private final LinkedHashMap<Long,long[]> ptsMeta=new LinkedHashMap<Long,long[]>(32,0.75f,false) {
             @Override protected boolean removeEldestEntry(Map.Entry<Long,long[]> e) { return size()>32; }
         };
@@ -165,7 +166,7 @@ final class Recorder {
         @Override public void run() {
             try {
                 rows=new BufferedWriter(new FileWriter(csv),1<<16);
-                rows.write("frame_idx,physical_ts_ns,logical_ts_ns,exposure_ns,rolling_shutter_skew_ns,pts_us\n");
+                rows.write("frame_idx,t_mid_ns,physical_ts_ns,logical_ts_ns,exposure_ns,rolling_shutter_skew_ns,pts_us\n");
                 if(raw!=null) rawOut=new BufferedOutputStream(new FileOutputStream(raw),1<<20);
                 codec=encoderName!=null?MediaCodec.createByCodecName(encoderName)
                         :MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
@@ -201,16 +202,16 @@ final class Recorder {
             }
             if(in<0) { busy++; if(live!=null) live.h264Drop(index); return; }
             long t0v; synchronized(Recorder.this) { t0v=t0; }
-            long pts=(fr.physical-t0v)/1000;
+            long pts=(fr.mid-t0v)/1000;
             if(pts<=lastPts) pts=lastPts+1;   // MP4 needs strictly increasing PTS per track
             lastPts=pts;
             Image img=codec.getInputImage(in);
             int size;
             if(img!=null) { H264.fillImage(img,fr.nv21,width,height); size=width*height*3/2; }
             else size=fillBuffer(codec.getInputBuffer(in),fr.nv21);
-            if(live!=null) ptsMeta.put(pts,new long[]{fr.physical,System.nanoTime()});
+            if(live!=null) ptsMeta.put(pts,new long[]{fr.mid,System.nanoTime()});
             codec.queueInputBuffer(in,0,size,pts,0);
-            rows.write(encoded+","+fr.physical+","+fr.logical+","+fr.exposure+","+fr.skew+","+pts+"\n");
+            rows.write(encoded+","+fr.mid+","+fr.physical+","+fr.logical+","+fr.exposure+","+fr.skew+","+pts+"\n");
             encoded++;
         }
 

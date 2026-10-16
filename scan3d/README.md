@@ -79,6 +79,47 @@ OpenVINS(ROS 없음) 스테레오+IMU VIO 로 자세, Fast-FoundationStereo 깊�
   `runs/phone_caps.json` 에 둔다. 아직 없으면 `phone_stereo/cameras_s24.json` 으로 추정 (최대 fps 30 으로 보수적).
   형식: SPEC.md 14. 명령줄: `scan3d.py --app-size 960x720 --app-fps 15`, `win_relay.py --size 960x720 --fps 15`.
 
+## 깊이 렌즈 쌍: 2+5 (기본) / 2+6 (초광각+망원)
+
+웹 [스캔 시작] 옆 **"깊이 렌즈"** 목록 (다음 [▶ 스캔 시작] 부터). 위치 추적(VIO)은 어느 쪽이든 렌즈 2(초광각) 하나 + IMU 로 똑같다.
+
+| | 2+5 초광각+광각 (기본) | 2+6 초광각+망원 |
+|---|---|---|
+| 보정 | `calib_phone_pair.json` 체커보드 | `calib_phone_pair_2_6.json` 공장 값 + 장면 쌍으로 다듬음 |
+| 두 렌즈 사이 (기선) | 15.5 mm | 32.4 mm |
+| 두 렌즈 찍는 시각 차 (실측) | −26 ~ −33 ms (앱 켤 때마다 다름) | **+1 ~ +3 ms (거의 동시)** |
+| 정류 초점 (640x480) | f ≈ 463 px | f ≈ 1287 px (망원 화각을 채움) |
+| 깊이가 나오는 범위 | 초광각 공통 영역 (수평 약 69°) | **화면 가운데만** (망원 화각 약 28°x21°, 초광각 가운데 약 130x100 화소를 4.9배 확대) |
+| 1 m 시차 | 약 7 px | 약 41 px |
+
+- 쓰는 법: "깊이 렌즈" 를 **초광각+망원** 으로 바꾸고 [▶ 스캔 시작] (녹화 + 실시간도 같음). 폰 앱이 `--es physical 2,6` 으로 켜진다.
+  녹화를 복원할 때는 녹화 폴더 `meta.json` 의 `physical` 로 쌍을 자동으로 고른다 (2,6 녹화 = 2+6 보정).
+- API: `POST /api/cmd {"cmd":"mode","mode":"live","size":"640x480","fps":15,"pair":"2+6"}`, 명령줄 `scan3d.py --pair 2+6`.
+- 망원은 초점이 0.5 m 보다 가까우면 흐리다 (최소 초점 2 디옵터, 앱은 1 m 고정). 깊이는 FFS 시차 192 px 로 약 0.22 m 부터.
+- 깊이 최대값은 아직 3 m 상한 그대로 (`--depth-range`). 2+6 은 3 m 에서도 시차 14 px 라 더 멀리 쓸 여지가 있다 (다음 단계).
+- stereo VIO (`--vio-mode stereo`) 는 2+5 설정만 있어 2+6 이면 시작을 거절한다 (기본 mono 는 상관없음).
+
+**보정 만들기 (`tools/make_factory_pair_calib.py`, 2026-10-16 결과)**
+
+```bash
+# 1) 실시간 2+6 세션을 켜고 (폰은 세워 둔 채, 질감 있는 장면을 망원 쪽에) 쌍 저장 → 2) 같은 자리에서 2+5 세션으로 한 번 더
+venv_ffs/bin/python scan3d/tools/make_factory_pair_calib.py --grab phone_stereo/runs/pair26_20261016/p26
+venv_ffs/bin/python scan3d/tools/make_factory_pair_calib.py --grab phone_stereo/runs/pair26_20261016/p25
+# 3) 공장 값 → 회전(x·z)·망원 초점 배율 다듬기 → yaw 를 2+5 거리에 맞춤 → calib_phone_pair_2_6.json
+venv_ffs/bin/python scan3d/tools/make_factory_pair_calib.py --refine phone_stereo/runs/pair26_20261016/p26 \
+    --yaw-ref phone_stereo/runs/pair26_20261016/p25
+venv_ffs/bin/python scan3d/tools/make_factory_pair_calib.py --compare-only    # 2+5 공장 값 vs 체커보드 숫자만
+```
+
+- 공장 값을 얼마나 믿나: 2+5 공장 값 vs 체커보드 = 회전 차 0.43° (x −0.31, y −0.26, z −0.14), T 차 0.44 mm (기선 1.5 % 짧음,
+  방향 1.4°), 광각 fx 0.991 배. 2+6 은 더 나빠서 공장 회전 그대로면 정류 세로 어긋남 **24~27 px** (f 1248) — 그대로는 못 쓴다.
+  장면 쌍 6개로 다듬은 값: 회전 x −1.31°, z −1.31°, 망원 초점 ×1.037 (초점 1 m 의 AF 렌즈), yaw +1.04° (2+5 거리 기준).
+  공장 값과의 회전 차 합계 약 2.1°.
+- 다듬은 뒤: 정류 세로 어긋남 0.5~1.3 px (기준 1 px), 실시간 첫 쌍 검증 0.80 px · 맞는 비율 0.90.
+- yaw 는 세로 어긋남으로 안 보이고 시차에 그대로 들어간다 (0.1° = 2.2 px). 그래서 같은 장면을 2+5 (체커보드 = 미터 맞음) 로도 찍어
+  같은 렌즈 2 화소의 거리가 같아지게 맞췄다. 기선 32.4 mm 는 공장 값 그대로 (검증 안 됨) → 실측 거리 한 번으로 확인 권장.
+- 폰을 떨어뜨리거나 케이스를 바꾸면 다시 만든다 (위 1~3, 1분).
+
 ## 세 모드 사용법
 
 공통: 폰 USB 연결·화면 켬·USB 디버깅 허용. 시작 직후 2 초 정도 폰을 가만히 (OpenVINS 정지 초기화).
@@ -181,10 +222,24 @@ WSL 이 아니면 `--native` 를 안 줘도 자동 (`/proc/version` 에 microsof
 복원은 실시간과 같은 파이프라인이지만 느려도 정확하게: 전용 브리지(새 상태), 프레임마다 포즈를 기다림, 키프레임을 버리지 않음.
 영상 프레임 ↔ CSV 행은 mp4 PTS 와 `pts_us` 로 맞춘다 (없으면 순서). 행 수와 영상 프레임 수가 다르면 짝 없는 쪽을 버리고 로그에 개수를 남긴다.
 
+### 자동 가져오기 · 자동 복원 · 리플레이 (rec_sync.py, replay_view.py)
+- 폰을 연결하면(서버 시작 때 이미 붙어 있어도) 폰의 끝난 녹화(meta complete=true)를 `scan3d/recordings/` 로 하나씩 가져온다.
+  PC 에 같은 사본(파일 이름·크기 같음)이 있으면 다시 안 가져온다. [■ 정지] 로 녹화를 멈추면 마무리 뒤 바로 가져온다.
+- 가져온 녹화 중 시간 정보가 있는 복원이 없는 것을 하나씩 자동 복원 (실시간·녹화 중에는 쉬었다가 끝나면 처음부터 다시).
+  오른쪽 칸 "녹화본 · 리플레이" 에 녹화마다 상태(폰에만 있음 · 가져오는 중 N% · 복원 대기 · 3D 복원 중 N% · 리플레이 가능)와 버튼.
+  두 체크(자동으로 가져오기 / 자동으로 복원)는 `runs/rec_auto.json` 에 남는다. [폰에서 지우기] 는 PC 사본이 같을 때만, 물어본 뒤에만.
+- [▶ 보기] → 3D 화면 위 리플레이 막대: [최종 맵] (전체 복셀 + 전체 궤적) / [시간 따라 보기] (▶·속도 0.5~4×·시간 막대 끌기, 스페이스·←→).
+  그 시각까지 처음 보인 복셀만, 궤적은 그 시각까지, 하늘색 절두체 = 그때 폰 자세, 오른쪽 아래 카메라 창 = 그 시각의 녹화 프레임,
+  깊이 화면 = 그 시각의 키프레임. 실시간 스캔 중에는 [보기] 가 잠기고, 스캔을 시작하면 리플레이는 닫힌다.
+- 복원 폴더에 더 쓰는 것: `timeline.json` (scan3d-timeline/1: 키프레임 {i, t, frames, T_world_rect0, n_shown}, 궤적, 카메라),
+  `voxels_t.bin` (S3VT/1: 17 B 레코드를 처음 보인 시각 순 + float32 시각 + int32 키프레임), `kf/d_NNNNN.jpg` (깊이).
+  `voxels.npz` 에 `t_first`·`t_shown`·`kf_shown` 배열 (scan3d-voxels/2, 17 B 레코드는 그대로). 녹화 폴더에 `thumbs/` (카메라 창 그림).
+  시각은 모두 "녹화 기준 초" (첫 프레임 노출 가운데 = 0). 옛 복원(시간 정보 없음)은 자동으로 다시 복원한다.
+
 ### 녹화 가져오기·복원 (명령줄)
 ```bash
 python3 scan3d/pull_rec.py list                    # 폰 녹화 목록
-python3 scan3d/pull_rec.py pull --latest           # → recordings/<이름>/   (Windows 에서도 실행 가능)
+python3 scan3d/pull_rec.py pull --latest           # → scan3d/recordings/<이름>/   (Windows 에서도 실행 가능)
 bash scan3d/run_scan.sh --replay recordings/<이름> --every-frame --replay-iters 12
 venv_ffs/bin/python scan3d/replay.py recordings/<이름> --keep-web   # 끝난 뒤에도 뷰어 유지
 ```
@@ -210,6 +265,7 @@ venv_ffs/bin/python scan3d/replay.py recordings/<이름> --keep-web   # 끝난 �
 | `setup.sh` | 설치 재현 (uv, venv_ffs, torch, FFS, Ceres, OpenVINS, ov_bridge, 설정, platform-tools) |
 | `win_relay.py` | Windows 쪽 바이트 중계 + 앱 시작 (`--app-mode`), 폰 포트 접속 실패 때 adb forward 다시 |
 | `preview_server.py` | 웹 화면 미리보기 (가짜 데이터, 포트 8796, 폰·GPU 불필요) |
+| `tools/make_factory_pair_calib.py` | 렌즈 쌍 공장 값 보정 (2+6) + 장면 쌍으로 다듬기·yaw 고정, 2+5 공장 값 vs 체커보드 비교 |
 
 ## 주요 인자 (`scan3d.py --help`)
 - `--link auto|relay|native`, `--phone listen:8766 | 127.0.0.1:8765 | :18765 | HOST:PORT`, `--adb PATH`
@@ -218,7 +274,9 @@ venv_ffs/bin/python scan3d/replay.py recordings/<이름> --keep-web   # 끝난 �
 - 재생: `--replay DIR`, `--every-frame`, `--replay-iters 8`, `--replay-out DIR`, `--exit-after-replay`, `--rec-root recordings`
 - `--voxel 0.03`, `--min-hits 2`, `--depth-range 0.3 2.5` (최대 3 m), `--iters 4`, `--scale` (FFS 축소, 기본 자동) `--ffs-max-px 307200`, `--stride 3`
 - `--kf-trans 0.03 --kf-rot 5 --kf-dt 0`, `--yolo-model yolo11m-seg.pt`, `--yolo-rotate`, `--no-yolo`
-- `--port 8795`, `--save-on-exit`, `--pair-skew-ms 5` (쌍 묶기), `--vio-stereo-skew-ms` (기본 = `--pair-skew-ms`)
+- `--port 8795`, `--save-on-exit`, `--pair-skew-ms` (쌍 묶기, 기본 = 프레임 주기 × 0.45 → 15 fps 면 30 ms), `--vio-stereo-skew-ms 5` (stereo VIO 만)
+- `--pair 2+5|2+6` (깊이 렌즈 쌍 시작값, 웹에서 바꿈), `--calib-26 calib_phone_pair_2_6.json`
+- `--vio-mode mono|stereo` (기본 **mono** = 왼쪽 렌즈 lens0 + IMU), `--app-sync off|auto` (기본 **off**), `--motion-rect on|off` (기본 on = 깊이 정류를 쌍마다 움직임 보정)
 - VIO 입력은 항상 정류 gray (`--ov-images rect`, raw 는 설정과 안 맞아 제거 — REVIEW 5)
 
 ## 폰 스트림 형식 (USB 끊김 줄이기)
@@ -240,9 +298,17 @@ venv_ffs/bin/python scan3d/replay.py recordings/<이름> --keep-web   # 끝난 �
   뷰어는 `t=`/`frames=` 가 있으면 그 값을, 없으면 원문 줄과 "앱 시작 후 경과 s" 를 보여 준다.
 - 영상 ↔ CSV: 처음 12 장으로 방식(PTS/순서)과 첫 행(0..4)을 정한다 (PTS 간격 무늬로 판정, 허용 오차 반 프레임). 드롭이 없어 간격이 일정하면
   첫 행을 가를 수 없어 0 으로 두고, meta `samples_written` ≠ 행 수면 경고한다 (미검증). 중간에 순서로 바꿔도 행 번호가 디코드 번호와 같이 움직인다.
-- 두 렌즈 노출 동기 APPROXIMATE → 쌍 묶기(`--pair-skew-ms`)와 스테레오 VIO 거름(`--vio-stereo-skew-ms`)을 같은 기준(기본 5 ms)으로 둔다.
-  그보다 먼 프레임은 짝을 안 짓는다 (mono 로 섞어 보내지 않음 — 섞으면 OpenVINS TrackKLT 가 죽음). 웹 고급 → "렌즈 시각차" 줄에 두 기준과 버린 수가 보인다.
-  버림이 많아 추적이 끊기면 `--pair-skew-ms 10` 또는 `--vio-mode mono` 와 비교 (REVIEW4 B6, 미측정).
+- 두 렌즈는 동시에 안 찍힌다 (실측: 위상 10~28 ms, 카메라를 열 때 정해지고 15 fps 에서 초당 약 0.05 ms 만 미끄러짐;
+  앱이 카메라를 다시 열어 맞추는 방법 C 는 19번 해도 실패). 그래서 (2026-10-16 결정)
+  - **VIO 는 렌즈 하나(lens0) + IMU (mono)** 가 기본. 처음 1~2초 천천히 움직여야 초기화된다 (웹 안내). 스테레오 VIO 는 `--vio-mode stereo` (옵션, 시각차 5 ms 넘는 쌍은 버림).
+  - **앱 위상 맞추기 기본 끔** (`--app-sync off`, 앱 `--es sync off`). `--app-sync auto` 는 옵션.
+  - **쌍 묶기**: 기준 = 프레임 주기 × 0.45 (반 주기 미만 → 가장 가까운 프레임끼리만 짝). 쌍마다 dt = t(lens1) − t(lens0) (노출 가운데끼리) 를 같이 넘긴다.
+    주의: 위상이 0.45·T ~ 0.5·T (15 fps 에서 30~33 ms) 이면 짝이 안 지어진다 — 그때는 `--pair-skew-ms 32`.
+  - **움직임 보정 정류** (`motion_rect.py`): 키프레임마다 두 촬영 순간 사이 폰 움직임 ΔT (회전 = 자이로 적분, 이동 = VIO 속도 × dt,
+    레버암 = VIO 추정 외부 파라미터) 를 구해 실제 상대자세 (R,T)∘ΔT 로 그 쌍만 stereoRectify → FFS. 깊이는 lens0 시각 기준이고,
+    쌍별 정류 좌표 rect0' 는 R1·R1'ᵀ 로 기본 rect0 에 돌려 T_world_rect0 를 곱한다. ΔT 를 모르면 (자이로 창 없음 등) |dt| ≤ 2 ms 일 때만
+    고정 보정, 아니면 그 키프레임은 깊이를 안 만든다. 웹 고급 → "움직임 보정" 줄 (/api/state depth.motion) 에 키프레임별 dt·회전·이동·정류맵 시간.
+  - 녹화 복원도 같은 방식 (녹화 CSV 의 렌즈별 노출 가운데 시각으로 dt, 녹화 IMU 로 ΔT).
 - 원시 가속도계(TYPE_ACCELEROMETER) 는 수정된 앱(2026-10-16 설치)에서만 온다. 없으면 IMU 출력 0 → VIO 시작 안 됨 (뷰어 "IMU 동기" 줄 확인).
   실제 IMU 주기: `adb shell run-as com.camera.dualstream cat files/sensors.json`. 400 Hz 가 아니면 `make_ov_config.py --imu-rate` 로 다시 생성.
 - 카메라 SENSOR_TIMESTAMP 와 센서 timestamp 가 같은 시계(elapsedRealtimeNanos)라는 가정 (S24 timestamp source 미확인).

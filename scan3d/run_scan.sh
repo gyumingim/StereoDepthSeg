@@ -14,7 +14,7 @@
 #   OV_CONFIG   estimator_config.yaml 고정 (기본: 없음 = scan3d 가 세션 크기·fps 로 config/<W>x<H>_<fps>/ 자동 생성)
 #   OV_ARGS     실시간 브리지 추가 인자 (기본 "--auto-reset"; scan3d 가 "<config> --stdio" 앞에 붙여 띄움)
 #   OV_ADDR     따로 띄운 TCP 브리지 주소 (예 127.0.0.1:7600). 비우면 scan3d 가 브리지를 직접 띄우고 죽으면 재시작
-#   VIO 모드    --vio-mode stereo (기본, 두 렌즈 쌍만) | --vio-mode mono (왼쪽 렌즈만, config/mono 설정) — scan3d.py 인자
+#   VIO 모드    --vio-mode mono (기본, 왼쪽 렌즈 + IMU) | --vio-mode stereo (두 렌즈 쌍, 옵션) — scan3d.py 인자
 #   PHONE       폰 주소 (relay 기본 "listen:8766", native 기본 "127.0.0.1:8765")
 #   SCAN3D_ADB  adb 경로 (native: PATH 의 adb 또는 tools/platform-tools/adb, WSL: Windows adb.exe 를 interop 으로)
 #   NO_VIO=1    브리지 없이 고정 포즈로 깊이·분할만

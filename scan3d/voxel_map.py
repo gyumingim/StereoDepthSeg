@@ -2,6 +2,8 @@
 
 복셀마다: 관측 프레임 수(hits), 평균 색, 클래스 투표(0 = 배경, c+1 = COCO 클래스 c), 인스턴스 투표(다수결 근사),
 최근 관측 시각, 변경 버전(증분 전송용).
+시간 정보 (복원 리플레이, scan3d-voxels/2): t_first = 처음 관측된 시각, t_shown·kf_shown = 표시 기준(hits ≥ min_hits)을
+처음 넘은 시각·키프레임 번호(frames, 1부터). 웹 17 B 레코드는 그대로 두고 save() 가 voxels.npz 에 따로 넣는다.
 물체 = 표시 복셀(hits ≥ min_hits) 중 같은 클래스의 26-이웃 연결 성분 → xy PCA yaw 박스, 부피, 라벨.
 """
 import json
@@ -36,6 +38,7 @@ def unpack_keys(p):
 
 VOXEL_DTYPE = np.dtype([("ix", "<i2"), ("iy", "<i2"), ("iz", "<i2"), ("r", "u1"), ("g", "u1"), ("b", "u1"),
                         ("cls", "<i2"), ("inst", "<i4"), ("hits", "<u2")])          # 17 B (웹 바이너리 형식)
+VOXEL_FORMAT = "scan3d-voxels/2"          # /1 = 17 B 레코드만, /2 = + 시간 배열 (t_first, t_shown, kf_shown)
 
 
 class InstanceTracker:
@@ -110,6 +113,9 @@ class VoxelMap:
         self.inst_score = np.zeros(cap, np.int16)
         self.last = np.zeros(cap, np.float32)
         self.ver = np.zeros(cap, np.uint32)
+        self.t_first = np.zeros(cap, np.float32)
+        self.t_shown = np.full(cap, np.inf, np.float32)
+        self.kf_shown = np.full(cap, -1, np.int32)
         self.version = 0
         self.epoch = getattr(self, "epoch", 0) + 1
         self.frames = 0
@@ -120,11 +126,14 @@ class VoxelMap:
         if need <= cap:
             return
         new = max(need, cap * 2)
-        for name in ("pk", "rgb_sum", "npts", "hits", "cls_hist", "inst", "inst_score", "last", "ver"):
+        for name in ("pk", "rgb_sum", "npts", "hits", "cls_hist", "inst", "inst_score", "last", "ver",
+                     "t_first", "t_shown", "kf_shown"):
             a = getattr(self, name)
             b = np.zeros((new,) + a.shape[1:], a.dtype)
-            if name == "inst":
+            if name in ("inst", "kf_shown"):
                 b[:] = -1
+            elif name == "t_shown":
+                b[:] = np.inf
             b[:cap] = a
             setattr(self, name, b)
 
@@ -188,6 +197,7 @@ class VoxelMap:
         if new:
             nr = rows[rows >= self.n]
             self.pk[nr] = u[rows >= self.n]
+            self.t_first[nr] = t
             self.n += new
         self.version += 1
         self.frames += 1
@@ -213,6 +223,10 @@ class VoxelMap:
         self.inst_score[rows] = np.clip(sc, 0, 1000).astype(np.int16)
         self.last[rows] = t
         self.ver[rows] = self.version
+        fresh = rows[(self.kf_shown[rows] < 0) & (self.hits[rows] >= self.min_hits)]
+        if len(fresh):
+            self.t_shown[fresh] = t
+            self.kf_shown[fresh] = self.frames
         return m
 
     # ---- 조회 ----
@@ -222,14 +236,24 @@ class VoxelMap:
     def _rgb_of(self, rows):
         return np.clip(self.rgb_sum[rows] / np.maximum(self.npts[rows, None], 1), 0, 255).astype(np.uint8)
 
-    def delta(self, since=0, epoch=None):
-        """(epoch, version, records) — since 이후 바뀐 표시 복셀. epoch 가 다르면 전체."""
+    def delta(self, since=0, epoch=None, with_time=False):
+        """(epoch, version, records) — since 이후 바뀐 표시 복셀. epoch 가 다르면 전체.
+        with_time=True 면 (epoch, version, records, times) — times = dict(t_first, t_shown, kf_shown) 같은 순서
+        (min_hits 를 낮춰 표시 기준을 나중에 넘은 복셀은 t_shown 대신 t_first, kf_shown 은 0)."""
         with self.lock:
             n = self.n
             if epoch is not None and epoch != self.epoch:
                 since = 0
             sel = (self.hits[:n] >= self.min_hits) & (self.ver[:n] > since)
             rows = np.nonzero(sel)[0]
+            times = None
+            if with_time:
+                ks = self.kf_shown[rows].copy()
+                ts = self.t_shown[rows].copy()
+                miss = ks < 0
+                ts[miss] = self.t_first[rows][miss]
+                ks[miss] = 0
+                times = dict(t_first=self.t_first[rows].copy(), t_shown=ts, kf_shown=ks)
             rec = np.zeros(len(rows), VOXEL_DTYPE)
             k = unpack_keys(self.pk[rows])
             rec["ix"], rec["iy"], rec["iz"] = k[:, 0], k[:, 1], k[:, 2]
@@ -238,6 +262,8 @@ class VoxelMap:
             rec["cls"] = self._cls_of(rows)
             rec["inst"] = self.inst[rows]
             rec["hits"] = np.minimum(self.hits[rows], 65535)
+            if with_time:
+                return self.epoch, self.version, rec, times
             return self.epoch, self.version, rec
 
     def count_shown(self):
@@ -324,10 +350,13 @@ class VoxelMap:
         d = Path(out_dir); d.mkdir(parents=True, exist_ok=True)
         pts, rgb, cls, inst = self.points()
         write_ply(d / "voxels.ply", pts, rgb)
-        epoch, ver, rec = self.delta(0)
+        epoch, ver, rec, tm = self.delta(0, with_time=True)
+        # records·centers 는 같은 순서 (hits ≥ min_hits 행 순). t_* 도 records 와 같은 순서 (맵 시각 = 첫 IMU 기준 초)
         np.savez_compressed(d / "voxels.npz", centers=pts, rgb=rgb, cls=cls, inst=inst, records=rec,
-                            voxel_m=np.float32(self.voxel_m), min_hits=np.int32(self.min_hits))
+                            voxel_m=np.float32(self.voxel_m), min_hits=np.int32(self.min_hits),
+                            format=np.array(VOXEL_FORMAT), **tm)
         (d / "voxels.json").write_text(json.dumps(dict(
+            format=VOXEL_FORMAT, time_fields="voxels.npz: t_first, t_shown, kf_shown (records 순서); 복원이면 voxels_t.bin",
             voxel_m=self.voxel_m, version=ver, min_hits=self.min_hits, created=time.strftime("%Y-%m-%d %H:%M:%S"),
             fields=list(VOXEL_DTYPE.names), voxels=[list(map(int, r)) for r in rec.tolist()],
             classes={int(k): v for k, v in self.names.items()}), separators=(",", ":")))

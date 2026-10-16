@@ -77,13 +77,17 @@ adb pull /sdcard/Android/data/com.camera.dualstream/files/rec_20261016_153012 .
 `SensorEvent.timestamp` 도 같은 시계). 즉 프레임 시각과 IMU 시각을 바로 비교할 수 있다 — 스트림 경로와 동일.
 벽시계 대응은 `meta.json` 의 `start_wall_ms` ↔ `start_elapsed_ns`.
 
+**프레임 시각 기준 (앱 1.7-mid / versionCode 11 부터, `meta.json` `timestamp_ref: "mid_exposure"`)**: 프레임 시각 = 그 렌즈 사진 전체 노출의
+가운데 `t_mid = physical SENSOR_TIMESTAMP + SENSOR_EXPOSURE_TIME/2 + SENSOR_ROLLING_SHUTTER_SKEW/2` (렌즈별 물리 결과 값, SPEC.md 1.4).
+실시간 스트림 헤더 timestamp 와 같은 값이고 시계는 위와 같다. 그 전 녹화(`timestamp_ref` 없음)의 프레임 시각은 노출 시작(`physical_ts_ns`).
+
 ## 4. 영상 `camN.mp4`
 
 - H.264 (video/avc), 640x480 (인자 width/height), 인코더 입력 `COLOR_FormatYUV420Flexible`
   (NV21 → 인코더 `Image` 평면에 stride 를 지켜 복사; `getInputImage` 가 null 이면 NV12 = `YUV420SemiPlanar` 로 직접 씀).
 - 비트레이트 `rec_kbps` (기본 = 크기·fps 비례 자동, SPEC.md 14.5; 기기 기본 비트레이트 모드), I-프레임 간격 1 s, `KEY_FRAME_RATE = fps`.
 - 회전 메타데이터 없음: 센서 원래 방향(가로) 그대로. 안정화(OIS/EIS) 끔, 초점 고정 — 스트림과 같은 캡처 요청이다.
-- PTS(µs) = (그 프레임의 physical SENSOR_TIMESTAMP − 녹화 첫 프레임의 physical timestamp(두 렌즈 공통)) / 1000.
+- PTS(µs) = (그 프레임의 `t_mid_ns` − 녹화 첫 프레임의 `t_mid_ns`(두 렌즈 공통)) / 1000 (1.7-mid; 그 전 앱은 physical SENSOR_TIMESTAMP 기준).
   두 mp4 가 같은 시간축을 쓴다. 단조 증가를 보장하려고 같거나 작으면 이전 + 1 µs 로 민다.
 - 인코더는 B-프레임 없이 입력 순서대로 출력한다고 가정한다. 디코드한 n 번째 프레임 = CSV 의 `frame_idx = n`.
   확실히 하려면 디코더가 주는 PTS 를 CSV 의 `pts_us` 와 맞춰라.
@@ -91,22 +95,27 @@ adb pull /sdcard/Android/data/com.camera.dualstream/files/rec_20261016_153012 .
 ## 5. 프레임 CSV `frames_camN.csv`
 
 ```
-frame_idx,physical_ts_ns,logical_ts_ns,exposure_ns,rolling_shutter_skew_ns,pts_us
-0,123456789012345,123456789000000,9998000,25000000,0
+frame_idx,t_mid_ns,physical_ts_ns,logical_ts_ns,exposure_ns,rolling_shutter_skew_ns,pts_us
+0,123456806511345,123456789012345,123456789000000,9998000,25000000,0
 ```
+(앱 1.7-mid. 1.6 까지는 `t_mid_ns` 열이 없다: `frame_idx,physical_ts_ns,logical_ts_ns,exposure_ns,rolling_shutter_skew_ns,pts_us`.)
 
 | 열 | 뜻 |
 |---|---|
 | `frame_idx` | mp4 안의 프레임 순번 (0부터, 인코더에 넣은 순서). 버려진 프레임은 행이 없다. |
-| `physical_ts_ns` | 이 렌즈의 physical `CaptureResult.SENSOR_TIMESTAMP` (`getPhysicalCameraResults()`) — **스트림 STER 패킷이 보내는 값과 같다** (`raw_ts=false`). `raw_ts=true` 면 logical 값. |
+| `t_mid_ns` | **프레임 시각** = 노출 가운데 = `physical_ts_ns + exposure_ns/2 + rolling_shutter_skew_ns/2` — **스트림 STER/STEJ/STEH 헤더 timestamp 와 같은 값** (1.7-mid). PTS 도 이 값 기준. |
+| `physical_ts_ns` | 이 렌즈의 physical `CaptureResult.SENSOR_TIMESTAMP` (`getPhysicalCameraResults()`) = 첫 줄 노출 시작 (`raw_ts=false`). `raw_ts=true` 면 logical 값. 1.6 까지는 이 값이 스트림 헤더 값이었다. |
 | `logical_ts_ns` | logical 결과의 `SENSOR_TIMESTAMP` (= ImageReader `Image.getTimestamp()`). 찾지 못하면 −1. |
-| `exposure_ns` | `SENSOR_EXPOSURE_TIME` (logical 결과). 없으면 −1. |
-| `rolling_shutter_skew_ns` | `SENSOR_ROLLING_SHUTTER_SKEW`. 없으면 −1. |
+| `exposure_ns` | `t_mid_ns` 계산에 쓴 노출: 이 렌즈 physical 결과의 `SENSOR_EXPOSURE_TIME`, 없으면 logical 결과 값, 그것도 없으면 이 렌즈의 마지막으로 알던 값 (1.7-mid; 그 전은 logical 결과 값). 한 번도 몰랐으면 −1. |
+| `rolling_shutter_skew_ns` | 같은 규칙의 `SENSOR_ROLLING_SHUTTER_SKEW`. 한 번도 몰랐으면 −1. |
 | `pts_us` | mp4 에 쓴 PTS (µs). |
 
-스캐너와 같은 노출 중앙 시각: `t_mid = physical_ts_ns + 0.5·(exposure_ns + rolling_shutter_skew_ns)` (`phone_rx.camera_time_offset_ns` 와 같은 식).
+노출 가운데 시각: 새 녹화는 `t_mid_ns` 그대로. **옛 녹화 (`meta.json` 에 `timestamp_ref` 없음, `t_mid_ns` 열 없음)** 는 `recording.py` 가 읽을 때
+`t_mid = physical_ts_ns + 0.5·(exposure_ns + rolling_shutter_skew_ns)` 로 바꾼다 (−1 인 행은 그 렌즈의 마지막으로 알던 값, 처음부터 없으면
+처음 나오는 값). 노출 열이 아예 없으면 노출 시작 그대로 두고 경고 로그 (그때만 재생 중 imu.csv frame_timing 값으로 보정).
+재생은 바꾼 뒤 실시간과 같은 기준이라 PC 노출 보정을 더하지 않는다 (`FrameTimingIndex.set_mid`).
 
-스테레오 짝은 스트림 쪽과 같은 방식으로 `physical_ts_ns` 가 가장 가까운 프레임끼리 맞추거나, 같은 `logical_ts_ns` 로 맞춘다
+스테레오 짝은 스트림 쪽과 같은 방식으로 프레임 시각(`t_mid_ns`)이 가장 가까운 프레임끼리 맞추거나, 같은 `logical_ts_ns` 로 맞춘다
 (같은 캡처 요청의 두 렌즈 프레임은 logical 값이 같다).
 
 ## 6. 센서 CSV `imu.csv`
@@ -138,6 +147,8 @@ type,t_ns,v0,v1,v2,v3,v4,v5
 | `width`, `height`, `fps`, `imu_us`, `focus_diopters`, `raw_ts` | 캡처 설정 (인텐트 값) |
 | `rec_kbps`, `rec_raw_h264`, `i_frame_interval_s`, `codec` | 인코더 설정 |
 | `timestamp_clock` | 시계 설명 |
+| `timestamp_ref` | 프레임 시각 기준: `"mid_exposure"` (1.7-mid, 3절). 없으면 옛 녹화 = 노출 시작 |
+| `mid_ts` | 노출 가운데 계산 출처별 프레임 수 `{ref, from_physical, from_logical, last_known, unknown, no_result}` (SPEC.md 1.4; 스트림과 공통 카운터) |
 | `start_wall_ms`, `start_wall`, `start_elapsed_ns` | 시작 시각 (벽시계 ms, ISO, elapsedRealtime ns) |
 | `end_wall_ms`, `end_wall`, `end_elapsed_ns`, `stop_reason` | 끝 시각, `broadcast` 또는 `activity_stop` |
 | `app_version`, `app_version_code` | 앱 버전 |
