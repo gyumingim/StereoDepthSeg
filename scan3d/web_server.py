@@ -35,6 +35,10 @@ POST /api/cmd  {"cmd": pause|resume|reset_map|reset_vio|save|set, ...}
                {"cmd": "rec_retry", "name": ...}                  실패·멈춘 복원 다시
                {"cmd": "rec_delete_phone", "name": ...}           PC 사본이 똑같을 때만 폰에서 지움 (웹이 먼저 물어봄)
                {"cmd": "mesh_set", "voxel_m": 0.02, "z_max": 2.5}   TSDF 메시 설정 (바꾸면 메시 지도를 새로 시작)
+               {"cmd": "sfm_recon", "name": REC}   정밀 복원 (sfm_recon.py 별도 프로세스, 수 분~수십 분) → REC/recon_<시각>_sfm.
+                                            대기 중(실시간·녹화·복원 아님)일 때만. 도는 동안 실시간·복원·다른 정밀 복원은 거절,
+                                            자동 복원은 쉼. 진행률 state.ui.sfm (SfmJob), 녹화 목록 줄에도 '3D 복원 중 %'
+               {"cmd": "sfm_stop"}  정밀 복원 멈춤 (만들던 폴더 지움)
                {"cmd": "restart"}   [처음부터 다시]: VIO 가 죽었으면 세션 다시 시작(브리지 새로), 아니면 VIO 재시작 + 맵 초기화
 
 쉬운 UI 도우미 (Helper, 이 파일 안의 별도 스레드, scan3d.py 로직은 안 건드림):
@@ -378,6 +382,69 @@ def _psq(s):
     return "'" + str(s).replace("'", "''") + "'"
 
 
+class SfmJob:
+    """정밀 복원 (sfm_recon.py) 별도 프로세스 하나. rec_sync 의 job 자리에 넣어 자동 복원이 겹치지 않게 한다
+    (rec_sync 는 job['rp'].thread.is_alive() · .progress 만 본다 — replay.Replayer 와 같은 꼴)."""
+
+    def __init__(self, sc, rec_dir, log):
+        import sys
+        self.sc, self.rec_dir, self.log = sc, Path(rec_dir), log
+        self.out = self.rec_dir / time.strftime("recon_%Y%m%d-%H%M%S_sfm")
+        self.pfile = self.out / "sfm_progress.json"
+        self.stopped = False
+        self.rc = None
+        self.t0 = time.time()
+        logp = HERE / "runs" / time.strftime("sfm_%Y%m%d-%H%M%S.log")
+        self.logp = logp
+        cmd = ["nice", "-n", "10", sys.executable, str(HERE / "sfm_recon.py"), str(self.rec_dir), "--out", str(self.out)]
+        self.fo = open(logp, "w")
+        self.proc = subprocess.Popen(cmd, stdout=self.fo, stderr=subprocess.STDOUT, cwd=str(HERE.parent))
+        self.thread = threading.Thread(target=self._wait, daemon=True, name="sfm")
+        self.thread.start()
+        log(f"[sfm] 정밀 복원 시작 {self.rec_dir.name} → {self.out.name} (pid {self.proc.pid}, 로그 {logp})")
+
+    def _wait(self):
+        self.rc = self.proc.wait()
+        self.fo.close()
+        if self.stopped:
+            shutil.rmtree(self.out, ignore_errors=True)
+        self.log(f"[sfm] 정밀 복원 끝 rc={self.rc} {'(멈춤)' if self.stopped else ''} {self.rec_dir.name}")
+
+    def stop(self):
+        self.stopped = True
+        if self.proc.poll() is None:
+            self.proc.terminate()
+
+    def alive(self):
+        return self.thread.is_alive()
+
+    def file(self):
+        try:
+            return json.loads(self.pfile.read_text())
+        except (OSError, ValueError):
+            return {}
+
+    @property
+    def progress(self):
+        """rec_sync 가 읽는 꼴: state (완료 | 정지됨 | 단계), pos_s/total_s (= %), timeline, out, error."""
+        f = self.file()
+        done = not self.alive()
+        if done and self.rc == 0 and f.get("state") == "done":
+            st = "완료"
+        elif done:
+            st = "정지됨"                     # 실패도 '쉼' 으로 (자동 복원 실패 목록에 넣지 않음, 로그·웹 sfm.error 로 알림)
+        else:
+            st = f"정밀 복원 · {f.get('stage') or '시작'}"
+        return dict(state=st, pos_s=float(f.get("pct") or 0.0), total_s=100.0, timeline=st == "완료", out=str(self.out),
+                    error=None, pair="2+5", keyframes=1)
+
+    def snapshot(self):
+        f = self.file()
+        return dict(name=self.rec_dir.name, out=self.out.name, running=self.alive(), rc=self.rc, stopped=self.stopped,
+                    stage=f.get("stage"), pct=f.get("pct"), msg=f.get("msg"), error=f.get("error"),
+                    elapsed_s=round(time.time() - self.t0, 1), log=str(self.logp))
+
+
 class Helper:
     """폰 USB·온도 감시 + Windows 중계(win_relay.py) 켜기/끄기. 실패해도 스캐너는 그대로 돈다."""
 
@@ -437,6 +504,7 @@ class Helper:
         self.h264_err = None               # 폰 metrics.json 의 h264.error (실시간 압축기 오류, REVIEW7 H2) — 세션 끝나면 지움
         self.h264_err_gen = None           # 그 오류를 낸 인코더 세대 (metrics h264.gen) — 세대가 바뀌면 지움
         self.phone_sync = None             # 폰 metrics.json 의 sync (렌즈 위상 맞추기, SPEC 15) — 세션 끝나면 지움
+        self.sfm = None                    # 정밀 복원 SfmJob (마지막 것)
         threading.Thread(target=self._loop, daemon=True, name="ui-helper").start()
 
     # ---- 상태 ----
@@ -446,7 +514,7 @@ class Helper:
         return dict(usb=self.usb, usb_age_s=round(time.time() - self.usb_t, 1) if self.usb_t else None,
                     temp_c=t, temp_level=lvl, temp_age_s=round(time.time() - self.temp_t, 1) if self.temp_t else None,
                     stream=self.stream(), load=self.mon.snapshot if self.mon else None, h264_error=self.h264_err,
-                    sync=self.phone_sync,
+                    sync=self.phone_sync, sfm=self.sfm.snapshot() if self.sfm else None,
                     relay=dict(state=self.relay_state, pid=self.relay_pid, error=self.relay_err,
                                starts=self.relay_starts, fails=self.relay_fails, wanted=self.want_relay,
                                log_tail=self._relay_tail()))
@@ -653,9 +721,39 @@ class Helper:
                         scale=scale, kf_min=self.kf_min, stream_fmt=fmt)
 
     # ---- 명령 ----
+    def _sfm_start(self, name):
+        sc = self.sc
+        if self.sfm is not None and self.sfm.alive():
+            return dict(ok=False, error=f"이미 정밀 복원 중 ({self.sfm.rec_dir.name})")
+        if getattr(sc, "mode", "idle") != "idle":
+            return dict(ok=False, error="스캔·녹화·복원 중에는 정밀 복원을 못 합니다 — 먼저 [■ 정지] 또는 복원이 끝나기를 기다리세요")
+        rp = getattr(sc, "replayer", None)
+        rs = getattr(sc, "recsync", None)
+        if (rp is not None and rp.thread.is_alive()) or (rs is not None and rs.job is not None):
+            return dict(ok=False, error="다른 복원이 도는 중 — 끝난 뒤 다시 누르세요")
+        try:
+            path = sc.resolve_rec(replay_view.safe_name(name))
+        except ValueError as e:
+            return dict(ok=False, error=str(e))
+        if not path.is_dir():
+            return dict(ok=False, error=f"녹화 폴더 없음: {name}")
+        self.sfm = SfmJob(sc, path, sc.log)
+        if rs is not None and rs.job is None:
+            rs.job = dict(name=path.name, rp=self.sfm, t0=time.time(), pair=None)   # 자동 복원이 끝날 때까지 쉼
+        return dict(ok=True, out=self.sfm.out.name, note="정밀 복원은 오래 걸립니다 (26 초 녹화에 약 5~10 분)")
+
     def command(self, body):
         cmd = body.get("cmd")
         sc = self.sc
+        if cmd == "sfm_recon":
+            return self._sfm_start(str(body.get("name") or ""))
+        if cmd == "sfm_stop":
+            if self.sfm is None or not self.sfm.alive():
+                return dict(ok=False, error="정밀 복원 중이 아님")
+            self.sfm.stop()
+            return dict(ok=True)
+        if cmd in ("mode", "replay") and self.sfm is not None and self.sfm.alive():
+            return dict(ok=False, error="정밀 복원 중 (GPU 를 씀) — 끝나기를 기다리거나 [정밀 복원 멈춤]")
         if cmd == "load_reset":
             if self.lm is None:
                 return dict(ok=False, error="부하 모델 없음")

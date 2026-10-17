@@ -453,12 +453,14 @@ function toast(msg, ms = 4000) {
 
 // ---------- 상태 폴링 ----------
 let paused = false, lastObjSig = '', sessMode = 'idle', adbOk = false, failCount = 0;
+let SFM = null;   // 정밀 복원 (SfM, state.ui.sfm) — 녹화 목록 [정밀 복원] 버튼
 async function pollState() {
   try {
     const s = await (await fetch('/api/state', { cache: 'no-store' })).json();
     failCount = 0;
     const se = s.session || {}, ui = s.ui || {}, vio = s.vio || {}, ph = s.phone || {}, dp = s.depth || {}, mp = s.map || {};
     sessMode = se.mode || 'idle';
+    SFM = ui.sfm || null;
     adbOk = !!(se.adb && se.adb.available);
     if (sessMode !== lastMode) { sessT0 = sessMode === 'idle' ? 0 : Date.now() / 1000; camSeenT = 0; lastMode = sessMode; }
     paused = s.paused; $('bPause').textContent = paused ? '재개' : '일시정지'; $('bPause').classList.toggle('on', paused);
@@ -725,7 +727,7 @@ let lastRecsSig = '';
 async function loadRecs(refresh) {
   try {
     const j = await (await fetch(`/api/recordings${refresh ? '?refresh=1' : ''}`, { cache: 'no-store' })).json();
-    const sig = JSON.stringify([j, sessMode]);
+    const sig = JSON.stringify([j, sessMode, SFM && SFM.running, SFM && SFM.error]);
     if (sig === lastRecsSig && !refresh) return;          // 바뀐 게 없으면 다시 안 그림 (버튼이 깜박이지 않게)
     lastRecsSig = sig;
     renderRecs(j); renderItems(j);
@@ -1112,7 +1114,18 @@ function renderItems(j) {
     else if (st === 'ready') btn = `<button class="go" data-view="${esc(it.name)}" data-recon="${esc(it.recon)}"${live ? ' disabled title="실시간 스캔 중에는 볼 수 없습니다 — 먼저 [■ 정지]"' : ' title="리플레이 보기"'}>▶ 보기</button>`;
     else if (st === 'failed' || st === 'held' || st === 'pc_only' || st === 'bad') btn = `<button data-retry="${esc(it.name)}" title="이 녹화를 3D 로 복원합니다 (스캔 중이 아닐 때)">복원</button>`;
     else if (st === 'phone_only' || st === 'pull_failed') btn = `<button data-get="${esc(it.name)}">가져오기</button>`;
+    if (it.on_pc) {
+      // 정밀 복원 (SfM/번들 조정, sfm_recon.py): 오래 걸림. 결과 폴더 recon_*_sfm → [정밀 ▶]
+      const sfmR = (it.recons || []).find(x => /_sfm$/.test(x));
+      const sfmRun = SFM && SFM.running && SFM.name === it.name;
+      if (sfmRun) btn += ` <button data-sfmstop="1" style="white-space:nowrap" title="정밀 복원 멈춤 (만들던 결과는 지움)">정밀 멈춤</button>`;
+      else {
+        if (sfmR) btn += ` <button class="go" style="white-space:nowrap" data-view="${esc(it.name)}" data-recon="${esc(sfmR)}"${dis || ' title="정밀 복원 결과 보기"'}>정밀 ▶</button>`;
+        btn += ` <button data-sfm="${esc(it.name)}" style="white-space:nowrap"${dis || ' title="사진마다 자세를 다시 맞춰 (SfM) 같은 벽이 두 장으로 쌓이는 것을 줄입니다. 수 분~십수 분 걸림"'}>정밀 복원</button>`;
+      }
+    }
     let sub = esc(where);
+    if (SFM && SFM.name === it.name && SFM.error && !SFM.running) sub += ` · <span class="bad" title="${esc(SFM.error)}">정밀 복원 실패</span>`;
     if (it.error) sub += ` · <span class="bad" title="${esc(it.error)}">${esc(String(it.error).slice(0, 60))}</span>`;
     if (it.paused && (st === 'pull_wait' || st === 'recon_wait')) sub += ' · 스캔이 끝나면 이어서';
     if (it.recons && it.recons.length && st !== 'ready' && st !== 'recon') sub += ` · 옛 복원 ${it.recons.length}개 (시간 정보 없음)`;
@@ -1130,6 +1143,17 @@ function renderItems(j) {
   $('recItems').querySelectorAll('[data-retry]').forEach(b => b.onclick = async () => {
     const r = await cmd({ cmd: 'rec_retry', name: b.dataset.retry });
     toast(r.ok ? (sessMode === 'idle' ? '곧 복원을 시작합니다' : '스캔이 끝나면 복원합니다') : (r.error || '실패'));
+    lastRecsSig = ''; loadRecs(false);
+  });
+  $('recItems').querySelectorAll('[data-sfm]').forEach(b => b.onclick = async () => {
+    if (!confirm('정밀 복원은 오래 걸립니다 (26 초 녹화에 약 5~10 분, GPU 사용). 도는 동안 실시간 스캔·다른 복원은 못 합니다. 시작할까요?')) return;
+    const r = await cmd({ cmd: 'sfm_recon', name: b.dataset.sfm });
+    toast(r.ok ? '정밀 복원을 시작했습니다 — 진행률은 이 줄에 보입니다' : (r.error || '실패'), 6000);
+    lastRecsSig = ''; loadRecs(false);
+  });
+  $('recItems').querySelectorAll('[data-sfmstop]').forEach(b => b.onclick = async () => {
+    const r = await cmd({ cmd: 'sfm_stop' });
+    toast(r.ok ? '정밀 복원을 멈췄습니다' : (r.error || '실패'));
     lastRecsSig = ''; loadRecs(false);
   });
   $('recItems').querySelectorAll('[data-get]').forEach(b => b.onclick = async () => {
