@@ -141,6 +141,14 @@ class Keeper:
         if not self.adb:
             return self.report("no_adb", "Windows adb.exe 를 찾지 못함 (--adb 로 지정)")
         devs = self.win_devices()
+        # A wireless entry stuck 'offline' (e.g. Tailscale relay hiccup during a big pull, or the phone's wireless
+        # debugging port changed) is not a connection: drop it and look for the port again (2026-10-18 pull failed).
+        stale = [s for s, st in devs if ":" in s and st == "offline"]
+        for s in stale:
+            run([self.adb, "disconnect", s])
+            self.log(f"무선 연결 {s} offline -> 끊고 다시 찾음")
+        if stale:
+            devs = [(s, st) for s, st in devs if s not in stale]
         if devs:
             usb = [s for s, _ in devs if ":" not in s]
             kind = "USB" if usb else "무선"

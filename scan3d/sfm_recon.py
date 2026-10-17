@@ -176,7 +176,7 @@ def load_inputs(rec_dir, pair, log):
     pair = (pair or "2+5").replace(",", "+")
     rec = recording.Recording(rec_dir, log, pair=pair.split("+"))
     phys = [str(p) for p in rec.physical[:2]]
-    calib = ROOT / ("calib_phone_pair.json" if pair == "2+5" else "calib_phone_pair_2_6.json")
+    calib = Path(calib_scale.default_calib(pair))
     g = calib_scale.load_geometry(str(calib), phys, rec.size)
     # 정류 왼쪽 = 렌즈 2 (K1), 오른쪽 = 렌즈 5 (K2). swap 이면 녹화 스트림 1 이 왼쪽
     iL, iR = (1, 0) if g["swap"] else (0, 1)
@@ -1137,7 +1137,7 @@ def load_six(rec, info, jobs, by, a, log):
     phys6 = [str(p) for p in rec6.physical[:2]]
     if "6" not in phys6:
         raise RuntimeError("렌즈 6 이 없는 녹화")
-    g6 = calib_scale.load_geometry(str(ROOT / "calib_phone_pair_2_6.json"), phys6, rec6.size)
+    g6 = calib_scale.load_geometry(calib_scale.default_calib("2+6"), phys6, rec6.size)
     i6 = 0 if g6["swap"] else 1
     s6 = [s for s in rec6.streams if s.index == i6][0]
     t6 = np.array(sorted(int(r[1]) for r in s6.recs), np.int64)

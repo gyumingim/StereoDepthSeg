@@ -652,6 +652,18 @@ function renderDetails(s, se, ui, vio, ph, dp, mp) {
     const d640 = (s.epi.dy_med_640 != null && s.epi.size && s.epi.size[0] !== 640) ? ` (640 기준 ${f(s.epi.dy_med_640, 2)} px)` : '';
     rows.push(['정류 검증', `<span class="${good ? 'ok' : 'warn'}">세로 어긋남 ${f(s.epi.dy_med, 2)} px${d640} · 기준 ${f(gate, 2)} px · inlier ${f(s.epi.inlier_frac, 2)}</span>${good ? '' : ' (정보: 보정이 조금 어긋남 — 다른 크기면 폰이 화각을 잘랐는지 확인)'}`]);
   }
+  if (s.aruco && !s.aruco.error) {
+    // 보드 (aruco_scale.py): 보임 여부 · 관측 수 · 시차 보정 Δd·s · 1 m 깊이 변화 · 렌즈 자세 잔차 · VIO 축척 (ARUCO_SCALE.md)
+    const a = s.aruco, ex = a.extrinsic || {}, vs = a.vio_scale || {};
+    const dc = a.depth_change_pct ? a.depth_change_pct['1.0m'] : null;
+    let t = `<span class="${a.board_seen ? 'ok' : ''}">${a.board_seen ? '보임' : '안 보임'}</span> · 관측 ${a.n_obs || 0}`;
+    if (a.n_obs) t += ` · Δd ${f(a.delta_d_px, 2)} px · s ${f(a.s, 3)}` + (dc != null ? ` · 1 m 깊이 ${dc > 0 ? '+' : ''}${f(dc, 1)} %` : '')
+      + ` · ${a.apply ? (a.ready ? '<span class="ok">적용 중</span>' : '적용 대기') : '관측만'}`;
+    if (ex.n) t += ` · 렌즈 자세 yaw ${f(ex.yaw_mrad, 2)} pitch ${f(ex.pitch_mrad, 2)} mrad`;
+    if (vs.n_pairs) t += ` · VIO 축척 ${f(vs.ratio_median, 3)}`;
+    if (a.warn) t += ` <span class="warn">(${esc(a.warn)})</span>`;
+    rows.push(['보드 (ArUco)', t]);
+  }
   $('stat').innerHTML = rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
   $('log').textContent = (s.log || []).join('\n');
 }

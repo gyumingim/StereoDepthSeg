@@ -93,6 +93,7 @@ class DepthSeg:
         self.log(f"[depth] FFS 로드 (triton={lib_ffs.triton_usable()}, iters={iters}, scale={scale})")
         self.yolo = None if no_yolo else YoloTracker(yolo_model, yolo_conf, device, yolo_rotate)
         self.names = self.yolo.names if self.yolo else {}
+        self.disp_fix = None        # (disp, rp) -> disp. aruco_scale.apply_disp (scan3d --aruco-apply 일 때만)
 
     def set_iters(self, iters):
         """FFS GRU 반복 수 변경 (load 가 model.args.valid_iters 를 고정하므로 다시 load; lib_ffs 가 키별로 캐시). 워커 스레드에서만."""
@@ -133,6 +134,9 @@ class DepthSeg:
         rectL, rectR = lr.rectify_pair(bgrL, bgrR, rp)
         disp = lib_ffs.infer(self.model, cv2.cvtColor(rectL, cv2.COLOR_BGR2RGB), cv2.cvtColor(rectR, cv2.COLOR_BGR2RGB),
                              valid_iters=self.iters, scale=scale)
+        disp_raw = disp
+        if self.disp_fix is not None:
+            disp = self.disp_fix(disp, rp)
         t1 = time.perf_counter()
         valid, Z = valid_mask(disp, rp, self.z_range)
         valid &= ~uncertain_mask(disp)
@@ -161,5 +165,5 @@ class DepthSeg:
         rgb = rectL[vs, us][:, ::-1].copy()                 # BGR → RGB
         cls = np.where(di >= 0, np.array([d["class_id"] for d in dets] + [-1], np.int16)[di], -1).astype(np.int16)
         pts = frames.rect0_points(Zs, rp, us.astype(np.float32), vs.astype(np.float32))
-        return dict(rectL=rectL, disp=disp, Z=Z, valid=valid, dets=dets, pts_rect0=pts, rgb=rgb, cls=cls, det_idx=di, us=us, vs=vs,
+        return dict(rectL=rectL, rectR=rectR, disp=disp, disp_raw=disp_raw, Z=Z, valid=valid, dets=dets, pts_rect0=pts, rgb=rgb, cls=cls, det_idx=di, us=us, vs=vs,
                     ffs_ms=1000 * (t1 - t0), yolo_ms=1000 * (t2 - t1), n=len(pts), size=tuple(rp["size"]), ffs_scale=scale)

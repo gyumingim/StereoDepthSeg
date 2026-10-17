@@ -38,6 +38,11 @@ import numpy as np
 
 REPO = Path(__file__).resolve().parents[1]
 HERE = Path(__file__).resolve().parent
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+if str(REPO) not in sys.path:
+    sys.path.insert(1, str(REPO))
+import calib_scale  # noqa: E402  (default_calib: 기본 보정 파일 v2/v1)
 sys.path.insert(0, str(REPO))
 sys.path.insert(1, str(HERE))
 CONFIG_ROOT = HERE / "config"
@@ -116,7 +121,7 @@ IMU_NOISE = dict(
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--calib", default=str(REPO / "calib_phone_pair.json"))
+    ap.add_argument("--calib", default=calib_scale.default_calib("2+5"))
     ap.add_argument("--cameras", default=str(REPO / "phone_stereo" / "cameras_s24.json"))
     ap.add_argument("--out", default=str(REPO / "scan3d" / "config"))
     ap.add_argument("--fps", type=float, default=15.0, help="카메라 프레임률 = track_frequency")
@@ -157,7 +162,7 @@ def config_dir(size, fps, mono=False, root=CONFIG_ROOT):
 def ensure_config(size, fps, mono=False, calib=None, cameras=None, root=CONFIG_ROOT, log=print, **kw):
     """scan3d 세션 시작 때 호출: (W,H,fps) 설정이 캐시에 없거나 입력(보정·카메라 json·이 파일)보다 오래되면 만든다.
     반환 estimator_config.yaml 경로. kw 는 명령줄 인자 이름 그대로 (imu_rate, init, imu_origin …)."""
-    calib = str(calib or REPO / "calib_phone_pair.json")
+    calib = str(calib or calib_scale.default_calib("2+5"))
     cameras = str(cameras or REPO / "phone_stereo" / "cameras_s24.json")
     out = config_dir(size, fps, mono, root)
     est = out / "estimator_config.yaml"

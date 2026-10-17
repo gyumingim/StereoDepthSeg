@@ -4,6 +4,14 @@
 //   ov_bridge <estimator_config.yaml> [--stdio | --tcp HOST:PORT] [--max-cam-queue N]
 //             [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]
 //             [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S]
+//             [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG]
+//
+// --init-gate (2026-10-18): init_max_disparity 를 DISP_DEG 각도 (cam0 fx 로 화소 환산) 로 넓히는 대신, 정지 초기화가 끝난
+// 순간 그 창 init_window_time(+0.05 s) 의 자이로가 조용했는지 (평균 각속도 벡터 크기 <= MEAN, 순간 최대 <= MAX, 카메라 시작 뒤
+// 1 s 이상) 확인해 아니면 그 초기화를 버리고 VioManager 를 새로 만든다. 회전은 자이로가 직접 막으므로 (바이어스 오차 <= MEAN) 영상 쪽 기준은 흐린 장면 KLT 잡음·가까운 물체 시차만큼
+// 여유를 줄 수 있다. 근거: rec_20261018_002349 는 자이로 평균 0.001 rad/s 로 멈춰 있었는데 흐린 근접 장면이라 시차
+// 3.95~6.6 px (> 3.09) 로 초기화가 늦어짐. 예전 문제 (천천히 도는 중 2.6~14.8 px 에서 초기화 → 바이어스 0.016~0.035 rad/s) 는
+// 평균 각속도 기준으로 막힌다. 버린 프레임의 포즈 줄에는 "init_gate":"moving"|"short".
 //
 // --reinit-state (2026-10-17): lost(특징 끊김) auto-reset 때 정지 초기화 대신 옛 상태를 새 VioManager 에 넣어 같은 월드로 이어 감
 // ({"type":"reset","auto":true,"reason":"lost","reinit":"state",...}). PROTOCOL.md 참고.
@@ -76,6 +84,9 @@ struct Args {
   double reinit_sig_ori_deg = 3.0;  // 넣은 상태의 공분산 (IMU 만 전파한 1 s 동안 늘어난 불확실성, 추정)
   double reinit_sig_pos = 0.10;
   double reinit_sig_vel = 0.30;
+  double gate_mean = 0.0;   // --init-gate (0 = 끔)
+  double gate_max = 0.0;
+  double gate_disp_deg = 0.0;
 };
 
 // JSON 문자열 이스케이프 (예외 메시지에 따옴표·줄바꿈이 들어 있음)
@@ -168,6 +179,13 @@ public:
     ov_core::Printer::setPrintLevel(verbosity);
     params_.print_and_load(parser_);
     params_.use_multi_threading_subs = false;  // 순서대로 처리 (카메라 feed 는 이 스레드에서만)
+    if (a.gate_mean > 0.0 && a.gate_disp_deg > 0.0 && params_.camera_intrinsics.count(0)) {
+      double fx = params_.camera_intrinsics.at(0)->get_value()(0);
+      double px = fx * std::tan(a.gate_disp_deg * M_PI / 180.0);
+      std::fprintf(stderr, "[ov_bridge] init gate: gyro mean <= %.4f max <= %.3f rad/s, init_max_disparity %.2f -> %.2f px (%.2f deg, fx %.1f)\n",
+                   a.gate_mean, a.gate_max, params_.init_options.init_max_disparity, px, a.gate_disp_deg, fx);
+      params_.init_options.init_max_disparity = px;
+    }
     if (!parser_->successful()) {
       PRINT_ERROR("[ov_bridge] unable to parse all parameters in %s\n", a.config.c_str());
       ok_ = false;
@@ -181,6 +199,7 @@ public:
   // VioManager 새로 만들기. 붙잡아 둔 IMU(imu_hold_) 는 새 시스템에 그대로 넣을 수 있으므로 남긴다.
   void make_system() {
     sys_ = std::make_shared<ov_msckf::VioManager>(params_);
+    init_checked_ = false;
     cams_.clear();
     last_imu_t_ = -1e300;
     zero_feat_frames_ = 0;
@@ -207,6 +226,7 @@ public:
       imu_recent_.clear();
       last_upd_t_ = -1e300;
       newest_imu_t_ = -1e300;
+      first_cam_t_ = -1e300;
       out += "{\"type\":\"reset\"}\n";
       return true;
     case kQuit:
@@ -323,6 +343,7 @@ private:
       n_cam_dropped_++;
       return;
     }
+    if (first_cam_t_ < -1e299) first_cam_t_ = c.t;
     cams_.push_back(std::move(c));
     while (cams_.size() > args_.max_cam_queue) {  // 밀리면 오래된 카메라만 버린다 (IMU 는 안 버림)
       cams_.pop_front();
@@ -364,6 +385,41 @@ private:
     }
   }
 
+  // --init-gate: 이 카메라 시각까지 init 창 동안 자이로가 조용했나 (넣은 IMU 기준). why 에 이유.
+  bool init_still(double t, const char *&why) {
+    double W = params_.init_options.init_window_time + 0.05;
+    // 카메라 시작 뒤 kGateSkipCamS 안의 초기화는 버린다: 시작 직후 약 0.5 s 동안 영상이 자리 잡으며 흐름 10~20 px/프레임
+    // (자이로는 0) 이라, 넓힌 시차 기준으로는 첫 몇 장으로 바로 초기화돼 버린다 (rec_20261016_175446: 카메라 0.18 s 에 초기화).
+    if (first_cam_t_ < -1e299 || t - first_cam_t_ < kGateSkipCamS) {
+      why = "cam_start";
+      return false;
+    }
+    if (imu_recent_.empty() || imu_recent_.front().timestamp > t - kGateMinImuS) {  // OpenVINS 도 창이 덜 차도 초기화함
+      why = "short";
+      return false;
+    }
+    Eigen::Vector3d s = Eigen::Vector3d::Zero();
+    double mx = 0.0;
+    int n = 0;
+    for (const auto &m : imu_recent_) {
+      if (m.timestamp < t - W || m.timestamp > t + 0.05) continue;
+      s += m.wm;
+      mx = std::max(mx, m.wm.norm());
+      n++;
+    }
+    if (n < 10) {
+      why = "short";
+      return false;
+    }
+    gate_last_mean_ = (s / n).norm();
+    gate_last_max_ = mx;
+    if (gate_last_mean_ > args_.gate_mean || mx > args_.gate_max) {
+      why = "moving";
+      return false;
+    }
+    return true;
+  }
+
   void feed_camera(const CamMsg &c, std::string &out) {
     auto t0 = std::chrono::steady_clock::now();
     try {
@@ -373,6 +429,31 @@ private:
       return;
     }
     double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+    // --init-gate: 정지 초기화가 막 끝났으면 (상태 시각 -1 → 초기화 시각) 그 창의 자이로가 조용했는지 확인, 아니면 버리고 다시.
+    // 프레임은 예전처럼 다 넣는다 (프레임을 막으면 초기화 창의 영상이 몇 장뿐이라 엉뚱한 때 초기화됨 — 175446 키프레임 142 -> 18).
+    if (args_.gate_mean > 0.0 && !init_checked_ && sys_->get_state()->_timestamp >= 0.0) {
+      init_checked_ = true;
+      const char *why = "";
+      double ti = sys_->get_state()->_timestamp;
+      if (!init_still(ti, why)) {
+        n_init_vetoed_++;
+        std::fprintf(stderr, "[ov_bridge] init gate: static init at t=%.3f vetoed (%s, gyro mean %.4f max %.3f rad/s) #%llu\n",
+                     ti, why, gate_last_mean_, gate_last_max_, static_cast<unsigned long long>(n_init_vetoed_));
+        make_system();
+        // 새 VioManager 에 이미 넣었던 최근 IMU 를 다시 넣는다 (안 넣으면 다음 정지 초기화에 쓸 IMU 이력이 없어 한참 못 함)
+        for (const auto &m : imu_recent_) {
+          sys_->feed_measurement_imu(m);
+          last_imu_t_ = m.timestamp;
+        }
+        std::string pl = pose_line(c, ms);
+        if (!pl.empty() && pl.back() == '\n' && pl.size() > 2 && pl[pl.size() - 2] == '}')
+          pl = pl.substr(0, pl.size() - 2) + ",\"init_gate\":\"" + why + "\"}\n";
+        out += pl;
+        return;
+      }
+      std::fprintf(stderr, "[ov_bridge] init gate: static init at t=%.3f ok (gyro mean %.4f max %.3f rad/s)\n", ti,
+                   gate_last_mean_, gate_last_max_);
+    }
     try {
       out += pose_line(c, ms);
     } catch (const std::exception &e) {
@@ -414,6 +495,7 @@ private:
     s(0) = t;
     s.block(1, 0, 16, 1) = imu;
     sys_->initialize_with_gt(s);
+    init_checked_ = true;  // 상태 주입은 정지 초기화가 아님 (--init-gate 검사 안 함)
     // initialize_with_gt 의 공분산(속도 0.01 m/s 등)은 정지 가정이라 너무 작다 → IMU 만 전파한 뒤의 불확실성으로 키움
     std::vector<std::shared_ptr<ov_type::Type>> order = {ns->_imu};
     Eigen::MatrixXd C = Eigen::MatrixXd::Zero(15, 15);
@@ -549,6 +631,12 @@ private:
   double last_upd_t_ = -1e300;      // 마지막 특징 갱신 시각 (make_system 이 지우지 않음: 주입 뒤 또 끊기면 gap 이 커져 정지 초기화로)
   std::deque<ov_core::ImuData> imu_recent_;
   uint64_t n_reinit_state_ = 0;
+  uint64_t n_init_vetoed_ = 0;
+  bool init_checked_ = false;  // 이 VioManager 의 초기화를 --init-gate 로 확인했나
+  double gate_last_mean_ = 0.0, gate_last_max_ = 0.0;
+  double first_cam_t_ = -1e300;                   // 받은 첫 카메라 시각 (--init-gate). RESET 때 지움
+  static constexpr double kGateSkipCamS = 0.8;   // --init-gate: 카메라 시작 뒤 이 시간 안의 정지 초기화는 버림
+  static constexpr double kGateMinImuS = 0.8;    // --init-gate: 확인에 쓸 IMU 최소 길이 (s)
   uint64_t n_cam_dropped_ = 0, n_imu_dropped_ = 0, n_cam_rejected_ = 0, n_exceptions_ = 0;
 };
 
@@ -583,7 +671,8 @@ void usage() {
   std::fprintf(stderr,
                "usage: ov_bridge <estimator_config.yaml> [--stdio | --tcp HOST:PORT] [--max-cam-queue N]\n"
                "                 [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]\n"
-               "                 [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S]\n");
+               "                 [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S]\n"
+               "                 [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG]\n");
 }
 
 }  // namespace
@@ -627,6 +716,12 @@ int main(int argc, char **argv) {
     else if (s == "--reinit-sigma") {  // ori_deg,pos_m,vel_m_s
       std::string v = next();
       if (std::sscanf(v.c_str(), "%lf,%lf,%lf", &a.reinit_sig_ori_deg, &a.reinit_sig_pos, &a.reinit_sig_vel) != 3) {
+        usage();
+        return 2;
+      }
+    } else if (s == "--init-gate") {  // mean,max rad/s, disparity deg
+      std::string v = next();
+      if (std::sscanf(v.c_str(), "%lf,%lf,%lf", &a.gate_mean, &a.gate_max, &a.gate_disp_deg) != 3) {
         usage();
         return 2;
       }

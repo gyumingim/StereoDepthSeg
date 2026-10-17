@@ -18,6 +18,25 @@ import lib_rectify as lr
 from lib_phone_depth import load_phone_calibration
 
 
+REPO = Path(__file__).resolve().parent.parent
+# 기본 보정 파일 (2026-10-18): v2 = 원래 체커보드 보정 + 렌즈 5 회전 고침 (yaw 1.5 · pitch 2.0 mrad, 근거는 파일 안
+# rotation_fix 와 scan3d/tools/calib_rot_fix.py). 옛 파일은 지우지 않고 SCAN3D_CALIB=v1 (또는 scan3d --calib-v1) 로 쓴다.
+CALIB_FILES = {"v1": {"2+5": "calib_phone_pair.json", "2+6": "calib_phone_pair_2_6.json"},
+               "v2": {"2+5": "calib_phone_pair_v2.json", "2+6": "calib_phone_pair_2_6_v2.json"}}
+
+
+def default_calib(pair="2+5", version=None):
+    """렌즈 쌍 기본 보정 파일 경로 (str). version None = 환경 변수 SCAN3D_CALIB (v1|v2), 없으면 v2.
+    v2 파일이 없으면 v1 로 돌아간다."""
+    import os
+    pair = str(pair or "2+5").replace(",", "+")
+    ver = (version or os.environ.get("SCAN3D_CALIB") or "v2").lower()
+    p = REPO / CALIB_FILES.get(ver, CALIB_FILES["v2"])[pair]
+    if not p.is_file():
+        p = REPO / CALIB_FILES["v1"][pair]
+    return str(p)
+
+
 def parse_size(v):
     """'640x480' | (640, 480) | [640, 480] → (W, H) int."""
     if isinstance(v, str):

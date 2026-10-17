@@ -119,12 +119,21 @@ def sync_from_status(st):
 
 def parse_args(argv=None):
     p = argparse.ArgumentParser(description="실시간 3D 복셀 맵 스캐너 (OpenVINS + FFS + YOLO-seg)")
-    p.add_argument("--calib", default=str(ROOT / "calib_phone_pair.json"))
+    p.add_argument("--calib", default=None,
+                   help="렌즈 2+5 보정 (기본 calib_phone_pair_v2.json = 체커보드 + 렌즈 5 회전 고침 2026-10-18, "
+                        "calib_scale.default_calib)")
+    p.add_argument("--aruco-board", default="auto",
+                   help="ChArUco 보드 json (aruco_scale.py, ARUCO_SCALE.md): 키프레임마다 보드를 찾아 깊이 축척·렌즈 자세 잔차를 "
+                        "웹 상태에 보여 줌. auto = scan3d/config/charuco/board_user_A4_6x6.json (있으면), none = 끔")
+    p.add_argument("--aruco-apply", action="store_true",
+                   help="보드로 잰 시차 보정 (s, Δd) 을 깊이에 실제로 적용 (기본은 관측만)")
+    p.add_argument("--calib-v1", action="store_true",
+                   help="옛 보정 (calib_phone_pair.json, calib_phone_pair_2_6.json, 회전 고침 전) 을 기본으로")
     p.add_argument("--physical", nargs=2, default=["2", "5"], help="앱 --physical 순서 (스트림 0 = 왼쪽 렌즈 2). --pair 를 주면 그 쌍")
     p.add_argument("--pair", choices=LENS_PAIRS, default=None,
                    help="깊이 렌즈 쌍 (시작 기본값, 웹에서 세션마다 바꿈): 2+5 = 초광각+광각 (기본, 체커보드 보정), "
                         "2+6 = 초광각+망원 (공장 값 보정 --calib-26, 기선 32 mm, 거의 동시 촬영)")
-    p.add_argument("--calib-26", default=str(ROOT / "calib_phone_pair_2_6.json"),
+    p.add_argument("--calib-26", default=None,
                    help="렌즈 2+6 보정 (scan3d/tools/make_factory_pair_calib.py 가 공장 값으로 만듦). --calib 는 2+5 보정이고 "
                         "모노 VIO 설정(렌즈 2)도 늘 --calib 로 만든다")
     p.add_argument("--app-size", default="1440x1080",
@@ -169,6 +178,9 @@ def parse_args(argv=None):
     p.add_argument("--ov-config-mono", default=None,
                    help="mono estimator_config.yaml 고정 (--vio-mode mono). 기본 = 자동 config/<W>x<H>_<fps>/mono/")
     # --reinit-state (2026-10-17): 추적이 끊기면 정지 초기화를 기다리지 않고 옛 상태로 바로 다시 시작 (ov_bridge/PROTOCOL.md)
+    # --init-gate MEAN,MAX,DEG (2026-10-18, 기본 꺼짐): 정지 초기화 시차 기준을 DEG 로 넓히고 자이로로 확인 (ov_bridge/PROTOCOL.md).
+    # rec_20261018_002349 는 초기화 못 함 → 추적 90 % 가 되지만 (그 뒤 벽만 보여 VIO 가 퍼짐), 참조 175446 재생 키프레임이
+    # 142 → 111 로 줄어 기본으로 안 켬. 켜려면 "--auto-reset --reinit-state --init-gate 0.006,0.15,0.8".
     p.add_argument("--live-bridge-args", default="--auto-reset --reinit-state", help="실시간 브리지 추가 인자 (--ov auto)")
     p.add_argument("--replay-bridge-args", default="--auto-reset --reinit-state", help="재생용 브리지 추가 인자")
     p.add_argument("--reloc", choices=["on", "off"], default="on",
@@ -263,6 +275,14 @@ def parse_args(argv=None):
         a.phone = "listen:8766" if a.link == "relay" else "127.0.0.1:8765"
     if a.start_app is None:
         a.start_app = a.link == "native"
+    ver = "v1" if a.calib_v1 else None
+    a.calib = a.calib or calib_scale.default_calib("2+5", ver)
+    a.calib_26 = a.calib_26 or calib_scale.default_calib("2+6", ver)
+    if a.aruco_board == "auto":
+        b = HERE / "config" / "charuco" / "board_user_A4_6x6.json"
+        a.aruco_board = str(b) if b.is_file() else None
+    elif str(a.aruco_board).lower() in ("none", "off", ""):
+        a.aruco_board = None
     return a
 
 
@@ -326,6 +346,13 @@ class Scanner:
         self.worker_busy = False
         self.want_iters = a.iters
         self.ds = None
+        self.aruco = None                                # 보드 관측기 (aruco_scale, --aruco-board). 깊이 워커에서 observe
+        if a.aruco_board:
+            try:
+                import aruco_scale
+                self.aruco = aruco_scale.make(a.aruco_board, log=self.log)
+            except Exception as e:                       # 보드가 없어도 스캐너는 돈다
+                print(f"[aruco] 보드 관측 끔: {e!r}", flush=True)
         self.dstats = dict(ffs_ms=None, yolo_ms=None, total_ms=None, keyframes=0, points=0, fps=0.0, ready=False,
                            error=None, iters=None, loading=False, loaded=False,   # loaded = 로드 시작함 (지연 로드)
                            load_t0=None, load_s=None, load_stage=None)   # 로드 진행 (웹 진행 표시, REVIEW5 N2)
@@ -459,6 +486,8 @@ class Scanner:
             ng.update(fps=fps, ffs_scale=ffs_scale, pair=pair, physical=phys, calib=str(calib),
                       calib_src=f"{ng['st'].get('pose_source', '-')} ({ng['st'].get('scale_status', '-')})")
             self.epi = None                                   # 새 크기·쌍으로 정류 검증 다시 (기준 dy 도 크기 배율)
+            if self.aruco is not None:
+                self.aruco.reset()                            # f·기선이 바뀜 (맵 리셋 때는 안 지움 — 열 상태는 이어짐)
             self.a.physical = list(phys)
             self.link.physical = ",".join(phys)              # 앱 --es physical (다음 앱 시작부터)
         self.st, self.swap, self.rp = ng["st"], ng["swap"], ng["rp"]
@@ -1835,6 +1864,8 @@ class Scanner:
                                          self.a.yolo_model, self.a.yolo_conf, self.a.yolo_rotate, self.a.device,
                                          self.a.no_yolo, self.log)
             self.vmap.names = self.ds.names
+            if self.aruco is not None and self.a.aruco_apply:
+                self.ds.disp_fix = self.aruco.apply_disp
             self.dstats["load_stage"] = "GPU 준비 (첫 계산)"
             self.ds.warmup()
             self.dstats["ready"] = True
@@ -1928,6 +1959,17 @@ class Scanner:
             self._kf_tried(self.vmap, epoch, t)
             return
         r = self.ds(fL.bgr, fR.bgr, rp=rp, scale=g["ffs_scale"])
+        if self.aruco is not None:
+            # 보드 관측: 보정 전 시차 (disp_raw) + 이 쌍의 rp, 자세는 쌍별 정류 rect0' 의 월드 자세 (ARUCO_SCALE.md 5 절)
+            try:
+                T_cam = np.array(T, np.float64)
+                if R_fix is not None:
+                    T_cam[:3, :3] = T_cam[:3, :3] @ np.asarray(R_fix, np.float64)
+                self.aruco.observe(r["rectL"], r.get("disp_raw", r["disp"]), rp, t, valid=r["valid"], T_world_cam=T_cam,
+                                   motion=dict(rot_deg=(info or {}).get("rot_deg", 0), trans_mm=(info or {}).get("trans_mm", 0)),
+                                   rect1=r.get("rectR"))
+            except Exception as e:
+                self.log(f"[aruco] 관측 실패 {e!r}")
         if self.paused and self.mode != "replay":
             return
         # 여러 키프레임 일관성 (depth_fuse.py, 기본 꺼짐 — SCAN3D_CONSIST=1): 앞 키프레임 2 장과 어긋난 화소 (빈 공간에 뜬 점) 를 뺌
@@ -2086,11 +2128,24 @@ class Scanner:
                              shown=self.vmap.count_shown(), voxel_m=self.vmap.voxel_m, min_hits=self.vmap.min_hits,
                              frames=self.vmap.frames),
                     map_store=self.map_state(),
-                    objects=self.objects, epi=self.epi,
+                    objects=self.objects, epi=self.epi, aruco=self._aruco_state(),
                     classes={int(k): dict(name=v, color=list(class_color(int(k)))) for k, v in names.items()},
                     log=list(self.log_lines)[-14:], stream=self.stream_info(),
                     settings=dict(depth_range=self.a.depth_range, stride=self.a.stride, iters=self.a.iters,
                                   replay_iters=self.a.replay_iters, kf_trans=self.a.kf_trans, kf_rot=self.a.kf_rot))
+
+    def _aruco_state(self):
+        """웹 상태용 보드 관측 요약 (없으면 None). 'last' 의 큰 숫자 목록은 빼고 사람이 읽을 것만."""
+        if self.aruco is None:
+            return None
+        try:
+            s = self.aruco.status()
+        except Exception as e:
+            return dict(error=repr(e))
+        last = s.pop("last", None) or {}
+        s["last"] = {k: last.get(k) for k in ("t", "used", "why", "z_m", "angle_deg", "offset_px", "depth_err_pct") if k in last}
+        s["apply"] = bool(self.a.aruco_apply)
+        return s
 
     def _pair_drop(self, ph):
         """최근 약 10 s 동안 짝 없어 버린 프레임 비율 (REVIEW5 N1). 기준(--pair-skew-ms)은 자동으로 넓히지 않고 웹이 안내만.

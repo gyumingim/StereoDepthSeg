@@ -87,9 +87,13 @@ class Board:
                 self.board.setLegacyPattern(True)          # 짝수 행: 4.5 로 인쇄한 보드와 같은 무늬
             cp = cv2.aruco.CharucoParameters()
             cp.minMarkers = 1
+            cp.tryRefineMarkers = True                   # 놓친 마커를 보드 배치로 다시 찾음
             dp = cv2.aruco.DetectorParameters()
             dp.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
-            self.detector = cv2.aruco.CharucoDetector(self.board, cp, dp)
+            # 작은 마커 (1440 폭에서 기본 0.03 = 둘레 약 43 px 미만은 버림) 도 받기. rec_20261018_002349 실측:
+            # 두 렌즈 모두 모서리 8개 이상 97 -> 105 쌍 (+8 %), 검출 16 -> 24 ms/장. 창 크기를 넓히면 108 쌍인데 40 ms 라 안 씀.
+            dp.minMarkerPerimeterRate = 0.01
+            self.detector = cv2.aruco.CharucoDetector(self.board, cp, dp, cv2.aruco.RefineParameters())
             corners = self.board.getChessboardCorners()
         else:
             self.board = cv2.aruco.CharucoBoard_create(self.sx, self.sy, self.square_m, self.marker_m, self.dictionary)

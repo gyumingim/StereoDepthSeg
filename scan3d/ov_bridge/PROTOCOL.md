@@ -97,3 +97,12 @@ def send_stereo(t_ns, g0, g1=None):            # g0/g1: (480,640) uint8 C-contig
 # 출력은 별도 스레드에서: for line in p.stdout: msg = json.loads(line)
 ```
 stdout 을 읽는 스레드를 따로 두어야 파이프가 막히지 않는다 (bridge 는 입력 처리 중에 출력 쓰기를 기다린다).
+
+## --init-gate MEAN,MAX,DISP_DEG (2026-10-18, scan3d 기본 꺼짐)
+
+켜면 `init_max_disparity` 를 DISP_DEG 각도 (cam0 fx 로 화소 환산) 로 넓힌다. 대신 정지 초기화가 끝난 순간, 그 창 (넣은 IMU 중
+초기화 시각까지 init_window_time + 0.05 s, 최소 0.8 s) 의 평균 각속도 벡터 크기가 MEAN 이하, 순간 크기가 MAX 이하이고 카메라
+시작 뒤 0.8 s 가 지났는지 확인해, 아니면 그 초기화를 버리고 VioManager 를 새로 만든다 (최근 IMU 는 다시 넣음). 버린 프레임의
+포즈 줄에 `"init_gate":"moving"|"short"|"cam_start"`. 프레임은 예전처럼 다 넣는다.
+실측 (vio_track_eval / regress): rec_20261018_002349 초기화 못 함 → 추적 90 %; 참조 4 개 중 175446 재생 키프레임 142 → 111
+(카메라 시작 0.18 s 에 넓힌 기준으로 초기화된 것을 버리고 1.18 s 에 다시) → 기본으로는 안 켬.
