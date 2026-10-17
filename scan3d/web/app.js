@@ -69,6 +69,7 @@ function allocVoxels(cap) {
   }
   Object.assign(V, { mesh, cap, rgb, cls, inst, keys });
   mesh.count = V.n;
+  mesh.visible = !RV.on && MS.show !== 'mesh';     // 보기 전환 (면 ↔ 칸) · 리플레이 중이면 숨김
   scene.add(mesh);
   for (let i = 0; i < V.n; i++) colorVoxel(i);
 }
@@ -114,6 +115,86 @@ async function pollVoxels() {
   } catch (e) { /* 서버 재시작 중 */ }
   setTimeout(pollVoxels, 250);
 }
+
+// ---------- 면 (TSDF 메시, /api/mesh — 바뀐 청크만) ----------
+// 보기 전환: '면' (기본, 깊이를 평균 낸 매끈한 표면) ↔ '칸' (예전 복셀). 물체 상자는 복셀에서 계산하므로 둘 다 그대로.
+let meshCfgSynced = false;
+const MS = { epoch: -1, version: 0, chunks: new Map(), group: new THREE.Group(), show: 'mesh', nv: 0, nf: 0 };
+try { if (localStorage.getItem('scan3d.show') === 'vox') MS.show = 'vox'; } catch (e) { }
+scene.add(MS.group);
+const surfMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+// S3M1 (tsdf_map.mesh_bytes): 'S3M1' u32 json 길이, JSON {epoch, version, chunks:[{k, nv, nf}]}, 청크마다 위치 f32·면 u32·색 u8 (+패딩)
+function parseMesh(buf) {
+  const dv = new DataView(buf);
+  if (buf.byteLength < 8 || String.fromCharCode(dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3)) !== 'S3M1') throw new Error('메시 형식이 다릅니다');
+  const jl = dv.getUint32(4, true);
+  const head = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 8, jl)));
+  let o = 8 + jl;
+  const parts = head.chunks.map(c => {
+    if (!c.nv) return { k: c.k, geo: null };
+    const pos = new Float32Array(buf.slice(o, o + c.nv * 12)); o += c.nv * 12;
+    const idx = new Uint32Array(buf.slice(o, o + c.nf * 12)); o += c.nf * 12;
+    const col = new Uint8Array(buf.slice(o, o + c.nv * 3)); o += c.nv * 3; o += (4 - (c.nv * 3) % 4) % 4;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3, true));
+    geo.setIndex(new THREE.BufferAttribute(idx, 1));
+    geo.computeVertexNormals(); geo.computeBoundingBox();
+    return { k: c.k, geo, nv: c.nv, nf: c.nf };
+  });
+  return { head, parts };
+}
+function clearMesh() { for (const m of MS.chunks.values()) { MS.group.remove(m); m.geometry.dispose(); } MS.chunks.clear(); MS.nv = MS.nf = 0; }
+function applyShow() {
+  const mesh = MS.show === 'mesh';
+  $('bViewMesh').classList.toggle('on', mesh); $('bViewVox').classList.toggle('on', !mesh);
+  if (RV.on) { rvApplyShow(); return; }
+  MS.group.visible = mesh;
+  if (V.mesh) V.mesh.visible = !mesh;
+  $('meshInfo').textContent = MS.nf ? `면 ${MS.nf.toLocaleString()}개` : '면 아직 없음';
+}
+async function pollMesh() {
+  let wait = 1000;
+  try {
+    if (!RV.on && MS.show === 'mesh' && !document.hidden) {
+      // 응답이 멈추면 다음 폴링이 영영 안 오므로 10 s 에 끊는다
+      const ac = new AbortController(), to = setTimeout(() => ac.abort(), 10000);
+      const r = await fetch(`/api/mesh?since=${MS.version}&epoch=${MS.epoch}`, { cache: 'no-store', signal: ac.signal });
+      const buf = r.ok ? await r.arrayBuffer() : null;
+      clearTimeout(to);
+      if (buf) {
+        const { head, parts } = parseMesh(buf);
+        if (head.epoch !== MS.epoch) { clearMesh(); MS.epoch = head.epoch; }
+        for (const p of parts) {
+          const old = MS.chunks.get(p.k);
+          if (old) { MS.group.remove(old); old.geometry.dispose(); MS.chunks.delete(p.k); MS.nv -= old.userData.nv; MS.nf -= old.userData.nf; }
+          if (p.geo) {
+            const m = new THREE.Mesh(p.geo, surfMat); m.userData = { nv: p.nv, nf: p.nf };
+            MS.group.add(m); MS.chunks.set(p.k, m); MS.nv += p.nv; MS.nf += p.nf;
+          }
+        }
+        MS.version = head.version;
+        $('meshInfo').textContent = MS.nf ? `면 ${MS.nf.toLocaleString()}개` : '면 아직 없음';
+      }
+    } else if (MS.show !== 'mesh') wait = 1500;
+  } catch (e) { /* 서버 재시작 중·응답 멈춤 */ }
+  setTimeout(pollMesh, wait);
+}
+function meshDownload(kind) {
+  const q = RV.on ? `/api/replay/mesh.${kind}?rec=${encodeURIComponent(RV.rec)}&recon=${encodeURIComponent(RV.recon)}` : `/api/mesh.${kind}`;
+  fetch(q, { method: 'GET', cache: 'no-store' }).then(async r => {
+    if (!r.ok) { let m = '메시가 없습니다'; try { m = (await r.json()).error || m; } catch (e) { } toast(m, 5000); return; }
+    const name = ((r.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/) || [])[1] || `scan3d_mesh.${kind}`;
+    const url = URL.createObjectURL(await r.blob());
+    const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    toast(`${name} 내려받음`, 3000);
+  }).catch(() => toast('내려받기 실패 (서버 연결)', 5000));
+}
+$('bViewMesh').onclick = () => { MS.show = 'mesh'; try { localStorage.setItem('scan3d.show', 'mesh'); } catch (e) { } applyShow(); };
+$('bViewVox').onclick = () => { MS.show = 'vox'; try { localStorage.setItem('scan3d.show', 'vox'); } catch (e) { } applyShow(); };
+$('bPly').onclick = () => meshDownload('ply');
+$('bObj').onclick = () => meshDownload('obj');
 
 // ---------- 물체 상자·라벨 ----------
 const objGroup = new THREE.Group(); scene.add(objGroup);
@@ -412,6 +493,14 @@ async function pollState() {
 
     renderProgress(se);
     if ($('adv').open) renderDetails(s, se, ui, vio, ph, dp, mp);
+    if (s.mesh && s.mesh.cfg && !meshCfgSynced) {
+      meshCfgSynced = true;
+      const c = s.mesh.cfg;
+      for (const [id, v] of [['sMeshVoxel', c.voxel_m], ['sMeshZ', c.z_max]]) {
+        const el = $(id), opt = [...el.options].find(o => Math.abs(parseFloat(o.value) - v) < 1e-6);
+        if (opt) el.value = opt.value;
+      }
+    }
     if (document.activeElement !== $('iHits') && mp.min_hits) $('iHits').value = mp.min_hits;
     const sig = JSON.stringify((s.objects || []).map(o => [o.id, o.n_voxels, o.box_center, o.box_size, o.yaw]));
     if (sig !== lastObjSig) { lastObjSig = sig; objects = s.objects || []; rebuildObjects(); }
@@ -503,6 +592,14 @@ function motionRow(m) {
 }
 
 // 고급 → 세부 상태 (열려 있을 때만 그림)
+function meshTxt(m) {
+  if (!m || m.error) return m && m.error ? `<span class="bad">${esc(m.error)}</span>` : '-';
+  const c = m.cfg || {}, t = m.stats;
+  if (!c.enabled) return '꺼짐';
+  if (!t) return `아직 없음 · 칸 ${(c.voxel_m * 100).toFixed(1)} cm · 최대 ${f(c.z_max, 1)} m`;
+  return `면 ${(t.mesh_faces || 0).toLocaleString()} · 블록 ${t.blocks} (${f(t.mem_mb, 0)} MB) · 갱신 ${f(t.integrate_ms)} ms (최대 ${f(t.integrate_ms_max)})`
+    + ` · 면 뽑기 ${f(t.mesh_ms)} ms · 칸 ${(t.voxel_m * 100).toFixed(1)} cm · 거리 ${f(t.z_range[0], 1)}–${f(t.z_max_eff !== null && t.z_max_eff !== undefined ? t.z_max_eff : t.z_range[1], 2)} m`;
+}
 function renderDetails(s, se, ui, vio, ph, dp, mp) {
   const relay = ui.relay || {};
   const srows = [['모드', `<b>${MODE_KO[sessMode] || esc(sessMode)}</b>`],
@@ -520,7 +617,12 @@ function renderDetails(s, se, ui, vio, ph, dp, mp) {
   if (ui.temp_c !== null && ui.temp_c !== undefined) srows.push(['폰 온도', `${f(ui.temp_c)} °C (SKIN)${s.preview ? ' <span class="warn">가짜</span>' : ''}`]);
   $('sess').innerHTML = srows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
   const rates = Object.entries(ph.imu_rates || {}).map(([k, v]) => `${k.replace('_uncalibrated', '_u')} ${v}`).join(', ');
+  const rl = vio.reloc || {};
   const rows = [
+    // 추적이 끊겼을 때 안내 (scan3d state vio.hint): 정지 초기화 대기 = '잠깐 멈추세요', 새 조각 = '찍은 곳을 다시 비추세요'
+    ...(vio.hint ? [['안내', `<b class="warn" style="font-size:1.15em">${esc(vio.hint)}</b>`]] : []),
+    ...(rl.on && (rl.seg || rl.aligned) ? [['지도 이어 붙이기', `${rl.pending ? `새 조각 ${rl.seg} 따로 쌓는 중 (키프레임 ${rl.pending_kf})` : '하나의 지도'}`
+      + ` · 붙임 ${rl.aligned || 0}번 · 기준 키프레임 ${rl.db || 0} · 시도 ${rl.queries || 0}`]] : []),
     ['위치 추적', `${vio.error ? `<span class="bad">${esc(vio.error)}</span>` : esc(vio.status || '-')} · init ${vio.init ? '예' : '아니오'} · ${f(vio.ms)} ms · SLAM ${f(vio.n_slam, 0)} / MSCKF ${f(vio.n_msckf, 0)}${vio.auto_resets ? ` · 자동 재시작 ${vio.auto_resets}` : ''}${vio.bridge_restarts ? ` · 브리지 다시 띄움 ${vio.bridge_restarts}` : ''}${vio.bridge_exceptions ? ` · 브리지 내부 오류 ${vio.bridge_exceptions}` : ''}`],
     ['추적 입력', `${vio.vio_mode === 'mono' ? '한쪽 렌즈 + IMU (mono, 기본)' : '두 렌즈 (stereo)'} · 스테레오 ${vio.stereo_frames || 0} / mono ${vio.mono_frames || 0} · 버림 ${vio.cams_dropped || 0} · IMU ${vio.imu_sent || 0}`],
     ['렌즈 시각차', (vio.skew_n ? `중앙 ${f(vio.skew_med_ms, 2)} ms · p95 ${f(vio.skew_p95_ms, 2)} ms · ` : '')
@@ -539,6 +641,7 @@ function renderDetails(s, se, ui, vio, ph, dp, mp) {
     ['깊이', dp.error ? `<span class="bad">${esc(dp.error)}</span>` : (dp.ready ? `FFS ${f(dp.ffs_ms)} ms · YOLO ${f(dp.yolo_ms)} ms · ${f(dp.fps, 2)} 키프레임/s · 총 ${f(dp.keyframes, 0)}`
       : dp.loading ? '<span class="warn">모델 불러오는 중…</span>' : '아직 안 불러옴 (대기 중에는 GPU 를 안 씀 — 스캔·복원을 시작하면 불러옴)')],
     ['복셀', `${mp.shown || 0} 표시 / ${mp.voxels || 0} · ${((mp.voxel_m || 0) * 100).toFixed(1)} cm`],
+    ['면 (메시)', meshTxt(s.mesh)],
   ];
   if (s.epi && s.epi.status === 'ok') {
     // 기준은 크기 배율만큼 (640x480 에서 1 px, 1440x1080 이면 2.25 px) — scan3d 가 epi.gate_px 로 줌
@@ -637,6 +740,9 @@ $('bResetMap').onclick = () => { if (confirm('3D 맵을 지울까요?')) cmd({ c
 $('bResetVio').onclick = () => { if (confirm('위치 추적과 맵을 다시 시작할까요? 폰을 2초 가만히 두세요.')) cmd({ cmd: 'reset_vio' }); };
 document.querySelectorAll('.cm').forEach(b => b.onclick = () => { V.mode = b.dataset.m; document.querySelectorAll('.cm').forEach(x => x.classList.toggle('on', x === b)); recolorAll(); rvRecolor(); });
 $('sVoxel').onchange = e => cmd({ cmd: 'set', voxel_m: parseFloat(e.target.value) });
+const meshSet = body => cmd(Object.assign({ cmd: 'mesh_set' }, body)).then(r => toast(r && r.ok ? '면 설정을 바꿨습니다 — 면 지도를 새로 시작합니다' : `면 설정 실패: ${(r && r.error) || ''}`, 4000));
+$('sMeshVoxel').onchange = e => meshSet({ voxel_m: parseFloat(e.target.value) });
+$('sMeshZ').onchange = e => meshSet({ z_max: parseFloat(e.target.value) });
 $('iHits').onchange = e => cmd({ cmd: 'set', min_hits: parseInt(e.target.value) });
 $('cBoxes').onchange = e => { objGroup.visible = e.target.checked; };
 $('cTraj').onchange = e => { trajLine.visible = e.target.checked; };
@@ -1113,6 +1219,16 @@ async function rvFetch(rec, recon) {
   ds.trajRows = rows; ds.trajT = rows.map(r => r[0]);
   ds.kfT = (tl.keyframes || []).map(k => k.t);
   ds.dur = Math.max(tl.duration_s || 0, tl.t_max || 0, ds.trajT.length ? ds.trajT[ds.trajT.length - 1] : 0, 0.1);
+  // 최종 메시 (mesh_web.bin, 새 복원만) — '최종 맵' 에서 [면] 이면 이것을 보여 줌. '시간 따라 보기' 는 칸(복셀)
+  ds.surf = null; ds.surfNf = 0;
+  try {
+    const r = await fetch(`/api/replay/mesh?rec=${encodeURIComponent(rec)}&recon=${encodeURIComponent(tl.recon)}`, { cache: 'no-store' });
+    if (r.ok) {
+      const { parts } = parseMesh(await r.arrayBuffer());
+      const p = parts.find(x => x.geo);
+      if (p) { ds.surf = new THREE.Mesh(p.geo, surfMat); ds.surf.visible = false; ds.surfNf = p.nf; }
+    }
+  } catch (e) { }
   return ds;
 }
 const dsKey = ds => ds.pair || 'one';
@@ -1141,6 +1257,9 @@ async function rvOpen(rec, recon) {
 function rvUse(ds, fit) {
   if (RV.mesh && RV.mesh !== ds.mesh) scene.remove(RV.mesh);
   if (RV.mesh !== ds.mesh) scene.add(ds.mesh);
+  if (RV.surf && RV.surf !== ds.surf) scene.remove(RV.surf);
+  if (ds.surf && RV.surf !== ds.surf) scene.add(ds.surf);
+  RV.surf = ds.surf;
   Object.assign(RV, { recon: ds.recon, pair: ds.pair, tl: ds.tl, mesh: ds.mesh, M: ds.M, times: ds.times, rgb: ds.rgb, cls: ds.cls,
     inst: ds.inst, trajRows: ds.trajRows, trajT: ds.trajT, kfT: ds.kfT, trajPos: ds.trajPos });
   RV.dur = Math.max(...Object.values(RV.sets).map(x => x.dur), ds.dur);
@@ -1155,7 +1274,8 @@ function rvUse(ds, fit) {
   for (const L of ds.tl.lenses || []) { const el = $('camName' + L.lens); if (el) el.textContent = `${L.name} (렌즈 ${L.physical}) · 녹화`; }
   const multi = !!(RV.info && RV.info.pair_recons);
   $('rpTitle').textContent = `리플레이: ${recLabel(RV.rec)}${multi && ds.pair ? ` · ${PAIR_KO[ds.pair] || ds.pair} (${ds.pair})` : ''}`;
-  $('rpInfo').textContent = `복셀 ${ds.M.toLocaleString()} · 키프레임 ${ds.kfT.length} · ${RV.dur.toFixed(1)} s`;
+  $('rpInfo').textContent = `복셀 ${ds.M.toLocaleString()}${ds.surf ? ` · 면 ${ds.surfNf.toLocaleString()}` : ' · 면 없음 (옛 복원)'} · 키프레임 ${ds.kfT.length} · ${RV.dur.toFixed(1)} s`;
+  rvApplyShow();
 }
 async function rvSwitch(pair) {
   if (!RV.on || pair === RV.pair) return;
@@ -1249,14 +1369,23 @@ function rvCmp(force) {
   el.innerHTML = lines.map(x => `<div>${x}</div>`).join('');
   el.hidden = !lines.length;
 }
+// 리플레이 보기: '최종 맵' + [면] + 메시 있음 → 메시, 아니면 복셀 (시간 따라 보기는 늘 복셀)
+function rvApplyShow() {
+  MS.group.visible = false; if (V.mesh) V.mesh.visible = false;
+  const useSurf = !!RV.surf && RV.mode === 'final' && MS.show === 'mesh';
+  if (RV.mesh) RV.mesh.visible = !useSurf;
+  if (RV.surf) RV.surf.visible = useSurf;
+  $('meshInfo').textContent = RV.surf ? (RV.mode === 'final' ? '복원 결과 면' : '시간 따라 보기는 칸으로') : '이 복원에는 면 없음';
+}
 function rvClose(silent) {
-  for (const ds of Object.values(RV.sets)) { scene.remove(ds.mesh); ds.mesh.dispose(); }
+  for (const ds of Object.values(RV.sets)) { scene.remove(ds.mesh); ds.mesh.dispose(); if (ds.surf) { scene.remove(ds.surf); ds.surf.geometry.dispose(); } }
   if (RV.mesh) { scene.remove(RV.mesh); RV.mesh = null; }
+  RV.surf = null;
   RV.sets = {}; RV.info = null; RV.pair = null;
   const was = RV.on;
   RV.on = false; RV.playing = false; RV.M = 0;
   rvTraj.visible = false; rvFrustum.visible = false;
-  if (V.mesh) V.mesh.visible = true;
+  applyShow();
   trajLine.visible = $('cTraj').checked; objGroup.visible = $('cBoxes').checked;
   $('rpBar').hidden = true; $('rpCmp').hidden = true; $('rpPairs').innerHTML = '';
   if (was && !silent) {
@@ -1269,6 +1398,7 @@ function rvSetMode(m) {
   $('rpFinal').classList.toggle('on', m === 'final');
   $('rpTime').classList.toggle('on', m === 'time');
   $('rpCtl').hidden = m !== 'time';
+  rvApplyShow();
   if (m === 'final') {
     RV.playing = false;
     RV.mesh.count = RV.M;
@@ -1384,6 +1514,7 @@ function resize() {
 }
 function loop() { resize(); rvTick(); applyOrbit(); renderer.render(scene, cam); drawLabels(); requestAnimationFrame(loop); }
 allocVoxels(65536);
-loop(); pollVoxels(); pollState(); pollTraj(); poll2d(); camLoop(); rvCamLoop(); loadRecs(false); loadCombos();
+applyShow();
+loop(); pollVoxels(); pollMesh(); pollState(); pollTraj(); poll2d(); camLoop(); rvCamLoop(); loadRecs(false); loadCombos();
 setInterval(() => { if (!document.hidden) loadRecs(false); }, 2000);   // 녹화본 상태 (가져오는 중 · 복원 중 · 리플레이 가능)
 setInterval(() => { if (!document.hidden) loadCombos(); }, 10000);   // 계수가 실측으로 바뀌면 예상도 바뀐다

@@ -42,7 +42,8 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(1, str(HERE))
 CONFIG_ROOT = HERE / "config"
 # 설정 형식 버전 (ensure_config 캐시 판정). 2026-10-16b: mono cam0 = lens0u, 정지 판정 문턱 각도 기준
-CFG_VERSION = "2026-10-16b"
+# 2026-10-17a: 삼각측량 문턱 fi_max_cond_number 1e6 · fi_max_baseline 1000 (짧은 기선에서 lost 줄임)
+CFG_VERSION = "2026-10-17a"
 
 
 def quat_to_R(q):
@@ -349,6 +350,15 @@ track_frequency: {a.fps:.1f}
 downsample_cameras: false
 num_opencv_threads: 4
 histogram_method: "HISTOGRAM"
+
+# 특징점 삼각측량 문턱 (2026-10-17). 기본(조건수 1e4, 거리/기선 40)이면 제자리 회전·빠른 회전 뒤처럼 기선이 짧은 구간에서
+# MSCKF·SLAM 특징이 모두 버려져 갱신이 0 → 브리지가 1 s 뒤 lost → 다시 정지 초기화를 못 하고 지도가 끊김.
+# 실측(lens0u KLT 진단): rec_20261016_162204 31.5 s lost 때 자이로 0.1~0.3 rad/s, 프레임 간 KLT 390/400 추적 = 영상은 멀쩡,
+# 기선만 짧았다. 오프라인 재생 (tools/vio_track_eval.py, 4개 녹화) lost 횟수 기본 3 → 이 값 0, 추적 시간
+# 175446 2.2→14.8 s, 162204 21.1→27.5 s, 165645 6.7→15.9 s, 143702 22.1 s 그대로 (회귀 없음).
+# 조건수 1e5 는 175446 이 그대로 lost, 1e7 은 175446 이 다시 lost(속도 1.7 m/s 로 표류) → 1e6 이 가장 좋음.
+fi_max_cond_number: 1000000
+fi_max_baseline: 1000
 
 use_aruco: false
 num_aruco: 1024

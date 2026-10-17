@@ -3,6 +3,9 @@
 GET  /api/state                  상태 JSON (VIO, 폰, 깊이, 맵, 물체, 클래스 팔레트)
 GET  /api/voxels?since=V&epoch=E 바뀐 복셀만: 헤더 <IIIf (epoch, version, M, voxel_m) + M × 17 B
                                  (<hhhBBBhiH: ix,iy,iz, r,g,b, cls, inst, hits). epoch 가 다르면 전체.
+GET  /api/mesh?since=V&epoch=E   TSDF 메시 바뀐 청크만 (tsdf_map.mesh_bytes 형식 S3M1). epoch 가 다르면 전체, 지도가 없으면 epoch 0 빈 것
+GET  /api/mesh.ply · /api/mesh.obj   지금 메시 내려받기 (색 포함)
+GET  /api/replay/mesh?rec=NAME[&recon=R]   복원 결과 mesh_web.bin (S3M1 한 청크) · /api/replay/mesh.ply|mesh.obj 내려받기
 GET  /api/trajectory             [[t, x, y, z], ...] (rect0 원점, 솎음) + 현재 자세
 GET  /api/frame.jpg?kind=rgb|overlay|depth   최근 키프레임 2D 패널 (웹은 depth 만 씀)
 GET  /api/cam.jpg?lens=0|1&overlay=0|1        가장 최근 수신 프레임 (0 = 초광각 렌즈 2 = 정류 왼쪽, 1 = 광각 렌즈 5).
@@ -31,6 +34,7 @@ POST /api/cmd  {"cmd": pause|resume|reset_map|reset_vio|save|set, ...}
                {"cmd": "rec_auto", "pull": bool, "recon": bool}   자동 가져오기·자동 복원 켜고 끔 (runs/rec_auto.json)
                {"cmd": "rec_retry", "name": ...}                  실패·멈춘 복원 다시
                {"cmd": "rec_delete_phone", "name": ...}           PC 사본이 똑같을 때만 폰에서 지움 (웹이 먼저 물어봄)
+               {"cmd": "mesh_set", "voxel_m": 0.02, "z_max": 2.5}   TSDF 메시 설정 (바꾸면 메시 지도를 새로 시작)
                {"cmd": "restart"}   [처음부터 다시]: VIO 가 죽었으면 세션 다시 시작(브리지 새로), 아니면 VIO 재시작 + 맵 초기화
 
 쉬운 UI 도우미 (Helper, 이 파일 안의 별도 스레드, scan3d.py 로직은 안 건드림):
@@ -58,9 +62,13 @@ from urllib.parse import urlparse, parse_qs
 try:
     import load_model
     import replay_view
+    import tsdf_map
+    import voxel_map
 except ImportError:                     # 다른 위치에서 import 될 때
     from scan3d import load_model       # type: ignore
     from scan3d import replay_view      # type: ignore
+    from scan3d import tsdf_map         # type: ignore
+    from scan3d import voxel_map        # type: ignore
 
 WEB = Path(__file__).parent / "web"
 CTYPE = {".html": "text/html; charset=utf-8", ".js": "application/javascript", ".css": "text/css",
@@ -94,7 +102,19 @@ def make_handler(scanner, helper):
                 if u.path == "/api/state":
                     st = scanner.state()
                     st["ui"] = helper.ui()
+                    st["mesh"] = _mesh_state(scanner)
                     return self._json(st)
+                if u.path == "/api/mesh":
+                    ts = scanner.vmap.tsdf
+                    if ts is None:
+                        return self._send(200, _EMPTY_MESH, "application/octet-stream")
+                    body = ts.mesh_bytes(int(q.get("since", 0)), int(q["epoch"]) if "epoch" in q else None)
+                    return self._send(200, body, "application/octet-stream")
+                if u.path in ("/api/mesh.ply", "/api/mesh.obj"):
+                    ts = scanner.vmap.tsdf
+                    if ts is None:
+                        return self._json({"error": "메시가 아직 없습니다 (스캔이나 복원을 먼저)"}, 404)
+                    return self._download(*ts.mesh_arrays(), kind=u.path[-3:], name=time.strftime("scan3d_mesh_%Y%m%d-%H%M%S"))
                 if u.path == "/api/voxels":
                     epoch, ver, rec = scanner.vmap.delta(int(q.get("since", 0)),
                                                          int(q["epoch"]) if "epoch" in q else None)
@@ -135,6 +155,22 @@ def make_handler(scanner, helper):
                     self._json({"error": repr(e)}, 500)
                 except Exception:
                     pass
+
+        def _download(self, V, C, F, kind, name):
+            if kind == "ply":
+                import io
+                buf = io.BytesIO()
+                tsdf_map.write_mesh_ply(buf, V, C, F)
+                body = buf.getvalue()
+            else:
+                body = tsdf_map.mesh_obj_bytes(V, C, F)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Content-Disposition", f'attachment; filename="{name}.{kind}"')
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
 
         def _replay(self, what, q):
             """복원 리플레이 (replay_view.py 형식). rec = 녹화 이름, recon = 복원 폴더 이름 (없으면 가장 최근 리플레이 가능한 것)."""
@@ -182,6 +218,16 @@ def make_handler(scanner, helper):
                 if not p.is_file():
                     return self._json({"error": "voxels_t.bin 없음"}, 404)
                 return self._send(200, p.read_bytes(), "application/octet-stream")
+            if what == "mesh":
+                p = cdir / "mesh_web.bin"
+                if not p.is_file():
+                    return self._json({"error": "이 복원에는 메시가 없습니다 (옛 복원)"}, 404)
+                return self._send(200, p.read_bytes(), "application/octet-stream")
+            if what in ("mesh.ply", "mesh.obj"):
+                p = cdir / "mesh.ply"
+                if not p.is_file():
+                    return self._json({"error": "이 복원에는 메시가 없습니다 (옛 복원)"}, 404)
+                return self._download(*tsdf_map.read_mesh_ply(p), kind=what[-3:], name=f"{rec}_{cdir.name}_mesh")
             if what == "depth.jpg":
                 try:
                     p = cdir / "kf" / f"d_{int(q.get('kf', 0)):05d}.jpg"
@@ -205,6 +251,21 @@ def make_handler(scanner, helper):
                 return self._json({"error": repr(e)}, 500)
 
     return H
+
+
+_EMPTY_MESH = tsdf_map.mesh_bin_static([], [], [])    # 지도 없음: epoch 0, 청크 없음 (웹이 지운다)
+
+
+def _mesh_state(scanner):
+    """/api/state 의 mesh: 설정 (cfg) + 지금 TSDF 숫자 (없으면 None)."""
+    try:
+        cfg = voxel_map.tsdf_cfg()
+    except Exception as e:                      # torch·tsdf_map 문제여도 상태 JSON 은 나가게
+        return dict(error=repr(e))
+    vm = getattr(scanner, "vmap", None)
+    ts = getattr(vm, "tsdf", None) if vm is not None else None
+    return dict(cfg=dict(enabled=cfg["enabled"], voxel_m=cfg["voxel_m"], z_min=cfg["z_min"], z_max=cfg["z_max"],
+                         sigma_max=cfg["sigma_max"]), stats=ts.stats() if ts is not None else None)
 
 
 _thumb_busy = set()
@@ -626,6 +687,20 @@ class Helper:
             r = sc.command(body)
             self.relay_off()
             return r
+        if cmd == "mesh_set":
+            kw = {}
+            try:
+                if body.get("voxel_m") is not None:
+                    kw["voxel_m"] = float(min(max(float(body["voxel_m"]), 0.01), 0.05))
+                if body.get("z_max") is not None:
+                    kw["z_max"] = float(min(max(float(body["z_max"]), 0.6), 3.0))
+                if body.get("enabled") is not None:
+                    kw["enabled"] = bool(body["enabled"])
+            except (TypeError, ValueError):
+                return dict(ok=False, error="값이 숫자가 아닙니다")
+            cfg = voxel_map.configure_tsdf(**kw)
+            sc.vmap.reset_tsdf()                         # 새 설정은 새 메시 지도부터 (이미 넣은 깊이는 다시 안 넣음)
+            return dict(ok=True, cfg=cfg)
         if cmd == "restart":
             # [처음부터 다시]: VIO(브리지)가 죽었으면 세션을 새로 (pipe 브리지 새 프로세스), 아니면 VIO 재시작 + 맵 초기화
             mode = getattr(sc, "mode", "idle")

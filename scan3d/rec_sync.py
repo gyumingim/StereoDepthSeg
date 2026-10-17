@@ -15,6 +15,7 @@
 import json
 import re
 import shutil
+import hashlib
 import threading
 import time
 from pathlib import Path
@@ -24,6 +25,22 @@ import replay_view
 
 HERE = Path(__file__).resolve().parent
 CFG_FILE = HERE / "runs" / "rec_auto.json"
+# 자동 복원 실패 기록 (서버를 다시 켜도 남음): {열쇠: {reason, at, code, rec_bytes}}. 같은 녹화(크기)·같은 코드 버전이면
+# 다시 시도하지 않음 → 웹 [다시 시도] (retry) 로만. 맵이 비어 실패한 것만 (모델 오류 같은 일시적 실패는 메모리에만)
+FAIL_FILE = HERE / "runs" / "rec_recon_failed.json"
+# 코드 버전 = 복원 결과를 바꾸는 파일 내용의 해시 (이 중 하나라도 고치면 실패했던 녹화를 한 번 다시 시도)
+CODE_FILES = ("scan3d.py", "replay.py", "recording.py", "frames.py", "motion_rect.py", "depth_seg.py", "ov_client.py",
+              "voxel_map.py", "tsdf_map.py", "reloc.py", "replay_view.py", "make_ov_config.py", "ov_bridge/main.cpp")
+
+
+def code_version():
+    h = hashlib.sha1()
+    for f in CODE_FILES:
+        try:
+            h.update(f.encode() + b"\0" + (HERE / f).read_bytes())
+        except OSError:
+            h.update(f.encode() + b"\0-")
+    return h.hexdigest()[:12]
 POLL_S = 4.0
 PHONE_RESCAN_S = 30.0
 PHONE_MODES = ("live", "record", "both")
@@ -56,6 +73,51 @@ class RecSync:
         self.job = None                # dict(name, rp, t0, pair)
         self.waiting_stop = None       # [정지] 뒤 앱 마무리를 기다리는 녹화 이름
         self.thread = None
+        self.code = code_version()
+        self._load_failed()
+
+    # ---------------- 실패 기록 (파일) ----------------
+    def _rec_bytes(self, name):
+        lf = self._local_files(name)
+        return sum(lf.values()) if lf else None
+
+    def _read_fail_file(self):
+        try:
+            d = json.loads(FAIL_FILE.read_text())
+            return d if isinstance(d, dict) else {}
+        except (OSError, ValueError):
+            return {}
+
+    def _load_failed(self):
+        """서버 시작: 같은 코드 버전·같은 녹화 크기로 '맵 비었음' 실패한 녹화는 다시 시도하지 않게 self.failed 에 넣음."""
+        n = 0
+        for k, v in self._read_fail_file().items():
+            if not isinstance(v, dict) or v.get("code") != self.code:
+                continue
+            if v.get("rec_bytes") != self._rec_bytes(k.split("|", 1)[0]):
+                continue                                    # 녹화가 바뀜 (다시 가져옴) → 다시 시도
+            self.failed[k] = f"{v.get('reason')} ({v.get('at')} 실패, 같은 코드 — [다시 시도] 로만 다시)"
+            n += 1
+        if n:
+            self.log(f"자동 복원 실패 기록 {n} 개 불러옴 (코드 {self.code}, 다시 시도 안 함 — 웹 [다시 시도] 로만)")
+
+    def _save_failed(self, key, reason=None):
+        """reason None = 기록 지움 (retry)."""
+        d = self._read_fail_file()
+        if reason is None:
+            if key not in d:
+                return
+            d.pop(key, None)
+        else:
+            d[key] = dict(reason=reason, at=time.strftime("%Y-%m-%d %H:%M:%S"), code=self.code,
+                          rec_bytes=self._rec_bytes(key.split("|", 1)[0]))
+        try:
+            FAIL_FILE.parent.mkdir(parents=True, exist_ok=True)
+            tmp = FAIL_FILE.with_suffix(".part")
+            tmp.write_text(json.dumps(d, ensure_ascii=False, indent=1))
+            tmp.replace(FAIL_FILE)
+        except OSError as e:
+            self.log(f"실패 기록 저장 못함 {e!r}")
 
     # ---------------- 바깥에서 부르는 것 ----------------
     def start(self):
@@ -93,6 +155,8 @@ class RecSync:
         for d in (self.failed, self.pull_failed):
             for k in [k for k in d if k == name or k.startswith(name + "|")]:
                 d.pop(k, None)
+        for k in [k for k in self._read_fail_file() if k == name or k.startswith(name + "|")]:
+            self._save_failed(k, None)
         for k in [k for k in self.held if k == name or k.startswith(name + "|")]:
             self.held.discard(k)
         if name and name not in self.recon_first:
@@ -448,6 +512,8 @@ class RecSync:
             self.failed[key] = P.get("error") or ("맵이 비었음 — 위치 추적이 시작되지 않음 (녹화 때 폰을 움직이지 않았거나 처음에 "
                                                    "가만히 두지 않음)" if not P.get("keyframes") else "맵이 비어 결과 없음")
             self.log(f"복원 실패 {tag}: {self.failed[key]}")
+            if not P.get("error"):
+                self._save_failed(key, self.failed[key])    # 맵 비었음: 서버를 다시 켜도 다시 시도 안 함
         self.evt.set()
 
     def _recon_next(self):

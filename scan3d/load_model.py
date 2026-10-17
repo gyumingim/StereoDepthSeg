@@ -492,10 +492,9 @@ def _clip_kbps(caps, k):
 def live_kbps(coeffs, caps, w, h, fps):
     """실시간 H.264 비트레이트 (렌즈 하나, kbps): 640x480·15 ≈ 4000 기준 픽셀률 비례, 최소 500, 인코더 범위 (없으면 100 Mbps) 로 자름.
     caps pairs[].live_kbps_default (가정한 필드) 가 있으면 그것."""
-    d = ((_pair(caps, w, h) or {}).get("live_kbps_default") or {}).get(str(int(fps)))
-    if isinstance(d, (int, float)) and d > 0:
-        return int(d)
-    k = coeffs["live_kbps_ref"] * (w * h * fps) / (640 * 480 * 15)
+    # 실시간도 녹화와 같은 기준 (1440x1080·15 = 14 Mbps, REC_KBPS_REF_1440_15 주석의 폰 실측). 옛 식(640x480·15 = 4 Mbps 비례)은
+    # 1440x1080 에서 20 Mbps × 2 → USB 6.3 MB/s·폰 부하가 커서 (2026-10-16 사용자: 부하가 좀 있음) 바꿈. 640x480 은 더 낮아짐.
+    k = REC_KBPS_REF_1440_15 * (w * h * fps) / (1440 * 1080 * 15)
     return round(_clip_kbps(caps, max(H264_MIN_KBPS, k)))
 
 

@@ -26,7 +26,13 @@ build/ov_bridge ../config/estimator_config.yaml --tcp 127.0.0.1:7600
 `--startup-lost-frames N` (기본 45, 2026-10-16: 초기화 뒤 **첫 특징 갱신 전**에는 이 프레임 수까지 기다림 — 정지 ZUPT 가
 끝나고 움직이기 시작하면 clone 창이 차고 시차가 생길 때까지 10~14 프레임 동안 SLAM/MSCKF 갱신이 0 인 게 정상이라, 15 로
 자르면 막 시작한 추적을 lost 로 끊고 다시 정지하기 전까지 초기화를 못 한다; rec_20261016_143702 재생에서 확인),
-`--auto-reset` (`lost` 가 되면 VioManager 재생성), `--emit-features N` (pose 줄에 SLAM 특징점 최대 N 개).
+`--auto-reset` (`lost` 가 되면 VioManager 재생성),
+`--reinit-state` (2026-10-17, scan3d 기본 켬: 특징 끊김 `lost` 때 새 VioManager 에 옛 상태 — 자세·위치·속도·바이어스(마지막 특징 갱신 뒤
+IMU 로 전파한 값)·추정 외부 파라미터·시간 오프셋 — 를 `initialize_with_gt` 로 넣고 최근 IMU 를 다시 넣어 **정지 없이 같은 월드로 이어 감**.
+reset 줄에 `"reinit":"state","gap":s,"t_state":..,"v_norm":..`. 마지막 특징 갱신이 `--reinit-max-gap`(1.5 s)보다 오래됐거나 속도 초과·NaN 이면
+예전처럼 정지 초기화 (`"reinit":"static"` 또는 필드 없음). 넣은 상태의 공분산 `--reinit-sigma 3,0.10,0.30` (자세°, 위치 m, 속도 m/s, 추정).
+주의: 영상 갱신이 계속 0 이면 주입 뒤에도 속도가 1.5 m/s 까지 표류했다 (옛 삼각측량 문턱일 때 실측) → scan3d 는 주입 뒤 조각도
+재위치(reloc.py)로 확인한 뒤에만 옛 지도에 합친다), `--emit-features N` (pose 줄에 SLAM 특징점 최대 N 개).
 RPATH 가 `~/scanner/src/ovbuild`, `~/scanner/local/lib` 로 박혀 있어 `LD_LIBRARY_PATH` 불필요.
 
 ## 채널

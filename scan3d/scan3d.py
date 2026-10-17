@@ -36,6 +36,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -57,6 +58,7 @@ import phone_link               # noqa: E402
 import phone_rx                 # noqa: E402
 import rec_sync                 # noqa: E402
 import replay_view              # noqa: E402
+import voxel_map                # noqa: E402
 from voxel_map import VoxelMap, class_color   # noqa: E402
 import web_server               # noqa: E402
 
@@ -161,8 +163,18 @@ def parse_args(argv=None):
                         "(make_ov_config.ensure_config → config/<W>x<H>_<fps>/, 없거나 낡으면 만듦)")
     p.add_argument("--ov-config-mono", default=None,
                    help="mono estimator_config.yaml 고정 (--vio-mode mono). 기본 = 자동 config/<W>x<H>_<fps>/mono/")
-    p.add_argument("--live-bridge-args", default="--auto-reset", help="실시간 브리지 추가 인자 (--ov auto)")
-    p.add_argument("--replay-bridge-args", default="--auto-reset", help="재생용 브리지 추가 인자")
+    # --reinit-state (2026-10-17): 추적이 끊기면 정지 초기화를 기다리지 않고 옛 상태로 바로 다시 시작 (ov_bridge/PROTOCOL.md)
+    p.add_argument("--live-bridge-args", default="--auto-reset --reinit-state", help="실시간 브리지 추가 인자 (--ov auto)")
+    p.add_argument("--replay-bridge-args", default="--auto-reset --reinit-state", help="재생용 브리지 추가 인자")
+    p.add_argument("--reloc", choices=["on", "off"], default="on",
+                   help="재위치 (reloc.py): VIO 리셋 뒤 새 조각을 옛 지도 키프레임과 특징 매칭·PnP 로 맞춰 같은 지도에 이어 쌓음. "
+                        "붙기 전에는 새 조각을 따로 쌓고, 붙으면 그 키프레임들을 전역 좌표로 다시 넣는다")
+    p.add_argument("--reloc-merge", choices=["on", "off"], default="on",
+                   help="재위치로 조각이 붙을 때: on = 조각이 따로 쌓던 지도(복셀+TSDF)를 변환해 그대로 합침 (VoxelMap.merge), "
+                        "off = 조각 키프레임 깊이를 전역 좌표로 다시 계산 (옛 방식, 비교용 · merge 실패 때도 이것)")
+    p.add_argument("--reloc-test-split", default=None, metavar="T,YAW_DEG,X,Y,Z",
+                   help="시험용: VIO 시각 T s 에 가짜 리셋을 내고 이후 포즈에 알려진 변환(yaw, 이동)을 곱함 → 재위치가 그 변환을 "
+                        "얼마나 정확히 되찾는지 (정답 비교) 확인")
     p.add_argument("--bridge-restart-s", type=float, default=2.0, help="브리지가 죽으면 이만큼 뒤 다시 띄움 (s)")
     p.add_argument("--ov-images", choices=["rect"], default="rect",
                    help="VIO 입력 영상: rect = 정류 gray (명세 9.4, make_ov_config.py 설정과 짝). raw 는 설정과 안 맞아 제거 (REVIEW 5). "
@@ -182,6 +194,10 @@ def parse_args(argv=None):
     p.add_argument("--voxel", type=float, default=0.03, help="복셀 크기 m")
     p.add_argument("--min-hits", type=int, default=2, help="표시할 최소 관측 수")
     p.add_argument("--depth-range", nargs=2, type=float, default=[0.3, 2.5], help="적분 깊이 범위 m (최대 3 m)")
+    p.add_argument("--tsdf", choices=["on", "off"], default="on", help="TSDF 융합 + 메시 (tsdf_map.py, GPU)")
+    p.add_argument("--tsdf-voxel", type=float, default=None, help="TSDF 복셀 m (기본 tsdf_map.DEFAULTS = 0.02, 근거 주석 거기)")
+    p.add_argument("--tsdf-depth", nargs=2, type=float, default=None, metavar=("ZMIN", "ZMAX"),
+                   help="TSDF 에 넣는 깊이 범위 m (기본 0.3 2.5 + 노이즈 σ 15 cm 한계 = 2+5 는 약 1.5 m; --depth-range 안쪽만 의미 있음)")
     p.add_argument("--iters", type=int, default=4, help="실시간 FFS GRU 반복")
     p.add_argument("--scale", type=float, default=None,
                    help="FFS 입력 축소 (0,1]. 기본 자동 = 화소 수가 --ffs-max-px 를 넘으면 √(max/화소) 로 줄임 (FFS 시간 ∝ 화소 수)")
@@ -195,8 +211,8 @@ def parse_args(argv=None):
                    help="물체 구분(YOLO-seg) 끔 — 기본 (2026-10-16 사용자: 인식률이 낮아 뺌)")
     p.add_argument("--yolo", dest="no_yolo", action="store_false", help="물체 구분(YOLO-seg) 켜기")
     p.add_argument("--device", default="0")
-    p.add_argument("--kf-trans", type=float, default=0.03, help="키프레임 이동 m")
-    p.add_argument("--kf-rot", type=float, default=5.0, help="키프레임 회전 deg")
+    p.add_argument("--kf-trans", type=float, default=0.015, help="키프레임 이동 m (2026-10-16: 0.03 → 0.015, 더 촘촘히)")
+    p.add_argument("--kf-rot", type=float, default=2.5, help="키프레임 회전 deg (2026-10-16: 5 → 2.5)")
     p.add_argument("--kf-dt", type=float, default=0.0, help="이 시간(s) 지나면 움직임 없어도 키프레임 (0 = 끔)")
     p.add_argument("--host", default="0.0.0.0")
     p.add_argument("--port", type=int, default=8795)
@@ -276,6 +292,9 @@ class Scanner:
                          pair=a.pair)
         self.boot_size = tuple(a.size)                   # 외부 브리지(--ov HOST:PORT)가 쓰는 크기로 본다 (REVIEW6 R1)
         self.vio_cfg_used = None                         # 지금 브리지가 쓰는 estimator_config.yaml (저장 때 복사)
+        voxel_map.configure_tsdf(enabled=a.tsdf == "on", voxel_m=a.tsdf_voxel,
+                                 z_min=a.tsdf_depth[0] if a.tsdf_depth else None,
+                                 z_max=a.tsdf_depth[1] if a.tsdf_depth else None)
         self.vmap = VoxelMap(a.voxel, a.min_hits)
         self.paused = False
         self.t0_ns = None
@@ -311,6 +330,17 @@ class Scanner:
         self.gyro_buf = deque(maxlen=12000)               # (t_ns, gyro) 약 30 s — ImuSync 출력 (실시간·재생 같음), 움직임 보정 정류용
         self.mrect = dict(motion=0, fixed=0, skipped=0, last=None, recent=deque(maxlen=12))   # 키프레임 움직임 보정 통계
         self.pair_hist = deque(maxlen=64)                 # (monotonic, 프레임 합, 짝 없어 버린 합) → 최근 버린 비율 (REVIEW5 N1)
+        # 재위치 (reloc.py, _reloc_* 함수): 조각 좌표 → 전역 변환, 붙기 전 보관한 옛(전역) 지도, 다시 넣을 키프레임
+        self.reloc = None                                 # Relocalizer (첫 사용 때 만듦)
+        self._reloc_lock = threading.RLock()
+        self._seg_T = np.eye(4)                           # 전역 ← 지금 VIO 월드 (None = 아직 못 붙임)
+        self._seg_n = 0                                   # VIO 조각 번호
+        self._pend = None                                 # 붙기 전: dict(main=옛 지도 묶음, jobs=[키프레임], seg)
+        self._epoch_hi = 0
+        self._requeue = deque()                           # 붙은 뒤 전역 좌표로 다시 넣을 키프레임 job
+        self._test_split = None                           # --reloc-test-split (T, T_fake), 쓴 뒤 'done'
+        self._post_checks = 0
+        self.vio_events = []                              # [{t, kind, reason, reinit, ...}] → 복원 summary
         self.vio_auto_resets = 0
         self.bridge_restarts = 0
         self.bridge_fails = 0                             # 연속 실패(시작 실패·곧 죽음) → 다시 시도 간격 (B11)
@@ -935,6 +965,7 @@ class Scanner:
         self.mrect["recent"].clear()
         self.pair_hist.clear()
         self.vio_auto_resets = 0
+        self._reloc_reset()
         # 지난 세션(또는 복원)의 카메라 창·깊이 그림·물체 상자를 새 세션에 남기지 않는다 (REVIEW5 N3)
         self.last_pair = None
         with self.panel_lock:
@@ -1201,6 +1232,14 @@ class Scanner:
         if T is None or t_ns < 0:
             return
         t = (t_ns - (self.t0_ns or t_ns)) * 1e-9          # 표시용 초 (첫 IMU 기준)
+        self._last_pose_t = t
+        T = self._reloc_test_apply(T, t)                  # --reloc-test-split (시험용 가짜 리셋)
+        # 재위치: VIO 조각 좌표 → 전역. 아직 못 붙인 조각(_seg_T None)은 조각 좌표 그대로 따로 쌓는다
+        with self._reloc_lock:
+            seg_T, pend = self._seg_T, self._pend
+        T_vio = T
+        if seg_T is not None and not np.array_equal(seg_T, np.eye(4)):
+            T = seg_T @ T_vio
         with self.traj_lock:
             self.traj.append((t, T))
             if len(self.traj) > 50000:
@@ -1214,7 +1253,10 @@ class Scanner:
             got = self._pair_for(t_ns)
             if got is not None:
                 self.last_kf = (t, T)
-                self._replay_kf = (got[0], T, t, self.vmap.epoch, self._motion_of(msg, t_ns, got[1]))
+                mot = self._motion_of(msg, t_ns, got[1])
+                self._replay_kf = (got[0], T, t, self.vmap.epoch, mot)
+                if pend is not None:
+                    self._reloc_pending_kf(got[0], T_vio, t, mot, pend)
             return
         if self.paused or self.worker_busy or self.kf_queue.qsize():
             return
@@ -1224,8 +1266,11 @@ class Scanner:
         if got is None:
             return
         try:
-            self.kf_queue.put_nowait((got[0], T, t, self.vmap.epoch, self._motion_of(msg, t_ns, got[1])))
+            mot = self._motion_of(msg, t_ns, got[1])
+            self.kf_queue.put_nowait((got[0], T, t, self.vmap.epoch, mot))
             self.last_kf = (t, T)
+            if pend is not None:
+                self._reloc_pending_kf(got[0], T_vio, t, mot, pend)
         except queue.Full:
             pass
 
@@ -1257,20 +1302,32 @@ class Scanner:
         if msg.get("type") != "reset" or not msg.get("auto"):
             return
         self.vio_auto_resets += 1
+        reinit = msg.get("reinit")
         why = {"exception": f"VIO 내부 오류 ({str(msg.get('msg', ''))[:120]}) → 자동 재시작",
-               "bridge_restart": "브리지 다시 띄움"}.get(msg.get("reason"), "추적 실패 → VIO 재시작")
-        self.log(f"[ov] auto-reset #{self.vio_auto_resets} ({why}, 폰을 잠시 멈추면 다시 초기화)")
+               "bridge_restart": "브리지 다시 띄움", "test_split": "시험용 가짜 리셋"}.get(msg.get("reason"), "추적 실패 → VIO 재시작")
+        hint = "옛 상태로 바로 다시 시작, 멈추지 않아도 됨" if reinit == "state" else "폰을 잠시 멈추면 다시 초기화"
+        self.log(f"[ov] auto-reset #{self.vio_auto_resets} ({why}, {hint})")
+        self.vio_events.append(dict(t=round(float(getattr(self, "_last_pose_t", 0.0)), 3), kind="reset",
+                                    reason=msg.get("reason"), reinit=reinit, gap=msg.get("gap"), wall=time.time()))
+        if reinit == "state" and self._pend is not None and self.a.reloc == "on":
+            # 상태 주입 재시작은 월드 좌표가 그대로 → 아직 못 붙인 조각을 새로 시작하지 않고 그대로 이어 쌓는다
+            # (rec_20261016_175446 을 --lost-frames 6 으로 일부러 끊었을 때 1 s 마다 새 조각이 생겨 키프레임이 모이지 않았음)
+            self.log(f"[reloc] 조각 {self._seg_n} 에 그대로 이어 쌓음 (좌표 그대로인 재시작)")
+            return
         with self.traj_lock:
             traj_before = self.traj
             self.traj, self.cur_T = [], None
         self.last_kf = None
-        if self.a.on_vio_reset == "clear" and self.vmap.n:
+        if self.a.on_vio_reset == "clear" and (self.vmap.n or self._pend is not None):
             rp = self.replayer
-            if self.mode == "replay" and rp is not None and rp.out_dir is not None:
+            if self.mode == "replay" and rp is not None and rp.out_dir is not None and self.vmap.n:
                 try:
                     self.save(Path(rp.out_dir) / f"segment_{self.vio_auto_resets:02d}", include_cfg=False)
                 except Exception as e:
                     self.log(f"[save] 조각 저장 실패 {e!r}")
+            if self.a.reloc == "on" and self._reloc_get() is not None:
+                self._reloc_start_segment(traj_before)       # 옛 지도는 보관, 새 조각은 따로 → 붙으면 합침
+                return
             if self.mode == "replay":
                 # 복원: 리셋 전 조각이 지금까지 가장 크면 (맵·시간 정보·궤적·물체) 를 통째로 보관하고 새 맵으로 이어 감.
                 # 끝날 때 restore_best_segment() 가 마지막 조각보다 크면 이것을 결과로 씀.
@@ -1287,9 +1344,20 @@ class Scanner:
             self.replay_tl, self.replay_depth = [], {}     # 리플레이 시간 정보는 새 맵(지금 조각)만
 
     def restore_best_segment(self, log=None):
-        """복원 끝: 리셋 전 보관한 조각이 마지막 조각보다 크면 그것을 결과로 되돌림. 되돌렸으면 조각 번호, 아니면 None."""
+        """복원 끝: 리셋 전 보관한 조각이 마지막 조각보다 크면 그것을 결과로 되돌림. 되돌렸으면 조각 번호, 아니면 None.
+        재위치(--reloc on): 끝까지 못 붙인 조각이 있으면 보관해 둔 전역 지도(번호 0)·버린 조각·마지막 조각 중 가장 큰 것."""
+        with self._reloc_lock:
+            pend, self._pend = self._pend, None
+            if pend is not None:
+                self._seg_T = np.eye(4)
         best = self._best_seg
         self._best_seg = None
+        if pend is not None:
+            main = dict(pend["main"], seg=0)
+            if log:
+                log(f"[reloc] 조각 {pend['seg']} 은 끝까지 옛 지도에 못 붙음 (다시 넣으려던 키프레임 {len(pend['jobs'])}개)")
+            if best is None or main["vmap"].n >= best["vmap"].n:
+                best = main
         if best is None or best["vmap"].n <= self.vmap.n:
             return None
         if log:
@@ -1301,6 +1369,238 @@ class Scanner:
         with self.traj_lock:
             self.traj = best["traj"]
         return best["seg"]
+
+    # ---------------- 재위치 (reloc.py) ----------------
+    def _reloc_get(self):
+        """Relocalizer (지금 세션 lens0u 보정으로). 만들 수 없으면 None."""
+        if self.a.reloc != "on" or self.a.ov == "none":
+            return None
+        g = self.geom or {}
+        vio = g.get("vio")
+        if not vio:
+            return None
+        rl = self.reloc
+        if rl is not None and getattr(rl, "geom_size", None) == tuple(g["size"]) and np.allclose(rl.K_full, vio["K"]):
+            return rl
+        import reloc
+        rl = reloc.Relocalizer(self.log, vio["K"], vio["map"], on_aligned=self._reloc_on_aligned)
+        rl.geom_size, rl.K_full = tuple(g["size"]), np.asarray(vio["K"], float)
+        self.reloc = rl
+        return rl
+
+    def _reloc_reset(self):
+        """새 세션·재생 시작: 조각 상태·재위치 DB 비움, --reloc-test-split 다시 장전."""
+        with self._reloc_lock:
+            self._seg_T, self._seg_n, self._pend = np.eye(4), 0, None
+            self._requeue.clear()
+            self._post_checks = 0
+            self._base_checks = 0
+            self.vio_events = []
+            self._test_split = None
+            ts = self.a.reloc_test_split
+            if ts:
+                v = [float(x) for x in str(ts).split(",")]
+                yaw = np.radians(v[1])
+                R = np.array([[np.cos(yaw), -np.sin(yaw), 0], [np.sin(yaw), np.cos(yaw), 0], [0, 0, 1.0]])
+                self._test_split = dict(t=v[0], T=frames.make_T(R, v[2:5]), state="armed", truth=None, seg=None)
+        if self.reloc is not None:
+            self.reloc.clear()
+
+    def _reloc_test_apply(self, T, t):
+        ts = self._test_split
+        if ts is None:
+            return T
+        if ts["state"] == "armed" and t >= ts["t"]:
+            ts["state"] = "on"
+            base = self._seg_T if self._seg_T is not None else np.eye(4)
+            ts["truth"] = base @ frames.inv_T(ts["T"])      # 정답 T_old_new (가짜 변환의 역)
+            self.log(f"[reloc] 시험: t={t:.2f} s 에 가짜 리셋, 이후 포즈에 yaw·이동 변환을 곱함")
+            self.on_vio_event({"type": "reset", "auto": True, "reason": "test_split"})
+            ts["seg"] = self._seg_n
+        return ts["T"] @ T if ts["state"] == "on" else T
+
+    def _reloc_start_segment(self, traj_before):
+        """VIO 리셋: 지금 지도가 전역이면 통째로 보관 (붙을 때 되돌림), 새 조각은 새 지도에 따로."""
+        with self._reloc_lock:
+            self._seg_n += 1
+            seg = self._seg_n
+            old = self.vmap
+            if self._pend is None:
+                main = dict(vmap=old, tl=self.replay_tl, depth=self.replay_depth, traj=traj_before, objects=self.objects)
+            else:
+                main = self._pend["main"]
+                # 붙지 못한 조각: 복원 끝에 가장 큰 조각 후보로만 남김
+                if self.mode == "replay" and old.n and (self._best_seg is None or old.n > self._best_seg["vmap"].n):
+                    self._best_seg = dict(vmap=old, tl=self.replay_tl, depth=self.replay_depth, traj=traj_before,
+                                          objects=self.objects, seg=self._pend["seg"])
+            self._seg_T = None
+            self._pend = dict(main=main, jobs=[], seg=seg, n_query=0)
+            nv = VoxelMap(self.a.voxel, self.a.min_hits, names=old.names)
+            self._epoch_hi = max(self._epoch_hi, old.epoch, main["vmap"].epoch) + 1
+            nv.epoch = self._epoch_hi                     # 보관한 전역 지도·버린 조각과 겹치지 않는 epoch (REVIEW 8)
+            nv._done_t = set()                            # 이 조각 지도에 깊이를 넣은(시도한) 키프레임 시각 → 붙을 때 다시 넣을 것 가림
+            self.vmap = nv
+            self.objects = []
+            self.replay_tl, self.replay_depth = [], {}
+            self._post_checks = 0
+        rl = self._reloc_get()
+        rl.begin_segment(seg)
+        self.log(f"[reloc] 조각 {seg} 시작: 옛 지도(복셀 {main['vmap'].n}, 기준 키프레임 {rl.n_db()}) 는 보관, "
+                 f"이미 찍은 곳을 다시 비추면 이어 붙임")
+
+    def _reloc_pending_kf(self, pair, T_vio, t, mot, pend):
+        """붙기 전 키프레임: 나중에 전역 좌표로 다시 넣을 수 있게 영상(JPEG)·조각 좌표 자세를 보관, 재위치 질의."""
+        if len(pend["jobs"]) < 300:
+            fr = []
+            for f in pair:
+                ok, b = cv2.imencode(".jpg", f.bgr, [cv2.IMWRITE_JPEG_QUALITY, 95])
+                if not ok:
+                    return
+                fr.append((b, f.index, f.timestamp_ns))
+            pend["jobs"].append(dict(fr=fr, T=np.array(T_vio, float), t=t, mot=mot))
+        rl = self.reloc
+        if rl is None or rl.n_db() == 0 or rl.q.qsize() > 6:
+            return
+        pend["n_query"] += 1
+        ts = self._test_split
+        truth = ts["truth"] if ts is not None and ts.get("seg") == pend["seg"] else None
+        R1 = np.asarray(self.rp["R1"], float)
+        rl.submit("query", bgr=pair[0].bgr, T_seg_c1=np.asarray(T_vio, float) @ frames.make_T(R1, np.zeros(3)), t=t,
+                  seg=pend["seg"], truth=truth)
+
+    @staticmethod
+    def _kf_tried(vm, epoch, t):
+        """조각 지도(_done_t 가 있는 VoxelMap)에 깊이를 넣었거나 (움직임 보정이 버려) 시도한 키프레임 시각 기록."""
+        s = getattr(vm, "_done_t", None)
+        if s is not None and epoch == vm.epoch:
+            s.add(t)
+
+    def _reloc_on_aligned(self, seg, T, info):
+        """재위치 스레드: 조각이 붙음 → 전역 지도 되돌리고, 조각이 따로 쌓던 지도(복셀 + TSDF)를 T 로 옮겨 그대로 합침
+        (VoxelMap.merge, 깊이 다시 계산 안 함). 조각 궤적·리플레이 시간 정보(키프레임 목록·깊이 그림)도 전역 좌표·번호로.
+        합치기 전에 조각 지도에 못 들어간 키프레임(처리 중·대기열)만 전역 좌표로 깊이를 다시 계산. merge 가 실패하면 전부 다시 계산."""
+        T = np.asarray(T, float)
+        with self._reloc_lock:
+            pend = self._pend
+            if pend is None or pend["seg"] != seg:
+                return
+            main = pend["main"]
+            gvm, piece = main["vmap"], self.vmap
+            self._seg_T = T
+            self._pend = None
+            with self.traj_lock:
+                self.traj = list(main["traj"]) + [(tt, T @ TT) for tt, TT in self.traj]
+                self.cur_T = self.traj[-1][1] if self.traj else None
+            lk = self.last_kf
+            if lk is not None:
+                self.last_kf = (lk[0], T @ lk[1])
+            with piece.lock:                               # 조각에 넣는 중인 키프레임이 끝난 뒤 바꿈 (그 뒤 조각 epoch 은 버려짐)
+                self.vmap = gvm                            # epoch 그대로: 리셋 전에 대기열에 있던 전역 키프레임도 들어감
+                p_tl, p_depth = self.replay_tl, self.replay_depth
+                self.replay_tl, self.replay_depth, self.objects = main["tl"], main["depth"], main["objects"]
+                done = set(getattr(piece, "_done_t", None) or ())
+                piece._done_t = None
+            self._post_checks = 4
+        t0 = time.perf_counter()
+        mres = None
+        if piece is not gvm and self.a.reloc_merge == "on":
+            try:
+                with gvm.lock:                             # 합친 복셀 번호와 시간 정보 번호가 같게 (그 사이 새 키프레임 안 끼게)
+                    mres = gvm.merge(piece, T, keep_time=True)
+                    kb = mres["kf_base"]
+                    for e in p_tl:
+                        self.replay_tl.append(dict(e, i=kb + int(e["i"]), T=T @ np.asarray(e["T"], float)))
+                    for k, v in p_depth.items():
+                        self.replay_depth[kb + int(k)] = v
+            except Exception as e:
+                mres = None
+                self.log(f"[reloc] 조각 지도 합치기(merge) 실패 {e!r} → 키프레임 깊이를 전역 좌표로 다시 계산")
+        ms = round(1000 * (time.perf_counter() - t0), 1)
+        jobs = pend["jobs"] if mres is None else [j for j in pend["jobs"] if j["t"] not in done]
+        with self._reloc_lock:
+            ep = gvm.epoch
+            for j in jobs:
+                self._requeue.append(dict(j, T=T @ j["T"], epoch=ep))
+            mg = None if mres is None else dict(voxels=mres["voxels"], tsdf=mres["tsdf"], kf=len(p_tl) or int(piece.frames), ms=ms)
+            self.vio_events.append(dict(info, t=round(float(getattr(self, "_last_pose_t", 0.0)), 3), kind="aligned",
+                                        requeued=len(jobs), merge=mg, wall=time.time()))
+        if mg is not None:
+            self.log(f"[reloc] 조각 {seg} → 전역 지도에 합침 (merge {ms:.0f} ms): 조각 지도 키프레임 {mg['kf']}개 · 복셀 {mg['voxels']} · "
+                     f"TSDF {mg['tsdf']} 를 그대로 옮김, 아직 깊이 전이던 키프레임 {len(jobs)}개만 전역 좌표로 다시 넣음")
+        else:
+            self.log(f"[reloc] 조각 {seg} → 전역 지도에 합침: 키프레임 {len(jobs)}개 전역 좌표로 다시 넣음")
+        if self.mode != "replay" and jobs:
+            threading.Thread(target=self._reloc_feed_live, daemon=True, name="reloc-feed").start()
+
+    def take_reloc_jobs(self):
+        """붙은 조각의 키프레임 job 들 (pair, T, t, epoch, mot) — 재생은 replay.py 가 대기열에 넣는다."""
+        out = []
+        while self._requeue:
+            try:
+                j = self._requeue.popleft()
+            except IndexError:
+                break
+            pair = tuple(SimpleNamespace(bgr=cv2.imdecode(b, cv2.IMREAD_COLOR), index=i, timestamp_ns=ts)
+                         for b, i, ts in j["fr"])
+            out.append((pair, j["T"], j["t"], j["epoch"], j["mot"]))
+        return out
+
+    def _reloc_feed_live(self):
+        """실시간: 다시 넣을 키프레임을 깊이 대기열이 빌 때마다 하나씩."""
+        while self._requeue and not self.stopped and self.mode in PHONE_MODES:
+            if self.kf_queue.qsize() >= 2 or self.worker_busy:
+                time.sleep(0.05)
+                continue
+            for job in self.take_reloc_jobs()[:1]:
+                try:
+                    self.kf_queue.put(job, timeout=1.0)
+                except queue.Full:
+                    pass
+
+    def reloc_flush(self, timeout=20.0):
+        """재생 끝: 재위치 작업 대기열이 빌 때까지 (최대 timeout s)."""
+        rl = self.reloc
+        t_end = time.monotonic() + timeout
+        while rl is not None and (rl.q.qsize() or rl.busy) and time.monotonic() < t_end:
+            time.sleep(0.05)
+
+    def _reloc_kf_done(self, fL, T, t, epoch, r, rp, R_fix):
+        """깊이를 만든 전역 키프레임 → 재위치 기준(DB)에 추가. 붙은 직후 몇 장은 옛 지도와 겹침 확인 (정렬 정확도)."""
+        try:
+            if self.a.reloc != "on" or self._pend is not None or self._seg_T is None or epoch != self.vmap.epoch:
+                return
+            rl = self._reloc_get()
+            if rl is None:
+                return
+            R1 = np.asarray(self.rp["R1"], float)
+            Rf = np.asarray(R_fix, float) if R_fix is not None else np.eye(3)
+            check = None
+            if self._post_checks > 0:
+                self._post_checks -= 1
+                check = self._seg_n
+            elif self._seg_n == 0 and rl.n_db() >= 10 and self._base_checks < 80:
+                self._base_checks += 1
+                if self._base_checks % 10 == 0:
+                    check = "base"                        # 비교 기준: 리셋 없는 평소 키프레임의 겹침 (최대 8번)
+            if check is not None:
+                pts = np.asarray(r["pts_rect0"], float) @ Rf.T
+                rl.submit("check", pts_w=frames.transform(np.asarray(T, float), pts.astype(np.float32)), seg=check, t=t)
+            Z = r["Z"]
+            sx = Z.shape[1] / float(rp["size"][0])
+            rl.submit("db", bgr=fL.bgr, T_w_c1=np.asarray(T, float) @ frames.make_T(R1, np.zeros(3)), Z=Z,
+                      valid=r["valid"], f=rp["f"] * sx, cx=rp["cx"] * sx, cy=rp["cy"] * sx, R_c1_d=R1.T @ Rf, t=t)
+        except Exception as e:
+            self.log(f"[reloc] 키프레임 추가 실패 {e!r}")
+
+    def reloc_state(self):
+        """웹·summary 용 재위치 상태."""
+        rl = self.reloc
+        pend = self._pend
+        d = dict(on=self.a.reloc == "on", pending=pend is not None, seg=self._seg_n,
+                 pending_kf=len(pend["jobs"]) if pend else 0, events=list(self.vio_events[-20:]))
+        if rl is not None:
+            d.update(rl.summary())
+        return d
 
     def _depth_worker(self):
         import depth_seg
@@ -1399,6 +1699,7 @@ class Scanner:
         rp, R_fix, info = self._pair_rect(g, mot)
         self._note_mrect(info, t)
         if rp is None:
+            self._kf_tried(self.vmap, epoch, t)
             return
         r = self.ds(fL.bgr, fR.bgr, rp=rp, scale=g["ffs_scale"])
         if self.paused and self.mode != "replay":
@@ -1411,33 +1712,50 @@ class Scanner:
         # 물체 인스턴스 (2D 트랙 id 우선) → 점마다 전역 id. 리셋과 겹치지 않게 맵 lock 안에서 (REVIEW 8)
         inst = np.full(len(pts_w), -1, np.int32)
         di = r["det_idx"]
-        with self.vmap.lock:
-            if epoch != self.vmap.epoch:
+        ent = jpg = None
+        if self.mode == "replay":
+            # 리플레이 시간 정보 재료 (맵 lock 밖에서 미리): 깊이 렌즈 쌍 비교 숫자 (replay_view.kf_quality), 깊이 그림
+            ent = dict(t=t, fr=[(fL.index, fL.timestamp_ns), (fR.index, fR.timestamp_ns)], T=np.array(T, float))
+            try:
+                ent["q"] = replay_view.kf_quality(r["pts_rect0"], r["valid"], seed=int(fL.timestamp_ns) & 0xFFFFFFFF)
+            except Exception as e:
+                self.log(f"[replay] 비교 숫자 실패 {e!r}")
+            try:
+                jpg = replay_view.depth_jpeg(r["Z"], r["valid"], self.a.depth_range[0], self.a.depth_range[1])
+            except Exception as e:
+                self.log(f"[replay] 깊이 그림 실패 {e!r}")
+        vm = self.vmap                                        # 재위치가 조각 → 전역 지도로 바꿔도 이 키프레임은 한 지도에만
+        with vm.lock:
+            if epoch != vm.epoch:
                 return
             for k in np.unique(di[di >= 0]):
                 d = r["dets"][k]
                 sel = di == k
-                iid = self.vmap.tracker.associate(d["class_id"], pts_w[sel], d["track_id"], t)
+                iid = vm.tracker.associate(d["class_id"], pts_w[sel], d["track_id"], t)
                 inst[sel] = iid
                 d["inst"] = iid
-            nf0 = self.vmap.frames
-            self.vmap.integrate(pts_w, r["rgb"], r["cls"], inst, t, epoch=epoch)
-            kf_i = self.vmap.frames if self.vmap.frames != nf0 else None
-        if kf_i is not None and self.mode == "replay":
-            # 리플레이 시간 정보: 키프레임 번호 = 복셀의 kf_shown 과 같은 번호 (voxel_map.frames)
-            ent = dict(i=kf_i, t=t, fr=[(fL.index, fL.timestamp_ns), (fR.index, fR.timestamp_ns)], T=np.array(T, float))
+            nf0 = vm.frames
+            vm.integrate(pts_w, r["rgb"], r["cls"], inst, t, epoch=epoch)
+            kf_i = vm.frames if vm.frames != nf0 else None
+            # TSDF (메시): 깊이 지도 그대로 투영형 갱신. 깊이 카메라 = 쌍별 정류 rect0' → 월드 = T_world_rect0 · R_fix
+            T_cam = np.array(T, np.float64)
+            if R_fix is not None:
+                T_cam[:3, :3] = T_cam[:3, :3] @ np.asarray(R_fix, np.float64)
             try:
-                # 깊이 렌즈 쌍 비교 숫자: 유효 화소 비율, 가장 큰 평면의 잔차 (거리 구간별) — replay_view.kf_quality
-                ent["q"] = replay_view.kf_quality(r["pts_rect0"], r["valid"], seed=int(fL.timestamp_ns) & 0xFFFFFFFF)
+                tsr = vm.integrate_depth(r["Z"], r["valid"], r["rectL"], rp, T_cam, ffs_scale=g["ffs_scale"],
+                                         t=t, epoch=epoch, log=self.log)
             except Exception as e:
-                self.log(f"[replay] 비교 숫자 실패 {e!r}")
-            self.replay_tl.append(ent)
-            try:
-                jpg = replay_view.depth_jpeg(r["Z"], r["valid"], self.a.depth_range[0], self.a.depth_range[1])
+                tsr = None
+                self.log(f"[tsdf] 적분 실패 {e!r}")
+            self.dstats["tsdf_ms"] = round(tsr["ms"], 1) if tsr else None
+            if kf_i is not None and ent is not None:
+                # 리플레이 시간 정보: 키프레임 번호 = 복셀의 kf_shown 과 같은 번호 (voxel_map.frames).
+                # 맵 lock 안에서 넣음 → 재위치가 지도를 바꿀 때 (_reloc_on_aligned) 시간 정보도 같은 지도 것으로 함께 바뀜
+                ent["i"] = kf_i
+                self.replay_tl.append(ent)
                 if jpg:
                     self.replay_depth[kf_i] = jpg
-            except Exception as e:
-                self.log(f"[replay] 깊이 그림 실패 {e!r}")
+            self._kf_tried(vm, epoch, t)
         now = time.monotonic()
         if now - self.objects_t > 1.0:
             self.objects = self.vmap.objects()
@@ -1452,6 +1770,7 @@ class Scanner:
             ds["fps"] = round((len(self.kf_times) - 1) / max(1e-6, self.kf_times[-1] - self.kf_times[0]), 2)
         with self.panel_lock:
             self.panel = dict(rect=r["rectL"], Z=r["Z"], valid=r["valid"], dets=r["dets"], t=t)
+        self._reloc_kf_done(fL, T, t, epoch, r, rp, R_fix)   # 재위치 기준 키프레임 (reloc.py, 전역 키프레임만)
 
     # ---------------- 웹 API ----------------
     def state(self):
@@ -1485,6 +1804,16 @@ class Scanner:
                    skew_med_ms=None if sk is None else round(float(np.median(sk)), 2),
                    skew_p95_ms=None if sk is None else round(float(np.percentile(sk, 95)), 2),
                    skew_n=0 if sk is None else int(sk.size))
+        # 재위치·다시 시작 안내 (웹 상태 줄에 크게): 정지 초기화를 기다리는 중이면 '잠깐 멈추세요'
+        rs = self.reloc_state()
+        vio["reloc"] = dict(on=rs["on"], pending=rs["pending"], seg=rs["seg"], pending_kf=rs["pending_kf"], db=rs.get("db", 0),
+                            aligned=len(rs.get("alignments") or []), queries=rs.get("queries", 0))
+        hint = None
+        if self.vio_auto_resets and vio.get("status") == "init" and self.mode in PHONE_MODES:
+            hint = "추적이 끊겼습니다 — 폰을 1~2초 가만히 들고 있으면 다시 시작합니다"
+        elif rs["pending"]:
+            hint = "새 조각을 따로 쌓는 중 — 이미 찍은 곳을 천천히 다시 비추면 옛 지도에 이어 붙입니다"
+        vio["hint"] = hint
         try:
             dts = np.array(self.dt_ms.copy(), float) if self.dt_ms else None
         except RuntimeError:

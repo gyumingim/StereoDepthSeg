@@ -121,8 +121,12 @@ def infer(model, rgbL, rgbR, valid_iters=8, scale=1.0, hiera=False):
     H0, W0 = rgbL.shape[:2]
     l, r = rgbL, rgbR
     if scale != 1.0:
-        l = cv2.resize(l, None, fx=scale, fy=scale)
-        r = cv2.resize(r, (l.shape[1], l.shape[0]))
+        # 두 영상을 같은 dsize 로 줄인다. resize(fx=scale) 는 좌표 배율로 scale 을 쓰고 dsize(정수 반올림)로 준 쪽은
+        # W'/W 를 써서, W·scale 이 정수가 아니면 두 영상 화소가 가로로 갈수록 어긋난다 (1440·0.444: x 끝에서 시차 +0.7 px,
+        # 2026-10-17 aruco_scale 합성 시험에서 발견). 아래 되돌리기도 실제 비율 W/W0 를 쓰므로 일관.
+        dsize = (max(1, int(round(W0 * scale))), max(1, int(round(H0 * scale))))
+        l = cv2.resize(l, dsize, interpolation=cv2.INTER_AREA)
+        r = cv2.resize(r, dsize, interpolation=cv2.INTER_AREA)
     H, W = l.shape[:2]
     tl = torch.as_tensor(np.ascontiguousarray(l)).cuda().float()[None].permute(0, 3, 1, 2)
     tr = torch.as_tensor(np.ascontiguousarray(r)).cuda().float()[None].permute(0, 3, 1, 2)

@@ -40,6 +40,22 @@ VOXEL_DTYPE = np.dtype([("ix", "<i2"), ("iy", "<i2"), ("iz", "<i2"), ("r", "u1")
                         ("cls", "<i2"), ("inst", "<i4"), ("hits", "<u2")])          # 17 B (웹 바이너리 형식)
 VOXEL_FORMAT = "scan3d-voxels/2"          # /1 = 17 B 레코드만, /2 = + 시간 배열 (t_first, t_shown, kf_shown)
 
+# TSDF 융합 지도 (tsdf_map.py) 설정 — VoxelMap 마다 하나 (리셋·조각 교체 때 같이 바뀜). 첫 깊이 적분 때 만든다 (대기 중 GPU 안 씀).
+# configure_tsdf(voxel_m=, z_min=, z_max=, enabled=, ...) 로 바꾸면 다음에 만드는 TSDF 부터 적용 (지금 것은 reset_tsdf()).
+TSDF_CFG = dict(enabled=True)
+
+
+def configure_tsdf(**kw):
+    TSDF_CFG.update({k: v for k, v in kw.items() if v is not None})
+    return dict(TSDF_CFG)
+
+
+def tsdf_cfg():
+    import tsdf_map
+    c = dict(tsdf_map.DEFAULTS)
+    c.update({k: v for k, v in TSDF_CFG.items() if k in c})
+    return dict(c, enabled=bool(TSDF_CFG.get("enabled", True)))
+
 
 class InstanceTracker:
     """프레임 마스크 → 전역 인스턴스 id. 2D 트랙 id 우선, 아니면 같은 클래스 중심 거리 < dist 또는 3D IoU > iou."""
@@ -120,6 +136,7 @@ class VoxelMap:
         self.epoch = getattr(self, "epoch", 0) + 1
         self.frames = 0
         self._obj_cache, self._obj_ver = [], -1
+        self._tsdf = None                                 # TSDF 지도 (첫 integrate_depth 때 만듦)
 
     def _grow(self, need):
         cap = len(self.pk)
@@ -141,6 +158,102 @@ class VoxelMap:
         with self.lock:
             self._alloc(voxel_m or self.voxel_m)
             self.tracker.reset()
+
+    # ---- TSDF (메시) ----
+    @property
+    def tsdf(self):
+        """지금 TSDF 지도 (없으면 None — 아직 깊이를 안 넣었거나 꺼짐)."""
+        return self._tsdf
+
+    def reset_tsdf(self):
+        with self.lock:
+            self._tsdf = None
+
+    def integrate_depth(self, Z, valid, bgr, rp, T_world_cam, ffs_scale=1.0, t=0.0, epoch=None, log=None):
+        """키프레임 깊이 지도 → TSDF. rp = 그 깊이의 정류 (f, cx, cy, baseline_m), T_world_cam = 그 정류 카메라 → 월드
+        (움직임 보정 정류면 T_world_rect0 · R_fix). epoch 가 다르면 버림. 반환 tsdf_map.integrate 결과 또는 None."""
+        with self.lock:
+            if epoch is not None and epoch != self.epoch:
+                return None
+            if self._tsdf is None:
+                c = tsdf_cfg()
+                if not c.pop("enabled"):
+                    return None
+                import tsdf_map
+                self._tsdf = tsdf_map.TSDFMap(log=log, **c)
+            ts = self._tsdf
+            return ts.integrate(Z, valid, bgr, rp["f"], rp["cx"], rp["cy"], rp["baseline_m"], T_world_cam,
+                                ffs_scale=ffs_scale, t=t)
+
+    def merge(self, other, T=None, keep_time=False):
+        """재위치 '조각 잇기': 다른 VoxelMap 을 T (4x4, other 월드 → self 월드, None = 단위) 로 옮겨 합침.
+        복셀: 표시 기준과 상관없이 모든 복셀의 중심을 옮겨 그 관측 수(hits)·색 합·클래스 투표를 더함 (새 키프레임 하나로 셈).
+        keep_time=True: other 의 키프레임 번호를 그대로 이어 붙임 (self.frames 를 other.frames 만큼 늘리고, 새로 표시 기준을
+        넘은 복셀의 kf_shown·t_shown 은 other 의 값 + 옛 self.frames) → 리플레이 시간 정보에서 조각 키프레임 i 는 옛 frames + i.
+        TSDF: tsdf_map.TSDFMap.merge (가중 평균). 반환 dict(voxels=합친 복셀 행 수, tsdf=합친 TSDF 복셀 수, kf_base=옛 frames)."""
+        with other.lock:
+            n = other.n
+            centers = (unpack_keys(other.pk[:n]) + 0.5) * other.voxel_m
+            rgb_sum, npts, hits = other.rgb_sum[:n].copy(), other.npts[:n].copy(), other.hits[:n].copy()
+            ch = other.cls_hist[:n].copy()
+            inst, t_first, last = other.inst[:n].copy(), other.t_first[:n].copy(), other.last[:n].copy()
+            o_kf, o_ts, o_frames = other.kf_shown[:n].copy(), other.t_shown[:n].copy(), int(other.frames)
+            ots = other._tsdf
+        if T is not None:
+            T = np.asarray(T, np.float64).reshape(4, 4)
+            centers = centers @ T[:3, :3].T + T[:3, 3]
+        out = dict(voxels=0, tsdf=0, kf_base=None)
+        with self.lock:
+            out["kf_base"] = base = int(self.frames)
+            if n:
+                keys = np.floor(centers / self.voxel_m).astype(np.int64)
+                ok = np.all(np.abs(keys) < 32000, axis=1)
+                keys = keys[ok]
+                pk = pack_keys(keys)
+                rows = np.empty(len(pk), np.int64)
+                new = 0
+                for j, key in enumerate(pk.tolist()):
+                    r = self.index.get(key)
+                    if r is None:
+                        r = self.n + new
+                        self.index[key] = r
+                        new += 1
+                    rows[j] = r
+                self._grow(self.n + new)
+                if new:
+                    nr = rows[rows >= self.n]
+                    self.pk[nr] = pk[rows >= self.n]
+                    self.t_first[nr] = t_first[ok][rows >= self.n]
+                    self.n += new
+                self.version += 1
+                self.frames += max(1, o_frames) if keep_time else 1
+                np.add.at(self.rgb_sum, rows, rgb_sum[ok])
+                np.add.at(self.npts, rows, npts[ok])
+                np.add.at(self.hits, rows, hits[ok])
+                h = self.cls_hist[rows].astype(np.int32)
+                np.add.at(h, np.arange(len(rows)), ch[ok].astype(np.int32))
+                self.cls_hist[rows] = np.minimum(h, 255).astype(np.uint8)
+                keep = self.inst[rows] < 0
+                self.inst[rows[keep]] = inst[ok][keep]
+                self.last[rows] = np.maximum(self.last[rows], last[ok])
+                self.ver[rows] = self.version
+                fm = (self.kf_shown[rows] < 0) & (self.hits[rows] >= self.min_hits)
+                fresh = rows[fm]
+                if keep_time:
+                    ok_kf, ok_ts = o_kf[ok][fm], o_ts[ok][fm]
+                    has = ok_kf >= 0
+                    self.kf_shown[fresh] = np.where(has, base + ok_kf, self.frames)
+                    self.t_shown[fresh] = np.where(has, ok_ts, self.last[fresh])
+                else:
+                    self.t_shown[fresh] = self.last[fresh]
+                    self.kf_shown[fresh] = self.frames
+                out["voxels"] = int(len(rows))
+            if ots is not None:
+                if self._tsdf is None:
+                    import tsdf_map
+                    self._tsdf = tsdf_map.TSDFMap(device=ots.dev, log=ots.log, **ots.cfg)
+                out["tsdf"] = self._tsdf.merge(ots, T)
+        return out
 
     def set_min_hits(self, m):
         with self.lock:
@@ -344,7 +457,8 @@ class VoxelMap:
         return out
 
     def save(self, out_dir, trajectory=None, extra=None):
-        """voxels.ply (중심점), voxels.json, voxels.npz, objects.json, viewer.html (write_viewer)."""
+        """voxels.ply (중심점), voxels.json, voxels.npz, objects.json, viewer.html (write_viewer),
+        TSDF 가 있으면 mesh.ply · mesh_web.bin · mesh.json."""
         from lib_pointcloud_export import write_ply
         from lib_pointcloud_view import write_viewer
         d = Path(out_dir); d.mkdir(parents=True, exist_ok=True)
@@ -377,6 +491,15 @@ class VoxelMap:
         write_viewer(d / "viewer.html", np.concatenate(order_pts) if len(pts) else np.zeros((0, 3)),
                      np.concatenate(order_rgb) if len(pts) else np.zeros((0, 3)),
                      dict(objects=meta_objs, trajectory=traj))
+        ts = self._tsdf
+        if ts is not None:
+            # 최종 메시 (TSDF marching cubes): mesh.ply (색 포함), mesh_web.bin (웹 리플레이 '최종 맵' 메시), mesh.json (숫자)
+            import tsdf_map
+            V, C, F = ts.mesh_arrays()
+            tsdf_map.write_mesh_ply(d / "mesh.ply", V, C, F)
+            (d / "mesh_web.bin").write_bytes(tsdf_map.mesh_bin_static(V, C, F, ts.vm))
+            (d / "mesh.json").write_text(json.dumps(dict(ts.stats(), cfg=ts.cfg, w_min=ts.w_min,
+                                                         created=time.strftime("%Y-%m-%d %H:%M:%S")), indent=1))
         if extra:
             (d / "summary.json").write_text(json.dumps(extra, indent=1, default=str))
         return d

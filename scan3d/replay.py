@@ -147,6 +147,14 @@ class Replayer:
                 continue
         return False
 
+    def _enqueue_reloc(self):
+        """재위치가 조각을 옛 지도에 붙였으면 그 조각 키프레임들을 전역 좌표로 깊이 대기열에 (scan3d.take_reloc_jobs)."""
+        take = getattr(self.sc, "take_reloc_jobs", None)
+        for job in (take() if take else []):
+            if not self._enqueue(job):
+                return False
+        return True
+
     def _run(self):
         import recording
         sc, P = self.sc, self.progress
@@ -226,6 +234,8 @@ class Replayer:
                     kf = sc.take_replay_kf()
                     if kf is not None and not self._enqueue(kf):
                         break
+                    if not self._enqueue_reloc():           # 재위치로 붙은 조각의 키프레임 (전역 좌표로 다시)
+                        break
                 P["pairs"] += 1
                 P["pos_s"] = round((pair[0].timestamp_ns - rec.t_first) * 1e-9, 2)
                 el = time.monotonic() - t_start
@@ -235,14 +245,25 @@ class Replayer:
                 P["queue"] = sc.kf_queue.qsize()
             stopped = self._stop.is_set()
             P["state"] = "깊이 마무리"
-            while not stopped and not sc.queue_idle():
-                if self._stop.is_set():
+            for _ in range(3):                              # 깊이 → 재위치 질의 → 붙으면 다시 넣은 키프레임 깊이 …
+                while not stopped and not sc.queue_idle():
+                    if self._stop.is_set():
+                        break
+                    time.sleep(0.1)
+                    P["keyframes"] = sc.dstats.get("keyframes", 0) - kf0
+                if stopped or self._stop.is_set():
                     break
-                time.sleep(0.1)
-                P["keyframes"] = sc.dstats.get("keyframes", 0) - kf0
+                sc.reloc_flush()
+                if not sc._requeue:
+                    break
+                self._enqueue_reloc()
+            sc.reloc_flush()
             P["keyframes"] = sc.dstats.get("keyframes", 0) - kf0
+            rs = sc.reloc_state()
             P.update(reordered=pstats.get("reordered"), unmatched_dropped=pstats.get("unmatched_dropped"),
-                     vio_auto_resets=sc.vio_auto_resets)
+                     vio_auto_resets=sc.vio_auto_resets, vio_events=list(sc.vio_events),
+                     reloc={k: rs.get(k) for k in ("on", "seg", "pending", "pending_kf", "db", "db_skipped", "queries",
+                                                   "pnp_ok", "rejected", "alignments", "checks")})
             if not (stopped and not self.save_partial):
                 seg = sc.restore_best_segment(self._log)
                 if seg is not None:

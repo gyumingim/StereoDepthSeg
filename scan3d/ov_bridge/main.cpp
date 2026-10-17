@@ -3,7 +3,10 @@
 //
 //   ov_bridge <estimator_config.yaml> [--stdio | --tcp HOST:PORT] [--max-cam-queue N]
 //             [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]
-//             [--imu-hold S]
+//             [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S]
+//
+// --reinit-state (2026-10-17): lost(특징 끊김) auto-reset 때 정지 초기화 대신 옛 상태를 새 VioManager 에 넣어 같은 월드로 이어 감
+// ({"type":"reset","auto":true,"reason":"lost","reinit":"state",...}). PROTOCOL.md 참고.
 //
 // 방어: OpenVINS 호출에서 난 예외(cv::Exception 포함)는 잡아서 VioManager 를 새로 만들고
 // {"type":"reset","auto":true,"reason":"exception"} 를 보낸다 (프로세스는 계속 산다).
@@ -36,6 +39,7 @@
 #include "core/VioManager.h"
 #include "core/VioManagerOptions.h"
 #include "state/State.h"
+#include "state/StateHelper.h"
 #include "types/IMU.h"
 #include "types/PoseJPL.h"
 #include "types/Vec.h"
@@ -62,6 +66,16 @@ struct Args {
   bool auto_reset = false;
   int emit_features = 0;    // JSON 에 SLAM 특징점 최대 N 개
   double imu_hold_s = 0.25; // 카메라를 기다리며 IMU 를 붙잡아 두는 최대 시간 (IMU·카메라 시간 순서 유지)
+  // 정지 없이 다시 시작 (2026-10-17): 특징점이 끊겨 lost 가 되면 VioManager 를 새로 만들되, 정지 초기화를 기다리지 않고
+  // 옛 상태(자세·위치·속도·바이어스, 마지막 특징 갱신 뒤 IMU 만으로 전파한 값)와 추정된 외부 파라미터·시간 오프셋을
+  // initialize_with_gt 로 넣는다 → 같은 월드 좌표로 바로 이어서 추적. 마지막 특징 갱신이 reinit_max_gap 초보다 오래됐거나
+  // 상태가 망가졌으면(속도 초과·NaN) 예전처럼 정지 초기화 (reason lost, reinit 없음).
+  // 근거: rec_20261016_175446/162204/165645 는 lost 뒤 계속 움직여 정지 초기화를 한 번도 못 함 (재생 로그 "failed static init").
+  bool reinit_state = false;
+  double reinit_max_gap = 1.5;
+  double reinit_sig_ori_deg = 3.0;  // 넣은 상태의 공분산 (IMU 만 전파한 1 s 동안 늘어난 불확실성, 추정)
+  double reinit_sig_pos = 0.10;
+  double reinit_sig_vel = 0.30;
 };
 
 // JSON 문자열 이스케이프 (예외 메시지에 따옴표·줄바꿈이 들어 있음)
@@ -190,6 +204,8 @@ public:
     case kReset:
       make_system();
       imu_hold_.clear();
+      imu_recent_.clear();
+      last_upd_t_ = -1e300;
       newest_imu_t_ = -1e300;
       out += "{\"type\":\"reset\"}\n";
       return true;
@@ -340,6 +356,8 @@ private:
           continue;
         }
         last_imu_t_ = m.timestamp;
+        imu_recent_.push_back(m);  // 상태 주입 재시작 때 새 VioManager 에 다시 넣을 최근 IMU (2 s)
+        while (!imu_recent_.empty() && imu_recent_.front().timestamp < m.timestamp - 2.0) imu_recent_.pop_front();
         continue;
       }
       break;
@@ -362,9 +380,67 @@ private:
       return;
     }
     if (lost_ && args_.auto_reset) {
-      make_system();
-      out += "{\"type\":\"reset\",\"auto\":true,\"reason\":\"lost\"}\n";
+      std::string extra;
+      if (!(args_.reinit_state && reinit_from_state(extra))) make_system();
+      out += "{\"type\":\"reset\",\"auto\":true,\"reason\":\"lost\"" + extra + "}\n";
     }
+  }
+
+  // lost → 새 VioManager 에 옛 상태를 넣어 정지 없이 이어 가기. 성공하면 true, extra 에 JSON 필드 (",\"reinit\":\"state\",...").
+  bool reinit_from_state(std::string &extra) {
+    if (!sys_->initialized() || lost_bad_) return false;
+    auto st = sys_->get_state();
+    double t = st->_timestamp;
+    double gap = t - last_upd_t_;
+    std::ostringstream o;
+    o.precision(6);
+    if (!(gap >= 0.0 && gap <= args_.reinit_max_gap)) {
+      o << ",\"reinit\":\"static\",\"gap\":";
+      jnum(o, gap);
+      extra = o.str();
+      return false;
+    }
+    Eigen::Matrix<double, 16, 1> imu = st->_imu->value();
+    Eigen::Matrix<double, 7, 1> ext = st->_calib_IMUtoCAM.at(0)->value();
+    Eigen::VectorXd dt = st->_calib_dt_CAMtoIMU->value();
+    if (!imu.allFinite() || !ext.allFinite() || !dt.allFinite()) return false;
+    make_system();
+    auto ns = sys_->get_state();
+    ns->_calib_IMUtoCAM.at(0)->set_value(ext);
+    ns->_calib_IMUtoCAM.at(0)->set_fej(ext);
+    ns->_calib_dt_CAMtoIMU->set_value(dt);
+    ns->_calib_dt_CAMtoIMU->set_fej(dt);
+    Eigen::Matrix<double, 17, 1> s;
+    s(0) = t;
+    s.block(1, 0, 16, 1) = imu;
+    sys_->initialize_with_gt(s);
+    // initialize_with_gt 의 공분산(속도 0.01 m/s 등)은 정지 가정이라 너무 작다 → IMU 만 전파한 뒤의 불확실성으로 키움
+    std::vector<std::shared_ptr<ov_type::Type>> order = {ns->_imu};
+    Eigen::MatrixXd C = Eigen::MatrixXd::Zero(15, 15);
+    C.block(0, 0, 3, 3) = std::pow(args_.reinit_sig_ori_deg * M_PI / 180.0, 2) * Eigen::Matrix3d::Identity();
+    C.block(3, 3, 3, 3) = std::pow(args_.reinit_sig_pos, 2) * Eigen::Matrix3d::Identity();
+    C.block(6, 6, 3, 3) = std::pow(args_.reinit_sig_vel, 2) * Eigen::Matrix3d::Identity();
+    C.block(9, 9, 3, 3) = std::pow(0.01, 2) * Eigen::Matrix3d::Identity();
+    C.block(12, 12, 3, 3) = std::pow(0.1, 2) * Eigen::Matrix3d::Identity();
+    ov_msckf::StateHelper::set_initial_covariance(ns, C, order);
+    // 옛 시스템에 이미 넣은 최근 IMU 를 다시 넣는다 (다음 카메라까지 전파할 IMU 가 새 시스템에 없으므로)
+    for (const auto &m : imu_recent_) {
+      if (m.timestamp < t - 0.5) continue;
+      sys_->feed_measurement_imu(m);
+      last_imu_t_ = m.timestamp;
+    }
+    n_reinit_state_++;
+    o << ",\"reinit\":\"state\",\"gap\":";
+    jnum(o, gap);
+    o << ",\"t_state\":";
+    jnum(o, t);
+    o << ",\"v_norm\":";
+    jnum(o, imu.block(7, 0, 3, 1).norm());  // IMU 값 = [q(4) p(3) v(3) bg(3) ba(3)]
+    o << ",\"n_reinit_state\":" << n_reinit_state_;
+    extra = o.str();
+    std::fprintf(stderr, "[ov_bridge] lost -> reinit from state t=%.3f gap=%.2f s |v|=%.2f (#%llu)\n", t, gap,
+                 imu.block(7, 0, 3, 1).norm(), static_cast<unsigned long long>(n_reinit_state_));
+    return true;
   }
 
   std::string pose_line(const CamMsg &c, double ms) {
@@ -404,7 +480,11 @@ private:
       bool bad = !p_IinG.allFinite() || !v.allFinite() || !R_CtoG.allFinite() || !T.allFinite() ||
                  v.norm() > args_.max_speed;
       zero_feat_frames_ = (n_slam + n_msckf == 0) ? zero_feat_frames_ + 1 : 0;
-      if (n_slam + n_msckf > 0) feat_seen_ = true;
+      if (n_slam + n_msckf > 0) {
+        feat_seen_ = true;
+        last_upd_t_ = st->_timestamp;  // 마지막으로 영상이 상태를 고친 시각 (상태 주입 재시작의 gap 기준)
+      }
+      lost_bad_ = bad;
       // 초기화 직후(정지 ZUPT 가 끝나고 처음 움직일 때)는 clone 창이 차고 시차가 생길 때까지 특징 갱신이 0 인 게 정상이다
       // (rec_20261016_143702: 10~14 프레임, 천천히 움직이기 시작하면 더 길다). 첫 특징 갱신 전에는 startup_lost_frames 까지 기다린다.
       int lim = feat_seen_ ? args_.lost_frames : std::max(args_.lost_frames, args_.startup_lost_frames);
@@ -436,7 +516,7 @@ private:
     jnum(o, ms);
     o << ",\"cam_dropped\":" << n_cam_dropped_ << ",\"imu_dropped\":" << n_imu_dropped_
       << ",\"cam_rejected\":" << n_cam_rejected_ << ",\"exceptions\":" << n_exceptions_
-      << ",\"imu_held\":" << imu_hold_.size();
+      << ",\"imu_held\":" << imu_hold_.size() << ",\"n_reinit_state\":" << n_reinit_state_;
     if (args_.emit_features > 0 && init) {
       o << ",\"slam_pts\":[";
       size_t k = std::min(slam.size(), static_cast<size_t>(args_.emit_features));
@@ -465,6 +545,10 @@ private:
   int zero_feat_frames_ = 0;
   bool feat_seen_ = false;  // 이 VioManager 가 특징 갱신(SLAM/MSCKF > 0)을 한 번이라도 했는지
   bool lost_ = false;
+  bool lost_bad_ = false;           // lost 원인이 속도 초과·NaN (상태 주입 재시작 안 함)
+  double last_upd_t_ = -1e300;      // 마지막 특징 갱신 시각 (make_system 이 지우지 않음: 주입 뒤 또 끊기면 gap 이 커져 정지 초기화로)
+  std::deque<ov_core::ImuData> imu_recent_;
+  uint64_t n_reinit_state_ = 0;
   uint64_t n_cam_dropped_ = 0, n_imu_dropped_ = 0, n_cam_rejected_ = 0, n_exceptions_ = 0;
 };
 
@@ -499,7 +583,7 @@ void usage() {
   std::fprintf(stderr,
                "usage: ov_bridge <estimator_config.yaml> [--stdio | --tcp HOST:PORT] [--max-cam-queue N]\n"
                "                 [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]\n"
-               "                 [--imu-hold S]\n");
+               "                 [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S]\n");
 }
 
 }  // namespace
@@ -538,7 +622,15 @@ int main(int argc, char **argv) {
     else if (s == "--auto-reset") a.auto_reset = true;
     else if (s == "--emit-features") a.emit_features = std::stoi(next());
     else if (s == "--imu-hold") a.imu_hold_s = std::max(0.0, std::stod(next()));
-    else {
+    else if (s == "--reinit-state") a.reinit_state = true;
+    else if (s == "--reinit-max-gap") a.reinit_max_gap = std::stod(next());
+    else if (s == "--reinit-sigma") {  // ori_deg,pos_m,vel_m_s
+      std::string v = next();
+      if (std::sscanf(v.c_str(), "%lf,%lf,%lf", &a.reinit_sig_ori_deg, &a.reinit_sig_pos, &a.reinit_sig_vel) != 3) {
+        usage();
+        return 2;
+      }
+    } else {
       usage();
       return 2;
     }
