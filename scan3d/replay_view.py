@@ -124,10 +124,15 @@ def list_recons(rec_dir):
 
 def best_recon(rec_dir, pair=None):
     """리플레이할 수 있는 (시간 정보가 있고 끝까지 된) 가장 최근 복원 이름 또는 None. pair 를 주면 그 쌍의 복원만."""
+    # 정밀 복원(recon_*_sfm)은 웹 [정밀 ▶] 이 이름을 직접 넘기므로, 기본 [▶ 보기]·자동 복원 판단은 일반 복원을 먼저 고른다
+    # (일반 복원이 없을 때만 정밀 복원).
+    sfm = None
     for r in list_recons(rec_dir):
         if r["ready"] and (pair is None or r["pair"] == pair):
-            return r["name"]
-    return None
+            if not r["name"].endswith("_sfm"):
+                return r["name"]
+            sfm = sfm or r["name"]
+    return sfm
 
 
 def pair_recons(rec_dir):
