@@ -20,7 +20,17 @@ GET  /api/replay/depth.jpg?rec=NAME&recon=R&kf=I     키프레임 I 의 깊이 �
 GET  /api/combos?mode=live|record|both&kf=3&fmt=h264|jpeg|nv21[&lenses=3]   (lenses=3 = 3개 모두 녹화, 녹화 인코더 3개)
                                  화질(4:3 해상도)·fps 조합별 가능 여부·이유·예상 부하 (load_model.py). fmt = 실시간 영상 형식 (기본 h264)
                                  state.ui.stream = 지금 크기·fps·형식, state.ui.load = 실행 중 예상 대비 실측·과부하 신호·한 단계 낮추기 제안
+GET  /api/maps                   저장 지도 목록 (map_store.list_maps) + 지금 지도 세션 상태
+GET  /api/maps/esdf2d.png?name=N  저장 지도의 위에서 본 장애물 지도 그림
+GET  /api/esdf2d.png?z0=0.3&z1=1.5&res=0.05[&floor=Z]   지금 지도의 2D 장애물 지도 (빨강 장애물 · 흰색 빈 곳 · 회색 모름,
+                                 거리 등고선 0.25/0.5/1 m, 궤적). 높이는 바닥(자동 추정, floor 를 주면 그 값) 기준
+GET  /api/esdf.json?...          같은 계산의 숫자 (갱신 ms·격자 크기·메모리·칸 수·바닥 높이)
+GET  /api/esdf.npz?res=0.05      3D ESDF 내려받기 (dist f16, state u8, lo, res — esdf_map.EsdfMap.save 형식)
+GET  /api/esdf/query?p=x,y,z;x,y,z[&res=]   점의 거리·기울기·상태 (0 모름 1 빈 곳 2 장애물) JSON
 POST /api/cmd  {"cmd": pause|resume|reset_map|reset_vio|save|set, ...}
+               {"cmd": "map_list"} · {"cmd": "map_save", "name": N} · {"cmd": "map_delete", "name": N}
+               {"cmd": "mode"|"replay", ..., "map": N|null, "map_mode": "append"|"localize"}   저장 지도 기준으로 시작
+               {"cmd": "replay", ..., "map_save": N}   복원이 끝나면 지도로 저장
                {"cmd": "mode", "mode": live|record|both, "start_app": true,
                 "size": "WxH", "fps": 15, "stream_fmt": "h264"}
                                             모드 시작 (앱 --es mode). size·fps·형식은 부하 모델로 검사 (불가능하면 ok:false + reasons,
@@ -147,6 +157,8 @@ def make_handler(scanner, helper):
                     return self._send(200, jpg, "image/jpeg") if jpg else self._send(204, b"", "text/plain")
                 if u.path.startswith("/api/replay/"):
                     return self._replay(u.path[len("/api/replay/"):], q)
+                if u.path.startswith("/api/maps") or u.path.startswith("/api/esdf"):
+                    return self._maps(u.path, q)
                 path = "/index.html" if u.path in ("/", "") else u.path
                 f = (WEB / path.lstrip("/")).resolve()
                 if WEB.resolve() not in f.parents or not f.is_file():
@@ -175,6 +187,64 @@ def make_handler(scanner, helper):
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(body)
+
+        def _maps(self, path, q):
+            """저장 지도 목록·그림, 지금 지도의 ESDF (2D 그림·숫자·npz·점 질의)."""
+            import map_store
+            if path == "/api/maps":
+                ms = getattr(scanner, "map_state", None)
+                return self._json(dict(maps=map_store.list_maps(), state=ms() if ms else None))
+            if path == "/api/maps/esdf2d.png":
+                try:
+                    p = map_store.map_dir(q.get("name")) / "esdf2d.png"
+                except ValueError as e:
+                    return self._json({"error": str(e)}, 400)
+                return self._send(200, p.read_bytes(), "image/png") if p.is_file() else self._send(204, b"", "text/plain")
+            if not hasattr(scanner, "esdf_get"):
+                return self._json({"error": "ESDF 없음"}, 404)
+            try:
+                res = float(q.get("res") or 0.05)
+                if not 0.01 <= res <= 0.2:
+                    raise ValueError("res 0.01~0.2")
+                e = scanner.esdf_get(res)
+                if path == "/api/esdf/query":
+                    pts = [[float(x) for x in p.split(",")] for p in str(q.get("p") or "").split(";") if p.strip()]
+                    r = e.query(pts)
+                    return self._json(dict(dist=r["dist"].round(4).tolist(), grad=r["grad"].round(4).tolist(),
+                                           state=r["state"].tolist(), inside=r["inside"].tolist(), res=e.res, d_max=e.d_max))
+                if path == "/api/esdf.npz":
+                    import tempfile
+                    with tempfile.TemporaryDirectory() as td:
+                        meta = e.save(td)
+                        if meta is None:
+                            return self._json({"error": "지도가 비어 있음 (메시가 아직 없음)"}, 404)
+                        body = (Path(td) / "esdf.npz").read_bytes()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/octet-stream")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.send_header("Content-Disposition", f'attachment; filename="{time.strftime("scan3d_esdf_%Y%m%d-%H%M%S")}.npz"')
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
+                z0, z1 = float(q.get("z0") or 0.3), float(q.get("z1") or 1.5)
+                floor = float(q["floor"]) if q.get("floor") not in (None, "", "auto") else None
+                with scanner.traj_lock:
+                    tr = list(scanner.traj)
+                xy = [tuple(float(v) for v in T[:3, 3]) for _, T in tr[::max(1, len(tr) // 1500)]]
+                import esdf_map
+                s2 = e.slice2d(z0, z1, floor, cam_z=esdf_map.cam_min_z(xy))
+                if s2 is None:
+                    return self._send(204, b"", "text/plain") if path.endswith(".png") else \
+                        self._json(dict(empty=True, update=e.last))
+                if path == "/api/esdf2d.png":
+                    return self._send(200, e.render_png(s2, xy), "image/png")
+                if path == "/api/esdf.json":
+                    return self._json(dict(update=e.last, res=e.res, d_max=e.d_max, slice2d={k: v for k, v in s2.items()
+                                                                                             if k not in ("state2d", "dist2d")},
+                                           free=None if getattr(scanner.vmap, "free", None) is None else scanner.vmap.free.stats()))
+            except (ValueError, KeyError) as ex:
+                return self._json({"error": str(ex)}, 400)
+            return self._json({"error": "unknown"}, 404)
 
         def _replay(self, what, q):
             """복원 리플레이 (replay_view.py 형식). rec = 녹화 이름, recon = 복원 폴더 이름 (없으면 가장 최근 리플레이 가능한 것)."""

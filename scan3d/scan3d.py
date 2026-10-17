@@ -76,6 +76,11 @@ ALL_LENSES = ("all", "2+5+6", "2,5,6")
 ALL_REC_PHYSICAL = ("2", "5", "6")
 
 
+def reloc_T_yaw(yaw):
+    c, s_ = np.cos(yaw), np.sin(yaw)
+    return np.array([[c, -s_, 0], [s_, c, 0], [0, 0, 1.0]])
+
+
 def norm_pair(v):
     """'2+6' | '2,6' | ['2', '6'] → '2+6'. None·'' → None. 모르는 쌍이면 ValueError."""
     if v is None or v == "":
@@ -175,6 +180,16 @@ def parse_args(argv=None):
     p.add_argument("--reloc-test-split", default=None, metavar="T,YAW_DEG,X,Y,Z",
                    help="시험용: VIO 시각 T s 에 가짜 리셋을 내고 이후 포즈에 알려진 변환(yaw, 이동)을 곱함 → 재위치가 그 변환을 "
                         "얼마나 정확히 되찾는지 (정답 비교) 확인")
+    p.add_argument("--map-load", default=None, metavar="NAME",
+                   help="저장 지도 (map_store.py, scan3d/maps/NAME) 기준으로 세션 시작: 첫 키프레임들을 지도 기준 키프레임과 맞춰 "
+                        "(재위치) 지도 좌표로 바꾼 뒤 이어 쌓거나 (--map-mode append) 위치만 추정 (localize)")
+    p.add_argument("--map-mode", choices=["append", "localize"], default="append")
+    p.add_argument("--map-save", default=None, metavar="NAME", help="복원(--replay)이 끝나면 결과를 이 이름의 지도로 저장")
+    p.add_argument("--map-test", default=None, metavar="T,YAW_DEG,X,Y,Z",
+                   help="시험용 (--map-load 와 함께): VIO 시각 T s 전 포즈는 버리고 (키프레임 없음), 뒤 포즈에 알려진 변환을 곱함 "
+                        "→ 같은 녹화 앞부분으로 만든 지도에 뒷부분이 얼마나 정확히 붙는지 (정답 = 그 변환의 역)")
+    p.add_argument("--replay-pair", default=None, choices=LENS_PAIRS, help="재생: 3렌즈 녹화에서 쓸 깊이 쌍 (기본 2+6)")
+    p.add_argument("--replay-until", type=float, default=None, metavar="SEC", help="재생: 녹화 이 초까지만 (지도 나누기 시험)")
     p.add_argument("--bridge-restart-s", type=float, default=2.0, help="브리지가 죽으면 이만큼 뒤 다시 띄움 (s)")
     p.add_argument("--ov-images", choices=["rect"], default="rect",
                    help="VIO 입력 영상: rect = 정류 gray (명세 9.4, make_ov_config.py 설정과 짝). raw 는 설정과 안 맞아 제거 (REVIEW 5). "
@@ -340,6 +355,11 @@ class Scanner:
         self._requeue = deque()                           # 붙은 뒤 전역 좌표로 다시 넣을 키프레임 job
         self._test_split = None                           # --reloc-test-split (T, T_fake), 쓴 뒤 'done'
         self._post_checks = 0
+        # 저장 지도 (map_store.py): map_req = 다음 세션이 쓸 지도 {name, mode}, _map_sess = 지금 세션 상태 (_map_begin)
+        self.map_req = dict(name=a.map_load, mode=a.map_mode) if a.map_load else None
+        self.map_save_next = a.map_save                  # 복원이 끝나면 이 이름으로 지도 저장 (replay.py)
+        self._map_sess = None
+        self._map_test = None
         self.vio_events = []                              # [{t, kind, reason, reinit, ...}] → 복원 summary
         self.vio_auto_resets = 0
         self.bridge_restarts = 0
@@ -582,7 +602,7 @@ class Scanner:
         threading.Thread(target=self._vio_feeder, daemon=True, name="vio-feed").start()
         threading.Thread(target=self._vio_watchdog, daemon=True, name="vio-watchdog").start()
         if self.a.replay:
-            self.start_replay(self.a.replay, self.a.every_frame, self.a.replay_iters, self.a.replay_out)
+            self.start_replay(self.a.replay, self.a.every_frame, self.a.replay_iters, self.a.replay_out, pair=self.a.replay_pair)
         elif self.a.mode != "idle":
             self.start_session(self.a.mode, start_app=self.a.start_app)
         if not self.a.replay:                             # 명령줄 한 번 재생(replay.py)에서는 자동 대기열을 안 띄움
@@ -979,6 +999,7 @@ class Scanner:
             self.ds.yolo.reset()
         if vio_reset:
             self.vio.reset()
+        self._map_begin()                                 # 저장 지도 기준 세션이면 지도·기준 키프레임 불러오기
 
     # ---------------- 녹화 재생 ----------------
     def resolve_rec(self, name):
@@ -1234,6 +1255,9 @@ class Scanner:
         t = (t_ns - (self.t0_ns or t_ns)) * 1e-9          # 표시용 초 (첫 IMU 기준)
         self._last_pose_t = t
         T = self._reloc_test_apply(T, t)                  # --reloc-test-split (시험용 가짜 리셋)
+        T = self._map_test_apply(T, t)                    # --map-test (지도 나누기 시험): 앞부분 포즈는 버림
+        if T is None:
+            return
         # 재위치: VIO 조각 좌표 → 전역. 아직 못 붙인 조각(_seg_T None)은 조각 좌표 그대로 따로 쌓는다
         with self._reloc_lock:
             seg_T, pend = self._seg_T, self._pend
@@ -1247,6 +1271,8 @@ class Scanner:
             self.cur_T = T
         if msg.get("stale"):                              # 상태 시각이 영상 시각과 다름 (REVIEW 9)
             return
+        if pend is None and self._map_fixed():
+            return                                        # 지도 위치만 추정 (localize): 붙은 뒤에는 깊이·지도 갱신 안 함
         if self.mode == "replay":
             if not (self.replay_every or self._want_kf(T, t)):
                 return
@@ -1352,6 +1378,17 @@ class Scanner:
                 self._seg_T = np.eye(4)
         best = self._best_seg
         self._best_seg = None
+        if pend is not None and pend.get("base_map"):
+            # 저장 지도 기준 세션이 끝까지 지도에 못 붙음: 결과는 이 세션 지도 (불러온 지도는 결과로 쓰지 않음),
+            # 재위치 DB 의 지도 키프레임도 비움 (이 세션 결과를 지도로 저장할 때 다른 좌표계 키프레임이 섞이지 않게)
+            ms = self._map_sess
+            if ms is not None:
+                ms.update(status="failed")
+            if log:
+                log(f"[map] 지도 '{pend['base_map']}' 에 끝까지 못 붙음 → 이 세션 지도만 결과로 (질의 {pend.get('n_query', 0)}번)")
+            if self.reloc is not None:
+                self.reloc.clear()
+            pend = None
         if pend is not None:
             main = dict(pend["main"], seg=0)
             if log:
@@ -1369,6 +1406,167 @@ class Scanner:
         with self.traj_lock:
             self.traj = best["traj"]
         return best["seg"]
+
+    # ---------------- 저장 지도 (map_store.py) ----------------
+    def _map_begin(self):
+        """세션 시작 (_reset_pipeline 끝): map_req 가 있으면 지도를 불러와 '보관한 전역 지도' 로 두고, 이 세션은 처음부터
+        아직 못 붙은 조각 (재위치 _pend, base_map) 으로 따로 쌓는다. 재위치 DB 에 지도 기준 키프레임을 넣어 두면 첫 키프레임들의
+        질의가 PnP + 두 키프레임 합의로 VIO → 지도 변환을 찾고, _reloc_on_aligned 가 이어 쌓기·위치만 추정을 한다."""
+        self._map_sess = None
+        self._map_test = None
+        req, self.map_req = self.map_req, None             # 이번 세션만 (자동 복원 등 다음 세션에는 안 씀)
+        if not req or not req.get("name"):
+            return
+        sess = dict(name=req["name"], mode=req.get("mode") or "append", status="loading", started_wall=time.time())
+        self._map_sess = sess
+        try:
+            import map_store
+            if self.a.reloc != "on":
+                raise ValueError("재위치가 꺼져 있음 (--reloc on 필요)")
+            rl = self._reloc_get()
+            if rl is None:
+                raise ValueError("재위치를 만들 수 없음 (VIO 없음)")
+            m = map_store.load_map(req["name"], log=self.log)
+            if not m["db"] or not int(m["db"]["n"]):
+                raise ValueError("지도에 기준 키프레임이 없음 (위치를 찾을 수 없음)")
+            rl.import_db(m["db"])
+        except Exception as e:
+            sess.update(status="error", error=str(e))
+            self.log(f"[map] 지도 '{req['name']}' 를 쓸 수 없음: {e} → 지도 없이 새로 시작")
+            return
+        gvm = m["vmap"]
+        gvm.names = self.vmap.names
+        with self._reloc_lock:
+            self._seg_n = 1
+            self._epoch_hi = max(self._epoch_hi, self.vmap.epoch, gvm.epoch) + 1
+            gvm.epoch = self._epoch_hi
+            main = dict(vmap=gvm, tl=[], depth={}, traj=[], objects=[])
+            self._seg_T = None
+            self._pend = dict(main=main, jobs=[], seg=1, n_query=0, base_map=req["name"])
+            nv = VoxelMap(self.a.voxel, self.a.min_hits, names=self.vmap.names)
+            self._epoch_hi += 1
+            nv.epoch = self._epoch_hi
+            nv._done_t = set()
+            self.vmap = nv
+        rl.begin_segment(1)
+        sess.update(status="waiting", loaded=dict(voxels=int(gvm.n), tsdf_blocks=0 if gvm.tsdf is None else int(gvm.tsdf.nb),
+                                                  db=int(m["db"]["n"]), load_ms=m["load_ms"]),
+                    source=m["meta"].get("source"))
+        mt = self.a.map_test
+        if mt:
+            v = [float(x) for x in str(mt).split(",")]
+            Tf = frames.make_T(reloc_T_yaw(np.radians(v[1])), v[2:5])
+            self._map_test = dict(t=v[0], T=Tf, truth=frames.inv_T(Tf))
+            self.log(f"[map] 시험: t<{v[0]} s 포즈는 버리고, 뒤 포즈에 yaw {v[1]}° 이동 {v[2:5]} 을 곱함 (정답 = 그 역)")
+        how = "이어 쌓기" if sess["mode"] == "append" else "위치만 추정"
+        self.log(f"[map] 지도 '{req['name']}' 기준 세션 ({how}): 기준 키프레임 {sess['loaded']['db']}개 — 찍은 곳을 비추면 붙습니다")
+
+    MAP_VERIFY = dict(min_pts=300, near_m=0.30, inlier_m=0.08, min_frac=0.5, recent_s=3.0)
+
+    def _map_verify(self, gvm, piece, T, t=None):
+        """기하 확인: 조각 지도 복셀 중심 (관측 1 이상, 붙인 시각 t 전 recent_s 초 안에 본 것 — 조각이 길면 VIO 표류로 한 변환에
+        다 안 맞으므로) 을 T 로 옮겨, 지도 복셀 중심이 near_m 안에 있는 점 (겹치는 곳) 중 inlier_m 안 비율.
+        점이 min_pts 보다 적으면 판단 보류 (통과). 반환 (통과?, 숫자 dict)."""
+        c = self.MAP_VERIFY
+        try:
+            from scipy.spatial import cKDTree
+            with piece.lock:
+                sel = np.arange(piece.n)
+                if t is not None:
+                    sel = sel[piece.last[:piece.n] >= float(t) - c["recent_s"]]
+                n = len(sel)
+                P = (voxel_map.unpack_keys(piece.pk[sel]) + 0.5) * piece.voxel_m
+            if n < c["min_pts"]:
+                return True, dict(n=int(n), skipped="few_points")
+            P = P @ T[:3, :3].T + T[:3, 3]
+            ref = gvm.points()[0]
+            if len(ref) < c["min_pts"]:
+                return True, dict(n=int(n), skipped="empty_map")
+            d, _ = cKDTree(ref).query(P, distance_upper_bound=c["near_m"])
+            near = np.isfinite(d)
+            frac = float((d[near] < c["inlier_m"]).mean()) if near.any() else 0.0
+            vf = dict(n=int(n), near=round(float(near.mean()), 3), inlier=round(frac, 3),
+                      med_cm=round(float(np.median(d[near])) * 100, 2) if near.any() else None)
+            return (near.mean() >= 0.2 and frac >= c["min_frac"]), vf
+        except Exception as e:
+            return True, dict(error=repr(e))
+
+    def _map_test_apply(self, T, t):
+        mt = self._map_test
+        if mt is None:
+            return T
+        if t < mt["t"]:
+            return None
+        return mt["T"] @ T
+
+    def _map_fixed(self):
+        """위치만 추정 모드에서 지도에 붙은 뒤인가 (깊이·지도 갱신 안 함)."""
+        ms = self._map_sess
+        return ms is not None and ms.get("mode") == "localize" and ms.get("status") == "attached"
+
+    def map_state(self):
+        ms = self._map_sess
+        return dict(req=self.map_req, save_next=self.map_save_next,
+                    session=None if ms is None else {k: v for k, v in ms.items() if k != "source"})
+
+    def save_map(self, name, source=None):
+        """지금 지도 (전역; 아직 못 붙은 조각은 빼고) + 재위치 기준 키프레임 → scan3d/maps/<name>/."""
+        import map_store
+        with self._reloc_lock:
+            pend = self._pend
+            vm = pend["main"]["vmap"] if pend is not None else self.vmap
+        if pend is not None:
+            self.log("[map] 아직 못 붙은 조각이 있음 → 그 조각은 빼고 전역 지도만 저장")
+        with self.traj_lock:
+            tr = list(self.traj) if pend is None else list(pend["main"]["traj"])
+        rp = self.replayer
+        ms = self._map_sess
+        src = dict(mode="replay" if rp is not None and self.mode in ("replay", "idle") else self.mode,
+                   recording=rp.rec_dir.name if rp is not None else None, recon=self.last_result,
+                   size=list(self.geom["size"]) if self.geom else None, pair=(self.geom or {}).get("pair"),
+                   saved=time.strftime("%Y-%m-%d %H:%M:%S"))
+        src.update(source or {})
+        frame = dict(base_map=ms["name"] if ms is not None and ms.get("status") == "attached" else None)
+        if ms is not None and ms.get("status") != "attached":
+            frame["note"] = f"지도 '{ms['name']}' 에 못 붙은 세션 — 이 세션 자체 좌표"
+        return map_store.save_map(name, vm, self.reloc, tr, source=src, frame=frame, log=self.log)
+
+    def esdf_get(self, res=None):
+        """지금 지도의 ESDF (esdf_map.for_vmap, 바뀐 것만 갱신)."""
+        import esdf_map
+        return esdf_map.for_vmap(self.vmap, float(res or esdf_map.RES))
+
+    def _esdf_kf_done(self, vm, epoch, r, rp, T, R_fix):
+        """키프레임 깊이 → 관측된 빈 칸 (ESDF 의 빈 곳/모름 구분, esdf_map.FreeSpace)."""
+        try:
+            Z = r["Z"]
+            sx = Z.shape[1] / float(rp["size"][0])
+            T_cam = np.array(T, np.float64)
+            if R_fix is not None:
+                T_cam[:3, :3] = T_cam[:3, :3] @ np.asarray(R_fix, np.float64)
+            args = (Z, r["valid"], rp["f"] * sx, rp["cx"] * sx, rp["cy"] * sx, T_cam)
+            if self.mode == "replay":
+                vm.observe_free(*args, epoch=epoch)        # 복원: 바로 (저장 때 빠짐 없게)
+                return
+            # 실시간: 깊이 스레드를 붙잡지 않게 작업 스레드 하나에서 (밀리면 버림 — 빈 칸은 다음 키프레임이 또 채움)
+            if getattr(self, "_esdf_pending", 0) >= 2:
+                return
+            if getattr(self, "_esdf_pool", None) is None:
+                from concurrent.futures import ThreadPoolExecutor
+                self._esdf_pool = ThreadPoolExecutor(1, thread_name_prefix="esdf")
+                self._esdf_pending = 0
+            self._esdf_pending += 1
+
+            def job():
+                try:
+                    vm.observe_free(*args, epoch=epoch)
+                except Exception as e:
+                    self.log(f"[esdf] 빈 칸 갱신 실패 {e!r}")
+                finally:
+                    self._esdf_pending -= 1
+            self._esdf_pool.submit(job)
+        except Exception as e:
+            self.log(f"[esdf] 빈 칸 갱신 실패 {e!r}")
 
     # ---------------- 재위치 (reloc.py) ----------------
     def _reloc_get(self):
@@ -1434,7 +1632,9 @@ class Scanner:
                     self._best_seg = dict(vmap=old, tl=self.replay_tl, depth=self.replay_depth, traj=traj_before,
                                           objects=self.objects, seg=self._pend["seg"])
             self._seg_T = None
-            self._pend = dict(main=main, jobs=[], seg=seg, n_query=0)
+            # 저장 지도 기준 세션이 지도에 붙기 전에 VIO 가 리셋되면 새 조각도 '지도 기준' (끝까지 못 붙으면 불러온 지도를 결과로 안 씀)
+            bm = self._pend.get("base_map") if self._pend is not None else None
+            self._pend = dict(main=main, jobs=[], seg=seg, n_query=0, base_map=bm)
             nv = VoxelMap(self.a.voxel, self.a.min_hits, names=old.names)
             self._epoch_hi = max(self._epoch_hi, old.epoch, main["vmap"].epoch) + 1
             nv.epoch = self._epoch_hi                     # 보관한 전역 지도·버린 조각과 겹치지 않는 epoch (REVIEW 8)
@@ -1464,6 +1664,9 @@ class Scanner:
         pend["n_query"] += 1
         ts = self._test_split
         truth = ts["truth"] if ts is not None and ts.get("seg") == pend["seg"] else None
+        mt = self._map_test
+        if truth is None and mt is not None and pend.get("base_map"):
+            truth = mt["truth"]
         R1 = np.asarray(self.rp["R1"], float)
         rl.submit("query", bgr=pair[0].bgr, T_seg_c1=np.asarray(T_vio, float) @ frames.make_T(R1, np.zeros(3)), t=t,
                   seg=pend["seg"], truth=truth)
@@ -1480,10 +1683,33 @@ class Scanner:
         (VoxelMap.merge, 깊이 다시 계산 안 함). 조각 궤적·리플레이 시간 정보(키프레임 목록·깊이 그림)도 전역 좌표·번호로.
         합치기 전에 조각 지도에 못 들어간 키프레임(처리 중·대기열)만 전역 좌표로 깊이를 다시 계산. merge 가 실패하면 전부 다시 계산."""
         T = np.asarray(T, float)
+        ms = self._map_sess
+        loc = ms is not None and ms.get("mode") == "localize" and ms.get("status") != "error"
+        pend0 = self._pend
+        if pend0 is not None and pend0["seg"] == seg and pend0.get("base_map"):
+            ok, vf = self._map_verify(pend0["main"]["vmap"], self.vmap, T, t=info.get("t"))
+            info["verify"] = vf
+            if not ok:
+                # 저장 지도 기준 붙임은 기하 확인까지: 이 세션 조각 지도 점을 T 로 옮겨 지도 점과 겹치는 정도가 낮으면 거절하고
+                # 계속 찾음 (사진 특징 두 장 합의만으로는 15 cm 어긋나게 붙은 적 있음 — 175446 → 143702 지도)
+                with self._reloc_lock:
+                    if ms is not None:
+                        ms["rejected"] = ms.get("rejected", 0) + 1
+                        ms["last_reject"] = vf
+                self.log(f"[map] 붙임 후보 거절 (기하 확인): {vf} → 계속 찾음")
+                rl = self.reloc
+                if rl is not None and self._pend is pend0:
+                    rl.begin_segment(seg)
+                return
         with self._reloc_lock:
             pend = self._pend
             if pend is None or pend["seg"] != seg:
                 return
+            if ms is not None and pend.get("base_map"):
+                ms.update(status="attached", attached_wall=time.time(), attached_t=info.get("t"), info=dict(info),
+                          T_map_session=T.round(5).tolist())
+                self.log(f"[map] 지도 '{pend['base_map']}' 에 붙음 (t={info.get('t')} s, 키프레임 {info.get('n_agree')}장 합의) → "
+                         + ("위치만 추정 (지도 고정)" if loc else "지도 좌표로 이어 쌓음"))
             main = pend["main"]
             gvm, piece = main["vmap"], self.vmap
             self._seg_T = T
@@ -1503,7 +1729,7 @@ class Scanner:
             self._post_checks = 4
         t0 = time.perf_counter()
         mres = None
-        if piece is not gvm and self.a.reloc_merge == "on":
+        if piece is not gvm and self.a.reloc_merge == "on" and not loc:
             try:
                 with gvm.lock:                             # 합친 복셀 번호와 시간 정보 번호가 같게 (그 사이 새 키프레임 안 끼게)
                     mres = gvm.merge(piece, T, keep_time=True)
@@ -1516,7 +1742,7 @@ class Scanner:
                 mres = None
                 self.log(f"[reloc] 조각 지도 합치기(merge) 실패 {e!r} → 키프레임 깊이를 전역 좌표로 다시 계산")
         ms = round(1000 * (time.perf_counter() - t0), 1)
-        jobs = pend["jobs"] if mres is None else [j for j in pend["jobs"] if j["t"] not in done]
+        jobs = [] if loc else pend["jobs"] if mres is None else [j for j in pend["jobs"] if j["t"] not in done]
         with self._reloc_lock:
             ep = gvm.epoch
             for j in jobs:
@@ -1704,6 +1930,17 @@ class Scanner:
         r = self.ds(fL.bgr, fR.bgr, rp=rp, scale=g["ffs_scale"])
         if self.paused and self.mode != "replay":
             return
+        # 여러 키프레임 일관성 (depth_fuse.py, 기본 꺼짐 — SCAN3D_CONSIST=1): 앞 키프레임 2 장과 어긋난 화소 (빈 공간에 뜬 점) 를 뺌
+        try:
+            import depth_fuse
+            T_c = np.array(T, np.float64)
+            if R_fix is not None:
+                T_c[:3, :3] = T_c[:3, :3] @ np.asarray(R_fix, np.float64)
+            ci = depth_fuse.realtime_check(self, r, rp, T_c, g["ffs_scale"], t, epoch, self.vmap,
+                                           float(voxel_map.tsdf_cfg()["sigma_px"]))
+            self.dstats["consist"] = ci
+        except Exception as e:
+            self.log(f"[depth] 일관성 거르기 실패 {e!r}")
         pts = r["pts_rect0"]
         if R_fix is not None:
             # 쌍별 정류 좌표 rect0' → 기본 rect0 (T_world_rect0 는 기본 R1 기준, lens0 시각 포즈)
@@ -1770,6 +2007,7 @@ class Scanner:
             ds["fps"] = round((len(self.kf_times) - 1) / max(1e-6, self.kf_times[-1] - self.kf_times[0]), 2)
         with self.panel_lock:
             self.panel = dict(rect=r["rectL"], Z=r["Z"], valid=r["valid"], dets=r["dets"], t=t)
+        self._esdf_kf_done(vm, epoch, r, rp, T, R_fix)      # ESDF 관측된 빈 칸 (esdf_map.py)
         self._reloc_kf_done(fL, T, t, epoch, r, rp, R_fix)   # 재위치 기준 키프레임 (reloc.py, 전역 키프레임만)
 
     # ---------------- 웹 API ----------------
@@ -1847,6 +2085,7 @@ class Scanner:
                     map=dict(epoch=self.vmap.epoch, version=self.vmap.version, voxels=self.vmap.n,
                              shown=self.vmap.count_shown(), voxel_m=self.vmap.voxel_m, min_hits=self.vmap.min_hits,
                              frames=self.vmap.frames),
+                    map_store=self.map_state(),
                     objects=self.objects, epi=self.epi,
                     classes={int(k): dict(name=v, color=list(class_color(int(k)))) for k, v in names.items()},
                     log=list(self.log_lines)[-14:], stream=self.stream_info(),
@@ -1990,6 +2229,14 @@ class Scanner:
 
     def command(self, body):
         cmd = body.get("cmd")
+        if cmd in ("mode", "replay") and "map" in body:
+            # 저장 지도 기준으로 시작 (map = 이름 또는 null, map_mode = append | localize) — 이번 세션부터
+            nm = body.get("map")
+            self.map_req = dict(name=str(nm), mode=body.get("map_mode") or "append") if nm else None
+        if cmd == "replay" and "map_save" in body:
+            self.map_save_next = body.get("map_save") or None
+        if cmd and str(cmd).startswith("map_"):
+            return self._map_command(cmd, body)
         if cmd == "pause":
             self.paused = True
         elif cmd == "resume":
@@ -2078,6 +2325,39 @@ class Scanner:
         else:
             return dict(ok=False, error=f"unknown cmd {cmd}")
         return dict(ok=True, paused=self.paused)
+
+    def _map_command(self, cmd, body):
+        """map_list | map_save {name} | map_delete {name} | map_use {name|null, mode} (다음 세션) | map_esdf {res}."""
+        import map_store
+        try:
+            if cmd == "map_list":
+                return dict(ok=True, maps=map_store.list_maps(), state=self.map_state())
+            if cmd == "map_save":
+                if self.mode == "replay":
+                    return dict(ok=False, error="복원 중 — 끝난 뒤 저장 (또는 복원 명령에 map_save)")
+                if not self.vmap.n and self._pend is None:
+                    return dict(ok=False, error="지도가 비어 있음")
+                name = map_store.safe_name(body.get("name") or time.strftime("map_%Y%m%d-%H%M%S"))
+                return dict(ok=True, map=self.save_map(name))
+            if cmd == "map_delete":
+                map_store.delete_map(body.get("name"))
+                if self.map_req and self.map_req.get("name") == body.get("name"):
+                    self.map_req = None
+                return dict(ok=True, maps=map_store.list_maps())
+            if cmd == "map_use":
+                nm = body.get("name")
+                if nm:
+                    map_store.map_dir(nm)
+                    if not (map_store.map_dir(nm) / "map.json").is_file():
+                        return dict(ok=False, error=f"지도 없음: {nm}")
+                self.map_req = dict(name=str(nm), mode=body.get("mode") or "append") if nm else None
+                return dict(ok=True, state=self.map_state())
+            if cmd == "map_esdf":
+                e = self.esdf_get(body.get("res"))
+                return dict(ok=True, update=e.last)
+        except (ValueError, FileNotFoundError, FileExistsError) as e:
+            return dict(ok=False, error=str(e))
+        return dict(ok=False, error=f"unknown cmd {cmd}")
 
     def save(self, d=None, extra=None, include_cfg=True):
         d = Path(d) if d else Path(self.a.out) / time.strftime("%Y%m%d-%H%M%S")

@@ -137,6 +137,8 @@ class VoxelMap:
         self.frames = 0
         self._obj_cache, self._obj_ver = [], -1
         self._tsdf = None                                 # TSDF 지도 (첫 integrate_depth 때 만듦)
+        self.free = None                                  # 관측된 빈 칸 (esdf_map.FreeSpace, 첫 observe_free 때)
+        self._esdf = None                                 # esdf_map.for_vmap 가 붙이는 ESDF
 
     def _grow(self, need):
         cap = len(self.pk)
@@ -184,6 +186,44 @@ class VoxelMap:
             ts = self._tsdf
             return ts.integrate(Z, valid, bgr, rp["f"], rp["cx"], rp["cy"], rp["baseline_m"], T_world_cam,
                                 ffs_scale=ffs_scale, t=t)
+
+    def observe_free(self, Z, valid, f, cx, cy, T_world_cam, epoch=None, res=None):
+        """키프레임 깊이 → 관측된 빈 칸 (esdf_map.FreeSpace, ESDF 의 '빈 곳' 과 '모름' 구분). epoch 이 다르면 버림."""
+        import esdf_map
+        with self.lock:
+            if epoch is not None and epoch != self.epoch:
+                return 0
+            if self.free is None:
+                self.free = esdf_map.FreeSpace(res or esdf_map.RES)
+            fs = self.free
+        return fs.observe(Z, valid, f, cx, cy, T_world_cam)
+
+    def save_state(self, path):
+        """지도 저장 (map_store.py): 모든 복셀 행 (표시 기준 아래 포함) 의 상태 → npz. 반환 복셀 수."""
+        with self.lock:
+            n = self.n
+            np.savez_compressed(path, format=np.array("scan3d-voxstate/1"), voxel_m=np.float32(self.voxel_m),
+                                min_hits=np.int32(self.min_hits), frames=np.int64(self.frames),
+                                names=np.array(json.dumps({int(k): v for k, v in self.names.items()})),
+                                **{k: getattr(self, k)[:n] for k in _STATE})
+            return int(n)
+
+    @classmethod
+    def load_state(cls, path):
+        z = np.load(path, allow_pickle=False)
+        names = {int(k): v for k, v in json.loads(str(z["names"])).items()}
+        vm = cls(float(z["voxel_m"]), int(z["min_hits"]), names=names)
+        n = len(z["pk"])
+        with vm.lock:
+            vm._grow(n)
+            for k in _STATE:
+                getattr(vm, k)[:n] = z[k]
+            vm.n = n
+            vm.index = dict(zip(vm.pk[:n].tolist(), range(n)))
+            vm.frames = int(z["frames"])
+            vm.version = 1
+            vm.ver[:n] = 1
+        return vm
 
     def merge(self, other, T=None, keep_time=False):
         """재위치 '조각 잇기': 다른 VoxelMap 을 T (4x4, other 월드 → self 월드, None = 단위) 로 옮겨 합침.
@@ -253,6 +293,17 @@ class VoxelMap:
                     import tsdf_map
                     self._tsdf = tsdf_map.TSDFMap(device=ots.dev, log=ots.log, **ots.cfg)
                 out["tsdf"] = self._tsdf.merge(ots, T)
+        ofs = getattr(other, "free", None)
+        if ofs is not None:
+            try:
+                import esdf_map
+                with self.lock:
+                    if self.free is None:
+                        self.free = esdf_map.FreeSpace(ofs.res)
+                    fs = self.free
+                out["free"] = fs.merge(ofs, T)
+            except Exception:
+                out["free"] = None
         return out
 
     def set_min_hits(self, m):
@@ -500,9 +551,23 @@ class VoxelMap:
             (d / "mesh_web.bin").write_bytes(tsdf_map.mesh_bin_static(V, C, F, ts.vm))
             (d / "mesh.json").write_text(json.dumps(dict(ts.stats(), cfg=ts.cfg, w_min=ts.w_min,
                                                          created=time.strftime("%Y-%m-%d %H:%M:%S")), indent=1))
+        if ts is not None:
+            # ESDF (esdf_map.py): esdf.npz (3D 거리·상태), esdf2d.npz · esdf2d.png (위에서 본 장애물 지도), esdf.json
+            try:
+                import esdf_map
+                xy = [tuple(float(v) for v in np.asarray(T).reshape(4, 4)[:3, 3]) for T in (trajectory or [])]
+                em = esdf_map.for_vmap(self).save(d, traj_xy=xy)
+                if extra is not None and em is not None:
+                    extra = dict(extra, esdf=dict(res=em["res"], counts=em["counts"], slice2d=em["slice2d"],
+                                                  update=em["last_update"], mem_mb=em["mem_mb"]))
+            except Exception as e:
+                print(f"[esdf] 저장 실패 {e!r}", flush=True)
         if extra:
             (d / "summary.json").write_text(json.dumps(extra, indent=1, default=str))
         return d
+
+
+_STATE = ("pk", "rgb_sum", "npts", "hits", "cls_hist", "inst", "inst_score", "last", "t_first", "t_shown", "kf_shown")
 
 
 def _pca_box(centers, vm):

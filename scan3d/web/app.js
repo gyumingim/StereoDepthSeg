@@ -665,7 +665,7 @@ async function startScan(askMsg) {
   try {
     const all = Q.pair === 'all' && m === 'record';            // 3개 모두 녹화 (비교용) — 폰에 녹화만
     const pair = all ? 'all' : (Q.pair === 'all' ? '2+6' : Q.pair);
-    const r = await cmd({ cmd: 'mode', mode: m, start_app: $('cStartApp').checked && adbOk, size: Q.size, fps: Q.fps, stream_fmt: Q.fmt, pair, live_pair: '2+6' });
+    const r = await cmd(Object.assign({ cmd: 'mode', mode: m, start_app: $('cStartApp').checked && adbOk, size: Q.size, fps: Q.fps, stream_fmt: Q.fmt, pair, live_pair: '2+6' }, mapOpts()));
     if (r.ok === false || r.error) alert(r.error || '시작 실패');
     else toast(r.warn ? `시작합니다 — ${r.warn}` : `시작합니다 (${Q.size} · ${Q.fps} fps${Q.fmt !== 'h264' ? ' · ' + (FMT_KO[Q.fmt] || Q.fmt) : ''}${pair !== '2+5' ? ' · ' + PAIR_KO[pair] : ''}) — 폰 화면을 켜 두세요`
       + (all ? '. 끝나면 두 쌍(초광각+망원, 초광각+광각)으로 따로 복원합니다' : ''), r.warn || all ? 8000 : 4000);
@@ -719,7 +719,7 @@ function renderRecs(j) {
   });
   $('recs').querySelectorAll('[data-replay-local]').forEach(b => b.onclick = async () => {
     if (sessMode !== 'idle' && !confirm('지금 스캔을 멈추고 복원할까요? (맵이 새로 시작됩니다)')) return;
-    const r = await cmd(Object.assign({ cmd: 'replay', name: b.dataset.replayLocal }, opts()));
+    const r = await cmd(Object.assign({ cmd: 'replay', name: b.dataset.replayLocal }, opts(), mapOpts()));
     if (!r.ok) alert(r.error || '실패');
   });
 }
@@ -1540,5 +1540,91 @@ function loop() { resize(); rvTick(); applyOrbit(); renderer.render(scene, cam);
 allocVoxels(65536);
 applyShow();
 loop(); pollVoxels(); pollMesh(); pollState(); pollTraj(); poll2d(); camLoop(); rvCamLoop(); loadRecs(false); loadCombos();
+// ---------- 저장 지도 · 장애물 지도 (map_store.py · esdf_map.py) ----------
+const mapOpts = () => ({ map: $('sMapUse').value || null, map_mode: $('sMapMode').value });
+let mapSig = '', mapStatus = '';
+async function loadMaps() {
+  let j;
+  try { j = await (await fetch('/api/maps', { cache: 'no-store' })).json(); } catch (e) { return; }
+  const sig = JSON.stringify(j.maps);
+  if (sig !== mapSig) {
+    mapSig = sig;
+    const cur = $('sMapUse').value;
+    $('sMapUse').innerHTML = '<option value="">지도 없이 새로</option>' + j.maps.map(m => `<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('');
+    if (j.maps.some(m => m.name === cur)) $('sMapUse').value = cur;
+    $('mapList').innerHTML = j.maps.length ? j.maps.map(m => {
+      const c = m.counts || {}, s = m.source || {};
+      return `<div class="rec"><span title="${esc(JSON.stringify(m.frame || {}))}">${esc(m.name)} <small>${esc(m.created || '')} · ${esc(s.recording || s.mode || '')}`
+        + ` · 기준 ${c.reloc_keyframes || 0}장 · ${m.size_mb} MB</small></span><span>`
+        + (m.esdf2d ? `<button data-mapimg="${esc(m.name)}" title="저장할 때의 장애물 지도">장애물</button> ` : '')
+        + `<button data-mapuse="${esc(m.name)}" title="다음 스캔·복원이 이 지도에서 시작">고르기</button> <button data-mapdel="${esc(m.name)}">지우기</button></span></div>`;
+    }).join('') : '<div class="empty">저장한 지도가 없습니다</div>';
+    $('mapList').querySelectorAll('[data-mapuse]').forEach(b => b.onclick = () => { $('sMapUse').value = b.dataset.mapuse; toast(`다음 [스캔 시작]·복원은 지도 '${b.dataset.mapuse}' 에서 위치를 찾습니다`); });
+    $('mapList').querySelectorAll('[data-mapdel]').forEach(b => b.onclick = async () => {
+      if (!confirm(`지도 '${b.dataset.mapdel}' 를 지울까요? (되돌릴 수 없음)`)) return;
+      const r = await cmd({ cmd: 'map_delete', name: b.dataset.mapdel });
+      if (r.ok === false) alert(r.error || '실패');
+      loadMaps();
+    });
+    $('mapList').querySelectorAll('[data-mapimg]').forEach(b => b.onclick = () => {
+      $('imgEsdf').src = `/api/maps/esdf2d.png?name=${encodeURIComponent(b.dataset.mapimg)}&t=${Date.now()}`;
+      $('imgEsdf').hidden = false;
+      $('esdfInfo').textContent = `저장 지도 '${b.dataset.mapimg}' 의 장애물 지도 (저장할 때 계산)`;
+    });
+  }
+  noteMap(j.state && j.state.session);
+}
+const MAP_ST_KO = { loading: '불러오는 중', waiting: '위치 찾는 중 — 이미 찍은 곳을 천천히 비추세요', attached: '붙음', failed: '끝까지 못 붙음 (다른 곳이거나 겹치는 곳이 적음)', error: '쓸 수 없음' };
+function noteMap(ms) {
+  if (!ms) { $('mapNote').textContent = ''; mapStatus = ''; return; }
+  const inf = ms.info || {};
+  let t = `지도 '${ms.name}' (${ms.mode === 'localize' ? '위치만 찾기' : '이어 쌓기'}): ${MAP_ST_KO[ms.status] || ms.status}`;
+  if (ms.status === 'attached') t += ` · ${f(inf.t, 1)} s 에 키프레임 ${inf.n_agree}장 합의, 재투영 ${f(inf.refined_reproj_px, 2)} px`;
+  if (ms.error) t += ` · ${ms.error}`;
+  $('mapNote').textContent = t;
+  const key = ms.name + ':' + ms.status;
+  if (mapStatus && key !== mapStatus) {
+    if (ms.status === 'attached') toast(`지도 '${ms.name}' 에 붙었습니다 — 이제 지도 좌표로 ${ms.mode === 'localize' ? '위치만 찾습니다' : '이어 쌓습니다'}`, 8000);
+    else if (ms.status === 'failed') toast(`지도 '${ms.name}' 에 끝까지 못 붙었습니다 — 이 세션 지도만 남깁니다`, 8000);
+    else if (ms.status === 'error') toast(`지도 '${ms.name}' 를 쓸 수 없습니다: ${ms.error || ''}`, 8000);
+  }
+  mapStatus = key;
+}
+$('bMapSave').onclick = async () => {
+  const name = $('iMapName').value.trim();
+  if (!name) { alert('지도 이름을 적으세요'); return; }
+  toast('지도 저장 중…');
+  try {
+    const r = await cmd({ cmd: 'map_save', name });
+    if (r.ok === false || r.error) alert(r.error || '실패');
+    else toast(`지도 '${name}' 저장됨 (기준 키프레임 ${r.map.counts.reloc_keyframes}장 · ${r.map.size_mb} MB)`, 6000);
+  } catch (e) { alert('서버에 연결할 수 없습니다'); }
+  mapSig = ''; loadMaps();
+};
+let esdfBusy = false;
+async function loadEsdf() {
+  if (esdfBusy) return;
+  esdfBusy = true;
+  const qs = `z0=${encodeURIComponent($('iEz0').value)}&z1=${encodeURIComponent($('iEz1').value)}&res=${$('sEres').value}`;
+  try {
+    const j = await (await fetch(`/api/esdf.json?${qs}`, { cache: 'no-store' })).json();
+    if (j.error) $('esdfInfo').textContent = j.error;
+    else if (j.empty) $('esdfInfo').textContent = '아직 지도(면)가 없습니다 — 스캔이나 복원을 먼저';
+    else {
+      const s = j.slice2d, c = s.cells, u = j.update;
+      $('esdfInfo').textContent = `바닥 ${f(s.floor_z, 2)} m${s.floor_auto ? ' (자동)' : ''} · 높이 ${f(s.z_band[0], 2)}~${f(s.z_band[1], 2)} m · `
+        + `장애물 ${c.obstacle} · 빈 곳 ${c.free} · 모름 ${c.unknown} 칸 · 갱신 ${f(u.ms, 0)} ms · ${f(u.mem_mb, 1)} MB`;
+      $('imgEsdf').src = `/api/esdf2d.png?${qs}&t=${Date.now()}`;
+      $('imgEsdf').hidden = false;
+      $('aEsdfNpz').href = `/api/esdf.npz?res=${$('sEres').value}`;
+    }
+  } catch (e) { $('esdfInfo').textContent = '계산 실패'; }
+  esdfBusy = false;
+}
+$('bEsdf').onclick = loadEsdf;
+setInterval(() => { if (!document.hidden && $('cEsdfAuto').checked) loadEsdf(); }, 3000);
+loadMaps();
+setInterval(() => { if (!document.hidden) loadMaps(); }, 2000);
+
 setInterval(() => { if (!document.hidden) loadRecs(false); }, 2000);   // 녹화본 상태 (가져오는 중 · 복원 중 · 리플레이 가능)
 setInterval(() => { if (!document.hidden) loadCombos(); }, 10000);   // 계수가 실측으로 바뀌면 예상도 바뀐다

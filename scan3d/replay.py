@@ -213,8 +213,12 @@ class Replayer:
                 # → 0.55 주기까지 (FramePairer 는 양쪽을 다 본 뒤 가장 가까운 프레임을 고르므로 겹치지 않음). 두 쌍 모두 같은 기준
                 skew = max(skew, round(0.55 * 1000.0 / max(1, int(sc.geom["fps"])), 2))
             P["pair_skew_ms"] = skew
+            until = getattr(sc.a, "replay_until", None)
             for pair in rec.iter_pairs(skew, pstats):   # 기본 0.45 × 프레임 주기 (가장 가까운 프레임끼리)
                 if self._stop.is_set():
+                    break
+                if until is not None and (pair[0].timestamp_ns - rec.t_first) * 1e-9 > until:
+                    self._log(f"--replay-until {until} s 까지만 재생")
                     break
                 while sc.paused and not self._stop.is_set():
                     time.sleep(0.1)
@@ -263,11 +267,14 @@ class Replayer:
             P.update(reordered=pstats.get("reordered"), unmatched_dropped=pstats.get("unmatched_dropped"),
                      vio_auto_resets=sc.vio_auto_resets, vio_events=list(sc.vio_events),
                      reloc={k: rs.get(k) for k in ("on", "seg", "pending", "pending_kf", "db", "db_skipped", "queries",
-                                                   "pnp_ok", "rejected", "alignments", "checks")})
+                                                   "pnp_ok", "rejected", "alignments", "checks", "db_loaded")})
             if not (stopped and not self.save_partial):
                 seg = sc.restore_best_segment(self._log)
                 if seg is not None:
                     P["best_segment"] = seg
+            ms = getattr(sc, "map_state", None)
+            if ms is not None:
+                P["map"] = ms()["session"]                  # 저장 지도 기준 복원: 붙었는지·변환·정답 차이
             if stopped and not self.save_partial:
                 self._log("중간에 멈춤 → 저장 안 함 (자동 복원은 나중에 처음부터 다시)")
             elif sc.vmap.n:
@@ -292,6 +299,15 @@ class Replayer:
                     self._log(f"카메라 화면 그림 만들기 실패 (리플레이는 영상 없이): {e!r}")
                 sc.last_result = str(d)
                 P["out"] = str(d)
+                msave = getattr(sc, "map_save_next", None)
+                if msave and not stopped:
+                    P["state"] = "지도 저장"
+                    try:
+                        sc.save_map(msave, source=dict(recording=self.rec_dir.name, recon=str(d), until_s=getattr(sc.a, "replay_until", None)))
+                        P["map_saved"] = msave
+                    except Exception as e:
+                        self._log(f"지도 저장 실패 {e!r}")
+                    sc.map_save_next = None
             else:
                 self._log("맵이 비어 저장하지 않음 (포즈가 안 나왔으면 녹화 시작 때 폰 정지·IMU 를 확인)")
             P["state"] = "정지됨" if stopped else "완료"

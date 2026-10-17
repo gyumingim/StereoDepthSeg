@@ -143,6 +143,10 @@
   #recs .rec { display:flex; justify-content:space-between; align-items:center; gap:6px; padding:3px 0; border-bottom:1px solid #1f2833; font-size:12px; }
   #recs .rec span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   #recs .rec small { color:var(--dim); }
+  #mapList .rec { display:flex; justify-content:space-between; align-items:center; gap:6px; padding:3px 0; border-bottom:1px solid #1f2833; font-size:12px; }
+  #mapList .rec span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #mapList .rec small { color:var(--dim); }
+  #mapNote, #esdfInfo { font-size:12px; margin:4px 0; }
   #recs h4 { font-size:12px; color:var(--dim); margin:8px 0 2px; font-weight:normal; }
   #recs button { padding:2px 7px; font-size:12px; }
 
@@ -301,6 +305,31 @@
       </div>
       <div id="recNote"></div>
       <div id="recItems"><div class="empty">읽는 중…</div></div>
+
+      <h2>저장 지도 <small style="font-weight:400">(다음 스캔·복원이 이 지도에서 위치를 찾음)</small></h2>
+      <div class="row" style="margin-top:0">
+        <input id="iMapName" placeholder="지도 이름 (예: 거실)" style="width:11em" maxlength="64">
+        <button class="pk" id="bMapSave" title="지금 3D 지도 + 위치 찾기 정보(특징점)를 저장합니다. 복원이 끝난 뒤에도 됩니다">지도로 저장</button>
+      </div>
+      <div class="row">
+        <label title="스캔 시작·복원 때 이 지도에서 위치를 찾습니다. 이미 찍은 곳을 천천히 비추면 붙습니다">시작할 때
+          <select id="sMapUse"><option value="">지도 없이 새로</option></select></label>
+        <select id="sMapMode" title="이어 쌓기 = 지도에 새로 찍은 곳을 더함 · 위치만 찾기 = 지도는 그대로, 폰 위치만 지도 좌표로">
+          <option value="append">이어 쌓기</option><option value="localize">위치만 찾기</option></select>
+      </div>
+      <div id="mapNote" class="empty"></div>
+      <div id="mapList"></div>
+
+      <h2>장애물 지도 <small style="font-weight:400">(위에서 본 모습 · 드론 경로용)</small></h2>
+      <div class="row" style="margin-top:0">
+        <button class="pk" id="bEsdf" title="지금 지도에서 장애물(빨강) · 본 빈 곳(흰색) · 모름(회색) 을 계산해 보여 줍니다">보기 / 새로</button>
+        <label title="바닥(자동 추정)에서 이 높이 사이만">높이 <input id="iEz0" type="number" step="0.1" value="0.3" style="width:4em">~<input id="iEz1" type="number" step="0.1" value="1.5" style="width:4em"> m</label>
+        <select id="sEres"><option value="0.05">5 cm</option><option value="0.02">2 cm</option></select>
+        <label><input type="checkbox" id="cEsdfAuto"> 자동</label>
+        <a id="aEsdfNpz" href="/api/esdf.npz" title="3D 거리 지도 (npz: dist, state, lo, res)">npz</a>
+      </div>
+      <div id="esdfInfo" class="empty"></div>
+      <img id="imgEsdf" alt="" hidden style="width:100%;image-rendering:pixelated">
 
       <h2>깊이 화면 <small style="font-weight:400">(최근 키프레임 · 카메라 영상은 3D 화면 오른쪽 아래)</small></h2>
       <div class="row" style="margin-top:0">

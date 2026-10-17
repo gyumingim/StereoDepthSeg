@@ -161,5 +161,5 @@ class DepthSeg:
         rgb = rectL[vs, us][:, ::-1].copy()                 # BGR → RGB
         cls = np.where(di >= 0, np.array([d["class_id"] for d in dets] + [-1], np.int16)[di], -1).astype(np.int16)
         pts = frames.rect0_points(Zs, rp, us.astype(np.float32), vs.astype(np.float32))
-        return dict(rectL=rectL, disp=disp, Z=Z, valid=valid, dets=dets, pts_rect0=pts, rgb=rgb, cls=cls, det_idx=di,
+        return dict(rectL=rectL, disp=disp, Z=Z, valid=valid, dets=dets, pts_rect0=pts, rgb=rgb, cls=cls, det_idx=di, us=us, vs=vs,
                     ffs_ms=1000 * (t1 - t0), yolo_ms=1000 * (t2 - t1), n=len(pts), size=tuple(rp["size"]), ffs_scale=scale)

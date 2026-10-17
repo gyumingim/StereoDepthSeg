@@ -30,7 +30,18 @@
      --depth mono = 렌즈 2 만 (BA 자세 모션 스테레오, motion_stereo.py), fused = 두 렌즈 + 모션 합치기 — 비교용.
      --poses vio  = SfM 없이 기존 복원의 VIO 궤적으로 같은 조밀 단계 (전후 비교용).
      → stereoRectify → FFS (depth_seg.DepthSeg, scan3d 와 같은 축소 규칙 ffs_max_px, 반복 8) → 깊이
+     → (3 렌즈 녹화면 --six auto: 2+6 깊이를 같은 렌즈 2 정류 격자로 옮겨 역분산 합침, depth_fuse.py)
+     → (--consist auto = 2, 2+6 합칠 때는 0: 앞뒤 이웃 키프레임 2 장씩과 깊이가 어긋난 화소 버림, depth_fuse.ConsistencyFilter)
      → 복셀 지도 + TSDF (voxel_map.VoxelMap → tsdf_map.TSDFMap) → mesh.ply.
+     근거 (2026-10-17, 같은 SfM 자세로 조밀 단계만, eval_planes 메시 국소 두께 cm, 평면 6 개 · seed 4 개 평균):
+       --consist 2 (drop): 143702 11.5 → 10.0 · 175446 10.6 → 6.8 · 165645 12.7 → 12.0 (정점 −4~−18 %, +5 s)
+       --six fuse (165645 만 3 렌즈): 12.7 → 10.8, RMS 7.0 → 6.2, 다시 본 곳 어긋남 4.2 → 3.3 cm (+28 s).
+         둘 다 켜면 11.7 (더해지지 않음) → 2+6 합칠 때는 일관성 끔.
+       효과 없거나 비용이 커서 기본 아님: --iters 16 (11.3 / 11.4 / 11.9, FFS +40 %), FFS 입력 키우기 (scale 0.6·0.75:
+       이웃 잔차로 잰 깊이 노이즈 (m) 가 그대로 — 노이즈가 FFS 해상도가 아니라 원본 1.26 px 수준), --lr-check
+       (두께 −4~−36 % 지만 남는 화소 43~96 %, FFS 2 배), --sigma-floor 1.5 cm (−3 %, 잡음 수준).
+     · 모델 조각 합치기 (--merge-models 1): SfM 이 여러 모델로 갈라지면 모델마다 VIO 에 Sim(3) (merge_models).
+       175446 의 빠진 17 % 는 시작 정지 2.7 s (렌즈 2 만 36 장 모델, VIO 자세 없음) 라 합칠 수 없음 — 합성 시험만 통과.
   7. 저장: <녹화>/recon_<시각>_sfm/ — scan3d 복원과 같은 파일 (summary.json, voxels*, mesh*, trajectory.json, timeline.json,
      voxels_t.bin, kf/, 평가용 kf_points.npz) → 기존 웹 리플레이에서 그대로 열림. sfm/ 에 sparse/ (COLMAP 모델) · poses.json
      (미터 자세, --from-sfm 로 다시 씀). 사진·database.db 는 --keep-images / --keep-db 일 때만 남김.
@@ -401,7 +412,51 @@ def run_sfm(work, img_dir, images, g, info, fps, a, prog, log):
                           for c, cam in R.cameras.items()})
     R.write(str(sparse / str(best)))
     log(f"[sfm] 모델 {len(recs)} 개, 가장 큰 것 {stats['registered']}/{len(images)} 장, 재투영 {stats['reproj_px']} px")
+    stats["_recs"] = dict(recs)                  # 모델 조각 합치기 (merge_models) 용, sparse_stage 가 꺼냄
     return R, stats
+
+
+def merge_models(poses_m, recs, R_best, images, g, info, rec, fps, a, log, sstats, astats):
+    """SfM 이 여러 모델로 갈라졌을 때 (예: 175446 431 + 36 + 4 장) 작은 모델도 모델마다 VIO 궤적에 Sim(3) 을 따로 맞춰 합침.
+    모델끼리는 공통 점이 없어 서로 직접 못 잇지만, 같은 VIO (미터·중력) 좌표로 옮기면 한 지도가 된다 (그 부분 정확도 = VIO 수준).
+    받아들이는 조건: 등록 ≥ --merge-min-images, VIO 대응 ≥ 10 이고 인라이어 비율 ≥ 0.5, 축척이 VIO 에서 나옴 (중력 방향 있음)."""
+    by = {e["name"]: e for e in images}
+    out = dict(poses_m)
+    extra = []
+    for k, Rk in sorted(recs.items(), key=lambda kv: -kv[1].num_reg_images()):
+        if Rk is R_best:
+            continue
+        n_reg = int(Rk.num_reg_images())
+        ent = dict(model=int(k), registered=n_reg)
+        if n_reg < a.merge_min_images:
+            ent["why"] = "작음"
+            extra.append(ent)
+            continue
+        pk = {n: T for n, T in image_poses(Rk, images).items() if n not in out}
+        try:
+            pm, st = align_and_check(pk, images, g, info, rec, fps, a, lambda m: None)
+        except Exception as e:
+            ent["why"] = f"맞춤 실패 {e!r}"[:80]
+            extra.append(ent)
+            continue
+        ent.update({kk: st.get(kk) for kk in ("vio_matched", "vio_inliers", "vio_inlier_frac", "vio_rmse_m", "scale_used",
+                                               "baseline_mm_med")})
+        ok = st.get("scale_used") == "vio" and (st.get("vio_inliers") or 0) >= 10 and (st.get("vio_inlier_frac") or 0) >= 0.5
+        if not ok:
+            ent["why"] = "VIO 맞춤 약함"
+            extra.append(ent)
+            continue
+        out.update(pm)
+        ent["used"] = True
+        extra.append(ent)
+    nL = sum(1 for e in images if e["side"] == "L")
+    used = [e for e in extra if e.get("used")]
+    sstats["merged_models"] = extra
+    sstats["registered_merged"] = len(out)
+    sstats["registered_frac_merged"] = round(len(out) / max(1, len(images)), 4)
+    sstats["registered_frac_L_merged"] = round(sum(1 for n in out if by[n]["side"] == "L") / max(1, nL), 4)
+    log(f"[sfm] 모델 조각 합치기: {len(used)} 개 더함 → 사진 {len(poses_m)} → {len(out)}/{len(images)} 장 ({extra})")
+    return out
 
 
 def image_poses(R, images):
@@ -865,11 +920,13 @@ def dense(rec, g, info, images, poses, out_dir, a, prog, log, align_stats):
     for j in jobs:
         need.setdefault((by[j["n"]]["stream"], by[j["n"]]["t_ns"]), []).append(j)
         need.setdefault((by[j["m"]]["stream"], by[j["m"]]["t_ns"]), []).append(j)
-    voxel_map.configure_tsdf(enabled=True)
+    voxel_map.configure_tsdf(enabled=True, sigma_px=a.sigma_px, sigma_floor=a.sigma_floor)
     vmap = voxel_map.VoxelMap(a.voxel, a.min_hits)
     ds = depth_seg.DepthSeg(rp0, a.iters, ffs_scale, tuple(a.depth_range), a.stride, no_yolo=True, log=log)
     vmap.names = ds.names
     ds.warmup()
+    import depth_fuse
+    sig_px = float(voxel_map.tsdf_cfg()["sigma_px"])
     ms = None
     pose_atL = {}
     if a.depth == "fused":
@@ -879,6 +936,21 @@ def dense(rec, g, info, images, poses, out_dir, a, prog, log, align_stats):
         ms = motion_stereo.MotionStereo(st, rp0, ds.model, cfg=motion_stereo.MSConfig(pose=a.mono_pose, n_pairs=a.mono_pairs),
                                         iters=a.iters, infer=lib_ffs.infer, log=log)
         pose_atL = {by[n]["t_ns"]: poses[n] @ make_T(R1n.T, np.zeros(3)) for n in L}
+    six = None
+    if a.six == "auto":                                 # 3 렌즈 녹화 + 2+5 쌍이면 2+6 깊이 합치기 (165645: 국소 두께 13.3 → 10.3 cm)
+        a.six = "fuse" if info["pair"] == "2+5" and "6" in [str(p) for p in rec.physical_all] else "off"
+    if a.six != "off":
+        six = load_six(rec, info, jobs, by, a, log)
+        for j in jobs:                                    # 렌즈 6 시각의 렌즈 2 자세 (2+6 상대자세의 이동 부분)
+            f6 = six["frames"].get(j["n"])
+            if f6 is not None:
+                j["T6"] = interp_pose(tL, TL, int(f6.timestamp_ns) * 1e-9, gap)
+    if a.consist < 0:
+        # auto: 2 장. 단 2+6 을 합칠 때는 끔 — 165645 (seed 4 개 평균 국소 두께) six 만 10.8, six + 일관성 11.7 cm
+        a.consist = 0 if six is not None else 2
+    cf = None
+    if a.consist > 0:
+        cf = depth_fuse.ConsistencyFilter(k=a.consist_k, ds=a.consist_ds, sigma_px=sig_px, mode=a.consist_mode)
     shim = Shim(vmap, rp0, rec.t_first)
     for n in L:
         shim.traj.append(((by[n]["t_ns"] - rec.t_first) * 1e-9, poses[n] @ make_T(R1n.T, np.zeros(3))))
@@ -886,8 +958,59 @@ def dense(rec, g, info, images, poses, out_dir, a, prog, log, align_stats):
            for i in (1, 2)]
     got = {}
     done = 0
-    dstats = dict(kf=len(jobs), ok=0, skipped=0, ffs_ms=[], tsdf_ms=[], dy_px=[], base_mm=[], why={}, kfl=[], used={})
+    dstats = dict(kf=len(jobs), ok=0, skipped=0, ffs_ms=[], tsdf_ms=[], dy_px=[], base_mm=[], why={}, kfl=[], used={},
+                  lr_keep=[], six=[], consist=[])
     zero = dict(all=0.0, **{nm: 0.0 for _, _, nm in BANDS})
+    pending, hist = [], []                                # 일관성 거르기: 앞뒤 이웃이 다 계산될 때까지 기다리는 키프레임
+
+    def finish(e, nbs):
+        """깊이 한 장 → (일관성 거르기) → 복셀·TSDF·시간 정보."""
+        r, rp, T_cam = e["r"], e["rp"], e["T_cam"]
+        valid, wmul = r["valid"], None
+        if cf is not None:
+            keep, wmul, ci = cf.check(e["view"], nbs)
+            dstats["consist"].append(ci)
+            valid = valid & keep
+            if wmul is None and not keep.all():
+                pts, rgb, cls = depth_fuse.points_from(r["Z"], valid, r["rectL"], rp, a.stride)
+                r = dict(r, valid=valid, pts_rect0=pts, rgb=rgb, cls=cls)
+        pts_w = (r["pts_rect0"] @ T_cam[:3, :3].T.astype(np.float32) + T_cam[:3, 3].astype(np.float32))
+        t_map = e["t_map"]
+        keep_kf_pts(shim, t_map, pts_w, r["pts_rect0"][:, 2])
+        nf0 = vmap.frames
+        vmap.integrate(pts_w.astype(np.float32), r["rgb"], r["cls"], np.full(len(pts_w), -1, np.int32), t_map)
+        tsr = depth_fuse.integrate_tsdf(vmap, r["Z"], valid, r["rectL"], rp, T_cam, ffs_scale, t_map, log=log,
+                                        sigma=e.get("sigma"), wmul=wmul)
+        if tsr:
+            dstats["tsdf_ms"].append(tsr["ms"])
+        dstats["ffs_ms"].append(r["ffs_ms"])
+        dstats["ok"] += 1
+        if vmap.frames != nf0:
+            fL, fR = e["fL"], e["fR"]
+            pts_rect0 = r["pts_rect0"] @ e["R_q"].T.astype(np.float32)
+            ent = dict(i=vmap.frames, t=t_map, fr=[(fL.index, fL.timestamp_ns), (fR.index, fR.timestamp_ns)], T=e["T_rect0"])
+            try:
+                ent["q"] = replay_view.kf_quality(pts_rect0, valid, seed=int(fL.timestamp_ns) & 0xFFFFFFFF)
+            except Exception as ex:
+                log(f"[sfm] 비교 숫자 실패 {ex!r}")
+            shim.replay_tl.append(ent)
+            try:
+                jpg = replay_view.depth_jpeg(r["Z"], valid, a.depth_range[0], a.depth_range[1])
+                if jpg:
+                    shim.replay_depth[ent["i"]] = jpg
+            except Exception:
+                pass
+
+    def drain(final=False):
+        while pending and (final or len(pending) > a.consist):
+            e = pending.pop(0)
+            nbs = (hist[-a.consist:] + [p["view"] for p in pending[:a.consist]]) if cf is not None else []
+            finish(e, nbs)
+            if cf is not None:
+                hist.append(e["view"])
+                del hist[:-max(1, a.consist)]
+            e.clear()
+
     t0 = time.perf_counter()
     import torch
     torch.cuda.reset_peak_memory_stats()
@@ -935,11 +1058,24 @@ def dense(rec, g, info, images, poses, out_dir, a, prog, log, align_stats):
                 if dy is not None:
                     dstats["dy_px"].append(dy)
             r = ds(fL.bgr, fR.bgr, rp=rp, scale=ffs_scale)
-            dstats["kfl"].append(dict(bands=band_frac(r["Z"], r["valid"]), mk=mk))
+            if a.lr_check:
+                # 좌우 일관성: 오른쪽 기준 시차를 한 번 더 (FFS 2 배) → 왼쪽 시차와 lr_tol (FFS 해상도 px) 넘게 다르면 버림
+                _, rectR = lr.rectify_pair(fL.bgr, fR.bgr, rp)
+                dR = depth_fuse.infer_right(ds.model, r["rectL"], rectR, a.iters, ffs_scale)
+                lrm = depth_fuse.lr_check_mask(r["disp"], dR, a.lr_tol / ffs_scale)
+                nv0 = max(1, int(r["valid"].sum()))
+                valid = r["valid"] & lrm
+                dstats["lr_keep"].append(int(valid.sum()) / nv0)
+                pts, rgb, cls = depth_fuse.points_from(r["Z"], valid, r["rectL"], rp, a.stride)
+                r = dict(r, valid=valid, pts_rect0=pts, rgb=rgb, cls=cls)
             R1p = np.asarray(rp["R1"], float)
             T_cam = j["T"] @ make_T(R1p.T, np.zeros(3))                  # 쌍별 정류 카메라 → 월드
             T_rect0 = j["T"] @ make_T(R1n.T, np.zeros(3))                # 기본 rect0 (웹 절두체)
             R_q = R1n @ R1p.T                                              # 쌍별 정류 점 → 기본 rect0 (비교 숫자용)
+            sigma = None
+            if six is not None:
+                r, rp, T_cam, R_q, sigma = six_depth(six, j, r, rp, T_cam, R_q, fL, ds, ffs_scale, sig_px, a, dstats,
+                                                     depth_fuse, R1n)
             if ms is not None:
                 out = ms.fuse_keyframe(int(fL.timestamp_ns), fL.bgr, T_rect0, r2=r, rp_pair=rp, R_fix=R_q)
                 md = ms._last
@@ -949,31 +1085,13 @@ def dense(rec, g, info, images, poses, out_dir, a, prog, log, align_stats):
                          rectL=out["rectL"])
                 rp = dict(rp0, baseline_m=max(float(rp0["baseline_m"]), Bm))
                 T_cam, R_q = T_rect0, np.eye(3)
-                dstats["kfl"][-1] = dict(bands=band_frac(r["Z"], r["valid"]), mk=mk)
-            pts_w = (r["pts_rect0"] @ T_cam[:3, :3].T.astype(np.float32) + T_cam[:3, 3].astype(np.float32))
-            t_map = (fL.timestamp_ns - rec.t_first) * 1e-9
-            keep_kf_pts(shim, t_map, pts_w, r["pts_rect0"][:, 2])
-            nf0 = vmap.frames
-            vmap.integrate(pts_w.astype(np.float32), r["rgb"], r["cls"], np.full(len(pts_w), -1, np.int32), t_map)
-            tsr = vmap.integrate_depth(r["Z"], r["valid"], r["rectL"], rp, T_cam, ffs_scale=ffs_scale, t=t_map, log=log)
-            if tsr:
-                dstats["tsdf_ms"].append(tsr["ms"])
-            dstats["ffs_ms"].append(r["ffs_ms"])
-            dstats["ok"] += 1
-            if vmap.frames != nf0:
-                pts_rect0 = r["pts_rect0"] @ R_q.T.astype(np.float32)
-                ent = dict(i=vmap.frames, t=t_map, fr=[(fL.index, fL.timestamp_ns), (fR.index, fR.timestamp_ns)], T=T_rect0)
-                try:
-                    ent["q"] = replay_view.kf_quality(pts_rect0, r["valid"], seed=int(fL.timestamp_ns) & 0xFFFFFFFF)
-                except Exception as e:
-                    log(f"[sfm] 비교 숫자 실패 {e!r}")
-                shim.replay_tl.append(ent)
-                try:
-                    jpg = replay_view.depth_jpeg(r["Z"], r["valid"], a.depth_range[0], a.depth_range[1])
-                    if jpg:
-                        shim.replay_depth[ent["i"]] = jpg
-                except Exception:
-                    pass
+            dstats["kfl"].append(dict(bands=band_frac(r["Z"], r["valid"]), mk=mk))
+            e = dict(r=r, rp=rp, T_cam=T_cam, T_rect0=T_rect0, R_q=R_q, fL=fL, fR=fR, sigma=sigma,
+                     t_map=(fL.timestamp_ns - rec.t_first) * 1e-9)
+            if cf is not None:
+                e["view"] = cf.view(r["Z"], r["valid"], rp, T_cam, ffs_scale, t=e["t_map"])
+            pending.append(e)
+            drain()
             if done % 5 == 0:
                 prog("깊이", 60 + 35 * done / max(1, len(jobs)), f"키프레임 {done}/{len(jobs)}")
         if add:
@@ -981,6 +1099,22 @@ def dense(rec, g, info, images, poses, out_dir, a, prog, log, align_stats):
         # 메모리: 지난 프레임 버림
         for kk in [kk for kk in got if kk[1] < int(f.timestamp_ns) - 3_000_000_000]:
             del got[kk]
+    drain(final=True)
+    if cf is not None:
+        dstats["consist_summary"] = cf.summary()
+        log(f"[sfm] 일관성 거르기 {dstats['consist_summary']}")
+    dstats.pop("consist")
+    if dstats["lr_keep"]:
+        dstats["lr_keep_med"] = round(float(np.median(dstats["lr_keep"])), 4)
+    dstats.pop("lr_keep")
+    if dstats["six"]:
+        sx = dstats["six"]
+        dstats["six_summary"] = {k: round(float(np.median([x[k] for x in sx if x.get(k) is not None])), 5)
+                                 for k in ("agree_frac", "rel_bias", "conflict", "b_only", "both", "a", "b", "ffs6_ms")
+                                 if any(x.get(k) is not None for x in sx)}
+        dstats["six_summary"]["n"] = len(sx)
+        log(f"[sfm] 2+6 {six['mode']} {dstats['six_summary']}")
+    dstats.pop("six")
     dstats["t_dense_s"] = round(time.perf_counter() - t0, 1)
     dstats["gpu_peak_mb"] = round(torch.cuda.max_memory_allocated() / 2 ** 20, 1)
     dstats["coverage"] = summarize_kfs(dstats.pop("kfl"))
@@ -991,6 +1125,82 @@ def dense(rec, g, info, images, poses, out_dir, a, prog, log, align_stats):
             dstats[k + "_p90"] = round(float(np.percentile(v, 90)), 3)
             dstats[k + "_n"] = len(v)
     return vmap, shim, dstats
+
+
+# ---------------- 6b. 3 렌즈 녹화: 2+6 깊이 (망원 가운데) ----------------
+def load_six(rec, info, jobs, by, a, log):
+    """3 렌즈 녹화에서 키프레임 (렌즈 2 사진) 마다 시각이 가장 가까운 렌즈 6 사진 + 2+6 보정 기하.
+    렌즈 2·6 은 1~3 ms 로 거의 동시 → 상대자세 = 보정 (R,T) ∘ [자이로 회전 + 렌즈 2 궤적 이동] (gyro_rel), 못 구하면 보정 그대로."""
+    import calib_scale
+    import recording
+    rec6 = recording.Recording(rec.path, log, pair=["2", "6"])
+    phys6 = [str(p) for p in rec6.physical[:2]]
+    if "6" not in phys6:
+        raise RuntimeError("렌즈 6 이 없는 녹화")
+    g6 = calib_scale.load_geometry(str(ROOT / "calib_phone_pair_2_6.json"), phys6, rec6.size)
+    i6 = 0 if g6["swap"] else 1
+    s6 = [s for s in rec6.streams if s.index == i6][0]
+    t6 = np.array(sorted(int(r[1]) for r in s6.recs), np.int64)
+    want = {}
+    for j in jobs:
+        ti = by[j["n"]]["t_ns"]
+        k = int(np.argmin(np.abs(t6 - ti)))
+        if abs(int(t6[k]) - ti) <= 8_000_000:
+            want.setdefault(int(t6[k]), []).append(j["n"])
+    frames6 = {}
+    for f in rec6.iter_frames():
+        if f.index == i6 and int(f.timestamp_ns) in want:
+            for n in want[int(f.timestamp_ns)]:
+                frames6[n] = f
+    dt = [abs(int(frames6[n].timestamp_ns) - by[n]["t_ns"]) * 1e-6 for n in frames6]
+    log(f"[sfm] 렌즈 6 사진 {len(frames6)}/{len(jobs)} (렌즈 2 와 시각 차 중앙값 {float(np.median(dt)) if dt else -1:.2f} ms)")
+    st6 = g6["st"]
+    cal6 = [dict(K=np.array(st6[f"K{i}"], float), dist=np.array(st6[f"dist{i}"], float), image_size=st6["image_size"])
+            for i in (1, 2)]
+    gyro_s = [(s.timestamp_ns, s.values[:3]) for s in rec.sensors if s.type == 4]
+    gt = np.array([x[0] for x in gyro_s], np.int64) if gyro_s else np.zeros(0, np.int64)
+    first = (gt > rec.t_first) & (gt < rec.t_first + 1_000_000_000)
+    bg = np.median(np.array([x[1] for x in gyro_s])[first], axis=0) if first.sum() > 20 else np.zeros(3)
+    return dict(frames=frames6, g=g6, cal=cal6, gyro=gyro_s, bg=bg, mode=a.six,
+                T_cal=make_T(np.asarray(st6["R"], float), np.asarray(st6["T"], float)),
+                Rs=np.asarray(st6["R_sensor_to_left"], float))
+
+
+def six_depth(six, j, r, rp, T_cam, R_q, fL, ds, ffs_scale, sig_px, a, dstats, depth_fuse, R1n):
+    """키프레임 하나: 2+6 깊이 → only = 2+6 깊이만 (그 정류 그대로), fuse = 2+5 정류 격자로 옮겨 역분산 합침.
+    반환 (r, rp, T_cam, R_q, sigma 지도 또는 None)."""
+    import lib_rectify as lr
+    f6 = six["frames"].get(j["n"])
+    if f6 is None:
+        return r, rp, T_cam, R_q, None
+    ti, tj = int(fL.timestamp_ns), int(f6.timestamp_ns)
+    rel = None
+    Tj = j.get("T6")
+    if Tj is not None:
+        rel = gyro_rel(six["gyro"], six["bg"], six["Rs"], six["T_cal"], j["T"], Tj, ti, tj)
+    if rel is None:
+        rel = six["T_cal"]
+    try:
+        rp6 = lr.rectify_maps(six["cal"][0], six["cal"][1], rel[:3, :3], rel[:3, 3])
+    except ValueError:
+        return r, rp, T_cam, R_q, None
+    r6 = ds(fL.bgr, f6.bgr, rp=rp6, scale=ffs_scale)
+    info = dict(ffs6_ms=r6["ffs_ms"])
+    if six["mode"] == "only":
+        R1p = np.asarray(rp6["R1"], float)
+        T6 = j["T"] @ make_T(R1p.T, np.zeros(3))
+        info["b"] = int(r6["valid"].sum())
+        dstats["six"].append(info)
+        return r6, rp6, T6, R1n @ R1p.T, None
+    Za, Va = r["Z"], r["valid"]
+    Zb, Vb, _ = depth_fuse.warp_same_center(r6["Z"], r6["valid"], rp6, rp)
+    Sa = depth_fuse.sigma_map(Za, Va, depth_fuse.f_eff_B(rp, ffs_scale), sig_px)
+    Sb = depth_fuse.sigma_map(Zb, Vb, depth_fuse.f_eff_B(rp6, ffs_scale), a.six_sigma_px or sig_px)
+    Z, V, S, fst = depth_fuse.fuse_pairs(Za, Va, Sa, Zb, Vb, Sb, k=a.six_k)
+    info.update(fst)
+    dstats["six"].append(info)
+    pts, rgb, cls = depth_fuse.points_from(Z, V, r["rectL"], rp, a.stride)
+    return dict(r, Z=Z, valid=V, pts_rect0=pts, rgb=rgb, cls=cls), rp, T_cam, R_q, S
 
 
 # ---------------- 메인 ----------------
@@ -1010,6 +1220,9 @@ def parse_args(argv=None):
     p.add_argument("--refine-intrinsics", action="store_true", help="초점·왜곡을 BA 에서 다듬음 (기본 고정)")
     p.add_argument("--scale", choices=["vio", "baseline"], default="vio")
     p.add_argument("--sim3-thr", type=float, default=0.05, help="VIO Sim(3) RANSAC 인라이어 거리 (m)")
+    p.add_argument("--merge-models", type=int, choices=[0, 1], default=1,
+                   help="1 = SfM 이 여러 모델로 갈라지면 작은 모델도 모델마다 VIO 에 Sim(3) 맞춰 합침 (merge_models)")
+    p.add_argument("--merge-min-images", type=int, default=15, help="합칠 모델의 최소 등록 사진 수")
     p.add_argument("--rel", choices=["hybrid", "direct", "interp", "gyro"], default="hybrid",
                    help="키프레임 쌍 상대자세 (143702 정류 |dy| 중앙값: direct 0.58 · hybrid 0.58 · gyro 0.99 · interp 1.44 · 고정 보정 2.54 px)")
     p.add_argument("--kf-trans", type=float, default=0.015)
@@ -1031,6 +1244,24 @@ def parse_args(argv=None):
     p.add_argument("--poses", choices=["sfm", "vio"], default="sfm",
                    help="vio = 기존 복원의 VIO 궤적으로 같은 조밀 단계 (비교용, 결과 꼬리 _sfmvio, 상대자세 gyro)")
     p.add_argument("--from-sfm", default=None, help="다른 정밀 복원 폴더의 sfm/poses.json 자세를 다시 씀 (조밀 단계만 비교용)")
+    p.add_argument("--six", choices=["auto", "off", "fuse", "only"], default="auto",
+                   help="3 렌즈 녹화 (2·5·6): fuse = 2+5 깊이에 2+6 깊이 (망원 가운데) 역분산 합침, only = 2+6 깊이만 (비교용), "
+                        "auto = 렌즈 6 이 있고 쌍이 2+5 면 fuse")
+    p.add_argument("--six-k", type=float, default=3.0, help="2+5 와 2+6 깊이가 k·σ 넘게 다르면 버림")
+    p.add_argument("--six-sigma-px", type=float, default=None,
+                   help="2+6 깊이 σ_d (FFS px, 기본 = 2+5 와 같은 sigma_px). 이웃 잔차 실측은 0.79~0.95 (2+5 0.52~0.61) 이지만 "
+                        "0.9 로 두면 165645 국소 두께 10.8 → 12.0 cm 로 나빠짐 (2+5 깊이 몫이 커짐)")
+    p.add_argument("--consist", type=int, default=-1,
+                   help="여러 키프레임 일관성: 앞뒤 이웃 키프레임 수 (0 = 끔, -1 = auto: 2, 2+6 합칠 때는 0; depth_fuse.py). "
+                        "143702 11.5 → 10.0 · 175446 10.6 → 6.8 · 165645 12.7 → 12.0 cm (국소 두께, seed 4 개 평균)")
+    p.add_argument("--consist-mode", choices=["drop", "strict", "weight", "measure"], default="drop",
+                   help="measure = 거르지 않고 이웃 잔차로 깊이 노이즈만 잼 (summary dense.consist_summary.sigma_px_by_z)")
+    p.add_argument("--consist-k", type=float, default=2.5)
+    p.add_argument("--consist-ds", type=int, default=4, help="일관성 비교 격자 축소 (화소)")
+    p.add_argument("--lr-check", action="store_true", help="FFS 좌우 일관성 (오른쪽 기준 시차 한 번 더, FFS 2 배)")
+    p.add_argument("--lr-tol", type=float, default=1.0, help="좌우 시차 허용 (FFS 입력 해상도 px)")
+    p.add_argument("--sigma-px", type=float, default=None, help="TSDF 시차 노이즈 σ_d (FFS px, 기본 tsdf_map.DEFAULTS)")
+    p.add_argument("--sigma-floor", type=float, default=None, help="TSDF 깊이 노이즈 바닥 (m): σ = √(바닥² + σ_d² Z⁴/(fB)²)")
     p.add_argument("--no-dense", action="store_true")
     p.add_argument("--reuse-db", action="store_true", help="sfm/database.db 가 있으면 특징·매칭 건너뜀 (시험용)")
     p.add_argument("--keep-images", action="store_true")
@@ -1043,6 +1274,7 @@ def sparse_stage(rec_dir, rec, g, info, fps, images, work, img_dir, a, prog, log
     """특징·매칭·SfM·축척 → (미터 자세 {name: T_w_c}, sfm 숫자, 축척 숫자). sfm/poses.json 저장."""
     if True:
         R, sstats = run_sfm(work, img_dir, images, g, info, fps, a, prog, log)
+        recs_all = sstats.pop("_recs", {})
         times.update(features_s=sstats.get("t_features_s"), match_s=sstats.get("t_match_s"), map_s=sstats.get("t_map_s"))
         poses = image_poses(R, images)
         nloop, nver = loop_pairs(R, images, work / "database.db", a)
@@ -1055,6 +1287,8 @@ def sparse_stage(rec_dir, rec, g, info, fps, images, work, img_dir, a, prog, log
         sstats["registered_frac_R"] = round(sstats["registered_R"] / max(1, len(images) - nL), 4)
         prog("축척", 55, "VIO 궤적에 Sim(3) + 두 렌즈 기선 검증")
         poses_m, astats = align_and_check(poses, images, g, info, rec, fps, a, log)
+        if a.merge_models and len(recs_all) > 1:
+            poses_m = merge_models(poses_m, recs_all, R, images, g, info, rec, fps, a, log, sstats, astats)
         (work / "poses.json").write_text(json.dumps(dict(
             format=SFM_FORMAT, recording=rec_dir.name, t_first=rec.t_first,
             images=[dict(by[n], T_w_c=np.asarray(T).reshape(-1).round(7).tolist()) for n, T in

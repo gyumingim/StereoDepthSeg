@@ -46,7 +46,7 @@ MERGE_CHUNK = 400000         # merge 한 번에 옮기는 원본 복셀 수 (8 �
 #   sigma_ok 3 cm: 2 cm 는 두께 8.2 / 8.8 cm 로 더 얇지만 구멍이 늘어 정점 약 35 % 감소, 5 cm 는 12.6 / 12.8 cm.
 #   trunc_max 10 cm (6 cm 는 11.9 / 12.0 cm 로 나빠짐), min_obs 3.
 DEFAULTS = dict(voxel_m=0.02, z_min=0.3, z_max=2.5, sigma_max=0.15, sigma_px=0.5, trunc_k=2.0, trunc_min_vox=2.5,
-                trunc_max=0.10, sigma_ok=0.03, min_obs=3, max_blocks=60000)
+                trunc_max=0.10, sigma_ok=0.03, min_obs=3, max_blocks=60000, sigma_floor=0.0)
 
 _TABLES = {}
 
@@ -96,12 +96,12 @@ def _unpack(p):
 
 class TSDFMap:
     def __init__(self, voxel_m=None, z_min=None, z_max=None, sigma_max=None, sigma_px=None, trunc_k=None, trunc_min_vox=None,
-                 trunc_max=None, sigma_ok=None, min_obs=None, max_blocks=None, device=None, log=None):
+                 trunc_max=None, sigma_ok=None, min_obs=None, max_blocks=None, sigma_floor=None, device=None, log=None):
         import torch
         c = dict(DEFAULTS)
         for k, v in dict(voxel_m=voxel_m, z_min=z_min, z_max=z_max, sigma_max=sigma_max, sigma_px=sigma_px, trunc_k=trunc_k,
                          trunc_min_vox=trunc_min_vox, trunc_max=trunc_max, sigma_ok=sigma_ok, min_obs=min_obs,
-                         max_blocks=max_blocks).items():
+                         max_blocks=max_blocks, sigma_floor=sigma_floor).items():
             if v is not None:
                 c[k] = v
         self.cfg = c
@@ -193,12 +193,17 @@ class TSDFMap:
         return float(min(float(c["z_max"]), zs))
 
     def sigma(self, Z, f_eff, B):
-        return self.cfg["sigma_px"] * Z * Z / (f_eff * B)
+        s = self.cfg["sigma_px"] * Z * Z / (f_eff * B)
+        fl = float(self.cfg.get("sigma_floor") or 0.0)
+        return (s * s + fl * fl) ** 0.5 if fl > 0 else s
 
-    def integrate(self, Z, valid, bgr, f, cx, cy, baseline_m, T_world_cam, ffs_scale=1.0, t=0.0):
+    def integrate(self, Z, valid, bgr, f, cx, cy, baseline_m, T_world_cam, ffs_scale=1.0, t=0.0, sigma=None, wmul=None):
         """Z (H,W) f32 정류 왼쪽 깊이 (m, NaN 가능), valid (H,W) bool, bgr (H,W,3) u8 (정류 왼쪽, 같은 화소),
         f·cx·cy = 그 정류 카메라 내부값 (화소, Z 해상도), baseline_m, T_world_cam (4x4, 정류 카메라 → 월드),
-        ffs_scale = FFS 입력 축소 (시차 노이즈는 FFS 해상도 화소 단위라 σ 에 f·ffs_scale 을 씀). 반환 dict(ms, blocks, new)."""
+        ffs_scale = FFS 입력 축소 (시차 노이즈는 FFS 해상도 화소 단위라 σ 에 f·ffs_scale 을 씀). 반환 dict(ms, blocks, new).
+        sigma (H,W) f32 (선택) = 화소별 깊이 노이즈 (m) — 두 렌즈 쌍 합친 깊이처럼 화소마다 f·B 가 다를 때 (depth_fuse.py).
+          주면 σ(Z) 식 대신 이 값으로 가중치·잘림·깊이 한계 (σ ≤ sigma_max, Z ≤ z_max).
+        wmul (H,W) f32 (선택) = 화소별 가중치 배수 (여러 키프레임 일관성, depth_fuse.ConsistencyFilter)."""
         import torch
         t0 = time.perf_counter()
         if self._dump:
@@ -207,12 +212,24 @@ class TSDFMap:
         dev = self.dev
         f_eff = float(f) * float(ffs_scale or 1.0)
         B = float(baseline_m)
-        zmax = self.z_limit(f_eff, B)
+        zmax = self.z_limit(f_eff, B) if sigma is None else float(c["z_max"])
         with self.lock:
             self.z_max_eff = zmax
             Zt = torch.as_tensor(np.ascontiguousarray(Z, np.float32), device=dev)
             Mt = torch.as_tensor(np.ascontiguousarray(valid), device=dev)
             Mt = Mt & torch.isfinite(Zt) & (Zt >= c["z_min"]) & (Zt <= zmax)
+            St = Wm = None
+            if sigma is not None:
+                St = torch.as_tensor(np.ascontiguousarray(sigma, np.float32), device=dev)
+                fl = float(c.get("sigma_floor") or 0.0)
+                if fl > 0:
+                    St = torch.sqrt(St * St + fl * fl)
+                Mt &= torch.isfinite(St) & (St > 0)
+                if c.get("sigma_max"):
+                    Mt &= St <= float(c["sigma_max"])
+            if wmul is not None:
+                Wm = torch.as_tensor(np.ascontiguousarray(wmul, np.float32), device=dev)
+                Mt &= Wm > 0
             H, W = Zt.shape
             if not bool(Mt.any()):
                 return dict(ms=0.0, blocks=0, new=0)
@@ -223,7 +240,7 @@ class TSDFMap:
             vs, us = torch.nonzero(Mt[::s, ::s], as_tuple=True)
             vs, us = vs * s, us * s
             z = Zt[vs, us]
-            mu = self._trunc(z, f_eff, B)
+            mu = self._trunc(z, f_eff, B) if St is None else self._trunc_sig(St[vs, us])
             pts = []
             for k in (-1.0, 0.0, 1.0):
                 zz = z + k * mu
@@ -252,10 +269,13 @@ class TSDFMap:
             ok = inb & Mt[vi, ui]
             d = torch.where(ok, d, torch.ones_like(d))
             sdf = d - zc
-            mu = self._trunc(d, f_eff, B)
+            sg = self.sigma(d, f_eff, B) if St is None else torch.where(ok, St[vi, ui], torch.ones_like(d))
+            mu = self._trunc_sig(sg)
             ok &= sdf >= -mu
             val = torch.minimum(sdf, mu)
-            wobs = (SIGMA_REF / self.sigma(d, f_eff, B)) ** 2
+            wobs = (SIGMA_REF / sg) ** 2
+            if Wm is not None:
+                wobs = wobs * Wm[vi, ui]
             wobs = torch.where(ok, wobs, torch.zeros_like(wobs))
             S, Wt = self.sdf[rows], self.w[rows]
             Wn = Wt + wobs
@@ -282,9 +302,11 @@ class TSDFMap:
             return dict(ms=ms, blocks=int(len(rows)), new=int(self.nb - nb0))
 
     def _trunc(self, Z, f_eff, B):
+        return self._trunc_sig(self.sigma(Z, f_eff, B))
+
+    def _trunc_sig(self, sig):
         c = self.cfg
-        return (c["trunc_k"] * self.sigma(Z, f_eff, B)).clamp(min=c["trunc_min_vox"] * self.vm, max=max(c["trunc_max"],
-                                                                                                       c["trunc_min_vox"] * self.vm))
+        return (c["trunc_k"] * sig).clamp(min=c["trunc_min_vox"] * self.vm, max=max(c["trunc_max"], c["trunc_min_vox"] * self.vm))
 
     def _dump_kf(self, Z, valid, bgr, f, cx, cy, B, T, s, t):
         try:
@@ -488,6 +510,111 @@ class TSDFMap:
     def save_obj(self, path):
         Path(path).write_bytes(mesh_obj_bytes(*self.mesh_arrays()))
 
+    # ---------------- 지도 저장·불러오기·질의 (map_store.py, esdf_map.py) ----------------
+    def save_npz(self, path):
+        """블록 저장 (지도 저장): 값이 있는 블록만. sdf 는 f16 (±10 cm 범위라 0.1 mm 정밀), 나머지 그대로. 반환 블록 수."""
+        with self.lock:
+            nb = self.nb
+            keep = (self.w[:nb] > 0).any(1)
+            rows = keep.nonzero().squeeze(1)
+            np.savez_compressed(path, format=np.array("scan3d-tsdf/1"), cfg=np.array(json.dumps(self.cfg)),
+                                voxel_m=np.float32(self.vm), keys=self.keys[rows].cpu().numpy().astype(np.int32),
+                                sdf=self.sdf[rows].cpu().numpy().astype(np.float16), w=self.w[rows].cpu().numpy(),
+                                rgb=self.rgb[rows].cpu().numpy(), nobs=self.nobs[rows].cpu().numpy(),
+                                frames=np.int64(self.frames))
+            return int(len(rows))
+
+    @classmethod
+    def load_npz(cls, path, device=None, log=None, cfg=None):
+        """save_npz 로 저장한 지도 → 새 TSDFMap (cfg = 덮어쓸 설정, 복셀 크기는 저장 값)."""
+        import torch
+        z = np.load(path, allow_pickle=False)
+        c = dict(json.loads(str(z["cfg"])))
+        c.update({k: v for k, v in (cfg or {}).items() if k in DEFAULTS and k != "voxel_m"})
+        c["voxel_m"] = float(z["voxel_m"])
+        c = {k: v for k, v in c.items() if k in DEFAULTS}
+        keys = z["keys"].astype(np.int64)
+        n = len(keys)
+        c["max_blocks"] = max(int(c.get("max_blocks") or 0), n + 20000)
+        m = cls(device=device, log=log, **c)
+        with m.lock:
+            m._alloc(max(1024, n))
+            d = m.dev
+            if n:
+                m.keys[:n] = torch.as_tensor(keys, device=d)
+                m.sdf[:n] = torch.as_tensor(z["sdf"].astype(np.float32), device=d)
+                m.w[:n] = torch.as_tensor(z["w"], device=d)
+                m.rgb[:n] = torch.as_tensor(z["rgb"], device=d)
+                m.nobs[:n] = torch.as_tensor(z["nobs"], device=d)
+                m.nb = n
+                sk, order = torch.sort(_pack(m.keys[:n]))
+                m._sk, m._si = sk, order
+            m.version = 1
+            m.bver[:n] = 1
+            m.frames = int(z["frames"]) if "frames" in z else 0
+        return m
+
+    def voxel_layers(self, since_version=None):
+        """ESDF 재료 (esdf_map.py): 블록 키·sdf·w·nobs 를 CPU numpy 로. since_version 을 주면 그 판 뒤에 바뀐 블록만.
+        반환 dict(keys (B,3) i64, sdf (B,512) f32, w, nobs, version, voxel_m, w_min, min_obs, trunc_max)."""
+        import torch
+        with self.lock:
+            nb = self.nb
+            if since_version is None:
+                rows = torch.arange(nb, device=self.dev)
+            else:
+                rows = torch.nonzero(self.bver[:nb] > int(since_version)).squeeze(1)
+            out = dict(keys=self.keys[rows].cpu().numpy(), sdf=self.sdf[rows].cpu().numpy(), w=self.w[rows].cpu().numpy(),
+                       nobs=self.nobs[rows].cpu().numpy(), version=int(self.version), voxel_m=self.vm, w_min=self.w_min,
+                       min_obs=int(self.cfg["min_obs"]), trunc_max=float(self.cfg["trunc_max"]))
+        return out
+
+    def cell_layers(self, res, since_version=None):
+        """ESDF 재료 (esdf_map.py, GPU 에서 줄여 CPU 로): 복셀을 res 격자 칸 (정수 좌표 floor(중심/res)) 으로 모아
+        touched = 다시 셀 칸 (since_version 뒤 바뀐 블록이 덮는 칸, None 이면 전체), occ = 그중 표면 칸
+        (|sdf| < 복셀 크기, 가중치 ≥ w_min, 관측 ≥ min_obs — 메시 기준과 같음), free = 표면 앞 관측 칸 (sdf > 1.5 복셀, 관측 ≥ 1).
+        한 칸이 바뀐 블록과 안 바뀐 이웃 블록에 걸칠 수 있어 바뀐 블록의 26-이웃 블록까지 읽고 touched 칸만 돌려준다.
+        반환 dict(touched, occ, free (N,3) i64 numpy, version)."""
+        import torch
+        with self.lock:
+            nb = self.nb
+            ver = int(self.version)
+            e = np.zeros((0, 3), np.int64)
+            if nb == 0:
+                return dict(touched=e, occ=e, free=e, version=ver)
+            if since_version is None:
+                rows = torch.arange(nb, device=self.dev)
+                ch = rows
+            else:
+                ch = torch.nonzero(self.bver[:nb] > int(since_version)).squeeze(1)
+                if len(ch) == 0:
+                    return dict(touched=e, occ=e, free=e, version=ver)
+                nk = (self.keys[ch][:, None, :] + _nbr_offsets(self.dev)[None]).reshape(-1, 3)
+                rows = self._find(torch.unique(_pack(nk)))
+                rows = rows[rows >= 0]
+            off = _local_offsets(self.dev)
+            vm, wmin, mobs = self.vm, float(self.w_min), int(self.cfg["min_obs"])
+            touched, occ, free = [], [], []
+            for a in range(0, len(rows), 4000):
+                r = rows[a:a + 4000]
+                g = self.keys[r][:, None, :] * BLK + off[None]
+                cell = torch.floor((g.to(torch.float32) + 0.5) * (vm / res)).to(torch.int64).reshape(-1, 3)
+                sd, w, no = self.sdf[r].reshape(-1), self.w[r].reshape(-1), self.nobs[r].reshape(-1)
+                o = (sd.abs() < vm) & (w >= wmin) & (no >= mobs)
+                f = (sd > 1.5 * vm) & (no >= 1)
+                occ.append(torch.unique(_pack(cell[o])))
+                free.append(torch.unique(_pack(cell[f])))
+            for a in range(0, len(ch), 4000):
+                g = self.keys[ch[a:a + 4000]][:, None, :] * BLK + off[None]
+                cell = torch.floor((g.to(torch.float32) + 0.5) * (vm / res)).to(torch.int64).reshape(-1, 3)
+                touched.append(torch.unique(_pack(cell)))
+            T = torch.unique(torch.cat(touched))
+
+            def pick(lst):
+                u = torch.unique(torch.cat(lst)) if lst else T[:0]
+                return _unpack(u[torch.isin(u, T)]).cpu().numpy()
+            return dict(touched=_unpack(T).cpu().numpy(), occ=pick(occ), free=pick(free), version=ver)
+
     # ---------------- 조각 합치기 (재위치) ----------------
     def merge(self, other, T=None):
         """other 의 복셀을 T (other 월드 → self 월드, 4x4, None = 단위) 로 옮겨 self 에 가중 평균으로 더한다.
@@ -579,6 +706,16 @@ def _local_offsets(dev):
         i = torch.arange(BLK ** 3, device=dev)
         _LOC[k] = torch.stack([i % BLK, (i // BLK) % BLK, i // (BLK * BLK)], 1).to(torch.int64)
     return _LOC[k]
+
+
+def _nbr_offsets(dev):
+    """(27,3) int64 블록 이웃 (자기 포함)."""
+    key = ("nbr", str(dev))
+    if key not in _LOC:
+        import torch
+        _LOC[key] = torch.tensor([[x, y, z] for z in (-1, 0, 1) for y in (-1, 0, 1) for x in (-1, 0, 1)],
+                                 dtype=torch.int64, device=dev)
+    return _LOC[key]
 
 
 def _unit_offsets(dev):

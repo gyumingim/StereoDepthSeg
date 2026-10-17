@@ -24,6 +24,7 @@ import cv2
 import numpy as np
 
 MAX_DB = 400
+MAX_DB_LOADED = 1200          # 저장 지도를 불러올 때 (지도 + 이번 세션) 최대 기준 키프레임
 
 
 def make_T(R, p):
@@ -60,7 +61,7 @@ class Relocalizer:
     # 잘못 붙는 것은 '서로 다른 키프레임 2장이 8 cm·3° 안에서 같은 변환' 합의로 막는다. 2.0 px·0.25 이면 2+6 녹화
     # (162204) 질의 58개 중 45개가 재투영·비율에서 떨어져 끝까지 못 붙음.
     def __init__(self, log, K_lens0u, maps, min_inliers=30, min_inlier_frac=0.15, max_reproj_px=2.5, max_tilt_deg=4.0,
-                 min_agree=2, agree_rot_deg=3.0, agree_trans_m=0.08, on_aligned=None):
+                 min_agree=2, agree_rot_deg=3.0, agree_trans_m=0.08, on_aligned=None, min_side_cos=0.1):
         self.log = log
         # 특징 영상 폭 약 720 px: 1440 녹화는 절반, 640 녹화는 그대로 (640 을 절반으로 줄이면 특징·내점이 너무 적음 —
         # rec_20261016_143702 시험 분할에서 내점 30~44, 정답과 11 cm 차이)
@@ -73,9 +74,11 @@ class Relocalizer:
         self.min_inliers, self.min_inlier_frac, self.max_reproj = min_inliers, min_inlier_frac, max_reproj_px
         self.max_tilt, self.min_agree = max_tilt_deg, min_agree
         self.agree_rot, self.agree_trans = agree_rot_deg, agree_trans_m
+        self.min_side_cos = float(min_side_cos)      # 보는 쪽 확인 (내점 시선 방향 cos 중앙값 하한)
         self.on_aligned = on_aligned
         self.sift = cv2.SIFT_create(nfeatures=3000)
         self.db = []                 # dict(t, C (cam 중심), R, desc, X)
+        self.max_db = MAX_DB         # 저장 지도를 불러오면 (import_db) 그 수 + MAX_DB 까지 (MAX_DB_LOADED 한도)
         self.cloud = []              # 전역 깊이 점 표본 (확인용)
         self._index = None
         self._dirty = True
@@ -92,6 +95,7 @@ class Relocalizer:
     def clear(self):
         with self.lock:
             self.db, self.cloud, self._index, self._dirty = [], [], None, True
+            self.max_db = MAX_DB
             self.seg, self.cands = None, []
             self.stats = dict(db=0, db_skipped=0, queries=0, pnp_ok=0, rejected={}, alignments=[], checks=[])
         try:
@@ -124,6 +128,49 @@ class Relocalizer:
         if self.scale >= 1.0:
             return g
         return cv2.resize(g, None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_AREA)
+
+    def export_db(self):
+        """지도 저장 (map_store.py): 기준 키프레임 DB + 확인용 점 표본 → numpy 배열 dict (기술자는 이어 붙이고 offs 로 나눔)."""
+        with self.lock:
+            db, cloud = list(self.db), list(self.cloud)
+        n = len(db)
+        out = dict(n=np.int32(n), t=np.array([e["t"] for e in db], np.float64),
+                   C=np.array([e["C"] for e in db], np.float64).reshape(n, 3),
+                   R=np.array([e["R"] for e in db], np.float64).reshape(n, 3, 3),
+                   offs=np.cumsum([0] + [len(e["desc"]) for e in db]).astype(np.int64),
+                   desc=(np.concatenate([e["desc"] for e in db]) if n else np.zeros((0, 128), np.float32)).astype(np.float32),
+                   X=(np.concatenate([e["X"] for e in db]) if n else np.zeros((0, 3))).astype(np.float32),
+                   cloud=(np.concatenate(cloud) if cloud else np.zeros((0, 3))).astype(np.float32))
+        return out
+
+    def import_db(self, d, T=None):
+        """저장한 DB (export_db 형식) 를 지금 DB 에 더함 (T = 저장 지도 좌표 → 지금 전역, None = 그대로).
+        기술자는 SIFT 라 영상 크기(640·1440 녹화)와 상관없이 쓰고, 3D 점은 미터라 그대로. 반환 = 더한 키프레임 수."""
+        offs = np.asarray(d["offs"], np.int64)
+        n = int(d["n"])
+        desc = np.asarray(d["desc"], np.float32)
+        X = np.asarray(d["X"], np.float64)
+        C = np.asarray(d["C"], np.float64).reshape(-1, 3)
+        R = np.asarray(d["R"], np.float64).reshape(-1, 3, 3)
+        cl = np.asarray(d["cloud"], np.float64).reshape(-1, 3)
+        if T is not None:
+            T = np.asarray(T, np.float64)
+            X = X @ T[:3, :3].T + T[:3, 3]
+            C = C @ T[:3, :3].T + T[:3, 3]
+            R = np.einsum("ij,njk->nik", T[:3, :3], R)
+            cl = cl @ T[:3, :3].T + T[:3, 3]
+        with self.lock:
+            for i in range(n):
+                a, b = int(offs[i]), int(offs[i + 1])
+                self.db.append(dict(t=float(d["t"][i]), C=C[i], R=R[i], desc=desc[a:b], X=X[a:b]))
+            del self.db[:max(0, len(self.db) - MAX_DB_LOADED)]
+            self.max_db = min(MAX_DB_LOADED, max(self.max_db, len(self.db) + MAX_DB))
+            if len(cl):
+                self.cloud.extend(np.array_split(cl, max(1, len(cl) // 1500)))
+            self._dirty = True
+            self.stats["db"] = len(self.db)
+            self.stats["db_loaded"] = self.stats.get("db_loaded", 0) + n
+        return n
 
     def summary(self):
         s = dict(self.stats)
@@ -193,11 +240,11 @@ class Relocalizer:
         Xw = X @ R.T + C
         with self.lock:
             self.db.append(dict(t=t, C=C, R=R, desc=desc[good].astype(np.float32), X=Xw))
-            if len(self.db) > MAX_DB:
+            if len(self.db) > self.max_db:
                 self.db.pop(0)
             sel = np.random.default_rng(len(self.db)).choice(len(P), min(len(P), 1500), replace=False)
             self.cloud.append(P[sel] @ R.T + C)
-            if len(self.cloud) > MAX_DB:
+            if len(self.cloud) > self.max_db:
                 self.cloud.pop(0)
             self._dirty = True
             self.stats["db"] = len(self.db)
@@ -211,11 +258,12 @@ class Relocalizer:
             D = np.concatenate([e["desc"] for e in self.db])
             X = np.concatenate([e["X"] for e in self.db])
             E = np.concatenate([np.full(len(e["desc"]), i) for i, e in enumerate(self.db)])
+            Cp = np.concatenate([np.repeat(np.asarray(e["C"], float)[None], len(e["desc"]), 0) for e in self.db])
             self._dirty = False
         fl = cv2.FlannBasedMatcher(dict(algorithm=1, trees=4), dict(checks=64))
         fl.add([D])
         fl.train()
-        self._index = (fl, X, E)
+        self._index = (fl, X, E, Cp)
         return self._index
 
     def _query(self, bgr, T_seg_c1, t, seg, truth=None):
@@ -226,14 +274,14 @@ class Relocalizer:
         if idx is None:
             self._rej("empty_db")
             return
-        fl, X, _E = idx
+        fl, X, _E, Cp = idx
         g = self.gray(bgr)
         kps, desc = self.sift.detectAndCompute(g, None)
         if desc is None or len(kps) < 20:
             self._rej("few_features")
             return
         mm = fl.knnMatch(desc.astype(np.float32), k=4)
-        obj, img = [], []
+        obj, img, tri = [], [], []
         for qi, ms in enumerate(mm):
             if not ms:
                 continue
@@ -243,6 +291,7 @@ class Relocalizer:
             if other is not None and b.distance > 0.8 * other.distance:
                 continue
             obj.append(xb)
+            tri.append(b.trainIdx)
             img.append(kps[qi].pt)
         if len(obj) < self.min_inliers:
             self._rej("few_matches")
@@ -270,7 +319,18 @@ class Relocalizer:
         if tilt > self.max_tilt:
             self._rej("tilt")
             return
+        # 보는 쪽 확인: 내점 3D 점마다 (그 점을 본 기준 키프레임 카메라 − 점) 과 (지금 카메라 − 점) 의 방향이 같은 쪽이어야 함.
+        # 평면(선반 앞면 등)은 반대편(벽 뒤)에서 봐도 무늬가 거울처럼 맞아 PnP 가 통과할 수 있음 — 거울 지도 시험에서 잘못 붙음
+        tr_i = np.asarray(tri, np.int64)[inl]
+        v1 = Cp[tr_i] - obj[inl]
+        v2 = T_w_c[:3, 3][None] - obj[inl]
+        cs = (v1 * v2).sum(1) / np.maximum(np.linalg.norm(v1, axis=1) * np.linalg.norm(v2, axis=1), 1e-9)
+        side = float(np.median(cs))
+        if side < self.min_side_cos:
+            self._rej("view_side")
+            return
         self.stats["pnp_ok"] += 1
+        self.stats.setdefault("side_cos", []).append(round(side, 3))
         c = dict(t=t, T=T_on, n=len(inl), frac=round(frac, 3), reproj=round(med, 3), tilt=round(tilt, 2),
                  C_old=T_w_c[:3, 3].copy(), C_new=np.asarray(T_seg_c1, float)[:3, 3].copy(),
                  obj=obj[inl], img=img[inl], T_sc=np.asarray(T_seg_c1, float))
