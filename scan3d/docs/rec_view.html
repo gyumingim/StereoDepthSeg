@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>녹화 영상 보기</title>
+<style>
+:root{--bg:#f7f7f5;--fg:#1c1f24;--mut:#6b7078;--card:#fff;--line:#e2e4e8;--a:#2563eb}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,"Malgun Gothic",sans-serif}
+main{max-width:1100px;margin:0 auto;padding:16px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+select,button{font:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg)}
+video{width:100%;background:#000;border-radius:10px}
+.mut{color:var(--mut);font-size:14px}
+</style>
+</head>
+<body><main>
+<div class="row">
+ <b>녹화</b><select id="rec"></select>
+ <b>렌즈</b><select id="cam"></select>
+ <b>속도</b><select id="spd"><option>0.25</option><option>0.5</option><option selected>1</option><option>2</option></select>
+ <button id="back">◀ 1프레임</button><button id="fwd">1프레임 ▶</button>
+</div>
+<video id="v" controls preload="metadata"></video>
+<p class="mut" id="info">-</p>
+<p class="mut">스페이스 = 재생/멈춤, ← → = 1프레임 이동. 최근 녹화가 위에 있습니다.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let fps=30;
+async function links(path){const t=await (await fetch(path)).text();return [...t.matchAll(/href="([^"]+)"/g)].map(m=>decodeURIComponent(m[1]));}
+async function loadRecs(){const L=(await links('/recordings/')).filter(x=>/^rec_\d+_\d+\/$/.test(x)).map(x=>x.slice(0,-1)).sort().reverse();
+ $('rec').innerHTML=L.map(x=>`<option>${x}</option>`).join('');await loadCams();}
+async function loadCams(){const r=$('rec').value;const L=(await links(`/recordings/${r}/`)).filter(x=>/^cam\d\.mp4$/.test(x));
+ $('cam').innerHTML=L.map(x=>`<option value="${x}">${x.includes('5')?'광각 (5)':x.includes('2')?'초광각 (2)':x}</option>`).join('');
+ try{const m=await (await fetch(`/recordings/${r}/meta.json`)).json();fps=m.save_fps||m.fps||30;
+  $('info').textContent=`${r} · ${m.width}x${m.height} · ${fps} fps · 렌즈 ${(m.physical||[]).join(', ')}`;}catch(e){$('info').textContent=r;}
+ play();}
+function play(){const r=$('rec').value,c=$('cam').value;if(!c){$('v').removeAttribute('src');return;}$('v').src=`/recordings/${r}/${c}`;$('v').playbackRate=+$('spd').value;}
+$('rec').onchange=loadCams;$('cam').onchange=play;$('spd').onchange=()=>$('v').playbackRate=+$('spd').value;
+$('back').onclick=()=>{$('v').pause();$('v').currentTime=Math.max(0,$('v').currentTime-1/fps);};
+$('fwd').onclick=()=>{$('v').pause();$('v').currentTime+=1/fps;};
+addEventListener('keydown',e=>{if(e.target.tagName==='SELECT')return;if(e.key===' '){e.preventDefault();$('v').paused?$('v').play():$('v').pause();}
+ if(e.key==='ArrowLeft'){e.preventDefault();$('back').click();}if(e.key==='ArrowRight'){e.preventDefault();$('fwd').click();}});
+loadRecs();
+</script>
+</body></html>
