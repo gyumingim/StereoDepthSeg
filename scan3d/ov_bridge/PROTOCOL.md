@@ -21,7 +21,7 @@ build/ov_bridge ../config/estimator_config.yaml --tcp 127.0.0.1:7600
 - pose 줄 추가 필드: `cam_rejected`, `exceptions`, `imu_held`. ready 줄: `imu_hold_s`.
 - scan3d 는 기본 `--ov auto` 로 이 브리지를 `--stdio` 자식 프로세스로 띄우고, 죽으면 `--bridge-restart-s`(2 s) 뒤 다시 띄운다.
 
-옵션: `--max-cam-queue N` (기본 3, 넘으면 가장 오래된 카메라 레코드 버림, IMU 는 안 버림),
+옵션: `--remap FILE` (2026-10-18, 폰 실시간: cam0 영상을 int32 w,h + float32 mapx,my 맵으로 cv::remap — 렌즈 2 원본 → lens0u, make_phone_ov.py), `--max-cam-queue N` (기본 3, 넘으면 가장 오래된 카메라 레코드 버림, IMU 는 안 버림),
 `--max-speed M_S` (기본 5 m/s, 넘으면 `lost`), `--lost-frames N` (기본 15, 특징점 0 이 N 프레임 연속이면 `lost`),
 `--startup-lost-frames N` (기본 45, 2026-10-16: 초기화 뒤 **첫 특징 갱신 전**에는 이 프레임 수까지 기다림 — 정지 ZUPT 가
 끝나고 움직이기 시작하면 clone 창이 차고 시차가 생길 때까지 10~14 프레임 동안 SLAM/MSCKF 갱신이 0 인 게 정상이라, 15 로

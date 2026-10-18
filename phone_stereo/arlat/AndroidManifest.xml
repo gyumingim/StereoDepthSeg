@@ -2,6 +2,10 @@
     android:versionCode="1" android:versionName="0.1">
     <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="34" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Streamer: socket to 127.0.0.1:8798 (adb reverse to the PC bench server) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- OvRunner: gyro/accel above 200 Hz for OpenVINS -->
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
     <uses-feature android:name="android.hardware.camera.ar" android:required="true" />
     <queries><package android:name="com.google.ar.core" /></queries>
     <application android:label="ARCore Latency" android:debuggable="true" android:extractNativeLibs="true"

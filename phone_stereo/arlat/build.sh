@@ -13,6 +13,11 @@ javac -source 8 -target 8 -classpath "$JAR:$AAR/classes.jar" -d "$B/classes" $(f
 "$BT/d8" --lib "$JAR" --min-api 28 --output "$B" $(find "$B/classes" -name '*.class') "$AAR/classes.jar"
 "$BT/aapt" package -f -M "$HERE/AndroidManifest.xml" -I "$JAR" -F "$B/unsigned.apk"
 cp "$AAR"/jni/arm64-v8a/*.so "$B/apk/lib/arm64-v8a/"
+# live OpenVINS (mode ov): the bridge executable ships as a "library" so Android extracts it executable (W^X)
+NDK=${NDK:-$HOME/android-ndk-r27c}
+OVB=$HERE/../../scan3d/ov_bridge/android/build/ov_bridge
+"$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip" -o "$B/apk/lib/arm64-v8a/libov_bridge.so" "$OVB"
+cp "$NDK/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so" "$B/apk/lib/arm64-v8a/"
 cp "$B/classes.dex" "$B/apk/"
 (cd "$B/apk" && zip -q -r "$B/unsigned.apk" classes.dex lib)
 "$BT/zipalign" -f 4 "$B/unsigned.apk" "$B/aligned.apk"

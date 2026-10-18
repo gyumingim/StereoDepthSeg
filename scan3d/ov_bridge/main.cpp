@@ -3,7 +3,7 @@
 //
 //   ov_bridge <estimator_config.yaml> [--stdio | --tcp HOST:PORT] [--max-cam-queue N]
 //             [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]
-//             [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S]
+//             [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S] [--remap FILE]
 //             [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG]
 //
 // --init-gate (2026-10-18, 10-18 오전 "그림자" 방식으로 바꿈): 기본 VioManager (원래 설정, 시차 기준 그대로) 옆에
@@ -50,6 +50,7 @@
 
 #include <Eigen/Eigen>
 #include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 
 #include "core/VioManager.h"
 #include "core/VioManagerOptions.h"
@@ -94,6 +95,9 @@ struct Args {
   double gate_mean = 0.0;   // --init-gate (0 = 끔)
   double gate_max = 0.0;
   double gate_disp_deg = 0.0;
+  // --remap FILE (2026-10-18, 폰 실시간): cam0 영상을 받은 뒤 이 맵으로 cv::remap (렌즈 2 원본 → lens0u 왜곡 편 영상).
+  // 파일 = int32 w, h + float32 mapx[w*h] + float32 mapy[w*h] (scan3d/ov_bridge/android/make_phone_ov.py). 크기가 다른 영상은 그대로.
+  std::string remap;
 };
 
 // JSON 문자열 이스케이프 (예외 메시지에 따옴표·줄바꿈이 들어 있음)
@@ -186,6 +190,7 @@ public:
     ov_core::Printer::setPrintLevel(verbosity);
     params_.print_and_load(parser_);
     params_.use_multi_threading_subs = false;  // 순서대로 처리 (카메라 feed 는 이 스레드에서만)
+    if (!a.remap.empty()) load_remap(a.remap);
     if (a.gate_mean > 0.0 && a.gate_disp_deg > 0.0 && params_.camera_intrinsics.count(0)) {
       double fx = params_.camera_intrinsics.at(0)->get_value()(0);
       double px = fx * std::tan(a.gate_disp_deg * M_PI / 180.0);
@@ -352,6 +357,11 @@ private:
     for (int i = 0; i < n; i++) {
       cv::Mat g(static_cast<int>(h), static_cast<int>(w), CV_8UC1);
       std::memcpy(g.data, p + 20 + i * img, img);
+      if (i == 0 && !map_x_.empty() && map_x_.cols == static_cast<int>(w) && map_x_.rows == static_cast<int>(h)) {
+        cv::Mat u;
+        cv::remap(g, u, map_x_, map_y_, cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0));
+        g = u;
+      }
       c.data.sensor_ids.push_back(i);
       c.data.images.push_back(g);
       if (params_.use_mask && params_.masks.count(i))
@@ -666,6 +676,28 @@ private:
   }
 
   Args args_;
+  cv::Mat map_x_, map_y_;  // --remap (CV_16SC2 + CV_16UC1 고정소수 맵, 빠름)
+
+  void load_remap(const std::string &path) {
+    FILE *f = std::fopen(path.c_str(), "rb");
+    int32_t wh[2] = {0, 0};
+    if (!f || std::fread(wh, 4, 2, f) != 2 || wh[0] <= 0 || wh[1] <= 0) {
+      std::fprintf(stderr, "[ov_bridge] remap: cannot read %s\n", path.c_str());
+      if (f) std::fclose(f);
+      return;
+    }
+    cv::Mat mx(wh[1], wh[0], CV_32FC1), my(wh[1], wh[0], CV_32FC1);
+    size_t n = static_cast<size_t>(wh[0]) * wh[1];
+    bool ok = std::fread(mx.data, 4, n, f) == n && std::fread(my.data, 4, n, f) == n;
+    std::fclose(f);
+    if (!ok) {
+      std::fprintf(stderr, "[ov_bridge] remap: short file %s\n", path.c_str());
+      return;
+    }
+    cv::convertMaps(mx, my, map_x_, map_y_, CV_16SC2);
+    std::fprintf(stderr, "[ov_bridge] remap %dx%d from %s\n", wh[0], wh[1], path.c_str());
+  }
+
   bool ok_ = true;
   std::shared_ptr<ov_core::YamlParser> parser_;
   ov_msckf::VioManagerOptions params_;
@@ -729,7 +761,7 @@ void usage() {
   std::fprintf(stderr,
                "usage: ov_bridge <estimator_config.yaml> [--stdio | --tcp HOST:PORT] [--max-cam-queue N]\n"
                "                 [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]\n"
-               "                 [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S]\n"
+               "                 [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S] [--remap FILE]\n"
                "                 [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG]\n");
 }
 
@@ -770,6 +802,7 @@ int main(int argc, char **argv) {
     else if (s == "--emit-features") a.emit_features = std::stoi(next());
     else if (s == "--imu-hold") a.imu_hold_s = std::max(0.0, std::stod(next()));
     else if (s == "--reinit-state") a.reinit_state = true;
+    else if (s == "--remap") a.remap = next();
     else if (s == "--reinit-max-gap") a.reinit_max_gap = std::stod(next());
     else if (s == "--reinit-sigma") {  // ori_deg,pos_m,vel_m_s
       std::string v = next();

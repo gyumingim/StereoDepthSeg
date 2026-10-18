@@ -10,6 +10,7 @@ import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.view.WindowManager;
 import android.widget.TextView;
 
 import com.google.ar.core.Config;
@@ -24,10 +25,12 @@ import java.io.PrintWriter;
 import java.util.Locale;
 
 /**
- * ARCore latency probe. A GL thread loops Session.update() and logs per new frame:
- * frame timestamp (camera), android camera timestamp, elapsedRealtimeNanos before/after update(), tracking state, pose
- * -> files/arlat_<ms>.csv. Latency = t_return - t_frame, both on the phone clock.
- * Run length: intent extra "secs" (default 30).
+ * VIO latency/pose bench (PC page: scan3d/tools/vio_bench_server.py).
+ * Intent extras: mode = arcore (default) | ov (live OpenVINS, OvRunner) | cam2 (camera2 delivery only, Cam2Probe);
+ * secs = run length (0 = until the activity is stopped).
+ * arcore: a GL thread loops Session.update() and per new frame logs/streams
+ *   {"src":"arcore","t_sensor":android camera ts,"t_frame":ARCore ts,"t_call":..,"t_out":update() return,"status":..,"p":[..],"q":[..]}
+ * also written to files/arlat_<ms>.csv. Latency = t_out - t_sensor (phone clock).
  */
 public class MainActivity extends Activity {
     private Session session;
@@ -35,27 +38,45 @@ public class MainActivity extends Activity {
     private Thread worker;
     private TextView status;
     private Cam2Probe cam2;
+    private OvRunner ov;
+    private Streamer streamer;
 
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         status = new TextView(this);
         status.setTextSize(18);
         status.setPadding(40, 120, 40, 40);
         setContentView(status);
+        streamer = new Streamer();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (streamer != null) streamer.close();
+        super.onDestroy();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        final int secs = getIntent().getIntExtra("secs", 30);
+        final int secs = getIntent().getIntExtra("secs", 0);
         String mode = getIntent().getStringExtra("mode");
         if ("cam2".equals(mode)) {          // camera2 delivery latency of the VIO lens instead of ARCore
             if (cam2 == null) {
                 cam2 = new Cam2Probe(this, this::show);
                 String phys = getIntent().getStringExtra("phys");
-                try { cam2.start(secs, phys == null ? "2" : phys); }
+                try { cam2.start(secs > 0 ? secs : 30, phys == null ? "2" : phys); }
                 catch (Exception e) { status.setText("cam2 error: " + e); }
+            }
+            return;
+        }
+        if ("ov".equals(mode)) {
+            if (ov == null) {
+                ov = new OvRunner(this, this::show, streamer);
+                try { ov.start(); status.setText("OpenVINS starting..."); }
+                catch (Exception e) { status.setText("ov error: " + e); android.util.Log.e("arlat", "ov", e); }
             }
             return;
         }
@@ -82,6 +103,7 @@ public class MainActivity extends Activity {
     protected void onPause() {
         running = false;
         if (cam2 != null) { cam2.stop(); cam2 = null; }
+        if (ov != null) { ov.stop(); ov = null; }
         if (worker != null) {
             try { worker.join(2000); } catch (InterruptedException ignored) { }
         }
@@ -113,7 +135,7 @@ public class MainActivity extends Activity {
         session.setCameraTextureName(tex[0]);
 
         File out = new File(getExternalFilesDir(null), "arlat_" + System.currentTimeMillis() + ".csv");
-        long tEnd = SystemClock.elapsedRealtime() + secs * 1000L;
+        long tEnd = secs > 0 ? SystemClock.elapsedRealtime() + secs * 1000L : Long.MAX_VALUE;
         int frames = 0, tracking = 0;
         long lastTs = 0;
         try (PrintWriter w = new PrintWriter(new FileWriter(out))) {
@@ -127,14 +149,18 @@ public class MainActivity extends Activity {
                 lastTs = ts;
                 TrackingState st = f.getCamera().getTrackingState();
                 Pose p = f.getCamera().getPose();
+                long tCam = f.getAndroidCameraTimestamp();
                 frames++;
                 if (st == TrackingState.TRACKING) tracking++;
                 w.println(String.format(Locale.US, "%d,%d,%d,%d,%s,%.5f,%.5f,%.5f,%.6f,%.6f,%.6f,%.6f", ts,
-                        f.getAndroidCameraTimestamp(), t0, t1, st, p.tx(), p.ty(), p.tz(),
-                        p.qx(), p.qy(), p.qz(), p.qw()));
+                        tCam, t0, t1, st, p.tx(), p.ty(), p.tz(), p.qx(), p.qy(), p.qz(), p.qw()));
+                streamer.send(String.format(Locale.US,
+                        "{\"src\":\"arcore\",\"t_sensor\":%d,\"t_frame\":%d,\"t_call\":%d,\"t_out\":%d,\"status\":\"%s\","
+                                + "\"p\":[%.5f,%.5f,%.5f],\"q\":[%.6f,%.6f,%.6f,%.6f]}",
+                        tCam, ts, t0, t1, st, p.tx(), p.ty(), p.tz(), p.qx(), p.qy(), p.qz(), p.qw()));
                 if (frames % 15 == 0) {
-                    show(String.format(Locale.US, "frames %d tracking %d\nlatency %.1f ms\n%s", frames, tracking,
-                            (t1 - ts) / 1e6, st));
+                    show(String.format(Locale.US, "ARCore %s\nframes %d tracking %d\nlatency %.1f ms\nPC %s", st, frames,
+                            tracking, (t1 - tCam) / 1e6, streamer.connected ? "connected" : "-"));
                 }
             }
         } catch (Exception e) {
