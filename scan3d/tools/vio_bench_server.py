@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""VIO bench: live ARCore vs OpenVINS (on the phone) latency and pose page on the PC.
+r"""VIO bench: live ARCore vs OpenVINS (on the phone) latency and pose page on the PC.
 
 Runs on Windows Python (adb is a Windows exe); stdlib only:
   python \\\\wsl.localhost\\Ubuntu-22.04\\home\\system\\scanner\\StereoDepthSeg\\scan3d\\tools\\vio_bench_server.py
@@ -10,10 +10,13 @@ Runs on Windows Python (adb is a Windows exe); stdlib only:
 - Start/Stop buttons run `adb shell am start/force-stop`. OpenVINS config + undistort map (make_phone_ov.py output)
   are pushed to the app folder the first time OpenVINS starts (or with the "설정 다시 보내기" button).
 - Latency = t_out - t_sensor on the phone clock (sensor timestamp = start of exposure -> pose available in the app).
-- Every run is saved to scan3d/runs/vio_bench_<time>_<mode>.jsonl (+ .summary.json); the page lists past runs.
+- Every run is saved to %LOCALAPPDATA%\scan3d_vio_bench\vio_bench_<time>_<mode>.jsonl (+ .summary.json); the page
+  lists past runs. Not on the \\wsl.localhost share: per-line writes there stalled and froze the whole server
+  (2026-10-18), so files are local and only the writer thread touches the disk, never under the hub lock.
 """
 import argparse
 import json
+import os
 import math
 import queue
 import statistics
@@ -25,7 +28,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-RUNS = HERE.parent / "runs"
+RUNS = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "scan3d_vio_bench"
+WRITES = queue.Queue()      # (path, line) appends, or (path, None, text) whole-file writes -> writer_loop
 PKG = "com.scan3d.arlat"
 PHONE_OV = f"/sdcard/Android/data/{PKG}/files/ov/"
 OV_FILES = ["estimator_config.yaml", "kalibr_imu_chain.yaml", "kalibr_imucam_chain.yaml", "lens0u_remap.bin"]
@@ -46,7 +50,7 @@ class Run:
         self.t0 = time.time()
         self.name = time.strftime("vio_bench_%Y%m%d-%H%M%S_", time.localtime(self.t0)) + mode
         RUNS.mkdir(parents=True, exist_ok=True)
-        self.f = open(RUNS / (self.name + ".jsonl"), "a", encoding="utf-8")
+        self.path_jsonl = RUNS / (self.name + ".jsonl")
         self.lat = []            # ms, whole run (tracking frames only)
         self.lat_all = []        # ms, every frame
         self.ms = []             # OpenVINS processing ms
@@ -61,7 +65,7 @@ class Run:
         self.events = deque(maxlen=20)
 
     def add(self, d):
-        self.f.write(json.dumps(d) + "\n")
+        WRITES.put((self.path_jsonl, json.dumps(d) + "\n"))
         if "event" in d:
             self.events.append(d["event"])
             return
@@ -109,10 +113,32 @@ class Run:
         return r
 
     def close(self):
-        self.f.close()
         s = self.stats()
-        (RUNS / (self.name + ".summary.json")).write_text(json.dumps(s, ensure_ascii=False, indent=1), encoding="utf-8")
+        WRITES.put((RUNS / (self.name + ".summary.json"), None, json.dumps(s, ensure_ascii=False, indent=1)))
         return s
+
+
+def writer_loop():
+    """The only thread that touches the disk: appends run lines, writes summaries (and closes that run's file)."""
+    files = {}
+    while True:
+        item = WRITES.get()
+        try:
+            if len(item) == 3:
+                item[0].write_text(item[2], encoding="utf-8")
+                f = files.pop(str(item[0]).replace(".summary.json", ".jsonl"), None)
+                if f:
+                    f.close()
+                continue
+            path, line = item
+            f = files.get(str(path))
+            if f is None:
+                f = files[str(path)] = open(path, "a", encoding="utf-8")
+            f.write(line)
+            if WRITES.empty():
+                f.flush()
+        except Exception as e:
+            print("writer:", e, flush=True)
 
 
 class Hub:
@@ -120,10 +146,23 @@ class Hub:
         self.a = a
         self.run = None
         self.lock = threading.Lock()
+        self.cmd_lock = threading.Lock()
         self.clients = []
         self.phone_connected = False
         self.ov_pushed = False
         self.log = deque(maxlen=50)
+
+    def background(self, fn, *args):
+        """adb commands off the HTTP thread, one at a time (double clicks queue up instead of racing)."""
+        def run():
+            with self.cmd_lock:
+                try:
+                    out = fn(*args)
+                    if out:
+                        self.say(out.splitlines()[-1][:200])
+                except Exception as e:
+                    self.say(f"오류: {e}")
+        threading.Thread(target=run, daemon=True).start()
 
     def say(self, msg):
         self.log.append(time.strftime("%H:%M:%S ") + msg)
@@ -163,11 +202,13 @@ class Hub:
 
     def stop(self, quiet=False):
         o = self.adb("shell", "am", "force-stop", PKG)
+        s = None
         with self.lock:
             if self.run is not None:
                 s = self.run.close()
                 self.run = None
-                self.broadcast({"type": "run_end", "summary": s})
+        if s is not None:
+            self.broadcast({"type": "run_end", "summary": s})
         if not quiet:
             self.say("멈춤")
         return o
@@ -198,37 +239,45 @@ def phone_listener(hub, port):
     srv.bind(("127.0.0.1", port))
     srv.listen(2)
     while True:
-        c, _ = srv.accept()
-        hub.phone_connected = True
-        hub.say("폰 연결됨")
-        buf = b""
-        try:
-            while True:
-                b = c.recv(65536)
-                if not b:
-                    break
-                buf += b
-                *lines, buf = buf.split(b"\n")
-                for l in lines:
-                    if l.strip():
-                        try:
-                            hub.on_line(json.loads(l))
-                        except Exception as e:
-                            hub.say(f"잘못된 줄: {e}")
-        except OSError:
-            pass
-        finally:
-            c.close()
-            hub.phone_connected = False
-            hub.say("폰 연결 끊김")
+        c, _ = srv.accept()   # one thread per connection: an old half-dead phone socket must not block the new one
+        threading.Thread(target=phone_conn, args=(hub, c), daemon=True).start()
+
+
+def phone_conn(hub, c):
+    hub.phone_connected = True
+    hub.say("폰 연결됨")
+    c.settimeout(10)
+    buf = b""
+    try:
+        while True:
+            b = c.recv(65536)
+            if not b:
+                break
+            buf += b
+            *lines, buf = buf.split(b"\n")
+            for l in lines:
+                if l.strip():
+                    try:
+                        hub.on_line(json.loads(l))
+                    except Exception as e:
+                        hub.say(f"잘못된 줄: {e}")
+    except OSError:
+        pass
+    finally:
+        c.close()
+        hub.phone_connected = False
+        hub.say("폰 연결 끊김")
 
 
 def stats_ticker(hub):
     while True:
         time.sleep(1.0)
-        with hub.lock:
-            s = hub.run.stats() if hub.run else None
-        hub.broadcast({"type": "stats", "stats": s, "phone": hub.phone_connected})
+        try:
+            with hub.lock:
+                s = hub.run.stats() if hub.run else None
+            hub.broadcast({"type": "stats", "stats": s, "phone": hub.phone_connected})
+        except Exception as e:
+            print("stats:", e, flush=True)
 
 
 def make_handler(hub):
@@ -283,11 +332,14 @@ def make_handler(hub):
             body = json.loads(self.rfile.read(n) or b"{}")
             try:
                 if self.path == "/api/start":
-                    self._json({"ok": True, "out": hub.start(body.get("mode", "arcore"), int(body.get("secs", 0)))})
+                    hub.background(hub.start, body.get("mode", "arcore"), int(body.get("secs", 0)))
+                    self._json({"ok": True})
                 elif self.path == "/api/stop":
-                    self._json({"ok": True, "out": hub.stop()})
+                    hub.background(hub.stop)
+                    self._json({"ok": True})
                 elif self.path == "/api/push_ov":
-                    self._json({"ok": True, "out": hub.push_ov()})
+                    hub.background(hub.push_ov)
+                    self._json({"ok": True})
                 else:
                     self._json({"error": "not found"}, 404)
             except Exception as e:
@@ -351,7 +403,8 @@ es.onmessage=ev=>{const d=JSON.parse(ev.data);
  else if(d.type==='stats'){const s=d.stats; document.getElementById('phone').textContent='폰: '+(d.phone?'연결됨':'연결 안 됨');
   if(!s)return; document.getElementById('mode').textContent=s.mode==='ov'?'OpenVINS':'ARCore';
   document.getElementById('mode').style.color=css(s.mode==='ov'?'--ov':'--ar');
-  document.getElementById('status').textContent=s.status+(s.events&&s.events.length?' · '+JSON.stringify(s.events[s.events.length-1]).slice(0,80):'');
+  const ev=(s.events||[]).filter(e=>e.type!=='ready');
+  document.getElementById('status').textContent=(s.status==='init'?'초기화 대기 (가만히 1~2초 뒤 움직이기)':s.status)+(ev.length?' · '+JSON.stringify(ev[ev.length-1]).slice(0,80):'');
   document.getElementById('latnow').textContent=s.lat_recent_med!=null?s.lat_recent_med+' ms':(s.lat_all_recent_med!=null?s.lat_all_recent_med+' ms (추적 전)':'-');
   document.getElementById('latall').textContent='전체 중앙 '+fmt(s.lat_med)+' · p90 '+fmt(s.lat_p90)+' · 최대 '+fmt(s.lat_max)+' ms'+(s.proc_med!=null?' · 계산 '+s.proc_med+' ms':'');
   document.getElementById('trk').textContent=fmt(s.tracking_pct,' %');
@@ -392,6 +445,7 @@ def main():
     hub = Hub(a)
     threading.Thread(target=phone_listener, args=(hub, a.phone_port), daemon=True).start()
     threading.Thread(target=stats_ticker, args=(hub,), daemon=True).start()
+    threading.Thread(target=writer_loop, daemon=True).start()
     print(hub.adb("reverse", "tcp:8798", "tcp:8798"))
     print(f"http://localhost:{a.port}")
     ThreadingHTTPServer((a.host, a.port), make_handler(hub)).serve_forever()
