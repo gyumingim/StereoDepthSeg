@@ -272,7 +272,7 @@ async function pollTraj() {
 // 반환: { step: 1..4 (지금 단계, 0 = 없음), done: 끝난 단계 수, level: ok|warn|bad|'', main, sub }
 const MODE_KO = { idle: '대기', live: '실시간', record: '폰에 녹화', both: '녹화 + 실시간', replay: '녹화 복원' };
 let sessT0 = 0, lastMode = 'idle', camSeenT = 0;
-// 최근 10초 짝 없어 버린 비율 % (REVIEW5 N1). 쌍 묶기 기준이 반 프레임 주기(0.45·T)라 위상과 상관없이 거의 다 짝이 됨 →
+// 최근 10초 짝 없어 버린 비율 % (REVIEW5 N1). 쌍 묶기 기준이 0.55·T (가장 가까운 프레임끼리)라 위상과 상관없이 거의 다 짝이 됨 →
 // 버림은 한쪽 렌즈 프레임이 빠졌다는 뜻 (USB·발열). 그래서 예전(50/80)보다 낮게 잡는다.
 const PAIR_DROP_WARN = 20, PAIR_DROP_BAD = 50;
 // 렌즈 위상 맞추기 (앱 1.5-sync, SPEC 15): ui.sync = metrics.json sync, se.sync = status 줄 꼬리 (녹화 모드)
@@ -397,8 +397,8 @@ function stepFrom(s) {
   if (ph.error) return R('bad', 2, 1, '폰 영상 수신 오류', esc(ph.error));
   const imuOut = ph.imu_sync ? ph.imu_sync.out : 0;
   if (!imuOut && (ph.pairs || 0) > 150) return R('bad', 3, 2, '폰 움직임 센서 값이 안 들어옵니다', '폰 앱이 최신이 아닐 수 있습니다 (README 알려진 한계). 위치 추적을 할 수 없습니다.');
-  // REVIEW5 N1: 짝을 많이 버리면 원인을 보여 준다. 쌍 묶기 기준은 반 프레임 주기(0.45·T, 15 fps 면 30 ms)라
-  // 두 렌즈가 어긋나 찍어도(10~28 ms) 가장 가까운 프레임끼리 짝이 된다 → 버림이 많으면 한쪽 렌즈 프레임이 빠지는 것
+  // REVIEW5 N1: 짝을 많이 버리면 원인을 보여 준다. 쌍 묶기 기준은 0.55·T (15 fps 면 36.67 ms)라
+  // 두 렌즈가 어긋나 찍어도(10~33 ms) 가장 가까운 프레임끼리 짝이 된다 → 버림이 많으면 한쪽 렌즈 프레임이 빠지는 것
   const pd = ph.pair_drop_pct, pairLow = pd !== null && pd !== undefined && pd >= PAIR_DROP_WARN;
   const pairMsg = pairLow ? `한쪽 렌즈 영상이 자주 빠져 짝이 안 맞음 — 기준 ${f(ph.pair_skew_ms, 1)} ms, 버린 비율 ${f(pd, 0)} %` : '';
   const pairHelp = '두 렌즈는 서로 맞춰 찍지 않지만, 가장 가까운 프레임끼리 짝을 짓고 그 사이 폰 움직임은 깊이 계산에서 보정합니다. '

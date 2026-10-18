@@ -6,12 +6,19 @@
 //             [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S]
 //             [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG]
 //
-// --init-gate (2026-10-18): init_max_disparity 를 DISP_DEG 각도 (cam0 fx 로 화소 환산) 로 넓히는 대신, 정지 초기화가 끝난
-// 순간 그 창 init_window_time(+0.05 s) 의 자이로가 조용했는지 (평균 각속도 벡터 크기 <= MEAN, 순간 최대 <= MAX, 카메라 시작 뒤
-// 1 s 이상) 확인해 아니면 그 초기화를 버리고 VioManager 를 새로 만든다. 회전은 자이로가 직접 막으므로 (바이어스 오차 <= MEAN) 영상 쪽 기준은 흐린 장면 KLT 잡음·가까운 물체 시차만큼
+// --init-gate (2026-10-18, 10-18 오전 "그림자" 방식으로 바꿈): 기본 VioManager (원래 설정, 시차 기준 그대로) 옆에
+// init_max_disparity 를 DISP_DEG 각도 (cam0 fx 로 화소 환산) 로 넓힌 "그림자" VioManager 를 하나 더 돌린다 (초기화 전에만).
+//  - 그림자는 카메라 시작 뒤 0.8 s 동안의 프레임은 안 받는다 (시작 직후 흔들림·AE 로 곧바로 초기화되는 것 막기).
+//  - 그림자의 정지 초기화가 끝나면 그 창 init_window_time(+0.05 s) 의 자이로가 조용했는지 (평균 각속도 벡터 크기 <= MEAN,
+//    순간 최대 <= MAX) 확인해 아니면 그림자만 새로 만든다.
+//  - 기본 쪽이 정지 초기화를 하면 그림자는 버린다 (= 예전과 완전히 같은 결과, 참조 녹화 그대로).
+//  - 기본 쪽이 초기화 못 한 채로 폰이 움직이기 시작하면 (최근 0.1 s 자이로 > MAX, 또는 그림자가 이미 갱신 시작) 확인된 그림자로
+//    바꿔 쓴다 ("init_gate":"shadow" 포즈 줄 + stderr 로그).
+// 예전 방식 (기본 쪽 기준을 바로 넓히고 버리기) 은 175446 의 초기화 순간을 1 프레임 바꿔 궤적이 크게 달라졌다 (키프레임 142 -> 111):
+// 이 녹화는 초기화 순간에 매우 민감하다. 회전은 자이로가 직접 막으므로 (바이어스 오차 <= MEAN) 영상 쪽 기준은 흐린 장면 KLT 잡음·가까운 물체 시차만큼
 // 여유를 줄 수 있다. 근거: rec_20261018_002349 는 자이로 평균 0.001 rad/s 로 멈춰 있었는데 흐린 근접 장면이라 시차
 // 3.95~6.6 px (> 3.09) 로 초기화가 늦어짐. 예전 문제 (천천히 도는 중 2.6~14.8 px 에서 초기화 → 바이어스 0.016~0.035 rad/s) 는
-// 평균 각속도 기준으로 막힌다. 버린 프레임의 포즈 줄에는 "init_gate":"moving"|"short".
+// 평균 각속도 기준으로 막힌다. 그림자 초기화를 버릴 때 ("moving"|"short") 는 stderr 로그만 남는다.
 //
 // --reinit-state (2026-10-17): lost(특징 끊김) auto-reset 때 정지 초기화 대신 옛 상태를 새 VioManager 에 넣어 같은 월드로 이어 감
 // ({"type":"reset","auto":true,"reason":"lost","reinit":"state",...}). PROTOCOL.md 참고.
@@ -184,7 +191,9 @@ public:
       double px = fx * std::tan(a.gate_disp_deg * M_PI / 180.0);
       std::fprintf(stderr, "[ov_bridge] init gate: gyro mean <= %.4f max <= %.3f rad/s, init_max_disparity %.2f -> %.2f px (%.2f deg, fx %.1f)\n",
                    a.gate_mean, a.gate_max, params_.init_options.init_max_disparity, px, a.gate_disp_deg, fx);
-      params_.init_options.init_max_disparity = px;
+      shadow_params_ = params_;
+      shadow_params_.init_options.init_max_disparity = px;  // 기본 params_ 는 그대로 (그림자만 넓힘)
+      use_shadow_ = true;
     }
     if (!parser_->successful()) {
       PRINT_ERROR("[ov_bridge] unable to parse all parameters in %s\n", a.config.c_str());
@@ -196,9 +205,20 @@ public:
 
   bool ok() const { return ok_; }
 
+  // --init-gate 그림자 VioManager (넓힌 시차 기준) 새로 만들기. refeed = 지금까지 넣은 최근 IMU 를 다시 넣음.
+  void make_shadow(bool refeed) {
+    shadow_.reset();
+    shadow_checked_ = shadow_ok_ = false;
+    if (!use_shadow_) return;
+    shadow_ = std::make_shared<ov_msckf::VioManager>(shadow_params_);
+    if (refeed)
+      for (const auto &m : imu_recent_) shadow_->feed_measurement_imu(m);
+  }
+
   // VioManager 새로 만들기. 붙잡아 둔 IMU(imu_hold_) 는 새 시스템에 그대로 넣을 수 있으므로 남긴다.
   void make_system() {
     sys_ = std::make_shared<ov_msckf::VioManager>(params_);
+    make_shadow(false);
     init_checked_ = false;
     cams_.clear();
     last_imu_t_ = -1e300;
@@ -376,6 +396,14 @@ private:
           on_exception("feed_measurement_imu", e.what(), out);
           continue;
         }
+        if (shadow_) {
+          try {
+            shadow_->feed_measurement_imu(m);
+          } catch (const std::exception &e) {
+            std::fprintf(stderr, "[ov_bridge] init gate: shadow imu exception %s -> new shadow\n", e.what());
+            make_shadow(false);
+          }
+        }
         last_imu_t_ = m.timestamp;
         imu_recent_.push_back(m);  // 상태 주입 재시작 때 새 VioManager 에 다시 넣을 최근 IMU (2 s)
         while (!imu_recent_.empty() && imu_recent_.front().timestamp < m.timestamp - 2.0) imu_recent_.pop_front();
@@ -388,12 +416,7 @@ private:
   // --init-gate: 이 카메라 시각까지 init 창 동안 자이로가 조용했나 (넣은 IMU 기준). why 에 이유.
   bool init_still(double t, const char *&why) {
     double W = params_.init_options.init_window_time + 0.05;
-    // 카메라 시작 뒤 kGateSkipCamS 안의 초기화는 버린다: 시작 직후 약 0.5 s 동안 영상이 자리 잡으며 흐름 10~20 px/프레임
-    // (자이로는 0) 이라, 넓힌 시차 기준으로는 첫 몇 장으로 바로 초기화돼 버린다 (rec_20261016_175446: 카메라 0.18 s 에 초기화).
-    if (first_cam_t_ < -1e299 || t - first_cam_t_ < kGateSkipCamS) {
-      why = "cam_start";
-      return false;
-    }
+    // 카메라 시작 직후 프레임은 그림자에 아예 안 넣으므로 (feed_shadow) 여기서는 따로 안 본다.
     if (imu_recent_.empty() || imu_recent_.front().timestamp > t - kGateMinImuS) {  // OpenVINS 도 창이 덜 차도 초기화함
       why = "short";
       return false;
@@ -429,33 +452,13 @@ private:
       return;
     }
     double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
-    // --init-gate: 정지 초기화가 막 끝났으면 (상태 시각 -1 → 초기화 시각) 그 창의 자이로가 조용했는지 확인, 아니면 버리고 다시.
-    // 프레임은 예전처럼 다 넣는다 (프레임을 막으면 초기화 창의 영상이 몇 장뿐이라 엉뚱한 때 초기화됨 — 175446 키프레임 142 -> 18).
-    if (args_.gate_mean > 0.0 && !init_checked_ && sys_->get_state()->_timestamp >= 0.0) {
-      init_checked_ = true;
-      const char *why = "";
-      double ti = sys_->get_state()->_timestamp;
-      if (!init_still(ti, why)) {
-        n_init_vetoed_++;
-        std::fprintf(stderr, "[ov_bridge] init gate: static init at t=%.3f vetoed (%s, gyro mean %.4f max %.3f rad/s) #%llu\n",
-                     ti, why, gate_last_mean_, gate_last_max_, static_cast<unsigned long long>(n_init_vetoed_));
-        make_system();
-        // 새 VioManager 에 이미 넣었던 최근 IMU 를 다시 넣는다 (안 넣으면 다음 정지 초기화에 쓸 IMU 이력이 없어 한참 못 함)
-        for (const auto &m : imu_recent_) {
-          sys_->feed_measurement_imu(m);
-          last_imu_t_ = m.timestamp;
-        }
-        std::string pl = pose_line(c, ms);
-        if (!pl.empty() && pl.back() == '\n' && pl.size() > 2 && pl[pl.size() - 2] == '}')
-          pl = pl.substr(0, pl.size() - 2) + ",\"init_gate\":\"" + why + "\"}\n";
-        out += pl;
-        return;
-      }
-      std::fprintf(stderr, "[ov_bridge] init gate: static init at t=%.3f ok (gyro mean %.4f max %.3f rad/s)\n", ti,
-                   gate_last_mean_, gate_last_max_);
-    }
+    // --init-gate: 그림자 VioManager (기본 쪽이 아직 정지 초기화 전일 때만)
+    const char *gate_tag = shadow_ ? feed_shadow(c) : nullptr;
     try {
-      out += pose_line(c, ms);
+      std::string pl = pose_line(c, ms);
+      if (gate_tag && !pl.empty() && pl.back() == '\n' && pl.size() > 2 && pl[pl.size() - 2] == '}')
+        pl = pl.substr(0, pl.size() - 2) + ",\"init_gate\":\"" + gate_tag + "\"}\n";
+      out += pl;
     } catch (const std::exception &e) {
       on_exception("pose_line", e.what(), out);
       return;
@@ -465,6 +468,55 @@ private:
       if (!(args_.reinit_state && reinit_from_state(extra))) make_system();
       out += "{\"type\":\"reset\",\"auto\":true,\"reason\":\"lost\"" + extra + "}\n";
     }
+  }
+
+  // --init-gate 그림자 처리 (기본 sys_ 에 카메라를 넣은 직후). 반환: 포즈 줄 표시 ("shadow" = 이번에 그림자로 바꿈) 또는 nullptr.
+  const char *feed_shadow(const CamMsg &c) {
+    if (sys_->get_state()->_timestamp >= 0.0) {  // 기본 쪽이 스스로 정지 초기화함 → 예전과 같음, 그림자 버림
+      std::fprintf(stderr, "[ov_bridge] init gate: default init at t=%.3f -> shadow dropped\n", sys_->get_state()->_timestamp);
+      shadow_.reset();
+      return nullptr;
+    }
+    if (first_cam_t_ > -1e299 && c.t - first_cam_t_ < kGateSkipCamS) return nullptr;  // 카메라 시작 직후는 그림자에 안 넣음
+    try {
+      shadow_->feed_measurement_camera(c.data);
+    } catch (const std::exception &e) {
+      std::fprintf(stderr, "[ov_bridge] init gate: shadow camera exception %s -> new shadow\n", e.what());
+      make_shadow(true);
+      return nullptr;
+    }
+    if (!shadow_checked_ && shadow_->get_state()->_timestamp >= 0.0) {
+      shadow_checked_ = true;
+      const char *why = "";
+      double ti = shadow_->get_state()->_timestamp;
+      if (!init_still(ti, why)) {
+        n_init_vetoed_++;
+        std::fprintf(stderr, "[ov_bridge] init gate: shadow init at t=%.3f vetoed (%s, gyro mean %.4f max %.3f rad/s) #%llu\n",
+                     ti, why, gate_last_mean_, gate_last_max_, static_cast<unsigned long long>(n_init_vetoed_));
+        make_shadow(true);
+        return nullptr;
+      }
+      shadow_ok_ = true;
+      std::fprintf(stderr, "[ov_bridge] init gate: shadow init at t=%.3f ok (gyro mean %.4f max %.3f rad/s)\n", ti,
+                   gate_last_mean_, gate_last_max_);
+    }
+    if (!shadow_ok_) return nullptr;
+    // 움직이기 시작했나: 최근 0.1 s 자이로 최대 > MAX, 또는 그림자가 이미 특징 갱신을 시작함
+    double mx = 0.0;
+    for (auto it = imu_recent_.rbegin(); it != imu_recent_.rend() && it->timestamp > c.t - 0.1; ++it)
+      mx = std::max(mx, it->wm.norm());
+    if (mx <= args_.gate_max && !shadow_->initialized()) return nullptr;
+    n_shadow_used_++;
+    std::fprintf(stderr, "[ov_bridge] init gate: default not initialized at motion start (t=%.3f, gyro %.3f rad/s) -> "
+                 "using gated shadow init (t=%.3f) #%llu\n", c.t, mx, shadow_->get_state()->_timestamp,
+                 static_cast<unsigned long long>(n_shadow_used_));
+    sys_ = shadow_;
+    shadow_.reset();
+    init_checked_ = true;
+    zero_feat_frames_ = 0;
+    feat_seen_ = false;
+    lost_ = false;
+    return "shadow";
   }
 
   // lost → 새 VioManager 에 옛 상태를 넣어 정지 없이 이어 가기. 성공하면 true, extra 에 JSON 필드 (",\"reinit\":\"state\",...").
@@ -495,7 +547,8 @@ private:
     s(0) = t;
     s.block(1, 0, 16, 1) = imu;
     sys_->initialize_with_gt(s);
-    init_checked_ = true;  // 상태 주입은 정지 초기화가 아님 (--init-gate 검사 안 함)
+    shadow_.reset();       // 상태 주입은 정지 초기화가 아님 (--init-gate 그림자 필요 없음)
+    init_checked_ = true;
     // initialize_with_gt 의 공분산(속도 0.01 m/s 등)은 정지 가정이라 너무 작다 → IMU 만 전파한 뒤의 불확실성으로 키움
     std::vector<std::shared_ptr<ov_type::Type>> order = {ns->_imu};
     Eigen::MatrixXd C = Eigen::MatrixXd::Zero(15, 15);
@@ -633,9 +686,14 @@ private:
   uint64_t n_reinit_state_ = 0;
   uint64_t n_init_vetoed_ = 0;
   bool init_checked_ = false;  // 이 VioManager 의 초기화를 --init-gate 로 확인했나
+  bool use_shadow_ = false;    // --init-gate 켜짐
+  ov_msckf::VioManagerOptions shadow_params_;           // 그림자 설정 (넓힌 시차 기준)
+  std::shared_ptr<ov_msckf::VioManager> shadow_;        // 초기화 전에만 있음
+  bool shadow_checked_ = false, shadow_ok_ = false;     // 그림자 초기화를 자이로로 확인했나 / 통과했나
+  uint64_t n_shadow_used_ = 0;
   double gate_last_mean_ = 0.0, gate_last_max_ = 0.0;
   double first_cam_t_ = -1e300;                   // 받은 첫 카메라 시각 (--init-gate). RESET 때 지움
-  static constexpr double kGateSkipCamS = 0.8;   // --init-gate: 카메라 시작 뒤 이 시간 안의 정지 초기화는 버림
+  static constexpr double kGateSkipCamS = 0.8;   // --init-gate: 카메라 시작 뒤 이 시간 동안의 프레임은 그림자에 안 넣음
   static constexpr double kGateMinImuS = 0.8;    // --init-gate: 확인에 쓸 IMU 최소 길이 (s)
   uint64_t n_cam_dropped_ = 0, n_imu_dropped_ = 0, n_cam_rejected_ = 0, n_exceptions_ = 0;
 };

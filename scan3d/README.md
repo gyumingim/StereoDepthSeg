@@ -274,7 +274,7 @@ venv_ffs/bin/python scan3d/replay.py recordings/<이름> --keep-web   # 끝난 �
 - 재생: `--replay DIR`, `--every-frame`, `--replay-iters 8`, `--replay-out DIR`, `--exit-after-replay`, `--rec-root recordings`
 - `--voxel 0.03`, `--min-hits 2`, `--depth-range 0.3 2.5` (최대 3 m), `--iters 4`, `--scale` (FFS 축소, 기본 자동) `--ffs-max-px 307200`, `--stride 3`
 - `--kf-trans 0.03 --kf-rot 5 --kf-dt 0`, `--yolo-model yolo11m-seg.pt`, `--yolo-rotate`, `--no-yolo`
-- `--port 8795`, `--save-on-exit`, `--pair-skew-ms` (쌍 묶기, 기본 = 프레임 주기 × 0.45 → 15 fps 면 30 ms), `--vio-stereo-skew-ms 5` (stereo VIO 만)
+- `--port 8795`, `--save-on-exit`, `--pair-skew-ms` (쌍 묶기, 기본 = 프레임 주기 × 0.55 → 15 fps 면 36.67 ms, 가장 가까운 프레임끼리), `--vio-stereo-skew-ms 5` (stereo VIO 만)
 - `--pair 2+5|2+6` (깊이 렌즈 쌍 시작값, 웹에서 바꿈), `--calib-26 calib_phone_pair_2_6.json`
 - `--vio-mode mono|stereo` (기본 **mono** = 왼쪽 렌즈 lens0 + IMU), `--app-sync off|auto` (기본 **off**), `--motion-rect on|off` (기본 on = 깊이 정류를 쌍마다 움직임 보정)
 - VIO 입력은 항상 정류 gray (`--ov-images rect`, raw 는 설정과 안 맞아 제거 — REVIEW 5)
@@ -302,8 +302,9 @@ venv_ffs/bin/python scan3d/replay.py recordings/<이름> --keep-web   # 끝난 �
   앱이 카메라를 다시 열어 맞추는 방법 C 는 19번 해도 실패). 그래서 (2026-10-16 결정)
   - **VIO 는 렌즈 하나(lens0) + IMU (mono)** 가 기본. 처음 1~2초 천천히 움직여야 초기화된다 (웹 안내). 스테레오 VIO 는 `--vio-mode stereo` (옵션, 시각차 5 ms 넘는 쌍은 버림).
   - **앱 위상 맞추기 기본 끔** (`--app-sync off`, 앱 `--es sync off`). `--app-sync auto` 는 옵션.
-  - **쌍 묶기**: 기준 = 프레임 주기 × 0.45 (반 주기 미만 → 가장 가까운 프레임끼리만 짝). 쌍마다 dt = t(lens1) − t(lens0) (노출 가운데끼리) 를 같이 넘긴다.
-    주의: 위상이 0.45·T ~ 0.5·T (15 fps 에서 30~33 ms) 이면 짝이 안 지어진다 — 그때는 `--pair-skew-ms 32`.
+  - **쌍 묶기**: 기준 = 프레임 주기 × 0.55 (2026-10-18 전에는 0.45). FramePairer 가 양쪽 프레임을 다 본 뒤 가장 가까운 것을 고르므로
+    먼 프레임과 짝이 되지 않는다. 쌍마다 dt = t(lens1) − t(lens0) (노출 가운데끼리) 를 같이 넘긴다.
+    0.45·T (30 ms) 였을 때는 위상 30~33 ms 녹화의 짝이 통째로 버려졌다 (rec_20261018_101143: 처음 3.7 s 를 버려 VIO 초기화 실패).
   - **움직임 보정 정류** (`motion_rect.py`): 키프레임마다 두 촬영 순간 사이 폰 움직임 ΔT (회전 = 자이로 적분, 이동 = VIO 속도 × dt,
     레버암 = VIO 추정 외부 파라미터) 를 구해 실제 상대자세 (R,T)∘ΔT 로 그 쌍만 stereoRectify → FFS. 깊이는 lens0 시각 기준이고,
     쌍별 정류 좌표 rect0' 는 R1·R1'ᵀ 로 기본 rect0 에 돌려 T_world_rect0 를 곱한다. ΔT 를 모르면 (자이로 창 없음 등) |dt| ≤ 2 ms 일 때만

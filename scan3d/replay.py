@@ -207,14 +207,12 @@ class Replayer:
             t_start = time.monotonic()
             first = True
             pstats = {}
+            # 기본 0.55 × 프레임 주기 (2026-10-18 부터 2·3렌즈 모두; FramePairer 는 양쪽을 다 본 뒤 가장 가까운 프레임을 고름).
+            # 렌즈 5 는 렌즈 2 와 반 주기쯤(30~33 ms) 어긋나 찍힐 때가 있어 0.45 주기(30 ms) 기준이면 짝이 통째로 버려졌다.
             skew = sc.pair_skew_ms()
-            if multi and sc.a.pair_skew_ms is None:
-                # 3렌즈 녹화: 렌즈 5 는 렌즈 2 와 반 주기쯤(약 31 ms) 어긋나 찍혀 0.45 주기(30 ms) 기준이면 짝이 하나도 안 될 수 있음
-                # → 0.55 주기까지 (FramePairer 는 양쪽을 다 본 뒤 가장 가까운 프레임을 고르므로 겹치지 않음). 두 쌍 모두 같은 기준
-                skew = max(skew, round(0.55 * 1000.0 / max(1, int(sc.geom["fps"])), 2))
             P["pair_skew_ms"] = skew
             until = getattr(sc.a, "replay_until", None)
-            for pair in rec.iter_pairs(skew, pstats):   # 기본 0.45 × 프레임 주기 (가장 가까운 프레임끼리)
+            for pair in rec.iter_pairs(skew, pstats):
                 if self._stop.is_set():
                     break
                 if until is not None and (pair[0].timestamp_ns - rec.t_first) * 1e-9 > until:

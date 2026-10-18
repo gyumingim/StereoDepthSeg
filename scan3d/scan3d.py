@@ -166,8 +166,10 @@ def parse_args(argv=None):
     p.add_argument("--restart-app", action="store_true", default=True,
                    help="폰 쪽이 연달아 바로 끊기면 앱 다시 시작 (adb 있을 때, REVIEW 11)")
     p.add_argument("--pair-skew-ms", type=float, default=None,
-                   help="쌍 묶기 허용 두 렌즈 시각차 ms. 기본 = 프레임 주기의 0.45배 (15 fps 면 30 ms) — 반 주기 미만이라 "
-                        "가장 가까운 프레임끼리만 짝이 된다. 쌍마다 dt = t(lens1) − t(lens0) 를 같이 넘겨 깊이에서 움직임 보정")
+                   help="쌍 묶기 허용 두 렌즈 시각차 ms. 기본 = 프레임 주기의 0.55배 (15 fps 면 36.67 ms) — FramePairer 가 "
+                        "양쪽을 다 본 뒤 가장 가까운 프레임을 고르므로 위상이 반 주기 근처(30~33 ms)여도 짝이 된다 (2026-10-18: 0.45배 "
+                        "= 30.0 ms 였을 때 rec_20261018_101143 은 위상 30.0~30.2 ms 라 처음 3.7 s 를 다 버려 VIO 가 정지 구간을 못 봄). "
+                        "쌍마다 dt = t(lens1) − t(lens0) 를 같이 넘겨 깊이에서 움직임 보정")
     p.add_argument("--ov", default="auto",
                    help="auto = scan3d 가 브리지를 직접 띄움 (죽으면 자동 재시작, 로그 runs/ov_bridge_live_*.log) | "
                         "HOST:PORT (따로 띄운 TCP 브리지) | pipe:<명령> | none")
@@ -178,11 +180,14 @@ def parse_args(argv=None):
     p.add_argument("--ov-config-mono", default=None,
                    help="mono estimator_config.yaml 고정 (--vio-mode mono). 기본 = 자동 config/<W>x<H>_<fps>/mono/")
     # --reinit-state (2026-10-17): 추적이 끊기면 정지 초기화를 기다리지 않고 옛 상태로 바로 다시 시작 (ov_bridge/PROTOCOL.md)
-    # --init-gate MEAN,MAX,DEG (2026-10-18, 기본 꺼짐): 정지 초기화 시차 기준을 DEG 로 넓히고 자이로로 확인 (ov_bridge/PROTOCOL.md).
-    # rec_20261018_002349 는 초기화 못 함 → 추적 90 % 가 되지만 (그 뒤 벽만 보여 VIO 가 퍼짐), 참조 175446 재생 키프레임이
-    # 142 → 111 로 줄어 기본으로 안 켬. 켜려면 "--auto-reset --reinit-state --init-gate 0.006,0.15,0.8".
-    p.add_argument("--live-bridge-args", default="--auto-reset --reinit-state", help="실시간 브리지 추가 인자 (--ov auto)")
-    p.add_argument("--replay-bridge-args", default="--auto-reset --reinit-state", help="재생용 브리지 추가 인자")
+    # --init-gate MEAN,MAX,DEG (2026-10-18 오전부터 기본 켬): 원래 VioManager 옆에 정지 판정 시차 기준을 DEG 로 넓힌 "그림자"를
+    # 돌리고, 원래 쪽이 정지 초기화를 못 한 채 움직이기 시작하면 자이로가 조용했던 그림자 초기화로 바꿔 씀 (ov_bridge/PROTOCOL.md).
+    # 원래 쪽이 초기화하면 그림자는 버림 → 참조 녹화 결과는 예전과 같음. rec_20261018_002349 (흐린 근접 장면) 초기화 못 함 → 추적 94 %.
+    # 끄려면 --replay-bridge-args / --live-bridge-args 를 "--auto-reset --reinit-state" 로.
+    p.add_argument("--live-bridge-args", default="--auto-reset --reinit-state --init-gate 0.006,0.15,0.8",
+                   help="실시간 브리지 추가 인자 (--ov auto)")
+    p.add_argument("--replay-bridge-args", default="--auto-reset --reinit-state --init-gate 0.006,0.15,0.8",
+                   help="재생용 브리지 추가 인자")
     p.add_argument("--reloc", choices=["on", "off"], default="on",
                    help="재위치 (reloc.py): VIO 리셋 뒤 새 조각을 옛 지도 키프레임과 특징 매칭·PnP 로 맞춰 같은 지도에 이어 쌓음. "
                         "붙기 전에는 새 조각을 따로 쌓고, 붙으면 그 키프레임들을 전역 좌표로 다시 넣는다")
@@ -287,10 +292,12 @@ def parse_args(argv=None):
 
 
 def pair_skew_ms_for(a, fps):
-    """쌍 묶기 기준 ms: --pair-skew-ms 를 주면 그 값, 아니면 0.45 × 프레임 주기 (반 주기 미만 → 가장 가까운 프레임끼리만)."""
+    """쌍 묶기 기준 ms: --pair-skew-ms 를 주면 그 값, 아니면 0.55 × 프레임 주기.
+    FramePairer 는 기준 렌즈 프레임 양쪽을 다 받은 뒤 가장 가까운 프레임을 고르므로 반 주기를 넘는 기준이어도 먼 프레임과
+    짝이 되지 않는다. 0.45 × 주기 (15 fps 30.0 ms) 는 위상 30~33 ms 녹화의 짝을 통째로 버렸다 (S24 렌즈 2·5 위상 10~33 ms)."""
     if a.pair_skew_ms is not None:
         return float(a.pair_skew_ms)
-    return round(0.45 * 1000.0 / max(1, int(fps)), 2)
+    return round(0.55 * 1000.0 / max(1, int(fps)), 2)
 
 
 class IdleVIO:
@@ -436,7 +443,7 @@ class Scanner:
         self.log_lines.append(line)
 
     def pair_skew_ms(self):
-        """지금 세션 fps 의 쌍 묶기 기준 ms (기본 0.45 × 프레임 주기)."""
+        """지금 세션 fps 의 쌍 묶기 기준 ms (기본 0.55 × 프레임 주기)."""
         return pair_skew_ms_for(self.a, self.geom["fps"] if self.geom else self.a.app_fps)
 
     # ---------------- 해상도·fps (세션마다) ----------------
