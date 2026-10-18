@@ -83,6 +83,12 @@ MODES = ("live", "record", "both")
 STREAM_FMTS = ("h264", "jpeg", "nv21")
 DEFAULT_STREAM_FMT = "h264"
 FMT_INFO = dict(h264="H.264 (권장)", jpeg="JPEG", nv21="NV21 (압축 없음)")
+# 앱 1.8-subsample: capture_fps 로 찍고 fps 만 복사·인코드. 버리는 프레임은 시각만 보고 바로 close (복사 없음) →
+# 폰 CPU 는 촬영 1 fps 늘 때마다 이만큼 (한 코어 %, 두 렌즈 합: 결과 콜백·이미지 받기·닫기). S24 실측 값 (CAPTURE_MEASURED).
+PHONE_CAPTURE_PCT_PER_FPS = 0.0          # 아직 15 fps 기존 모드와 같은 시간 비교 실측 전 (subsample_test.ps1) — 재면 채움
+CAPTURE_MEASURED = "S24 실측 15 s: 카메라 약 50 /s, 짝 시각차 중앙 4.8 ms·최대 16.6 ms"
+# 촬영 fps 로 쓸 수 있는 값 (웹 '촬영 → 저장' 선택): 저장 fps 의 정수배일 때만
+CAPTURE_FPS_CHOICES = (30, 60)
 H264_USB_HEADROOM = 1.25          # VBR 순간 피크 + 키프레임 (1 s 간격) 여유. 추정
 H264_MIN_KBPS = 500.0             # 앱 Caps.autoKbps 와 같은 최소
 H264_MAX_KBPS = 100000.0          # 인코더 범위를 모를 때 상한 (넉넉하게, 100 Mbps)
@@ -614,7 +620,10 @@ class LoadModel:
         """앱이 카메라 → 인코더를 Surface 로 바로 잇는가 (caps live_h264.input, 가정한 필드). 모르면 False (복사 비용을 넣음)."""
         return str((self.caps.get("live_h264") or {}).get("input", "")).lower() == "surface"
 
-    def predict(self, w, h, fps, stream_fmt=DEFAULT_STREAM_FMT, scale=None, mode="live", n_rec=2):
+    def predict(self, w, h, fps, stream_fmt=DEFAULT_STREAM_FMT, scale=None, mode="live", n_rec=2, capture_fps=None):
+        """fps = 저장·전송 fps (인코더·USB·PC·녹화). capture_fps (> fps, 정수배) = 카메라 촬영 fps (앱 1.8-subsample):
+        복사·인코드는 fps 그대로, 폰 CPU 에 촬영 프레임 처리 몫(PHONE_CAPTURE_PCT_PER_FPS)만 더한다."""
+        cap = capture_of(fps, capture_fps)
         fmt = norm_fmt(stream_fmt)
         scale = self.ffs_scale(w, h, scale)
         c = self.coeffs
@@ -644,7 +653,9 @@ class LoadModel:
             phone_jpeg_pct=round(2 * fps * jpeg_ms / 10.0, 1),                 # 한 코어 시간 대비 %
             jpeg_frame_frac=round(jpeg_ms * fps / 1000.0, 2),                  # 렌즈 하나: 프레임 간격 대비
             phone_copy_ms=round(copy_ms, 2),
-            phone_cpu_pct=round(2 * fps * (jpeg_ms + copy_ms) / 10.0, 1),      # 형식과 무관한 폰 부하 (막대에 씀)
+            phone_cpu_pct=round(2 * fps * (jpeg_ms + copy_ms) / 10.0 + PHONE_CAPTURE_PCT_PER_FPS * (cap - fps), 1),   # 막대에 씀
+            capture_fps=cap,                                                   # 카메라 촬영 fps (= fps 면 따로 안 씀)
+            phone_capture_pct=round(PHONE_CAPTURE_PCT_PER_FPS * (cap - fps), 1),
             live_kbps=lk,                                                      # 실시간 H.264 비트레이트 (렌즈 하나)
             usb_mbs=round(usb, 2),
             pc_dec_ms=round(pc_dec_ms, 1),                                     # PC 한 장 풀기 (렌즈 하나)
@@ -656,24 +667,26 @@ class LoadModel:
             n_rec=max(2, int(n_rec or 2)),                                     # 녹화 렌즈 수 (3 = 비교용 3개 모두)
         )
 
-    def combo(self, mode, w, h, fps, kf_min=None, stream_fmt=DEFAULT_STREAM_FMT, scale=None, n_rec=2):
-        """n_rec = 녹화 렌즈 수 (3 = '3개 모두 녹화 (비교용)': 인코더 3개만 더 본다 — 실측 1440x1080 15 fps 3렌즈 녹화 됨)."""
+    def combo(self, mode, w, h, fps, kf_min=None, stream_fmt=DEFAULT_STREAM_FMT, scale=None, n_rec=2, capture_fps=None):
+        """n_rec = 녹화 렌즈 수 (3 = '3개 모두 녹화 (비교용)': 인코더 3개만 더 본다 — 실측 1440x1080 15 fps 3렌즈 녹화 됨).
+        capture_fps = 카메라 촬영 fps (앱 1.8-subsample; 카메라 검사만 이 값, 인코더·USB·PC 는 fps)."""
         kf_min = LIMITS["kf_min"] if kf_min is None else kf_min
         live = mode in ("live", "both")
         stream_fmt = norm_fmt(stream_fmt)
-        p = self.predict(w, h, fps, stream_fmt, scale, mode, n_rec)
+        p = self.predict(w, h, fps, stream_fmt, scale, mode, n_rec, capture_fps)
+        cfps = p["capture_fps"]
         reasons, notes = [], []
         ok_cam, fmax, guess = cam_max_fps(self.caps, w, h)
         if not ok_cam:
             reasons.append("카메라가 이 크기를 두 렌즈 모두 내지 못함")
-        elif fps > fmax + 0.01:
+        elif cfps > fmax + 0.01:
             reasons.append(f"카메라 최대 {fmax:.0f} fps (이 크기)" + (" — 추정" if guess else ""))
-        if ok_cam and fps <= fmax + 0.01 and not fps_ok_ae(self.caps, fps, w, h):
-            reasons.append(f"카메라에 고정 {fps} fps 설정이 없음 (앱이 거부)")
+        if ok_cam and cfps <= fmax + 0.01 and not fps_ok_ae(self.caps, cfps, w, h):
+            reasons.append(f"카메라에 고정 {cfps} fps 설정이 없음 (앱이 거부)")
         if ok_cam and (self.caps.get("full_area") or {}).get(size_str(w, h)) is False:
             reasons.append("이 크기는 센서 일부만 써서 보정 비례 변환이 맞지 않음")
         if ok_cam:
-            why = session_check(self.caps, w, h, fps)
+            why = session_check(self.caps, w, h, cfps)
             if why:
                 reasons.append(why)
         vf = self.vio_fixed_size
@@ -703,6 +716,9 @@ class LoadModel:
             notes.append(f"보정은 {self.calib[0]}x{self.calib[1]} 값을 비례 변환")
         if guess or (p["enc_n"] and enc_guess):
             notes.append("폰 능력표 없음 — 일부 추정")
+        if cfps > fps:
+            notes.append(f"{cfps} fps 로 찍고 {fps} fps 만 저장·전송 (두 렌즈 시각차 ≤ {500.0 / cfps:.1f} ms)"
+                         + (f" · {CAPTURE_MEASURED}" if CAPTURE_MEASURED else ""))
         load_only = bool(reasons) and all(r.startswith(SOFT_PREFIX) for r in reasons)
         if load_only:
             notes.append("예상 부하만 넘음 — 시작은 할 수 있음 (느리거나 끊길 수 있음)")
@@ -717,7 +733,13 @@ class LoadModel:
         combos = {}
         for w, h in sizes:
             for fp in fpss:
-                combos[f"{w}x{h}@{fp}"] = self.combo(mode, w, h, fp, kf_min, stream_fmt, scale, n_rec)
+                c = self.combo(mode, w, h, fp, kf_min, stream_fmt, scale, n_rec)
+                # 웹 '촬영 → 저장' 선택: 이 크기·저장 fps 에서 촬영 fps 후보마다 가능 여부 (정수배만)
+                c["capture"] = {str(cf): (lambda x: dict(ok=x["ok"], load_only=x["load_only"], reasons=x["reasons"],
+                                                         phone_cpu_pct=x["phone_cpu_pct"]))(
+                    self.combo(mode, w, h, fp, kf_min, stream_fmt, scale, n_rec, cf))
+                    for cf in CAPTURE_FPS_CHOICES if capture_of(fp, cf) != fp}
+                combos[f"{w}x{h}@{fp}"] = c
         return dict(mode=mode, stream_fmt=stream_fmt, default_fmt=DEFAULT_STREAM_FMT, n_rec=max(2, int(n_rec or 2)),
                     fmts=[dict(id=k, label=FMT_INFO[k]) for k in STREAM_FMTS],
                     h264=dict(surface=self.h264_surface(), headroom=H264_USB_HEADROOM,
@@ -753,6 +775,15 @@ class LoadModel:
 
 
 # ---------------- 실행 중 지표 ----------------
+def capture_of(fps, capture_fps):
+    """실제 촬영 fps: capture_fps 가 fps 보다 크고 정수배·30 또는 60 이면 그 값, 아니면 fps (scan3d.CAPTURE_FPS_CHOICES)."""
+    try:
+        c, f = int(capture_fps or 0), int(fps)
+    except (TypeError, ValueError):
+        return int(fps)
+    return c if c > f > 0 and c % f == 0 and c in CAPTURE_FPS_CHOICES else f
+
+
 def perf_from_metrics(j):
     """앱 metrics.json (format scan3d-phone-metrics/1, SPEC 14.3) → 내부 perf dict. 이미 내부 형식이면 그대로.
     누적 카운터: frames = jpeg_frames (스트림 없으면 cam_frames), jpeg_dropped, cam_dropped = cam_gap_drops + cam_buffer_lost,
@@ -774,6 +805,8 @@ def perf_from_metrics(j):
     usb = j.get("usb") or {}
     ph = j.get("phone") or {}
     out = dict(t_wall_ms=j.get("t_wall_ms"), w=j.get("width"), h=j.get("height"), fps_req=j.get("fps"),
+               capture_fps=j.get("capture_fps") or j.get("fps"),        # 앱 1.8: 카메라 촬영 fps (fps = 저장 fps)
+               cam_frames=[int(x.get("cam_frames") or 0) for x in L],
                state=j.get("state"), stream_fmt=j.get("stream_fmt"),
                cam_fps=col("cam_fps"),
                frames=[int(x.get("h264_frames" if h264 else "jpeg_frames" if stream else "cam_frames") or 0) for x in L],
@@ -816,7 +849,9 @@ class LoadMonitor:
         return []
 
     def update(self, mode, w, h, fps, perf=None, depth=None, phone=None, temp_level=None, jpeg_sizes=None,
-               scale=None, kf_min=None, stream_fmt=DEFAULT_STREAM_FMT):
+               scale=None, kf_min=None, stream_fmt=DEFAULT_STREAM_FMT, capture_fps=None):
+        """fps = 저장·전송 fps, capture_fps = 앱 촬영 fps (1.8-subsample, 없으면 fps)."""
+        cap = capture_of(fps, capture_fps)
         active = mode in MODES
         if not active:
             self.prev, self.over_n = None, 0
@@ -825,7 +860,7 @@ class LoadMonitor:
         m = mpx(w, h)
         stream_fmt = norm_fmt(stream_fmt)
         scale = self.m.ffs_scale(w, h, scale)
-        pred = self.m.combo(mode, w, h, fps, kf_min, stream_fmt, scale)
+        pred = self.m.combo(mode, w, h, fps, kf_min, stream_fmt, scale, capture_fps=cap)
         meas, flags = {}, []
         live = mode in ("live", "both")
         perf = perf_from_metrics(perf) if isinstance(perf, dict) and perf else None
@@ -875,15 +910,22 @@ class LoadMonitor:
             cf = self._pair(perf.get("cam_fps"))
             if cf:
                 meas["cam_fps"] = round(min(cf), 1)
-                if min(cf) < 0.85 * fps:
-                    flags.append(f"카메라가 {min(cf):.0f} fps 밖에 못 냄 (목표 {fps})")
+                # 촬영 > 저장 (1.8-subsample): S24 는 1440x1080 두 렌즈 60 fps 에서 결과를 약 50 /s 만 냄 (실측) → 0.75
+                if min(cf) < (0.75 if cap > fps else 0.85) * cap:
+                    flags.append(f"카메라가 {min(cf):.0f} fps 밖에 못 냄 (목표 {cap})")
+            if cap > fps:
+                meas["capture_fps"] = cap
             # 누적 카운터 → 최근 구간 드롭 비율
             now = time.monotonic()
-            cnt = {k: sum(self._pair(perf.get(k))) for k in ("frames", "jpeg_dropped", "cam_dropped", "enc_dropped")}
+            cnt = {k: sum(self._pair(perf.get(k))) for k in ("frames", "jpeg_dropped", "cam_dropped", "enc_dropped", "cam_frames")}
             if self.prev is not None:
                 dt = now - self.prev[0]
                 d = {k: cnt[k] - self.prev[1][k] for k in cnt}
                 fr = max(1.0, d["frames"])
+                if dt > 0 and all(v >= 0 for v in d.values()) and cap > fps:
+                    # 촬영 > 저장: 카메라가 건너뛴 촬영 프레임은 촬영 수 대비 따로 (저장은 가장 가까운 프레임이 대신함)
+                    meas["cam_skip_pct"] = round(100.0 * d["cam_dropped"] / max(1.0, d["cam_frames"] + d["cam_dropped"]), 1)
+                    d["cam_dropped"] = 0
                 if dt > 0 and all(v >= 0 for v in d.values()):
                     meas["drop_pct"] = round(100.0 * (d["jpeg_dropped"] + d["cam_dropped"]) / (fr + d["jpeg_dropped"]), 1)
                     meas["enc_dropped"] = int(d["enc_dropped"])
@@ -946,7 +988,7 @@ class LoadMonitor:
         self.over_n = self.over_n + 1 if serious else 0
         overload = self.over_n >= 3                      # 2 s × 3 = 6 s 이상 계속될 때만
         suggest = self.m.step_down(mode, w, h, fps, kf_min, stream_fmt) if (overload or temp_level == "hot") else None
-        self.snapshot = dict(active=True, mode=mode, stream_fmt=stream_fmt, size=size_str(w, h), fps=fps,
+        self.snapshot = dict(active=True, mode=mode, stream_fmt=stream_fmt, size=size_str(w, h), fps=fps, capture_fps=cap,
                              predicted=pred, measured=meas,
                              flags=flags, overload=overload or temp_level == "hot", suggest=suggest,
                              coeff_updated=self.m.updated)

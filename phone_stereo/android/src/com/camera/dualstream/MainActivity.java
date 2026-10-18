@@ -54,7 +54,12 @@ public class MainActivity extends Activity {
     private String[] ids;
     private long[] counts;
     private int width, height;
-    private int fps = 15;               // intent extra fps; must have a fixed AE range [fps,fps] (Caps.checkCamera)
+    private int fps = 15;               // intent extra fps = CAPTURE fps; must have a fixed AE range [fps,fps] (Caps.checkCamera)
+    /** intent extra save_fps (1.8-subsample, SPEC 1.2.3): frames kept per lens per second for recording AND live stream.
+     *  0 / absent = fps (old behaviour, every frame). fps must be a multiple (60/15, 30/15). Encoders run at saveFps. */
+    private int saveFps = 15;
+    /** saveFps < fps: picks 1 of fps/saveFps frames per lens by timestamp before any copy (camera thread). null = off. */
+    private Subsample subsample;
     /** Load counters -> metrics.json every 1 s (scan3d/SPEC.md 14.3). */
     private volatile Metrics metrics;
     private HandlerThread metricsThread;
@@ -221,7 +226,9 @@ public class MainActivity extends Activity {
                     Long key=rawTimestamps?ts:physicalTimestamps[i];
                     if(key!=null) frameMeta.get(i).put(key,m);
                 }
-                if(!rawTimestamps) timestampMatcher.result(ts,physicalTimestamps,SystemClock.elapsedRealtimeNanos());
+                Subsample sub=subsample;
+                if(sub!=null) sub.result(ts,physicalTimestamps,midOff);
+                else if(!rawTimestamps) timestampMatcher.result(ts,physicalTimestamps,SystemClock.elapsedRealtimeNanos());
                 PhaseSync ps=phaseSync;
                 if(ps!=null && physicalTimestamps[ps.ref]!=null && physicalTimestamps[ps.tgt]!=null) {
                     CaptureResult tr=phys.get(ids[ps.tgt]);
@@ -480,15 +487,18 @@ public class MainActivity extends Activity {
         File dir=new File(base,name);
         // rec_kbps extra overrides; default scales with pixels x fps (4 Mbps per lens at 640x480@15, Caps.autoKbps).
         int kbpsExtra=getIntent().getIntExtra("rec_kbps",0);
-        int kbps=kbpsExtra>0?kbpsExtra:Caps.autoKbps(width,height,fps,recEncoder);
+        int kbps=kbpsExtra>0?kbpsExtra:Caps.autoKbps(width,height,saveFps,recEncoder);
         recKbps=kbps;
         boolean raw=getIntent().getBooleanExtra("rec_raw",false);
-        Recorder rec=new Recorder(dir,ids,width,height,fps,kbps,raw,recEncoder,liveShared?liveSink(++liveGen):null);
+        // encoder / MP4 run at the SAVED rate; frames CSV gets pair_dt_ns when subsampling
+        Recorder rec=new Recorder(dir,ids,width,height,saveFps,kbps,raw,recEncoder,liveShared?liveSink(++liveGen):null,subsample!=null);
         recMeta=new JSONObject();
         recMeta.put("format","scan3d-phone-rec/1");
         recMeta.put("mode",mode); recMeta.put("folder",name);
         recMeta.put("logical",logical); recMeta.put("physical",new JSONArray(Arrays.asList(ids)));
-        recMeta.put("width",width); recMeta.put("height",height); recMeta.put("fps",fps);
+        // fps = frames per second IN the files (saved rate, what the PC pairs); capture_fps = camera rate (1.8-subsample)
+        recMeta.put("width",width); recMeta.put("height",height); recMeta.put("fps",saveFps);
+        recMeta.put("capture_fps",fps); recMeta.put("save_fps",saveFps);
         recMeta.put("imu_us",imuPeriodUs); recMeta.put("focus_diopters",focus);
         recMeta.put("raw_ts",rawTimestamps); recMeta.put("rec_kbps",kbps); recMeta.put("rec_raw_h264",raw);
         recMeta.put("rec_kbps_source",kbpsExtra>0?"extra":"auto"); recMeta.put("encoder",recEncoder==null?"default":recEncoder);
@@ -537,6 +547,8 @@ public class MainActivity extends Activity {
             meta.put("end_elapsed_ns",SystemClock.elapsedRealtimeNanos());
             meta.put("matcher_unmatched_dropped",timestampMatcher==null?0:timestampMatcher.dropped);
             meta.put("mid_ts",midJson());
+            Subsample sub=subsample;
+            if(sub!=null) meta.put("subsample",sub.json(ids,false));   // pairs, |dt| median/p95/max of the whole recording
             PhaseSync ps=phaseSync;
             synchronized(meta) { meta.put("sync",ps==null?JSONObject.NULL:ps.json()); }
             writeFinalMeta(rec,meta,done);
@@ -555,7 +567,7 @@ public class MainActivity extends Activity {
             liveShared=false; liveKbps=recKbps;
             for(int i=0;i<ids.length;i++) waitKey.set(i,1);
             // new generation first: a recorder that timed out (done=false) keeps draining into a sink that now ignores it
-            liveEncoder=new LiveEncoder(ids,width,height,fps,liveKbps,liveEncoderName,liveSink(++liveGen));
+            liveEncoder=new LiveEncoder(ids,width,height,saveFps,liveKbps,liveEncoderName,liveSink(++liveGen));
             Log.i(TAG,"live H.264 moved from recorder to own encoder");
         }
         status("RECORD_DONE rec="+rec.dir.getName()+" reason="+reason
@@ -617,6 +629,8 @@ public class MainActivity extends Activity {
             for(String id:ids) if(!available.contains(id)) throw new IllegalArgumentException("Not in logical group: "+id);
             width=getIntent().getIntExtra("width",640); height=getIntent().getIntExtra("height",480);
             fps=getIntent().getIntExtra("fps",15);
+            int sf=getIntent().getIntExtra("save_fps",0);
+            saveFps=sf>0?sf:fps;
             rawTimestamps=getIntent().getBooleanExtra("raw_ts",false);
             imuPeriodUs=getIntent().getIntExtra("imu_us",2500);
             String fmt=getIntent().getStringExtra("stream_fmt");
@@ -645,18 +659,20 @@ public class MainActivity extends Activity {
             }
             // Unsupported size/fps -> ERROR, never the nearest supported size (caps.json lists what works).
             String why=Caps.checkCamera(manager,logical,ids,width,height,fps);
+            if(why==null && (saveFps>fps || fps%saveFps!=0)) why="save_fps "+saveFps+" must divide fps "+fps;
+            if(why==null && saveFps<fps && rawTimestamps) why="save_fps needs raw_ts=false (picks frames by physical time)";
             if(why==null && recordEnabled) {
-                recEncoder=Caps.findAvcEncoder(width,height,fps,ids.length);
-                if(recEncoder==null) why="no H.264 encoder for "+ids.length+" x "+width+"x"+height+"@"+fps;
+                recEncoder=Caps.findAvcEncoder(width,height,saveFps,ids.length);
+                if(recEncoder==null) why="no H.264 encoder for "+ids.length+" x "+width+"x"+height+"@"+saveFps;
             }
             liveShared=streamEnabled && streamH264 && recordEnabled;
             if(why==null && streamEnabled && streamH264) {
                 // Live-only: own encoder per lens. both: the recorder's encoder (same settings) feeds the stream too,
                 // so live + record is still one encoder instance per lens (Caps max_instances >= lenses).
-                liveEncoderName=liveShared?recEncoder:Caps.findAvcEncoder(width,height,fps,ids.length);
-                if(liveEncoderName==null) why="no H.264 encoder for live "+ids.length+" x "+width+"x"+height+"@"+fps+" (try stream_fmt=jpeg)";
+                liveEncoderName=liveShared?recEncoder:Caps.findAvcEncoder(width,height,saveFps,ids.length);
+                if(liveEncoderName==null) why="no H.264 encoder for live "+ids.length+" x "+width+"x"+height+"@"+saveFps+" (try stream_fmt=jpeg)";
                 int lk=getIntent().getIntExtra("live_kbps",0);
-                liveKbps=liveShared?0:(lk>0?lk:Caps.autoKbps(width,height,fps,liveEncoderName));
+                liveKbps=liveShared?0:(lk>0?lk:Caps.autoKbps(width,height,saveFps,liveEncoderName));
             }
             if(why!=null) {
                 status("ERROR UNSUPPORTED "+width+"x"+height+"@"+fps+" mode="+mode+" reason="+why+" | see caps.json");
@@ -674,6 +690,10 @@ public class MainActivity extends Activity {
             // record and both: align (camera re-open) BEFORE the MP4s get frames; no re-open once they do (SPEC 15.5).
             // both: the live stream rides the recorder encoder, so it also starts after the lock.
             recGate=recordEnabled && phaseSync!=null && recWaitSyncS>0;
+            if(saveFps<fps) {
+                int r=0; for(int i=0;i<ids.length;i++) if(ids[i].equals("2")) r=i;   // reference lens = "2" (VIO lens)
+                subsample=new Subsample(ids.length,r,fps,saveFps,this::keepFrame);
+            }
             metrics=new Metrics(ids);
             running=true;
             startMetrics();
@@ -700,7 +720,7 @@ public class MainActivity extends Activity {
             if(streamEnabled) {
                 if(streamH264) {
                     pending=new ArrayBlockingQueue<>(12);
-                    if(!liveShared) liveEncoder=new LiveEncoder(ids,width,height,fps,liveKbps,liveEncoderName,liveSink(++liveGen));
+                    if(!liveShared) liveEncoder=new LiveEncoder(ids,width,height,saveFps,liveKbps,liveEncoderName,liveSink(++liveGen));
                 }
                 if(streamJpeg) {
                     jpegEncoders=new ExecutorService[ids.length]; jpegBusy=new java.util.concurrent.atomic.AtomicInteger[ids.length];
@@ -715,6 +735,7 @@ public class MainActivity extends Activity {
                 new Thread(this::serve,"usb-writer").start();
             }
             status("OPEN mode="+mode+" logical="+logical+" physical="+physical+" "+width+"x"+height+" fps="+fps
+                    +(saveFps<fps?" save_fps="+saveFps:"")
                     +(streamEnabled?" stream_fmt="+(streamJpeg?"jpeg q="+jpegQuality:streamH264?"h264 enc="+liveEncoderName
                         +" kbps="+(liveShared?recKbps+" (shared with recording)":String.valueOf(liveKbps)):"nv21"):""));
             deviceCb=new CameraDevice.StateCallback() {
@@ -778,6 +799,7 @@ public class MainActivity extends Activity {
         try { if(s!=null) s.close(); } catch(Exception e) { Log.w(TAG,"reopen: session close",e); }
         try { d.close(); } catch(Exception e) { Log.w(TAG,"reopen: device close",e); }
         if(timestampMatcher!=null) timestampMatcher.clear();     // half pairs of the old device
+        if(subsample!=null) subsample.clear();
         ps.reopenClosed();
         openForReopen(seq);
         handler.postDelayed(() -> reopenWatchdog(seq),5000);
@@ -878,7 +900,11 @@ public class MainActivity extends Activity {
             j.put("t_wall_ms",System.currentTimeMillis()); j.put("elapsed_ns",SystemClock.elapsedRealtimeNanos());
             String st=lastStatus==null?"":lastStatus.trim();
             j.put("state",st.isEmpty()?"":st.split("[ |]",2)[0]);
-            j.put("mode",mode); j.put("width",width); j.put("height",height); j.put("fps",fps);
+            // fps = saved/streamed rate (frames the PC gets); capture_fps = camera rate (phone load, 1.8-subsample)
+            j.put("mode",mode); j.put("width",width); j.put("height",height); j.put("fps",saveFps);
+            j.put("capture_fps",fps); j.put("save_fps",saveFps);
+            Subsample sub=subsample;
+            if(sub!=null) j.put("subsample",sub.json(ids,true));
             j.put("physical",new JSONArray(Arrays.asList(ids)));
             j.put("stream_fmt",streamEnabled?streamFmt:"none"); j.put("jpeg_q",jpegQuality);
             if(streamEnabled && streamH264) {
@@ -909,7 +935,7 @@ public class MainActivity extends Activity {
                 prevRecFrames=rf; prevRecNs=nowNs;
                 j.put("rec",rec.dir.getName()); j.put("rec_kbps",recKbps); j.put("rec_encoder",recEncoder);
             } else prevRecFrames=null;
-            mt.fill(j,nowNs,rf,rfps,rq,rb);
+            mt.fill(j,nowNs,rf,rfps,rq,rb);   // lenses[].cam_fps = capture rate, rec_fps / h264_fps = saved rate
             j.put("capture_failed",mt.captureFailed.get());
             CaptureTimestampMatcher tm=timestampMatcher;
             j.put("matcher_unmatched_dropped",tm==null?0:tm.dropped);
@@ -1046,7 +1072,8 @@ public class MainActivity extends Activity {
         try {
             for(int i=0;i<ids.length;i++) {
                 final int index=i;
-                ImageReader reader=ImageReader.newInstance(width,height,ImageFormat.YUV_420_888,3);
+                // subsample holds a few undecided images per lens (Subsample.HOLD_MAX) -> deeper reader
+                ImageReader reader=ImageReader.newInstance(width,height,ImageFormat.YUV_420_888,subsample!=null?Subsample.HOLD_MAX+3:3);
                 readers.add(reader);
                 reader.setOnImageAvailableListener(r -> receive(r,index),handler);
             }
@@ -1131,6 +1158,7 @@ public class MainActivity extends Activity {
     }
 
     private void receive(ImageReader reader,int index) {
+        if(subsample!=null) { receiveSub(reader,index); return; }
         try (Image image=reader.acquireLatestImage()) {
             if(image==null || !running) return;
             counts[index]++;
@@ -1139,32 +1167,79 @@ public class MainActivity extends Activity {
             Metrics mt=metrics;
             if(client==null && recorder==null) { if(mt!=null) mt.camFrame(index,image.getTimestamp(),0,fps); return; }
             long c0=System.nanoTime();
-            byte[] nv21=new byte[width*height*3/2];
-            Image.Plane[] planes=image.getPlanes();
-            // Plane buffers can have row padding and interleaved UV; never assume contiguous.
-            for(int p=0;p<3;p++) {
-                ByteBuffer b=planes[p].getBuffer(); int base=b.position();
-                int w=p==0?width:width/2, h=p==0?height:height/2;
-                int row=planes[p].getRowStride(), pixel=planes[p].getPixelStride();
-                if(p==0 && pixel==1) {          // Y rows are contiguous: bulk copy (per-pixel get is slow at large sizes)
-                    ByteBuffer d=b.duplicate();
-                    for(int y=0;y<h;y++) { d.position(base+y*row); d.get(nv21,y*width,width); }
-                    continue;
-                }
-                for(int y=0;y<h;y++) for(int x=0;x<w;x++) {
-                    int dst=p==0?y*width+x:width*height+y*width+2*x+(p==1?1:0);
-                    nv21[dst]=b.get(base+y*row+x*pixel);
-                }
-            }
+            byte[] nv21=toNv21(image);
             if(mt!=null) mt.camFrame(index,image.getTimestamp(),System.nanoTime()-c0,fps);
-            if(rawTimestamps) enqueueFrame(index,image.getTimestamp(),nv21);
+            if(rawTimestamps) enqueueFrame(index,image.getTimestamp(),nv21,Long.MIN_VALUE);
             else timestampMatcher.image(index,image.getTimestamp(),nv21,SystemClock.elapsedRealtimeNanos());
         } catch(Exception e) { Log.e(TAG,"frame",e); }
     }
 
+    /** Subsample mode (camera thread): every image (acquireNextImage, none skipped) goes to Subsample, which closes it
+     *  right away or holds it until its timestamp decision; kept ones come back in keepFrame. */
+    private void receiveSub(ImageReader reader,int index) {
+        Subsample sub=subsample;
+        while(true) {
+            Image image;
+            try { image=reader.acquireNextImage(); }
+            catch(IllegalStateException e) { Log.w(TAG,"subsample: reader full lens "+index); return; }
+            if(image==null) return;
+            if(!running) { image.close(); continue; }
+            counts[index]++;
+            if(counts[index]==1 || counts[index]%600==0)
+                Log.i(TAG,"FRAME physical="+ids[index]+" count="+counts[index]+" ts="+image.getTimestamp());
+            Metrics mt=metrics;
+            if(mt!=null) mt.camFrame(index,image.getTimestamp(),0,fps);
+            try { sub.image(index,image.getTimestamp(),image); }
+            catch(Exception e) { Log.e(TAG,"subsample",e); try { image.close(); } catch(Exception ignored) {} }
+        }
+    }
+
+    /** Subsample.Sink (camera thread): copy the kept image and send it on like a normal frame. The image is closed by
+     *  Subsample after this returns. */
+    private void keepFrame(int index,long physicalTs,Image image,long pairDtNs) {
+        if(!running || (client==null && recorder==null)) return;
+        long c0=System.nanoTime();
+        byte[] nv21=toNv21(image);
+        Metrics mt=metrics; if(mt!=null) mt.kept(index,System.nanoTime()-c0);
+        enqueueFrame(index,physicalTs,nv21,pairDtNs);
+    }
+
+    /** YUV_420_888 -> NV21 copy. */
+    private byte[] rowTmp;                             // toNv21 row scratch (camera thread only)
+    private byte[] toNv21(Image image) {
+        byte[] nv21=new byte[width*height*3/2];
+        Image.Plane[] planes=image.getPlanes();
+        // Plane buffers can have row padding and interleaved UV; never assume contiguous.
+        for(int p=0;p<3;p++) {
+            ByteBuffer b=planes[p].getBuffer(); int base=b.position();
+            int w=p==0?width:width/2, h=p==0?height:height/2;
+            int row=planes[p].getRowStride(), pixel=planes[p].getPixelStride();
+            if(p==0 && pixel==1) {          // Y rows are contiguous: bulk copy (per-pixel get is slow at large sizes)
+                ByteBuffer d=b.duplicate();
+                for(int y=0;y<h;y++) { d.position(base+y*row); d.get(nv21,y*width,width); }
+                continue;
+            }
+            // 1.8: one bulk get per row into a scratch array, then pick every pixel-th byte (same output as the old
+            // per-pixel ByteBuffer.get loop, which took ~20 ms per 1440x1080 frame on the S24)
+            int len=(w-1)*pixel+1;
+            if(rowTmp==null || rowTmp.length<len) rowTmp=new byte[len];
+            byte[] t=rowTmp;
+            ByteBuffer d=b.duplicate();
+            for(int y=0;y<h;y++) {
+                d.position(base+y*row); d.get(t,0,len);
+                if(p==0) { int o=y*width; for(int x=0;x<w;x++) nv21[o+x]=t[x*pixel]; }
+                else { int o=width*height+y*width+(p==1?1:0); for(int x=0;x<w;x++) nv21[o+2*x]=t[x*pixel]; }
+            }
+        }
+        return nv21;
+    }
+
     /** Camera handler thread. timestamp = physical SENSOR_TIMESTAMP (logical when raw_ts). The frame goes on with its
      *  mid-exposure time (SPEC 1.2, 1.7-mid). The same read-only NV21 array goes to the stream queue and the recorder. */
-    private void enqueueFrame(int index,long timestamp,byte[] data) {
+    private void enqueueFrame(int index,long timestamp,byte[] data) { enqueueFrame(index,timestamp,data,Long.MIN_VALUE); }
+
+    /** pairDtNs = this lens mid - kept reference mid (subsample mode), Long.MIN_VALUE = none (frames CSV pair_dt_ns). */
+    private void enqueueFrame(int index,long timestamp,byte[] data,long pairDtNs) {
         if(!running) return;
         long[] m=frameMeta.get(index).remove(timestamp);
         long mid;
@@ -1180,8 +1255,8 @@ public class MainActivity extends Activity {
             else rec=null;
         }
         if(rec!=null) {
-            if(m==null) rec.frame(index,mid,timestamp,rawTimestamps?timestamp:-1,-1,-1,data);
-            else rec.frame(index,mid,timestamp,m[0],m[1],m[2],data);
+            if(m==null) rec.frame(index,mid,timestamp,rawTimestamps?timestamp:-1,-1,-1,data,pairDtNs);
+            else rec.frame(index,mid,timestamp,m[0],m[1],m[2],data,pairDtNs);
         }
         if(client==null) return;
         if(streamH264) { LiveEncoder le=liveEncoder; if(le!=null) le.frame(index,mid,data); return; }   // shared: done by rec.frame
@@ -1317,7 +1392,7 @@ public class MainActivity extends Activity {
     private void stop() {
         running=false;
         PhaseSync ps=phaseSync; if(ps!=null) ps.stop();
-        if(handler!=null) handler.post(() -> { if(timestampMatcher!=null) timestampMatcher.clear(); });
+        if(handler!=null) handler.post(() -> { if(timestampMatcher!=null) timestampMatcher.clear(); if(subsample!=null) subsample.clear(); });
         if(sensors!=null) { sensors.unregisterListener(imu); sensors=null; }
         if(imuThread!=null) { imuThread.quitSafely(); imuThread=null; }
         if(metricsThread!=null) { metricsThread.quitSafely(); metricsThread=null; }

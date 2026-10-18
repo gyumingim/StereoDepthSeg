@@ -109,6 +109,7 @@ frame_idx,t_mid_ns,physical_ts_ns,logical_ts_ns,exposure_ns,rolling_shutter_skew
 | `exposure_ns` | `t_mid_ns` 계산에 쓴 노출: 이 렌즈 physical 결과의 `SENSOR_EXPOSURE_TIME`, 없으면 logical 결과 값, 그것도 없으면 이 렌즈의 마지막으로 알던 값 (1.7-mid; 그 전은 logical 결과 값). 한 번도 몰랐으면 −1. |
 | `rolling_shutter_skew_ns` | 같은 규칙의 `SENSOR_ROLLING_SHUTTER_SKEW`. 한 번도 몰랐으면 −1. |
 | `pts_us` | mp4 에 쓴 PTS (µs). |
+| `pair_dt_ns` | (앱 1.8-subsample, `save_fps` < `capture_fps` 일 때만 있는 마지막 열) 이 렌즈 `t_mid_ns` − 짝으로 고른 렌즈 2 프레임 `t_mid_ns`. 렌즈 2 행은 빈칸. |
 
 노출 가운데 시각: 새 녹화는 `t_mid_ns` 그대로. **옛 녹화 (`meta.json` 에 `timestamp_ref` 없음, `t_mid_ns` 열 없음)** 는 `recording.py` 가 읽을 때
 `t_mid = physical_ts_ns + 0.5·(exposure_ns + rolling_shutter_skew_ns)` 로 바꾼다 (−1 인 행은 그 렌즈의 마지막으로 알던 값, 처음부터 없으면
@@ -144,7 +145,9 @@ type,t_ns,v0,v1,v2,v3,v4,v5
 | `format` | `scan3d-phone-rec/1` |
 | `mode`, `folder` | live/record/both, 폴더 이름 |
 | `logical`, `physical` | 카메라 id |
-| `width`, `height`, `fps`, `imu_us`, `focus_diopters`, `raw_ts` | 캡처 설정 (인텐트 값) |
+| `width`, `height`, `fps`, `imu_us`, `focus_diopters`, `raw_ts` | 캡처 설정 (인텐트 값). 앱 1.8 부터 `fps` = 파일 안 프레임률 (= `save_fps`) |
+| `capture_fps`, `save_fps` | (앱 1.8-subsample) 카메라 촬영 fps, 저장 fps. 다르면 촬영 프레임 중 1/N 만 저장 (SPEC.md 1.2.3) |
+| `subsample` | (촬영 > 저장일 때) `{capture_fps, save_fps, ref, pairs, unmatched, n, dt_ms_median, dt_ms_p95, dt_ms_max, kept, seen, forced_drops}` 고른 짝의 시각차 |
 | `rec_kbps`, `rec_raw_h264`, `i_frame_interval_s`, `codec` | 인코더 설정 |
 | `timestamp_clock` | 시계 설명 |
 | `timestamp_ref` | 프레임 시각 기준: `"mid_exposure"` (1.7-mid, 3절). 없으면 옛 녹화 = 노출 시작 |

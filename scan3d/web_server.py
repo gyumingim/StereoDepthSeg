@@ -32,7 +32,7 @@ POST /api/cmd  {"cmd": pause|resume|reset_map|reset_vio|save|set, ...}
                {"cmd": "mode"|"replay", ..., "map": N|null, "map_mode": "append"|"localize"}   저장 지도 기준으로 시작
                {"cmd": "replay", ..., "map_save": N}   복원이 끝나면 지도로 저장
                {"cmd": "mode", "mode": live|record|both, "start_app": true,
-                "size": "WxH", "fps": 15, "stream_fmt": "h264"}
+                "size": "WxH", "fps": 15, "stream_fmt": "h264", "capture_fps": 60|0}   capture_fps = 앱 1.8 촬영 fps (fps 만 저장·전송)
                                             모드 시작 (앱 --es mode). size·fps·형식은 부하 모델로 검사 (불가능하면 ok:false + reasons,
                                             "force": true 면 그래도 시작). scanner.set_stream(w, h, fps, rec_kbps=, stream_fmt=,
                                             live_kbps=) 가 있으면 그것으로 적용 (stream_fmt 인자를 못 받는 옛 set_stream 이면 빼고 부름)
@@ -614,9 +614,9 @@ class Helper:
         d = dict(size=load_model.size_str(w, h), w=w, h=h, fps=fps, calib=load_model.size_str(*calib),
                  scaled_calib=(w, h) != calib, stream_fmt=load_model.norm_fmt(sfmt))
         if isinstance(st, dict):
-            # 지금 세션의 실제 FFS 축소 비율 (부하 실측 환산용) · 보정 변환 문구 · 실시간 비트레이트
+            # 지금 세션의 실제 FFS 축소 비율 (부하 실측 환산용) · 보정 변환 문구 · 실시간 비트레이트 · 촬영 fps (앱 1.8, 0 = fps)
             d.update(ffs_scale=st.get("ffs_scale"), calib_note=st.get("calib_note"), epi_gate_px=st.get("epi_gate_px"),
-                     live_kbps=st.get("live_kbps"))
+                     live_kbps=st.get("live_kbps"), capture_fps=int(st.get("capture_fps") or 0))
         return d
 
     def _fmt_scale(self, running=False):
@@ -636,23 +636,28 @@ class Helper:
         fmt, scale = self._fmt_scale()
         st = self.stream()
         return self.lm.table(mode, kf_min=self.kf_min, stream_fmt=fmt, scale=scale,
-                             current=dict(size=st["size"], fps=st["fps"], stream_fmt=st["stream_fmt"]), n_rec=n_rec)
+                             current=dict(size=st["size"], fps=st["fps"], stream_fmt=st["stream_fmt"],
+                                          capture_fps=st.get("capture_fps") or 0), n_rec=n_rec)
 
     def _apply_stream(self, body, mode):
         """[스캔 시작] 의 size·fps → 검사 후 적용. 반환 (거절 dict 또는 None, 경고 문자열 또는 None)."""
         if body.get("stream_fmt"):
             self.stream_fmt = load_model.norm_fmt(body["stream_fmt"])
-        if self.lm is None or (body.get("size") is None and body.get("fps") is None and not body.get("stream_fmt")):
+        if self.lm is None or (body.get("size") is None and body.get("fps") is None and not body.get("stream_fmt")
+                               and body.get("capture_fps") is None):
             return None, None
         st = self.stream()
         try:
             w, h = load_model.parse_size(body.get("size") or st["size"])
             fps = int(body.get("fps") or st["fps"])
+            # 촬영 fps (앱 1.8-subsample): 안 오면 지난 값, 0 = 저장 fps 로 촬영. fps 의 배수가 아니면 0
+            cap_in = body.get("capture_fps")
+            cap = load_model.capture_of(fps, st.get("capture_fps") if cap_in is None else cap_in)
         except (TypeError, ValueError):
             return dict(ok=False, error="화질·fps 값이 잘못됐습니다"), None
         fmt, scale = self._fmt_scale()
         n_rec = 3 if str(body.get("pair") or "") in ALL_LENS_PAIRS else 2   # '3개 모두 녹화 (비교용)' = 녹화 인코더 3개
-        c = self.lm.combo(mode, w, h, fps, self.kf_min, fmt, scale, n_rec)
+        c = self.lm.combo(mode, w, h, fps, self.kf_min, fmt, scale, n_rec, capture_fps=cap)
         warn = None
         if not c["ok"] and c.get("load_only"):
             # 부하 추정만 넘음 (장치 한계 아님) → 시작은 하고 경고만 (REVIEW6 R2: 튄 실측 하나로 시작이 막히지 않게)
@@ -669,6 +674,8 @@ class Helper:
             except (TypeError, ValueError):
                 params = {}
             kw = dict(rec_kbps=c.get("rec_kbps"))
+            if "capture_fps" in params:
+                kw["capture_fps"] = cap if cap > fps else 0
             if "stream_fmt" in params or any(p.kind == p.VAR_KEYWORD for p in params.values()):
                 kw.update(stream_fmt=fmt, live_kbps=c.get("live_kbps"))
                 if "live_kbps" not in params and not any(p.kind == p.VAR_KEYWORD for p in params.values()):
@@ -692,7 +699,8 @@ class Helper:
         try:
             ph = (f"실시간 H.264 {c['live_kbps']} kbps × 2 · 폰 복사 {c['phone_cpu_pct']}%" if fmt == "h264"
                   else f"폰 부하 {c['phone_cpu_pct']}%")
-            sc.log(f"[load] 시작 화질 {w}x{h} · {fps} fps · {load_model.FMT_INFO[fmt]} · 예상 {ph} · USB {c['usb_mbs']} MB/s"
+            sc.log(f"[load] 시작 화질 {w}x{h} · {f'{cap} fps 촬영 → ' if cap > fps else ''}{fps} fps · "
+                   f"{load_model.FMT_INFO[fmt]} · 예상 {ph} · USB {c['usb_mbs']} MB/s"
                    f" · PC 깊이 {c['pc_ffs_fps']} /s" + (f" — {warn}" if warn else ""))
         except Exception:
             pass
@@ -788,7 +796,7 @@ class Helper:
             scale = float(st["ffs_scale"])             # 세션이 실제로 쓰는 FFS 축소 비율
         self.mon.update(mode, st["w"], st["h"], st["fps"], perf=self.perf, depth=dict(getattr(sc, "dstats", {}) or {}),
                         phone=phone_st, temp_level=lvl, jpeg_sizes=sizes if fmt == "jpeg" else None,
-                        scale=scale, kf_min=self.kf_min, stream_fmt=fmt)
+                        scale=scale, kf_min=self.kf_min, stream_fmt=fmt, capture_fps=st.get("capture_fps"))
 
     # ---- 명령 ----
     def _sfm_start(self, name):

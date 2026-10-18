@@ -120,6 +120,22 @@ WSL Ubuntu-22.04 ─ scan3d/run_scanner.py (venv_ffs)
 - PC 쪽 기본도 h264: `phone_link.PhoneLink(stream_fmt="h264", live_kbps=None)` (→ `--es stream_fmt`, 값이 있을 때만 `--ei live_kbps`), `scan3d.py --app-stream h264|jpeg|nv21`, `win_relay.py --stream-fmt`, 웹 고급 설정 "영상 형식" (→ `scanner.set_stream(..., stream_fmt=, live_kbps=)`, 다음 세션부터).
 - 녹화 복원(replay): 녹화 MP4 도 B 0 이라 디코드 순서 = PTS 순서. `recording.py` 의 PTS 맞추기는 그대로 쓴다.
 
+#### 1.2.3 빠르게 찍고 1/N 만 저장 (앱 1.8-subsample / versionCode 12, 2026-10-18)
+- 인텐트 `--ei fps <촬영 fps> --ei save_fps <저장 fps>` (save_fps 없거나 0 = fps, 예전 동작 그대로). fps 는 save_fps 의 정수배,
+  `raw_ts=false` 만. 예: `--ei fps 60 --ei save_fps 15`. 카메라 AE 범위는 [fps,fps], 인코더(녹화·실시간)·MP4·스트림은 save_fps.
+- 고르기 (`Subsample.java`, 카메라 스레드, 시각만 보고 고른 뒤 그 프레임만 복사·인코드; 버리는 프레임은 바로 close):
+  기준 렌즈(물리 "2")는 1/save_fps 격자에 노출 가운데 시각이 가장 가까운 프레임, 다른 렌즈는 남긴 기준 프레임과 노출 가운데 시각이
+  가장 가까운 한 장 (|dt| ≤ 촬영 주기 1 개, 그 렌즈의 기준 시각 + 0.6 주기 뒤 프레임까지 본 뒤 결정). 결정 전 이미지는 잠깐 붙잡는다
+  (렌즈당 최대 5, ImageReader maxImages 8).
+- 스트림 헤더·frames CSV `t_mid_ns` 는 그대로 노출 가운데. frames CSV 마지막 열 `pair_dt_ns` (기준 렌즈 행은 빈칸),
+  meta.json `fps` = save_fps (파일 안 프레임률), `capture_fps`, `save_fps`, `subsample{pairs, unmatched, dt_ms_median/p95/max, kept, seen,
+  forced_drops}`. metrics.json `fps` = save_fps, `capture_fps`, `save_fps`, `subsample` (최근 30 짝), 렌즈별 `cam_fps` = 촬영,
+  `kept_fps`·`copy_ms_avg` = 남긴 프레임.
+- PC: `phone_link.PhoneLink.capture_fps` (→ `--ei fps <capture> --ei save_fps <fps>`), `scan3d.py --app-capture-fps`, 웹 '촬영' 선택
+  (`{"cmd":"mode", ..., "capture_fps": 60|0}`), `load_model.combo(..., capture_fps=)` (카메라 검사만 촬영 fps). 짝 묶기·VIO·복원은 저장 fps 그대로.
+- S24 실측 (1440x1080, 두 렌즈 60 fps 요청): 카메라 결과는 약 50 /s (몇 프레임마다 HAL 이 하나씩 건너뜀), 렌즈 2 의 위상이 렌즈 5 에 대해
+  계속 미끄러져 짝 시각차는 0~8.3 ms 에 고르게 퍼짐. 자세한 표는 `scan3d/research/subsample_60_15.md`.
+
 ### 1.3 파이썬 수신 API (lib_phone_stereo.py, import 해서 재사용)
 - `read_frame(sock, stream_count, size, h264=None) -> PhoneFrame | SensorSample` — 블로킹, 패킷 1개. STEH 를 받으려면 `h264=H264Decoders(stream_count, sock)` (PhoneReceiver·phone_rx 는 알아서 만든다).
   - `PhoneFrame(index:int, timestamp_ns:int, bgr:np.ndarray HxWx3 uint8)`

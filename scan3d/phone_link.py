@@ -10,6 +10,8 @@ adb 찾기 (find_adb):
 
 앱 시작 인자 (SPEC 1.5 + 모드): am start -S -n com.camera.dualstream/.MainActivity --es logical 0 --es physical 2,5  (깊이 렌즈 쌍 2+6 이면 --es physical 2,6, scan3d.apply_geometry 가 바꿈)
   --ei width <W> --ei height <H> --ei fps <fps> (기본 640 480 15; scan3d 가 세션마다 width/height/fps 를 바꿈) --ef focus_diopters 1.0 --ez raw_ts false --ei imu_us 2500 --es mode <live|record|both> --es stream_fmt h264|jpeg|nv21 (기본 h264) --ei jpeg_q 90 [--ei live_kbps N] (SPEC 1.2)
+  [--ei save_fps <fps>] (앱 1.8-subsample: capture_fps > fps 면 --ei fps <capture_fps> --ei save_fps <fps> = 빠르게 찍고 1/N 만
+  저장·전송 → 두 렌즈 시각차 ≤ 반 촬영 주기, 녹화·스트림은 fps 그대로. 옛 앱은 save_fps 를 몰라 capture_fps 로 전부 보냄)
   --es sync off|auto|a|b (기본 off = 안 맞춤: S24 는 다시 열어도 위상이 안 맞아 PC 가 깊이에서 움직임 보정; auto = 카메라 다시 열기, 옵션) --ei rec_wait_sync_s 40 (녹화는 맞춘 뒤 시작, SPEC 15)
 녹화 위치 (RECORDING_FORMAT.md 2절): /sdcard/Android/data/com.camera.dualstream/files/rec_YYYYMMDD_HHMMSS/ (adb 로 바로 읽힘),
   예비로 앱 내부 files/rec_* (run-as). 환경변수 SCAN3D_REC_DIRS(':' 구분)로 덮어씀. 폴더 이름이 rec_ 로 시작하는 것만.
@@ -124,6 +126,7 @@ class PhoneLink:
         self.adb, self.kind = find_adb(adb)
         self.log = log
         self.physical, self.fps, self.focus, self.imu_us = physical, fps, focus, imu_us
+        self.capture_fps = None                                     # 촬영 fps (None/0 = fps 그대로). fps 의 배수일 때만 씀
         self.width, self.height = int(width), int(height)          # 스트림·녹화 크기 (4:3, scan3d.apply_geometry 가 바꿈)
         self.rec_kbps = None                                        # 녹화 H.264 kbps (None = 앱 자동, SPEC 14.5: 640x480·15 fps 에서 4000)
         self.stream_fmt, self.jpeg_q = stream_fmt, int(jpeg_q)      # 스트림 형식 (SPEC 1.2: 기본 h264, jpeg·nv21 은 고급)
@@ -204,17 +207,20 @@ class PhoneLink:
         self.shell("pm", "enable", APP)
         self.shell("am", "force-stop", APP)
         self.shell("run-as", APP, "rm", "-f", "files/status.txt", "files/cameras.json")
+        cap = self.capture_fps_used()
         rc, out = self.shell("am", "start", "-S", "-n", ACTIVITY,
                              "--es", "logical", "0", "--es", "physical", str(self.physical),
                              "--ei", "width", str(self.width), "--ei", "height", str(self.height),
-                             "--ei", "fps", str(self.fps),
+                             "--ei", "fps", str(cap or self.fps),
+                             *(("--ei", "save_fps", str(int(self.fps))) if cap else ()),   # 앱 1.8: cap fps 로 찍고 fps 만 저장
                              "--ef", "focus_diopters", str(self.focus), "--ez", "raw_ts", "false",
                              "--ei", "imu_us", str(self.imu_us), "--es", "mode", mode,
                              "--es", "stream_fmt", str(self.stream_fmt), "--ei", "jpeg_q", str(self.jpeg_q),
                              "--es", "sync", str(self.sync), "--ei", "rec_wait_sync_s", str(int(self.rec_wait_sync_s)),
                              *(("--ei", "live_kbps", str(int(self.live_kbps))) if self.live_kbps else ()),   # 앱 MainActivity live_kbps
                              *(("--ei", "rec_kbps", str(int(self.rec_kbps))) if self.rec_kbps else ()), timeout=20)
-        self.log(f"[adb] am start mode={mode} {self.width}x{self.height} {self.fps} fps sync={self.sync} rc={rc} "
+        self.log(f"[adb] am start mode={mode} {self.width}x{self.height} "
+                 f"{f'{cap} fps 촬영 → {self.fps} fps 저장' if cap else f'{self.fps} fps'} sync={self.sync} rc={rc} "
                  f"{out.splitlines()[-1] if out else ''}")
         self.app_mode, self.app_started = mode, time.time()
         t_end = time.monotonic() + wait_s
@@ -230,6 +236,14 @@ class PhoneLink:
             time.sleep(0.2)
         self.log(f"[adb] 앱 시작 확인 실패 (화면 켜짐·카메라 권한 확인): {st}")
         return False, st
+
+    def capture_fps_used(self):
+        """앱에 줄 촬영 fps (save_fps 와 다를 때만), 아니면 None. fps 의 정수배이고 fps 보다 클 때만."""
+        try:
+            c, f = int(self.capture_fps or 0), int(self.fps)
+        except (TypeError, ValueError):
+            return None
+        return c if c > f > 0 and c % f == 0 else None
 
     def stop_app(self, wait_s=8.0):
         """녹화를 닫고(MP4 마무리) 앱을 끈다."""

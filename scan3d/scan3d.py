@@ -74,6 +74,9 @@ LENS_PAIRS = ("2+5", "2+6")
 # 복원은 두 쌍(2+6, 2+5)을 따로 → recon_<시각>_p26 / _p25 (replay_view.rec_pairs). 실시간 깊이는 한 쌍만.
 ALL_LENSES = ("all", "2+5+6", "2,5,6")
 ALL_REC_PHYSICAL = ("2", "5", "6")
+# 촬영 fps 기본 (앱 1.8-subsample): 0 = 저장 fps 로 촬영 (옛 동작). 웹 [60 fps 촬영 → 15 fps 저장] 이 세션마다 바꿈.
+CAPTURE_FPS_DEFAULT = 0
+CAPTURE_FPS_CHOICES = (30, 60)                   # 카메라 고정 AE 범위가 있는 값만 (S24: 15·20·24·30·60)
 
 
 def reloc_T_yaw(yaw):
@@ -152,6 +155,9 @@ def parse_args(argv=None):
                    help="시작할 때 adb 로 앱 시작 (native 기본 켬, relay 기본 끔 = win_relay 가 시작)")
     g.add_argument("--no-start-app", dest="start_app", action="store_false")
     p.add_argument("--app-fps", type=int, default=15)
+    p.add_argument("--app-capture-fps", type=int, default=CAPTURE_FPS_DEFAULT,
+                   help="촬영 fps (앱 1.8-subsample): --app-fps 의 배수면 이 fps 로 찍고 --app-fps 만큼만 저장·전송 "
+                        "(두 렌즈 시각차가 반 촬영 주기 이하로 줆). 0 = 촬영도 --app-fps. 웹 '60 fps 촬영 → 15 fps 저장' 이 바꿈")
     p.add_argument("--app-imu-us", type=int, default=2500)
     p.add_argument("--app-focus", type=float, default=1.0)
     p.add_argument("--app-stream", choices=["h264", "jpeg", "nv21"], default="h264",
@@ -291,6 +297,24 @@ def parse_args(argv=None):
     return a
 
 
+def norm_capture_fps(capture_fps, fps, strict=False):
+    """촬영 fps (앱 1.8-subsample --ei fps; 저장·전송은 fps). 0 = 따로 안 씀. CAPTURE_FPS_CHOICES 중 fps 의 정수배·fps 초과만.
+    strict=False 면 안 맞는 값은 0 (예: 지난 60 이 새 fps 20 과 안 맞음), True 면 ValueError."""
+    try:
+        c, f = int(capture_fps or 0), int(fps)
+    except (TypeError, ValueError):
+        if strict:
+            raise ValueError(f"촬영 fps {capture_fps!r} 가 숫자가 아님")
+        return 0
+    if c <= f:
+        return 0
+    if c not in CAPTURE_FPS_CHOICES or c % f:
+        if strict:
+            raise ValueError(f"촬영 {c} fps 는 {'/'.join(map(str, CAPTURE_FPS_CHOICES))} 중 저장 {f} fps 의 배수여야 합니다")
+        return 0
+    return c
+
+
 def pair_skew_ms_for(a, fps):
     """쌍 묶기 기준 ms: --pair-skew-ms 를 주면 그 값, 아니면 0.55 × 프레임 주기.
     FramePairer 는 기준 렌즈 프레임 양쪽을 다 받은 뒤 가장 가까운 프레임을 고르므로 반 주기를 넘는 기준이어도 먼 프레임과
@@ -331,7 +355,7 @@ class Scanner:
         self.geom = None                                 # dict(st, swap, rp, size, fps, ffs_scale, base_size, scale, scaled, note)
         self.st = self.swap = self.rp = None
         self.want = dict(size=tuple(a.size), fps=int(a.app_fps), ffs_scale=a.scale,   # 실시간·녹화 세션에 쓸 값 (웹이 바꿈)
-                         pair=a.pair)
+                         pair=a.pair, capture_fps=norm_capture_fps(getattr(a, "app_capture_fps", 0), int(a.app_fps)))
         self.boot_size = tuple(a.size)                   # 외부 브리지(--ov HOST:PORT)가 쓰는 크기로 본다 (REVIEW6 R1)
         self.vio_cfg_used = None                         # 지금 브리지가 쓰는 estimator_config.yaml (저장 때 복사)
         voxel_map.configure_tsdf(enabled=a.tsdf == "on", voxel_m=a.tsdf_voxel,
@@ -561,7 +585,9 @@ class Scanner:
                     calib_size=list(g["base_size"]), calib_scaled=bool(g["scaled"]), calib_scale=g["scale"],
                     calib_note=g["note"], rect=dict(f=g["rp"]["f"], cx=g["rp"]["cx"], cy=g["rp"]["cy"]),
                     epi_gate_px=round(1.0 * g["scale"], 3),
-                    want=dict(size=list(w["size"]), fps=w["fps"], ffs_scale=w["ffs_scale"], pair=w.get("pair")),
+                    want=dict(size=list(w["size"]), fps=w["fps"], ffs_scale=w["ffs_scale"], pair=w.get("pair"),
+                              capture_fps=w.get("capture_fps") or 0),
+                    capture_fps=self.link.capture_fps_used() or 0,   # 지금(마지막) 앱 촬영 fps (0 = fps 그대로)
                     rec3=self.rec3, app_physical=str(self.link.physical),
                     pair=g.get("pair"), physical=list(g.get("physical") or self.a.physical),
                     baseline_mm=round(g["rp"]["baseline_m"] * 1000, 2), calib_file=Path(g.get("calib") or "").name,
@@ -575,9 +601,11 @@ class Scanner:
         info = self.stream_info()
         if self.mode in PHONE_MODES:
             W, H, fps = info["size"][0], info["size"][1], info["fps"]
+            cap = info["capture_fps"]
         else:
             (W, H), fps = self.want["size"], self.want["fps"]
-        return dict(info, w=int(W), h=int(H), fps_now=info["fps"], fps=int(fps))
+            cap = self.want.get("capture_fps") or 0
+        return dict(info, w=int(W), h=int(H), fps_now=info["fps"], fps=int(fps), capture_fps=int(cap or 0))
 
     def _default_live_kbps(self, size, fps):
         """새 크기·fps 의 실시간 H.264 기본 비트레이트 (렌즈 하나, kbps; load_model.live_kbps = 웹 부하 모델과 같은 식).
@@ -592,7 +620,7 @@ class Scanner:
             return None
 
     def set_stream(self, size=None, h=None, fps=None, rec_kbps=None, ffs_scale=None, keep_ffs=False,
-                   stream_fmt=None, live_kbps=None, live_kbps_auto=False, pair=None):
+                   stream_fmt=None, live_kbps=None, live_kbps_auto=False, pair=None, capture_fps=None):
         """다음 실시간·녹화 세션의 크기·fps 를 정한다 (검증만, 적용은 start_session). 반환 want.
         size = "WxH" | (W,H) | W (그때 h 도 줌, web_server 의 set_stream(w, h, fps, rec_kbps=…) 호출).
         rec_kbps = 녹화 H.264 비트레이트 (앱 --ei rec_kbps, None = 앱 기본).
@@ -601,7 +629,9 @@ class Scanner:
         live_kbps_auto = True 면 live_kbps 는 부하 모델이 계산한 기본값 (웹 [스캔 시작]), False 면 사용자가 직접 준 값.
         크기·fps 만 바뀌고 live_kbps 가 없으면: 사용자가 직접 준 값만 유지하고, 아니면 새 크기 기준 기본값으로 다시 계산
         (REVIEW7 H4: 1280x960 의 16 Mbps 가 640x480 에 남지 않게).
-        pair = 깊이 렌즈 쌍 '2+5' | '2+6' (None = 지난 값). 보정 파일이 없으면 ValueError."""
+        pair = 깊이 렌즈 쌍 '2+5' | '2+6' (None = 지난 값). 보정 파일이 없으면 ValueError.
+        capture_fps = 촬영 fps (앱 1.8 --ei fps, 저장·전송은 fps; None = 지난 값, 0 = fps 그대로). fps 의 배수·60 이하가 아니면
+        ValueError (지난 값이 새 fps 와 안 맞으면 조용히 0)."""
         pair = norm_pair(pair) or self.want.get("pair") or self.a.pair
         self.calib_for(pair)                              # 보정 파일 확인 (없으면 세션을 멈추기 전에 ValueError)
         if stream_fmt is not None and stream_fmt not in ("h264", "jpeg", "nv21"):
@@ -612,7 +642,11 @@ class Scanner:
         old_geo = (tuple(w["size"]), int(w["fps"]))
         sz, f, fs = self._norm_geometry(size if size is not None else w["size"], fps if fps is not None else w["fps"],
                                         ffs_scale if ffs_scale is not None else (w["ffs_scale"] if keep_ffs else None))
-        self.want = dict(size=sz, fps=f, ffs_scale=fs, pair=pair)
+        if capture_fps is None:
+            cf = norm_capture_fps(w.get("capture_fps"), f)
+        else:
+            cf = norm_capture_fps(capture_fps, f, strict=True)
+        self.want = dict(size=sz, fps=f, ffs_scale=fs, pair=pair, capture_fps=cf)
         if rec_kbps is not None:
             self.link.rec_kbps = max(500, int(rec_kbps))
         if stream_fmt is not None:
@@ -659,7 +693,7 @@ class Scanner:
             self.depth_thread.start()
 
     # ---------------- 세션 (모드) ----------------
-    def start_session(self, mode, start_app=True, size=None, fps=None, ffs_scale=None, pair=None, rec3=False):
+    def start_session(self, mode, start_app=True, size=None, fps=None, ffs_scale=None, pair=None, rec3=False, capture_fps=None):
         """size(WxH 4:3)·fps·ffs_scale 를 주면 그 값으로 (self.want 갱신), 안 주면 self.want. 크기·fps 가 바뀌면
         정류맵·FFS 입력·앱 인자를 다시 정하고, 실시간 브리지는 그 크기·fps 설정(config/<W>x<H>_<fps>/)으로 다시 띄운다.
         rec3 = 렌즈 3개(2,5,6) 모두 녹화 (비교용, '폰에 녹화만' 에서만). pair 는 그때 쓰지 않는 깊이 쌍 (기본 2+6)."""
@@ -667,8 +701,9 @@ class Scanner:
             raise ValueError(f"mode {mode}")
         if rec3 and mode != "record":
             raise ValueError("렌즈 3개 모두 녹화는 '폰에 녹화만' 에서만 됩니다 — 실시간 깊이는 초광각+광각 또는 초광각+망원 중 하나를 고르세요")
-        if size is not None or fps is not None or ffs_scale is not None or pair is not None:
-            self.set_stream(size=size, fps=fps, ffs_scale=ffs_scale, keep_ffs=size is None, pair=pair)   # 잘못된 값이면 세션을 멈추기 전에 ValueError
+        if size is not None or fps is not None or ffs_scale is not None or pair is not None or capture_fps is not None:
+            self.set_stream(size=size, fps=fps, ffs_scale=ffs_scale, keep_ffs=size is None, pair=pair,
+                            capture_fps=capture_fps)   # 잘못된 값이면 세션을 멈추기 전에 ValueError
         if mode in ("live", "both") and self.a.vio_mode == "stereo" and self.want.get("pair") != "2+5":
             raise ValueError("두 렌즈 위치 추적(--vio-mode stereo)은 렌즈 2+5 설정만 있습니다 — 렌즈 쌍을 2+5 로 고르세요")
         if mode in ("live", "both"):
@@ -678,6 +713,7 @@ class Scanner:
             self._stop_session_locked(stop_app=False)
             w = self.want
             self.apply_geometry(w["size"], w["fps"], w["ffs_scale"], w.get("pair"))
+            self.link.capture_fps = w.get("capture_fps") or None   # 앱 1.8: 촬영 fps (저장·전송·짝 묶기는 w["fps"])
             # 앱 --es physical: 3개 모두 녹화면 2,5,6, 아니면 깊이 쌍 (apply_geometry 가 쌍이 같으면 안 건드리므로 늘 다시 정함)
             self.rec3 = bool(rec3)
             self.link.physical = ",".join(ALL_REC_PHYSICAL if self.rec3 else self.geom["physical"])
@@ -2329,17 +2365,19 @@ class Scanner:
             try:
                 return self.start_session(body.get("mode", "live"), start_app=bool(body.get("start_app", True)),
                                           size=body.get("size"), fps=body.get("fps"), ffs_scale=body.get("ffs_scale"),
-                                          pair=pair, rec3=rec3)
+                                          pair=pair, rec3=rec3, capture_fps=body.get("capture_fps"))
             except ValueError as e:
                 return dict(ok=False, error=str(e))
         elif cmd == "stream":
             # 다음 실시간·녹화 세션의 크기·fps 만 정함 (검증; 적용은 다음 '시작')
             try:
                 w = self.set_stream(size=body.get("size"), fps=body.get("fps"), ffs_scale=body.get("ffs_scale"),
-                                    keep_ffs=body.get("size") is None, pair=body.get("pair"))
+                                    keep_ffs=body.get("size") is None, pair=body.get("pair"),
+                                    capture_fps=body.get("capture_fps"))
             except ValueError as e:
                 return dict(ok=False, error=str(e))
-            return dict(ok=True, want=dict(size=list(w["size"]), fps=w["fps"], ffs_scale=w["ffs_scale"], pair=w.get("pair")),
+            return dict(ok=True, want=dict(size=list(w["size"]), fps=w["fps"], ffs_scale=w["ffs_scale"], pair=w.get("pair"),
+                                           capture_fps=w.get("capture_fps") or 0),
                         stream=self.stream_info())
         elif cmd == "stop":
             return self.stop_session(stop_app=bool(body.get("stop_app", True)))

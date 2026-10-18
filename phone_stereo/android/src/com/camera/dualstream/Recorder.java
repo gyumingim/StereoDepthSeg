@@ -30,19 +30,22 @@ final class Recorder {
     /** mode=both + stream_fmt=h264: the live stream shares this encoder's output (one encoder per lens, not two).
      *  null = recording only. Settings come from H264.configure (B=0, I every 1 s, realtime). */
     private final H264.Sink live;
+    /** Subsample mode (1.8-subsample): frames CSV gets an extra last column pair_dt_ns (this lens mid - kept lens-2 mid;
+     *  empty on the reference lens). */
+    private final boolean pairCol;
     private volatile boolean stopping;
     /** First frame timestamp (any lens): common PTS origin so both MP4s share one timebase. */
     private long t0 = Long.MIN_VALUE;
 
     /** mid = mid-exposure time (frame time since 1.7-mid, SPEC 1.2), physical = physical SENSOR_TIMESTAMP (start). */
     private static final class Frame {
-        final long mid, physical, logical, exposure, skew; final byte[] nv21;
-        Frame(long m, long p, long l, long e, long s, byte[] d) { mid=m; physical=p; logical=l; exposure=e; skew=s; nv21=d; }
+        final long mid, physical, logical, exposure, skew, pairDt; final byte[] nv21;
+        Frame(long m, long p, long l, long e, long s, byte[] d, long pd) { mid=m; physical=p; logical=l; exposure=e; skew=s; nv21=d; pairDt=pd; }
     }
-    private static final Frame EOS = new Frame(0,0,0,0,0,null);
+    private static final Frame EOS = new Frame(0,0,0,0,0,null,Long.MIN_VALUE);
 
-    Recorder(File dir, String[] ids, int width, int height, int fps, int kbps, boolean rawH264, String encoderName, H264.Sink live) throws IOException {
-        this.live=live;
+    Recorder(File dir, String[] ids, int width, int height, int fps, int kbps, boolean rawH264, String encoderName, H264.Sink live, boolean pairCol) throws IOException {
+        this.live=live; this.pairCol=pairCol;
         this.dir=dir; this.width=width; this.height=height; this.fps=fps; this.bitrate=kbps*1000; this.encoderName=encoderName;
         if(!dir.isDirectory() && !dir.mkdirs()) throw new IOException("mkdir "+dir);
         lenses=new Lens[ids.length];
@@ -53,11 +56,11 @@ final class Recorder {
     }
 
     /** Camera thread. Never blocks. mid = frame time (PTS, CSV t_mid_ns, live header), physical = start of exposure. */
-    void frame(int index, long mid, long physical, long logical, long exposure, long skew, byte[] nv21) {
+    void frame(int index, long mid, long physical, long logical, long exposure, long skew, byte[] nv21, long pairDt) {
         if(stopping || index<0 || index>=lenses.length) return;
         synchronized(this) { if(t0==Long.MIN_VALUE) t0=mid; }
         Lens l=lenses[index];
-        if(!l.queue.offer(new Frame(mid,physical,logical,exposure,skew,nv21))) { l.dropped++; if(live!=null) live.h264Drop(index); }
+        if(!l.queue.offer(new Frame(mid,physical,logical,exposure,skew,nv21,pairDt))) { l.dropped++; if(live!=null) live.h264Drop(index); }
     }
 
     /** Sensor thread. Never blocks. */
@@ -166,7 +169,7 @@ final class Recorder {
         @Override public void run() {
             try {
                 rows=new BufferedWriter(new FileWriter(csv),1<<16);
-                rows.write("frame_idx,t_mid_ns,physical_ts_ns,logical_ts_ns,exposure_ns,rolling_shutter_skew_ns,pts_us\n");
+                rows.write("frame_idx,t_mid_ns,physical_ts_ns,logical_ts_ns,exposure_ns,rolling_shutter_skew_ns,pts_us"+(pairCol?",pair_dt_ns":"")+"\n");
                 if(raw!=null) rawOut=new BufferedOutputStream(new FileOutputStream(raw),1<<20);
                 codec=encoderName!=null?MediaCodec.createByCodecName(encoderName)
                         :MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
@@ -211,7 +214,8 @@ final class Recorder {
             else size=fillBuffer(codec.getInputBuffer(in),fr.nv21);
             if(live!=null) ptsMeta.put(pts,new long[]{fr.mid,System.nanoTime()});
             codec.queueInputBuffer(in,0,size,pts,0);
-            rows.write(encoded+","+fr.mid+","+fr.physical+","+fr.logical+","+fr.exposure+","+fr.skew+","+pts+"\n");
+            rows.write(encoded+","+fr.mid+","+fr.physical+","+fr.logical+","+fr.exposure+","+fr.skew+","+pts
+                    +(pairCol?","+(fr.pairDt==Long.MIN_VALUE?"":String.valueOf(fr.pairDt)):"")+"\n");
             encoded++;
         }
 

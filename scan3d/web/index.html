@@ -225,6 +225,8 @@
         <select id="sSize"><option value="640x480">640x480</option></select></label>
       <label class="qsel" title="1초에 찍는 장 수. 회색은 이 화질에서 쓸 수 없는 값 (이유가 옆에 적혀 있음)">fps
         <select id="sFps"><option value="15">15 fps</option></select></label>
+      <label class="qsel" title="촬영 속도 (폰 앱 1.8 이상). '60 fps 촬영' = 카메라는 1초에 60장 찍고 위의 fps 만큼만 골라 저장·전송합니다. 두 렌즈는 서로 맞춰 찍히지 않아 15 fps 로 찍으면 두 렌즈 시각이 10~33 ms 어긋나는데, 60 fps 로 찍고 가장 가까운 짝을 고르면 8 ms 이하로 줄어 움직일 때 깊이가 좋아집니다. 녹화 용량·영상 압축은 저장 fps 그대로">촬영
+        <select id="sCap"><option value="0">fps 그대로</option></select></label>
       <label class="qsel" title="깊이를 재는 두 렌즈 (다음 [▶ 스캔 시작] 부터). 초광각+광각 = 기본 (체커보드로 보정한 값). 초광각+망원 = 두 렌즈 사이가 2배 넓고 거의 같은 순간에 찍혀 깊이에 유리하지만, 깊이가 나오는 범위가 화면 가운데(망원이 보는 곳)뿐이고 보정은 폰 공장 값입니다. 녹화를 복원할 때는 녹화한 렌즈로 자동으로 맞춥니다. '3개 모두 녹화 (비교용)' = [폰에 녹화만] 에서 세 렌즈를 한꺼번에 녹화해, 같은 움직임을 두 쌍(초광각+광각, 초광각+망원)으로 따로 복원해 비교합니다">깊이 렌즈
         <select id="sPair"><option value="2+5">초광각+광각</option><option value="2+6">초광각+망원</option><option value="all">3개 모두 녹화 (비교용)</option></select></label>
       <button id="bStart" class="big">▶ 스캔 시작</button>

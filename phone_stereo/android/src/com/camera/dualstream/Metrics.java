@@ -19,6 +19,8 @@ final class Metrics {
         final ArrayDeque<long[]> h264 = new ArrayDeque<>();   // {output ns (System.nanoTime), queue->output ns, bytes}
         long camFrames, gapDrops, bufferLost, jpegFrames, jpegDropped, lastTs = -1;
         long h264Frames, h264Keys, h264Dropped, h264WaitKey, h264Lost;
+        final ArrayDeque<long[]> kept = new ArrayDeque<>();   // subsample: {System.nanoTime, copy ns} of kept frames
+        long keptFrames;
     }
 
     Metrics(String[] ids) {
@@ -43,6 +45,15 @@ final class Metrics {
         l.lastTs = sensorTs;
         l.cam.addLast(new long[]{sensorTs, copyNs});
         trim(l.cam, sensorTs);
+    }
+
+    /** Subsample mode: a kept frame was copied (camera thread). camFrame still counts every captured frame. */
+    synchronized void kept(int i, long copyNs) {
+        Lens l = lens[i];
+        long now = System.nanoTime();
+        l.keptFrames++;
+        l.kept.addLast(new long[]{now, copyNs});
+        trim(l.kept, now);
     }
 
     synchronized void bufferLost(int i) { if (i >= 0 && i < lens.length) lens[i].bufferLost++; }
@@ -85,6 +96,15 @@ final class Metrics {
             o.put("cam_frames", l.camFrames);
             o.put("cam_gap_drops", l.gapDrops);
             o.put("cam_buffer_lost", l.bufferLost);
+            trim(l.kept, nowNs);
+            if (l.keptFrames > 0) {                            // subsample: copy time of kept frames only
+                int kn = l.kept.size();
+                copySum = 0; copyMax = 0;
+                for (long[] c : l.kept) { copySum += c[1]; copyMax = Math.max(copyMax, c[1]); }
+                n = kn;
+                o.put("kept_fps", Caps.round(kn * 1e9 / WINDOW_NS));
+                o.put("kept_frames", l.keptFrames);
+            }
             o.put("copy_ms_avg", n == 0 ? 0 : Caps.round(copySum / 1e6 / n));
             o.put("copy_ms_max", Caps.round(copyMax / 1e6));
             trim(l.jpeg, nowNs);

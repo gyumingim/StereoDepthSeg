@@ -608,7 +608,7 @@ function renderDetails(s, se, ui, vio, ph, dp, mp) {
     ['USB', `${esc(ui.usb)} · adb ${adbOk ? esc(se.adb.kind) : '<span class="warn">없음</span>'}`],
     ['중계', `${esc(relay.state)}${relay.pid ? ' pid ' + relay.pid : ''}${relay.starts ? ' · 시작 ' + relay.starts + '회' : ''}${relay.fails ? ' · 연속 실패 ' + relay.fails : ''}${relay.error ? ` <span class="bad">${esc(relay.error)}</span>` : ''}`]];
   if (relay.log_tail && relay.log_tail.length) srows.push(['중계 로그', `<small>${relay.log_tail.map(esc).join('<br>')}</small>`]);
-  if (ui.stream) srows.push(['영상', `${esc(ui.stream.size)} · ${ui.stream.fps} fps · ${esc(FMT_KO[ui.stream.stream_fmt] || ui.stream.stream_fmt || '-')}`
+  if (ui.stream) srows.push(['영상', `${esc(ui.stream.size)} · ${ui.stream.capture_fps ? ui.stream.capture_fps + ' fps 촬영 → ' : ''}${ui.stream.fps} fps · ${esc(FMT_KO[ui.stream.stream_fmt] || ui.stream.stream_fmt || '-')}`
     + (ui.stream.live_kbps ? ` · ${(ui.stream.live_kbps / 1000).toFixed(1)} Mbps × 2` : '')]);
   if (s.stream && s.stream.pair) srows.push(['깊이 렌즈', `${esc(PAIR_KO[s.stream.pair] || s.stream.pair)} (렌즈 ${esc((s.stream.physical || []).join('·'))}) · 두 렌즈 사이 ${f(s.stream.baseline_mm, 1)} mm · 정류 초점 ${f(s.stream.rect && s.stream.rect.f, 0)} px`
     + ` · <small>${esc(s.stream.calib_file || '')} ${esc(s.stream.calib_src || '')}</small>`
@@ -677,9 +677,9 @@ async function startScan(askMsg) {
   try {
     const all = Q.pair === 'all' && m === 'record';            // 3개 모두 녹화 (비교용) — 폰에 녹화만
     const pair = all ? 'all' : (Q.pair === 'all' ? '2+6' : Q.pair);
-    const r = await cmd(Object.assign({ cmd: 'mode', mode: m, start_app: $('cStartApp').checked && adbOk, size: Q.size, fps: Q.fps, stream_fmt: Q.fmt, pair, live_pair: '2+6' }, mapOpts()));
+    const r = await cmd(Object.assign({ cmd: 'mode', mode: m, start_app: $('cStartApp').checked && adbOk, size: Q.size, fps: Q.fps, capture_fps: capNow(), stream_fmt: Q.fmt, pair, live_pair: '2+6' }, mapOpts()));
     if (r.ok === false || r.error) alert(r.error || '시작 실패');
-    else toast(r.warn ? `시작합니다 — ${r.warn}` : `시작합니다 (${Q.size} · ${Q.fps} fps${Q.fmt !== 'h264' ? ' · ' + (FMT_KO[Q.fmt] || Q.fmt) : ''}${pair !== '2+5' ? ' · ' + PAIR_KO[pair] : ''}) — 폰 화면을 켜 두세요`
+    else toast(r.warn ? `시작합니다 — ${r.warn}` : `시작합니다 (${Q.size} · ${capNow() ? capNow() + ' fps 촬영 → ' : ''}${Q.fps} fps${Q.fmt !== 'h264' ? ' · ' + (FMT_KO[Q.fmt] || Q.fmt) : ''}${pair !== '2+5' ? ' · ' + PAIR_KO[pair] : ''}) — 폰 화면을 켜 두세요`
       + (all ? '. 끝나면 두 쌍(초광각+망원, 초광각+광각)으로 따로 복원합니다' : ''), r.warn || all ? 8000 : 4000);
   } catch (e) { alert('서버에 연결할 수 없습니다'); }
   $('bStart').disabled = false;
@@ -842,7 +842,8 @@ function renderPreview(s) {
 // 막대: 한계 = 막대의 2/3 지점 눈금, 흰 줄 = 스캔 중 실측. 과부하가 6초 넘게 이어지면 [한 단계 낮추기] 제안.
 // 영상 형식 (고급): H.264 = 기본·권장 (폰 하드웨어 압축), JPEG·NV21 은 예전 방식.
 const FMT_KO = { h264: 'H.264', jpeg: 'JPEG', nv21: 'NV21 (압축 없음)' };
-const Q = { tab: null, size: '1440x1080', fps: 15, fmt: 'h264', pair: '2+5', state: null, sigS: '', sigF: '', kf: null };
+const Q = { tab: null, size: '1440x1080', fps: 15, cap: null, fmt: 'h264', pair: '2+5', state: null, sigS: '', sigF: '', kf: null };
+// Q.cap = 촬영 fps (앱 1.8-subsample, 0 = fps 그대로). null = 아직 안 고름 → 서버 기본 (/api/combos current.capture_fps)
 // 깊이 렌즈 쌍: 2+5 = 초광각+광각 (기본), 2+6 = 초광각+망원 (기선 2배, 거의 동시 촬영, 화면 가운데만)
 const PAIR_KO = { '2+5': '초광각+광각', '2+6': '초광각+망원', all: '렌즈 3개 모두 녹화 (비교용)' };
 // '3개 모두 녹화 (비교용)' 은 [폰에 녹화만] 에서만 고를 수 있다 (실시간 깊이는 한 쌍만). 다른 방식으로 바꾸면 초광각+망원 으로.
@@ -859,6 +860,7 @@ try {
   $('sPair').value = Q.pair; renderPairSel(false);
   Q.size = localStorage.getItem('scan3d.size.v2') || Q.size;
   Q.fps = parseInt(localStorage.getItem('scan3d.fps')) || Q.fps;
+  const cp = localStorage.getItem('scan3d.cap'); if (cp !== null && !isNaN(parseInt(cp))) Q.cap = parseInt(cp);
   const fm = localStorage.getItem('scan3d.fmt'); if (fm && FMT_KO[fm]) Q.fmt = fm;
   $('sFmt').value = Q.fmt;
   const k = parseFloat(localStorage.getItem('scan3d.kf')); if (k > 0) { Q.kf = k; $('iKf').value = k; }
@@ -879,6 +881,12 @@ function shortWhy(c) {
   return r;
 }
 function saveQ() { try { localStorage.setItem('scan3d.size.v2', Q.size); localStorage.setItem('scan3d.fps', String(Q.fps)); } catch (e) { } }
+function saveCap() { try { localStorage.setItem('scan3d.cap', String(Q.cap || 0)); } catch (e) { } }
+// 지금 고른 크기·fps 에서 쓸 촬영 fps (안 되는 값이면 0)
+function capNow() {
+  const c = comboOf(Q.size, Q.fps) || {}, cc = (c.capture || {})[String(Q.cap || 0)];
+  return Q.cap && cc && (cc.ok || cc.load_only) ? Q.cap : 0;
+}
 async function loadCombos() {
   try {
     const kf = Q.kf ? `&kf=${Q.kf}` : '';
@@ -925,7 +933,17 @@ function renderQSel() {
       label: `${f} fps` + (c.ok ? '' : c.load_only ? ` — 부하 높음 (${shortWhy(c)})` : ` — 안 됨: ${shortWhy(c)}`),
       title: c.ok ? '' : (c.reasons || []).join(' · ') };
   }), Q.fps);
+  // 촬영 fps: 서버가 이 크기·fps 에서 되는 촬영 fps 후보를 combos[].capture 로 준다 (정수배만)
+  if (Q.cap === null) Q.cap = +((t.current || {}).capture_fps || 0);
+  const cf = (comboOf(Q.size, Q.fps) || {}).capture || {};
+  fillSelect($('sCap'), [{ value: 0, label: 'fps 그대로' }].concat(Object.keys(cf).map(k => {
+    const c = cf[k];
+    return { value: +k, disabled: !(c.ok || c.load_only),
+      label: `${k} fps 촬영 → ${Q.fps} 저장` + (c.ok ? '' : c.load_only ? ` — 부하 높음 (${shortWhy(c)})` : ` — 안 됨: ${shortWhy(c)}`),
+      title: c.ok ? `두 렌즈 시각차 ≤ ${(500 / +k).toFixed(1)} ms` : (c.reasons || []).join(' · ') };
+  })), capNow());
 }
+$('sCap').onchange = e => { Q.cap = parseInt(e.target.value) || 0; saveCap(); renderLoad(); };
 $('sSize').onchange = e => { Q.size = e.target.value; renderQSel(); renderLoad(); };
 $('sFps').onchange = e => { Q.fps = parseInt(e.target.value) || Q.fps; saveQ(); renderLoad(); };
 $('sPair').onchange = e => {
