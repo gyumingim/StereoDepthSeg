@@ -18,6 +18,13 @@ NDK=${NDK:-$HOME/android-ndk-r27c}
 OVB=$HERE/../../scan3d/ov_bridge/android/build/ov_bridge
 "$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip" -o "$B/apk/lib/arm64-v8a/libov_bridge.so" "$OVB"
 cp "$NDK/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so" "$B/apk/lib/arm64-v8a/"
+# loop closure over ARCore (jni/arloop.*): OpenCV + Ceres static inside libarloop.so
+JB=$HERE/jni/build-android
+cmake -S "$HERE/jni" -B "$JB" -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" -DANDROID_ABI=arm64-v8a \
+  -DANDROID_PLATFORM=android-34 -DANDROID_STL=c++_shared -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH \
+  -DEigen3_DIR=/usr/share/eigen3/cmake > /dev/null
+cmake --build "$JB" -j8 > /dev/null
+"$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip" -o "$B/apk/lib/arm64-v8a/libarloop.so" "$JB/libarloop.so"
 cp "$B/classes.dex" "$B/apk/"
 (cd "$B/apk" && zip -q -r "$B/unsigned.apk" classes.dex lib)
 "$BT/zipalign" -f 4 "$B/unsigned.apk" "$B/aligned.apk"

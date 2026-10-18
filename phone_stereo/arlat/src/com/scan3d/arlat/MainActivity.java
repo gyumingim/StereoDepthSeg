@@ -87,6 +87,12 @@ public class MainActivity extends Activity {
                 Config c = new Config(session);
                 c.setUpdateMode(Config.UpdateMode.BLOCKING);
                 c.setFocusMode(Config.FocusMode.FIXED);
+                // ARCore depth gives the 3D points for feature loop closure (ArLoop "feature" / "both")
+                // (only when feature loops are on: depth costs ARCore time — measure with extra depth=0/1)
+                String lm = getIntent().getStringExtra("loop");
+                // default off: ARCore depth raised pose latency 75 -> 176 ms (median) on the S24; arloop triangulates instead
+                boolean wantDepth = getIntent().getIntExtra("depth", 0) != 0 && (lm == null || lm.equals("both") || lm.equals("feature"));
+                if (wantDepth && session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) c.setDepthMode(Config.DepthMode.AUTOMATIC);
                 session.configure(c);
             }
             session.resume();
@@ -139,6 +145,18 @@ public class MainActivity extends Activity {
         long tEnd = secs > 0 ? SystemClock.elapsedRealtime() + secs * 1000L : Long.MAX_VALUE;
         int frames = 0, tracking = 0;
         long lastTs = 0;
+        // loop closure: extras loop = both | marker | feature | off, mdict (ArUco dictionary id, 0 = 4X4_50), mlen (m),
+        // dump > 0 = also save keyframes to files/arloop_kf.bin for PC replay
+        String loopMode = getIntent().getStringExtra("loop");
+        if (loopMode == null) loopMode = "both";
+        ArLoop loop = null;
+        try {
+            loop = new ArLoop(loopMode, getIntent().getIntExtra("mdict", 0), getIntent().getFloatExtra("mlen", 0.15f),
+                    getIntent().getIntExtra("dump", 0) > 0 ? new File(getExternalFilesDir(null), "arloop_kf.bin") : null);
+        } catch (Throwable e) {
+            android.util.Log.e("arlat", "arloop", e);
+            show("arloop error: " + e);
+        }
         try (PrintWriter w = new PrintWriter(new FileWriter(out))) {
             w.println("t_frame_ns,t_cam_android_ns,t_call_ns,t_return_ns,state,tx,ty,tz,qx,qy,qz,qw");
             while (running && SystemClock.elapsedRealtime() < tEnd) {
@@ -157,10 +175,22 @@ public class MainActivity extends Activity {
                 if (st == TrackingState.TRACKING) tracking++;
                 w.println(String.format(Locale.US, "%d,%d,%d,%d,%s,%.5f,%.5f,%.5f,%.6f,%.6f,%.6f,%.6f", ts,
                         tCam, t0, t1, st, p.tx(), p.ty(), p.tz(), p.qx(), p.qy(), p.qz(), p.qw()));
+                String extra = "";
+                if (loop != null && st == TrackingState.TRACKING) {
+                    float[] p7 = ArLoop.pose7(p);
+                    loop.onFrame(f, ts, p7);
+                    if (loop.active()) {
+                        float[] c = loop.correct(ts, p7);
+                        long tc = SystemClock.elapsedRealtimeNanos();
+                        extra = String.format(Locale.US, ",\"pc\":[%.5f,%.5f,%.5f],\"qc\":[%.6f,%.6f,%.6f,%.6f],\"t_corr\":%d",
+                                c[0], c[1], c[2], c[3], c[4], c[5], c[6], tc);
+                    }
+                    if (frames % 15 == 0 && loop.active()) extra += ",\"loop_mode\":\"" + loop.mode + "\",\"loop\":" + loop.stats();
+                }
                 streamer.send(String.format(Locale.US,
                         "{\"src\":\"arcore\",\"t_sensor\":%d,\"t_frame\":%d,\"t_call\":%d,\"t_out\":%d,\"status\":\"%s\","
-                                + "\"p\":[%.5f,%.5f,%.5f],\"q\":[%.6f,%.6f,%.6f,%.6f]}",
-                        tCam, ts, t0, t1, stName, p.tx(), p.ty(), p.tz(), p.qx(), p.qy(), p.qz(), p.qw()));
+                                + "\"p\":[%.5f,%.5f,%.5f],\"q\":[%.6f,%.6f,%.6f,%.6f]%s}",
+                        tCam, ts, t0, t1, stName, p.tx(), p.ty(), p.tz(), p.qx(), p.qy(), p.qz(), p.qw(), extra));
                 if (frames % 15 == 0) {
                     show(String.format(Locale.US, "ARCore %s\nframes %d tracking %d\nlatency %.1f ms\nPC %s", st, frames,
                             tracking, (t1 - tCam) / 1e6, streamer.connected ? "connected" : "-"));
@@ -169,8 +199,10 @@ public class MainActivity extends Activity {
         } catch (Exception e) {
             show("error: " + e);
             android.util.Log.e("arlat", "loop", e);
+            if (loop != null) loop.close();
             return;
         }
+        if (loop != null) loop.close();
         show("DONE " + frames + " frames -> " + out.getName());
         android.util.Log.i("arlat", "DONE " + out);
     }

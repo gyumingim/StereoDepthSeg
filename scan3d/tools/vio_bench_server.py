@@ -93,6 +93,15 @@ class Run:
                     self.path += step
             self.p_first = self.p_first or p
             self.p_last = p
+        pc = d.get("pc")      # ARCore pose after loop closure (arloop)
+        if tracking and pc:
+            self.pc_first = self.pc_first or pc
+            self.pc_last = pc
+        if d.get("loop"):
+            self.loop = d["loop"]
+            self.loop_mode = d.get("loop_mode")
+
+    pc_first = pc_last = loop = loop_mode = None
 
     def stats(self):
         span = (self.t_last - self.t_first) / 1e9 if self.t_first and self.t_last and self.t_last > self.t_first else 0
@@ -109,6 +118,8 @@ class Run:
                  proc_p90=round(pct(self.ms, 0.9), 1) if self.ms else None,
                  path_m=round(self.path, 2),
                  end_from_start_m=round(math.dist(self.p_first, self.p_last), 3) if self.p_first and self.p_last else None,
+                 corr_end_from_start_m=round(math.dist(self.pc_first, self.pc_last), 3) if self.pc_first and self.pc_last else None,
+                 loop_mode=self.loop_mode, loop=self.loop,
                  events=list(self.events)[-5:])
         return r
 
@@ -190,14 +201,17 @@ class Hub:
         d = dict(d, type="frame")
         self.broadcast(d)
 
-    def start(self, mode, secs=0):
+    def start(self, mode, secs=0, loop="both", mlen=0.15, mdict=0, dump=0):
+        """loop = both | marker | feature | off (ARCore loop closure, arlat ArLoop); mlen = printed marker side (m)."""
         self.stop(quiet=True)
         out = [self.adb("reverse", "tcp:8798", "tcp:8798")]
         if mode == "ov" and not self.ov_pushed:
             out.append(self.push_ov())
         self.adb("shell", "input", "keyevent", "KEYCODE_WAKEUP")
-        out.append(self.adb("shell", "am", "start", "-n", f"{PKG}/.MainActivity", "--es", "mode", mode, "--ei", "secs", str(secs)))
-        self.say(f"시작: {mode}")
+        out.append(self.adb("shell", "am", "start", "-n", f"{PKG}/.MainActivity", "--es", "mode", mode, "--ei", "secs", str(secs),
+                            "--es", "loop", str(loop), "--ef", "mlen", str(float(mlen)), "--ei", "mdict", str(int(mdict)),
+                            "--ei", "dump", str(int(dump))))
+        self.say(f"시작: {mode}" + (f" (루프 {loop}, 마커 {mlen} m)" if mode == "arcore" else ""))
         return "\n".join(o for o in out if o)
 
     def stop(self, quiet=False):
@@ -332,7 +346,8 @@ def make_handler(hub):
             body = json.loads(self.rfile.read(n) or b"{}")
             try:
                 if self.path == "/api/start":
-                    hub.background(hub.start, body.get("mode", "arcore"), int(body.get("secs", 0)))
+                    hub.background(hub.start, body.get("mode", "arcore"), int(body.get("secs", 0)), body.get("loop", "both"),
+                                   float(body.get("mlen", 0.15)), int(body.get("mdict", 0)), int(body.get("dump", 0)))
                     self._json({"ok": True})
                 elif self.path == "/api/stop":
                     hub.background(hub.stop)
@@ -350,8 +365,8 @@ def make_handler(hub):
 PAGE = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>VIO 지연 비교</title>
 <style>
-:root{--bg:#f6f7f9;--fg:#1d2128;--mut:#6b7280;--card:#fff;--line:#e3e6ea;--ar:#2563eb;--ov:#dc2626}
-@media (prefers-color-scheme:dark){:root{--bg:#14161a;--fg:#e8eaed;--mut:#9aa0a6;--card:#1d2026;--line:#2c3038;--ar:#60a5fa;--ov:#f87171}}
+:root{--bg:#f6f7f9;--fg:#1d2128;--mut:#6b7280;--card:#fff;--line:#e3e6ea;--ar:#2563eb;--ov:#dc2626;--lc:#16a34a}
+@media (prefers-color-scheme:dark){:root{--bg:#14161a;--fg:#e8eaed;--mut:#9aa0a6;--card:#1d2026;--line:#2c3038;--ar:#60a5fa;--ov:#f87171;--lc:#4ade80}}
 body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,sans-serif}
 main{max-width:1200px;margin:0 auto;padding:16px}
 h1{font-size:20px;margin:0 0 12px}
@@ -372,6 +387,10 @@ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums} th,
   <button onclick="post('/api/stop')">멈춤</button>
   <button onclick="post('/api/push_ov')">OpenVINS 설정 다시 보내기</button>
   <span id="phone" class="mut" style="margin-left:8px">폰: -</span>
+  <div style="margin-top:8px">ARCore 루프 클로저
+   <select id="loopmode"><option value="both">둘 다 (마커 + 특징점)</option><option value="marker">마커만</option><option value="feature">특징점만 (마커 없음)</option><option value="off">끔</option></select>
+   마커 한 변 <input id="mlen" type="number" step="0.005" value="0.15" style="width:70px"> m (ArUco 4x4_50)
+   <label><input id="dump" type="checkbox"> 키프레임 저장 (PC 재생용)</label></div>
   <div class="mut" style="margin-top:6px">지연 = 촬영(센서 시각) → 앱에서 위치가 나온 시각, 폰 시계 하나로 잼. 한 번에 하나만 돌아감 (카메라 공유 안 됨).</div>
  </div>
 </div>
@@ -382,16 +401,17 @@ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums} th,
 </div>
 <div class="row" style="margin-top:12px">
  <div class="card" style="flex:2"><div class="mut"><span class="dot" style="background:var(--ar)"></span>ARCore <span class="dot" style="background:var(--ov);margin-left:10px"></span>OpenVINS — 프레임별 지연 (ms, 최근 20초)</div><canvas id="lat"></canvas></div>
- <div class="card"><div class="mut">궤적 (위에서 본 것, m)</div><canvas id="traj"></canvas><div class="mut" id="path">-</div></div>
+ <div class="card"><div class="mut">궤적 (위에서 본 것, m) — <span style="color:var(--ar)">ARCore</span> · <span style="color:var(--lc)">루프 보정</span> · <span style="color:var(--ov)">OpenVINS</span></div><canvas id="traj"></canvas><div class="mut" id="path">-</div></div>
 </div>
+<div class="card" style="margin-top:12px"><div class="mut">루프 클로저</div><div id="loopst" style="font-variant-numeric:tabular-nums">-</div><div id="loopev" class="mut" style="font:12px ui-monospace,monospace;white-space:pre-wrap"></div></div>
 <div class="card" style="margin-top:12px"><div class="mut">기록 (끝난 측정)</div>
- <table id="runs"><thead><tr><th>측정</th><th>초</th><th>프레임</th><th>추적 %</th><th>fps</th><th>지연 중앙</th><th>p90</th><th>최대</th><th>계산 ms</th><th>이동 m</th><th>시작↔끝 m</th></tr></thead><tbody></tbody></table></div>
+ <table id="runs"><thead><tr><th>측정</th><th>초</th><th>프레임</th><th>추적 %</th><th>fps</th><th>지연 중앙</th><th>p90</th><th>최대</th><th>계산 ms</th><th>이동 m</th><th>시작↔끝 m</th><th>보정 시작↔끝 m</th><th>루프</th></tr></thead><tbody></tbody></table></div>
 <div class="card" style="margin-top:12px"><div class="mut">로그</div><div id="log"></div></div>
 </main><script>
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const pts={arcore:[],ov:[]}, traj={arcore:[],ov:[]};
+const pts={arcore:[],ov:[]}, traj={arcore:[],ov:[],lc:[]};
 function post(u,b){return fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})}).then(r=>r.json()).then(j=>{if(j.out)log(j.out);if(j.error)log('오류: '+j.error);loadRuns();});}
-function start(m){traj[m]=[];post('/api/start',{mode:m});}
+function start(m){traj[m]=[];if(m==='arcore')traj.lc=[];post('/api/start',{mode:m,loop:document.getElementById('loopmode').value,mlen:parseFloat(document.getElementById('mlen').value)||0.15,dump:document.getElementById('dump').checked?1:0});}
 function log(s){const e=document.getElementById('log');e.textContent=(s+'\n'+e.textContent).slice(0,6000);}
 function fmt(v,u=''){return v==null?'-':v+u}
 const es=new EventSource('/events');
@@ -399,6 +419,7 @@ es.onmessage=ev=>{const d=JSON.parse(ev.data);
  if(d.type==='frame'&&!d.event){const now=performance.now()/1000;
   if(d.t_sensor&&d.t_out){pts[d.src].push([now,(d.t_out-d.t_sensor)/1e6,/track/i.test(d.status)]);}
   if(d.p&&/track/i.test(d.status)){const p=d.p; traj[d.src].push(d.src==='arcore'?[p[0],-p[2]]:[p[0],p[1]]); if(traj[d.src].length>20000)traj[d.src].shift();}
+  if(d.pc&&/track/i.test(d.status)){traj.lc.push([d.pc[0],-d.pc[2]]); if(traj.lc.length>20000)traj.lc.shift();}
  } else if(d.type==='frame'&&d.event){log('OpenVINS: '+JSON.stringify(d.event).slice(0,200));}
  else if(d.type==='stats'){const s=d.stats; document.getElementById('phone').textContent='폰: '+(d.phone?'연결됨':'연결 안 됨');
   if(!s)return; document.getElementById('mode').textContent=s.mode==='ov'?'OpenVINS':'ARCore';
@@ -409,7 +430,9 @@ es.onmessage=ev=>{const d=JSON.parse(ev.data);
   document.getElementById('latall').textContent='전체 중앙 '+fmt(s.lat_med)+' · p90 '+fmt(s.lat_p90)+' · 최대 '+fmt(s.lat_max)+' ms'+(s.proc_med!=null?' · 계산 '+s.proc_med+' ms':'');
   document.getElementById('trk').textContent=fmt(s.tracking_pct,' %');
   document.getElementById('fps').textContent=fmt(s.fps,' fps')+' · '+s.frames+' 프레임 · '+s.secs+' 초';
-  document.getElementById('path').textContent='이동 '+s.path_m+' m · 시작↔지금 '+fmt(s.end_from_start_m,' m');}
+  document.getElementById('path').textContent='이동 '+s.path_m+' m · 시작↔지금 '+fmt(s.end_from_start_m,' m')+(s.corr_end_from_start_m!=null?' · 보정 시작↔지금 '+s.corr_end_from_start_m+' m':'');
+  const L=s.loop; if(L){document.getElementById('loopst').textContent=(s.loop_mode||'')+' · 키프레임 '+L.kf+' (깊이 있음 '+L.depth_kf+') · 특징점 루프 '+L.loops+' · 마커 '+L.markers+'개 / 관측 '+L.marker_edges+' · 최적화 '+L.opt+'회 ('+L.opt_ms+' ms) · 키프레임 처리 '+L.proc_ms+' ms · 보정 yaw '+L.corr_yaw_deg.toFixed(2)+'° 이동 '+L.corr_t.map(v=>v.toFixed(2)).join(', ')+' m';
+   document.getElementById('loopev').textContent=(L.events||[]).slice().reverse().join('\n');}}
  else if(d.type==='run_end'){loadRuns();}
  else if(d.type==='log'){log(d.msg);}
 };
@@ -420,14 +443,14 @@ function draw(){const c=document.getElementById('lat'),x=c.getContext('2d');cons
  for(const k of ['arcore','ov']){x.fillStyle=css(k==='ov'?'--ov':'--ar');for(const p of pts[k]){const X=W-(now-p[0])/span*W,Y=H-p[1]/ymax*H;x.globalAlpha=p[2]?1:.3;x.fillRect(X-2,Y-2,4,4);}}
  x.globalAlpha=1;
  const t=document.getElementById('traj'),y=t.getContext('2d');const TW=t.width=t.clientWidth*devicePixelRatio,TH=t.height=t.clientHeight*devicePixelRatio;
- y.clearRect(0,0,TW,TH);let all=[...traj.arcore,...traj.ov];if(all.length){let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;for(const p of all){x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1]);}
+ y.clearRect(0,0,TW,TH);let all=[...traj.arcore,...traj.ov,...traj.lc];if(all.length){let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;for(const p of all){x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1]);}
   const s=Math.min(TW/Math.max(x1-x0,1),TH/Math.max(y1-y0,1))*0.9,cx=(x0+x1)/2,cy=(y0+y1)/2;
   y.strokeStyle=css('--line');y.strokeRect(TW/2+(Math.floor(x0)-cx)*s,TH/2-(Math.ceil(y1)-cy)*s,(Math.ceil(x1)-Math.floor(x0))*s,(Math.ceil(y1)-Math.floor(y0))*s);
-  for(const k of ['arcore','ov']){const P=traj[k];if(!P.length)continue;y.strokeStyle=css(k==='ov'?'--ov':'--ar');y.lineWidth=2*devicePixelRatio;y.beginPath();P.forEach((p,i)=>{const X=TW/2+(p[0]-cx)*s,Y=TH/2-(p[1]-cy)*s;i?y.lineTo(X,Y):y.moveTo(X,Y);});y.stroke();}}
+  for(const k of ['arcore','ov','lc']){const P=traj[k];if(!P.length)continue;y.strokeStyle=css(k==='ov'?'--ov':k==='lc'?'--lc':'--ar');y.lineWidth=2*devicePixelRatio;y.beginPath();P.forEach((p,i)=>{const X=TW/2+(p[0]-cx)*s,Y=TH/2-(p[1]-cy)*s;i?y.lineTo(X,Y):y.moveTo(X,Y);});y.stroke();}}
  requestAnimationFrame(draw);}
 requestAnimationFrame(draw);
 function loadRuns(){fetch('/api/runs').then(r=>r.json()).then(R=>{const b=document.querySelector('#runs tbody');b.innerHTML='';for(const s of R){const tr=document.createElement('tr');
- const c=[(s.mode==='ov'?'OpenVINS ':'ARCore ')+s.name.slice(10,25),s.secs,s.frames,s.tracking_pct,s.fps,s.lat_med,s.lat_p90,s.lat_max,s.proc_med,s.path_m,s.end_from_start_m];
+ const c=[(s.mode==='ov'?'OpenVINS ':'ARCore ')+s.name.slice(10,25),s.secs,s.frames,s.tracking_pct,s.fps,s.lat_med,s.lat_p90,s.lat_max,s.proc_med,s.path_m,s.end_from_start_m,s.corr_end_from_start_m,s.loop?((s.loop_mode||'')+' '+s.loop.loops+'/'+s.loop.marker_edges):null];
  c.forEach((v,i)=>{const td=document.createElement('td');td.textContent=v==null?'-':v;if(i===0)td.style.color=css(s.mode==='ov'?'--ov':'--ar');tr.appendChild(td);});b.appendChild(tr);}});}
 loadRuns();
 </script></body></html>"""
