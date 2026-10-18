@@ -159,12 +159,40 @@ class OvRunner implements SensorEventListener {
             reqB.set(CaptureRequest.SENSOR_SENSITIVITY, iso);
             reqB.set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L);
             sess.setRepeatingRequest(reqB.build(), capCb, h);
+            fixExp = exp; fixIso = iso; isoLo = isoMin; isoHi = isoMax; camH = h;
             manualSet = true;
             android.util.Log.i("arlat", "short exposure " + exp / 1000 + " us iso " + iso + " (AE " + (long) aeExp / 1000 + " us)");
         } catch (Exception ex) {
             android.util.Log.w("arlat", "short exposure failed", ex);
             manualSet = true;
         }
+    }
+
+    // adaptive brightness on the short exposure: ISO follows the 95th percentile of Y toward 215 (no clipped highlights)
+    private long fixExp; private int fixIso, isoLo = 50, isoHi = 3200, abFrames;
+    private Handler camH;
+    private final int[] abHist = new int[256];
+
+    private void autoBrightness(byte[] buf, int off) {
+        for (int y = H / 16; y < H; y += H / 24) for (int x = W / 32; x < W; x += W / 32) abHist[buf[off + y * W + x] & 0xff]++;
+        if (++abFrames < 15) return;
+        int total = 0; for (int v : abHist) total += v;
+        int acc = 0, p95 = 255; for (int v = 0; v < 256; v++) { acc += abHist[v]; if (acc >= 0.95 * total) { p95 = v; break; } }
+        java.util.Arrays.fill(abHist, 0); abFrames = 0;
+        double ratio = p95 >= 254 ? 0.75 : 215.0 / Math.max(8, p95);
+        if (Math.abs(1 - ratio) < 0.06) return;
+        ratio = Math.max(0.8, Math.min(1.25, ratio));
+        double want = fixIso * ratio; long exp = fixExp; int iso;
+        if (want > isoHi) { iso = isoHi; exp = Math.min(Math.max(expCapNs, fixExp), (long) (fixExp * want / isoHi)); }
+        else if (want < isoLo) { iso = isoLo; exp = Math.max(100_000L, (long) (fixExp * want / isoLo)); }
+        else iso = (int) Math.round(want);
+        if (iso == fixIso && exp == fixExp) return;
+        fixIso = iso; fixExp = exp;
+        try {
+            reqB.set(CaptureRequest.SENSOR_EXPOSURE_TIME, exp);
+            reqB.set(CaptureRequest.SENSOR_SENSITIVITY, iso);
+            sess.setRepeatingRequest(reqB.build(), capCb, camH);
+        } catch (Exception ex) { android.util.Log.w("arlat", "auto brightness failed", ex); }
     }
 
     void stop() {
@@ -195,6 +223,7 @@ class OvRunner implements SensorEventListener {
             rec.put(row);
         }
         im.close();
+        if (manualSet && fixIso > 0) autoBrightness(rec.array(), 32);
         if (nCam % 150 == 0) {      // raw Y snapshot for checking field of view / blur on the PC (files/ov/frame_<n>.y, 640x480)
             try (FileOutputStream fo = new FileOutputStream(new File(new File(ctx.getExternalFilesDir(null), "ov"), "frame_" + (nCam / 150 % 4) + ".y"))) {
                 fo.write(rec.array(), 32, W * H);

@@ -1121,6 +1121,36 @@ public class MainActivity extends Activity {
         } catch(Exception ex) { Log.w(TAG,"short exposure request failed",ex); fixExpNs=0; }
     }
 
+    /** Adaptive brightness with the short manual exposure (1.13): every frame of lens 0 a sparse sample of Y gives the
+     *  95th percentile; every ~0.5 s ISO is scaled so that it sits at 215 (highlights not clipped: white walls made the
+     *  2 ms recording 1-3 % saturated and washed out). ISO at its max -> exposure grows up to the cap; at its min ->
+     *  exposure shrinks. Camera thread. */
+    private int abFrames; private final int[] abHist=new int[256];
+    private void autoBrightness(byte[] nv21) {
+        if(fixExpNs<=0 || fixIso<=0 || nv21==null) return;
+        int w=width,h=height,n=0;
+        for(int y=h/16;y<h;y+=h/24) for(int x=w/32;x<w;x+=w/32) { abHist[nv21[y*w+x]&0xff]++; n++; }
+        if(++abFrames<Math.max(5,fps/2)) return;
+        int total=0; for(int v:abHist) total+=v;
+        int acc=0,p95=255; for(int v=0;v<256;v++) { acc+=abHist[v]; if(acc>=0.95*total) { p95=v; break; } }
+        Arrays.fill(abHist,0); abFrames=0;
+        double ratio=215.0/Math.max(8,p95);
+        if(p95>=254) ratio=0.75;                            // clipped: we cannot see how far over -> step down
+        if(Math.abs(1-ratio)<0.06) return;
+        ratio=Math.max(0.8,Math.min(1.25,ratio));
+        int isoMax=logicalSensRange!=null?logicalSensRange.getUpper():3200, isoMin=logicalSensRange!=null?logicalSensRange.getLower():50;
+        double want=fixIso*ratio; long exp=fixExpNs; int iso;
+        if(want>isoMax) { iso=isoMax; exp=Math.min(expCapNs>0?Math.max(expCapNs,fixExpNs):fixExpNs,(long)(fixExpNs*want/isoMax)); }
+        else if(want<isoMin) { iso=isoMin; exp=Math.max(100_000L,(long)(fixExpNs*want/isoMin)); }
+        else iso=(int)Math.round(want);
+        if(iso==fixIso && exp==fixExpNs) return;
+        fixIso=iso; fixExpNs=exp;
+        try {
+            CameraCaptureSession s=session;
+            if(s!=null && phaseSync==null) { currentRequest=buildRequest(0,0,0); s.setRepeatingRequest(currentRequest,timing,handler); }
+        } catch(Exception ex) { Log.w(TAG,"auto brightness request failed",ex); }
+    }
+
     private void configure() {
         try {
             for(int i=0;i<ids.length;i++) {
@@ -1224,6 +1254,7 @@ public class MainActivity extends Activity {
             long c0=System.nanoTime();
             byte[] nv21=toNv21(image);
             if(mt!=null) mt.camFrame(index,image.getTimestamp(),System.nanoTime()-c0,fps);
+            if(index==0) autoBrightness(nv21);
             if(rawTimestamps) enqueueFrame(index,image.getTimestamp(),nv21,Long.MIN_VALUE);
             else timestampMatcher.image(index,image.getTimestamp(),nv21,SystemClock.elapsedRealtimeNanos());
         } catch(Exception e) { Log.e(TAG,"frame",e); }
@@ -1256,6 +1287,7 @@ public class MainActivity extends Activity {
         long c0=System.nanoTime();
         byte[] nv21=toNv21(image);
         Metrics mt=metrics; if(mt!=null) mt.kept(index,System.nanoTime()-c0);
+        if(index==0) autoBrightness(nv21);
         enqueueFrame(index,physicalTs,nv21,pairDtNs);
     }
 
