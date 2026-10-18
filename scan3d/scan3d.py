@@ -386,6 +386,13 @@ class Scanner:
                 self.aruco = aruco_scale.make(a.aruco_board, log=self.log)
             except Exception as e:                       # 보드가 없어도 스캐너는 돈다
                 print(f"[aruco] 보드 관측 끔: {e!r}", flush=True)
+        self.board_live = None                           # 매 프레임 보드 인식률 (board_live.py, IMU 학습 녹화용 웹 표시)
+        if a.aruco_board:
+            try:
+                import board_live
+                self.board_live = board_live.BoardLive(a.aruco_board, log=self.log)
+            except Exception as e:
+                print(f"[board-live] 끔: {e!r}", flush=True)
         self.dstats = dict(ffs_ms=None, yolo_ms=None, total_ms=None, keyframes=0, points=0, fps=0.0, ready=False,
                            error=None, iters=None, loading=False, loaded=False,   # loaded = 로드 시작함 (지연 로드)
                            load_t0=None, load_s=None, load_stage=None)   # 로드 진행 (웹 진행 표시, REVIEW5 N2)
@@ -699,6 +706,8 @@ class Scanner:
         """size(WxH 4:3)·fps·ffs_scale 를 주면 그 값으로 (self.want 갱신), 안 주면 self.want. 크기·fps 가 바뀌면
         정류맵·FFS 입력·앱 인자를 다시 정하고, 실시간 브리지는 그 크기·fps 설정(config/<W>x<H>_<fps>/)으로 다시 띄운다.
         rec3 = 렌즈 3개(2,5,6) 모두 녹화 (비교용, '폰에 녹화만' 에서만). pair 는 그때 쓰지 않는 깊이 쌍 (기본 2+6)."""
+        if getattr(self, "board_live", None) is not None:
+            self.board_live.reset()                      # 세션마다 인식률을 새로 셈
         if mode not in PHONE_MODES:
             raise ValueError(f"mode {mode}")
         if rec3 and mode != "record":
@@ -1203,6 +1212,8 @@ class Scanner:
     def on_pair(self, pair):
         if self.swap:
             pair = pair[::-1]
+        if self.board_live is not None:
+            self.board_live.push(pair)
         self.vio_in.append(pair)
         self.vio_evt.set()
 
@@ -2174,6 +2185,7 @@ class Scanner:
                              frames=self.vmap.frames),
                     map_store=self.map_state(),
                     objects=self.objects, epi=self.epi, aruco=self._aruco_state(),
+                    board_live=self.board_live.status() if self.board_live is not None else None,
                     classes={int(k): dict(name=v, color=list(class_color(int(k)))) for k, v in names.items()},
                     log=list(self.log_lines)[-14:], stream=self.stream_info(),
                     settings=dict(depth_range=self.a.depth_range, stride=self.a.stride, iters=self.a.iters,

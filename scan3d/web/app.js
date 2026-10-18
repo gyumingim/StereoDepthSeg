@@ -664,6 +664,7 @@ function renderDetails(s, se, ui, vio, ph, dp, mp) {
     if (a.warn) t += ` <span class="warn">(${esc(a.warn)})</span>`;
     rows.push(['보드 (ArUco)', t]);
   }
+  boardLive(s.board_live, sessMode);
   $('stat').innerHTML = rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
   $('log').textContent = (s.log || []).join('\n');
 }
@@ -1668,3 +1669,17 @@ setInterval(() => { if (!document.hidden) loadMaps(); }, 2000);
 
 setInterval(() => { if (!document.hidden) loadRecs(false); }, 2000);   // 녹화본 상태 (가져오는 중 · 복원 중 · 리플레이 가능)
 setInterval(() => { if (!document.hidden) loadCombos(); }, 10000);   // 계수가 실측으로 바뀌면 예상도 바뀐다
+
+// ---------- 매 프레임 보정판 인식 (board_live.py) ----------
+// IMU 학습용 녹화는 매 프레임 보드가 보여야 정답 궤적이 끊기지 않는다 → 최근 2 초 인식률을 크게 보여 줌.
+function boardLive(b, mode) {
+  const el = $('boardLive');
+  if (!el) return;
+  if (!b || mode === 'idle' || !b.frames) { el.hidden = true; return; }
+  el.hidden = false;
+  const r = b.rate_2s == null ? 0 : b.rate_2s;
+  el.className = r >= 95 ? 'good' : r >= 70 ? 'mid' : 'bad';
+  const gap = b.gap_now_s != null && !b.seen ? ` · 안 보인 지 ${b.gap_now_s.toFixed(1)} 초` : '';
+  el.innerHTML = `<span>보정판 ${b.seen ? '인식 중' : '안 보임'}</span><span>최근 2초 ${r.toFixed(0)} %</span><span>코너 ${b.corners}</span>`
+    + `<small>누적 ${b.ok_pct == null ? '-' : b.ok_pct.toFixed(0)} % (${b.ok}/${b.frames} 프레임) · 가장 긴 끊김 ${b.max_gap_s.toFixed(1)} 초${gap} · 인식 ${b.det_ms} ms${b.skipped ? ' · 못 본 프레임 ' + b.skipped : ''}</small>`;
+}
