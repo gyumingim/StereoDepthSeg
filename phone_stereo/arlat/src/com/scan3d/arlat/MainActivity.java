@@ -149,6 +149,8 @@ public class MainActivity extends Activity {
                 if (ts == 0 || ts == lastTs) continue;
                 lastTs = ts;
                 TrackingState st = f.getCamera().getTrackingState();
+                // why ARCore is not tracking (PAUSED/STOPPED): INSUFFICIENT_FEATURES, EXCESSIVE_MOTION, INSUFFICIENT_LIGHT, ...
+                String stName = st == TrackingState.TRACKING ? "TRACKING" : st + "/" + f.getCamera().getTrackingFailureReason();
                 Pose p = f.getCamera().getPose();
                 long tCam = f.getAndroidCameraTimestamp();
                 frames++;
@@ -158,7 +160,7 @@ public class MainActivity extends Activity {
                 streamer.send(String.format(Locale.US,
                         "{\"src\":\"arcore\",\"t_sensor\":%d,\"t_frame\":%d,\"t_call\":%d,\"t_out\":%d,\"status\":\"%s\","
                                 + "\"p\":[%.5f,%.5f,%.5f],\"q\":[%.6f,%.6f,%.6f,%.6f]}",
-                        tCam, ts, t0, t1, st, p.tx(), p.ty(), p.tz(), p.qx(), p.qy(), p.qz(), p.qw()));
+                        tCam, ts, t0, t1, stName, p.tx(), p.ty(), p.tz(), p.qx(), p.qy(), p.qz(), p.qw()));
                 if (frames % 15 == 0) {
                     show(String.format(Locale.US, "ARCore %s\nframes %d tracking %d\nlatency %.1f ms\nPC %s", st, frames,
                             tracking, (t1 - tCam) / 1e6, streamer.connected ? "connected" : "-"));
