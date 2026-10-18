@@ -84,6 +84,21 @@ public class MainActivity extends Activity {
         try {
             if (session == null) {
                 session = new Session(this);
+                // camera configs this phone offers ARCore (logcat "arlat cfg"); extra fps=60 picks a 60 fps one if any
+                int wantFps = getIntent().getIntExtra("fps", 30);
+                com.google.ar.core.CameraConfigFilter ff = new com.google.ar.core.CameraConfigFilter(session);
+                java.util.List<com.google.ar.core.CameraConfig> cfgs = session.getSupportedCameraConfigs(ff);
+                com.google.ar.core.CameraConfig pick = null;
+                for (com.google.ar.core.CameraConfig cc : cfgs) {
+                    android.util.Log.i("arlat", "cfg cam " + cc.getCameraId() + " fps " + cc.getFpsRange() + " cpu " + cc.getImageSize()
+                            + " tex " + cc.getTextureSize() + " depth " + cc.getDepthSensorUsage() + " facing " + cc.getFacingDirection());
+                    if (pick == null && cc.getFpsRange().getUpper() >= wantFps
+                            && cc.getFacingDirection() == com.google.ar.core.CameraConfig.FacingDirection.BACK) pick = cc;
+                }
+                if (pick != null && wantFps > 30) {
+                    session.setCameraConfig(pick);
+                    android.util.Log.i("arlat", "cfg picked fps " + pick.getFpsRange() + " " + pick.getImageSize());
+                }
                 Config c = new Config(session);
                 c.setUpdateMode(Config.UpdateMode.BLOCKING);
                 c.setFocusMode(Config.FocusMode.FIXED);
