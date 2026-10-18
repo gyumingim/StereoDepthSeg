@@ -144,6 +144,31 @@ class BiasOnly(nn.Module):
         return self.b[None, :, None].expand(x.shape[0], 6, x.shape[2])
 
 
+class Calib(nn.Module):
+    """물리 보정 (폰 하나에 공통): 자이로·가속도 각각 3x3 행렬(축척·축 어긋남, 처음 = 단위) + 바이어스, 그리고
+    IMU → 카메라 레버암 r (IMU 축, m). 보드 정답은 카메라 위치라 돌기만 해도 IMU 위치와 R·r 만큼 다름."""
+    def __init__(self):
+        super().__init__()
+        self.G = nn.Parameter(torch.eye(3)); self.bg = nn.Parameter(torch.zeros(3))
+        self.A = nn.Parameter(torch.eye(3)); self.ba = nn.Parameter(torch.zeros(3))
+        self.r = nn.Parameter(torch.zeros(3))
+
+    def forward(self, X):                       # (B,T,6) → (B,T,6)
+        g = X[..., :3] @ self.G.T + self.bg
+        a = X[..., 3:] @ self.A.T + self.ba
+        return torch.cat([g, a], -1)
+
+    def reg(self):                              # 단위 행렬에서 멀어지는 것에 작은 벌점 (정답 잡음을 외우지 않게)
+        I = torch.eye(3, device=self.G.device)
+        return ((self.G - I) ** 2).sum() / 0.01 ** 2 + ((self.A - I) ** 2).sum() / 0.02 ** 2
+
+
+class Stack(nn.Module):
+    def __init__(self, cal, net):
+        super().__init__()
+        self.cal, self.net = cal, net
+
+
 def so3_exp(w):                                  # (B,3) → (B,3,3)
     th = w.norm(dim=1, keepdim=True).clamp_min(1e-9)
     k = w / th
@@ -172,13 +197,15 @@ def integrate_all(gyr, acc, R0, gb, start):
     return torch.stack(Rs, 1), torch.stack(ps, 1)
 
 
-def window_loss(imu, W, gb):
+def window_loss(imu, W, gb, lever=None):
     """imu (B,T,6) 보정된 IMU; W: idx (B,F), R (B,F,3,3), p (B,F,3), m (B,F). → 자세 각 (B,F), 위치 잔차 (B,F)."""
     idx, Rg, pg, m = W["idx"], W["R"], W["p"], W["m"]
     start = idx[:, 0]
     Rall, pall = integrate_all(imu[..., :3], imu[..., 3:], Rg[:, 0], gb, start)
     b = torch.arange(idx.shape[0], device=idx.device)[:, None]
     Ri, qi = Rall[b, idx], pall[b, idx]                       # (B,F,3,3), (B,F,3)
+    if lever is not None:                                     # 카메라 위치 = IMU 위치 + R · r
+        qi = qi + (Ri @ lever[:, None])[..., 0]
     dR = Rg.transpose(-1, -2) @ Ri
     ang = torch.acos(((dR.diagonal(dim1=-2, dim2=-1).sum(-1) - 1) / 2).clamp(-1 + 1e-6, 1 - 1e-6))
     # p_j ≈ q_j + p0 + v0 τ_j : 축마다 [1, τ] 최소제곱 (mask 가중)
@@ -250,7 +277,19 @@ def main():
     def apply(model, X):
         if model is None:
             return X
+        if isinstance(model, Calib):
+            return model(X)
+        if isinstance(model, Stack):                  # 물리 보정 뒤 CNN
+            X1 = model.cal(X)
+            return X1 + model.net(((X1 - mu) / sd).transpose(1, 2)).transpose(1, 2) * scale
         return X + model(((X - mu) / sd).transpose(1, 2)).transpose(1, 2) * scale
+
+    def lever_of(model):
+        if isinstance(model, Calib):
+            return model.r
+        if isinstance(model, Stack):
+            return model.cal.r
+        return None
 
     def evaluate(model, sets):
         A, P = [], []
@@ -258,7 +297,7 @@ def main():
             for s in sets:
                 for b in range(0, len(s["X"]), 64):
                     W = {k: s[k][b:b + 64] for k in ("idx", "R", "p", "m")}
-                    ang, res = window_loss(apply(model, s["X"][b:b + 64]), W, s["gb"])
+                    ang, res = window_loss(apply(model, s["X"][b:b + 64]), W, s["gb"], lever_of(model))
                     m = W["m"] > 0
                     last = W["m"].sum(1).long() - 1
                     A.append(ang[torch.arange(len(last)), last].cpu().numpy())
@@ -279,11 +318,13 @@ def main():
                 for b in range(0, len(perm), a.batch):
                     j = perm[b:b + a.batch]
                     W = {k: s[k][j] for k in ("idx", "R", "p", "m")}
-                    ang, res = window_loss(apply(model, s["X"][j]), W, s["gb"])
+                    ang, res = window_loss(apply(model, s["X"][j]), W, s["gb"], lever_of(model))
                     # 빠르게 돌 때 보정판 정답 자체가 1~2° 흔들림(롤링셔터·번짐) → 그 프레임은 덜 믿음
                     wn = s["X"][j][..., :3].norm(dim=-1).gather(1, W["idx"])
                     m = W["m"] / (1 + (wn / 1.0) ** 2)
                     loss = (((ang / a.rot_sigma) ** 2 + (res / 0.01) ** 2) * m).sum() / m.sum()
+                    if isinstance(model, Calib):
+                        loss = loss + 1e-3 * model.reg()
                     opt.zero_grad()
                     loss.backward()
                     nn.utils.clip_grad_norm_(model.parameters(), 10.0)
@@ -302,8 +343,18 @@ def main():
     bias = train(BiasOnly().to(dev), max(20, a.epochs // 4), 3e-3)
     res["bias"] = dict(train=evaluate(bias, tr), val=evaluate(bias, va), b=(bias.b.detach() * scale).cpu().tolist())
     print("바이어스만:", res["bias"], flush=True)
+    cal = train(Calib().to(dev), max(20, a.epochs // 3), 3e-3)
+    res["calib"] = dict(train=evaluate(cal, tr), val=evaluate(cal, va),
+                        G=cal.G.detach().cpu().tolist(), bg=cal.bg.detach().cpu().tolist(),
+                        A=cal.A.detach().cpu().tolist(), ba=cal.ba.detach().cpu().tolist(), r=cal.r.detach().cpu().tolist())
+    print("물리 보정 (축척·축·바이어스·레버암):", {k: res["calib"][k] for k in ("train", "val", "r")}, flush=True)
     if a.eval_only:
         return
+    for prm in cal.parameters():
+        prm.requires_grad_(False)
+    stk = train(Stack(cal, CausalCNN()).to(dev), a.epochs, 1e-3)
+    res["calib_cnn"] = dict(train=evaluate(stk, tr), val=evaluate(stk, va))
+    print("물리 보정 + CNN:", res["calib_cnn"], flush=True)
     cnn = train(CausalCNN().to(dev), a.epochs, 1e-3)
     res["cnn"] = dict(train=evaluate(cnn, tr), val=evaluate(cnn, va), params=sum(p.numel() for p in cnn.parameters()))
     print("CNN:", res["cnn"], flush=True)
