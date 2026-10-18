@@ -133,8 +133,8 @@ WSL Ubuntu-22.04 ─ scan3d/run_scanner.py (venv_ffs)
   `kept_fps`·`copy_ms_avg` = 남긴 프레임.
 - PC: `phone_link.PhoneLink.capture_fps` (→ `--ei fps <capture> --ei save_fps <fps>`), `scan3d.py --app-capture-fps`, 웹 '촬영' 선택
   (`{"cmd":"mode", ..., "capture_fps": 60|0}`), `load_model.combo(..., capture_fps=)` (카메라 검사만 촬영 fps). 짝 묶기·VIO·복원은 저장 fps 그대로.
-- S24 실측 (1440x1080, 두 렌즈 60 fps 요청): 카메라 결과는 약 50 /s (몇 프레임마다 HAL 이 하나씩 건너뜀), 렌즈 2 의 위상이 렌즈 5 에 대해
-  계속 미끄러져 짝 시각차는 0~8.3 ms 에 고르게 퍼짐. 자세한 표는 `scan3d/research/subsample_60_15.md`.
+- S24 실측 (1440x1080, 두 렌즈 60 fps 요청): 카메라 결과는 약 49 /s (몇 프레임마다 HAL 이 하나씩 건너뜀), 렌즈 2 의 위상이 렌즈 5 에 대해
+  계속 미끄러져 짝 시각차는 0~8.3 ms 에 고르게 퍼짐 (중앙 4.8 ms). 노출 상한 16.7 ms. PC 기본 = 60 촬영 (scan3d.CAPTURE_FPS_DEFAULT). 표는 `scan3d/research/subsample_60_15.md`.
 
 ### 1.3 파이썬 수신 API (lib_phone_stereo.py, import 해서 재사용)
 - `read_frame(sock, stream_count, size, h264=None) -> PhoneFrame | SensorSample` — 블로킹, 패킷 1개. STEH 를 받으려면 `h264=H264Decoders(stream_count, sock)` (PhoneReceiver·phone_rx 는 알아서 만든다).

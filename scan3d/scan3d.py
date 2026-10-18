@@ -74,8 +74,10 @@ LENS_PAIRS = ("2+5", "2+6")
 # 복원은 두 쌍(2+6, 2+5)을 따로 → recon_<시각>_p26 / _p25 (replay_view.rec_pairs). 실시간 깊이는 한 쌍만.
 ALL_LENSES = ("all", "2+5+6", "2,5,6")
 ALL_REC_PHYSICAL = ("2", "5", "6")
-# 촬영 fps 기본 (앱 1.8-subsample): 0 = 저장 fps 로 촬영 (옛 동작). 웹 [60 fps 촬영 → 15 fps 저장] 이 세션마다 바꿈.
-CAPTURE_FPS_DEFAULT = 0
+# 촬영 fps 기본 (앱 1.8-subsample, 2026-10-18 실측으로 60): 60 으로 찍고 저장 fps 만 저장 → 두 렌즈 시각차 중앙 31.7 → 4.8 ms,
+# 폰 CPU +22 % (한 코어), 발열 차이 뚜렷하지 않음. 단 노출 상한 16.7 ms 라 어두운 실내에서 렌즈 2 잡음 약 2 배 (research/subsample_60_15.md).
+# 0 = 저장 fps 로 촬영 (옛 동작). 웹 [촬영] 선택이 세션마다 바꿈.
+CAPTURE_FPS_DEFAULT = 0   # 60->15 stays an option until a moving-recording comparison shows depth/VIO gain beats lens-2 noise x2 in dim light (main session 2026-10-18)
 CAPTURE_FPS_CHOICES = (30, 60)                   # 카메라 고정 AE 범위가 있는 값만 (S24: 15·20·24·30·60)
 
 

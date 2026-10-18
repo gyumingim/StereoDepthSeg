@@ -84,9 +84,9 @@ STREAM_FMTS = ("h264", "jpeg", "nv21")
 DEFAULT_STREAM_FMT = "h264"
 FMT_INFO = dict(h264="H.264 (권장)", jpeg="JPEG", nv21="NV21 (압축 없음)")
 # 앱 1.8-subsample: capture_fps 로 찍고 fps 만 복사·인코드. 버리는 프레임은 시각만 보고 바로 close (복사 없음) →
-# 폰 CPU 는 촬영 1 fps 늘 때마다 이만큼 (한 코어 %, 두 렌즈 합: 결과 콜백·이미지 받기·닫기). S24 실측 값 (CAPTURE_MEASURED).
-PHONE_CAPTURE_PCT_PER_FPS = 0.0          # 아직 15 fps 기존 모드와 같은 시간 비교 실측 전 (subsample_test.ps1) — 재면 채움
-CAPTURE_MEASURED = "S24 실측 15 s: 카메라 약 50 /s, 짝 시각차 중앙 4.8 ms·최대 16.6 ms"
+# 앱 전체 CPU 는 촬영 1 fps 늘 때마다 이만큼 (한 코어 %, 두 렌즈 합: 결과 콜백·이미지 받기·닫기). predict 의 phone_capture_pct.
+PHONE_CAPTURE_PCT_PER_FPS = 0.48         # S24 90 s 실측: 15 fps 158 % → 60/15 180 % (한 코어), (180-158)/45
+CAPTURE_MEASURED = "S24 실측 90 s: 카메라 약 49 /s, 짝 시각차 중앙 4.8 ms (15 fps 는 15~32 ms), 노출 상한 16.7 ms (어두우면 잡음 ↑)"
 # 촬영 fps 로 쓸 수 있는 값 (웹 '촬영 → 저장' 선택): 저장 fps 의 정수배일 때만
 CAPTURE_FPS_CHOICES = (30, 60)
 H264_USB_HEADROOM = 1.25          # VBR 순간 피크 + 키프레임 (1 s 간격) 여유. 추정
@@ -622,7 +622,7 @@ class LoadModel:
 
     def predict(self, w, h, fps, stream_fmt=DEFAULT_STREAM_FMT, scale=None, mode="live", n_rec=2, capture_fps=None):
         """fps = 저장·전송 fps (인코더·USB·PC·녹화). capture_fps (> fps, 정수배) = 카메라 촬영 fps (앱 1.8-subsample):
-        복사·인코드는 fps 그대로, 폰 CPU 에 촬영 프레임 처리 몫(PHONE_CAPTURE_PCT_PER_FPS)만 더한다."""
+        복사·인코드는 fps 그대로, 촬영 프레임 처리 몫은 phone_capture_pct (PHONE_CAPTURE_PCT_PER_FPS) 로 따로."""
         cap = capture_of(fps, capture_fps)
         fmt = norm_fmt(stream_fmt)
         scale = self.ffs_scale(w, h, scale)
@@ -653,8 +653,9 @@ class LoadModel:
             phone_jpeg_pct=round(2 * fps * jpeg_ms / 10.0, 1),                 # 한 코어 시간 대비 %
             jpeg_frame_frac=round(jpeg_ms * fps / 1000.0, 2),                  # 렌즈 하나: 프레임 간격 대비
             phone_copy_ms=round(copy_ms, 2),
-            phone_cpu_pct=round(2 * fps * (jpeg_ms + copy_ms) / 10.0 + PHONE_CAPTURE_PCT_PER_FPS * (cap - fps), 1),   # 막대에 씀
+            phone_cpu_pct=round(2 * fps * (jpeg_ms + copy_ms) / 10.0, 1),      # 형식과 무관한 폰 부하 (막대·한계 검사에 씀)
             capture_fps=cap,                                                   # 카메라 촬영 fps (= fps 면 따로 안 씀)
+            # 촬영 몫 (앱 전체 CPU 실측 차이, 한 코어 %): 복사·압축 한계(phone_cpu_pct) 와 다른 종류라 따로 보여만 줌
             phone_capture_pct=round(PHONE_CAPTURE_PCT_PER_FPS * (cap - fps), 1),
             live_kbps=lk,                                                      # 실시간 H.264 비트레이트 (렌즈 하나)
             usb_mbs=round(usb, 2),
