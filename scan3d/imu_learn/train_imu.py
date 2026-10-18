@@ -4,8 +4,9 @@
   venv_ffs/bin/python scan3d/imu_learn/train_imu.py REC [REC ...] [--epochs 300] [--val-frac 0.3] [--out runs/imu_cnn_x]
 
 구조
-- 입력: 1 초 창의 IMU (자이로 3 + 가속도 3, 200 Hz 로 다시 표본, IMU 축).
-- 모델: 과거만 보는(causal) 1D CNN, 필터 7, 간격 1·2·4·8·16 (약 1 s 를 봄) → 표본마다 자이로·가속도 보정값 6.
+- 입력: 1 초 창의 IMU (자이로 3 + 가속도 3, 폰 원래 비율 500 Hz 격자, IMU 축). 200 Hz 로 솎으면 드론 모터 진동
+  (100~300 Hz) 이 가짜 느린 움직임으로 섞여서(에일리어싱) 500 Hz 그대로 씀 (2026-10-18).
+- 모델: 과거만 보는(causal) 1D CNN, 필터 7, 간격 1·2·4·…·64 (7 층, 약 1.5 s 를 봄) → 표본마다 자이로·가속도 보정값 6.
 - 물리 적분 (미분 가능): R ← R·exp(ω dt), a = R f + g, v += a dt, p += v dt + ½ a dt²  (정답 시작 상태에서 출발).
 - 손실: 1 s 뒤 자세(각도) + 속도 + 위치 오차 (정답 = 보정판).
 - 평가: 학습에 안 쓴 구간(녹화마다 뒤쪽 val-frac, 또는 녹화 단위)에서 보정 없음 대비 1 s 적분 오차.
@@ -26,7 +27,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from imu_gt import read_imu  # noqa: E402
 
-HZ = 200
+HZ = 500          # S24 IMU 원래 비율 (가속도·자이로 약 499 Hz)
 WIN = HZ          # 1 s
 DT = 1.0 / HZ
 
@@ -100,7 +101,7 @@ def state_at(r, t):
     return R, p, v
 
 
-def windows(r, stride=20):
+def windows(r, stride=HZ // 10):       # 0.1 s 씩 밀며 겹치는 1 s 창
     X, S0, S1 = [], [], []
     for i in range(0, len(r["grid"]) - WIN, stride):
         ta, tb = r["grid"][i], r["grid"][i + WIN]
@@ -119,7 +120,7 @@ class CausalCNN(nn.Module):
         super().__init__()
         self.layers = nn.ModuleList()
         c_in = 6
-        for d in (1, 2, 4, 8, 16):
+        for d in (1, 2, 4, 8, 16, 32, 64):
             self.layers.append(nn.Conv1d(c_in, ch, 7, dilation=d))
             c_in = ch
         self.head = nn.Conv1d(ch, 6, 1)
@@ -184,7 +185,7 @@ def main():
         X, S0, S1 = windows(r)
         n = len(X)
         cut = int(n * (1 - a.val_frac))
-        gap = WIN // 20                                     # 학습·평가 창이 겹치지 않게 1 s 띄움
+        gap = 10                                            # 학습·평가 창이 겹치지 않게 (창 10개 = 1 s) 띄움
         print(f"{r['name']}: 창 {n} (학습 {cut}, 평가 {max(0, n - cut - gap)}), 정지 프레임 {r['n_still']}, "
               f"g_b {np.round(r['gb'], 2)}")
         tr.append((X[:cut], S0[:cut], S1[:cut], r["gb"]))
