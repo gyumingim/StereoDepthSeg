@@ -30,6 +30,11 @@ else
 fi
 
 mkdir -p "$HERE/runs"
+# 녹화 업로드 서버 + Cloudflare 터널 (upload_server.py, 포트 8799): 따로 띄워 두어 이 서버를 다시 켜도 터널 주소가 안 바뀜.
+# runs/upload.json 에 "enabled": false 면 앱이 안 올림 (서버는 그래도 뜸). UPLOAD=0 이면 아예 안 띄움.
+if [ "${UPLOAD:-1}" = 1 ] && ! ss -ltn "sport = :8799" 2>/dev/null | grep -q LISTEN; then
+  setsid nohup python3 "$HERE/upload_server.py" >>"$HERE/runs/upload_server.out" 2>&1 < /dev/null &
+fi
 LOG="$HERE/runs/server_$(date +%Y%m%d).log"
 echo "===== $(date '+%F %T') serve_idle 시작 =====" >>"$LOG"
 # LINK=native (usbipd 로 폰 USB 를 WSL 에 붙였거나 우분투 직접): 리눅스 adb + adb forward, Windows 중계 없음.

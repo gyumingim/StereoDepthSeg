@@ -524,6 +524,7 @@ public class MainActivity extends Activity {
         catch(IOException e) { Log.w(TAG,"cameras.json copy",e); }
         recorder=rec;
         lastRecName=name;
+        UploadService.recordingNow=name;          // never upload the folder being written
         Log.i(TAG,"recording to "+dir);
     }
 
@@ -570,6 +571,7 @@ public class MainActivity extends Activity {
             liveEncoder=new LiveEncoder(ids,width,height,saveFps,liveKbps,liveEncoderName,liveSink(++liveGen));
             Log.i(TAG,"live H.264 moved from recorder to own encoder");
         }
+        UploadService.recordingNow=null;          // meta "finishing" still keeps a late-closing folder out
         status("RECORD_DONE rec="+rec.dir.getName()+" reason="+reason
                 +(streamEnabled&&running?" | STREAMING continues":""));
     }
@@ -603,6 +605,8 @@ public class MainActivity extends Activity {
         setTurnScreenOn(true);
         text = new TextView(this); text.setTextSize(18); text.setPadding(32,64,32,32);
         setContentView(text);
+        UploadService.activityAlive=true;
+        UploadService.kick(this);                 // 1.9-upload: send finished recordings (resumes interrupted ones)
         manager = (CameraManager)getSystemService(CAMERA_SERVICE);
         cameraThread = new HandlerThread("camera"); cameraThread.start();
         handler = new Handler(cameraThread.getLooper());
@@ -696,6 +700,7 @@ public class MainActivity extends Activity {
             }
             metrics=new Metrics(ids);
             running=true;
+            UploadService.liveNow=streamEnabled;     // uploads wait while the live stream needs the uplink
             startMetrics();
             if(recordEnabled) {
                 startRecording(logical,physical,fps,getIntent().getFloatExtra("focus_diopters",1.0f));
@@ -708,7 +713,9 @@ public class MainActivity extends Activity {
                                 stopRecording("broadcast");
                                 // Keep rec=<name> so the PC (rec_status, pull guard) still knows which folder just finished.
                                 if(!streamEnabled) runOnUiThread(() -> { stop();
-                                    status("RECORD_DONE rec="+lastRecName+" reason=broadcast | capture stopped"); });
+                                    status("RECORD_DONE rec="+lastRecName+" reason=broadcast | capture stopped");
+                                    // 1.9-upload: the service keeps the process; close the screen-on activity
+                                    if(UploadService.config(MainActivity.this)!=null) finish(); });
                             } finally { pr.finish(); }
                         },"rec-stop").start();
                     }
@@ -971,6 +978,7 @@ public class MainActivity extends Activity {
             }
             ph.put("thermal_headroom_10s",Caps.num(Caps.round(thermalHeadroom)));
             j.put("phone",ph);
+            j.put("upload",UploadService.state);
             String doc=j.toString(1);
             writeAtomic(getFilesDir(),"metrics.json",doc);
             File ext=getExternalFilesDir(null);
@@ -1391,6 +1399,7 @@ public class MainActivity extends Activity {
     @Override public void onRestart() { super.onRestart(); recreate(); }
     private void stop() {
         running=false;
+        UploadService.liveNow=false;
         PhaseSync ps=phaseSync; if(ps!=null) ps.stop();
         if(handler!=null) handler.post(() -> { if(timestampMatcher!=null) timestampMatcher.clear(); if(subsample!=null) subsample.clear(); });
         if(sensors!=null) { sensors.unregisterListener(imu); sensors=null; }
@@ -1410,6 +1419,7 @@ public class MainActivity extends Activity {
     }
     @Override public void onDestroy() {
         stop();
+        UploadService.activityAlive=false;
         if(stopReceiver!=null) { try { unregisterReceiver(stopReceiver); } catch(Exception ignored) {} stopReceiver=null; }
         super.onDestroy();
     }

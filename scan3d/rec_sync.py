@@ -25,6 +25,8 @@ import replay_view
 
 HERE = Path(__file__).resolve().parent
 CFG_FILE = HERE / "runs" / "rec_auto.json"
+UPLOAD_STATE = HERE / "runs" / "upload_state.json"     # upload_server.py (폰이 HTTPS 로 올리는 녹화)
+UPLOAD_HOLD_S = 180.0      # 업로드 방식이 켜져 있으면 폰에서 끝난 지 이만큼은 adb 자동 가져오기를 미룸 (앱이 올릴 시간)
 # 자동 복원 실패 기록 (서버를 다시 켜도 남음): {열쇠: {reason, at, code, rec_bytes}}. 같은 녹화(크기)·같은 코드 버전이면
 # 다시 시도하지 않음 → 웹 [다시 시도] (retry) 로만. 맵이 비어 실패한 것만 (모델 오류 같은 일시적 실패는 메모리에만)
 FAIL_FILE = HERE / "runs" / "rec_recon_failed.json"
@@ -74,6 +76,7 @@ class RecSync:
         self.waiting_stop = None       # [정지] 뒤 앱 마무리를 기다리는 녹화 이름
         self.thread = None
         self.code = code_version()
+        self.seen_complete = {}        # 폰 녹화 이름 → 처음 complete 로 본 시각 (업로드 대기)
         self._load_failed()
 
     # ---------------- 실패 기록 (파일) ----------------
@@ -229,6 +232,30 @@ class RecSync:
         self.kick()
         return dict(ok=True, name=name)
 
+    # ---------------- 업로드 (upload_server.py) ----------------
+    @staticmethod
+    def uploads():
+        """지금 폰이 올리고 있는 녹화 {이름: dict(done, total, mbps)} (upload_state.json, 2 분 넘게 조용하면 뺌)."""
+        try:
+            st = json.loads(UPLOAD_STATE.read_text())
+        except (OSError, ValueError):
+            return {}
+        if time.time() - float(st.get("t") or 0) > 60:
+            return {}
+        return {a["name"]: a for a in st.get("active") or [] if a.get("idle_s", 999) < 120}
+
+    def _upload_hold(self, name):
+        """adb 자동 가져오기를 미룰까: 받는 중(.uploading/이름 이 30 분 안에 바뀜) 또는 업로드 방식이 켜져 있고 폰에서
+        끝난 지 3 분이 안 됨. 웹 [가져오기] 는 미루지 않음."""
+        d = Path(self.sc.a.rec_root) / ".uploading" / name
+        try:
+            # 올리다 만 것이 있으면 30 분 동안은 이어 올리기를 기다림 (터널 주소가 바뀌면 몇 분 멈췄다 이어짐, 2026-10-18)
+            if time.time() - d.stat().st_mtime < (1800.0 if phone_link.upload_on() else UPLOAD_HOLD_S):
+                return True
+        except OSError:
+            pass
+        return phone_link.upload_on() and time.time() - self.seen_complete.get(name, 0) < UPLOAD_HOLD_S
+
     # ---------------- 상태 (웹) ----------------
     def snapshot(self):
         j = self.job
@@ -239,7 +266,18 @@ class RecSync:
         pl = self.pulling
         return dict(pull=self.cfg["pull"], recon=self.cfg["recon"], phone=self.dev, phone_t=self.phone_t,
                     phone_error=self.phone_err, pulling=dict(pl) if pl else None, job=jp,
-                    paused=self.sc.mode in PHONE_MODES)
+                    paused=self.sc.mode in PHONE_MODES, upload=self.upload_info())
+
+    @staticmethod
+    def upload_info():
+        """웹 한 줄: 업로드 방식 켜짐·터널 상태·폰 설정·최근 받은 것 (upload_state.json). 없으면 None."""
+        try:
+            st = json.loads(UPLOAD_STATE.read_text())
+        except (OSError, ValueError):
+            return None
+        alive = time.time() - float(st.get("t") or 0) < 60
+        return dict(alive=alive, enabled=st.get("enabled"), url=st.get("url"), tunnel=st.get("tunnel"),
+                    phone_cfg_ok=st.get("phone_cfg_ok"), recent=(st.get("recent") or [])[-3:])
 
     def items(self):
         """녹화마다 한 줄: state = pulling | recon | ready | recon_wait | held | failed | bad | pc_only |
@@ -252,8 +290,16 @@ class RecSync:
             j = dict(name=rp_now.rec_dir.name, rp=rp_now, pair=rp_now.progress.get("pair"))
         cur = self._recording_now()
         paused = self.sc.mode in PHONE_MODES
+        ups = self.uploads()
         out = []
-        for n in sorted(set(local) | set(phone), reverse=True):
+        for n in sorted(set(local) | set(phone) | set(ups), reverse=True):
+            if n in ups and n not in local:
+                u = ups[n]
+                out.append(dict(name=n, on_phone=n in phone, on_pc=False, same=False, recons=[], paused=paused,
+                                phone_mb=round(u["total"] / 1048576, 1) if u.get("total") else None, pc_mb=None,
+                                can_delete_phone=False, state="uploading", mbps=u.get("mbps"),
+                                pct=round(100.0 * u["done"] / u["total"], 1) if u.get("total") else None))
+                continue
             ph, lo = phone.get(n), local.get(n)
             lf = self._local_files(n) if lo else None
             same = bool(ph and lo and self._same(ph, lf))
@@ -362,6 +408,10 @@ class RecSync:
                 info = self._phone_info(r)
                 self.info_cache[key] = info
             out.append(dict(r, **info))
+        now = time.time()
+        for r in out:
+            if r.get("complete"):
+                self.seen_complete.setdefault(r["name"], now)
         new = {r["name"] for r in out} - {r["name"] for r in (self.phone or [])}
         self.phone, self.phone_t = out, time.time()
         self.sc._phone_recs, self.sc._phone_recs_t = recs, self.phone_t
@@ -441,6 +491,8 @@ class RecSync:
                 d = self._local_dir(name)
                 if lf is not None and any(d.glob("recon_*")):
                     continue                                # PC 사본이 다르지만 복원본이 있음 → 표시만 (mismatch)
+                if self._upload_hold(name):
+                    continue                                # 폰이 HTTPS 로 올리는 중 (upload_server.py)
                 job = dict(name=name, replay=False)
                 break
         if job is None:

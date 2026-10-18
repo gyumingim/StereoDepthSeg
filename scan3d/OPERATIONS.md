@@ -71,3 +71,33 @@ powershell -ExecutionPolicy Bypass -File REPO\scan3d\tools\restart_server.ps1 -F
 ```
 WSL 에서는 `bash ~/scanner/StereoDepthSeg/scan3d/tools/restart_server.sh`. 최대 60 초 기다리고 안 뜨면 한 번 더 시도한다.
 완전히 끄기는 `scan3d\stop_scanner.bat`.
+
+## 6. 녹화를 인터넷으로 올리기 (집에서, adb 없이 빠르게)
+
+집 → 회사 PC 는 adb 가져오기가 느리다 (도쿄 중계, 실측 **0.3~0.7 MB/s**, 무선 디버깅이 꺼지면 끊김).
+대신 PC 가 Cloudflare 터널(바깥으로 나가는 연결만)을 열고, **폰 앱이 녹화가 끝나면 HTTPS 로 직접 올린다**
+(실측 2026-10-18: 브라우저 48 MB 2.4~3.1 MB/s, 앱 1.6 GB 녹화 약 3~4 MB/s → adb 의 4~10 배).
+
+- **자동으로 됨**: 서버(`serve_idle.sh`)가 뜰 때 `upload_server.py`(포트 8799)와 `cloudflared` 를 같이 띄운다.
+  scan3d 서버를 다시 켜도 이 둘은 남아서 터널 주소가 그대로다. 로그 `scan3d/runs/upload_server.log`, `runs/cloudflared.log`.
+- 폰 설정: adb 가 붙어 있으면 PC 가 30 초마다 폰의 `files/upload.json`(주소·토큰)을 확인하고 다르면 다시 넣는다.
+  → **터널 주소가 바뀐 뒤(PC 재부팅·cloudflared 재시작) 한 번은 adb 가 붙어야** 폰이 새 주소를 안다.
+  바로 넣기: `wsl -d Ubuntu-22.04 -e bash -lc "cd ~/scanner/StereoDepthSeg/scan3d && python3 upload_server.py --push-now"`
+- 앱(1.9-upload): 녹화가 끝나면 알림 "녹화 업로드" 가 뜨고 올린다. 끊기면 받은 데까지 이어서, 다 올라가면 PC 가 sha256 을
+  확인한 뒤 `recordings/<녹화>` 로 옮기고 → 자동 복원이 집어 간다. 웹 녹화 목록에 "폰이 올리는 중 NN% · X MB/s".
+  - 앱을 손으로 열기만 해도(adb 없이) 아직 안 올린 녹화를 올린다. 실시간 스트림 중에는 쉰다. 기본은 **Wi-Fi 에서만**.
+  - 업로드가 켜져 있으면 PC 가 녹화 [정지] 뒤 앱을 강제 종료하지 않는다 (올리는 중이라). 다음 [스캔 시작] 은 앱을 다시 켠다
+    (올리던 것은 끊겼다가 이어서 올림).
+- 설정 `scan3d/runs/upload.json`:
+  `enabled`(끄면 앱이 안 올리고 옛 방식 adb 가져오기), `wifi_only`, `delete_after`(PC 확인 뒤 폰에서 지우기, 기본 false),
+  `max_rec_mb`(녹화 하나 최대, 기본 4096), `tunnel`("quick"), `public_url`(아래 고정 주소). 바꾸면 30 초 안에 폰에 반영.
+- 보안: 토큰 `scan3d/runs/upload_token.txt`(PC 가 만듦) 없으면 401. 받은 파일은 `recordings/.uploading/` 에만 쓰고,
+  녹화 이름·파일 이름 형식 검사, 조각 최대 32 MB, 디스크 여유 2 GB 미만이면 거절. 토큰을 바꾸려면 파일을 지우고
+  `upload_server.py` 를 다시 켜면 새로 만들고 폰에 다시 넣는다.
+- adb 자동 가져오기와 겹치지 않게: 업로드가 켜져 있으면 폰에서 끝난 녹화는 3 분 동안(받는 중이면 계속) adb 로 안 가져온다.
+- **고정 주소로 바꾸기 (선택, Cloudflare 계정·도메인 필요)**: 이 PC 에는 이미 이름 있는 터널 `kit-univ2`(서비스 "Cloudflared")가 있다.
+  Cloudflare Zero Trust → Networks → Tunnels → kit-univ2 → Public Hostname 추가: 예 `scan.<내 도메인>` → `http://localhost:8799`.
+  그다음 `runs/upload.json` 에 `"public_url": "https://scan.<내 도메인>"` 를 넣고 upload_server 를 다시 켜면 quick tunnel 은
+  안 띄우고 그 주소를 폰에 넣는다 → PC 를 다시 켜도 주소가 안 바뀜.
+- 원격 녹화 시작·정지 (adb 없이): 아직 없음. 앱이 서버에 명령을 묻는 방식은 가능하지만, 안드로이드가 백그라운드에서
+  카메라 화면을 여는 것을 막아서 (앱이 앞에 떠 있어야 함) 앱을 손으로 열어 두는 조건이 붙는다.

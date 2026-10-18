@@ -1095,7 +1095,7 @@ $('iKf').onchange = e => {
 };
 
 // ---------- 녹화본 목록 (오른쪽 칸): 녹화마다 상태 한 줄 (rec_sync.py items) ----------
-const ST_KO = { pulling: '가져오는 중', recon: '3D 복원 중', ready: '리플레이 가능', recon_wait: '복원 대기', held: '복원 멈춤',
+const ST_KO = { uploading: '폰이 올리는 중', pulling: '가져오는 중', recon: '3D 복원 중', ready: '리플레이 가능', recon_wait: '복원 대기', held: '복원 멈춤',
   failed: '복원 실패', bad: '녹화 파일이 덜 끝남', pc_only: 'PC 에 있음', recording: '녹화 중', incomplete: '덜 끝난 녹화 (안 가져옴)',
   pull_wait: '가져오기 대기', pull_failed: '가져오기 실패', phone_only: '폰에만 있음', mismatch: 'PC 사본이 폰과 다름' };
 const ST_CLS = { ready: 'ok', failed: 'bad', pull_failed: 'bad', bad: 'warn', mismatch: 'warn', held: 'warn', incomplete: 'warn' };
@@ -1111,6 +1111,15 @@ function renderItems(j) {
   const live = sessMode === 'live' || sessMode === 'both' || sessMode === 'record';
   const notes = [];
   if (!au.phone) notes.push('폰이 연결돼 있지 않음 — PC 에 있는 녹화만 보입니다');
+  const up = au.upload;
+  if (up && up.enabled) {
+    // 업로드 방식 (upload_server.py): 폰이 녹화를 HTTPS (Cloudflare 터널) 로 직접 올림
+    if (!up.alive) notes.push('업로드 서버 꺼짐');
+    else if (up.tunnel !== 'up' && up.tunnel !== 'fixed') notes.push(`업로드 터널: ${up.tunnel || '-'}`);
+    else if (up.phone_cfg_ok === false) notes.push('폰에 업로드 설정을 못 넣음');
+    const last = (up.recent || []).slice(-1)[0];
+    if (up.alive && last) notes.push(`최근 업로드 ${last.name.slice(4)} ${last.mb} MB${last.mbps ? ` · ${last.mbps} MB/s` : ''} (${last.at})`);
+  }
   if (au.paused) notes.push('스캔 중이라 가져오기·복원은 쉬는 중 (끝나면 이어서)');
   $('recNote').textContent = notes.join(' · ');
   if (!items.length) { $('recItems').innerHTML = '<div class="empty">녹화가 없습니다 — [폰에 녹화만] 또는 [녹화 + 실시간] 으로 찍으면 여기에 생깁니다</div>'; return; }
@@ -1118,7 +1127,8 @@ function renderItems(j) {
   for (const it of items) {
     const st = it.state || '', pct = it.pct !== undefined && it.pct !== null ? it.pct : null;
     let stTxt = ST_KO[st] || st;
-    if (pct !== null && (st === 'pulling' || st === 'recon')) stTxt += ` ${pct.toFixed(0)}%`;
+    if (pct !== null && (st === 'pulling' || st === 'recon' || st === 'uploading')) stTxt += ` ${pct.toFixed(0)}%`;
+    if (st === 'uploading' && it.mbps) stTxt += ` · ${it.mbps} MB/s`;
     if (st === 'recon' && it.step && it.step !== '재생 중') stTxt += ` (${it.step})`;
     if (st === 'recon' && it.recon_pair) stTxt += ` · ${it.recon_pair}`;
     if (it.pair_recons && st === 'ready') stTxt = Object.values(it.pair_recons).every(Boolean) ? '두 쌍 비교 가능' : '리플레이 가능 (한 쌍)';
@@ -1163,7 +1173,7 @@ function renderItems(j) {
     h += `<div class="ri ${esc(st)}"><div class="l1"><span class="nm" title="${esc(it.name)}">${esc(recLabel(it.name))}</span>`
       + `<span class="st ${ST_CLS[st] || ''}">${esc(stTxt)}</span></div>`
       + `<div class="l2"><span>${sub}</span><span>${del} ${btn}</span></div>`
-      + (pct !== null && (st === 'pulling' || st === 'recon') ? `<div class="bar"><i style="width:${Math.min(100, pct).toFixed(1)}%"></i></div>` : '')
+      + (pct !== null && (st === 'pulling' || st === 'recon' || st === 'uploading') ? `<div class="bar"><i style="width:${Math.min(100, pct).toFixed(1)}%"></i></div>` : '')
       + '</div>';
     if (recPrev[it.name] && recPrev[it.name] !== 'ready' && st === 'ready') toast(`${recLabel(it.name)} — 리플레이 준비됨. 오른쪽 목록에서 [▶ 보기]`, 8000);
     recPrev[it.name] = st;

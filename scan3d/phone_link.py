@@ -68,6 +68,14 @@ def is_done_state(first):
     return first.startswith(DONE_STATES) or "ERROR" in first
 
 
+def upload_on():
+    """runs/upload.json 의 enabled (upload_server.py). 파일이 없으면 False = 옛 동작 (정지 때 force-stop)."""
+    try:
+        return bool(json.loads((Path(__file__).resolve().parent / "runs" / "upload.json").read_text()).get("enabled", True))
+    except (OSError, ValueError, AttributeError):
+        return False
+
+
 def is_wsl():
     try:
         return "microsoft" in Path("/proc/version").read_text().lower()
@@ -256,7 +264,7 @@ class PhoneLink:
         self.shell("am", "broadcast", "-a", STOP_ACTION, "-p", APP)
         t_end = time.monotonic() + wait_s
         sent_back = False
-        st = ""
+        st = raw = ""
         while time.monotonic() < t_end:
             raw = self.status_raw()
             st = parse_status(raw)["state"]
@@ -273,6 +281,14 @@ class PhoneLink:
             time.sleep(0.3)
         else:
             self.log(f"[adb] 정지 확인 시간 초과 ({wait_s:.0f} s, 마지막 상태 {st or '-'}) → force-stop")
+        if (st.startswith("RECORD_DONE") or st.startswith("STOPPED")) and upload_on():
+            # 업로드 방식 (upload_server.py): 앱이 녹화 끝에 UploadService 로 올리는 중 → force-stop 하면 끊긴다.
+            # 녹화만(record)이면 앱이 카메라를 이미 닫음. 녹화+실시간(both)이면 BACK 으로 화면만 닫음 (onStop → 카메라 정지).
+            if "STREAMING continues" in (raw or ""):
+                self.shell("input", "keyevent", "KEYCODE_BACK")
+            self.app_mode = None
+            self.log("[adb] 앱 정지 (업로드 중일 수 있어 force-stop 안 함)")
+            return True
         self.shell("am", "force-stop", APP)
         self.app_mode = None
         self.log("[adb] 앱 정지")
