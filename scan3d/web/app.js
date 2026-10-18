@@ -677,8 +677,9 @@ async function startScan(askMsg) {
   $('bStart').disabled = true;
   try {
     const all = Q.pair === 'all' && m === 'record';            // 3개 모두 녹화 (비교용) — 폰에 녹화만
-    const pair = all ? 'all' : (Q.pair === 'all' ? '2+6' : Q.pair);
-    const r = await cmd(Object.assign({ cmd: 'mode', mode: m, start_app: $('cStartApp').checked && adbOk, size: Q.size, fps: Q.fps, capture_fps: capNow(), stream_fmt: Q.fmt, pair, live_pair: '2+6' }, mapOpts()));
+    const mono = Q.pair === '5' ? '5' : null;                    // 광각만 (단안): 보정판 정답 녹화용, 깊이·VIO 안 돌림
+    const pair = all ? 'all' : mono ? '2+5' : (Q.pair === 'all' ? '2+6' : Q.pair);
+    const r = await cmd(Object.assign({ cmd: 'mode', mode: m, start_app: $('cStartApp').checked && adbOk, size: Q.size, fps: Q.fps, capture_fps: capNow(), stream_fmt: Q.fmt, pair, mono, live_pair: '2+6' }, mapOpts()));
     if (r.ok === false || r.error) alert(r.error || '시작 실패');
     else toast(r.warn ? `시작합니다 — ${r.warn}` : `시작합니다 (${Q.size} · ${capNow() ? capNow() + ' fps 촬영 → ' : ''}${Q.fps} fps${Q.fmt !== 'h264' ? ' · ' + (FMT_KO[Q.fmt] || Q.fmt) : ''}${pair !== '2+5' ? ' · ' + PAIR_KO[pair] : ''}) — 폰 화면을 켜 두세요`
       + (all ? '. 끝나면 두 쌍(초광각+망원, 초광각+광각)으로 따로 복원합니다' : ''), r.warn || all ? 8000 : 4000);
@@ -846,7 +847,7 @@ const FMT_KO = { h264: 'H.264', jpeg: 'JPEG', nv21: 'NV21 (압축 없음)' };
 const Q = { tab: null, size: '1440x1080', fps: 15, cap: null, fmt: 'h264', pair: '2+5', state: null, sigS: '', sigF: '', kf: null };
 // Q.cap = 촬영 fps (앱 1.8-subsample, 0 = fps 그대로). null = 아직 안 고름 → 서버 기본 (/api/combos current.capture_fps)
 // 깊이 렌즈 쌍: 2+5 = 초광각+광각 (기본), 2+6 = 초광각+망원 (기선 2배, 거의 동시 촬영, 화면 가운데만)
-const PAIR_KO = { '2+5': '초광각+광각', '2+6': '초광각+망원', all: '렌즈 3개 모두 녹화 (비교용)' };
+const PAIR_KO = { '2+5': '초광각+광각', '2+6': '초광각+망원', all: '렌즈 3개 모두 녹화 (비교용)', '5': '광각만 (단안)' };
 // '3개 모두 녹화 (비교용)' 은 [폰에 녹화만] 에서만 고를 수 있다 (실시간 깊이는 한 쌍만). 다른 방식으로 바꾸면 초광각+망원 으로.
 function renderPairSel(changed) {
   const rec = $('sMode').value === 'record', o = $('sPair').querySelector('option[value="all"]');
@@ -952,6 +953,7 @@ $('sPair').onchange = e => {
   renderPairSel(true);
   try { localStorage.setItem('scan3d.pair.v2', Q.pair); } catch (x) { }
   if (Q.pair === '2+6') toast('초광각+망원: 깊이는 화면 가운데(망원이 보는 곳)만 나옵니다. 다음 [▶ 스캔 시작] 부터 적용', 6000);
+  if (Q.pair === '5') toast('광각 렌즈 하나만 찍습니다 (보정판 정답 녹화용). 실시간은 카메라 화면과 보정판 인식만 나오고 깊이·위치 추적은 안 돕니다', 7000);
   if (Q.pair === 'all') toast('렌즈 3개를 한꺼번에 녹화합니다. 끝나면 초광각+망원, 초광각+광각 두 쌍으로 따로 복원해 리플레이에서 비교할 수 있습니다', 8000);
   loadCombos();                                    // 녹화 압축기 3개로 다시 계산
 };

@@ -632,8 +632,9 @@ public class MainActivity extends Activity {
             });
             lastExpNs=new long[ids.length]; lastSkewNs=new long[ids.length]; lastMidOffNs=new long[ids.length];
             Arrays.fill(lastExpNs,-1); Arrays.fill(lastSkewNs,-1);
-            if(ids.length<2 || ids.length>3 || new HashSet<>(Arrays.asList(ids)).size()!=ids.length)
-                throw new IllegalArgumentException("Need 2 or 3 distinct physical IDs");
+            // 1 lens (1.11-mono): single-camera recordings, e.g. lens 5 only for ChArUco ground truth (scan3d IMU_PLAN.md)
+            if(ids.length<1 || ids.length>3 || new HashSet<>(Arrays.asList(ids)).size()!=ids.length)
+                throw new IllegalArgumentException("Need 1, 2 or 3 distinct physical IDs");
             Set<String> available=manager.getCameraCharacteristics(logical).getPhysicalCameraIds();
             for(String id:ids) if(!available.contains(id)) throw new IllegalArgumentException("Not in logical group: "+id);
             width=getIntent().getIntExtra("width",640); height=getIntent().getIntExtra("height",480);
@@ -695,7 +696,7 @@ public class MainActivity extends Activity {
             recWaitSyncS=Math.max(0,getIntent().getIntExtra("rec_wait_sync_s",40));
             focusDiopters=getIntent().getFloatExtra("focus_diopters",1.0f);
             logicalId=logical;
-            if(!syncMode.equals("off")) phaseSync=createPhaseSync(logical);
+            if(!syncMode.equals("off") && ids.length>=2) phaseSync=createPhaseSync(logical);   // nothing to align with 1 lens
             // record and both: align (camera re-open) BEFORE the MP4s get frames; no re-open once they do (SPEC 15.5).
             // both: the live stream rides the recorder encoder, so it also starts after the lock.
             recGate=recordEnabled && phaseSync!=null && recWaitSyncS>0;

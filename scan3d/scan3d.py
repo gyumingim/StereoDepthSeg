@@ -458,6 +458,7 @@ class Scanner:
         self._best_seg = None                             # 복원 중 VIO 리셋 전 가장 큰 조각 (restore_best_segment)
         self.pose_log = None                              # 복원: 브리지 포즈·이벤트 기록 (3렌즈 녹화 → 다른 쌍 복원이 다시 씀, replay.py)
         self.rec3 = False                                 # 지금(또는 마지막) 녹화 세션이 렌즈 3개 모두 녹화인가
+        self.mono_lens = None                             # 렌즈 하나만 세션 (start_session mono)
         self.link = phone_link.PhoneLink(a.adb, self.log, physical=",".join(a.physical), fps=a.app_fps,
                                          focus=a.app_focus, imu_us=a.app_imu_us,
                                          stream_fmt=a.app_stream, jpeg_q=a.app_jpeg_q, width=a.size[0], height=a.size[1],
@@ -702,10 +703,13 @@ class Scanner:
             self.depth_thread.start()
 
     # ---------------- 세션 (모드) ----------------
-    def start_session(self, mode, start_app=True, size=None, fps=None, ffs_scale=None, pair=None, rec3=False, capture_fps=None):
+    def start_session(self, mode, start_app=True, size=None, fps=None, ffs_scale=None, pair=None, rec3=False, capture_fps=None,
+                      mono=None):
         """size(WxH 4:3)·fps·ffs_scale 를 주면 그 값으로 (self.want 갱신), 안 주면 self.want. 크기·fps 가 바뀌면
         정류맵·FFS 입력·앱 인자를 다시 정하고, 실시간 브리지는 그 크기·fps 설정(config/<W>x<H>_<fps>/)으로 다시 띄운다.
-        rec3 = 렌즈 3개(2,5,6) 모두 녹화 (비교용, '폰에 녹화만' 에서만). pair 는 그때 쓰지 않는 깊이 쌍 (기본 2+6)."""
+        rec3 = 렌즈 3개(2,5,6) 모두 녹화 (비교용, '폰에 녹화만' 에서만). pair 는 그때 쓰지 않는 깊이 쌍 (기본 2+6).
+        mono = 렌즈 하나만 (예: "5" 광각, 앱 1.11-mono): 보정판 정답 녹화용 (IMU_PLAN.md). 실시간은 카메라 창·보정판 인식만
+        (깊이·VIO 안 돌림). 기하(정류맵 등)는 pair 그대로 두고 앱 --es physical 만 그 렌즈."""
         if getattr(self, "board_live", None) is not None:
             self.board_live.reset()                      # 세션마다 인식률을 새로 셈
         if mode not in PHONE_MODES:
@@ -727,7 +731,10 @@ class Scanner:
             self.link.capture_fps = w.get("capture_fps") or None   # 앱 1.8: 촬영 fps (저장·전송·짝 묶기는 w["fps"])
             # 앱 --es physical: 3개 모두 녹화면 2,5,6, 아니면 깊이 쌍 (apply_geometry 가 쌍이 같으면 안 건드리므로 늘 다시 정함)
             self.rec3 = bool(rec3)
-            self.link.physical = ",".join(ALL_REC_PHYSICAL if self.rec3 else self.geom["physical"])
+            self.mono_lens = str(mono) if mono else None
+            self.link.physical = self.mono_lens or ",".join(ALL_REC_PHYSICAL if self.rec3 else self.geom["physical"])
+            if self.mono_lens:
+                self.log(f"[link] 렌즈 하나만 (단안 {self.mono_lens}): 깊이·VIO 끔, 카메라 창·보정판 인식만")
             if self.rec3:
                 self.log(f"[link] 렌즈 3개 모두 녹화 (비교용): 앱 --es physical {self.link.physical}")
             self.mode = mode
@@ -1003,7 +1010,7 @@ class Scanner:
                 continue
             if sock is None:
                 break
-            rx = phone_rx.StreamReceiver(sock, self.on_sensor, self.on_pair, 2, tuple(self.geom["size"]),
+            rx = phone_rx.StreamReceiver(sock, self.on_sensor, self.on_pair, 1 if self.mono_lens else 2, tuple(self.geom["size"]),
                                          self.pair_skew_ms(), log=self.log)
             if (self.app_status or {}).get("ts_ref") == "mid":     # 앱 status 꼬리 ts_ref=mid (1.7-mid): stream_info 전에도
                 rx.ts_ref = phone_rx.lps.TS_REF_MID
@@ -1210,6 +1217,12 @@ class Scanner:
         self.vio.push_imu(t_ns, w, acc)                  # 브리지가 t0 를 빼므로 원래 ns 그대로
 
     def on_pair(self, pair):
+        if self.mono_lens:                               # 렌즈 하나만: (f,) → 카메라 창·보정판 인식만, 깊이·VIO 로 안 보냄
+            f = pair[0]
+            self.last_pair = (f, f)
+            if self.board_live is not None:
+                self.board_live.push((f, f))
+            return
         if self.swap:
             pair = pair[::-1]
         if self.board_live is not None:
@@ -2379,7 +2392,7 @@ class Scanner:
             try:
                 return self.start_session(body.get("mode", "live"), start_app=bool(body.get("start_app", True)),
                                           size=body.get("size"), fps=body.get("fps"), ffs_scale=body.get("ffs_scale"),
-                                          pair=pair, rec3=rec3, capture_fps=body.get("capture_fps"))
+                                          pair=pair, rec3=rec3, capture_fps=body.get("capture_fps"), mono=body.get("mono"))
             except ValueError as e:
                 return dict(ok=False, error=str(e))
         elif cmd == "stream":
