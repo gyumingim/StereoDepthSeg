@@ -201,7 +201,7 @@ class Hub:
         d = dict(d, type="frame")
         self.broadcast(d)
 
-    def start(self, mode, secs=0, loop="both", mlen=0.15, mdict=0, dump=0):
+    def start(self, mode, secs=0, loop="both", mlen=0.15, mdict=0, dump=0, exp_ms=0.0):
         """loop = both | marker | feature | off (ARCore loop closure, arlat ArLoop); mlen = printed marker side (m)."""
         self.stop(quiet=True)
         out = [self.adb("reverse", "tcp:8798", "tcp:8798")]
@@ -210,7 +210,7 @@ class Hub:
         self.adb("shell", "input", "keyevent", "KEYCODE_WAKEUP")
         out.append(self.adb("shell", "am", "start", "-n", f"{PKG}/.MainActivity", "--es", "mode", mode, "--ei", "secs", str(secs),
                             "--es", "loop", str(loop), "--ef", "mlen", str(float(mlen)), "--ei", "mdict", str(int(mdict)),
-                            "--ei", "dump", str(int(dump))))
+                            "--ei", "dump", str(int(dump)), "--ei", "exp_cap_us", str(int(float(exp_ms) * 1000))))
         self.say(f"시작: {mode}" + (f" (루프 {loop}, 마커 {mlen} m)" if mode == "arcore" else ""))
         return "\n".join(o for o in out if o)
 
@@ -347,7 +347,8 @@ def make_handler(hub):
             try:
                 if self.path == "/api/start":
                     hub.background(hub.start, body.get("mode", "arcore"), int(body.get("secs", 0)), body.get("loop", "both"),
-                                   float(body.get("mlen", 0.15)), int(body.get("mdict", 0)), int(body.get("dump", 0)))
+                                   float(body.get("mlen", 0.15)), int(body.get("mdict", 0)), int(body.get("dump", 0)),
+                                   float(body.get("exp_ms", 0)))
                     self._json({"ok": True})
                 elif self.path == "/api/stop":
                     hub.background(hub.stop)
@@ -390,7 +391,8 @@ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums} th,
   <div style="margin-top:8px">ARCore 루프 클로저
    <select id="loopmode"><option value="both">둘 다 (마커 + 특징점)</option><option value="marker">마커만</option><option value="feature">특징점만 (마커 없음)</option><option value="off">끔</option></select>
    마커 한 변 <input id="mlen" type="number" step="0.005" value="0.15" style="width:70px"> m (ArUco 4x4_50)
-   <label><input id="dump" type="checkbox"> 키프레임 저장 (PC 재생용)</label></div>
+   <label><input id="dump" type="checkbox"> 키프레임 저장 (PC 재생용)</label>
+   · OpenVINS 노출 상한 <input id="expms" type="number" step="0.5" min="0" value="2" style="width:56px"> ms (0 = 자동, 짧을수록 덜 번짐)</div>
   <div class="mut" style="margin-top:6px">지연 = 촬영(센서 시각) → 앱에서 위치가 나온 시각, 폰 시계 하나로 잼. 한 번에 하나만 돌아감 (카메라 공유 안 됨).</div>
  </div>
 </div>
@@ -411,7 +413,7 @@ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums} th,
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const pts={arcore:[],ov:[]}, traj={arcore:[],ov:[],lc:[]};
 function post(u,b){return fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})}).then(r=>r.json()).then(j=>{if(j.out)log(j.out);if(j.error)log('오류: '+j.error);loadRuns();});}
-function start(m){traj[m]=[];if(m==='arcore')traj.lc=[];post('/api/start',{mode:m,loop:document.getElementById('loopmode').value,mlen:parseFloat(document.getElementById('mlen').value)||0.15,dump:document.getElementById('dump').checked?1:0});}
+function start(m){traj[m]=[];if(m==='arcore')traj.lc=[];post('/api/start',{mode:m,loop:document.getElementById('loopmode').value,mlen:parseFloat(document.getElementById('mlen').value)||0.15,dump:document.getElementById('dump').checked?1:0,exp_ms:parseFloat(document.getElementById('expms').value)||0});}
 function log(s){const e=document.getElementById('log');e.textContent=(s+'\n'+e.textContent).slice(0,6000);}
 function fmt(v,u=''){return v==null?'-':v+u}
 const es=new EventSource('/events');

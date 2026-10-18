@@ -62,6 +62,13 @@ class OvRunner implements SensorEventListener {
     private final ConcurrentHashMap<Long, long[]> sent = new ConcurrentHashMap<>();
     private volatile long midOffsetNs;          // (exposure + rolling shutter skew) / 2 from the latest capture result
     private volatile long expNs;                // exposure of the latest capture result (motion blur check)
+    /** exposure cap in ns (0 = AE): after 15 AE frames switch to a fixed short exposure with ISO raised to keep the
+     *  brightness (ISO capped at the lens max -> shortest exposure that still keeps it). Less blur = fewer lost features. */
+    long expCapNs;
+    private double meterEv, meterExp; private int meterN, meterFrames;
+    private volatile boolean manualSet;
+    private CameraCaptureSession sess;
+    private CaptureRequest.Builder reqB;
     private int nCam, nPose, nImu, nAcc, camDropped;
     private String lastStatus = "-";
 
@@ -111,11 +118,13 @@ class OvRunner implements SensorEventListener {
                             Long skew = res.get(CaptureResult.SENSOR_ROLLING_SHUTTER_SKEW);
                             midOffsetNs = ((exp == null ? 0 : exp) + (skew == null ? 0 : skew)) / 2;
                             expNs = exp == null ? 0 : exp;
+                            if (expCapNs > 0 && !manualSet) meter(res, h);
                         }
                     };
                     d.createCaptureSession(new SessionConfiguration(SessionConfiguration.SESSION_REGULAR,
                             Collections.singletonList(oc), ctx.getMainExecutor(), new CameraCaptureSession.StateCallback() {
                                 @Override public void onConfigured(CameraCaptureSession s) {
+                                    sess = s; reqB = rb; capCb = cb;
                                     try { s.setRepeatingRequest(rb.build(), cb, h); }
                                     catch (Exception e) { status.show("repeat: " + e); }
                                 }
@@ -126,6 +135,36 @@ class OvRunner implements SensorEventListener {
             @Override public void onDisconnected(CameraDevice d) { d.close(); }
             @Override public void onError(CameraDevice d, int e) { status.show("camera error " + e); d.close(); }
         }, h);
+    }
+
+    private CameraCaptureSession.CaptureCallback capCb;
+
+    private void meter(TotalCaptureResult res, Handler h) {
+        Long e = res.get(CaptureResult.SENSOR_EXPOSURE_TIME);
+        Integer is = res.get(CaptureResult.SENSOR_SENSITIVITY);
+        if (e == null || is == null || e <= 0 || is <= 0) return;
+        if (++meterFrames < 5) return;
+        meterEv += e * (double) is; meterExp += e; meterN++;
+        if (meterFrames < 15 || sess == null || reqB == null) return;
+        try {
+            android.util.Range<Integer> sr = ((CameraManager) ctx.getSystemService(Context.CAMERA_SERVICE))
+                    .getCameraCharacteristics("2").get(android.hardware.camera2.CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE);
+            int isoMax = sr != null ? sr.getUpper() : 3200, isoMin = sr != null ? sr.getLower() : 50;
+            double ev = meterEv / meterN, aeExp = meterExp / meterN;
+            long exp = (long) Math.min(expCapNs, aeExp);
+            if (ev / exp > isoMax) exp = (long) (ev / isoMax);
+            int iso = (int) Math.max(isoMin, Math.min(isoMax, Math.round(ev / Math.max(1, exp))));
+            reqB.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+            reqB.set(CaptureRequest.SENSOR_EXPOSURE_TIME, exp);
+            reqB.set(CaptureRequest.SENSOR_SENSITIVITY, iso);
+            reqB.set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L);
+            sess.setRepeatingRequest(reqB.build(), capCb, h);
+            manualSet = true;
+            android.util.Log.i("arlat", "short exposure " + exp / 1000 + " us iso " + iso + " (AE " + (long) aeExp / 1000 + " us)");
+        } catch (Exception ex) {
+            android.util.Log.w("arlat", "short exposure failed", ex);
+            manualSet = true;
+        }
     }
 
     void stop() {

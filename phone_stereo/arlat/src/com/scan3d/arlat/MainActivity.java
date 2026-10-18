@@ -76,6 +76,7 @@ public class MainActivity extends Activity {
             if (ov == null) {
                 ov = new OvRunner(this, this::show, streamer);
                 ov.dumpSecs = getIntent().getIntExtra("dump", 0);
+                ov.expCapNs = getIntent().getIntExtra("exp_cap_us", 0) * 1000L;   // short exposure (less motion blur)
                 try { ov.start(); status.setText("OpenVINS starting..."); }
                 catch (Exception e) { status.setText("ov error: " + e); android.util.Log.e("arlat", "ov", e); }
             }
