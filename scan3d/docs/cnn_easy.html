@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CNN 쉽게 보기</title>
+<style>
+:root{--bg:#f7f7f5;--fg:#1c1f24;--mut:#6b7078;--card:#fff;--line:#e2e4e8;--a:#2563eb;--b:#dc2626;--c:#16a34a;--d:#d97706;--hl:rgba(217,119,6,.18)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--hl:rgba(251,191,36,.18)}}
+body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.6 system-ui,"Malgun Gothic",sans-serif}
+main{max-width:860px;margin:0 auto;padding:20px 16px 40px}
+.top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.dots{display:flex;gap:6px;flex:1}.dots span{flex:1;height:6px;border-radius:3px;background:var(--line)}.dots span.on{background:var(--a)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+h2{font-size:24px;margin:0 0 6px}
+.say{font-size:19px;margin:10px 0 0}
+.say b{color:var(--a)}
+canvas{width:100%;display:block;margin-top:10px}
+.nav{display:flex;justify-content:space-between;margin-top:14px}
+button{font:inherit;font-size:16px;padding:8px 16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
+button.main{background:var(--a);color:#fff;border-color:var(--a)}
+button.on{border-color:var(--d);color:var(--d)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.slide{display:none}.slide.on{display:block}
+.small{font-size:14px;color:var(--mut)}
+</style>
+</head>
+<body><main>
+<div class="top"><div class="dots" id="dots"></div><span class="small" id="cnt"></span></div>
+
+<section class="slide card">
+ <h2>1. 문제: 작은 오차가 점점 커진다</h2>
+ <canvas id="s1" height="300"></canvas>
+ <p class="say">폰 센서(IMU)는 아주 조금씩 틀립니다. 그런데 위치는 센서 값을 <b>계속 더해서</b> 구하기 때문에, 작은 오차가 시간이 갈수록 <b>쌓여서 커집니다</b>.</p>
+ <p class="small">초록 = 실제로 간 길, 빨강 = 센서 값 그대로 계산한 길</p>
+</section>
+
+<section class="slide card">
+ <h2>2. 해결: 오차를 미리 빼 주는 "번역기"</h2>
+ <canvas id="s2" height="230"></canvas>
+ <p class="say">센서 값을 계산에 넣기 전에 <b>CNN이 "여기는 이만큼 틀렸어"</b> 하고 고쳐 줍니다. 위치 계산은 원래 공식 그대로입니다.</p>
+</section>
+
+<section class="slide card">
+ <h2>3. CNN은 어떻게 알아보나: "모양 카드"로 훑기</h2>
+ <div class="row" id="cards"></div>
+ <canvas id="s3" height="300"></canvas>
+ <p class="say">CNN은 <b>짧은 모양 카드</b>를 신호 위로 밀면서, 카드와 <b>닮은 곳에서 불이 켜집니다</b>(아래 막대). 카드를 바꿔 보세요.</p>
+</section>
+
+<section class="slide card">
+ <h2>4. 카드를 여러 장 쓰면</h2>
+ <canvas id="s4" height="300"></canvas>
+ <p class="say">카드마다 찾는 모양이 다릅니다. 여러 장을 동시에 쓰면 <b>"어디에 어떤 움직임이 있는지"</b> 한눈에 정리됩니다. (실제로는 32~128장)</p>
+</section>
+
+<section class="slide card">
+ <h2>5. 층을 쌓으면: 작은 모양 → 큰 동작</h2>
+ <canvas id="s5" height="300"></canvas>
+ <p class="say">글자를 읽을 때 <b>획 → 글자 → 단어</b>로 묶듯이, 1층은 짧은 떨림, 위층은 그걸 묶어 <b>"기울이며 빨라지는 동작"</b>을 알아봅니다. 4~5층이면 약 1초를 봅니다.</p>
+</section>
+
+<section class="slide card">
+ <h2>6. 카드는 누가 만드나: 스스로 배운다</h2>
+ <canvas id="s6" height="300"></canvas>
+ <div class="row"><button id="learn" class="main">배우기 시작</button></div>
+ <p class="say">처음 카드는 엉망입니다. 계산한 위치를 <b>보정판으로 잰 정답</b>과 비교해서, 틀린 만큼 카드를 <b>조금씩 고치기</b>를 수천 번 반복하면 오차가 줄어듭니다.</p>
+</section>
+
+<section class="slide card">
+ <h2>요약</h2>
+ <p class="say">① 센서 오차가 쌓여서 위치가 틀어진다.</p>
+ <p class="say">② CNN이 짧은 "모양 카드"로 센서 신호를 훑어 오차를 알아보고 미리 빼 준다.</p>
+ <p class="say">③ 카드는 보정판 정답과 비교하며 스스로 배운다. 계산은 가벼워서 폰에서 1 ms 안팎(추정).</p>
+</section>
+
+<div class="nav"><button id="prev">← 이전</button><button id="next" class="main">다음 →</button></div>
+</main>
+<script>
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function fit(c){const r=devicePixelRatio||1;if(!c.dataset.h){c.dataset.h=c.getAttribute('height');c.style.height=c.dataset.h+'px';}
+ const h=+c.dataset.h,w=c.clientWidth;if(c.width!==Math.round(w*r))c.width=Math.round(w*r);if(c.height!==Math.round(h*r))c.height=Math.round(h*r);
+ const x=c.getContext('2d');x.setTransform(r,0,0,r,0,0);x.clearRect(0,0,w,h);return [x,w,h];}
+function txt(x,s,px,py,col,size=15,al='left'){x.fillStyle=col||css('--fg');x.font=size+'px system-ui,sans-serif';x.textAlign=al;x.fillText(s,px,py);x.textAlign='left';}
+// slides
+const slides=[...document.querySelectorAll('.slide')];let cur=0;
+const dots=document.getElementById('dots');slides.forEach(()=>dots.appendChild(document.createElement('span')));
+function show(i){cur=Math.max(0,Math.min(slides.length-1,i));slides.forEach((s,k)=>s.classList.toggle('on',k===cur));[...dots.children].forEach((d,k)=>d.classList.toggle('on',k<=cur));
+ document.getElementById('cnt').textContent=(cur+1)+' / '+slides.length;prev.disabled=cur===0;next.textContent=cur===slides.length-1?'처음으로':'다음 →';t0=performance.now();}
+next.onclick=()=>show(cur===slides.length-1?0:cur+1);prev.onclick=()=>show(cur-1);
+addEventListener('keydown',e=>{if(e.key==='ArrowRight')show(cur+1);if(e.key==='ArrowLeft')show(cur-1);});
+let t0=performance.now();
+
+// toy signal: 조용 → 기울이기(꺾임) → 떨림 → 조용
+const N=240;const sig=[];for(let i=0;i<N;i++){let v=0;if(i>=50&&i<100)v=Math.min(1,(i-50)/12)*0.9;if(i>=100&&i<120)v=0.9-(i-100)/20*0.9;if(i>=150&&i<200)v=0.45*Math.sin(i*1.3);sig.push(v+0.03*Math.sin(i*0.37));}
+const zones=[[50,120,'기울이기'],[150,200,'떨림']];
+
+// 1: drift
+function s1(t){const [x,W,H]=fit(document.getElementById('s1'));const T=Math.min(1,((t-t0)/6000)%1.15);
+ const n=200,k=Math.floor(n*T);const P=i=>{const a=i/n*Math.PI*1.6;return [W*0.15+W*0.6*i/n,H*0.55-Math.sin(a)*H*0.3];};
+ const D=i=>{const [px,py]=P(i);const e=(i/n)**2;return [px+e*40,py+e*H*0.45];};
+ for(const [f,col] of [[P,css('--c')],[D,css('--b')]]){x.strokeStyle=col;x.lineWidth=4;x.beginPath();for(let i=0;i<=k;i++){const [a,b]=f(i);i?x.lineTo(a,b):x.moveTo(a,b);}x.stroke();
+  if(k>0){const [a,b]=f(k);x.fillStyle=col;x.beginPath();x.arc(a,b,7,0,7);x.fill();}}
+ const [ga,gb]=P(k),[da,db]=D(k);if(k>20){x.setLineDash([5,5]);x.strokeStyle=css('--mut');x.lineWidth=1.5;x.beginPath();x.moveTo(ga,gb);x.lineTo(da,db);x.stroke();x.setLineDash([]);
+  txt(x,'오차 '+(Math.hypot(da-ga,db-gb)/40).toFixed(1)+' m',(ga+da)/2+10,(gb+db)/2,css('--b'),16);}
+ txt(x,'시작',W*0.15-10,H*0.55+28,css('--mut'),14);txt(x,'시간 '+(T*10).toFixed(0)+' 초',W-110,24,css('--mut'),15);}
+
+// 2: pipeline boxes with moving dot
+function s2(t){const [x,W,H]=fit(document.getElementById('s2'));const bx=[[0.02,'센서 값\n(조금 틀림)',css('--b')],[0.27,'CNN\n오차 알아보기',css('--a')],[0.52,'고친 센서 값',css('--c')],[0.77,'위치 계산\n(원래 공식)',css('--fg')]];
+ const bw=W*0.2,bh=90,by=H/2-45;
+ bx.forEach(([f,s,col],i)=>{const px=W*f;x.strokeStyle=col;x.lineWidth=2.5;x.beginPath();x.roundRect(px,by,bw,bh,12);x.stroke();
+  s.split('\n').forEach((l,j)=>txt(x,l,px+bw/2,by+38+j*24,col,16,'center'));
+  if(i<3){const ax=px+bw+4,ay=H/2;x.strokeStyle=css('--mut');x.beginPath();x.moveTo(ax,ay);x.lineTo(W*bx[i+1][0]-6,ay);x.stroke();x.beginPath();x.moveTo(W*bx[i+1][0]-6,ay);x.lineTo(W*bx[i+1][0]-14,ay-6);x.lineTo(W*bx[i+1][0]-14,ay+6);x.fill();}});
+ const p=((t-t0)/2500)%1;const seg=Math.floor(p*3),f=p*3-seg;const sx=W*bx[seg][0]+bw,ex=W*bx[seg+1][0];x.fillStyle=seg===0?css('--b'):css('--c');x.beginPath();x.arc(sx+(ex-sx)*f,H/2,7,0,7);x.fill();
+ txt(x,'지연 없음: 지금까지의 값만 사용',W/2,H-14,css('--mut'),14,'center');}
+
+// 3: sliding card
+const CARDS={'꺾임 카드':[-1,-1,-1,0,1,1,1],'떨림 카드':[1,-1,1,-1,1,-1,1],'평평 카드':[0.3,0.3,0.3,0.3,0.3,0.3,0.3]};let card='꺾임 카드';
+const cardsEl=document.getElementById('cards');for(const k in CARDS){const b=document.createElement('button');b.textContent=k;b.onclick=()=>{card=k;[...cardsEl.children].forEach(c=>c.classList.toggle('on',c===b));t0=performance.now();};if(k===card)b.classList.add('on');cardsEl.appendChild(b);}
+function resp(k,dil=1){const h=3;return sig.map((_,i)=>{let s=0;for(let j=0;j<7;j++){const q=Math.min(N-1,Math.max(0,i+(j-h)*dil));s+=k[j]*sig[q];}return Math.abs(s);});}
+function drawSig(x,W,y0,amp,col){x.strokeStyle=col;x.lineWidth=2.5;x.beginPath();sig.forEach((v,i)=>{const px=10+i/(N-1)*(W-20),py=y0-v*amp;i?x.lineTo(px,py):x.moveTo(px,py)});x.stroke();}
+function s3(t){const [x,W,H]=fit(document.getElementById('s3'));const k=CARDS[card];const X=i=>10+i/(N-1)*(W-20);
+ zones.forEach(([a,b,n])=>{x.fillStyle=css('--line');x.globalAlpha=.5;x.fillRect(X(a),20,X(b)-X(a),130);x.globalAlpha=1;txt(x,n,(X(a)+X(b))/2,16,css('--mut'),13,'center');});
+ drawSig(x,W,110,70,css('--a'));
+ const pos=3+Math.floor(((t-t0)/25)%(N-6));
+ // card drawn as a little shape riding on the signal
+ x.fillStyle=css('--hl');x.fillRect(X(pos-3)-3,30,X(pos+3)-X(pos-3)+6,120);
+ x.strokeStyle=css('--d');x.lineWidth=3;x.beginPath();k.forEach((v,j)=>{const px=X(pos-3+j),py=60-v*14;j?x.lineTo(px,py):x.moveTo(px,py)});x.stroke();
+ txt(x,'카드',X(pos)-12,166,css('--d'),13);
+ const r=resp(k);const m=Math.max(...r)||1;const base=H-20;
+ for(let i=0;i<=pos;i++){const h=r[i]/m*90;x.fillStyle=css('--d');x.globalAlpha=.25+.75*(r[i]/m);x.fillRect(X(i),base-h,(W-20)/N+0.5,h);}
+ x.globalAlpha=1;txt(x,'닮은 정도 (높을수록 카드와 비슷)',12,base-100,css('--mut'),13);}
+
+// 4: multiple cards heat rows
+function s4(t){const [x,W,H]=fit(document.getElementById('s4'));const rows=[['꺾임 카드',CARDS['꺾임 카드'],1],['떨림 카드',CARDS['떨림 카드'],1],['평평 카드',CARDS['평평 카드'],1]];
+ const X=i=>100+i/(N-1)*(W-110);drawSig(x,W,60,40,css('--a'));
+ zones.forEach(([a,b,n])=>txt(x,n,10+(a+b)/2/(N-1)*(W-20),14,css('--mut'),13,'center'));
+ const rh=58;rows.forEach(([n,k],r)=>{const o=resp(k);const m=Math.max(...o)||1;const y=100+r*rh;txt(x,n,6,y+rh/2+4,css('--fg'),14);
+  for(let i=0;i<N;i++){x.fillStyle=css('--d');x.globalAlpha=0.06+0.94*(o[i]/m);x.fillRect(X(i),y,(W-110)/N+0.6,rh-10);}x.globalAlpha=1;});
+ txt(x,'진할수록 그 모양이 있음',W-180,H-6,css('--mut'),13);}
+
+// 5: layers grouping
+function s5(t){const [x,W,H]=fit(document.getElementById('s5'));const L=[['입력 신호',0],['1층: 짧은 조각',1],['2층: 조각 묶음',2],['3층: 동작',3]];
+ const p=((t-t0)/1200)%5;const shown=Math.min(4,Math.floor(p)+1);
+ L.forEach(([n,l],i)=>{if(i>=shown)return;const y=H-30-i*72;txt(x,n,8,y+5,css('--fg'),14);
+  const cnt=[24,12,6,2][i];const w=(W-160)/cnt;
+  for(let j=0;j<cnt;j++){const px=150+j*w;x.fillStyle=i===0?css('--a'):i===3?css('--b'):css('--d');x.globalAlpha=i===0?.5:.85;x.beginPath();x.roundRect(px+3,y-14,w-6,26,6);x.fill();x.globalAlpha=1;
+   if(i>0){x.strokeStyle=css('--mut');x.globalAlpha=.4;for(let q=0;q<2;q++){const cx=150+(j*2+q)*((W-160)/(cnt*2))+((W-160)/(cnt*2))/2;x.beginPath();x.moveTo(px+w/2,y+12);x.lineTo(cx,y+72-14);x.stroke();}x.globalAlpha=1;}}
+  if(i===3){txt(x,'"기울이며 빨라짐"',150+w/2,y+5,'#fff',13,'center');txt(x,'"멈춤"',150+w*1.5,y+5,'#fff',13,'center');}});
+ txt(x,'아래에서 위로: 작은 것을 묶어 큰 것',W-260,18,css('--mut'),13);}
+
+// 6: learning loop with error falling and card morphing
+let learnT=null;document.getElementById('learn').onclick=()=>{learnT=performance.now();};
+function s6(t){const [x,W,H]=fit(document.getElementById('s6'));const target=[-1,-1,-1,0,1,1,1],start=[0.8,-0.5,0.2,0.9,-0.7,0.4,-0.2];
+ const p=learnT?Math.min(1,(t-learnT)/5000):0;const e=1-Math.pow(1-p,3);const k=start.map((v,i)=>v+(target[i]-v)*e);
+ // card
+ txt(x,'카드 모양',20,24,css('--mut'),14);x.strokeStyle=css('--d');x.lineWidth=4;x.beginPath();k.forEach((v,j)=>{const px=40+j*36,py=110-v*45;j?x.lineTo(px,py):x.moveTo(px,py)});x.stroke();
+ k.forEach((v,j)=>{x.fillStyle=css('--d');x.beginPath();x.arc(40+j*36,110-v*45,5,0,7);x.fill();});
+ // error curve
+ const gx=W*0.45,gw=W*0.5,gy=30,gh=200;x.strokeStyle=css('--line');x.strokeRect(gx,gy,gw,gh);txt(x,'정답과의 오차',gx,gy-8,css('--mut'),14);
+ x.strokeStyle=css('--b');x.lineWidth=3;x.beginPath();const steps=Math.floor(p*100);for(let s=0;s<=steps;s++){const err=0.08+0.92*Math.exp(-s/22)+0.04*Math.sin(s*1.7)*Math.exp(-s/40);const px=gx+s/100*gw,py=gy+gh-err*gh*0.95;s?x.lineTo(px,py):x.moveTo(px,py);}x.stroke();
+ txt(x,'반복 횟수 →',gx+gw-90,gy+gh+20,css('--mut'),13);
+ txt(x,learnT?(p<1?'배우는 중…':'다 배움: 카드가 "꺾임" 모양이 됨'):'버튼을 누르세요',20,H-20,css('--fg'),15);}
+
+function frame(t){const f=[s1,s2,s3,s4,s5,s6][cur];if(f)f(t);requestAnimationFrame(frame);}
+show(0);requestAnimationFrame(frame);
+</script>
+</body></html>
