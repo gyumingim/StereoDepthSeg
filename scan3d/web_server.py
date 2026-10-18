@@ -54,7 +54,7 @@ POST /api/cmd  {"cmd": pause|resume|reset_map|reset_vio|save|set, ...}
 쉬운 UI 도우미 (Helper, 이 파일 안의 별도 스레드, scan3d.py 로직은 안 건드림):
   - 3 s 마다 adb devices -l → state.ui.usb (none | device | unauthorized | offline | noadb).
     transport_id 가 바뀌면 3 s 사이에 뺐다 꽂은 것도 "다시 꽂음" 으로 본다 (REVIEW4 B2)
-  - 10 s 마다 adb shell dumpsys thermalservice 의 SKIN 온도 → state.ui.temp_c / temp_level (ok | warm >42 | hot >45 °C)
+  - 10 s 마다 adb shell dumpsys thermalservice 의 SKIN 온도 → state.ui.temp_c / temp_level (ok | warm >50 | hot >55 °C)
   - WSL + Windows adb 면 [스캔 시작](live/both) 때 Windows 쪽 win_relay.py --no-start-app 을 interop
     (powershell.exe Start-Process, 창 없음)으로 띄우고 [정지] 때 끈다. 죽거나 USB 를 다시 꽂으면 다시 띄운다
     (adb forward 다시; 다시 꽂음은 래치해 두었다가 relay_next 가 지나면 처리, 연속 실패는 8→16→32→60 s 로 늘림).
@@ -384,7 +384,7 @@ def serve(scanner, host="0.0.0.0", port=8795):
 
 
 # ---------------- 쉬운 UI 도우미 ----------------
-TEMP_WARM, TEMP_HOT = 42.0, 45.0
+TEMP_WARM, TEMP_HOT = 50.0, 55.0     # 2026-10-18: 42/45 -> 50/55 (사용자: 온도 제한 풀기 — IMU 학습에 뜨거운 구간 데이터도 필요). 경고만 하고 막지는 않음
 HERE = Path(__file__).resolve().parent
 
 
