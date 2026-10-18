@@ -50,6 +50,7 @@ public class MainActivity extends Activity {
     private volatile Socket client;
     private ServerSocket server;
     private TextView text;
+    private PhonePreview preview;                      // 1.14: on-phone preview + marker check (one-lens sessions)
     private CameraManager manager;
     private String[] ids;
     private long[] counts;
@@ -650,6 +651,13 @@ public class MainActivity extends Activity {
             saveFps=sf>0?sf:fps;
             rawTimestamps=getIntent().getBooleanExtra("raw_ts",false);
             imuPeriodUs=getIntent().getIntExtra("imu_us",2500);
+            if(ids.length==1 && getIntent().getBooleanExtra("preview",true)) {
+                try {
+                    if(text.getParent()!=null) ((android.view.ViewGroup)text.getParent()).removeView(text);
+                    preview=new PhonePreview(this,text,width,height);
+                    setContentView(preview.root);
+                } catch(Throwable e) { Log.w(TAG,"preview off",e); preview=null; if(text.getParent()==null) setContentView(text); }
+            }
             expCapNs=Math.max(0,getIntent().getIntExtra("exp_cap_us",0))*1000L;
             expGain=Math.max(0.1,Math.min(1.0,getIntent().getFloatExtra("exp_gain",1.0f)));
             fixExpNs=0; fixIso=0; meterFrames=0; meterEv=0; meterExp=0; meterN=0;
@@ -1075,6 +1083,8 @@ public class MainActivity extends Activity {
             setKey(request,false,CaptureRequest.SENSOR_FRAME_DURATION,1_000_000_000L/Math.max(1,fps));
         }
         for(ImageReader reader:readers) request.addTarget(reader.getSurface());
+        PhonePreview pv=preview;
+        if(pv!=null && pv.surface!=null) request.addTarget(pv.surface);
         if(override) {
             String id=ids[ps.tgt];
             request.setPhysicalCameraKey(CaptureRequest.SENSOR_FRAME_DURATION,durNs,id);
@@ -1152,6 +1162,7 @@ public class MainActivity extends Activity {
     }
 
     private void configure() {
+        if(preview!=null && !preview.whenReady(() -> handler.post(this::configure))) return;   // wait for the preview surface
         try {
             for(int i=0;i<ids.length;i++) {
                 final int index=i;
@@ -1175,6 +1186,11 @@ public class MainActivity extends Activity {
         for(int i=0;i<ids.length;i++) {
             OutputConfiguration out=new OutputConfiguration(readers.get(i).getSurface());
             out.setPhysicalCameraId(ids[i]); outputs.add(out);
+        }
+        PhonePreview pv=preview;
+        if(pv!=null && pv.surface!=null) {
+            OutputConfiguration out=new OutputConfiguration(pv.surface);
+            out.setPhysicalCameraId(ids[0]); outputs.add(out);
         }
         SessionConfiguration config=new SessionConfiguration(SessionConfiguration.SESSION_REGULAR,outputs,
             command -> handler.post(command),new CameraCaptureSession.StateCallback() {
@@ -1255,6 +1271,7 @@ public class MainActivity extends Activity {
             byte[] nv21=toNv21(image);
             if(mt!=null) mt.camFrame(index,image.getTimestamp(),System.nanoTime()-c0,fps);
             if(index==0) autoBrightness(nv21);
+            if(index==0 && preview!=null) preview.frame(nv21);
             if(rawTimestamps) enqueueFrame(index,image.getTimestamp(),nv21,Long.MIN_VALUE);
             else timestampMatcher.image(index,image.getTimestamp(),nv21,SystemClock.elapsedRealtimeNanos());
         } catch(Exception e) { Log.e(TAG,"frame",e); }
@@ -1288,6 +1305,7 @@ public class MainActivity extends Activity {
         byte[] nv21=toNv21(image);
         Metrics mt=metrics; if(mt!=null) mt.kept(index,System.nanoTime()-c0);
         if(index==0) autoBrightness(nv21);
+        if(index==0 && preview!=null) preview.frame(nv21);
         enqueueFrame(index,physicalTs,nv21,pairDtNs);
     }
 

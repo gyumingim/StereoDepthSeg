@@ -13,6 +13,10 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 SDK = ROOT / "tools/android-sdk"
 ANDROID = ROOT / "phone_stereo/android"
+# 1.14-preview: OpenCV Java (core, imgproc, objdetect, utils) + libopencv_java4.so for the on-phone marker check
+OCV = Path.home() / "scanner/android/OpenCV-android-sdk/sdk"
+OCV_PKGS = ["core", "imgproc", "objdetect", "utils"]
+NDK = Path.home() / "android-ndk-r27c"
 
 
 def run(*args):
@@ -45,13 +49,17 @@ def main():
     classes.mkdir(parents=True, exist_ok=True)
     for old in classes.rglob("*.class"):
         old.unlink()
-    run("javac", "-source", "8", "-target", "8", "-classpath", jar, "-d", classes,
-        *sorted((ANDROID / "src").rglob("*.java")))
+    ocv_src = [f for pkg in OCV_PKGS for f in sorted((OCV / "java/src/org/opencv" / pkg).glob("*.java"))]
+    run("javac", "-nowarn", "-source", "8", "-target", "8", "-classpath", jar, "-d", classes,
+        *sorted((ANDROID / "src").rglob("*.java")), *ocv_src)
     run(bt / "d8", "--lib", jar, "--min-api", "28", "--output", build, *sorted(classes.rglob("*.class")))
     unsigned = build / "unsigned.apk"
     run(bt / "aapt", "package", "-f", "-M", ANDROID / "AndroidManifest.xml", "-I", jar, "-F", unsigned)
     with zipfile.ZipFile(unsigned, "a", zipfile.ZIP_DEFLATED) as z:
         z.write(build / "classes.dex", "classes.dex")
+        z.write(OCV / "native/libs/arm64-v8a/libopencv_java4.so", "lib/arm64-v8a/libopencv_java4.so")
+        z.write(NDK / "toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so",
+                "lib/arm64-v8a/libc++_shared.so")
     run(bt / "zipalign", "-f", "4", unsigned, build / "aligned.apk")
     key = build / "debug.keystore"
     if not key.exists():
