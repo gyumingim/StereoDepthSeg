@@ -34,7 +34,7 @@ from imu_gt import read_imu  # noqa: E402
 HZ = 500          # S24 IMU 원래 비율 (가속도·자이로 약 499 Hz)
 WIN = HZ          # 1 s
 DT = 1.0 / HZ
-MAXF = 72         # 창 안 정답 프레임 최대 (60 fps × 1 s + 여유)
+MAXF = 72         # 창 안 정답 프레임 최대 (60 fps × 1 s + 여유), --win 에 맞춰 늘림
 
 
 # ---------------------------------------------------------------- data
@@ -200,8 +200,14 @@ def main():
     ap.add_argument("--val", nargs="+", required=True)
     ap.add_argument("--epochs", type=int, default=200)
     ap.add_argument("--batch", type=int, default=192)
+    ap.add_argument("--win", type=float, default=1.0, help="창 길이 s (IMU 표류가 보드 정답 잡음보다 커지게 길게)")
+    ap.add_argument("--eval-only", action="store_true", help="보정 없음·바이어스만 평가 (CNN 학습 안 함)")
+    ap.add_argument("--rot-sigma", type=float, default=0.005, help="자세 손실 기준 rad (보드 정답 잡음이 크면 키움)")
     ap.add_argument("--out", default=str(HERE.parent / "runs" / time.strftime("imu_cnn_%Y%m%d-%H%M%S")))
     a = ap.parse_args()
+    global WIN, MAXF
+    WIN = int(round(a.win * HZ))
+    MAXF = int(72 * a.win)
     dev = "cuda" if torch.cuda.is_available() else "cpu"
 
     def prep(recs):
@@ -216,6 +222,27 @@ def main():
         return sets
 
     tr, va = prep(a.train), prep(a.val)
+
+    def fit_gravity(sets, iters=60):
+        """보드 좌표의 중력 방향을 녹화마다 원래 IMU 로 맞춤 (보정 모델 없이, 모든 방식에 같은 값).
+        정지 프레임 몇 개로 잡은 g_b 가 0.5 m/s² 넘게 틀린 녹화가 있어(221015: z -0.82 vs 다른 녹화 +0.3~0.5), CNN 이
+        그 틀림을 가속도 보정으로 외워 평가 녹화에서 오히려 나빠짐 (2026-10-18 밤 1 차 학습) → 방향만 먼저 맞춘다."""
+        for s in sets:
+            g = s["gb"].clone().requires_grad_(True)
+            opt = torch.optim.Adam([g], 0.02)
+            for it in range(iters):
+                j = torch.randperm(len(s["X"]), device=dev)[:256]
+                W = {k: s[k][j] for k in ("idx", "R", "p", "m")}
+                gn = g / g.norm() * 9.80665
+                ang, res = window_loss(s["X"][j], W, gn)
+                loss = ((res / 0.01) ** 2 * W["m"]).sum() / W["m"].sum()
+                opt.zero_grad(); loss.backward(); opt.step()
+            with torch.no_grad():
+                old = s["gb"].cpu().numpy()
+                s["gb"] = (g / g.norm() * 9.80665).detach()
+            print(f"  중력 맞춤 {s['name']}: {np.round(old, 2)} → {np.round(s['gb'].cpu().numpy(), 2)}", flush=True)
+
+    fit_gravity(tr + va)
     allX = torch.cat([s["X"] for s in tr]).reshape(-1, 6)
     mu, sd = allX.mean(0), allX.std(0) + 1e-6
     scale = torch.tensor([0.02] * 3 + [0.2] * 3, device=dev)
@@ -256,7 +283,7 @@ def main():
                     # 빠르게 돌 때 보정판 정답 자체가 1~2° 흔들림(롤링셔터·번짐) → 그 프레임은 덜 믿음
                     wn = s["X"][j][..., :3].norm(dim=-1).gather(1, W["idx"])
                     m = W["m"] / (1 + (wn / 1.0) ** 2)
-                    loss = (((ang / 0.005) ** 2 + (res / 0.01) ** 2) * m).sum() / m.sum()
+                    loss = (((ang / a.rot_sigma) ** 2 + (res / 0.01) ** 2) * m).sum() / m.sum()
                     opt.zero_grad()
                     loss.backward()
                     nn.utils.clip_grad_norm_(model.parameters(), 10.0)
@@ -275,6 +302,8 @@ def main():
     bias = train(BiasOnly().to(dev), max(20, a.epochs // 4), 3e-3)
     res["bias"] = dict(train=evaluate(bias, tr), val=evaluate(bias, va), b=(bias.b.detach() * scale).cpu().tolist())
     print("바이어스만:", res["bias"], flush=True)
+    if a.eval_only:
+        return
     cnn = train(CausalCNN().to(dev), a.epochs, 1e-3)
     res["cnn"] = dict(train=evaluate(cnn, tr), val=evaluate(cnn, va), params=sum(p.numel() for p in cnn.parameters()))
     print("CNN:", res["cnn"], flush=True)
