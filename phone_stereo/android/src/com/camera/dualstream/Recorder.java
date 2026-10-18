@@ -156,6 +156,10 @@ final class Recorder {
         private long lastPts=-1;
         private BufferedWriter rows;
         private OutputStream rawOut;
+        /** 1.10-liveupload: one row per encoder output buffer in the .h264 (byte offset, size, pts_us, MediaCodec flags)
+         *  so the PC can rebuild the same MP4 (scan3d/h264_mp4.py) from the append-only files uploaded while recording. */
+        private BufferedWriter rawIdx;
+        private long rawOff;
         private final MediaCodec.BufferInfo info=new MediaCodec.BufferInfo();
 
         final int index;
@@ -170,7 +174,11 @@ final class Recorder {
             try {
                 rows=new BufferedWriter(new FileWriter(csv),1<<16);
                 rows.write("frame_idx,t_mid_ns,physical_ts_ns,logical_ts_ns,exposure_ns,rolling_shutter_skew_ns,pts_us"+(pairCol?",pair_dt_ns":"")+"\n");
-                if(raw!=null) rawOut=new BufferedOutputStream(new FileOutputStream(raw),1<<20);
+                if(raw!=null) {
+                    rawOut=new BufferedOutputStream(new FileOutputStream(raw),1<<20);
+                    rawIdx=new BufferedWriter(new FileWriter(new File(dir,"cam"+id+".h264.csv")),1<<14);
+                    rawIdx.write("offset,size,pts_us,flags\n");
+                }
                 codec=encoderName!=null?MediaCodec.createByCodecName(encoderName)
                         :MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
                 codecName=codec.getName();
@@ -185,7 +193,9 @@ final class Recorder {
                     if(keyReq) { keyReq=false; try { H264.requestSync(codec); } catch(Exception e) { Log.w(TAG,"sync",e); } }
                     if(fr!=null) feed(fr);
                     drain(0);
-                    if(System.nanoTime()-lastFlush>1_000_000_000L) { rows.flush(); if(rawOut!=null) rawOut.flush(); lastFlush=System.nanoTime(); }
+                    if(System.nanoTime()-lastFlush>1_000_000_000L) {
+                        rows.flush(); if(rawOut!=null) { rawOut.flush(); rawIdx.flush(); } lastFlush=System.nanoTime();
+                    }
                 }
             } catch(Throwable e) {
                 error=e.toString(); Log.e(TAG,"lens "+id,e);
@@ -289,6 +299,8 @@ final class Recorder {
                     ob.position(info.offset); ob.limit(info.offset+info.size);
                     if(rawOut!=null) {                   // Annex-B elementary stream (SPS/PPS included)
                         byte[] tmp=new byte[info.size]; ob.duplicate().get(tmp); rawOut.write(tmp);
+                        rawIdx.write(rawOff+","+info.size+","+info.presentationTimeUs+","+info.flags+"\n");
+                        rawOff+=info.size;
                     }
                     if(!config && H264.isBSlice(ob,info.offset,info.offset+info.size)) bFrames++;   // REVIEW7 H5
                     if(config) csd=H264.copy(ob,info);
@@ -318,6 +330,7 @@ final class Recorder {
             try { if(muxer!=null) muxer.release(); } catch(Exception e) { Log.w(TAG,"muxer release",e); }
             try { if(rows!=null) rows.close(); } catch(IOException ignored) {}
             try { if(rawOut!=null) rawOut.close(); } catch(IOException ignored) {}
+            try { if(rawIdx!=null) rawIdx.close(); } catch(IOException ignored) {}
             lensClosed();
         }
     }

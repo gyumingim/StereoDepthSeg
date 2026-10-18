@@ -66,7 +66,8 @@ adb pull /sdcard/Android/data/com.camera.dualstream/files/rec_20261016_153012 .
     cameras.json                카메라 인벤토리 (스트림 경로와 같은 파일의 복사)
     sensors.json                등록된 센서 정보 (같은 파일의 복사)
     meta.json                   녹화 설정·통계
-    cam2.h264, cam5.h264        (rec_raw=true 일 때만)
+    cam2.h264, cam5.h264        (rec_raw=true 또는 앱 1.10 녹화하며 올리기 — 폰에만, PC 가 받은 뒤 지움)
+    cam2.h264.csv, cam5.h264.csv (1.10: 인코더 출력 버퍼마다 offset,size,pts_us,flags → PC h264_mp4.py 가 같은 mp4 로 묶음)
 ```
 
 파일 이름의 숫자는 `--es physical` 의 physical camera id 그대로다 (`physical 2,5` → cam2, cam5; 스트림 index 0 = 첫 id).

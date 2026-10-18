@@ -23,26 +23,37 @@ import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /** 1.9-upload: finished recordings -> PC over HTTPS (scan3d/upload_server.py behind a Cloudflare tunnel).
- *  Config ext files/upload.json {url, token, enabled, wifi_only, delete_after, chunk_mb, parallel} (the PC writes it over adb).
- *  Protocol: GET /api/up/status?rec=  ->  PUT /api/up/chunk?rec=&file=&off=&total= (resume from the PC's size, 409 = use
- *  its "have")  ->  POST /api/up/finish?rec= {files:{name:{size,sha256}}}. Done names: ext files/upload_done.txt.
+ *  1.10-liveupload: WHILE recording, the append-only files (camN.h264 + camN.h264.csv index, frames_camN.csv, imu.csv)
+ *  go up as they grow; after [stop] only the tails + meta.json/cameras.json are left, so the PC has it within seconds.
+ *  The PC rebuilds camN.mp4 from camN.h264 + index (scan3d/h264_mp4.py); the phone keeps its own camN.mp4 (backup,
+ *  adb pull) and deletes its .h264 copy once the PC confirmed (sha256). Slower uplink: the backlog continues after stop.
+ *  Config ext files/upload.json {url, token, enabled, live, wifi_only, delete_after, chunk_mb, parallel} (PC writes it over adb).
+ *  Protocol: GET /api/up/status?rec=  ->  PUT /api/up/chunk?rec=&file=&off=&total=[&live=1] (resume from the PC's size,
+ *  409 = use its "have")  ->  POST /api/up/finish?rec= {files:{name:{size,sha256}}}. Done names: ext files/upload_done.txt.
  *  Progress: ext files/upload_state.json (+ metrics.json "upload"). Foreground service (dataSync) so a finished activity
  *  or screen-off does not stop it; the PC no longer force-stops the app after a recording when uploads are on. */
 public class UploadService extends Service {
     private static final String TAG = "PhoneStereoUp";
     private static final String CH = "upload";
     private static final int NOTE_ID = 7;
-    /** Set by MainActivity: folder being recorded now (never uploaded) and whether the camera streams live. */
+    /** Set by MainActivity: folder being recorded now (only append-only files go up) and whether the camera streams live. */
     static volatile String recordingNow;
     static volatile boolean liveNow;
     static volatile boolean activityAlive;
     static volatile JSONObject state = new JSONObject();
     private static volatile Thread worker;
+    private static final Object NAP = new Object();
     private PowerManager.WakeLock wake;
     private WifiManager.WifiLock wifi;
+
+    /** Running sha256 of the bytes already sent per file (dir/name) -> no full re-read at finish. */
+    private static final class Dig { final MessageDigest md; final long n; Dig(MessageDigest m,long n) { md=m; this.n=n; } }
+    private static final ConcurrentHashMap<String,Dig> digs=new ConcurrentHashMap<>();
 
     /** upload.json present and enabled. */
     static JSONObject config(Context c) {
@@ -54,6 +65,17 @@ public class UploadService extends Service {
             return j;
         } catch(Exception e) { return null; }
     }
+
+    /** Upload while recording (upload.json "live", default true): the recorder then also writes camN.h264 + index. */
+    static boolean liveWanted(Context c) {
+        JSONObject j=config(c);
+        return j!=null && j.optBoolean("live",true);
+    }
+
+    /** Wake the uploader now (recording started / stopped). */
+    static void poke() { synchronized(NAP) { NAP.notifyAll(); } }
+
+    private static void nap(long ms) throws InterruptedException { synchronized(NAP) { NAP.wait(ms); } }
 
     /** From the activity (foreground: allowed to start a foreground service). */
     static void kick(Context c) {
@@ -104,16 +126,27 @@ public class UploadService extends Service {
             while(true) {
                 JSONObject cfg=config(this);
                 if(cfg==null) { setState("off",null,0,0,0,"no upload.json / disabled"); break; }
+                String recNow=recordingNow;
+                if(recNow!=null && cfg.optBoolean("live",true) && !liveNow && netOk(cfg)) {
+                    idle=0;
+                    try { liveUpload(cfg,recNow); backoff=5000; }
+                    catch(Exception e) {
+                        Log.w(TAG,"live upload "+recNow,e);
+                        setState("error",recNow,0,0,0,String.valueOf(e));
+                        nap(backoff); backoff=Math.min(backoff*2,60_000);
+                    }
+                    continue;
+                }
                 List<File> todo=candidates();
                 if(todo.isEmpty()) {
                     // keep waiting while the activity lives (a recording may finish soon), else stop
                     setState("idle",null,0,0,0,null);
-                    if(!activityAlive || ++idle>720) break;
-                    Thread.sleep(5000); continue;
+                    if((!activityAlive && recordingNow==null) || ++idle>720) break;
+                    nap(5000); continue;
                 }
                 idle=0;
-                if(liveNow) { setState("wait_live",null,0,0,0,"live stream running"); Thread.sleep(5000); continue; }
-                if(!netOk(cfg)) { setState("wait_net",null,0,0,0,cfg.optBoolean("wifi_only",true)?"no Wi-Fi":"no network"); Thread.sleep(15000); continue; }
+                if(liveNow) { setState("wait_live",null,0,0,0,"live stream running"); nap(5000); continue; }
+                if(!netOk(cfg)) { setState("wait_net",null,0,0,0,cfg.optBoolean("wifi_only",true)?"no Wi-Fi":"no network"); nap(15000); continue; }
                 boolean allOk=true;
                 for(File d:todo) {
                     if(config(this)==null || liveNow) { allOk=false; break; }
@@ -126,7 +159,7 @@ public class UploadService extends Service {
                     }
                 }
                 if(allOk) backoff=5000;
-                else { Thread.sleep(backoff); backoff=Math.min(backoff*2,300_000); }
+                else { nap(backoff); backoff=Math.min(backoff*2,300_000); }
             }
         } catch(InterruptedException ignored) {
         } finally {
@@ -180,19 +213,107 @@ public class UploadService extends Service {
         try(FileOutputStream o=new FileOutputStream(new File(ext,"upload_done.txt"),true)) { o.write((name+"\n").getBytes("UTF-8")); }
     }
 
+    /** Files that only grow while recording (safe to send before the recording ends). */
+    private static boolean appendOnly(String fn) {
+        return fn.equals("imu.csv") || (fn.startsWith("frames_cam") && fn.endsWith(".csv"))
+                || (fn.startsWith("cam") && (fn.endsWith(".h264") || fn.endsWith(".h264.csv")));
+    }
+
+    /** What goes to the PC: every file except camN.mp4 when camN.h264 + camN.h264.csv exist (the PC rebuilds the MP4). */
+    private static List<File> filesFor(File dir) {
+        List<File> out=new ArrayList<>();
+        File[] fs=dir.listFiles();
+        if(fs==null) return out;
+        for(File f:fs) {
+            String n=f.getName();
+            if(!f.isFile() || n.startsWith(".")) continue;
+            if(n.startsWith("cam") && n.endsWith(".mp4")) {
+                String b=n.substring(0,n.length()-4);
+                if(new File(dir,b+".h264").isFile() && new File(dir,b+".h264.csv").isFile()) continue;
+            }
+            out.add(f);
+        }
+        return out;
+    }
+
+    // ---------------------------------------------------------------- while recording
+    /** Sends the growing append-only files of the folder being recorded until the recording stops (recordingNow changes),
+     *  the live stream starts, the network goes or upload is disabled. Video: whenever 256 KB are new (or 1 s passed),
+     *  CSVs every 64 KB / 3 s. At most one request per file in flight; up to parallel+1 files at once. */
+    private void liveUpload(JSONObject cfg,String name) throws Exception {
+        File ext=getExternalFilesDir(null);
+        if(ext==null) { nap(1000); return; }
+        final File dir=new File(ext,name);
+        JSONObject st=new JSONObject(http(cfg,"GET","/api/up/status?rec="+enc(name),null,0));
+        final JSONObject have=st.optJSONObject("have");
+        final Map<String,Long> off=new ConcurrentHashMap<>();
+        final Map<String,Long> lastPut=new HashMap<>();
+        final Set<String> busy=ConcurrentHashMap.newKeySet();
+        final AtomicLong sent=new AtomicLong();
+        final AtomicInteger fails=new AtomicInteger();
+        final AtomicReference<String> err=new AtomicReference<>();
+        final int chunk=Math.max(1,Math.min(32,cfg.optInt("chunk_mb",16)))<<20;
+        int par=Math.max(1,Math.min(4,cfg.optInt("parallel",2)))+1;
+        ExecutorService ex=Executors.newFixedThreadPool(par);
+        long t0=System.nanoTime();
+        Log.i(TAG,"live upload "+name+" start");
+        try {
+            while(name.equals(recordingNow) && !liveNow && err.get()==null) {
+                if(config(this)==null || !netOk(cfg)) break;
+                File[] fs=dir.listFiles();
+                long now=System.nanoTime(), tot=0, done=0;
+                if(fs!=null) for(final File f:fs) {
+                    final String fn=f.getName();
+                    if(!f.isFile() || !appendOnly(fn)) continue;
+                    long len=f.length();
+                    Long o=off.get(fn);
+                    if(o==null) {
+                        o=have==null?0L:have.optLong(fn,0);
+                        if(o>len) o=0L;      // PC has more than this file (old attempt) -> server answers 409 with its size
+                        off.put(fn,o); lastPut.put(fn,now);
+                    }
+                    tot+=len; done+=Math.min(o,len);
+                    if(busy.contains(fn) || len<=o) continue;
+                    boolean video=fn.endsWith(".h264");
+                    long minB=video?(512<<10):(64<<10), maxAge=video?1_000_000_000L:3_000_000_000L;
+                    if(len-o<minB && now-lastPut.get(fn)<maxAge) continue;
+                    final long from=o, n=Math.min(Math.min(chunk,4<<20),len-o), recTot=tot;   // <= 4 MB: quick hand-over at stop
+                    lastPut.put(fn,now);
+                    busy.add(fn);
+                    ex.submit(() -> {
+                        try {
+                            long[] res=new long[1];
+                            int code=putChunk(cfg,name,f,from,n,from+n,recTot,true,res);
+                            if(code==200) { off.put(fn,res[0]); sent.addAndGet(n); fails.set(0); }
+                            else if(code==409) off.put(fn,res[0]);
+                            else if(fails.incrementAndGet()>8) err.set("live chunk http "+code);
+                        } catch(Exception e) { err.set(String.valueOf(e)); }
+                        finally { busy.remove(fn); }
+                    });
+                }
+                double s=(System.nanoTime()-t0)/1e9;
+                setState("live",name,done,tot,s>0?sent.get()/1048576.0/s:0,null);
+                nap(200);
+            }
+        } finally {
+            ex.shutdown();
+            ex.awaitTermination(90,TimeUnit.SECONDS);
+        }
+        Log.i(TAG,String.format(Locale.US,"live upload %s stop: %.1f MB in %.1f s",name,sent.get()/1048576.0,(System.nanoTime()-t0)/1e9));
+        if(err.get()!=null) throw new IOException(err.get());
+    }
+
     // ---------------------------------------------------------------- one recording
     private void uploadRec(JSONObject cfg,File dir) throws Exception {
         String name=dir.getName();
-        File[] fs=dir.listFiles();
-        if(fs==null) return;
-        final List<File> files=new ArrayList<>();
+        final List<File> files=filesFor(dir);
         long total=0;
-        for(File f:fs) if(f.isFile() && !f.getName().startsWith(".")) { files.add(f); total+=f.length(); }
+        for(File f:files) total+=f.length();
         JSONObject st=new JSONObject(http(cfg,"GET","/api/up/status?rec="+enc(name),null,total));
         if(st.optBoolean("done") || sameSizes(st.optJSONObject("pc"),files)) {
             Log.i(TAG,name+": PC already has it");
             markDone(name);
-            if(cfg.optBoolean("delete_after",false)) deleteRec(dir);
+            afterDone(cfg,dir);
             return;
         }
         JSONObject have=st.optJSONObject("have");
@@ -205,9 +326,10 @@ public class UploadService extends Service {
         final int chunk=Math.max(1,Math.min(32,cfg.optInt("chunk_mb",16)))<<20;
         ExecutorService ex=Executors.newFixedThreadPool(par);
         List<Future<?>> fu=new ArrayList<>();
-        // biggest files first so the two MP4s go in parallel
-        Collections.sort(files,(a,b) -> Long.compare(b.length(),a.length()));
+        // biggest remaining first so the two videos go in parallel
         final JSONObject haveF=have;
+        Collections.sort(files,(a,b) -> Long.compare(b.length()-(haveF==null?0:haveF.optLong(b.getName(),0)),
+                                                       a.length()-(haveF==null?0:haveF.optLong(a.getName(),0))));
         for(final File f:files) fu.add(ex.submit(() -> {
             long off=haveF==null?0:haveF.optLong(f.getName(),0);
             if(off>f.length()) off=0;
@@ -215,7 +337,7 @@ public class UploadService extends Service {
             while(off<f.length()) {
                 long n=Math.min(chunk,f.length()-off);
                 long[] res=new long[1];
-                int code=putChunk(cfg,name,f,off,n,tot,res);
+                int code=putChunk(cfg,name,f,off,n,f.length(),tot,false,res);
                 if(code==200) { sent.addAndGet(n); off=res[0]; tries=0; }
                 else if(code==409) off=res[0];
                 else if(++tries>4) throw new IOException("chunk http "+code);
@@ -229,16 +351,40 @@ public class UploadService extends Service {
         try { for(Future<?> x:fu) x.get(); }
         catch(ExecutionException e) { ex.shutdownNow(); throw new IOException("upload "+name+": "+e.getCause(),e.getCause()); }
         setState("verify",name,tot,tot,0,null);
+        long th=System.nanoTime();
         JSONObject want=new JSONObject();
         for(File f:files) want.put(f.getName(),new JSONObject().put("size",f.length()).put("sha256",sha256(f)));
+        long hashMs=(System.nanoTime()-th)/1_000_000;
         String r=http(cfg,"POST","/api/up/finish?rec="+enc(name),new JSONObject().put("files",want).toString().getBytes("UTF-8"),tot);
         JSONObject fin=new JSONObject(r);
         if(!fin.optBoolean("ok")) throw new IOException("finish: "+r);
         double s=(System.nanoTime()-t0)/1e9;
-        Log.i(TAG,String.format(Locale.US,"%s uploaded %.1f MB in %.1f s",name,sent.get()/1048576.0,s));
+        Log.i(TAG,String.format(Locale.US,"%s uploaded %.1f MB (rest after stop) in %.1f s, sha256 %d ms",name,sent.get()/1048576.0,s,hashMs));
         markDone(name);
         setState("done",name,tot,tot,s>0?sent.get()/1048576.0/s:0,null);
-        if(cfg.optBoolean("delete_after",false)) deleteRec(dir);
+        afterDone(cfg,dir);
+    }
+
+    /** PC confirmed: delete_after -> whole folder; else drop the .h264 copies whose MP4 the phone finished (muxer_ok). */
+    private void afterDone(JSONObject cfg,File dir) {
+        String pre=dir.getAbsolutePath()+"/";
+        for(String k:digs.keySet()) if(k.startsWith(pre)) digs.remove(k);
+        if(cfg.optBoolean("delete_after",false)) { deleteRec(dir); return; }
+        try {
+            JSONObject lenses=new JSONObject(readText(new File(dir,"meta.json"))).optJSONObject("lenses");
+            File[] fs=dir.listFiles();
+            if(lenses==null || fs==null) return;
+            for(File f:fs) {
+                String n=f.getName();
+                if(!n.startsWith("cam") || !n.endsWith(".h264")) continue;
+                String id=n.substring(3,n.length()-5);
+                JSONObject l=lenses.optJSONObject(id);
+                File mp4=new File(dir,"cam"+id+".mp4");
+                if(l!=null && l.optBoolean("muxer_ok") && mp4.length()>0) {
+                    f.delete(); new File(dir,n+".csv").delete();
+                }
+            }
+        } catch(Exception e) { Log.w(TAG,"after done "+dir.getName(),e); }
     }
 
     private static boolean sameSizes(JSONObject pc,List<File> files) {
@@ -254,9 +400,17 @@ public class UploadService extends Service {
         Log.i(TAG,"deleted on phone after PC confirm: "+dir.getName()+" "+ok);
     }
 
-    /** returns HTTP code; res[0] = server size of the file after this call (200/409). */
-    private int putChunk(JSONObject cfg,String rec,File f,long off,long n,long recTotal,long[] res) throws Exception {
-        String path="/api/up/chunk?rec="+enc(rec)+"&file="+enc(f.getName())+"&off="+off+"&total="+f.length();
+    /** returns HTTP code; res[0] = server size of the file after this call (200/409). fileTotal = file size known now
+     *  (while recording = off+n). Keeps the running sha256 of the file when the chunk continues it. */
+    private int putChunk(JSONObject cfg,String rec,File f,long off,long n,long fileTotal,long recTotal,boolean live,long[] res) throws Exception {
+        String path="/api/up/chunk?rec="+enc(rec)+"&file="+enc(f.getName())+"&off="+off+"&total="+fileTotal+(live?"&live=1":"");
+        String key=f.getAbsolutePath();
+        Dig d=digs.get(key);
+        MessageDigest md=null;
+        try {
+            if(d==null && off==0) md=MessageDigest.getInstance("SHA-256");
+            else if(d!=null && d.n==off) md=(MessageDigest)d.md.clone();
+        } catch(Exception e) { md=null; }
         HttpURLConnection c=open(cfg,"PUT",path,recTotal);
         try {
             c.setFixedLengthStreamingMode(n);
@@ -269,16 +423,21 @@ public class UploadService extends Service {
                     int k=in.read(buf,0,(int)Math.min(buf.length,left));
                     if(k<0) throw new EOFException(f.getName());
                     o.write(buf,0,k); left-=k;
+                    if(md!=null) md.update(buf,0,k);
                 }
             }
             int code=c.getResponseCode();
             String body=readAll(code>=400?c.getErrorStream():c.getInputStream());
             try { res[0]=new JSONObject(body).optLong("have",off); } catch(Exception e) { res[0]=off; }
+            if(code==200 && md!=null && res[0]==off+n) digs.put(key,new Dig(md,off+n));
             return code;
         } catch(IOException e) {
             Log.w(TAG,"chunk "+f.getName()+"@"+off+": "+e);
+            c.disconnect();
             return -1;
-        } finally { c.disconnect(); }
+        }
+        // no disconnect() on success: on Android it closes the socket; with the body read the TLS connection is reused
+        // (a new TLS handshake through Cloudflare per small live chunk cost more than the chunk itself).
     }
 
     private HttpURLConnection open(JSONObject cfg,String method,String path,long recTotal) throws IOException {
@@ -305,19 +464,20 @@ public class UploadService extends Service {
             if(code==401) throw new IOException("token rejected (401) - PC upload_token changed? run upload_server.py --push-now");
             if(code>=400 && code!=409) throw new IOException(method+" "+path+" -> "+code+" "+r);
             return r;
-        } finally { c.disconnect(); }
+        } catch(IOException e) { c.disconnect(); throw e; }
     }
 
     // ---------------------------------------------------------------- state
     private long lastStateMs;
     private synchronized void setState(String what,String rec,long done,long total,double mbps,String err) {
         long now=System.currentTimeMillis();
-        if(what.equals("uploading") && now-lastStateMs<1000) return;
+        if((what.equals("uploading") || what.equals("live")) && now-lastStateMs<1000) return;
         lastStateMs=now;
         try {
             JSONObject j=new JSONObject();
             j.put("state",what); j.put("rec",rec==null?JSONObject.NULL:rec); j.put("done",done); j.put("total",total);
             j.put("mbps",Math.round(mbps*100)/100.0); j.put("error",err==null?JSONObject.NULL:err); j.put("t_wall_ms",now);
+            if(what.equals("live")) j.put("lag_mb",Math.round((total-done)/104857.6)/10.0);   // not yet on the PC
             state=j;
             File ext=getExternalFilesDir(null);
             if(ext!=null) {
@@ -327,6 +487,8 @@ public class UploadService extends Service {
             }
             if(what.equals("uploading") && total>0)
                 notify(String.format(Locale.US,"%s 올리는 중 %d%% · %.1f MB/s",rec,done*100/total,mbps));
+            else if(what.equals("live"))
+                notify(String.format(Locale.US,"녹화하며 올리는 중 · %.1f MB/s · 밀림 %.1f MB",mbps,(total-done)/1048576.0));
             else if(what.equals("done")) notify(rec+" 업로드 끝");
             else if(what.equals("error")) notify("업로드 오류 (다시 시도): "+err);
             else if(what.startsWith("wait")) notify("업로드 대기: "+err);
@@ -349,11 +511,19 @@ public class UploadService extends Service {
         return b.toString("UTF-8");
     }
 
+    /** sha256 of the whole file: continues the running digest from the upload when there is one (only the tail is read). */
     private static String sha256(File f) throws Exception {
-        MessageDigest md=MessageDigest.getInstance("SHA-256");
-        try(InputStream i=new FileInputStream(f)) {
+        Dig d=digs.get(f.getAbsolutePath());
+        MessageDigest md=null;
+        long from=0;
+        if(d!=null && d.n<=f.length()) {
+            try { md=(MessageDigest)d.md.clone(); from=d.n; } catch(CloneNotSupportedException e) { md=null; }
+        }
+        if(md==null) { md=MessageDigest.getInstance("SHA-256"); from=0; }
+        try(RandomAccessFile in=new RandomAccessFile(f,"r")) {
+            in.seek(from);
             byte[] buf=new byte[1<<20]; int n;
-            while((n=i.read(buf))>0) md.update(buf,0,n);
+            while((n=in.read(buf))>0) md.update(buf,0,n);
         }
         StringBuilder sb=new StringBuilder();
         for(byte x:md.digest()) sb.append(String.format("%02x",x));

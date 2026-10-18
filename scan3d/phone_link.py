@@ -188,6 +188,19 @@ class PhoneLink:
     def status(self):
         return parse_status(self.status_raw())
 
+    def _rec_kbps(self):
+        """녹화 비트레이트: 세션이 정한 값, 없으면 load_model 기준 (1440x1080·15 = 14 Mbps, 픽셀률 비례).
+        앱 자체 기본식(640x480·15 = 4 Mbps 비례 → 1440 에서 20.25 Mbps)을 쓰지 않게 항상 넘긴다
+        (2026-10-18: 웹 밖에서 시작한 녹화가 20 Mbps 로 찍혀 업로드가 밀림)."""
+        if self.rec_kbps:
+            return int(self.rec_kbps)
+        try:
+            import load_model
+            return int(load_model.rec_kbps(dict(load_model.DEFAULT_COEFFS), {}, int(self.width), int(self.height),
+                                           int(self.save_fps or self.fps) if hasattr(self, "save_fps") else int(self.fps)))
+        except Exception:
+            return 14000
+
     def start_app(self, mode="live", wait_s=12.0):
         """SPEC 1.5 + --es mode. 반환 (ok, status 줄)."""
         if mode not in MODES:
@@ -226,7 +239,7 @@ class PhoneLink:
                              "--es", "stream_fmt", str(self.stream_fmt), "--ei", "jpeg_q", str(self.jpeg_q),
                              "--es", "sync", str(self.sync), "--ei", "rec_wait_sync_s", str(int(self.rec_wait_sync_s)),
                              *(("--ei", "live_kbps", str(int(self.live_kbps))) if self.live_kbps else ()),   # 앱 MainActivity live_kbps
-                             *(("--ei", "rec_kbps", str(int(self.rec_kbps))) if self.rec_kbps else ()), timeout=20)
+                             "--ei", "rec_kbps", str(int(self._rec_kbps())), timeout=20)
         self.log(f"[adb] am start mode={mode} {self.width}x{self.height} "
                  f"{f'{cap} fps 촬영 → {self.fps} fps 저장' if cap else f'{self.fps} fps'} sync={self.sync} rc={rc} "
                  f"{out.splitlines()[-1] if out else ''}")

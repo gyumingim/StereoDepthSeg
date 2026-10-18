@@ -489,7 +489,9 @@ public class MainActivity extends Activity {
         int kbpsExtra=getIntent().getIntExtra("rec_kbps",0);
         int kbps=kbpsExtra>0?kbpsExtra:Caps.autoKbps(width,height,saveFps,recEncoder);
         recKbps=kbps;
-        boolean raw=getIntent().getBooleanExtra("rec_raw",false);
+        // 1.10-liveupload: also write the append-only .h264 (+ .h264.csv index) that UploadService sends while recording
+        boolean liveUp=UploadService.liveWanted(this);
+        boolean raw=getIntent().getBooleanExtra("rec_raw",false) || liveUp;
         // encoder / MP4 run at the SAVED rate; frames CSV gets pair_dt_ns when subsampling
         Recorder rec=new Recorder(dir,ids,width,height,saveFps,kbps,raw,recEncoder,liveShared?liveSink(++liveGen):null,subsample!=null);
         recMeta=new JSONObject();
@@ -501,6 +503,7 @@ public class MainActivity extends Activity {
         recMeta.put("capture_fps",fps); recMeta.put("save_fps",saveFps);
         recMeta.put("imu_us",imuPeriodUs); recMeta.put("focus_diopters",focus);
         recMeta.put("raw_ts",rawTimestamps); recMeta.put("rec_kbps",kbps); recMeta.put("rec_raw_h264",raw);
+        recMeta.put("live_upload",liveUp);
         recMeta.put("rec_kbps_source",kbpsExtra>0?"extra":"auto"); recMeta.put("encoder",recEncoder==null?"default":recEncoder);
         recMeta.put("i_frame_interval_s",1); recMeta.put("max_b_frames",0); recMeta.put("codec","video/avc");
         recMeta.put("live_shares_encoder",liveShared);
@@ -524,7 +527,8 @@ public class MainActivity extends Activity {
         catch(IOException e) { Log.w(TAG,"cameras.json copy",e); }
         recorder=rec;
         lastRecName=name;
-        UploadService.recordingNow=name;          // never upload the folder being written
+        UploadService.recordingNow=name;          // only the append-only files go up while it is written (1.10)
+        UploadService.poke();
         Log.i(TAG,"recording to "+dir);
     }
 
@@ -572,6 +576,7 @@ public class MainActivity extends Activity {
             Log.i(TAG,"live H.264 moved from recorder to own encoder");
         }
         UploadService.recordingNow=null;          // meta "finishing" still keeps a late-closing folder out
+        UploadService.poke();                     // live upload: send the tails + finish now, not after a 5 s idle wait
         status("RECORD_DONE rec="+rec.dir.getName()+" reason="+reason
                 +(streamEnabled&&running?" | STREAMING continues":""));
     }

@@ -83,6 +83,19 @@ WSL 에서는 `bash ~/scanner/StereoDepthSeg/scan3d/tools/restart_server.sh`. �
 - 폰 설정: adb 가 붙어 있으면 PC 가 30 초마다 폰의 `files/upload.json`(주소·토큰)을 확인하고 다르면 다시 넣는다.
   → **터널 주소가 바뀐 뒤(PC 재부팅·cloudflared 재시작) 한 번은 adb 가 붙어야** 폰이 새 주소를 안다.
   바로 넣기: `wsl -d Ubuntu-22.04 -e bash -lc "cd ~/scanner/StereoDepthSeg/scan3d && python3 upload_server.py --push-now"`
+- **앱 1.10-liveupload: 녹화하면서 올린다** (기본). [정지] 뒤 약 2 초면 PC `recordings/<녹화>` 에 있다
+  (실측 2026-10-18, 30 s 녹화 152 MB: 끝나고 올리기 55~75 s → 녹화하며 올리기 **1.7 s**, 업로드 4.7 MB/s 로 녹화 5 MB/s 를 따라감).
+  - 어떻게: 녹화 중에는 계속 커지기만 하는 파일(`camN.h264` 원시 H.264 + 그 색인 `camN.h264.csv`, `frames_camN.csv`, `imu.csv`)의
+    늘어난 부분을 이어 붙여 올린다 (영상 512 KB 또는 1 s 마다, CSV 3 s 마다). mp4 는 끝날 때 moov 가 써져서 중간에 못 올리므로,
+    [정지] 뒤 남은 꼬리와 meta.json 만 보내면 PC 가 sha256 확인 뒤 `h264_mp4.py` 로 같은 비트스트림·같은 pts 의 `camN.mp4` 를 묶는다
+    (다시 인코딩 없음, 0.3 s). 폰에는 지금처럼 `camN.mp4` 가 남고(오프라인 백업·adb 가져오기), `.h264` 사본은 PC 확인 뒤 지운다.
+  - 업로드가 녹화보다 느리면(셀룰러·약한 Wi-Fi) 밀린 만큼 [정지] 뒤에 이어서 올린다 (알림에 "밀림 N MB"). Wi-Fi 만 옵션 그대로.
+  - 실시간 스트림(녹화+실시간)이 돌면 녹화 중에는 안 올리고 끝난 뒤 올린다 (상향 대역을 스트림에 줌).
+  - 폰 부하: 30 s 녹화 프레임 빠짐 0 (두 방식 모두), 앱 CPU 평균 166~178 %(한 코어 기준, 8 코어) — 차이는 측정 흔들림 안.
+    녹화 중 저장소에 `.h264` 를 한 번 더 쓴다 (약 5 MB/s).
+  - 끄기: `runs/upload.json` 의 `"live_upload": false` → 1.9 방식 (끝나고 mp4 를 올림). `"keep_h264": true` 면 PC 가 `.h264` 를 남김.
+  - PC 의 `camN.mp4` 는 폰 mp4 와 크기가 다르다 (같은 프레임, pts 는 µs 단위). 그래서 `.uploaded.json` 이 있는 녹화는 rec_sync 가
+    "같은 녹화" 로 보고 adb 로 다시 가져오지 않는다 (폰에서 지우기도 허용).
 - 앱(1.9-upload): 녹화가 끝나면 알림 "녹화 업로드" 가 뜨고 올린다. 끊기면 받은 데까지 이어서, 다 올라가면 PC 가 sha256 을
   확인한 뒤 `recordings/<녹화>` 로 옮기고 → 자동 복원이 집어 간다. 웹 녹화 목록에 "폰이 올리는 중 NN% · X MB/s".
   - 앱을 손으로 열기만 해도(adb 없이) 아직 안 올린 녹화를 올린다. 실시간 스트림 중에는 쉰다. 기본은 **Wi-Fi 에서만**.

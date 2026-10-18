@@ -13,6 +13,9 @@ serve_idle.sh 가 서버를 띄울 때 이것도 (없으면) 같이 띄운다. s
 
 설정 runs/upload.json (없으면 기본값으로 만듦):
   enabled      true   — false 면 폰 설정에 enabled=false 를 넣어 앱이 안 올림 (서버는 계속 받음)
+  live_upload  true   — 앱 1.10-liveupload: 녹화하면서 올림 (camN.h264 + camN.h264.csv, frames/imu CSV 를 이어 붙여 올리고
+                        [정지] 뒤에는 꼬리·meta.json 만). false = 녹화가 끝난 뒤 mp4 를 올림 (1.9 방식)
+  keep_h264    false  — 받은 .h264 로 camN.mp4 를 만든 뒤 .h264·색인을 지움 (true = 남김)
   protocol     "http2" — cloudflared 와 Cloudflare 사이 (WSL 은 UDP 버퍼를 못 키워 quic 이 느림: 2026-10-18 1 MB/s 대)
   tunnel       "quick" (계정 없는 trycloudflare, 주소가 cloudflared 시작마다 바뀜) | "none" (고정 주소를 따로 둘 때)
   public_url   null 또는 "https://scan.example.com" (Cloudflare 계정·도메인의 이름 있는 터널 → 이 주소를 폰에 넣음)
@@ -24,10 +27,13 @@ serve_idle.sh 가 서버를 띄울 때 이것도 (없으면) 같이 띄운다. s
 API (모든 요청에 Authorization: Bearer <토큰>, 없거나 틀리면 401):
   GET  /api/up/ping                                    {ok, t}
   GET  /api/up/status?rec=NAME                         {ok, done, have:{파일: 받은 바이트}}  (done = PC recordings/ 에 이미 있음)
-  PUT  /api/up/chunk?rec=NAME&file=F&off=O&total=T     본문 = 파일 F 의 O 바이트부터 (최대 32 MB). 헤더 X-Rec-Total = 녹화 전체 크기.
-                                                       O 가 PC 에 받은 크기와 다르면 409 {have} → 앱이 그 자리부터 다시
+  PUT  /api/up/chunk?rec=NAME&file=F&off=O&total=T[&live=1]
+                                                       본문 = 파일 F 의 O 바이트부터 (최대 32 MB). 헤더 X-Rec-Total = 녹화 전체 크기.
+                                                       O 가 PC 에 받은 크기와 다르면 409 {have} → 앱이 그 자리부터 다시.
+                                                       live=1 = 녹화 중 (파일이 아직 자람, total = 지금까지 크기)
   POST /api/up/finish?rec=NAME  {"files": {F: {"size": N, "sha256": "..."}}}
-       크기·sha256 이 모두 맞고 meta.json 이 complete=true 면 recordings/.uploading/NAME → recordings/NAME 로 옮김
+       크기·sha256 이 모두 맞고 meta.json 이 complete=true 면 camN.h264 + camN.h264.csv → camN.mp4 (h264_mp4.py, 다시 인코딩 없음)
+       그리고 recordings/.uploading/NAME → recordings/NAME 로 옮김. sha256 은 받으면서 이어 계산해 둔 값 (서버를 다시 켜면 파일 다시 읽음)
        (옛 PC 사본의 recon_* 은 새 폴더로 옮겨 보존). 그 뒤 rec_sync 의 자동 복원이 집어 간다. 응답 {ok, moved}
 상태 파일 runs/upload_state.json (웹 /api/state 의 ui.upload): 터널 주소, 지금 받는 녹화·진행률·속도, 최근 끝난 것.
 
@@ -51,6 +57,7 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
+import h264_mp4
 import phone_link
 
 HERE = Path(__file__).resolve().parent
@@ -66,7 +73,8 @@ CHUNK_MAX = 32 << 20
 REC_RE = re.compile(r"^rec_[\w.\-]{1,80}$")
 FILE_RE = re.compile(r"^[A-Za-z0-9][\w.\-]{0,120}$")
 PHONE_CFG = f"/sdcard/Android/data/{phone_link.APP}/files/upload.json"
-DEFAULT_CFG = dict(enabled=True, tunnel="quick", protocol="http2", public_url=None, wifi_only=True, delete_after=False, max_rec_mb=4096)
+DEFAULT_CFG = dict(enabled=True, live_upload=True, tunnel="quick", protocol="http2", public_url=None, wifi_only=True,
+                   delete_after=False, max_rec_mb=4096, keep_h264=False)
 CF_URL_RE = re.compile(r"https://[a-z0-9-]+\.trycloudflare\.com")
 
 
@@ -129,6 +137,7 @@ class State:
         self.url_t = None
         self.tunnel = "off"
         self.active = {}            # name → dict(done, total, t0, t, bytes_win)
+        self.hashes = {}            # (name, file) → [받은 크기, sha256 진행 객체]  (받으면서 이어 계산)
         self.recent = []            # [{name, mb, s, mbps, at, ok, error}]
         self.pushed = None          # 폰에 마지막으로 넣은 설정 (문자열)
         self.phone_cfg_ok = None
@@ -142,7 +151,7 @@ class State:
                 if now - a["t"] > 600:
                     continue
                 el = max(1e-3, a["t"] - a["t0"])
-                act.append(dict(name=n, done=a["done"], total=a["total"], session_bytes=a["sess"],
+                act.append(dict(name=n, done=a["done"], total=a["total"], session_bytes=a["sess"], live=a.get("live", False),
                                 mbps=round(a["sess"] / 1048576 / el, 2), idle_s=round(now - a["t"], 1)))
             st = dict(t=now, url=self.url, url_t=self.url_t, tunnel=self.tunnel, phone_cfg_ok=self.phone_cfg_ok,
                       active=act, recent=self.recent[-10:], enabled=upload_enabled())
@@ -152,7 +161,7 @@ class State:
         except OSError:
             pass
 
-    def note(self, name, nbytes, total):
+    def note(self, name, nbytes, total, live=False):
         with self.lock:
             now = time.time()
             a = self.active.get(name)
@@ -160,6 +169,7 @@ class State:
                 a = self.active[name] = dict(done=0, total=total, t0=now, t=now, sess=0)
             a["sess"] += nbytes
             a["t"] = now
+            a["live"] = live
             if total:
                 a["total"] = total
             a["done"] = staged_bytes(self.stage / name)
@@ -293,15 +303,25 @@ def make_handler(S, token, cfg_get):
                 self._drain()
                 return self._json(409, dict(ok=False, have=have))
             got = 0
+            hk = (n, fn)
+            hs = S.hashes.get(hk)
+            if have == 0:
+                hs = S.hashes[hk] = [0, hashlib.sha256()]
+            elif hs is None or hs[0] != have:
+                hs = None
+                S.hashes.pop(hk, None)                  # 이어 계산 못 함 → finish 때 파일을 다시 읽음
             with open(p, "ab") as f:
                 while got < ln:
                     b = self.rfile.read(min(1 << 20, ln - got))
                     if not b:
                         break
                     f.write(b)
+                    if hs is not None:
+                        hs[1].update(b)
+                        hs[0] += len(b)
                     got += len(b)
             os.utime(d)                                  # rec_sync: 최근에 받는 중 → adb 자동 가져오기 미룸
-            S.note(n, got, rec_total)
+            S.note(n, got, rec_total, live=q.get("live") == "1")
             if got < ln:
                 self.close_connection = True
                 return self._json(400, dict(ok=False, error="short body", have=have + got))
@@ -341,9 +361,13 @@ def finish(S, n, want):
         p = d / fn
         if not p.is_file() or p.stat().st_size != int(w.get("size", -1)):
             bad.append(dict(file=fn, have=p.stat().st_size if p.is_file() else None, want=w.get("size")))
-        elif sha256_file(p) != str(w.get("sha256", "")).lower():
-            bad.append(dict(file=fn, error="sha256"))
-            p.unlink()                                       # 내용이 틀림 → 처음부터 다시 받음
+        else:
+            hs = S.hashes.get((n, fn))
+            got = hs[1].hexdigest() if hs is not None and hs[0] == p.stat().st_size else sha256_file(p)
+            if got != str(w.get("sha256", "")).lower():
+                bad.append(dict(file=fn, error="sha256"))
+                p.unlink()                                   # 내용이 틀림 → 처음부터 다시 받음
+                S.hashes.pop((n, fn), None)
     extra = [p.name for p in d.iterdir() if p.is_file() and p.name not in want] if d.is_dir() else []
     for fn in extra:
         (d / fn).unlink()
@@ -357,7 +381,14 @@ def finish(S, n, want):
     if not complete:
         return 409, dict(ok=False, error="meta.json complete=false")
     total = sum(int(w["size"]) for w in want.values())
-    (d / ".uploaded.json").write_text(json.dumps(dict(at=time.strftime("%Y-%m-%d %H:%M:%S"), files=want), indent=1))
+    t_hash = time.time() - t0
+    try:                                                     # 녹화하며 올린 것: .h264 + 색인 → camN.mp4
+        mux = h264_mp4.remux_dir(d, keep=bool(load_cfg().get("keep_h264", False)), log=log)
+    except Exception as e:
+        log(f"MP4 묶기 실패 {n}: {e!r}")
+        return 500, dict(ok=False, error=f"remux: {e}")
+    (d / ".uploaded.json").write_text(json.dumps(dict(at=time.strftime("%Y-%m-%d %H:%M:%S"), at_ms=int(time.time() * 1000),
+                                                      files=want, remux=mux), indent=1))
     if final.exists():
         for sub in final.iterdir():                          # 옛 복원본 보존 (rec_sync._pull_safe 와 같은 규칙)
             if sub.is_dir() and sub.name.startswith("recon_"):
@@ -366,12 +397,14 @@ def finish(S, n, want):
     d.rename(final)
     with S.lock:
         a = S.active.pop(n, None)
+        for k in [k for k in S.hashes if k[0] == n]:
+            S.hashes.pop(k, None)
         el = (a["t"] - a["t0"]) if a else 0
         S.recent.append(dict(name=n, mb=round(total / 1048576, 1), s=round(el, 1),
                              mbps=round(a["sess"] / 1048576 / max(el, 1e-3), 2) if a else None,
                              at=time.strftime("%H:%M:%S"), ok=True))
         S.dirty = True
-    log(f"받음 {n}: {total / 1048576:.1f} MB, sha256 확인 {time.time() - t0:.1f} s → recordings/{n}")
+    log(f"받음 {n}: {total / 1048576:.1f} MB, sha256 확인 {t_hash:.2f} s, 끝까지 {time.time() - t0:.2f} s → recordings/{n}")
     return 200, dict(ok=True, moved=True)
 
 
@@ -430,6 +463,7 @@ def phone_cfg_text(S, token, cfg):
     if not url:
         return None
     return json.dumps(dict(url=url.rstrip("/"), token=token, enabled=bool(cfg.get("enabled", True)),
+                           live=bool(cfg.get("live_upload", True)),
                            wifi_only=bool(cfg.get("wifi_only", True)), delete_after=bool(cfg.get("delete_after", False)),
                            chunk_mb=16, parallel=2, set_at=time.strftime("%Y-%m-%d %H:%M:%S")), separators=(",", ":"))
 

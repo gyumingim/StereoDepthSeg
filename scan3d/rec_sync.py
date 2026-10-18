@@ -223,7 +223,7 @@ class RecSync:
                                  and name == (self.sc.rec_status or {}).get("rec")):
             return dict(ok=False, error="녹화 중인 폴더")
         info = self._phone_info(rec)
-        if not info["files"] or not self._same(dict(rec, **info), self._local_files(name)):
+        if not self._uploaded(name) and (not info["files"] or not self._same(dict(rec, **info), self._local_files(name))):
             return dict(ok=False, error="PC 사본이 폰과 똑같은지 확인하지 못해 지우지 않았습니다")
         rc, out = link.run("shell", "rm", "-rf", f"{rec['base']}/{name}", timeout=30)
         if rc != 0:
@@ -302,7 +302,7 @@ class RecSync:
                 continue
             ph, lo = phone.get(n), local.get(n)
             lf = self._local_files(n) if lo else None
-            same = bool(ph and lo and self._same(ph, lf))
+            same = bool(ph and lo and (self._same(ph, lf) or self._uploaded(n)))
             it = dict(name=n, on_phone=bool(ph), on_pc=bool(lo), same=same,
                       phone_mb=round(ph["size_kb"] / 1024, 1) if ph else None, pc_mb=lo["size_mb"] if lo else None,
                       recons=lo["recon"] if lo else [], paused=paused,
@@ -451,6 +451,11 @@ class RecSync:
             return None
         return {p.name: p.stat().st_size for p in d.iterdir() if p.is_file() and not p.name.startswith(".")}
 
+    def _uploaded(self, name):
+        """폰이 HTTPS 로 올리고 sha256 까지 맞은 녹화 (upload_server.py 가 .uploaded.json 을 씀). 녹화하며 올린 것은
+        PC 의 camN.mp4 를 .h264 에서 다시 묶어 크기가 폰 mp4 와 달라도 같은 녹화다 → adb 로 다시 가져오지 않음."""
+        return (self._local_dir(name) / ".uploaded.json").is_file()
+
     @staticmethod
     def _same(ph, lf):
         if not lf:
@@ -486,7 +491,7 @@ class RecSync:
                 if not ph["complete"] or name in self.pull_failed or name == cur:
                     continue
                 lf = self._local_files(name)
-                if lf is not None and self._same(ph, lf):
+                if lf is not None and (self._same(ph, lf) or self._uploaded(name)):
                     continue
                 d = self._local_dir(name)
                 if lf is not None and any(d.glob("recon_*")):
