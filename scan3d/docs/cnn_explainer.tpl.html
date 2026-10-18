@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IMU 보정 CNN</title>
+<style>
+:root{--bg:#f7f7f5;--fg:#1c1f24;--mut:#6b7078;--card:#fff;--line:#e2e4e8;--a:#2563eb;--b:#dc2626;--c:#16a34a;--d:#d97706;--hl:rgba(37,99,235,.14)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--hl:rgba(96,165,250,.18)}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 system-ui,"Malgun Gothic",sans-serif}
+main{max-width:920px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:26px;margin:0 0 6px}
+h2{font-size:20px;margin:40px 0 8px}
+.lead{color:var(--mut);margin:0 0 18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0}
+canvas{width:100%;display:block}
+.mut{color:var(--mut);font-size:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+button{font:inherit;font-size:14px;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
+button.on{border-color:var(--a);color:var(--a)}
+.step{display:inline-block;min-width:24px;height:24px;border-radius:12px;background:var(--a);color:#fff;text-align:center;font-size:14px;line-height:24px;margin-right:6px}
+table{border-collapse:collapse;width:100%;font-size:15px}td,th{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+.key{font-weight:600}
+input[type=range]{width:100%}
+</style>
+</head>
+<body><main>
+<h1>IMU를 고쳐 주는 작은 CNN, 그림으로 이해하기</h1>
+<p class="lead">S24에서 실제로 기록한 IMU 4초로 설명합니다. 그림은 모두 움직이거나 눌러 볼 수 있습니다.</p>
+
+<h2><span class="step">1</span>재료: IMU 신호</h2>
+<div class="card">
+ <canvas id="c1" height="220"></canvas>
+ <p class="mut">파랑 = 자이로(회전 속도, z축), 빨강 = 가속도(x축). 폰을 손에 들고 움직인 4초입니다. 초당 50개로 줄여 그렸습니다(실제로는 초당 500개).</p>
+ <p>CNN이 하는 일은 이 구불구불한 선에서 <span class="key">"어떤 모양이 어디에 있는지"</span>를 찾는 것입니다. 예를 들면 갑자기 꺾이는 곳, 잘게 떨리는 곳, 평평한 곳입니다.</p>
+</div>
+
+<h2><span class="step">2</span>필터 하나 = 작은 창을 밀며 모양 찾기</h2>
+<div class="card">
+ <div class="row" id="kbtn"></div>
+ <canvas id="c2" height="330"></canvas>
+ <input type="range" id="pos" min="3" max="196" value="40">
+ <p class="mut">위: 원래 신호와 <b>창(7칸)</b>. 가운데: 창 안의 7개 값에 곱할 <b>무게(필터)</b>. 아래: 곱해서 더한 결과(창을 밀 때마다 점 하나).
+ 슬라이더를 움직이거나 그냥 두면 저절로 밀립니다.</p>
+ <p>필터 무게가 어떤 모양이냐에 따라 찾는 것이 달라집니다. <b>"꺾임 찾기"</b>는 신호가 바뀌는 곳에서 크게 튀고, <b>"떨림 찾기"</b>는 잘게 흔들리는 곳에서 커집니다.
+ <span class="key">실제 CNN에서는 이 무게를 사람이 정하지 않고, 학습하면서 스스로 정합니다.</span></p>
+</div>
+
+<h2><span class="step">3</span>필터 여러 개 = 채널</h2>
+<div class="card">
+ <canvas id="c3" height="260"></canvas>
+ <p class="mut">같은 신호에 필터 4개를 동시에 적용한 결과. 진할수록 그 모양이 강하게 있다는 뜻입니다.</p>
+ <p>한 층에 필터를 32개 두면 "32가지 모양"을 한꺼번에 찾습니다. 이것을 <span class="key">채널 32</span>라고 부릅니다.</p>
+</div>
+
+<h2><span class="step">4</span>층을 쌓으면 더 긴 시간을 본다</h2>
+<div class="card">
+ <div class="row"><button id="l1">1층</button><button id="l2">2층</button><button id="l3">3층</button><button id="l4">4층</button><button id="l5">5층</button></div>
+ <canvas id="c4" height="300"></canvas>
+ <p class="mut">맨 위 점 하나(빨강)가 아래로 내려가며 원래 신호의 어느 범위를 보고 있는지(파랑)를 보여 줍니다. 필터 길이 7칸, 층마다 간격을 2배씩 벌리면(1, 2, 4, 8, 16칸) 5층만으로 약 190칸 = 200 Hz에서 약 1초를 봅니다.</p>
+ <p>1층은 아주 짧은 순간(떨림)만 보고, 위층으로 갈수록 그것들을 묶어 <span class="key">"기울이며 가속하는 동작"</span>처럼 긴 패턴을 봅니다.
+ 오른쪽 끝만 보도록(과거만 보도록) 만들어서 <span class="key">미래를 기다리지 않습니다 → 지연이 없습니다.</span></p>
+</div>
+
+<h2><span class="step">5</span>CNN이 내놓는 것: 보정값 + 믿음 정도</h2>
+<div class="card">
+ <div class="row"><button id="bOn" class="on">CNN 보정 켜기</button><button id="bOff">끄기</button></div>
+ <canvas id="c5" height="300"></canvas>
+ <p class="mut">위: 자이로 값에 센서 오차(바이어스, 0.12 rad/s — 잘 보이게 크게 잡음)가 섞인 상태. 아래: 그걸 적분해 얻은 <b>회전 각도</b>. 초록 = 정답, 빨강 = 오차 섞인 IMU 그대로, 파랑 = CNN이 고친 IMU.</p>
+ <p>센서 오차가 아주 작아도 적분하면 시간이 갈수록 <span class="key">계속 벌어집니다</span>(빨강). 위치는 두 번 적분이라 더 빨리 벌어집니다.
+ CNN은 샘플마다 "여기서 이만큼 빼라"(보정값)와 "이 값은 이 정도만 믿어라"(불확실성)를 내고, 적분은 원래 물리 공식으로 합니다.
+ 그래서 신경망이 물리를 새로 배울 필요가 없습니다.</p>
+ <p class="mut">이 그림의 "CNN 보정"은 설명용으로 오차를 거의 맞힌 경우를 흉내 낸 것입니다. 실제 성능은 학습해 봐야 압니다.</p>
+</div>
+
+<h2><span class="step">6</span>어떻게 배우나: 보정판이 정답</h2>
+<div class="card">
+ <svg id="flow" viewBox="0 0 880 300" width="100%"></svg>
+ <p>① IMU 1초를 CNN에 넣고 ② 고친 IMU를 물리식으로 적분해 1초 뒤 위치·자세를 예측합니다. ③ 같은 순간 카메라가 본 <b>보정판</b>으로 실제 위치·자세(정답)를 구합니다.
+ ④ 둘의 차이(오차)를 계산하고 ⑤ 그 오차가 줄어드는 쪽으로 필터 무게를 조금씩 고칩니다. 이걸 수만 번 반복합니다.</p>
+ <p class="mut">그래서 사용자분이 보정판 앞에서 폰을 여러 방식으로 움직여 주는 녹화가 곧 학습 재료입니다.</p>
+</div>
+
+<h2><span class="step">7</span>한눈에 정리</h2>
+<div class="card"><table>
+<tr><th>말</th><th>뜻</th><th>우리 설계</th></tr>
+<tr><td class="key">필터</td><td>짧은 창에 곱하는 무게. 특정 모양을 찾음</td><td>길이 7칸</td></tr>
+<tr><td class="key">채널</td><td>한 층의 필터 개수 = 찾는 모양 종류 수</td><td>32 → 64 → 128</td></tr>
+<tr><td class="key">층</td><td>필터 단계를 겹쳐 쌓은 것. 위로 갈수록 긴 패턴</td><td>4~5층, 간격 2배씩 → 약 1초를 봄</td></tr>
+<tr><td class="key">과거만 보기</td><td>지금보다 앞의 데이터만 씀</td><td>추가 지연 0</td></tr>
+<tr><td class="key">출력</td><td>샘플마다 보정값 6개 + 불확실성 6개</td><td>적분은 물리식</td></tr>
+<tr><td class="key">정답</td><td>보정판으로 구한 폰 위치·자세</td><td>녹화 20~30분</td></tr>
+<tr><td class="key">크기·속도</td><td>무게 10만~20만 개</td><td>폰에서 1 ms 안팎 (추정)</td></tr>
+</table></div>
+</main>
+<script>
+const D = __IMU__;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const N = D.t.length;
+function fit(c){const r=devicePixelRatio||1;c.width=c.clientWidth*r;c.height=c.getAttribute('height')*r;const x=c.getContext('2d');x.setTransform(r,0,0,r,0,0);return [x,c.clientWidth,+c.getAttribute('height')];}
+function line(x,arr,X,Y,col,w=2){x.strokeStyle=col;x.lineWidth=w;x.beginPath();arr.forEach((v,i)=>{const px=X(i),py=Y(v);i?x.lineTo(px,py):x.moveTo(px,py)});x.stroke();}
+function rng(a){let lo=Infinity,hi=-Infinity;for(const v of a){lo=Math.min(lo,v);hi=Math.max(hi,v)}return [lo,hi];}
+const gz=D.gz, ax=D.ax.map(v=>v);
+// 1
+function draw1(){const [x,W,H]=fit(c1);x.clearRect(0,0,W,H);
+ const [g0,g1]=rng(gz),[a0,a1]=rng(ax);const X=i=>10+i/(N-1)*(W-20);
+ x.strokeStyle=css('--line');x.beginPath();x.moveTo(10,H/2);x.lineTo(W-10,H/2);x.stroke();
+ line(x,gz,X,v=>H/2-(v/(Math.max(-g0,g1)))*H*0.42,css('--a'));
+ line(x,ax,X,v=>H/2-((v-(a0+a1)/2)/((a1-a0)/2))*H*0.42,css('--b'),1.5);
+ x.fillStyle=css('--mut');x.font='12px sans-serif';x.fillText('0 s',10,H-6);x.fillText('4 s',W-34,H-6);}
+// 2
+const KER={'꺾임 찾기':[-1,-1,-1,0,1,1,1],'떨림 찾기':[1,-1,1,-1,1,-1,1],'부드럽게(평균)':[1,1,1,1,1,1,1].map(v=>v/7*3)};
+let kname='꺾임 찾기',pos=40,auto=true;
+const kb=document.getElementById('kbtn');
+for(const k in KER){const b=document.createElement('button');b.textContent=k;b.onclick=()=>{kname=k;[...kb.children].forEach(c=>c.classList.toggle('on',c===b));};if(k===kname)b.classList.add('on');kb.appendChild(b);}
+const posEl=document.getElementById('pos');posEl.oninput=()=>{pos=+posEl.value;auto=false;};
+function conv(sig,k,dil=1){const h=(k.length-1)/2;return sig.map((_,i)=>{let s=0;for(let j=0;j<k.length;j++){const t=i+(j-h)*dil;s+=k[j]*(sig[Math.min(sig.length-1,Math.max(0,t))])}return s;});}
+function draw2(){const [x,W,H]=fit(c2);x.clearRect(0,0,W,H);const k=KER[kname];
+ const X=i=>10+i/(N-1)*(W-20);const [g0,g1]=rng(gz);const sc=Math.max(-g0,g1);
+ const top=70,mid=165,bot=270;
+ // signal + window
+ const w0=X(pos-3)-4,w1=X(pos+3)+4;x.fillStyle=css('--hl');x.fillRect(w0,top-60,w1-w0,120);
+ line(x,gz,X,v=>top-v/sc*55,css('--a'));
+ x.fillStyle=css('--mut');x.font='12px sans-serif';x.fillText('원래 신호 + 창(7칸)',12,14);
+ // kernel bars
+ const bw=40,bx=W/2-bw*3.5;x.fillText('필터 무게 (곱할 값)',12,mid-40);
+ const km=Math.max(...k.map(Math.abs));
+ k.forEach((v,j)=>{const h=v/km*34;x.fillStyle=v>=0?css('--c'):css('--b');x.fillRect(bx+j*bw+6,mid-(h>0?h:0),bw-12,Math.abs(h));
+  x.fillStyle=css('--mut');x.fillText((Math.round(v*100)/100)+'',bx+j*bw+6,mid+52);
+  // value inside window
+  x.fillStyle=css('--a');x.fillText((Math.round(gz[pos-3+j]*10)/10)+'',bx+j*bw+6,mid+66);});
+ x.strokeStyle=css('--line');x.beginPath();x.moveTo(bx,mid);x.lineTo(bx+7*bw,mid);x.stroke();
+ x.fillStyle=css('--mut');x.fillText('무게 →',bx-52,mid+52);x.fillText('창 안 값 →',bx-64,mid+66);
+ // output
+ const out=conv(gz,k);const [o0,o1]=rng(out);const os=Math.max(-o0,o1)||1;
+ x.fillText('결과 (곱해서 더한 값)',12,bot-52);
+ x.strokeStyle=css('--line');x.beginPath();x.moveTo(10,bot);x.lineTo(W-10,bot);x.stroke();
+ line(x,out.slice(0,pos+1),X,v=>bot-v/os*45,css('--d'));
+ x.fillStyle=css('--d');x.beginPath();x.arc(X(pos),bot-out[pos]/os*45,4,0,7);x.fill();
+ x.strokeStyle=css('--d');x.setLineDash([3,3]);x.beginPath();x.moveTo(X(pos),top+60);x.lineTo(X(pos),bot-out[pos]/os*45);x.stroke();x.setLineDash([]);}
+// 3
+function draw3(){const [x,W,H]=fit(c3);x.clearRect(0,0,W,H);const ks=[['꺾임',KER['꺾임 찾기'],1],['떨림',KER['떨림 찾기'],1],['평균',KER['부드럽게(평균)'],1],['긴 꺾임',[-1,-1,-1,0,1,1,1],4]];
+ const X=i=>80+i/(N-1)*(W-90);const rh=(H-20)/ks.length;
+ ks.forEach(([n,k,d],r)=>{const o=conv(gz,k,d).map(Math.abs);const m=Math.max(...o)||1;
+  for(let i=0;i<N;i++){const a=o[i]/m;x.fillStyle=css('--a');x.globalAlpha=0.08+0.92*a;x.fillRect(X(i),10+r*rh,(W-90)/N+1,rh-6);}
+  x.globalAlpha=1;x.fillStyle=css('--fg');x.font='13px sans-serif';x.fillText('필터 '+(r+1)+' '+n,6,10+r*rh+rh/2+4);});}
+// 4
+let layers=3;
+['l1','l2','l3','l4','l5'].forEach((id,i)=>{document.getElementById(id).onclick=()=>{layers=i+1;setL();};});
+function setL(){['l1','l2','l3','l4','l5'].forEach((id,i)=>document.getElementById(id).classList.toggle('on',i+1===layers));}
+setL();
+function draw4(){const [x,W,H]=fit(c4);x.clearRect(0,0,W,H);const M=190,L=layers,k=7;
+ const X=i=>20+i/(M-1)*(W-40);const rowY=l=>H-30-l*(H-60)/5;
+ // which nodes are in the receptive field of top node (index M-1 at layer L), causal kernel 3, dilation 2^l
+ let cur=new Set([M-1]);const fields=[cur];
+ for(let l=L;l>=1;l--){const d=2**(l-1);const nxt=new Set();for(const i of cur)for(let j=0;j<k;j++){const t=i-j*d;if(t>=0)nxt.add(t);}cur=nxt;fields.unshift(cur);}
+ for(let l=0;l<=L;l++){const f=fields[l];for(let i=0;i<M;i++){x.fillStyle=f.has(i)?(l===L?css('--b'):css('--a')):css('--line');x.beginPath();x.arc(X(i),rowY(l),f.has(i)?2.6:1.4,0,7);x.fill();}
+  x.fillStyle=css('--mut');x.font='12px sans-serif';x.fillText(l===0?'입력 IMU':(l+'층 (간격 '+2**(l-1)+')'),W-120,rowY(l)-8);}
+ // lines
+ x.strokeStyle=css('--a');x.globalAlpha=.18;
+ for(let l=L;l>=1;l--){const d=2**(l-1);for(const i of fields[l])for(let j=0;j<k;j++){const t=i-j*d;if(t>=0){x.beginPath();x.moveTo(X(i),rowY(l));x.lineTo(X(t),rowY(l-1));x.stroke();}}}
+ x.globalAlpha=1;const span=Math.min(...fields[0]);const n=M-span;
+ x.fillStyle=css('--fg');x.font='14px sans-serif';x.fillText('맨 위 점 하나가 보는 입력: '+n+'칸 (200 Hz면 '+(n/200).toFixed(2)+' 초)',20,18);}
+// 5
+let useCnn=true;
+document.getElementById('bOn').onclick=()=>{useCnn=true;bOn.classList.add('on');bOff.classList.remove('on')};
+document.getElementById('bOff').onclick=()=>{useCnn=false;bOff.classList.add('on');bOn.classList.remove('on')};
+function draw5(t){const [x,W,H]=fit(c5);x.clearRect(0,0,W,H);const bias=0.12;const dt=0.02;
+ const truth=gz,meas=gz.map(v=>v+bias),corr=meas.map((v,i)=>v-bias*(0.92+0.08*Math.sin(i/9)));
+ const integ=a=>{let s=0;return a.map(v=>(s+=v*dt));};
+ const shown=Math.min(N,Math.floor((t/40)%(N+60)));
+ const X=i=>10+i/(N-1)*(W-20);const [g0,g1]=rng(meas);const gs=Math.max(-g0,g1);
+ const half=H/2-10;
+ x.fillStyle=css('--mut');x.font='12px sans-serif';x.fillText('자이로 (회전 속도)',12,14);x.fillText('적분한 회전 각도',12,half+24);
+ line(x,meas.slice(0,shown),X,v=>half/2+10-v/gs*half*0.4,css('--b'),1.5);
+ if(useCnn)line(x,corr.slice(0,shown),X,v=>half/2+10-v/gs*half*0.4,css('--a'),1.5);
+ const it=integ(truth),im=integ(meas),ic=integ(corr);const [i0,i1]=rng([...it,...im]);
+ const Y=v=>H-12-(v-i0)/(i1-i0)*(half-30);
+ line(x,it.slice(0,shown),X,Y,css('--c'),2.5);line(x,im.slice(0,shown),X,Y,css('--b'),2);if(useCnn)line(x,ic.slice(0,shown),X,Y,css('--a'),2);
+ if(shown>1){const e=Math.abs(im[shown-1]-it[shown-1])*57.3,ec=Math.abs(ic[shown-1]-it[shown-1])*57.3;
+  x.fillStyle=css('--fg');x.font='13px sans-serif';x.fillText('오차: 그대로 '+e.toFixed(1)+'°'+(useCnn?'  /  CNN 보정 '+ec.toFixed(1)+'°':''),W-260,half+24);}}
+// 6 flow
+function drawFlow(){const s=document.getElementById('flow');const c=k=>css(k);
+ const box=(x,y,w,h,t,col)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" fill="none" stroke="${col}" stroke-width="2"/><text x="${x+w/2}" y="${y+h/2+5}" text-anchor="middle" font-size="15" fill="${c('--fg')}">${t}</text>`;
+ const ar=(x1,y1,x2,y2,col,lab,ly)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="2" marker-end="url(#ah)"/>`+(lab?`<text x="${(x1+x2)/2}" y="${ly||((y1+y2)/2-6)}" text-anchor="middle" font-size="13" fill="${c('--mut')}">${lab}</text>`:'');
+ s.innerHTML=`<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="${c('--mut')}"/></marker></defs>`+
+ box(10,30,120,50,'IMU 1초',c('--a'))+ar(130,55,180,55,c('--mut'),'①')+
+ box(180,30,120,50,'CNN',c('--a'))+ar(300,55,350,55,c('--mut'),'')+
+ box(350,30,150,50,'고친 IMU',c('--a'))+ar(500,55,550,55,c('--mut'),'②')+
+ box(550,30,150,50,'물리 적분',c('--a'))+ar(700,55,740,55,c('--mut'),'')+
+ box(740,30,130,50,'예측 위치',c('--a'))+
+ box(740,200,130,50,'정답 위치',c('--c'))+box(550,200,150,50,'보정판 인식',c('--c'))+ar(700,225,740,225,c('--mut'),'③')+
+ box(740,115,130,50,'오차',c('--b'))+ar(805,80,805,115,c('--mut'),'')+ar(805,200,805,165,c('--mut'),'')+
+ `<path d="M740,140 C500,140 300,140 240,82" fill="none" stroke="${c('--b')}" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ah)"/>`+
+ `<text x="420" y="178" text-anchor="middle" font-size="13" fill="${c('--b')}">④⑤ 오차가 줄도록 필터 무게 조정 (거꾸로 전달)</text>`+
+ `<text x="625" y="285" text-anchor="middle" font-size="13" fill="${c('--mut')}">카메라 영상 (같은 순간)</text>`;}
+function frame(t){if(auto){pos=3+Math.floor((t/60)%(N-6));posEl.value=pos;}draw1();draw2();draw3();draw4();draw5(t);requestAnimationFrame(frame);}
+drawFlow();matchMedia('(prefers-color-scheme: dark)').addEventListener('change',drawFlow);
+c2.addEventListener('pointerdown',()=>auto=false);
+requestAnimationFrame(frame);
+</script>
+</body></html>
