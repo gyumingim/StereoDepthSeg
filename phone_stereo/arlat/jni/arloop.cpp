@@ -19,6 +19,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <sstream>
+#include <sys/resource.h>
 
 namespace arloop {
 namespace {
@@ -104,6 +105,8 @@ void LoopCloser::add_keyframe(KeyframeIn kf) {
 }
 
 void LoopCloser::worker() {
+  // background priority (nice 10, this thread only on Linux/Android): loop closure must never take CPU from ARCore
+  setpriority(PRIO_PROCESS, 0, 10);
   while (!stop_) {
     KeyframeIn kf;
     {
@@ -449,7 +452,7 @@ void LoopCloser::optimize(const char *why) {
   ceres::Solver::Options so;
   so.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
   so.max_num_iterations = 15;
-  so.num_threads = 2;
+  so.num_threads = 1;
   ceres::Solver::Summary sum;
   ceres::Solve(so, &prob, &sum);
   for (auto &k : kfs_) k->opt_yaw = norm_angle(k->opt_yaw);
