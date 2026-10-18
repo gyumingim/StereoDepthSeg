@@ -39,6 +39,7 @@ public class MainActivity extends Activity {
     private TextView status;
     private Cam2Probe cam2;
     private OvRunner ov;
+    private HsRecorder hs;
     private Streamer streamer;
 
     @Override
@@ -69,6 +70,15 @@ public class MainActivity extends Activity {
                 String phys = getIntent().getStringExtra("phys");
                 try { cam2.start(secs > 0 ? secs : 30, phys == null ? "2" : phys); }
                 catch (Exception e) { status.setText("cam2 error: " + e); }
+            }
+            return;
+        }
+        if ("hs".equals(mode)) {            // 120 fps high-speed recording (main camera + IMU) for board ground truth
+            if (hs == null) {
+                hs = new HsRecorder(this, this::show);
+                hs.wantFps = getIntent().getIntExtra("fps", 120);
+                try { hs.start(); }
+                catch (Exception e) { status.setText("hs error: " + e); android.util.Log.e("arlat", "hs", e); hs = null; }
             }
             return;
         }
@@ -127,6 +137,7 @@ public class MainActivity extends Activity {
         running = false;
         if (cam2 != null) { cam2.stop(); cam2 = null; }
         if (ov != null) { ov.stop(); ov = null; }
+        if (hs != null) { hs.stop(); hs = null; }
         if (worker != null) {
             try { worker.join(2000); } catch (InterruptedException ignored) { }
         }

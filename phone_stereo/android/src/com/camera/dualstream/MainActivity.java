@@ -186,6 +186,11 @@ public class MainActivity extends Activity {
      *  min(AE exposure, cap) and raise ISO to keep the same brightness (exposure x ISO); if ISO hits the lens max the
      *  exposure stays as short as that ISO allows. Only without phase sync (1 lens or sync=off). exp_gain < 1 = darker. */
     private long expCapNs; private double expGain=1.0;
+    /** 1.15-isp: image processing for tracking/markers (extras): nr = off|fast|hq (default off: high-ISO noise reduction
+     *  smeared marker corners), edge = off|fast (default off), gamma = fixed tonemap gamma (default 2.2, 0 = camera's),
+     *  AWB locked once the short exposure is fixed, distortion-correction mode pinned to the template's value (the lens
+     *  calibration was made with it) so the ISP can never switch it. */
+    private String ispNr="off", ispEdge="off"; private float ispGamma=2.2f;
     private long fixExpNs; private int fixIso; private int meterFrames;
     private Range<Integer> logicalSensRange;
     private List<CaptureRequest.Key<?>> physKeys;      // logical getAvailablePhysicalCameraRequestKeys (method A, REVIEW8 H1)
@@ -660,6 +665,9 @@ public class MainActivity extends Activity {
             }
             expCapNs=Math.max(0,getIntent().getIntExtra("exp_cap_us",0))*1000L;
             expGain=Math.max(0.1,Math.min(1.0,getIntent().getFloatExtra("exp_gain",1.0f)));
+            if(getIntent().getStringExtra("nr")!=null) ispNr=getIntent().getStringExtra("nr");
+            if(getIntent().getStringExtra("edge")!=null) ispEdge=getIntent().getStringExtra("edge");
+            ispGamma=getIntent().getFloatExtra("gamma",2.2f);
             fixExpNs=0; fixIso=0; meterFrames=0; meterEv=0; meterExp=0; meterN=0;
             String fmt=getIntent().getStringExtra("stream_fmt");
             fmt=fmt==null?"h264":fmt.trim().toLowerCase(Locale.US);
@@ -1076,11 +1084,13 @@ public class MainActivity extends Activity {
         Range<Integer>[] ranges=manager.getCameraCharacteristics(camera.getId()).get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
         if(ranges!=null) for(Range<Integer> r:ranges)
             if(r.getLower()==fps && r.getUpper()==fps) { setKey(request,override,CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,r); break; }
+        applyIsp(request,override);
         if(fixExpNs>0 && fixIso>0 && !override) {          // short manual exposure (meterShortExposure)
             setKey(request,false,CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_OFF);
             setKey(request,false,CaptureRequest.SENSOR_EXPOSURE_TIME,fixExpNs);
             setKey(request,false,CaptureRequest.SENSOR_SENSITIVITY,fixIso);
             setKey(request,false,CaptureRequest.SENSOR_FRAME_DURATION,1_000_000_000L/Math.max(1,fps));
+            setKey(request,false,CaptureRequest.CONTROL_AWB_LOCK,true);    // white balance no longer changes either
         }
         for(ImageReader reader:readers) request.addTarget(reader.getSurface());
         PhonePreview pv=preview;
@@ -1101,6 +1111,27 @@ public class MainActivity extends Activity {
         }
         return request.build();
     }
+
+    private CameraCharacteristics ispChars;
+    private void applyIsp(CaptureRequest.Builder request,boolean override) {
+        try {
+            if(ispChars==null) ispChars=manager.getCameraCharacteristics(ids[0]);
+            int[] nrModes=ispChars.get(CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES);
+            int nr=ispNr.equals("hq")?CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY:ispNr.equals("fast")?CaptureRequest.NOISE_REDUCTION_MODE_FAST:CaptureRequest.NOISE_REDUCTION_MODE_OFF;
+            if(has(nrModes,nr)) setKey(request,override,CaptureRequest.NOISE_REDUCTION_MODE,nr);
+            int[] edgeModes=ispChars.get(CameraCharacteristics.EDGE_AVAILABLE_EDGE_MODES);
+            int ed=ispEdge.equals("fast")?CaptureRequest.EDGE_MODE_FAST:CaptureRequest.EDGE_MODE_OFF;
+            if(has(edgeModes,ed)) setKey(request,override,CaptureRequest.EDGE_MODE,ed);
+            int[] tm=ispChars.get(CameraCharacteristics.TONEMAP_AVAILABLE_TONE_MAP_MODES);
+            if(ispGamma>0 && has(tm,CaptureRequest.TONEMAP_MODE_GAMMA_VALUE)) {
+                setKey(request,override,CaptureRequest.TONEMAP_MODE,CaptureRequest.TONEMAP_MODE_GAMMA_VALUE);
+                setKey(request,override,CaptureRequest.TONEMAP_GAMMA,ispGamma);
+            }
+            Integer dc=request.get(CaptureRequest.DISTORTION_CORRECTION_MODE);
+            if(dc!=null) setKey(request,override,CaptureRequest.DISTORTION_CORRECTION_MODE,dc);
+        } catch(Exception e) { Log.w(TAG,"isp settings",e); }
+    }
+    private static boolean has(int[] a,int v) { if(a==null) return false; for(int x:a) if(x==v) return true; return false; }
 
     /** Logical value; with physical=true also the same value on every selected lens when it is a physical key. */
     private <T> void setKey(CaptureRequest.Builder b,boolean physical,CaptureRequest.Key<T> k,T v) {

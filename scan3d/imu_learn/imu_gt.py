@@ -39,6 +39,34 @@ def lens_K(rec, cam, size):
     return np.asarray(st["K" + k], float), np.asarray(st["dist" + k], float).ravel()
 
 
+def self_calibrate(video, n=80, min_corners=12):
+    """4:3 가 아닌 녹화(예: 120 fps 고속 모드 1280x720·1920x1080 — 센서를 잘라 씀)는 렌즈 보정값을 비례 변환할 수 없어
+    녹화 속 보드로 직접 보정: 고르게 뽑은 n 프레임의 ChArUco 모서리 → cv2.calibrateCamera. → (K, dist, rms)."""
+    board = aruco_scale.Board(aruco_scale.load_board_spec(str(BOARD_JSON)))
+    cap = cv2.VideoCapture(str(video))
+    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 1
+    want = set(np.linspace(0, total - 1, n * 3).astype(int))
+    obj, img, size = [], [], None
+    i = 0
+    while len(obj) < n:
+        r, f = cap.read()
+        if not r:
+            break
+        if i in want:
+            g = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY)
+            size = g.shape[::-1]
+            c, ids, _ = board.detect(g)
+            if len(ids) >= min_corners:
+                obj.append(board.obj[ids].astype(np.float32))
+                img.append(c.astype(np.float32).reshape(-1, 1, 2))
+        i += 1
+    if len(obj) < 15:
+        raise SystemExit(f"자기 보정에 쓸 보드 프레임이 부족 ({len(obj)})")
+    rms, K, dist, _, _ = cv2.calibrateCamera(obj, img, size, None, None, flags=cv2.CALIB_FIX_K3)
+    print(f"자기 보정: 프레임 {len(obj)}, rms {rms:.2f} px, f {K[0,0]:.1f} {K[1,1]:.1f}, c {K[0,2]:.1f} {K[1,2]:.1f}")
+    return K, dist.ravel(), rms
+
+
 def board_poses(video, frames_csv, K, dist, min_corners=8, max_rms=1.5):
     board = aruco_scale.Board(aruco_scale.load_board_spec(str(BOARD_JSON)))
     rows = list(csv.DictReader(open(frames_csv)))
@@ -183,7 +211,10 @@ def main():
     rec = Path(a.rec)
     meta = json.load(open(rec / "meta.json"))
     size = (int(meta["width"]), int(meta["height"]))
-    K, dist = lens_K(rec, a.cam, size)
+    if size[0] * 3 == size[1] * 4:
+        K, dist = lens_K(rec, a.cam, size)
+    else:
+        K, dist, _ = self_calibrate(rec / f"cam{a.cam}.mp4")
     out = rec / "imu_gt"
     out.mkdir(exist_ok=True)
     gt = board_poses(rec / f"cam{a.cam}.mp4", rec / f"frames_cam{a.cam}.csv", K, dist)

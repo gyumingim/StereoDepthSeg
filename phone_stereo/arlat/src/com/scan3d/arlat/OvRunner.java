@@ -112,6 +112,21 @@ class OvRunner implements SensorEventListener {
                     rb.addTarget(reader.getSurface());
                     rb.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, new Range<>(30, 30));
                     rb.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_OFF);
+                    // tracking-friendly image processing (same as the recorder 1.15-isp): no noise reduction / sharpening
+                    // (they smear and move corners at high ISO), fixed gamma tonemap, distortion-correction mode pinned
+                    try {
+                        android.hardware.camera2.CameraCharacteristics ch = cm.getCameraCharacteristics("2");
+                        if (has(ch.get(android.hardware.camera2.CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES), CaptureRequest.NOISE_REDUCTION_MODE_OFF))
+                            rb.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_OFF);
+                        if (has(ch.get(android.hardware.camera2.CameraCharacteristics.EDGE_AVAILABLE_EDGE_MODES), CaptureRequest.EDGE_MODE_OFF))
+                            rb.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF);
+                        if (has(ch.get(android.hardware.camera2.CameraCharacteristics.TONEMAP_AVAILABLE_TONE_MAP_MODES), CaptureRequest.TONEMAP_MODE_GAMMA_VALUE)) {
+                            rb.set(CaptureRequest.TONEMAP_MODE, CaptureRequest.TONEMAP_MODE_GAMMA_VALUE);
+                            rb.set(CaptureRequest.TONEMAP_GAMMA, 2.2f);
+                        }
+                        Integer dc = rb.get(CaptureRequest.DISTORTION_CORRECTION_MODE);
+                        if (dc != null) rb.set(CaptureRequest.DISTORTION_CORRECTION_MODE, dc);
+                    } catch (Exception ex) { android.util.Log.w("arlat", "isp", ex); }
                     final CameraCaptureSession.CaptureCallback cb = new CameraCaptureSession.CaptureCallback() {
                         @Override public void onCaptureCompleted(CameraCaptureSession s, CaptureRequest q, TotalCaptureResult res) {
                             Long exp = res.get(CaptureResult.SENSOR_EXPOSURE_TIME);
@@ -139,6 +154,8 @@ class OvRunner implements SensorEventListener {
 
     private CameraCaptureSession.CaptureCallback capCb;
 
+    private static boolean has(int[] a, int v) { if (a == null) return false; for (int x : a) if (x == v) return true; return false; }
+
     private void meter(TotalCaptureResult res, Handler h) {
         Long e = res.get(CaptureResult.SENSOR_EXPOSURE_TIME);
         Integer is = res.get(CaptureResult.SENSOR_SENSITIVITY);
@@ -158,6 +175,7 @@ class OvRunner implements SensorEventListener {
             reqB.set(CaptureRequest.SENSOR_EXPOSURE_TIME, exp);
             reqB.set(CaptureRequest.SENSOR_SENSITIVITY, iso);
             reqB.set(CaptureRequest.SENSOR_FRAME_DURATION, 33_333_333L);
+            reqB.set(CaptureRequest.CONTROL_AWB_LOCK, true);
             sess.setRepeatingRequest(reqB.build(), capCb, h);
             fixExp = exp; fixIso = iso; isoLo = isoMin; isoHi = isoMax; camH = h;
             manualSet = true;
