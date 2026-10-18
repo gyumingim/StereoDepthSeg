@@ -4,7 +4,7 @@
   venv_ffs/bin/python scan3d/imu_learn/imu_gt.py scan3d/recordings/rec_YYYYMMDD_HHMMSS [--cam 5]
 
 쓰는 것 (<녹화>/imu_gt/):
-  gt.npz      t_ns (프레임 노출 가운데), R_bc (카메라→보드 회전, 3x3), p_bc (보드 좌표의 카메라 위치, m), rms_px, n_corners,
+  gt.npz      t_ns (노출 가운데 + 롤링셔터로 보드가 찍힌 줄만큼 보정), R_bc (카메라→보드 회전, 3x3), p_bc (보드 좌표의 카메라 위치, m), rms_px, n_corners,
               ok (자세를 믿을 프레임). 보드 좌표 = aruco_scale.Board (판 평면 z=0).
   align.json  dt_ns: IMU 시각 + dt = 카메라 시각 (자이로 |ω| 와 정답 |ω| 의 상호상관), R_ci: IMU(기기) 축 → 카메라 축 회전
               (ω_cam = R_ci ω_imu, 같은 순간 ω 벡터들의 Kabsch), 잔차, 사용 표본 수.
@@ -43,6 +43,7 @@ def board_poses(video, frames_csv, K, dist, min_corners=8, max_rms=1.5):
     board = aruco_scale.Board(aruco_scale.load_board_spec(str(BOARD_JSON)))
     rows = list(csv.DictReader(open(frames_csv)))
     t_mid = {int(r["frame_idx"]): int(r["t_mid_ns"]) for r in rows}
+    skew = {int(r["frame_idx"]): int(r.get("rolling_shutter_skew_ns") or 0) for r in rows}
     cap = cv2.VideoCapture(str(video))
     out = dict(t_ns=[], R_bc=[], p_bc=[], rms_px=[], n_corners=[], ok=[])
     Kn = K.copy()
@@ -54,6 +55,7 @@ def board_poses(video, frames_csv, K, dist, min_corners=8, max_rms=1.5):
         g = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY)
         corners, ids, _ = board.detect(g)
         R, p, rms, ok = np.eye(3), np.zeros(3), np.nan, False
+        t_row = 0                                                    # 롤링셔터: 보드가 찍힌 줄의 시각 보정
         if len(ids) >= min_corners:
             und = cv2.undistortPoints(corners.reshape(-1, 1, 2), K, dist, P=Kn).reshape(-1, 2)
             pose = aruco_scale.solve_pose(board, und, ids, Kn)
@@ -63,7 +65,10 @@ def board_poses(video, frames_csv, K, dist, min_corners=8, max_rms=1.5):
                 p = -R_cb.T @ t_cb                           # 보드 좌표의 카메라 중심
                 rms = pose["rms"]
                 ok = rms <= max_rms
-        out["t_ns"].append(t_mid.get(i, -1))
+                # 프레임 시각 = 노출 가운데 + 가운데 줄. 보드 줄(모서리 평균 y)은 (y/H - 0.5)·skew 만큼 다름
+                # (S24 광각 skew 8.7 ms: 2 rad/s 회전이면 위·아래 끝에서 약 0.5° 어긋남)
+                t_row = int((corners[:, 1].mean() / g.shape[0] - 0.5) * skew.get(i, 0))
+        out["t_ns"].append(t_mid.get(i, -1) + t_row if i in t_mid else -1)
         out["R_bc"].append(R)
         out["p_bc"].append(p)
         out["rms_px"].append(rms)

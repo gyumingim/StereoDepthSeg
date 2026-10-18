@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 """IMU 보정 CNN 학습 (혼합 방식, IMU_PLAN.md 4) — 녹화들의 imu_gt (imu_gt.py 결과) 로.
 
-  venv_ffs/bin/python scan3d/imu_learn/train_imu.py REC [REC ...] [--epochs 300] [--val-frac 0.3] [--out runs/imu_cnn_x]
+  venv_ffs/bin/python scan3d/imu_learn/train_imu.py --train REC [REC ...] --val REC [REC ...] [--epochs 200] [--out DIR]
 
 구조
 - 입력: 1 초 창의 IMU (자이로 3 + 가속도 3, 폰 원래 비율 500 Hz 격자, IMU 축). 200 Hz 로 솎으면 드론 모터 진동
-  (100~300 Hz) 이 가짜 느린 움직임으로 섞여서(에일리어싱) 500 Hz 그대로 씀 (2026-10-18).
+  (100~300 Hz) 이 가짜 느린 움직임으로 섞여서(에일리어싱) 500 Hz 그대로 씀.
 - 모델: 과거만 보는(causal) 1D CNN, 필터 7, 간격 1·2·4·…·64 (7 층, 약 1.5 s 를 봄) → 표본마다 자이로·가속도 보정값 6.
-- 물리 적분 (미분 가능): R ← R·exp(ω dt), a = R f + g, v += a dt, p += v dt + ½ a dt²  (정답 시작 상태에서 출발).
-- 손실: 1 s 뒤 자세(각도) + 속도 + 위치 오차 (정답 = 보정판).
-- 평가: 학습에 안 쓴 구간(녹화마다 뒤쪽 val-frac, 또는 녹화 단위)에서 보정 없음 대비 1 s 적분 오차.
-정답 좌표: 보드 좌표. IMU 자세 R_bi = R_bc · R_ci (align.json), 위치 = 카메라 위치 (지렛대 길이 무시, 수 cm 이하).
+  비교용 'bias' 모델 = 녹화 전체에 상수 보정 6 개만 (단순 바이어스 빼기).
+- 물리 적분 (미분 가능): R ← R·exp(ω dt), a = R f + g, v += a dt, p += v dt + ½ a dt².
+- 손실 (창 안의 정답 프레임 j 전부, 약 50 개):
+  자세: 창 첫 정답 프레임의 정답 자세에서 적분한 R(τ_j) 와 정답 R_j 의 각도.
+  위치: 시작 위치·속도는 정답 미분값을 쓰지 않고(흔들 때 부정확) 적분 위치 q(τ_j) + p0 + v0 τ_j 가 정답 p_j 에 가장 잘
+        맞도록 p0·v0 를 최소제곱으로 풀고 남은 잔차 → 가속도·자세가 정답 궤적의 '휘어짐' 을 설명하는지만 봄.
+- 정답 거르기: 연속 프레임의 정답 회전과 자이로 적분 회전이 3° 넘게 다르면 그 프레임 버림 (보드 자세 뒤집힘·롤링셔터).
+정답 좌표: 보드 좌표. IMU 자세 R_bi = R_bc · R_ci (align.json), 위치 = 카메라 위치 (지렛대 길이 무시).
 보드 좌표의 중력 g_b 는 거의 정지한 구간의 가속도로 추정.
 """
 import argparse
@@ -30,14 +34,10 @@ from imu_gt import read_imu  # noqa: E402
 HZ = 500          # S24 IMU 원래 비율 (가속도·자이로 약 499 Hz)
 WIN = HZ          # 1 s
 DT = 1.0 / HZ
+MAXF = 72         # 창 안 정답 프레임 최대 (60 fps × 1 s + 여유)
 
 
 # ---------------------------------------------------------------- data
-def slerp_R(R0, R1, a):
-    w = so3_log_np(R0.T @ R1)
-    return R0 @ so3_exp_np(w * a)
-
-
 def so3_exp_np(w):
     th = np.linalg.norm(w)
     if th < 1e-12:
@@ -47,74 +47,73 @@ def so3_exp_np(w):
     return np.eye(3) + np.sin(th) * K + (1 - np.cos(th)) * K @ K
 
 
-def so3_log_np(R):
-    c = np.clip((np.trace(R) - 1) / 2, -1, 1)
-    th = np.arccos(c)
-    if th < 1e-9:
-        return np.zeros(3)
-    return np.array([R[2, 1] - R[1, 2], R[0, 2] - R[2, 0], R[1, 0] - R[0, 1]]) / (2 * np.sin(th)) * th
+def ang_deg(R):
+    return np.degrees(np.arccos(np.clip((np.trace(R) - 1) / 2, -1, 1)))
 
 
-def load_rec(rec):
+def load_rec(rec, max_jump_deg=3.0):
     rec = Path(rec)
     gt = np.load(rec / "imu_gt" / "gt.npz")
     al = json.load(open(rec / "imu_gt" / "align.json"))
     R_ci = np.asarray(al["R_ci"])
     acc, gyr = read_imu(rec / "imu.csv")
     dt = al["dt_ns"]
-    # IMU 를 카메라 시각으로 (+dt) 옮겨 200 Hz 격자에
     t0 = max(acc[0, 0], gyr[0, 0]) + dt
     t1 = min(acc[-1, 0], gyr[-1, 0]) + dt
     grid = np.arange(t0, t1, int(1e9 / HZ))
     g = np.stack([np.interp(grid, gyr[:, 0] + dt, gyr[:, 1 + j]) for j in range(3)], 1)
     a = np.stack([np.interp(grid, acc[:, 0] + dt, acc[:, 1 + j]) for j in range(3)], 1)
-    ok = gt["ok"].astype(bool)
+    ok = gt["ok"].astype(bool) & (gt["t_ns"] > t0) & (gt["t_ns"] < t1)
     tf, Rbc, pbc = gt["t_ns"][ok], gt["R_bc"][ok], gt["p_bc"][ok]
     Rbi = Rbc @ R_ci                                        # IMU 축 → 보드
-    # 위치를 살짝 매끄럽게 (보드 자세 떨림) 후 속도 = 중앙 차분
-    from scipy.ndimage import uniform_filter1d
-    ps = uniform_filter1d(pbc, 5, axis=0)
-    vf = np.gradient(ps, tf * 1e-9, axis=0)
-    # 보드 좌표의 중력: 거의 정지(자이로 작음) 프레임에서 g_b = -R_bi f
+    # 정답 거르기: 이웃 프레임 사이 회전을 자이로 적분과 비교
+    bad = np.zeros(len(tf), bool)
+    for k in range(1, len(tf)):
+        if tf[k] - tf[k - 1] > 40_000_000:
+            continue
+        i0, i1 = np.searchsorted(grid, [tf[k - 1], tf[k]])
+        R = np.eye(3)
+        for i in range(i0, i1):
+            R = R @ so3_exp_np(g[i] * DT)
+        if ang_deg((Rbi[k - 1].T @ Rbi[k]).T @ R) > max_jump_deg:
+            bad[k] = True
+    keep = ~bad
+    tf, Rbi, pf = tf[keep], Rbi[keep], pbc[keep]
+    # 보드 좌표 중력: 거의 정지(자이로 작음) 프레임에서 g_b = -R_bi f
     gi = np.stack([np.interp(tf, grid, g[:, j]) for j in range(3)], 1)
     ai = np.stack([np.interp(tf, grid, a[:, j]) for j in range(3)], 1)
-    still = (np.linalg.norm(gi, axis=1) < 0.05) & (np.linalg.norm(vf, axis=1) < 0.05)
-    if still.sum() < 10:
+    still = np.where(np.linalg.norm(gi, axis=1) < 0.05)[0]
+    if len(still) < 10:
         still = np.argsort(np.linalg.norm(gi, axis=1))[:30]
     gb = -np.mean(np.einsum("nij,nj->ni", Rbi[still], ai[still]), 0)
     gb = gb / np.linalg.norm(gb) * 9.80665
-    return dict(name=rec.name, grid=grid, gyr=g, acc=a, tf=tf, Rbi=Rbi, p=ps, v=vf, gb=gb, n_still=int(np.sum(still)))
+    return dict(name=rec.name, grid=grid, gyr=g, acc=a, tf=tf, Rbi=Rbi, p=pf, gb=gb,
+                n_still=len(still), n_bad=int(bad.sum()), n_gt=len(tf))
 
 
-def state_at(r, t):
-    """정답 프레임 사이 보간 (프레임 간격 > 40 ms 면 None)."""
-    k = np.searchsorted(r["tf"], t)
-    if k <= 0 or k >= len(r["tf"]):
-        return None
-    t0, t1 = r["tf"][k - 1], r["tf"][k]
-    if t1 - t0 > 40_000_000:
-        return None
-    a = (t - t0) / (t1 - t0)
-    R = slerp_R(r["Rbi"][k - 1], r["Rbi"][k], a)
-    p = r["p"][k - 1] * (1 - a) + r["p"][k] * a
-    v = r["v"][k - 1] * (1 - a) + r["v"][k] * a
-    return R, p, v
-
-
-def windows(r, stride=HZ // 10):       # 0.1 s 씩 밀며 겹치는 1 s 창
-    X, S0, S1 = [], [], []
-    for i in range(0, len(r["grid"]) - WIN, stride):
-        ta, tb = r["grid"][i], r["grid"][i + WIN]
-        s0, s1 = state_at(r, ta), state_at(r, tb)
-        if s0 is None or s1 is None:
+def windows(r, stride=HZ // 4, min_frames=25):
+    """겹치는 1 s 창 (0.25 s 씩). 창 안 정답 프레임: 표본 위치 idx, 자세, 위치 (MAXF 로 채움 + mask)."""
+    X, IDX, RG, PG, M = [], [], [], [], []
+    grid, tf = r["grid"], r["tf"]
+    for i in range(0, len(grid) - WIN, stride):
+        ta, tb = grid[i], grid[i + WIN - 1]
+        js = np.where((tf >= ta) & (tf <= tb))[0]
+        if len(js) < min_frames:
             continue
+        js = js[:MAXF]
+        idx = np.round((tf[js] - ta) / (1e9 / HZ)).astype(int)
+        n = len(js)
+        pad = MAXF - n
         X.append(np.c_[r["gyr"][i:i + WIN], r["acc"][i:i + WIN]])
-        S0.append(np.r_[s0[0].ravel(), s0[1], s0[2]])
-        S1.append(np.r_[s1[0].ravel(), s1[1], s1[2]])
-    return np.asarray(X, np.float32), np.asarray(S0, np.float32), np.asarray(S1, np.float32)
+        IDX.append(np.r_[idx, np.full(pad, idx[-1])])
+        RG.append(np.concatenate([r["Rbi"][js], np.repeat(r["Rbi"][js[-1:]], pad, 0)]))
+        PG.append(np.concatenate([r["p"][js], np.repeat(r["p"][js[-1:]], pad, 0)]))
+        M.append(np.r_[np.ones(n), np.zeros(pad)])
+    f = lambda z, t=np.float32: np.asarray(z, t)
+    return dict(X=f(X), idx=f(IDX, np.int64), R=f(RG), p=f(PG), m=f(M), gb=r["gb"].astype(np.float32), name=r["name"])
 
 
-# ---------------------------------------------------------------- model + physics
+# ---------------------------------------------------------------- models + physics
 class CausalCNN(nn.Module):
     def __init__(self, ch=64):
         super().__init__()
@@ -127,15 +126,25 @@ class CausalCNN(nn.Module):
         nn.init.zeros_(self.head.weight)
         nn.init.zeros_(self.head.bias)          # 처음엔 보정 0 = 원래 IMU
 
-    def forward(self, x):                       # x (B, 6, T) 정규화된 IMU
+    def forward(self, x):                       # x (B, 6, T) 정규화된 IMU → (B, 6, T)
         h = x
         for conv in self.layers:
             pad = (conv.kernel_size[0] - 1) * conv.dilation[0]
             h = torch.relu(conv(nn.functional.pad(h, (pad, 0))))   # 왼쪽(과거)만 채움 → 미래를 안 봄
-        return self.head(h)                     # (B, 6, T) 보정값 (자이로 rad/s, 가속도 m/s²) × 스케일
+        return self.head(h)
 
 
-def so3_exp(w):                                  # (B,3) → (B,3,3) Rodrigues
+class BiasOnly(nn.Module):
+    """비교 기준: 상수 보정 6 개 (자이로·가속도 바이어스 빼기)."""
+    def __init__(self):
+        super().__init__()
+        self.b = nn.Parameter(torch.zeros(6))
+
+    def forward(self, x):
+        return self.b[None, :, None].expand(x.shape[0], 6, x.shape[2])
+
+
+def so3_exp(w):                                  # (B,3) → (B,3,3)
     th = w.norm(dim=1, keepdim=True).clamp_min(1e-9)
     k = w / th
     K = torch.zeros(w.shape[0], 3, 3, device=w.device)
@@ -145,97 +154,135 @@ def so3_exp(w):                                  # (B,3) → (B,3,3) Rodrigues
     return torch.eye(3, device=w.device)[None] + s * K + (1 - c) * K @ K
 
 
-def integrate(gyr, acc, R, p, v, gb):
-    """물리 적분 (미분 가능). gyr, acc (B,T,3) IMU 축; R (B,3,3) IMU→보드; gb (3,) 보드 좌표 중력."""
-    for k in range(gyr.shape[1]):
+def integrate_all(gyr, acc, R0, gb, start):
+    """창 첫 정답 프레임(표본 start)에서 R0, p=v=0 으로 출발해 모든 표본의 R, p (B,T,·). start 이전은 R0, 0."""
+    B, T, _ = gyr.shape
+    Rs, ps = [], []
+    R = R0
+    p = torch.zeros(B, 3, device=gyr.device)
+    v = torch.zeros(B, 3, device=gyr.device)
+    for k in range(T):
+        on = (k >= start).float()[:, None]
+        Rs.append(R)
+        ps.append(p)
         a_w = (R @ acc[:, k, :, None])[..., 0] + gb
-        p = p + v * DT + 0.5 * a_w * DT * DT
-        v = v + a_w * DT
-        R = R @ so3_exp(gyr[:, k] * DT)
-    return R, p, v
+        p = p + on * (v * DT + 0.5 * a_w * DT * DT)
+        v = v + on * a_w * DT
+        R = torch.where(on[..., None] > 0, R @ so3_exp(gyr[:, k] * DT), R)
+    return torch.stack(Rs, 1), torch.stack(ps, 1)
 
 
-def errors(R, p, v, S1):
-    R1, p1, v1 = S1[:, :9].view(-1, 3, 3), S1[:, 9:12], S1[:, 12:15]
-    dR = R1.transpose(1, 2) @ R
-    ang = torch.acos(((dR.diagonal(dim1=1, dim2=2).sum(1) - 1) / 2).clamp(-1 + 1e-6, 1 - 1e-6))
-    return ang, (p - p1).norm(dim=1), (v - v1).norm(dim=1)
-
-
-def run(model, X, S0, S1, gb, mu, sd, scale, train=True):
-    x = (X - mu) / sd
-    corr = model(x.transpose(1, 2)).transpose(1, 2) * scale if model is not None else 0
-    imu = X + corr
-    R0, p0, v0 = S0[:, :9].view(-1, 3, 3), S0[:, 9:12], S0[:, 12:15]
-    R, p, v = integrate(imu[..., :3], imu[..., 3:], R0, p0, v0, gb)
-    return errors(R, p, v, S1)
+def window_loss(imu, W, gb):
+    """imu (B,T,6) 보정된 IMU; W: idx (B,F), R (B,F,3,3), p (B,F,3), m (B,F). → 자세 각 (B,F), 위치 잔차 (B,F)."""
+    idx, Rg, pg, m = W["idx"], W["R"], W["p"], W["m"]
+    start = idx[:, 0]
+    Rall, pall = integrate_all(imu[..., :3], imu[..., 3:], Rg[:, 0], gb, start)
+    b = torch.arange(idx.shape[0], device=idx.device)[:, None]
+    Ri, qi = Rall[b, idx], pall[b, idx]                       # (B,F,3,3), (B,F,3)
+    dR = Rg.transpose(-1, -2) @ Ri
+    ang = torch.acos(((dR.diagonal(dim1=-2, dim2=-1).sum(-1) - 1) / 2).clamp(-1 + 1e-6, 1 - 1e-6))
+    # p_j ≈ q_j + p0 + v0 τ_j : 축마다 [1, τ] 최소제곱 (mask 가중)
+    tau = (idx - start[:, None]).float() * DT
+    y = pg - qi
+    w = m
+    sw = w.sum(1, keepdim=True)
+    mt = (w * tau).sum(1, keepdim=True) / sw
+    my = (w[..., None] * y).sum(1, keepdim=True) / sw[..., None]
+    vt = (w * (tau - mt) ** 2).sum(1, keepdim=True).clamp_min(1e-9)
+    v0 = (w[..., None] * (tau - mt)[..., None] * (y - my)).sum(1, keepdim=True) / vt[..., None]
+    res = y - my - v0 * (tau - mt)[..., None]
+    return ang, res.norm(dim=-1)
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("recs", nargs="+")
-    ap.add_argument("--epochs", type=int, default=300)
-    ap.add_argument("--val-frac", type=float, default=0.3)
+    ap.add_argument("--train", nargs="+", required=True)
+    ap.add_argument("--val", nargs="+", required=True)
+    ap.add_argument("--epochs", type=int, default=200)
+    ap.add_argument("--batch", type=int, default=192)
     ap.add_argument("--out", default=str(HERE.parent / "runs" / time.strftime("imu_cnn_%Y%m%d-%H%M%S")))
     a = ap.parse_args()
     dev = "cuda" if torch.cuda.is_available() else "cpu"
-    tr, va = [], []
-    for rec in a.recs:
-        r = load_rec(rec)
-        X, S0, S1 = windows(r)
-        n = len(X)
-        cut = int(n * (1 - a.val_frac))
-        gap = 10                                            # 학습·평가 창이 겹치지 않게 (창 10개 = 1 s) 띄움
-        print(f"{r['name']}: 창 {n} (학습 {cut}, 평가 {max(0, n - cut - gap)}), 정지 프레임 {r['n_still']}, "
-              f"g_b {np.round(r['gb'], 2)}")
-        tr.append((X[:cut], S0[:cut], S1[:cut], r["gb"]))
-        va.append((X[cut + gap:], S0[cut + gap:], S1[cut + gap:], r["gb"]))
-    T = lambda z: torch.tensor(z, device=dev)
-    allX = np.concatenate([t[0] for t in tr])
-    mu = T(allX.reshape(-1, 6).mean(0)); sd = T(allX.reshape(-1, 6).std(0) + 1e-6)
-    scale = T(np.array([0.02] * 3 + [0.2] * 3, np.float32))   # 보정 크기: 자이로 0.02 rad/s, 가속도 0.2 m/s² 단위
-    model = CausalCNN().to(dev)
-    opt = torch.optim.Adam(model.parameters(), 1e-3)
-    nparam = sum(p.numel() for p in model.parameters())
 
-    def evaluate(m, sets):
-        out = []
+    def prep(recs):
+        sets = []
+        for rec in recs:
+            r = load_rec(rec)
+            W = windows(r)
+            print(f"{r['name']}: 정답 프레임 {r['n_gt']} (버림 {r['n_bad']}), 창 {len(W['X'])}, 정지 {r['n_still']}, "
+                  f"g_b {np.round(r['gb'], 2)}", flush=True)
+            if len(W["X"]):
+                sets.append({k: (torch.tensor(v, device=dev) if isinstance(v, np.ndarray) else v) for k, v in W.items()})
+        return sets
+
+    tr, va = prep(a.train), prep(a.val)
+    allX = torch.cat([s["X"] for s in tr]).reshape(-1, 6)
+    mu, sd = allX.mean(0), allX.std(0) + 1e-6
+    scale = torch.tensor([0.02] * 3 + [0.2] * 3, device=dev)
+
+    def apply(model, X):
+        if model is None:
+            return X
+        return X + model(((X - mu) / sd).transpose(1, 2)).transpose(1, 2) * scale
+
+    def evaluate(model, sets):
+        A, P = [], []
         with torch.no_grad():
-            for X, S0, S1, gb in sets:
-                if len(X) == 0:
-                    continue
-                ang, dp, dv = run(m, T(X), T(S0), T(S1), T(gb.astype(np.float32)), mu, sd, scale)
-                out.append(torch.stack([ang, dp, dv], 1).cpu().numpy())
-        z = np.concatenate(out)
-        return dict(ang_deg=float(np.degrees(np.median(z[:, 0]))), pos_cm=float(np.median(z[:, 1]) * 100),
-                    vel_cms=float(np.median(z[:, 2]) * 100), n=len(z))
+            for s in sets:
+                for b in range(0, len(s["X"]), 64):
+                    W = {k: s[k][b:b + 64] for k in ("idx", "R", "p", "m")}
+                    ang, res = window_loss(apply(model, s["X"][b:b + 64]), W, s["gb"])
+                    m = W["m"] > 0
+                    last = W["m"].sum(1).long() - 1
+                    A.append(ang[torch.arange(len(last)), last].cpu().numpy())
+                    P.append((torch.sqrt((res ** 2 * W["m"]).sum(1) / W["m"].sum(1))).cpu().numpy())
+        A, P = np.concatenate(A), np.concatenate(P)
+        return dict(rot_end_deg=round(float(np.degrees(np.median(A))), 3), pos_rms_cm=round(float(np.median(P) * 100), 2),
+                    rot_end_p90=round(float(np.degrees(np.percentile(A, 90))), 3), n=len(A))
 
-    base_tr, base_va = evaluate(None, tr), evaluate(None, va)
-    print(f"모델 무게 {nparam}개, 장치 {dev}\n보정 없음 (1 s 적분 중앙 오차): 학습 {base_tr}\n                           평가 {base_va}")
-    t0 = time.time()
-    for ep in range(1, a.epochs + 1):
-        model.train()
-        tot = 0
-        for X, S0, S1, gb in tr:
-            idx = torch.randperm(len(X))
-            for b in range(0, len(X), 64):
-                j = idx[b:b + 64]
-                ang, dp, dv = run(model, T(X[j]), T(S0[j]), T(S1[j]), T(gb.astype(np.float32)), mu, sd, scale)
-                loss = (ang / 0.01).pow(2).mean() + (dp / 0.05).pow(2).mean() + (dv / 0.05).pow(2).mean()
-                opt.zero_grad()
-                loss.backward()
-                opt.step()
-                tot += loss.item()
-        if ep % 25 == 0 or ep == a.epochs:
-            model.eval()
-            print(f"  ep {ep:4d} 손실 {tot:.1f}  학습 {evaluate(model, tr)}  평가 {evaluate(model, va)}  ({time.time() - t0:.0f} s)")
+    def train(model, epochs, lr):
+        opt = torch.optim.Adam(model.parameters(), lr)
+        sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, epochs)
+        t0 = time.time()
+        for ep in range(1, epochs + 1):
+            model.train()
+            tot = 0.0
+            for s in tr:
+                perm = torch.randperm(len(s["X"]), device=dev)
+                for b in range(0, len(perm), a.batch):
+                    j = perm[b:b + a.batch]
+                    W = {k: s[k][j] for k in ("idx", "R", "p", "m")}
+                    ang, res = window_loss(apply(model, s["X"][j]), W, s["gb"])
+                    # 빠르게 돌 때 보정판 정답 자체가 1~2° 흔들림(롤링셔터·번짐) → 그 프레임은 덜 믿음
+                    wn = s["X"][j][..., :3].norm(dim=-1).gather(1, W["idx"])
+                    m = W["m"] / (1 + (wn / 1.0) ** 2)
+                    loss = (((ang / 0.005) ** 2 + (res / 0.01) ** 2) * m).sum() / m.sum()
+                    opt.zero_grad()
+                    loss.backward()
+                    nn.utils.clip_grad_norm_(model.parameters(), 10.0)
+                    opt.step()
+                    tot += loss.item()
+            sched.step()
+            if ep % max(1, epochs // 8) == 0 or ep == epochs:
+                model.eval()
+                print(f"  ep {ep:4d} 손실 {tot:.1f}  학습 {evaluate(model, tr)}  평가 {evaluate(model, va)}  "
+                      f"({time.time() - t0:.0f} s)", flush=True)
+        return model
+
+    res = dict(train=[s["name"] for s in tr], val=[s["name"] for s in va])
+    res["none"] = dict(train=evaluate(None, tr), val=evaluate(None, va))
+    print("보정 없음:", res["none"], flush=True)
+    bias = train(BiasOnly().to(dev), max(20, a.epochs // 4), 3e-3)
+    res["bias"] = dict(train=evaluate(bias, tr), val=evaluate(bias, va), b=(bias.b.detach() * scale).cpu().tolist())
+    print("바이어스만:", res["bias"], flush=True)
+    cnn = train(CausalCNN().to(dev), a.epochs, 1e-3)
+    res["cnn"] = dict(train=evaluate(cnn, tr), val=evaluate(cnn, va), params=sum(p.numel() for p in cnn.parameters()))
+    print("CNN:", res["cnn"], flush=True)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    torch.save(dict(model=model.state_dict(), mu=mu.cpu(), sd=sd.cpu(), scale=scale.cpu()), out / "model.pt")
-    res = dict(recs=[Path(r).name for r in a.recs], base_train=base_tr, base_val=base_va,
-               model_train=evaluate(model, tr), model_val=evaluate(model, va), params=nparam, epochs=a.epochs)
+    torch.save(dict(model=cnn.state_dict(), mu=mu.cpu(), sd=sd.cpu(), scale=scale.cpu(), hz=HZ), out / "model.pt")
     json.dump(res, open(out / "result.json", "w"), indent=1, ensure_ascii=False)
-    print(json.dumps(res, ensure_ascii=False, indent=1))
+    print(json.dumps(res, ensure_ascii=False, indent=1), f"\n→ {out}")
 
 
 if __name__ == "__main__":
