@@ -181,6 +181,12 @@ public class MainActivity extends Activity {
     private float focusDiopters=1.0f;
     private CaptureRequest currentRequest;             // what the repeating request runs now (camera thread)
     private Range<Integer> sensRange;                  // target lens SENSOR_INFO_SENSITIVITY_RANGE (method A iso clamp)
+    /** 1.12-shortexp: less motion blur. exp_cap_us > 0 = after AE meters (~15 frames) switch to manual exposure
+     *  min(AE exposure, cap) and raise ISO to keep the same brightness (exposure x ISO); if ISO hits the lens max the
+     *  exposure stays as short as that ISO allows. Only without phase sync (1 lens or sync=off). exp_gain < 1 = darker. */
+    private long expCapNs; private double expGain=1.0;
+    private long fixExpNs; private int fixIso; private int meterFrames;
+    private Range<Integer> logicalSensRange;
     private List<CaptureRequest.Key<?>> physKeys;      // logical getAvailablePhysicalCameraRequestKeys (method A, REVIEW8 H1)
     private String logicalId;
     /** Method C camera re-open (camera thread only): reopening = waiting for onOpened of the new device. */
@@ -192,6 +198,7 @@ public class MainActivity extends Activity {
             try {
                 if(!running) return;
                 Long ts=result.get(CaptureResult.SENSOR_TIMESTAMP); if(ts==null) return;
+                if(expCapNs>0 && fixExpNs==0 && phaseSync==null) meterShortExposure(result);
                 Map<String,CaptureResult> phys=result.getPhysicalCameraResults();
                 float[] v=new float[ids.length+3];
                 Long[] physicalTimestamps=new Long[ids.length];
@@ -643,6 +650,9 @@ public class MainActivity extends Activity {
             saveFps=sf>0?sf:fps;
             rawTimestamps=getIntent().getBooleanExtra("raw_ts",false);
             imuPeriodUs=getIntent().getIntExtra("imu_us",2500);
+            expCapNs=Math.max(0,getIntent().getIntExtra("exp_cap_us",0))*1000L;
+            expGain=Math.max(0.1,Math.min(1.0,getIntent().getFloatExtra("exp_gain",1.0f)));
+            fixExpNs=0; fixIso=0; meterFrames=0; meterEv=0; meterExp=0; meterN=0;
             String fmt=getIntent().getStringExtra("stream_fmt");
             fmt=fmt==null?"h264":fmt.trim().toLowerCase(Locale.US);
             if(!fmt.equals("h264") && !fmt.equals("jpeg") && !fmt.equals("nv21"))
@@ -1058,6 +1068,12 @@ public class MainActivity extends Activity {
         Range<Integer>[] ranges=manager.getCameraCharacteristics(camera.getId()).get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
         if(ranges!=null) for(Range<Integer> r:ranges)
             if(r.getLower()==fps && r.getUpper()==fps) { setKey(request,override,CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,r); break; }
+        if(fixExpNs>0 && fixIso>0 && !override) {          // short manual exposure (meterShortExposure)
+            setKey(request,false,CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_OFF);
+            setKey(request,false,CaptureRequest.SENSOR_EXPOSURE_TIME,fixExpNs);
+            setKey(request,false,CaptureRequest.SENSOR_SENSITIVITY,fixIso);
+            setKey(request,false,CaptureRequest.SENSOR_FRAME_DURATION,1_000_000_000L/Math.max(1,fps));
+        }
         for(ImageReader reader:readers) request.addTarget(reader.getSurface());
         if(override) {
             String id=ids[ps.tgt];
@@ -1082,6 +1098,29 @@ public class MainActivity extends Activity {
         if(physical && physKeys!=null && physKeys.contains(k)) for(String id:ids) b.setPhysicalCameraKey(k,v,id);
     }
 
+    /** Camera thread: average AE exposure x ISO over frames 5..15, then fix a short exposure (see expCapNs). */
+    private double meterEv, meterExp; private int meterN;
+    private void meterShortExposure(TotalCaptureResult r) {
+        Long e=r.get(CaptureResult.SENSOR_EXPOSURE_TIME); Integer is=r.get(CaptureResult.SENSOR_SENSITIVITY);
+        if(e==null || is==null || e<=0 || is<=0) return;
+        meterFrames++;
+        if(meterFrames<5) return;                          // AE still settling
+        meterEv+=e*(double)is; meterExp+=e; meterN++;
+        if(meterFrames<15) return;
+        double ev=meterEv/meterN*expGain, aeExp=meterExp/meterN;   // ns x ISO, ns
+        int isoMax=logicalSensRange!=null?logicalSensRange.getUpper():3200, isoMin=logicalSensRange!=null?logicalSensRange.getLower():50;
+        long exp=(long)Math.min(expCapNs,aeExp);                  // never longer than AE chose
+        if(ev/exp>isoMax) exp=(long)(ev/isoMax);                   // ISO at max -> shortest exposure that keeps brightness
+        int iso=(int)Math.max(isoMin,Math.min(isoMax,Math.round(ev/Math.max(1,exp))));
+        fixExpNs=exp; fixIso=iso;
+        Log.i(TAG,"short exposure: AE ev "+(long)ev+" -> exp "+exp/1000+" us iso "+iso+" (cap "+expCapNs/1000+" us, iso max "+isoMax+")");
+        status(runningState()+" exp_us="+exp/1000+" iso="+iso);
+        try {
+            CameraCaptureSession s=session;
+            if(s!=null) { currentRequest=buildRequest(0,0,0); s.setRepeatingRequest(currentRequest,timing,handler); }
+        } catch(Exception ex) { Log.w(TAG,"short exposure request failed",ex); fixExpNs=0; }
+    }
+
     private void configure() {
         try {
             for(int i=0;i<ids.length;i++) {
@@ -1091,6 +1130,8 @@ public class MainActivity extends Activity {
                 readers.add(reader);
                 reader.setOnImageAvailableListener(r -> receive(r,index),handler);
             }
+            try { logicalSensRange=manager.getCameraCharacteristics(ids[0]).get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE); }
+            catch(Exception ignored) { }
             currentRequest=buildRequest(0,0,0);
             createSession(true,0);
         } catch(Exception e) { status("CONFIGURE_ERROR "+e); Log.e(TAG,"configure",e); }

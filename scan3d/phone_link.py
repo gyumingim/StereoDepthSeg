@@ -135,6 +135,7 @@ class PhoneLink:
         self.log = log
         self.physical, self.fps, self.focus, self.imu_us = physical, fps, focus, imu_us
         self.capture_fps = None                                     # 촬영 fps (None/0 = fps 그대로). fps 의 배수일 때만 씀
+        self.exp_cap_us = 0                                         # 노출 상한 µs (0 = 자동 노출 그대로, 앱 1.12-shortexp)
         self.width, self.height = int(width), int(height)          # 스트림·녹화 크기 (4:3, scan3d.apply_geometry 가 바꿈)
         self.rec_kbps = None                                        # 녹화 H.264 kbps (None = 앱 자동, SPEC 14.5: 640x480·15 fps 에서 4000)
         self.stream_fmt, self.jpeg_q = stream_fmt, int(jpeg_q)      # 스트림 형식 (SPEC 1.2: 기본 h264, jpeg·nv21 은 고급)
@@ -239,7 +240,9 @@ class PhoneLink:
                              "--es", "stream_fmt", str(self.stream_fmt), "--ei", "jpeg_q", str(self.jpeg_q),
                              "--es", "sync", str(self.sync), "--ei", "rec_wait_sync_s", str(int(self.rec_wait_sync_s)),
                              *(("--ei", "live_kbps", str(int(self.live_kbps))) if self.live_kbps else ()),   # 앱 MainActivity live_kbps
-                             "--ei", "rec_kbps", str(int(self._rec_kbps())), timeout=20)
+                             "--ei", "rec_kbps", str(int(self._rec_kbps())),
+                             *(("--ei", "exp_cap_us", str(int(self.exp_cap_us))) if self.exp_cap_us else ()),   # 앱 1.12: 짧은 노출
+                             timeout=20)
         self.log(f"[adb] am start mode={mode} {self.width}x{self.height} "
                  f"{f'{cap} fps 촬영 → {self.fps} fps 저장' if cap else f'{self.fps} fps'} sync={self.sync} rc={rc} "
                  f"{out.splitlines()[-1] if out else ''}")

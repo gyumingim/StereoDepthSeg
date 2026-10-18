@@ -236,6 +236,8 @@
         <select id="sCap"><option value="0">fps 그대로</option></select></label>
       <label class="qsel" title="깊이를 재는 두 렌즈 (다음 [▶ 스캔 시작] 부터). 초광각+광각 = 기본 (체커보드로 보정한 값). 초광각+망원 = 두 렌즈 사이가 2배 넓고 거의 같은 순간에 찍혀 깊이에 유리하지만, 깊이가 나오는 범위가 화면 가운데(망원이 보는 곳)뿐이고 보정은 폰 공장 값입니다. 녹화를 복원할 때는 녹화한 렌즈로 자동으로 맞춥니다. '3개 모두 녹화 (비교용)' = [폰에 녹화만] 에서 세 렌즈를 한꺼번에 녹화해, 같은 움직임을 두 쌍(초광각+광각, 초광각+망원)으로 따로 복원해 비교합니다">깊이 렌즈
         <select id="sPair"><option value="2+5">초광각+광각</option><option value="2+6">초광각+망원</option><option value="all">3개 모두 녹화 (비교용)</option><option value="5">광각만 (단안, 보정판 녹화용)</option></select></label>
+      <label class="qsel" title="노출 시간 상한 (ms). 짧을수록 움직일 때 덜 번지고, 대신 감도(ISO)를 올려 밝기를 맞춰 노이즈가 늘어남. ISO 가 최대에 닿으면 그 밝기를 유지하는 가장 짧은 노출. 0 = 자동 노출 (렌즈 하나 또는 동기화 끔일 때만 적용)">노출 상한
+        <input id="iExpCap" type="number" min="0" max="33" step="0.5" value="2" style="width:56px"> ms</label>
       <button id="bStart" class="big">▶ 스캔 시작</button>
       <button id="bStop" class="big">■ 정지</button>
       <button id="bRestart" class="big" title="위치 추적과 3D 맵을 처음부터 다시 시작합니다">↺ 처음부터 다시</button>

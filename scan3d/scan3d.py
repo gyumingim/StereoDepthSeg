@@ -704,7 +704,7 @@ class Scanner:
 
     # ---------------- 세션 (모드) ----------------
     def start_session(self, mode, start_app=True, size=None, fps=None, ffs_scale=None, pair=None, rec3=False, capture_fps=None,
-                      mono=None):
+                      mono=None, exp_cap_us=None):
         """size(WxH 4:3)·fps·ffs_scale 를 주면 그 값으로 (self.want 갱신), 안 주면 self.want. 크기·fps 가 바뀌면
         정류맵·FFS 입력·앱 인자를 다시 정하고, 실시간 브리지는 그 크기·fps 설정(config/<W>x<H>_<fps>/)으로 다시 띄운다.
         rec3 = 렌즈 3개(2,5,6) 모두 녹화 (비교용, '폰에 녹화만' 에서만). pair 는 그때 쓰지 않는 깊이 쌍 (기본 2+6).
@@ -732,6 +732,7 @@ class Scanner:
             # 앱 --es physical: 3개 모두 녹화면 2,5,6, 아니면 깊이 쌍 (apply_geometry 가 쌍이 같으면 안 건드리므로 늘 다시 정함)
             self.rec3 = bool(rec3)
             self.mono_lens = str(mono) if mono else None
+            self.link.exp_cap_us = int(exp_cap_us or 0)          # 짧은 노출 (모션 블러 줄이기, 앱 1.12): 0 = 자동 노출
             self.link.physical = self.mono_lens or ",".join(ALL_REC_PHYSICAL if self.rec3 else self.geom["physical"])
             if self.mono_lens:
                 self.log(f"[link] 렌즈 하나만 (단안 {self.mono_lens}): 깊이·VIO 끔, 카메라 창·보정판 인식만")
@@ -2392,7 +2393,8 @@ class Scanner:
             try:
                 return self.start_session(body.get("mode", "live"), start_app=bool(body.get("start_app", True)),
                                           size=body.get("size"), fps=body.get("fps"), ffs_scale=body.get("ffs_scale"),
-                                          pair=pair, rec3=rec3, capture_fps=body.get("capture_fps"), mono=body.get("mono"))
+                                          pair=pair, rec3=rec3, capture_fps=body.get("capture_fps"), mono=body.get("mono"),
+                                          exp_cap_us=body.get("exp_cap_us"))
             except ValueError as e:
                 return dict(ok=False, error=str(e))
         elif cmd == "stream":

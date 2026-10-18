@@ -679,7 +679,7 @@ async function startScan(askMsg) {
     const all = Q.pair === 'all' && m === 'record';            // 3개 모두 녹화 (비교용) — 폰에 녹화만
     const mono = Q.pair === '5' ? '5' : null;                    // 광각만 (단안): 보정판 정답 녹화용, 깊이·VIO 안 돌림
     const pair = all ? 'all' : mono ? '2+5' : (Q.pair === 'all' ? '2+6' : Q.pair);
-    const r = await cmd(Object.assign({ cmd: 'mode', mode: m, start_app: $('cStartApp').checked && adbOk, size: Q.size, fps: Q.fps, capture_fps: capNow(), stream_fmt: Q.fmt, pair, mono, live_pair: '2+6' }, mapOpts()));
+    const r = await cmd(Object.assign({ cmd: 'mode', mode: m, start_app: $('cStartApp').checked && adbOk, size: Q.size, fps: Q.fps, capture_fps: capNow(), stream_fmt: Q.fmt, pair, mono, exp_cap_us: Math.round((parseFloat($('iExpCap').value) || 0) * 1000), live_pair: '2+6' }, mapOpts()));
     if (r.ok === false || r.error) alert(r.error || '시작 실패');
     else toast(r.warn ? `시작합니다 — ${r.warn}` : `시작합니다 (${Q.size} · ${capNow() ? capNow() + ' fps 촬영 → ' : ''}${Q.fps} fps${Q.fmt !== 'h264' ? ' · ' + (FMT_KO[Q.fmt] || Q.fmt) : ''}${pair !== '2+5' ? ' · ' + PAIR_KO[pair] : ''}) — 폰 화면을 켜 두세요`
       + (all ? '. 끝나면 두 쌍(초광각+망원, 초광각+광각)으로 따로 복원합니다' : ''), r.warn || all ? 8000 : 4000);
