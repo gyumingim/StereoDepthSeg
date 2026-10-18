@@ -61,9 +61,8 @@ class OvRunner implements SensorEventListener {
     /** t_ns sent to the bridge (mid exposure) -> {t_sensor, t_arrive} */
     private final ConcurrentHashMap<Long, long[]> sent = new ConcurrentHashMap<>();
     private volatile long midOffsetNs;          // (exposure + rolling shutter skew) / 2 from the latest capture result
-    private float[] accPrev, accLast;
-    private long accPrevT, accLastT;
-    private int nCam, nPose, nImu, camDropped;
+    private volatile long expNs;                // exposure of the latest capture result (motion blur check)
+    private int nCam, nPose, nImu, nAcc, camDropped;
     private String lastStatus = "-";
 
     OvRunner(Context ctx, Status status, Streamer out) { this.ctx = ctx; this.status = status; this.out = out; }
@@ -111,6 +110,7 @@ class OvRunner implements SensorEventListener {
                             Long exp = res.get(CaptureResult.SENSOR_EXPOSURE_TIME);
                             Long skew = res.get(CaptureResult.SENSOR_ROLLING_SHUTTER_SKEW);
                             midOffsetNs = ((exp == null ? 0 : exp) + (skew == null ? 0 : skew)) / 2;
+                            expNs = exp == null ? 0 : exp;
                         }
                     };
                     d.createCaptureSession(new SessionConfiguration(SessionConfiguration.SESSION_REGULAR,
@@ -156,45 +156,99 @@ class OvRunner implements SensorEventListener {
             rec.put(row);
         }
         im.close();
+        if (nCam % 150 == 0) {      // raw Y snapshot for checking field of view / blur on the PC (files/ov/frame_<n>.y, 640x480)
+            try (FileOutputStream fo = new FileOutputStream(new File(new File(ctx.getExternalFilesDir(null), "ov"), "frame_" + (nCam / 150 % 4) + ".y"))) {
+                fo.write(rec.array(), 32, W * H);
+            } catch (Exception ignored) { }
+        }
         sent.put(tSend, new long[]{ts, now});
         if (sent.size() > 300) sent.clear();
         if (!toBridge.offer(rec.array())) camDropped++;
         nCam++;
     }
 
+    /**
+     * One IMU record per gyro sample with the accelerometer interpolated at the gyro time.
+     * S24 delivers the accelerometer in bursts (~every 12 ms, several samples at once) while the gyro streams, so a gyro
+     * sample is held until an accel sample at or after its time has arrived, then interpolated between the bracketing
+     * accel samples. (2026-10-18: keeping only the last two accel samples froze accel for ~6 gyro samples at a time —
+     * 16 % unique values — and OpenVINS drifted off by tens of metres; the same stream replayed on the PC did the same.)
+     */
+    private final java.util.ArrayDeque<long[]> gyroQ = new java.util.ArrayDeque<>();      // {t, bits(x), bits(y), bits(z)}
+    private final java.util.ArrayList<float[]> accV = new java.util.ArrayList<>();
+    private final java.util.ArrayList<Long> accT = new java.util.ArrayList<>();
+
     @Override public void onSensorChanged(SensorEvent e) {
         if (e.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            accPrev = accLast; accPrevT = accLastT;
-            accLast = e.values.clone(); accLastT = e.timestamp;
-            return;
+            if (!accT.isEmpty() && e.timestamp <= accT.get(accT.size() - 1)) return;
+            accT.add(e.timestamp);
+            accV.add(e.values.clone());
+            nAcc++;
+        } else {
+            gyroQ.add(new long[]{e.timestamp, Float.floatToIntBits(e.values[0]), Float.floatToIntBits(e.values[1]),
+                    Float.floatToIntBits(e.values[2])});
         }
-        if (accLast == null) return;
-        float[] a = accLast;
-        if (accPrev != null && accLastT > accPrevT && e.timestamp <= accLastT) {   // interpolate accel at gyro time
-            double f = (double) (e.timestamp - accPrevT) / (accLastT - accPrevT);
-            f = Math.max(0, Math.min(1, f));
-            a = new float[3];
-            for (int i = 0; i < 3; i++) a[i] = (float) (accPrev[i] + f * (accLast[i] - accPrev[i]));
+        flushImu();
+    }
+
+    private void flushImu() {
+        if (accT.isEmpty()) { gyroQ.clear(); return; }
+        long accNewest = accT.get(accT.size() - 1);
+        while (!gyroQ.isEmpty()) {
+            long[] g = gyroQ.peekFirst();
+            long tg = g[0];
+            // wait for the accel that brackets this gyro sample; give up waiting after 50 ms (accel stalled)
+            if (tg > accNewest && gyroQ.peekLast()[0] - tg < 50_000_000L) break;
+            gyroQ.pollFirst();
+            float[] a;
+            int k = 0;
+            while (k + 1 < accT.size() && accT.get(k + 1) <= tg) k++;    // accT[k] <= tg < accT[k+1] when possible
+            if (tg <= accT.get(0)) a = accV.get(0);
+            else if (k + 1 >= accT.size()) a = accV.get(accT.size() - 1);
+            else {
+                double f = (double) (tg - accT.get(k)) / (accT.get(k + 1) - accT.get(k));
+                float[] a0 = accV.get(k), a1 = accV.get(k + 1);
+                a = new float[]{(float) (a0[0] + f * (a1[0] - a0[0])), (float) (a0[1] + f * (a1[1] - a0[1])),
+                        (float) (a0[2] + f * (a1[2] - a0[2]))};
+            }
+            // drop accel samples no later gyro can need (keep the one at or before tg)
+            if (k > 0) { accT.subList(0, k).clear(); accV.subList(0, k).clear(); }
+            ByteBuffer rec = ByteBuffer.allocate(12 + 56).order(ByteOrder.LITTLE_ENDIAN);
+            rec.putInt(MAGIC).putInt(1).putInt(56).putLong(tg);
+            rec.putDouble(Float.intBitsToFloat((int) g[1])).putDouble(Float.intBitsToFloat((int) g[2]))
+                    .putDouble(Float.intBitsToFloat((int) g[3]));
+            rec.putDouble(a[0]).putDouble(a[1]).putDouble(a[2]);
+            toBridge.offer(rec.array());
+            nImu++;
         }
-        ByteBuffer rec = ByteBuffer.allocate(12 + 56).order(ByteOrder.LITTLE_ENDIAN);
-        rec.putInt(MAGIC).putInt(1).putInt(56).putLong(e.timestamp);
-        rec.putDouble(e.values[0]).putDouble(e.values[1]).putDouble(e.values[2]);
-        rec.putDouble(a[0]).putDouble(a[1]).putDouble(a[2]);
-        toBridge.offer(rec.array());
-        nImu++;
     }
 
     @Override public void onAccuracyChanged(Sensor s, int a) { }
 
+    /** seconds of bridge input to also save as files/ov/live_stream.bin (0 = off) — for replaying the live run on the PC */
+    int dumpSecs;
+
     private void writer() {
+        OutputStream dump = null;
+        long dumpEnd = 0;
         try {
+            if (dumpSecs > 0) {
+                dump = new java.io.BufferedOutputStream(new FileOutputStream(
+                        new File(new File(ctx.getExternalFilesDir(null), "ov"), "live_stream.bin")), 1 << 20);
+                dumpEnd = SystemClock.elapsedRealtime() + dumpSecs * 1000L;
+            }
             OutputStream o = proc.getOutputStream();
             while (running) {
                 byte[] r = toBridge.poll(100, java.util.concurrent.TimeUnit.MILLISECONDS);
                 if (r == null) continue;
                 o.write(r);
+                if (dump != null) {
+                    dump.write(r);
+                    if (SystemClock.elapsedRealtime() > dumpEnd) { dump.close(); dump = null; status.show("dump done"); }
+                }
                 if (toBridge.isEmpty()) o.flush();
             }
+            if (dump != null) dump.close();
         } catch (Exception e) {
             if (running) status.show("writer: " + e);
         }
@@ -224,6 +278,7 @@ class OvRunner implements SensorEventListener {
                 if (j.has("q")) o.put("q", j.getJSONArray("q"));
                 o.put("ms", j.optDouble("ms", 0)).put("n_slam", j.optInt("n_slam")).put("n_msckf", j.optInt("n_msckf"));
                 o.put("dt_cam_imu", j.optDouble("dt_cam_imu", 0)).put("cam_q_drop", camDropped);
+                o.put("exp_ms", expNs / 1e6).put("mid_ms", midOffsetNs / 1e6).put("n_imu", nImu).put("n_acc", nAcc).put("n_cam", nCam);
                 out.send(o.toString());
                 lastStatus = j.optString("status");
                 if (++nPose % 15 == 0) {
