@@ -97,7 +97,11 @@ input[type=range]{width:100%}
 const D = __IMU__;
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const N = D.t.length;
-function fit(c){const r=devicePixelRatio||1;c.width=c.clientWidth*r;c.height=c.getAttribute('height')*r;const x=c.getContext('2d');x.setTransform(r,0,0,r,0,0);return [x,c.clientWidth,+c.getAttribute('height')];}
+// CSS height comes from the original height attribute, kept in data-h: setting c.height rewrites the attribute, so
+// reading it back every frame grew the canvas by devicePixelRatio each frame on scaled screens
+function fit(c){const r=devicePixelRatio||1;if(!c.dataset.h){c.dataset.h=c.getAttribute('height');c.style.height=c.dataset.h+'px';}
+ const h=+c.dataset.h,w=c.clientWidth;if(c.width!==Math.round(w*r))c.width=Math.round(w*r);if(c.height!==Math.round(h*r))c.height=Math.round(h*r);
+ const x=c.getContext('2d');x.setTransform(r,0,0,r,0,0);return [x,w,h];}
 function line(x,arr,X,Y,col,w=2){x.strokeStyle=col;x.lineWidth=w;x.beginPath();arr.forEach((v,i)=>{const px=X(i),py=Y(v);i?x.lineTo(px,py):x.moveTo(px,py)});x.stroke();}
 function rng(a){let lo=Infinity,hi=-Infinity;for(const v of a){lo=Math.min(lo,v);hi=Math.max(hi,v)}return [lo,hi];}
 const gz=D.gz, ax=D.ax.map(v=>v);
