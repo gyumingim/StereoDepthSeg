@@ -41,8 +41,9 @@ CNN은 데이터가 10배가 되어도 거의 더해 주지 못했습니다 → 
 (2 초 끊김 78 → 62 cm). 끊긴 동안의 순수 IMU 표류는 위 1번의 3 초 창 오차 (물리 보정 0.99 cm) 가 더 가까운 숫자. → 오늘 할 일: 끊김 뒤 재초기화·특징점 리셋.</p>
 <p class="small">ATE = 전체 위치 오차, RPE1s = 1초 동안 흘러간 오차, 스케일 = VIO 크기/정답 크기. 물리 보정은 그 녹화를 빼고 학습한 값만 사용(공정).</p>
 <b>속도 (PC 실측 → 폰 추정)</b>
-<div class="scroll"><table><tr><th>설정</th><th>PC 중앙</th><th>PC 상위10%</th><th>폰 추정 (중앙)</th><th>폰 지속 가능 fps (발열 ×1.4)</th></tr><tr><td colspan=5>측정 중/실패</td></tr></table></div>
-<p class="small">폰 추정 = PC 시간 × 비율. 비율은 예전 폰 실측(640×480 단안 13.1 ms)을 기준으로 잡은 추정치 — 오늘 폰으로 꼭 확인할 항목.</p></div>
+<div class="scroll"><table><tr><th>설정</th><th>PC 중앙</th><th>PC 상위10%</th><th>폰 추정 (중앙)</th><th>폰 지속 가능 fps (발열 ×1.4)</th></tr><tr><td>30 fps · 640x360 · 특징점 200</td><td>12.83 ms</td><td>22.86 ms</td><td>19.2 ms</td><td>37</td></tr><tr><td>60 fps · 640x360 · 특징점 200</td><td>9.02 ms</td><td>15.12 ms</td><td>13.5 ms</td><td>53</td></tr><tr><td>60 fps · 640x360 · 특징점 100</td><td>7.18 ms</td><td>14.16 ms</td><td>10.8 ms</td><td>66</td></tr><tr><td>60 fps · 480x270 · 특징점 200</td><td>8.05 ms</td><td>15.87 ms</td><td>12.1 ms</td><td>59</td></tr><tr><td>60 fps · 480x270 · 특징점 100</td><td>6.05 ms</td><td>12.49 ms</td><td>9.1 ms</td><td>79</td></tr></table></div>
+<p class="small">폰 추정 = PC 시간 × 1.5 (추정: 7800X3D 대 S24 단일 코어 성능 차 약 1.3 배 + 느린 메모리), 지속 가능 fps 는 발열로 1.4 배 더 느려진다고 가정.
+예전 폰 실측(640×480 단안 13.1 ms)은 설정이 달라 비율 계산에 못 씀 — <b>오늘 폰으로 꼭 확인할 항목</b>. 시간 측정용 실행은 30 초짜리라 정확도 열은 60 초 표와 다름.</p></div>
 
 <h2>4. 밤사이 사고와 고친 것</h2>
 <div class="card"><ul>
