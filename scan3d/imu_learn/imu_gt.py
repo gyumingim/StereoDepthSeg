@@ -209,6 +209,8 @@ def main():
     ap.add_argument("--cam", default="5")
     ap.add_argument("--board", default=None,
                     help="보드 json (기본 board_user_A4_6x6.json). 모니터에 띄운 보드: config/charuco/board_monitor_6x6.json")
+    ap.add_argument("--lens", default=None,
+                    help="렌즈 값 json (lens_calib.py). 없으면 imu_gt/lens.json → config/lens/hs_<w>x<h>_f<초점>.json → 새로 구함")
     a = ap.parse_args()
     if a.board:
         global BOARD_JSON
@@ -217,12 +219,25 @@ def main():
     rec = Path(a.rec)
     meta = json.load(open(rec / "meta.json"))
     size = (int(meta["width"]), int(meta["height"]))
+    out = rec / "imu_gt"
+    out.mkdir(exist_ok=True)
     if size[0] * 3 == size[1] * 4:
         K, dist = lens_K(rec, a.cam, size)
     else:
-        K, dist, _ = self_calibrate(rec / f"cam{a.cam}.mp4")
-    out = rec / "imu_gt"
-    out.mkdir(exist_ok=True)
+        # 고속 녹화 (16:9, 센서를 잘라 씀): 공장 렌즈 값을 못 쓰므로 보드로 구한 값. 초점 고정 녹화는 같은 값을 같이 씀.
+        import lens_calib
+        fd = meta.get("focus_dpt_request") or -1
+        shared = SCAN3D / "config" / "lens" / f"hs_{size[0]}x{size[1]}_f{fd:.2f}.json"
+        cand = [Path(a.lens)] if a.lens else [out / "lens.json", shared]
+        lp = next((p for p in cand if p.exists()), None)
+        if lp is None:
+            print("렌즈 값 새로 구함 (느린 프레임, 화면 전체에 퍼지게)")
+            K, dist, info = lens_calib.calibrate([rec], BOARD_JSON)
+            lp = shared if fd > 0 else out / "lens.json"
+            lens_calib.save(lp, K, dist, info, focus_dpt=fd if fd > 0 else meta.get("focus_locked_dpt"))
+        K, dist, info = lens_calib.load(lp)
+        print(f"렌즈 값: {lp} ({info.get('model')}, rms {info.get('rms_px')} px, 사진 {info.get('n_views')} 장, "
+              f"f {K[0, 0]:.1f} {K[1, 1]:.1f})")
     gt = board_poses(rec / f"cam{a.cam}.mp4", rec / f"frames_cam{a.cam}.csv", K, dist)
     np.savez(out / "gt.npz", **gt, K=K, dist=dist)
     ok = gt["ok"]
