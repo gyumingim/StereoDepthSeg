@@ -63,7 +63,7 @@ class HsRecorder implements SensorEventListener {
     volatile String stopReason = "user";
     int maxBatteryTenthC = 460;                  // stop when the battery reaches 46.0 C or Android reports SEVERE throttling
     private File dir;
-    private BufferedWriter imuW, frW;
+    private BufferedWriter imuW, frW, resW;     // resW: every capture result (offline check of the pts -> sensor ts match)
     private volatile boolean running;
     private final ConcurrentHashMap<Long, long[]> meta = new ConcurrentHashMap<>();   // sensor ts -> {exp, skew}
     private int nFrames, nImu, nRes, nUnmatched;
@@ -108,6 +108,8 @@ class HsRecorder implements SensorEventListener {
         imuW = new BufferedWriter(new FileWriter(new File(dir, "imu.csv")), 1 << 16);
         imuW.write("type,t_ns,v0,v1,v2,v3,v4,v5\n");
         frW = new BufferedWriter(new FileWriter(new File(dir, "frames_cam5.csv")), 1 << 16);
+        resW = new BufferedWriter(new FileWriter(new File(dir, "results_cam5.csv")), 1 << 16);
+        resW.write("sensor_ts_ns,exposure_ns,rolling_shutter_skew_ns,frame_number,arrive_elapsed_ns\n");
         frW.write("frame_idx,t_mid_ns,physical_ts_ns,logical_ts_ns,exposure_ns,rolling_shutter_skew_ns,pts_us\n");
         t0Elapsed = SystemClock.elapsedRealtimeNanos(); t0Wall = System.currentTimeMillis();
         clockOffset = SystemClock.elapsedRealtimeNanos() - System.nanoTime();
@@ -191,6 +193,8 @@ class HsRecorder implements SensorEventListener {
                                     @Override public void onCaptureCompleted(CameraCaptureSession ss, CaptureRequest q, TotalCaptureResult r) {
                                         Long ts = r.get(CaptureResult.SENSOR_TIMESTAMP), e = r.get(CaptureResult.SENSOR_EXPOSURE_TIME),
                                                 sk = r.get(CaptureResult.SENSOR_ROLLING_SHUTTER_SKEW);
+                                        try { resW.write(ts + "," + e + "," + sk + "," + r.getFrameNumber() + "," + SystemClock.elapsedRealtimeNanos() + "\n"); }
+                                        catch (Exception ignored) { }
                                         if (ts != null) meta.put(ts, new long[]{e == null ? 0 : e, sk == null ? 0 : sk, ts});
                                         if (++nRes <= 3) android.util.Log.i("arlat", "hs result ts " + ts + " exp " + e + " skew " + sk);
                                         if (meta.size() > 2000) meta.clear();
@@ -266,7 +270,7 @@ class HsRecorder implements SensorEventListener {
         try { if (dev != null) dev.close(); } catch (Exception ignored) { }
         try { enc.stop(); enc.release(); } catch (Exception ignored) { }
         try { if (track >= 0) mux.stop(); mux.release(); } catch (Exception ignored) { }
-        try { imuW.close(); frW.close(); } catch (Exception ignored) { }
+        try { imuW.close(); frW.close(); resW.close(); } catch (Exception ignored) { }
         try {
             JSONObject m = new JSONObject();
             m.put("format", "scan3d-phone-rec/1").put("mode", "hs").put("folder", dir.getName()).put("logical", "0")
