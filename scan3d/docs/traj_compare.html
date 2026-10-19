@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>점 vs 곡선 궤적</title>
+<style>
+:root{--bg:#f7f7f5;--fg:#1c1f24;--mut:#6b7078;--card:#fff;--line:#e2e4e8;--a:#2563eb;--b:#dc2626;--c:#16a34a;--d:#d97706;--chip:#eef2ff;--svgbg:#fbfbfa}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--chip:#1e293b;--svgbg:#16191d}}
+:root[data-theme="dark"]{--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--chip:#1e293b;--svgbg:#16191d}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,"Malgun Gothic",sans-serif}
+main{max-width:1100px;margin:0 auto;padding:16px 16px 60px}
+h1{font-size:24px;margin:0 0 4px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+select,button{font:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg)}
+input[type=range]{width:100%}
+canvas{width:100%;display:block;background:var(--svgbg);border-radius:8px}
+.small{font-size:14px;color:var(--mut)}
+.stat{font-variant-numeric:tabular-nums}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px}
+</style>
+</head>
+<body><main>
+<h1>실제 녹화 궤적 — 사진마다 점 vs 매끈한 곡선</h1>
+<p class="small">점 = 사진 한 장마다 따로 계산한 폰(카메라) 위치·자세 (지금 정답). 곡선 = 같은 점들을 지나는 매끈한 곡선 (사진만 사용한 간이판 — IMU까지 같이 맞추는 표준 방식은 아직 아님). 점이 곡선에서 벗어난 만큼이 "사진마다 계산 흔들림"입니다.</p>
+<div class="card row">
+ <b>녹화</b><select id="rec"></select>
+ <b>보는 길이</b><select id="span"><option value="0.25" selected>0.25 초</option><option value="1">1 초</option><option value="3">3 초</option><option value="10">10 초</option></select>
+ <button id="worst">가장 흔들리는 곳으로</button>
+</div>
+<div class="card"><label>시작 시각 <b id="tv">0</b> 초</label><input type="range" id="t0" min="0" max="100" step="0.01" value="5"></div>
+<div class="card stat" id="stats">-</div>
+<div class="grid">
+ <div class="card"><b>위치 x · y · z (mm, 각 축은 보는 구간 평균을 0으로)</b><canvas id="cp" style="height:360px"></canvas></div>
+ <div class="card"><b>위에서 본 경로 (x–y, mm)</b><canvas id="cxy" style="height:360px"></canvas></div>
+</div>
+<div class="grid">
+ <div class="card"><b>자세 (구간 시작 기준 회전, °)</b><canvas id="cr" style="height:300px"></canvas></div>
+ <div class="card"><b>점 − 곡선 차이 (위치 mm · 회전 °)</b><canvas id="cd" style="height:300px"></canvas></div>
+</div>
+<p class="small"><span style="color:var(--b)">● 점 (사진마다)</span> · <span style="color:var(--c)">━ 곡선</span> · 회색 띠 = 정답이 끊겨 구간이 나뉜 곳. 데이터: <code>recordings/&lt;녹화&gt;/imu_gt/traj_compare.json</code> (imu_learn/traj_compare.py).</p>
+</main>
+<script>
+const $=id=>document.getElementById(id),css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let D=null;
+async function links(path){const t=await (await fetch(path)).text();return [...t.matchAll(/href="([^"]+)"/g)].map(m=>decodeURIComponent(m[1]));}
+async function init(){const L=(await links('/recordings/')).filter(x=>/^hs_\d+_\d+\/$/.test(x)).map(x=>x.slice(0,-1)).sort().reverse();
+ const ok=[];for(const r of L){const h=await fetch(`/recordings/${r}/imu_gt/traj_compare.json`,{method:'HEAD'});if(h.ok)ok.push(r);}
+ $('rec').innerHTML=ok.map(r=>`<option>${r}</option>`).join('');if(ok.length)load();else $('stats').textContent='traj_compare.json 이 있는 녹화가 없음';}
+async function load(){D=await (await fetch(`/recordings/${$('rec').value}/imu_gt/traj_compare.json`)).json();
+ $('t0').max=Math.max(0,D.t[D.t.length-1]-0.25);const s=D.stats;
+ $('stats').innerHTML=`${D.rec}: 정답 사진 ${s.frames}장, ${s.seconds.toFixed(0)}초, 끊김으로 나뉜 구간 ${s.segments}개<br>`+
+  `점이 곡선에서 벗어난 정도 (전체 RMS): 위치 <b>${s.jitter_mm_total} mm</b> (x ${s.jitter_mm_rms[0]}, y ${s.jitter_mm_rms[1]}, z ${s.jitter_mm_rms[2]}) · 회전 <b>${s.jitter_deg_rms}°</b> (중앙 ${s.jitter_deg_med}°)`;draw();}
+function idxRange(a,b){const T=D.t;let i=0;while(i<T.length&&T[i]<a)i++;let j=i;while(j<T.length&&T[j]<=b)j++;return[i,j];}
+function setup(c){const d=devicePixelRatio,W=c.width=c.clientWidth*d,H=c.height=c.clientHeight*d,x=c.getContext("2d");x.clearRect(0,0,W,H);return{x,W,H,d};}
+function plotLines(c,a,b,series,unit){const {x,W,H,d}=setup(c),[i,j]=idxRange(a,b);if(j-i<2)return;
+ const T=D.t,L=40*d,R=W-10*d,lanes=series.length,lh=(H-10*d)/lanes;const X=t=>L+(t-a)/(b-a)*(R-L);
+ // segment breaks
+ x.fillStyle=css('--line');for(let k=i+1;k<j;k++)if(D.seg[k]!==D.seg[k-1]){x.globalAlpha=.6;x.fillRect(X(T[k-1]),0,Math.max(2*d,X(T[k])-X(T[k-1])),H);x.globalAlpha=1;}
+ series.forEach((s,li)=>{const top=5*d+li*lh,bot=top+lh-6*d;const ys=[];for(let k=i;k<j;k++){ys.push(s.pt(k),s.sm(k));}
+  let mn=Math.min(...ys),mx=Math.max(...ys);if(s.center){const m=(mn+mx)/2;mn-=m;mx-=m;s.off=m;}else s.off=0;const pad=(mx-mn)*0.08+1e-9;mn-=pad;mx+=pad;
+  const Y=v=>bot-(v-s.off-mn)/(mx-mn)*(bot-top);x.fillStyle=css('--mut');x.font=`${11*d}px sans-serif`;x.fillText(`${s.name} (${(mx-mn).toFixed(s.dig??1)} ${unit} 범위)`,L+4*d,top+12*d);
+  const r=(j-i)>600?1.2*d:2.2*d;x.fillStyle=css('--b');x.globalAlpha=.75;for(let k=i;k<j;k++){x.beginPath();x.arc(X(T[k]),Y(s.pt(k)),r,0,7);x.fill();}x.globalAlpha=1;
+  x.strokeStyle=css('--c');x.lineWidth=1.8*d;x.beginPath();let first=true;for(let k=i;k<j;k++){if(k>i&&D.seg[k]!==D.seg[k-1])first=true;const P=[X(T[k]),Y(s.sm(k))];first?x.moveTo(...P):x.lineTo(...P);first=false;}x.stroke();});
+ x.fillStyle=css('--mut');x.font=`${11*d}px sans-serif`;x.fillText(`${a.toFixed(2)} s`,L,H-2*d);x.fillText(`${b.toFixed(2)} s`,R-50*d,H-2*d);}
+function draw(){if(!D)return;const a=+$('t0').value,b=a+ +$('span').value;$('tv').textContent=a.toFixed(2);
+ const mm=1000;
+ plotLines($('cp'),a,b,[0,1,2].map(ax=>({name:'xyz'[ax],pt:k=>D.p[k][ax]*mm,sm:k=>D.ps[k][ax]*mm,center:true})),'mm');
+ plotLines($('cr'),a,b,[0,1,2].map(ax=>({name:'회전 '+'xyz'[ax],pt:k=>D.r[k][ax],sm:k=>D.rs[k][ax],center:true,dig:2})),'°');
+ plotLines($('cd'),a,b,[{name:'위치 차이',pt:k=>Math.hypot(...[0,1,2].map(ax=>(D.p[k][ax]-D.ps[k][ax])*mm)),sm:k=>0,dig:2},
+   {name:'회전 차이',pt:k=>Math.hypot(...[0,1,2].map(ax=>D.r[k][ax]-D.rs[k][ax])),sm:k=>0,dig:3}],'');
+ // top view
+ const c=$('cxy'),{x,W,H,d}=setup(c),[i,j]=idxRange(a,b);if(j-i<2)return;let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+ for(let k=i;k<j;k++){for(const P of [D.p[k],D.ps[k]]){x0=Math.min(x0,P[0]);x1=Math.max(x1,P[0]);y0=Math.min(y0,P[1]);y1=Math.max(y1,P[1]);}}
+ const s=Math.min((W-30*d)/(x1-x0+1e-9),(H-30*d)/(y1-y0+1e-9)),cx=(x0+x1)/2,cy=(y0+y1)/2,X=v=>W/2+(v-cx)*s,Y=v=>H/2-(v-cy)*s;
+ x.fillStyle=css('--b');x.globalAlpha=.75;const r=(j-i)>600?1.2*d:2.2*d;for(let k=i;k<j;k++){x.beginPath();x.arc(X(D.p[k][0]),Y(D.p[k][1]),r,0,7);x.fill();}x.globalAlpha=1;
+ x.strokeStyle=css('--c');x.lineWidth=1.8*d;x.beginPath();let first=true;for(let k=i;k<j;k++){if(k>i&&D.seg[k]!==D.seg[k-1])first=true;first?x.moveTo(X(D.ps[k][0]),Y(D.ps[k][1])):x.lineTo(X(D.ps[k][0]),Y(D.ps[k][1]));first=false;}x.stroke();
+ x.fillStyle=css('--mut');x.font=`${11*d}px sans-serif`;x.fillText(`가로 ${((x1-x0)*1000).toFixed(1)} mm · 세로 ${((y1-y0)*1000).toFixed(1)} mm`,8*d,H-6*d);}
+$('worst').onclick=()=>{if(!D)return;const span=+$('span').value,T=D.t;let best=0,bt=0,j=0,acc=0;const e=D.t.map((_,k)=>Math.hypot(...[0,1,2].map(ax=>D.r[k][ax]-D.rs[k][ax])));
+ for(let i=0;i<T.length;i++){while(j<T.length&&T[j]<T[i]+span){acc+=e[j];j++;}if(acc>best){best=acc;bt=T[i];}acc-=e[i];}$('t0').value=bt;draw();};
+$('rec').onchange=load;$('span').onchange=draw;$('t0').oninput=draw;addEventListener('resize',draw);init();
+</script>
+</body></html>
