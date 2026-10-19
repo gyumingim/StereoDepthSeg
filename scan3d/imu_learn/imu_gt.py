@@ -76,6 +76,15 @@ def _so3_exp(w):
     return np.eye(3) + np.sin(th) * Kx + (1 - np.cos(th)) * Kx @ Kx
 
 
+def _rot_rays(om, tau, d):
+    """Rotate each ray d[k] by exp([om * tau[k]]×) (Rodrigues, vectorized; same as _so3_exp per corner)."""
+    w = np.outer(tau, om)                                            # (N,3) rotation vectors
+    th = np.linalg.norm(w, axis=1, keepdims=True)
+    k = np.where(th > 1e-12, w / np.maximum(th, 1e-12), 0.0)
+    c, s = np.cos(th), np.sin(th)
+    return d * c + np.cross(k, d) * s + k * np.sum(k * d, axis=1, keepdims=True) * (1 - c)
+
+
 def gyro_cam(rec, al):
     """align.json (dt, R_ci, gyro bias) → function t_cam_ns → angular velocity in the camera frame (rad/s)."""
     _, gyr = read_imu(Path(rec) / "imu.csv")
@@ -115,8 +124,7 @@ def board_poses(video, frames_csv, K, dist, min_corners=8, max_rms=1.5, w_cam=No
                 d = np.c_[n, np.ones(len(n))]
                 tau = (corners[:, 1] / g.shape[0] - 0.5) * skew.get(i, 0) / 1e9   # s after the middle row
                 om = w_cam(t_mid[i])
-                for k in range(len(d)):
-                    d[k] = _so3_exp(om * tau[k]) @ d[k]               # ray seen at t_mid = exp(-w (t_mid - t_c)) d
+                d = _rot_rays(om, tau, d)                             # ray seen at t_mid = exp(-w (t_mid - t_c)) d
                 und = (d[:, :2] / d[:, 2:3]) * [Kn[0, 0], Kn[1, 1]] + [Kn[0, 2], Kn[1, 2]]
             else:
                 und = cv2.undistortPoints(corners.reshape(-1, 1, 2), K, dist, P=Kn).reshape(-1, 2)
