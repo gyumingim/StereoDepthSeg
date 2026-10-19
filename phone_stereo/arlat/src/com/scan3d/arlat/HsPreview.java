@@ -32,11 +32,13 @@ import java.util.Locale;
 /**
  * On-phone view + board check for the 240 fps high-speed recording. High-speed sessions only feed preview/encoder
  * surfaces (no CPU frames), so the camera also draws into a SurfaceTexture; a GL thread latches every frame and, about
- * 30 times a second, renders it to a small 640x360 gray image (glReadPixels) that is shown on screen and searched for
+ * 30 times a second, renders it to a small 360x640 (portrait) gray image (glReadPixels) that is shown on screen and searched for
  * the board markers (MarkerCheck, OpenCV ArUco in libarloop). Recording itself is untouched (encoder surface).
  */
 class HsPreview {
-    static final int PW = 640, PH = 360;
+    // the camera already rotates preview buffers upright (SurfaceTexture transform = sensor orientation), so the
+    // small gray image is portrait 360x640 and is shown without further rotation (checked against the mp4 2026-10-19)
+    static final int PW = 360, PH = 640;
     final FrameLayout root;
     private final View overlay;
     private final int camW, camH;
@@ -65,7 +67,7 @@ class HsPreview {
         root.setBackgroundColor(Color.BLACK);
         root.setFitsSystemWindows(true);
         int sw = act.getResources().getDisplayMetrics().widthPixels;
-        int vh = (int) ((long) sw * PW / PH);                // portrait: width = screen, height = sw * 16 / 9
+        int vh = (int) ((long) sw * PH / PW);                // portrait: width = screen, height = sw * 16 / 9
         overlay = new Overlay(act);
         root.addView(overlay, new FrameLayout.LayoutParams(sw, vh, Gravity.TOP));
         if (status.getParent() != null) ((android.view.ViewGroup) status.getParent()).removeView(status);
@@ -203,8 +205,7 @@ class HsPreview {
         }
         @Override protected void onDraw(Canvas c) {
             float vw = getWidth(), vh = getHeight();
-            // landscape PW x PH -> portrait view (back camera, sensor rotated 90 deg clockwise)
-            M.setPolyToPoly(new float[]{0, 0, PW, 0, 0, PH}, 0, new float[]{vw, 0, vw, vh, 0, 0}, 0, 3);
+            M.setPolyToPoly(new float[]{0, 0, PW, 0, 0, PH}, 0, new float[]{0, 0, vw, 0, 0, vh}, 0, 3);
             c.drawColor(Color.BLACK);
             c.drawBitmap(bmp[front], M, img);
             float[] q = quads;
