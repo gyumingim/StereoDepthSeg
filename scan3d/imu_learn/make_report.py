@@ -102,7 +102,9 @@ def main():
                 out.append(f"{NAMES[n]}: {r.get('error', '실패')}")
         return "<br>".join(out) or "-"
     vio_tags = [("fps30", "30 fps"), ("fps60", "60 fps"), ("fps120", "120 fps"), ("size480", "60 fps · 480×270"),
-                ("noisemeas", "60 fps · 잡음 실측값"), ("calib", "60 fps · 물리 보정 IMU"),
+                ("noisemeas", "60 fps · 잡음 실측값 그대로 (발산)"), ("noisemeas_x5", "60 fps · 잡음 실측 ×5"),
+                ("noisemeas_x10", "60 fps · 잡음 실측 ×10"), ("fps120_clones22", "120 fps · 기억 사진 22장"),
+                ("fps120_clones33", "120 fps · 기억 사진 33장"), ("calib", "60 fps · 물리 보정 IMU"),
                 ("calib_noisemeas", "60 fps · 물리 보정 + 잡음 실측"), ("drop_raw", "카메라 끊김 2/5/10 s · 생 IMU"),
                 ("drop_calib", "카메라 끊김 2/5/10 s · 보정 IMU + 실측 잡음")]
     vio_rows = "".join(f"<tr><td>{lab}</td><td>{vrow(tag)}</td></tr>" for tag, lab in vio_tags)
@@ -178,6 +180,10 @@ CNN은 데이터가 10배가 되어도 거의 더해 주지 못했습니다 → 
 
 <h2>3. VIO 시험대 (OpenVINS, 보드 정답 대비, 60초씩)</h2>
 <div class="card"><div class="scroll"><table><tr><th>설정</th><th>결과</th></tr>{vio_rows}</table></div>
+<p><b>읽는 법</b> — ① 30·60 fps, 480×270 은 정상 (1~2.6 cm). ② <b>120 fps 는 발산</b>: OpenVINS 가 기억하는 과거 사진 11 장이 120 fps 에선 0.09 초뿐이라
+시차가 모자람 — 22·33 장으로 늘리면 11 m → 18 cm → 10 cm 로 나아지지만 아직 부족 → <b>추적은 120 fps, 갱신은 더 긴 간격</b>으로 나누는 수정이 필요 (오늘 할 일).
+③ <b>IMU 잡음 실측값을 그대로 넣으면 발산</b> (기존 설정보다 자이로 8 배·가속도 20 배 작음 → IMU 를 너무 믿음). <b>실측 ×10 이 기존 설정보다 좋음</b>
+(전체 오차 0.90 vs 0.99 cm, 회전 0.41° vs 0.57°) — open_vins#65 (잡음 설정이 결과를 좌우) 와 같은 결론. ④ 카메라가 끊기면 생 IMU 로는 2 초에 약 0.8 m 까지 틀어짐.</p>
 <p class="small">ATE = 전체 위치 오차, RPE1s = 1초 동안 흘러간 오차, 스케일 = VIO 크기/정답 크기. 물리 보정은 그 녹화를 빼고 학습한 값만 사용(공정).</p>
 <b>속도 (PC 실측 → 폰 추정)</b>
 <div class="scroll"><table><tr><th>설정</th><th>PC 중앙</th><th>PC 상위10%</th><th>폰 추정 (중앙)</th><th>폰 지속 가능 fps (발열 ×1.4)</th></tr>{timing_rows}</table></div>

@@ -124,7 +124,7 @@ def run(a):
     else:
         t_end = t_frames[-1]
     acc, gyr = read_imu(rec / "imu.csv")
-    noise = measured_noise(acc, gyr) if a.noise == "meas" else dict(
+    noise = {k: v * a.noise_scale for k, v in measured_noise(acc, gyr).items()} if a.noise == "meas" else dict(
         accelerometer_noise_density=1e-2, accelerometer_random_walk=1e-3, gyroscope_noise_density=1e-3,
         gyroscope_random_walk=1e-4)
     a_i = np.stack([np.interp(gyr[:, 0], acc[:, 0], acc[:, 1 + j]) for j in range(3)], 1)
@@ -268,6 +268,8 @@ def main():
     ap.add_argument("--npts", type=int, default=200)
     ap.add_argument("--clones", type=int, default=11)
     ap.add_argument("--noise", default="cfg", choices=["cfg", "meas"])
+    ap.add_argument("--noise-scale", type=float, default=1.0,
+                    help="multiply measured noise (quiet-sample white noise underestimates real errors; Kalibr practice inflates)")
     ap.add_argument("--imu-calib", default=None)
     ap.add_argument("--dropout", default="")
     ap.add_argument("--max-secs", type=float, default=0)
