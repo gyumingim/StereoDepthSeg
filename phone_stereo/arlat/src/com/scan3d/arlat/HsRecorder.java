@@ -59,6 +59,9 @@ class HsRecorder implements SensorEventListener {
     private MediaMuxer mux;
     private int track = -1;
     private Surface encSurface;
+    Surface previewSurface;                      // optional 2nd output (HsPreview: on-screen view + board check)
+    volatile String stopReason = "user";
+    int maxBatteryTenthC = 460;                  // stop when the battery reaches 46.0 C or Android reports SEVERE throttling
     private File dir;
     private BufferedWriter imuW, frW;
     private volatile boolean running;
@@ -172,12 +175,13 @@ class HsRecorder implements SensorEventListener {
             @Override public void onOpened(CameraDevice d) {
                 dev = d;
                 try {
-                    d.createConstrainedHighSpeedCaptureSession(Arrays.asList(encSurface), new CameraCaptureSession.StateCallback() {
+                    d.createConstrainedHighSpeedCaptureSession(previewSurface == null ? Arrays.asList(encSurface) : Arrays.asList(encSurface, previewSurface), new CameraCaptureSession.StateCallback() {
                         @Override public void onConfigured(CameraCaptureSession s) {
                             sess = (CameraConstrainedHighSpeedCaptureSession) s;
                             try {
                                 CaptureRequest.Builder rb = d.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
                                 rb.addTarget(encSurface);
+                                if (previewSurface != null) rb.addTarget(previewSurface);
                                 rb.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, range);
                                 rb.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_OFF);
                                 rb.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_OFF);
@@ -192,6 +196,7 @@ class HsRecorder implements SensorEventListener {
                                         if (meta.size() > 2000) meta.clear();
                                     }
                                 }, h);
+                                h.postDelayed(heatCheck, 2000);
                                 status.show("HS " + size + "@" + wantFps + " recording -> " + dir.getName());
                             } catch (Exception e) { status.show("hs request: " + e); }
                         }
@@ -202,6 +207,27 @@ class HsRecorder implements SensorEventListener {
             @Override public void onDisconnected(CameraDevice d) { d.close(); }
             @Override public void onError(CameraDevice d, int e) { status.show("camera error " + e); d.close(); }
         }, h);
+    }
+
+    /** Overheating: stop the recording (the files up to now are closed normally and are usable data). */
+    private final Runnable heatCheck = new Runnable() {
+        @Override public void run() {
+            if (!running) return;
+            int temp = batteryTenthC();
+            int th = ((android.os.PowerManager) ctx.getSystemService(Context.POWER_SERVICE)).getCurrentThermalStatus();
+            if (temp >= maxBatteryTenthC || th >= android.os.PowerManager.THERMAL_STATUS_SEVERE) {
+                stopReason = String.format(Locale.US, "overheat (battery %.1f C, thermal status %d)", temp / 10.0, th);
+                android.util.Log.w("arlat", "HS stop: " + stopReason);
+                stop();
+                return;
+            }
+            h.postDelayed(this, 2000);
+        }
+    };
+
+    int batteryTenthC() {
+        android.content.Intent b = ctx.registerReceiver(null, new android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED));
+        return b == null ? 0 : b.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, 0);
     }
 
     private long[] nearestEntry(long ts) {
@@ -249,10 +275,11 @@ class HsRecorder implements SensorEventListener {
                     .put("timestamp_ref", "mid_exposure").put("start_elapsed_ns", t0Elapsed).put("end_elapsed_ns", SystemClock.elapsedRealtimeNanos())
                     .put("start_wall_ms", t0Wall).put("complete", true).put("app", "arlat hs")
                     .put("clock_offset_ns", clockOffset).put("frames_unmatched", nUnmatched).put("ev_comp", evComp)
-                    .put("bitrate_bps", bitrate);
+                    .put("bitrate_bps", bitrate).put("stop_reason", stopReason)
+                    .put("battery_c_end", batteryTenthC() / 10.0);
             try (FileWriter w = new FileWriter(new File(dir, "meta.json"))) { w.write(m.toString(1)); }
         } catch (Exception ignored) { }
-        status.show("HS done: " + nFrames + " frames, imu " + nImu + " -> " + dir.getName());
+        status.show((stopReason.startsWith("overheat") ? "과열로 녹화 멈춤 — 지금까지 저장됨\n" : "") + "HS done: " + nFrames + " frames, imu " + nImu + " -> " + dir.getName());
         android.util.Log.i("arlat", "HS DONE " + dir);
         if (th != null) th.quitSafely();
     }

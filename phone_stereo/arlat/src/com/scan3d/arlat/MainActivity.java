@@ -40,6 +40,7 @@ public class MainActivity extends Activity {
     private Cam2Probe cam2;
     private OvRunner ov;
     private HsRecorder hs;
+    private HsPreview hsPrev;
     private Streamer streamer;
 
     @Override
@@ -81,7 +82,16 @@ public class MainActivity extends Activity {
                 hs.wantFps = getIntent().getIntExtra("fps", 120);
                 hs.evComp = getIntent().getIntExtra("ev", 0);
                 hs.wantKbps = getIntent().getIntExtra("kbps", 160_000);
-                try { hs.start(); }
+                hs.maxBatteryTenthC = getIntent().getIntExtra("max_temp_dc", 460);
+                try {
+                    if (getIntent().getIntExtra("preview", 1) != 0) {     // on-screen view + board detected / not detected
+                        hs.choose();
+                        if (hsPrev == null) { hsPrev = new HsPreview(this, status, hs.size.getWidth(), hs.size.getHeight()); setContentView(hsPrev.root); }
+                        hsPrev.start();
+                        hs.previewSurface = hsPrev.surface;
+                    }
+                    hs.start();
+                }
                 catch (Exception e) { status.setText("hs error: " + e); android.util.Log.e("arlat", "hs", e); hs = null; }
             }
             return;
@@ -142,6 +152,7 @@ public class MainActivity extends Activity {
         if (cam2 != null) { cam2.stop(); cam2 = null; }
         if (ov != null) { ov.stop(); ov = null; }
         if (hs != null) { hs.stop(); hs = null; }
+        if (hsPrev != null) { hsPrev.stop(); hsPrev = null; }
         if (worker != null) {
             try { worker.join(2000); } catch (InterruptedException ignored) { }
         }

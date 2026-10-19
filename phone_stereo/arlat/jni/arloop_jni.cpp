@@ -62,3 +62,29 @@ JNIEXPORT jstring JNICALL Java_com_scan3d_arlat_ArLoop_nStats(JNIEnv *env, jclas
 }
 
 }  // extern "C"
+
+// ---- marker check for the high-speed preview (com.scan3d.arlat.MarkerCheck): ChArUco board markers DICT_6X6_250 ----
+#include <opencv2/core/version.hpp>
+#if CV_VERSION_MAJOR > 4 || (CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR >= 7)
+#include <opencv2/objdetect/aruco_detector.hpp>
+extern "C" JNIEXPORT jfloatArray JNICALL Java_com_scan3d_arlat_MarkerCheck_nDetect(JNIEnv *env, jclass, jbyteArray gray,
+                                                                                  jint w, jint h) {
+  static cv::aruco::ArucoDetector det(cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250),
+                                      cv::aruco::DetectorParameters());
+  cv::Mat g(h, w, CV_8UC1);
+  env->GetByteArrayRegion(gray, 0, w * h, reinterpret_cast<jbyte *>(g.data));
+  std::vector<std::vector<cv::Point2f>> corners;
+  std::vector<int> ids;
+  det.detectMarkers(g, corners, ids);
+  std::vector<float> out(1 + 8 * corners.size());
+  out[0] = static_cast<float>(corners.size());
+  for (size_t i = 0; i < corners.size(); i++)
+    for (int k = 0; k < 4; k++) {
+      out[1 + 8 * i + 2 * k] = corners[i][k].x;
+      out[2 + 8 * i + 2 * k] = corners[i][k].y;
+    }
+  jfloatArray r = env->NewFloatArray(static_cast<jsize>(out.size()));
+  env->SetFloatArrayRegion(r, 0, static_cast<jsize>(out.size()), out.data());
+  return r;
+}
+#endif
