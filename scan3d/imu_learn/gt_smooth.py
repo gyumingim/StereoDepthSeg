@@ -24,10 +24,9 @@ def smooth_gt(t_ns, R, p, max_mm=5.0, max_deg=1.0):
     Rs, ps = R.copy(), p.copy()
     for s in segments(t):
         good = np.ones(len(s), bool)
-        for _ in range(2):                                   # fit, drop outliers, refit
+        for _ in range(3):                                   # fit, drop outliers, refit (until none dropped)
             ss = s[good]
             if len(ss) < 40:
-                good[:] = False
                 break
             ref = Rot.from_matrix(R[ss[0]])
             rv = (ref.inv() * Rot.from_matrix(R[ss])).as_rotvec()
@@ -37,9 +36,13 @@ def smooth_gt(t_ns, R, p, max_mm=5.0, max_deg=1.0):
             bad = (ep > max_mm) | (er > max_deg)
             if not bad.any():
                 break
-            idx = np.where(good)[0]
-            good[idx[bad]] = False
-        ss = s[good]
+            good[np.where(good)[0][bad]] = False
+        else:                                                # still dropping after 3 rounds: fit the final set once more
+            ss = s[good]
+            if len(ss) >= 40:
+                ref = Rot.from_matrix(R[ss[0]])
+                rv = (ref.inv() * Rot.from_matrix(R[ss])).as_rotvec()
+                pf, rf = _fit(t[ss], p[ss]), _fit(t[ss], rv)
         if len(ss) < 40:
             continue
         keep[ss] = True
