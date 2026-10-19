@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>표준 곡선 방식</title>
+<style>
+:root{--bg:#f7f7f5;--fg:#1c1f24;--mut:#6b7078;--card:#fff;--line:#e2e4e8;--a:#2563eb;--b:#dc2626;--c:#16a34a;--d:#d97706;--p:#9333ea;--chip:#eef2ff;--svgbg:#fbfbfa}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--p:#c084fc;--chip:#1e293b;--svgbg:#16191d}}
+:root[data-theme="dark"]{--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--p:#c084fc;--chip:#1e293b;--svgbg:#16191d}
+body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.75 system-ui,"Malgun Gothic",sans-serif}
+main{max-width:920px;margin:0 auto;padding:20px 16px 80px}
+h1{font-size:27px;margin:0 0 6px}h2{font-size:22px;margin:40px 0 8px}h3{margin:6px 0}
+.lead{color:var(--mut);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+.step{display:flex;gap:14px;align-items:flex-start}
+.n{flex:0 0 38px;height:38px;border-radius:50%;background:var(--a);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:19px}
+.emoji{font-size:30px}
+svg{width:100%;height:auto;display:block;background:var(--svgbg);border-radius:10px}
+svg text{fill:var(--fg);font:14px system-ui,"Malgun Gothic",sans-serif}svg .m{fill:var(--mut)}
+button{font:inherit;padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer;margin:4px 6px 4px 0}
+label.ck{margin-right:16px}
+.pill{display:inline-block;border-radius:999px;padding:2px 12px;font-weight:700;background:var(--chip)}
+.small{font-size:15px;color:var(--mut)}
+.key{border-left:5px solid var(--a);padding:8px 14px;margin:12px 0;background:var(--chip);border-radius:0 10px 10px 0}
+</style>
+</head>
+<body><main>
+<h1>표준 곡선 방식 (Kalibr 방식) — 그림으로</h1>
+<p class="lead">한 문장: <b>폰의 움직임 전체를 휘는 철사 하나로 놓고, 그 철사가 사진과 IMU를 동시에 가장 잘 설명하도록 모양을 잡는다.</b></p>
+
+<h2>다섯 단계</h2>
+<div class="card step"><div class="n">1</div><div><h3>〰️ 휘는 철사 하나</h3>
+ 폰의 움직임을 <b>시간을 넣으면 위치·자세가 나오는 매끈한 곡선</b>으로 생각합니다. 곡선 모양은 일정 간격(예: 0.05초)마다 놓인 <b>손잡이</b>들이 정합니다. 손잡이를 당기면 그 근처 철사만 매끈하게 휩니다.</div></div>
+<div class="card step"><div class="n">2</div><div><h3>✏️ 대충 시작</h3>
+ 처음 철사 모양은 지금 방식의 점들(사진마다 계산한 자세)을 대충 이어서 만듭니다.</div></div>
+<div class="card step"><div class="n">3</div><div><h3>🔍 세 가지로 검사</h3>
+ <b>📷 사진 검사</b> — 보드 모서리 하나마다: "이 모서리가 있는 <u>줄이 찍힌 순간</u>"을 철사에 넣어 그 순간 폰 자세를 꺼냄 → 그 자세면 모서리가 사진 어디에 보여야 하나 계산 → 실제 위치와 몇 픽셀 차이?<br>
+ <b>🌀 자이로 검사</b> — 철사가 그 순간 도는 빠르기 = 자이로 값?<br>
+ <b>📈 가속도 검사</b> — 철사가 그 순간 휘는 정도 + 중력 = 가속도계 값?</div></div>
+<div class="card step"><div class="n">4</div><div><h3>🔧 한꺼번에 맞추기</h3>
+ 세 검사의 차이를 다 더한 값이 <b>가장 작아지게</b> 손잡이 수천 개와 시간차·축 방향·바이어스(·렌즈 값)를 <b>동시에</b> 조금씩 고치기를 반복합니다.</div></div>
+<div class="card step"><div class="n">5</div><div><h3>✅ 결과</h3>
+ 매끈한 궤적 하나 + 정확한 보정값들(시간차, 축 방향, 카메라↔IMU 거리, 바이어스).</div></div>
+
+<h2>직접 해 보기</h2>
+<div class="card">
+<p class="small">한 방향 회전만 있는 간단한 예. 진짜 움직임을 컴퓨터가 만들고, 사진(모서리)과 자이로를 흔들림과 함께 만든 다음, 철사를 맞춥니다.</p>
+<div>
+ <label class="ck"><input type="checkbox" id="usePhoto" checked> 📷 사진 검사 사용</label>
+ <label class="ck"><input type="checkbox" id="useGyro" checked> 🌀 자이로 검사 사용</label>
+</div>
+<button id="go">▶ 맞추기 (천천히)</button><button id="reset">↺ 처음 모양으로</button><button id="newd">🎲 새 데이터</button>
+<svg id="main" viewBox="0 0 900 330"></svg>
+<p><span style="color:var(--mut)">┅ 진짜 움직임</span> · <span style="color:var(--b)">● 사진 모서리 (각자 자기 시각)</span> · <span style="color:var(--a)">━ 철사(곡선)</span> · <span style="color:var(--p)">◆ 손잡이</span></p>
+<svg id="gyro" viewBox="0 0 900 170"></svg>
+<p><span style="color:var(--d)">· 자이로 값</span> · <span style="color:var(--a)">━ 철사가 도는 빠르기</span></p>
+<p>반복 <span class="pill" id="it">0</span> · 전체 차이 <span class="pill" id="loss">-</span> · <b>진짜와의 오차</b> <span class="pill" id="err">-</span> · 찾은 자이로 바이어스 <span class="pill" id="bias">-</span> (진짜 2.0 °/s)</p>
+<p class="small">해 볼 것: ① 둘 다 켜고 맞추기 → ② "사진만"으로 맞추기 → ③ "자이로만"으로 맞추기. 사진만이면 흔들림을 따라가고, 자이로만이면 전체가 흘러가며(위치를 모름), 둘을 같이 쓸 때 진짜에 가장 가깝습니다.</p>
+</div>
+
+<h2>왜 롤링 셔터가 저절로 풀리나</h2>
+<div class="card">
+<svg id="rs" viewBox="0 0 900 230"></svg>
+<p>사진 한 장의 모서리들은 줄마다 <b>조금씩 다른 순간</b>에 찍힙니다(위 0 ms → 아래 2.9 ms). 점 찍기 방식은 사진 한 장 = 한 순간이라 이 차이를 무시하지만, 철사는 <b>아무 순간이나</b> 꺼낼 수 있어서 모서리마다 자기 순간의 자세로 검사합니다. 따로 고칠 필요가 없습니다.</p>
+</div>
+
+<h2>주의: 답안지에 학생 답이 섞이면 안 됨</h2>
+<div class="card">
+<div class="key">이 철사는 IMU(학생)까지 보고 만든 것입니다. 이걸 정답(답안지)으로 IMU 보정을 채점하면 점수가 부풀려집니다.<br>
+→ <b>보정값</b>(시간차·축 방향·렌즈)은 IMU 포함해서 구하고, <b>학습·평가용 정답 궤적</b>은 위 데모에서 "사진 검사만" 켠 것처럼 사진만으로 만듭니다(모서리별 시각은 그대로 사용).</div>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id),css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let seed=3;function rnd(){seed=(seed*16807)%2147483647;return(seed-1)/2147483646;}
+function gauss(){let u=0,v=0;while(!u)u=rnd();while(!v)v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+const T=2.0,H=0.1,NC=Math.round(T/H)+3;           // knots every 0.1 s (cubic B-spline, uniform)
+let truth,obs,gy,c,c0,iter=0,timer=null;
+function Bv(u){const a=Math.abs(u);return a<1?(4-6*a*a+3*a*a*a)/6:a<2?(2-a)**3/6:0;}
+function Bd(u){const a=Math.abs(u),s=Math.sign(u);return a<1?s*(-12*a+9*a*a)/6:a<2?-s*(2-a)**2/2:0;}
+const knot=i=>(i-1)*H;
+function val(cc,t){let s=0;const i0=Math.floor(t/H);for(let i=i0-1;i<=i0+3;i++){if(i<0||i>=NC)continue;s+=cc[i]*Bv((t-knot(i))/H);}return s;}
+function der(cc,t){let s=0;const i0=Math.floor(t/H);for(let i=i0-1;i<=i0+3;i++){if(i<0||i>=NC)continue;s+=cc[i]*Bd((t-knot(i))/H)/H;}return s;}
+function makeData(){
+ const comps=[];for(let k=0;k<5;k++)comps.push({a:8*rnd()+3,f:0.4+2*rnd(),p:6.28*rnd()});
+ truth=t=>comps.reduce((s,q)=>s+q.a*Math.sin(2*Math.PI*q.f*t+q.p),0);
+ const dtr=t=>comps.reduce((s,q)=>s+q.a*2*Math.PI*q.f*Math.cos(2*Math.PI*q.f*t+q.p),0);
+ obs=[];for(let t=0.02;t<T-0.02;t+=1/30){for(const off of [0,0.0029*0.33,0.0029*0.66,0.0029]){const tc=t+off;obs.push({t:tc,y:truth(tc)+1.2*gauss(),f:t});}}
+ gy=[];for(let t=0.004;t<T;t+=0.004){gy.push({t,w:dtr(t)+3*gauss()+2.0});}   // gyro with noise + small bias (deg/s)
+ // initial: per-frame average of corners, linearly interpolated to knots
+ const fr={};obs.forEach(o=>{(fr[o.f]=fr[o.f]||[]).push(o.y);});const ft=Object.keys(fr).map(Number).sort((a,b)=>a-b);
+ c0=new Array(NC).fill(0).map((_,i)=>{const t=Math.min(Math.max(knot(i),ft[0]),ft[ft.length-1]);let j=0;while(j<ft.length-1&&ft[j+1]<t)j++;
+  const a=fr[ft[j]].reduce((x,y)=>x+y)/fr[ft[j]].length,b=fr[ft[Math.min(j+1,ft.length-1)]].reduce((x,y)=>x+y)/fr[ft[Math.min(j+1,ft.length-1)]].length;
+  const u=ft[j+1]?(t-ft[j])/(ft[j+1]-ft[j]):0;return a+(b-a)*Math.min(Math.max(u,0),1)+3*gauss();});
+ bias=0;
+}
+let bias=0;
+function lossGrad(cc,b){const up=$('usePhoto').checked,ug=$('useGyro').checked;const g=new Array(NC).fill(0);let L=0,gb=0;const sc=1/1.2**2,sg=1/3**2*0.25;
+ if(up)for(const o of obs){const r=val(cc,o.t)-o.y;L+=sc*r*r;const i0=Math.floor(o.t/H);for(let i=i0-1;i<=i0+3;i++){if(i<0||i>=NC)continue;g[i]+=2*sc*r*Bv((o.t-knot(i))/H);}}
+ if(ug)for(const q of gy){const r=der(cc,q.t)+b-q.w;L+=sg*r*r;gb+=2*sg*r;const i0=Math.floor(q.t/H);for(let i=i0-1;i<=i0+3;i++){if(i<0||i>=NC)continue;g[i]+=2*sg*r*Bd((q.t-knot(i))/H)/H;}}
+ return{L,g,gb};}
+function errTruth(cc){let e=0,n=0;for(let t=0.05;t<T-0.05;t+=0.005){e+=(val(cc,t)-truth(t))**2;n++;}return Math.sqrt(e/n);}
+function step(){const {g,gb}=lossGrad(c,bias);
+ // simple preconditioned steps (diagonal scale estimated numerically once)
+ for(let i=0;i<NC;i++)c[i]-=lr[i]*g[i];bias-=0.002*gb;iter++;}
+let lr=[];
+function setLR(){const up=$('usePhoto').checked,ug=$('useGyro').checked;lr=new Array(NC).fill(0).map((_,i)=>{let d=1e-9;const sc=1/1.44,sg=1/9*0.25;
+ if(up)for(const o of obs){const b=Bv((o.t-knot(i))/H);d+=2*sc*b*b;}if(ug)for(const q of gy){const b=Bd((q.t-knot(i))/H)/H;d+=2*sg*b*b;}return 0.45/d;});}
+function draw(){
+ const X=t=>40+t/T*840;let lo=1e9,hi=-1e9;for(let t=0;t<=T;t+=0.01){lo=Math.min(lo,truth(t));hi=Math.max(hi,truth(t));}lo-=6;hi+=6;
+ const Y=v=>300-(v-lo)/(hi-lo)*270;let s='';
+ let d='';for(let t=0;t<=T;t+=0.005)d+=(d?'L':'M')+X(t).toFixed(1)+' '+Y(truth(t)).toFixed(1);s+=`<path d="${d}" fill="none" stroke="${css('--mut')}" stroke-width="2" stroke-dasharray="6 5"/>`;
+ if($('usePhoto').checked||true)obs.forEach(o=>s+=`<circle cx="${X(o.t).toFixed(1)}" cy="${Y(o.y).toFixed(1)}" r="2.6" fill="${css('--b')}" opacity="${$('usePhoto').checked?0.85:0.25}"/>`);
+ d='';for(let t=0;t<=T;t+=0.005)d+=(d?'L':'M')+X(t).toFixed(1)+' '+Y(val(c,t)).toFixed(1);s+=`<path d="${d}" fill="none" stroke="${css('--a')}" stroke-width="3"/>`;
+ for(let i=0;i<NC;i++){const t=knot(i);if(t<0||t>T)continue;const yy=Y(c[i]);s+=`<rect x="${X(t)-4}" y="${yy-4}" width="8" height="8" transform="rotate(45 ${X(t)} ${yy})" fill="${css('--p')}"/>`;}
+ s+=`<text x="40" y="322" class="m">0초</text><text x="850" y="322" class="m">2초</text>`;$('main').innerHTML=s;
+ // gyro
+ let gl=1e9,gh=-1e9;gy.forEach(q=>{gl=Math.min(gl,q.w);gh=Math.max(gh,q.w);});const GY=v=>155-(v-gl)/(gh-gl)*140;let g='';
+ gy.forEach((q,k)=>{if(k%2)return;g+=`<circle cx="${X(q.t).toFixed(1)}" cy="${GY(q.w).toFixed(1)}" r="1.6" fill="${css('--d')}"/>`;});
+ d='';for(let t=0.01;t<=T-0.01;t+=0.005)d+=(d?'L':'M')+X(t).toFixed(1)+' '+GY(der(c,t)+bias).toFixed(1);g+=`<path d="${d}" fill="none" stroke="${css('--a')}" stroke-width="2.5"/>`;$('gyro').innerHTML=g;
+ $('it').textContent=iter;$('loss').textContent=lossGrad(c,bias).L.toFixed(0);$('err').textContent=errTruth(c).toFixed(2)+'°';$('bias').textContent=$('useGyro').checked?bias.toFixed(2)+' °/s':'(자이로 안 씀)';}
+function reset(){if(timer){clearInterval(timer);timer=null;}c=c0.slice();bias=0;iter=0;setLR();draw();}
+$('go').onclick=()=>{if(timer)return;setLR();timer=setInterval(()=>{for(let k=0;k<4;k++)step();draw();if(iter>=600){clearInterval(timer);timer=null;}},40);};
+$('reset').onclick=reset;$('newd').onclick=()=>{seed=Math.floor(Math.random()*1e9)+1;makeData();reset();};
+$('usePhoto').onchange=$('useGyro').onchange=()=>{reset();};
+function drawRS(){let s='';const x0=60,y0=30;
+ s+=`<rect x="${x0}" y="${y0}" width="220" height="170" fill="none" stroke="${css('--fg')}"/><text x="${x0}" y="${y0-8}" class="m">사진 한 장</text>`;
+ const rows=[0.15,0.4,0.65,0.9];rows.forEach((r,k)=>{const y=y0+r*170;s+=`<line x1="${x0}" y1="${y}" x2="${x0+220}" y2="${y}" stroke="${css('--line')}"/>`;
+  s+=`<circle cx="${x0+60+k*30}" cy="${y}" r="7" fill="${css('--b')}"/>`;
+  const tx=430+r*380;s+=`<line x1="${x0+67+k*30}" y1="${y}" x2="${tx}" y2="190" stroke="${css('--b')}" stroke-dasharray="4 4" opacity=".7"/>`;
+  s+=`<circle cx="${tx}" cy="190" r="6" fill="${css('--b')}"/><text x="${tx-22}" y="215" class="m">${(r*2.9).toFixed(1)} ms</text>`;});
+ let d='';for(let x=420;x<=880;x+=4){const t=(x-420)/460;d+=(d?'L':'M')+x+' '+(150-50*Math.sin(t*5+0.6)).toFixed(1);}
+ s+=`<path d="${d}" fill="none" stroke="${css('--a')}" stroke-width="3"/><text x="430" y="60">철사: 모서리마다 자기 순간의 자세를 꺼냄</text>`;
+ $('rs').innerHTML=s;}
+makeData();reset();drawRS();
+</script>
+</body></html>
