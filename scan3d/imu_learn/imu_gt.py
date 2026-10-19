@@ -67,13 +67,35 @@ def self_calibrate(video, n=80, min_corners=12):
     return K, dist.ravel(), rms
 
 
-def board_poses(video, frames_csv, K, dist, min_corners=8, max_rms=1.5):
+def _so3_exp(w):
+    th = np.linalg.norm(w)
+    if th < 1e-12:
+        return np.eye(3)
+    k = w / th
+    Kx = np.array([[0, -k[2], k[1]], [k[2], 0, -k[0]], [-k[1], k[0], 0]])
+    return np.eye(3) + np.sin(th) * Kx + (1 - np.cos(th)) * Kx @ Kx
+
+
+def gyro_cam(rec, al):
+    """align.json (dt, R_ci, gyro bias) → function t_cam_ns → angular velocity in the camera frame (rad/s)."""
+    _, gyr = read_imu(Path(rec) / "imu.csv")
+    tg = gyr[:, 0].astype(np.int64) + int(al["dt_ns"])
+    wg = gyr[:, 1:4] - np.mean(al.get("gyro_bias_knots", [[0, 0, 0]]), 0)
+    R_ci = np.asarray(al["R_ci"])
+    return lambda t: R_ci @ np.array([np.interp(t, tg, wg[:, j]) for j in range(3)])
+
+
+def board_poses(video, frames_csv, K, dist, min_corners=8, max_rms=1.5, w_cam=None, keep_corners=False):
+    """w_cam (gyro_cam): rolling-shutter derotation — every corner is rotated from the moment its image row was read
+    to the frame's middle row with the gyro, then one PnP at t_mid (gt_experiment.py, 4 recordings 2026-10-19: gyro
+    0.2 s disagreement −20…−45 %, fast segments about halved, +9 % frames under the 1.5 px gate; flipped sign worse)."""
     board = aruco_scale.Board(aruco_scale.load_board_spec(str(BOARD_JSON)))
     rows = list(csv.DictReader(open(frames_csv)))
     t_mid = {int(r["frame_idx"]): int(r["t_mid_ns"]) for r in rows}
     skew = {int(r["frame_idx"]): int(r.get("rolling_shutter_skew_ns") or 0) for r in rows}
     cap = cv2.VideoCapture(str(video))
     out = dict(t_ns=[], R_bc=[], p_bc=[], rms_px=[], n_corners=[], ok=[])
+    cc_all, id_all = [], []
     Kn = K.copy()
     i = 0
     while True:
@@ -82,10 +104,22 @@ def board_poses(video, frames_csv, K, dist, min_corners=8, max_rms=1.5):
             break
         g = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY)
         corners, ids, _ = board.detect(g)
+        if keep_corners:                                             # for a later continuous-time (spline) fit
+            cc_all.append(corners.astype(np.float32))
+            id_all.append(ids.astype(np.int16))
         R, p, rms, ok = np.eye(3), np.zeros(3), np.nan, False
         t_row = 0                                                    # 롤링셔터: 보드가 찍힌 줄의 시각 보정
         if len(ids) >= min_corners:
-            und = cv2.undistortPoints(corners.reshape(-1, 1, 2), K, dist, P=Kn).reshape(-1, 2)
+            if w_cam is not None and i in t_mid:
+                n = cv2.undistortPoints(corners.reshape(-1, 1, 2), K, dist).reshape(-1, 2)
+                d = np.c_[n, np.ones(len(n))]
+                tau = (corners[:, 1] / g.shape[0] - 0.5) * skew.get(i, 0) / 1e9   # s after the middle row
+                om = w_cam(t_mid[i])
+                for k in range(len(d)):
+                    d[k] = _so3_exp(om * tau[k]) @ d[k]               # ray seen at t_mid = exp(-w (t_mid - t_c)) d
+                und = (d[:, :2] / d[:, 2:3]) * [Kn[0, 0], Kn[1, 1]] + [Kn[0, 2], Kn[1, 2]]
+            else:
+                und = cv2.undistortPoints(corners.reshape(-1, 1, 2), K, dist, P=Kn).reshape(-1, 2)
             pose = aruco_scale.solve_pose(board, und, ids, Kn)
             if pose["ok"]:
                 R_cb, t_cb = pose["R"], pose["t"]            # X_cam = R_cb X_board + t_cb
@@ -95,7 +129,8 @@ def board_poses(video, frames_csv, K, dist, min_corners=8, max_rms=1.5):
                 ok = rms <= max_rms
                 # 프레임 시각 = 노출 가운데 + 가운데 줄. 보드 줄(모서리 평균 y)은 (y/H - 0.5)·skew 만큼 다름
                 # (S24 광각 skew 8.7 ms: 2 rad/s 회전이면 위·아래 끝에서 약 0.5° 어긋남)
-                t_row = int((corners[:, 1].mean() / g.shape[0] - 0.5) * skew.get(i, 0))
+                if w_cam is None:                                    # derotated corners already belong to t_mid
+                    t_row = int((corners[:, 1].mean() / g.shape[0] - 0.5) * skew.get(i, 0))
         out["t_ns"].append(t_mid.get(i, -1) + t_row if i in t_mid else -1)
         out["R_bc"].append(R)
         out["p_bc"].append(p)
@@ -103,7 +138,11 @@ def board_poses(video, frames_csv, K, dist, min_corners=8, max_rms=1.5):
         out["n_corners"].append(len(ids))
         out["ok"].append(ok)
         i += 1
-    return {k: np.asarray(v) for k, v in out.items()}
+    res = {k: np.asarray(v) for k, v in out.items()}
+    if keep_corners:
+        res["corners"] = np.array(cc_all, dtype=object)
+        res["corner_ids"] = np.array(id_all, dtype=object)
+    return res
 
 
 def read_imu(path):
@@ -211,6 +250,11 @@ def main():
                     help="보드 json (기본 board_user_A4_6x6.json). 모니터에 띄운 보드: config/charuco/board_monitor_6x6.json")
     ap.add_argument("--lens", default=None,
                     help="렌즈 값 json (lens_calib.py). 없으면 imu_gt/lens.json → config/lens/hs_<w>x<h>_f<초점>.json → 새로 구함")
+    ap.add_argument("--rs", action="store_true",
+                    help="롤링셔터 펴기 (자이로; imu_gt/align.json 의 dt·R_ci·바이어스 필요 → batch_sync 뒤에)")
+    ap.add_argument("--out-dir", default="imu_gt",
+                    help="결과 폴더 이름 (imu_gt 가 아니면 align.json 은 imu_gt 것을 쓰고 새로 만들지 않음)")
+    ap.add_argument("--keep-corners", action="store_true", help="프레임별 모서리를 gt.npz 에 저장 (곡선 맞춤용)")
     a = ap.parse_args()
     if a.board:
         global BOARD_JSON
@@ -219,8 +263,13 @@ def main():
     rec = Path(a.rec)
     meta = json.load(open(rec / "meta.json"))
     size = (int(meta["width"]), int(meta["height"]))
-    out = rec / "imu_gt"
+    out = rec / a.out_dir
     out.mkdir(exist_ok=True)
+    w_cam = None
+    if a.rs:
+        al0 = json.load(open(rec / "imu_gt" / "align.json"))
+        w_cam = gyro_cam(rec, al0)
+        print(f"롤링셔터 펴기: align {al0.get('method', 'omega')}, dt {al0['dt_ns'] / 1e6:+.2f} ms")
     if size[0] * 3 == size[1] * 4:
         K, dist = lens_K(rec, a.cam, size)
     else:
@@ -228,7 +277,7 @@ def main():
         import lens_calib
         fd = meta.get("focus_dpt_request") or -1
         shared = SCAN3D / "config" / "lens" / f"hs_{size[0]}x{size[1]}_f{fd:.2f}.json"
-        cand = [Path(a.lens)] if a.lens else [out / "lens.json", shared]
+        cand = [Path(a.lens)] if a.lens else [out / "lens.json", rec / "imu_gt" / "lens.json", shared]
         lp = next((p for p in cand if p.exists()), None)
         if lp is None:
             print("렌즈 값 새로 구함 (느린 프레임, 화면 전체에 퍼지게)")
@@ -238,11 +287,14 @@ def main():
         K, dist, info = lens_calib.load(lp)
         print(f"렌즈 값: {lp} ({info.get('model')}, rms {info.get('rms_px')} px, 사진 {info.get('n_views')} 장, "
               f"f {K[0, 0]:.1f} {K[1, 1]:.1f})")
-    gt = board_poses(rec / f"cam{a.cam}.mp4", rec / f"frames_cam{a.cam}.csv", K, dist)
-    np.savez(out / "gt.npz", **gt, K=K, dist=dist)
+    gt = board_poses(rec / f"cam{a.cam}.mp4", rec / f"frames_cam{a.cam}.csv", K, dist, w_cam=w_cam,
+                     keep_corners=a.keep_corners)
+    np.savez(out / "gt.npz", **gt, K=K, dist=dist, rs=bool(a.rs))
     ok = gt["ok"]
     print(f"정답: 프레임 {len(ok)}, 자세 OK {ok.sum()} ({ok.mean()*100:.0f} %), 재투영 중앙 {np.nanmedian(gt['rms_px'][ok]):.2f} px, "
           f"거리 중앙 {np.median(np.linalg.norm(gt['p_bc'][ok], axis=1)):.2f} m")
+    if a.out_dir != "imu_gt":                       # variant GT: keep the (batch_sync) alignment in imu_gt untouched
+        return
     acc, gyr = read_imu(rec / "imu.csv")
     print(f"IMU: 가속도 {len(acc)} ({len(acc)/((acc[-1,0]-acc[0,0])*1e-9):.0f} Hz), 자이로 {len(gyr)} ({len(gyr)/((gyr[-1,0]-gyr[0,0])*1e-9):.0f} Hz)")
     al, data = align(gt, gyr)

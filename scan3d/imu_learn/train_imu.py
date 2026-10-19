@@ -52,11 +52,11 @@ def ang_deg(R):
     return np.degrees(np.arccos(np.clip((np.trace(R) - 1) / 2, -1, 1)))
 
 
-def load_rec(rec, max_jump_deg=3.0, smooth=False):
+def load_rec(rec, max_jump_deg=3.0, smooth=False, gt_dir="imu_gt"):
     """rec = 녹화 폴더, 또는 'folder@a:b' = 그 녹화의 시간 비율 a~b 구간만 (녹화 하나를 학습/평가로 나눌 때)."""
     rec, part = (str(rec).split("@") + [None])[:2]
     rec = Path(rec)
-    gt = np.load(rec / "imu_gt" / "gt.npz")
+    gt = np.load(rec / gt_dir / "gt.npz")              # gt_dir: e.g. imu_gt_rs (rolling-shutter derotated GT)
     al = json.load(open(rec / "imu_gt" / "align.json"))
     R_ci = np.asarray(al["R_ci"])
     acc, gyr = read_imu(rec / "imu.csv")
@@ -249,6 +249,7 @@ def main():
     ap.add_argument("--win", type=float, default=1.0, help="창 길이 s (IMU 표류가 보드 정답 잡음보다 커지게 길게)")
     ap.add_argument("--eval-only", action="store_true", help="보정 없음·바이어스만 평가 (CNN 학습 안 함)")
     ap.add_argument("--rot-sigma", type=float, default=0.005, help="자세 손실 기준 rad (보드 정답 잡음이 크면 키움)")
+    ap.add_argument("--gt-dir", default="imu_gt", help="정답 폴더 (imu_gt_rs = 롤링셔터 펴기). align·trim 은 늘 imu_gt")
     ap.add_argument("--stride", type=float, default=0.25, help="창 시작 간격 s (데이터가 많으면 늘려 학습 시간 줄임)")
     ap.add_argument("--gt-smooth", action="store_true", help="정답을 사진만으로 그린 매끈한 곡선으로 (gt_smooth.py)")
     ap.add_argument("--out", default=str(HERE.parent / "runs" / time.strftime("imu_cnn_%Y%m%d-%H%M%S")))
@@ -267,7 +268,7 @@ def main():
     def prep(recs):
         sets = []
         for rec in recs:
-            r = load_rec(rec, smooth=a.gt_smooth)
+            r = load_rec(rec, smooth=a.gt_smooth, gt_dir=a.gt_dir)
             W = windows(r, stride=max(1, int(a.stride * HZ)))
             print(f"{r['name']}: 정답 프레임 {r['n_gt']} (버림 {r['n_bad']}), 창 {len(W['X'])}, 정지 {r['n_still']}, "
                   f"g_b {np.round(r['gb'], 2)}", flush=True)
