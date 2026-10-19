@@ -23,7 +23,7 @@ body.full{cursor:none}body.full #bar{display:none}
  <div><b>모니터 보정판</b> — 칸 240 px · 마커 144 px (사진 1픽셀 = 화면 1픽셀)</div>
  <div id="chk"></div>
  <div>예상 칸 크기 <b id="sq">-</b> (모니터 크기 597 × 336 mm 기준)</div>
- <div style="margin-top:6px">자로 잰 <b>보드 긴 쪽 (7칸)</b>: <input id="mm" type="number" step="0.5" placeholder="mm"> mm → 칸 <b id="sqm">-</b></div>
+ <div style="margin-top:6px">자로 잰 <b>보드 짧은 쪽 (5칸)</b>: <input id="mm" type="number" step="0.5" placeholder="mm"> mm → 칸 <b id="sqm">-</b></div>
  <div class="small" id="json"></div>
  <div style="margin-top:8px"><button id="fs">전체 화면 (Esc 로 나감)</button><button id="hide">이 상자 숨기기</button></div>
  <div style="margin-top:6px;font-size:13px;color:#555">밝기 최대 · 야간 모드 끄기 · 브라우저 확대 100 % · 반사 없게. 녹화 첫 1~2초는 보드를 비춰서 초점을 맞추세요.</div>
@@ -45,14 +45,14 @@ function layout() {
 function measured() {
   const v = parseFloat(document.getElementById('mm').value);
   if (!(v > 0)) { document.getElementById('sqm').textContent = '-'; document.getElementById('json').textContent = ''; return; }
-  const sq = v / 7;
+  const sq = v / 5;
   document.getElementById('sqm').textContent = sq.toFixed(2) + ' mm';
   document.getElementById('json').innerHTML =
     `→ <code>config/charuco/board_monitor_6x6.json</code> 의 <code>"square_mm": ${sq.toFixed(2)}</code> 로 (이 값을 알려 주면 바꿔 둠)`;
-  try { localStorage.setItem('mon_mm', String(v)); } catch (e) {}
+  try { localStorage.setItem('mon_mm5', String(v)); } catch (e) {}
 }
 document.getElementById('mm').addEventListener('input', measured);
-try { const v = localStorage.getItem('mon_mm'); if (v) { document.getElementById('mm').value = v; } } catch (e) {}
+try { const v = localStorage.getItem('mon_mm5'); if (v) { document.getElementById('mm').value = v; } } catch (e) {}
 document.getElementById('fs').onclick = () => document.documentElement.requestFullscreen().then(() => document.body.classList.add('full'));
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('full'); });
 document.getElementById('hide').onclick = () => document.getElementById('bar').style.display = 'none';
