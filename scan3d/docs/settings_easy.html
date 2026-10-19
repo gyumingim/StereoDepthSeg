@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>카메라·센서 설정 정리</title>
+<style>
+:root{--bg:#f7f7f5;--fg:#1c1f24;--mut:#6b7078;--card:#fff;--line:#e2e4e8;--a:#2563eb;--b:#dc2626;--c:#16a34a;--d:#d97706;--chip:#eef2ff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--chip:#1e293b}}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.6 system-ui,"Malgun Gothic",sans-serif}
+main{max-width:980px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:26px;margin:0 0 4px}h2{font-size:21px;margin:34px 0 8px}
+.lead{color:var(--mut);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.mode h3{margin:0 0 4px;font-size:19px}.mode .where{font-size:14px;color:var(--mut)}
+.chip{display:inline-block;background:var(--chip);border-radius:999px;padding:1px 10px;font-size:14px;margin:2px 4px 2px 0}
+table{border-collapse:collapse;width:100%;font-size:15px}th,td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}
+th{font-size:14px;color:var(--mut);font-weight:600}
+td.good{color:var(--c);font-weight:600}td.bad{color:var(--b);font-weight:600}td.mid{color:var(--d);font-weight:600}
+.scroll{overflow-x:auto}
+canvas{width:100%;display:block}
+.small{font-size:14px;color:var(--mut)}
+b.k{color:var(--a)}
+</style>
+</head>
+<body><main>
+<h1>카메라·센서 설정 한눈에 보기</h1>
+<p class="lead">지금 쓰는 촬영 방식 4가지와, 각 설정이 무슨 뜻인지 쉬운 말로 정리했습니다 (2026-10-19 기준).</p>
+
+<h2>① 촬영 방식 4가지</h2>
+<div class="grid">
+ <div class="card mode"><h3>📷 광각 단안 60 fps</h3><div class="where">스캐너 웹 :8795 → 깊이 렌즈 "광각만 (단안)"</div>
+  <p>보정판 정답 녹화용 (지금 주력). 폰 화면에 실시간 마커 표시.</p>
+  <span class="chip">렌즈 5 (광각)</span><span class="chip">960x720</span><span class="chip">60 fps</span><span class="chip">노출 2 ms</span></div>
+ <div class="card mode"><h3>⚡ 고속 240 fps</h3><div class="where">VIO 웹 :8793 → "고속 녹화 시작"</div>
+  <p>보정판 정답 녹화용 (더 촘촘한 정답). 폰 화면 미리보기 없음.</p>
+  <span class="chip">주 카메라</span><span class="chip">1920x1080</span><span class="chip">240 fps</span><span class="chip">노출 4 ms (자동)</span></div>
+ <div class="card mode"><h3>🧭 OpenVINS 실시간</h3><div class="where">VIO 웹 :8793 → "OpenVINS 시작"</div>
+  <p>폰 안에서 위치 추적 (드론용 후보). 결과는 PC 웹에 실시간 표시.</p>
+  <span class="chip">렌즈 2 (초광각)</span><span class="chip">640x480</span><span class="chip">30 fps</span><span class="chip">노출 2 ms</span></div>
+ <div class="card mode"><h3>📐 ARCore (비교용)</h3><div class="where">VIO 웹 :8793 → "ARCore 시작"</div>
+  <p>구글 위치 추적. 논문 비교용으로만 남김.</p>
+  <span class="chip">렌즈 5</span><span class="chip">640x480</span><span class="chip">30 fps</span><span class="chip">노출 자동 (~17 ms)</span></div>
+</div>
+
+<h2>② 방식별 설정 비교</h2>
+<div class="card scroll"><table>
+<tr><th>설정</th><th>광각 단안 60</th><th>고속 240</th><th>OpenVINS</th><th>ARCore</th></tr>
+<tr><td>렌즈</td><td>광각 (5)</td><td>주 카메라 (광각)</td><td>초광각 (2)</td><td>광각 (5)</td></tr>
+<tr><td>해상도</td><td>960x720 (선택 가능)</td><td>1920x1080 (1280x720 가능)</td><td>640x480</td><td>640x480</td></tr>
+<tr><td>프레임</td><td>60 fps</td><td class="good">240 fps</td><td>30 fps</td><td>30 fps</td></tr>
+<tr><td>노출 (번짐)</td><td class="good">2 ms 고정</td><td class="mid">4.0 ms (못 바꿈)</td><td class="good">2 ms 고정</td><td class="bad">자동 ~17 ms</td></tr>
+<tr><td>밝기 맞춤</td><td>감도(ISO) 자동 조절</td><td>폰이 자동</td><td>감도 자동 조절</td><td>폰이 자동</td></tr>
+<tr><td>롤링 셔터 (위↔아래 시간차)</td><td class="bad">8.7 ms</td><td class="good">2.9 ms</td><td>측정 안 함</td><td>측정 안 함</td></tr>
+<tr><td>노이즈 제거 / 선명화</td><td class="good">끔</td><td>폰 기본 (못 바꿈)</td><td class="good">끔</td><td>폰 기본</td></tr>
+<tr><td>밝기 곡선</td><td>고정 (감마 2.2)</td><td>폰 기본</td><td>고정 (감마 2.2)</td><td>폰 기본</td></tr>
+<tr><td>화이트밸런스</td><td>노출 고정 후 잠금</td><td>폰 기본</td><td>노출 고정 후 잠금</td><td>폰 기본</td></tr>
+<tr><td>손떨림 보정 (OIS·영상)</td><td>끔</td><td>끔</td><td>끔</td><td>끔</td></tr>
+<tr><td>초점</td><td>1 m 고정</td><td>자동</td><td>렌즈 고정 초점</td><td>고정</td></tr>
+<tr><td>왜곡 보정 모드</td><td>원래 값으로 고정</td><td>폰 기본</td><td>원래 값으로 고정</td><td>폰 기본</td></tr>
+<tr><td>렌즈 보정값</td><td>체커보드 보정 파일</td><td>녹화 속 보정판으로 자동</td><td>보정 파일 (왜곡 편 영상)</td><td>구글 공장값</td></tr>
+<tr><td>IMU (센서)</td><td>500 Hz 원시값 전부</td><td>500 Hz 원시값 전부</td><td>500 Hz, 가속도 보간</td><td>ARCore 내부</td></tr>
+<tr><td>영상 시각</td><td>노출 가운데</td><td>노출 가운데 (시계 보정)</td><td>노출 가운데</td><td>ARCore 값</td></tr>
+<tr><td>폰 화면</td><td>흑백 60 fps + 마커 표시</td><td>없음</td><td>상태 글자만</td><td>상태 글자만</td></tr>
+<tr><td>저장</td><td>영상 + IMU → PC 자동</td><td>영상 + IMU → 버튼으로 PC</td><td>측정값만 PC</td><td>측정값만 PC</td></tr>
+<tr><td>용량 (1분)</td><td>약 190 MB</td><td>약 300 MB</td><td>-</td><td>-</td></tr>
+</table></div>
+
+<h2>③ 설정이 뭔 뜻인지 (쉬운 말)</h2>
+<div class="card"><b class="k">노출 시간 = 셔터가 열려 있는 시간</b>
+ <canvas id="cBlur" height="150"></canvas>
+ <p>길수록 빛을 많이 받아 밝지만, <b>움직이면 번집니다</b>. 짧을수록 선명하지만 어두워서 감도(ISO)를 올려야 하고, 그만큼 자글자글한 노이즈가 늘어납니다.
+ 240 fps는 한 장이 1/240초라 노출이 최대 4.2 ms를 넘을 수 없고, 폰이 알아서 4 ms로 정합니다(직접 못 바꿈).</p></div>
+<div class="card"><b class="k">롤링 셔터 = 화면을 위에서 아래로 한 줄씩 찍는 방식</b>
+ <canvas id="cRs" height="160"></canvas>
+ <p>맨 위 줄과 맨 아래 줄이 찍히는 시간이 다릅니다(지금 60 fps 모드 8.7 ms, 240 fps 모드 2.9 ms). 빠르게 돌리면 <b>똑바른 판이 기울어져 찍혀서</b> 정답이 틀어집니다. 짧을수록 좋습니다.</p></div>
+<div class="grid">
+ <div class="card"><b class="k">감도 (ISO)</b><p>어두울 때 밝게 키우는 증폭. 높을수록 노이즈 증가. 지금은 영상 밝기를 보고 0.5초마다 자동으로 맞춥니다 (밝은 부분이 하얗게 날아가지 않게).</p></div>
+ <div class="card"><b class="k">노이즈 제거·선명화 끔</b><p>폰이 사진을 "예쁘게" 만들려고 뭉개고 날카롭게 하는 처리. 마커 모서리 위치를 바꿀 수 있어 껐습니다.</p></div>
+ <div class="card"><b class="k">밝기 곡선·화이트밸런스 고정</b><p>프레임마다 밝기·색 처리가 바뀌면 특징점 추적이 흔들려서 고정합니다.</p></div>
+ <div class="card"><b class="k">손떨림 보정 끔</b><p>렌즈가 몰래 움직이면 카메라 보정값이 틀어져서 끕니다.</p></div>
+ <div class="card"><b class="k">왜곡 보정 모드 고정</b><p>폰이 영상 휘어짐을 펴는 기능. 렌즈 보정을 한 때와 같은 상태로 묶어 둡니다.</p></div>
+ <div class="card"><b class="k">영상 시각 = 노출 가운데</b><p>사진이 "언제" 찍혔는지를 셔터가 열린 시간의 한가운데로 기록. IMU와 맞출 때 기준이 됩니다. 고속 모드는 폰이 다른 시계를 써서 맞춰 줬습니다.</p></div>
+</div>
+
+<h2>④ 보정판 정답 녹화엔 뭐가 좋나</h2>
+<div class="card scroll"><table>
+<tr><th></th><th>광각 단안 60</th><th>고속 240</th></tr>
+<tr><td>번짐 (노출)</td><td class="good">2 ms — 더 선명</td><td class="mid">4 ms</td></tr>
+<tr><td>롤링 셔터</td><td class="bad">8.7 ms</td><td class="good">2.9 ms — 3배 짧음</td></tr>
+<tr><td>정답 개수 (1초)</td><td>60</td><td class="good">240 — 4배</td></tr>
+<tr><td>해상도</td><td>960x720</td><td class="good">1920x1080</td></tr>
+<tr><td>찍으며 확인</td><td class="good">폰 화면에 마커 표시</td><td class="bad">미리보기 없음</td></tr>
+<tr><td>결론</td><td colspan="2"><b>빠른 동작이 많으면 240</b>, 천천히 정밀하게면 60 (둘 다 학습에 같이 쓸 수 있음)</td></tr>
+</table>
+<p class="small">수치: 노출·롤링 셔터는 폰에서 실측 (2026-10-19). 어느 쪽 정답이 더 정확한지는 240 fps 녹화가 쌓이면 비교 예정.</p></div>
+
+<h2>⑤ IMU 값과 카메라 값을 어떻게 믿나</h2>
+<p class="lead">"믿는다"는 말 대신, <b>서로 독립된 방법으로 같은 값이 나오는지</b> 확인했습니다. 숫자는 모두 실측입니다.</p>
+<div class="grid">
+ <div class="card"><b class="k">📷 카메라 (보정판 정답)</b>
+  <table>
+   <tr><td>모서리 맞음 (재투영 오차)</td><td class="good">0.46~0.51 픽셀</td></tr>
+   <tr><td>판 인식률 (긴 녹화)</td><td class="good">92~94 %</td></tr>
+   <tr><td>판 크기</td><td>자로 잼 37.0 mm (±0.4 %)</td></tr>
+   <tr><td>렌즈 보정 교차 확인</td><td class="good">녹화 속 판으로 다시 구한 값과 1~2 % 차이</td></tr>
+   <tr><td>튀는 프레임</td><td>자이로와 3° 넘게 다르면 버림</td></tr>
+  </table>
+  <p class="small">재투영 오차 = 계산한 판 자세로 모서리를 다시 그렸을 때 실제 모서리와의 거리. 0.5 픽셀이면 매우 잘 맞는 편.</p></div>
+ <div class="card"><b class="k">〰 IMU (센서)</b>
+  <table>
+   <tr><td>가만히 둘 때 가속도 크기</td><td class="good">9.809 m/s² (중력 9.807과 일치)</td></tr>
+   <tr><td>가만히 둘 때 자이로</td><td class="good">0.002 rad/s (거의 0)</td></tr>
+   <tr><td>샘플 간격</td><td class="good">정확히 2.00 ms (500 Hz)</td></tr>
+   <tr><td>빠진 샘플</td><td class="good">0개 (6만 4천 개 중)</td></tr>
+   <tr><td>값 종류</td><td>원시값 (안드로이드 가공 없음)</td></tr>
+  </table>
+  <p class="small">S24 가속도가 묶음으로 오는 문제는 보간으로 해결 (모든 샘플 사용).</p></div>
+ <div class="card"><b class="k">🔗 카메라 ↔ IMU 맞춤</b>
+  <table>
+   <tr><td>0.2초 자세 변화 비교 (천천히)</td><td class="good">0.54~0.64° 차이</td></tr>
+   <tr><td>시간차</td><td>−4.6 ~ +1.6 ms</td></tr>
+   <tr><td>방향 (녹화끼리)</td><td class="good">1.3° 이내로 같음</td></tr>
+   <tr><td>방향 (폰 공장값과)</td><td class="good">0.9~1.8° 차이</td></tr>
+  </table>
+  <p class="small">카메라가 본 회전과 자이로가 잰 회전이 따로 계산되는데도 거의 같게 나옴 → 둘 다, 그리고 맞춤도 맞다는 근거.</p></div>
+</div>
+<div class="card"><b class="k">그림으로 보기: 카메라가 본 회전(빨강) vs 자이로(파랑)</b>
+ <img src="img_sync_212727.png" alt="board GT vs gyro" style="width:100%;border-radius:8px;margin-top:8px">
+ <p class="small">녹화 21:27 (천천히). 두 선이 거의 겹침. 위에서부터 회전 크기, x·y·z 축.</p></div>
+<div class="card"><b class="k">⚠ 아직 덜 믿을 부분</b>
+ <ul>
+  <li><b>빠르게 흔들 때 정답</b>: 롤링 셔터·번짐으로 판 자세가 1~2° 흔들림 → 학습할 때 덜 믿게 처리. 240 fps로 개선 기대.</li>
+  <li><b>시간차</b>: 천천히 찍은 녹화는 ±1~2 ms로 안정, 빠른 녹화는 구간마다 ±4~5 ms 흔들림 (정답 품질 탓으로 추정).</li>
+  <li><b>레버암 (카메라–IMU 거리)</b>: 학습으로 약 5.5 cm로 나왔지만 아직 검증 안 됨.</li>
+ </ul></div>
+</main>
+<script>
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function fit(c){const r=devicePixelRatio||1;if(!c.dataset.h){c.dataset.h=c.getAttribute('height');c.style.height=c.dataset.h+'px';}
+ const h=+c.dataset.h,w=c.clientWidth;if(c.width!==Math.round(w*r))c.width=Math.round(w*r);if(c.height!==Math.round(h*r))c.height=Math.round(h*r);
+ const x=c.getContext('2d');x.setTransform(r,0,0,r,0,0);x.clearRect(0,0,w,h);return [x,w,h];}
+function txt(x,s,px,py,col,size=14,al='center'){x.fillStyle=col||css('--fg');x.font=size+'px system-ui,sans-serif';x.textAlign=al;x.fillText(s,px,py);}
+function blur(t){const [x,W,H]=fit(cBlur);const items=[['2 ms',2],['4 ms',4],['17 ms',17]];const cw=W/3;const sp=(t/1000)%2;
+ items.forEach(([n,e],k)=>{const cx=cw*k+cw/2,cy=H/2-8;const smear=e*2.2;
+  for(let i=0;i<12;i++){x.globalAlpha=1/12*1.6;x.fillStyle=css('--fg');x.fillRect(cx-28+i/11*smear-smear/2,cy-28,56,56);}
+  x.globalAlpha=1;x.fillStyle=css('--card');x.fillRect(cx-14+0,cy-14,28,28);
+  txt(x,'노출 '+n,cx,H-12,e<5?css('--c'):css('--b'),15);});}
+function rs(t){const [x,W,H]=fit(cRs);const half=W/2;const ang=Math.sin(t/700)*0.6;
+ [['8.7 ms (60 fps 모드)',8.7,0],['2.9 ms (240 fps 모드)',2.9,half]].forEach(([n,s,ox])=>{const cx=ox+half/2,top=20,hgt=H-55;
+  for(let row=0;row<20;row++){const y=top+row/20*hgt;const shift=ang*s*row*0.9;x.fillStyle=css('--fg');x.fillRect(cx-35+shift,y,70,hgt/20+0.5);}
+  txt(x,n,cx,H-12,s<5?css('--c'):css('--b'),14);});
+ txt(x,'폰을 좌우로 빠르게 돌릴 때 사각형이 찍히는 모양',W/2,13,css('--mut'),13);}
+function frame(t){blur(t);rs(t);requestAnimationFrame(frame);}requestAnimationFrame(frame);
+</script>
+</body></html>
