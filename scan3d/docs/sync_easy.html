@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>카메라·IMU 맞추기</title>
+<style>
+:root{--bg:#f7f7f5;--fg:#1c1f24;--mut:#6b7078;--card:#fff;--line:#e2e4e8;--a:#2563eb;--b:#dc2626;--c:#16a34a;--d:#d97706;--chip:#eef2ff;--svgbg:#fbfbfa}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--chip:#1e293b;--svgbg:#16191d}}
+:root[data-theme="dark"]{--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--chip:#1e293b;--svgbg:#16191d}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.65 system-ui,"Malgun Gothic",sans-serif}
+main{max-width:980px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:26px;margin:0 0 4px}h2{font-size:21px;margin:36px 0 8px}
+.lead{color:var(--mut);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+.step{display:inline-block;background:var(--a);color:#fff;border-radius:999px;width:30px;height:30px;text-align:center;line-height:30px;font-weight:700;margin-right:8px}
+.chip{display:inline-block;background:var(--chip);border-radius:999px;padding:1px 10px;font-size:14px;margin:2px 4px 2px 0}
+.small{font-size:14px;color:var(--mut)}
+.eq{background:var(--chip);border-radius:10px;padding:8px 12px;font-family:ui-monospace,Consolas,monospace;font-size:15px;overflow-x:auto;white-space:nowrap}
+svg{width:100%;height:auto;display:block;background:var(--svgbg);border-radius:10px}
+svg text{fill:var(--fg);font:13px system-ui,"Malgun Gothic",sans-serif}
+svg .m{fill:var(--mut)}
+table{border-collapse:collapse;width:100%;font-size:15px}th,td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}
+th{font-size:14px;color:var(--mut);font-weight:600}
+td.good{color:var(--c);font-weight:600}td.mid{color:var(--d);font-weight:600}
+.scroll{overflow-x:auto}
+img{max-width:100%;border-radius:10px;border:1px solid var(--line)}
+b.k{color:var(--a)}
+ol.flow{padding-left:22px}ol.flow li{margin:4px 0}
+</style>
+</head>
+<body><main>
+<h1>카메라 사진과 IMU 값은 어떻게 짝지어지나</h1>
+<p class="lead">카메라는 1초에 240장(또는 60장), IMU는 1초에 500번 값을 냅니다. 둘을 <b>같은 시각, 같은 방향</b>으로 맞춰야 "이 사진이 찍힐 때 IMU는 이 값이었다"를 알 수 있습니다. 4단계로 맞춥니다.</p>
+
+<div class="card">
+<b>한 줄 요약</b>
+<ol class="flow">
+ <li><b>같은 시계</b>로 바꾸기 — 영상 파일 시각을 IMU와 같은 폰 시계로 옮김</li>
+ <li><b>사진 한 장의 정확한 순간</b> 정하기 — 노출 가운데 + 보드가 찍힌 줄</li>
+ <li><b>남은 작은 시간차(dt)</b> 찾기 — 자이로가 본 회전 vs 보드가 본 회전을 겹쳐 봄</li>
+ <li><b>축 방향(R)</b> 맞추기 — IMU 칩과 카메라가 살짝 틀어진 각도</li>
+</ol>
+</div>
+
+<h2><span class="step">1</span>같은 시계로 바꾸기</h2>
+<div class="card">
+<p>폰 안에는 시계가 두 개 있습니다.</p>
+<ul>
+ <li><b class="k">부팅 시계</b>(BOOTTIME): 폰이 잠들어 있던 시간도 셉니다. <b>IMU 값</b>과 <b>카메라 사진 정보</b>가 이 시계를 씁니다.</li>
+ <li><b class="k">깨어 있는 시계</b>(MONOTONIC): 잠든 시간은 빼고 셉니다. <b>240 fps 영상 파일(mp4)</b>의 시각이 이 시계입니다.</li>
+</ul>
+<svg viewBox="0 0 900 170" role="img" aria-label="두 시계의 차이">
+ <text x="20" y="40">부팅 시계</text>
+ <line x1="130" y1="35" x2="870" y2="35" stroke="var(--a)" stroke-width="4"/>
+ <text x="20" y="110">깨어 있는 시계</text>
+ <line x1="130" y1="105" x2="300" y2="105" stroke="var(--d)" stroke-width="4"/>
+ <line x1="300" y1="105" x2="560" y2="105" stroke="var(--d)" stroke-width="4" stroke-dasharray="4 8" opacity=".35"/>
+ <line x1="560" y1="105" x2="870" y2="105" stroke="var(--d)" stroke-width="4"/>
+ <text x="350" y="95" class="m">폰이 잠든 동안 멈춤</text>
+ <line x1="720" y1="35" x2="720" y2="105" stroke="var(--b)" stroke-width="2"/>
+ <text x="730" y="75">같은 순간인데</text>
+ <text x="730" y="93">4189 초 차이</text>
+ <text x="130" y="150" class="m">→ 녹화 시작할 때 두 시계 차이(clock_offset)를 재서 영상 시각에 더함</text>
+</svg>
+<p>그다음, 카메라가 사진마다 따로 알려 주는 <b>정확한 센서 시각</b> 목록에서 <b>2 ms 안쪽</b>으로 가장 가까운 것을 찾아 짝짓습니다(사진 간격이 4.2 ms라 헷갈릴 일이 없습니다). 짝을 못 찾은 사진은 바로 앞 사진의 차이를 그대로 씁니다.</p>
+<div class="eq">사진 시각 = 영상 시각 + clock_offset → 2 ms 안의 센서 시각으로 바꿈</div>
+<p class="small">60 fps 모드는 사진마다 센서 시각이 바로 오므로 이 단계가 필요 없습니다.</p>
+</div>
+
+<h2><span class="step">2</span>사진 한 장의 "찍힌 순간" 정하기</h2>
+<div class="card">
+<p>사진은 한순간에 찍히지 않습니다. 셔터가 <b>열려 있는 시간(노출)</b>이 있고, 위 줄부터 아래 줄까지 <b>차례로</b> 읽힙니다(롤링 셔터).</p>
+<svg viewBox="0 0 900 230" role="img" aria-label="롤링 셔터와 노출">
+ <text x="20" y="24" class="m">사진의 줄 (위 → 아래)</text>
+ <g>
+  <rect x="200" y="40" width="120" height="16" fill="var(--a)" opacity=".75" rx="3"/>
+  <rect x="230" y="62" width="120" height="16" fill="var(--a)" opacity=".75" rx="3"/>
+  <rect x="260" y="84" width="120" height="16" fill="var(--c)" opacity=".9" rx="3"/>
+  <rect x="290" y="106" width="120" height="16" fill="var(--a)" opacity=".75" rx="3"/>
+  <rect x="320" y="128" width="120" height="16" fill="var(--a)" opacity=".75" rx="3"/>
+ </g>
+ <text x="40" y="53">맨 윗줄</text><text x="40" y="97">보드가 찍힌 줄</text><text x="40" y="141">맨 아랫줄</text>
+ <line x1="320" y1="92" x2="320" y2="180" stroke="var(--c)" stroke-width="2"/>
+ <text x="300" y="198">이 줄의 가운데 = 우리가 쓰는 시각</text>
+ <line x1="200" y1="165" x2="320" y2="165" stroke="var(--fg)" stroke-width="1.5"/><text x="210" y="160" class="m">노출 4 ms</text>
+ <line x1="200" y1="222" x2="320" y2="222" stroke="var(--d)" stroke-width="1.5"/>
+ <text x="500" y="60">윗줄 → 아랫줄 걸리는 시간 (skew)</text>
+ <text x="500" y="84">· 240 fps: <tspan font-weight="700">2.9 ms</tspan></text>
+ <text x="500" y="106">· 60 fps: <tspan font-weight="700">8.7 ms</tspan></text>
+ <text x="500" y="140" class="m">빨리 돌리면 이 몇 ms 동안</text>
+ <text x="500" y="158" class="m">폰이 움직여서 줄마다 시각이 달라짐</text>
+</svg>
+<p>그래서 "사진 시각" = <b>노출 가운데</b>, 거기에 보드가 사진의 위쪽에 있으면 조금 빠르게, 아래쪽에 있으면 조금 늦게 고칩니다.</p>
+<div class="eq">t = t_가운데 + (보드 모서리 평균 y / 사진 높이 − 0.5) × skew</div>
+<p class="small">예: 60 fps에서 초당 2 rad로 돌리면 고치지 않을 때 위·아래 끝에서 약 0.5° 어긋납니다. 240 fps는 skew가 1/3이라 이 오차도 1/3.</p>
+</div>
+
+<h2><span class="step">3</span>남은 작은 시간차(dt) 찾기</h2>
+<div class="card">
+<p>1·2단계를 해도 카메라 처리 지연 때문에 <b>몇 ms</b> 어긋남이 남습니다. 이건 직접 잴 수 없어서, <b>같은 회전을 두 센서가 어떻게 봤는지</b> 겹쳐 보고 찾습니다.</p>
+<ul>
+ <li><b>자이로</b>: "폰이 이만큼 돌았다"를 직접 잼</li>
+ <li><b>보드 사진</b>: 사진마다 보드에 대한 폰 자세를 계산 → 사진끼리 차이 = 돌아간 양</li>
+</ul>
+<svg viewBox="0 0 900 200" role="img" aria-label="두 회전 그래프를 밀어서 맞추기">
+ <path d="M30 150 C 110 150, 140 40, 210 50 S 330 160, 400 140 S 520 30, 600 60 S 760 150, 870 120" fill="none" stroke="var(--b)" stroke-width="3"/>
+ <path d="M60 150 C 140 150, 170 40, 240 50 S 360 160, 430 140 S 550 30, 630 60 S 790 150, 900 120" fill="none" stroke="var(--a)" stroke-width="3" stroke-dasharray="7 5"/>
+ <text x="40" y="24"><tspan fill="var(--b)">━ 보드가 본 회전</tspan>   <tspan fill="var(--a)">┅ 자이로가 본 회전</tspan></text>
+ <line x1="210" y1="50" x2="240" y2="50" stroke="var(--fg)" stroke-width="2" marker-end="url(#ar)"/>
+ <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--fg)"/></marker></defs>
+ <text x="250" y="45">dt 만큼 밀려 있음</text>
+ <text x="40" y="190" class="m">자이로 그래프를 앞뒤로 조금씩 밀어 보며 가장 잘 겹치는 위치 = dt</text>
+</svg>
+<table>
+ <tr><th>방법</th><th>무엇을 겹치나</th><th>찾는 범위</th><th>평가</th></tr>
+ <tr><td>처음 방법</td><td>회전 <b>빠르기</b>(크기만)</td><td>±150 ms, 1 ms 간격</td><td class="mid">대충 위치 찾기용. ±2 ms 틀려도 차이가 1%뿐이라 정밀하지 않음</td></tr>
+ <tr><td>정밀 방법</td><td><b>0.2초 동안 돌아간 양</b>(방향까지)</td><td>±15 ms, 0.2 ms 간격</td><td class="good">dt와 축 방향(4단계)을 같이 맞춤. 지금 이 값을 씀</td></tr>
+</table>
+<div class="eq">IMU 시각 + dt = 카메라 시각   (지금 녹화들: dt = −4.6 ~ +1.6 ms)</div>
+</div>
+
+<h2><span class="step">4</span>축 방향(R) 맞추기</h2>
+<div class="card">
+<p>IMU 칩과 카메라는 폰 안에서 <b>완전히 같은 방향이 아닙니다</b>. 그래서 자이로의 "x축으로 돌았다"가 카메라에서는 살짝 다른 축입니다. 3단계에서 회전을 겹칠 때 이 틀어진 각도(R)도 같이 구합니다.</p>
+<svg viewBox="0 0 900 170" role="img" aria-label="IMU 축과 카메라 축">
+ <g transform="translate(200,95)">
+  <line x1="0" y1="0" x2="90" y2="0" stroke="var(--a)" stroke-width="3" marker-end="url(#ar)"/>
+  <line x1="0" y1="0" x2="0" y2="-70" stroke="var(--a)" stroke-width="3" marker-end="url(#ar)"/>
+  <text x="-60" y="40">IMU 축</text>
+ </g>
+ <g transform="translate(560,95) rotate(-8)">
+  <line x1="0" y1="0" x2="90" y2="0" stroke="var(--c)" stroke-width="3" marker-end="url(#ar)"/>
+  <line x1="0" y1="0" x2="0" y2="-70" stroke="var(--c)" stroke-width="3" marker-end="url(#ar)"/>
+ </g>
+ <text x="500" y="140">카메라 축 (살짝 틀어짐 · 그림은 과장)</text>
+ <text x="330" y="80" class="m">R 로 돌려서 맞춤 →</text>
+</svg>
+<table>
+ <tr><th>확인</th><th>결과</th></tr>
+ <tr><td>녹화마다 따로 구한 R끼리</td><td class="good">1.3° 안에서 같음 → 매번 같은 값이 나옴</td></tr>
+ <tr><td>폰 공장 기본값과 비교</td><td class="mid">0.9 ~ 1.8° 다름 → 공장값보다 우리가 잰 값을 씀</td></tr>
+</table>
+<p class="small">카메라와 IMU의 <b>위치</b> 차이(몇 cm)도 있는데, 이건 학습의 "물리 보정" 단계에서 같이 구합니다.</p>
+</div>
+
+<h2>맞춘 뒤: 사진 사이의 IMU는 어떻게 쓰나</h2>
+<div class="card">
+<svg viewBox="0 0 900 120" role="img" aria-label="사진 사이 IMU 값">
+ <line x1="40" y1="60" x2="860" y2="60" stroke="var(--line)" stroke-width="2"/>
+ <g fill="var(--b)"><rect x="60" y="30" width="14" height="60" rx="3"/><rect x="330" y="30" width="14" height="60" rx="3"/><rect x="600" y="30" width="14" height="60" rx="3"/></g>
+ <g fill="var(--a)"><circle cx="130" cy="60" r="7"/><circle cx="196" cy="60" r="7"/><circle cx="262" cy="60" r="7"/><circle cx="400" cy="60" r="7"/><circle cx="466" cy="60" r="7"/><circle cx="532" cy="60" r="7"/><circle cx="670" cy="60" r="7"/><circle cx="736" cy="60" r="7"/><circle cx="802" cy="60" r="7"/></g>
+ <text x="40" y="112"><tspan fill="var(--b)">■ 사진(정답 위치)</tspan>   <tspan fill="var(--a)">● IMU 값(2 ms마다)</tspan>   <tspan class="m">— 그림은 간격 단순화</tspan></text>
+</svg>
+<p>IMU 값을 차례로 더해서(적분) 다음 사진 때 폰이 어디 있을지 <b>예측</b>하고, 보드 사진이 알려 주는 <b>정답</b>과 비교합니다. 그 차이를 줄이도록 보정(+CNN)을 학습합니다. 240 fps면 사진 사이 IMU 값이 약 2개라 정답이 아주 촘촘합니다.</p>
+</div>
+
+<h2>잘 맞았는지 어떻게 아나</h2>
+<div class="card">
+<div class="scroll"><table>
+ <tr><th>확인한 것</th><th>결과</th><th>뜻</th></tr>
+ <tr><td>0.2초 동안 돌아간 양: 자이로 vs 보드</td><td class="good">0.54 ~ 0.64° 차이</td><td>시간·방향이 잘 맞음 (천천히 움직인 녹화)</td></tr>
+ <tr><td>보드 사진 계산 오차(재투영)</td><td class="good">0.46 ~ 0.51 픽셀</td><td>정답 위치가 정확함</td></tr>
+ <tr><td>IMU 빠진 값</td><td class="good">64,579개 중 0개, 간격 2.00 ms</td><td>IMU 기록이 고름</td></tr>
+ <tr><td>빠르게 움직인 구간</td><td class="mid">1 ~ 2° 차이, dt가 구간마다 ±4~5 ms 흔들림</td><td>약점 → 240 fps(노출 짧고 skew 1/3)로 줄이려는 이유</td></tr>
+</table></div>
+<p>아래 그림: 빨강 = 보드가 본 회전, 파랑 = 자이로(위 4단계로 맞춘 뒤). 거의 겹치면 잘 맞은 것입니다.</p>
+<img src="img_sync_212727.png" alt="보드 회전과 자이로 회전 비교 그래프 (녹화 212727)">
+<p class="small">관련 코드: <code>scan3d/imu_learn/imu_gt.py</code> (1·2단계, 처음 dt), <code>check_sync.py</code> (정밀 dt·R), 결과 파일 <code>align.json</code>.</p>
+</div>
+</main></body>
+</html>
