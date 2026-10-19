@@ -227,6 +227,30 @@ class Hub:
             self.say("멈춤")
         return o
 
+    def hs_start(self, fps=240):
+        """고속 정답 녹화 (arlat mode hs): 주 카메라 1920x1080 fps + IMU → 폰 files/hs_<시각>/."""
+        self.stop(quiet=True)
+        self.adb("shell", "input", "keyevent", "KEYCODE_WAKEUP")
+        o = self.adb("shell", "am", "start", "-n", f"{PKG}/.MainActivity", "--es", "mode", "hs", "--ei", "fps", str(int(fps)))
+        self.say(f"고속 녹화 시작: {fps} fps (멈추면 PC 로 가져옴)")
+        return o
+
+    def hs_stop(self):
+        """홈 키 → 앱이 onPause 에서 파일을 닫음 → 끝낸 뒤 가장 최근 hs_ 폴더를 PC recordings/ 로 가져옴."""
+        self.adb("shell", "input", "keyevent", "KEYCODE_HOME")
+        time.sleep(3)
+        self.adb("shell", "am", "force-stop", PKG)
+        base = f"/sdcard/Android/data/{PKG}/files"
+        name = self.adb("shell", f"ls -d {base}/hs_* | tail -1").strip().split("/")[-1]
+        if not name.startswith("hs_"):
+            self.say("고속 녹화 폴더를 못 찾음")
+            return ""
+        dst = Path(self.a.rec_dir)
+        self.say(f"가져오는 중: {name} → {dst}")
+        o = self.adb("pull", f"{base}/{name}", str(dst), timeout=3600)
+        self.say(f"가져옴: {name} ({o.splitlines()[-1][:120] if o else ''})")
+        return o
+
     def push_ov(self):
         self.adb("shell", "mkdir", "-p", PHONE_OV)
         outs = []
@@ -353,6 +377,12 @@ def make_handler(hub):
                 elif self.path == "/api/stop":
                     hub.background(hub.stop)
                     self._json({"ok": True})
+                elif self.path == "/api/hs_start":
+                    hub.background(hub.hs_start, int(body.get("fps", 240)))
+                    self._json({"ok": True})
+                elif self.path == "/api/hs_stop":
+                    hub.background(hub.hs_stop)
+                    self._json({"ok": True})
                 elif self.path == "/api/push_ov":
                     hub.background(hub.push_ov)
                     self._json({"ok": True})
@@ -387,6 +417,11 @@ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums} th,
   <button class="ov" onclick="start('ov')">OpenVINS 시작</button>
   <button onclick="post('/api/stop')">멈춤</button>
   <button onclick="post('/api/push_ov')">OpenVINS 설정 다시 보내기</button>
+  <div style="margin-top:8px">보정판 정답 녹화 (고속, 주 카메라 1920x1080 + IMU)
+   <select id="hsfps"><option>240</option><option>120</option></select> fps
+   <button class="ar" onclick="post('/api/hs_start',{fps:+document.getElementById('hsfps').value})">● 고속 녹화 시작</button>
+   <button onclick="post('/api/hs_stop')">■ 멈추고 PC로 가져오기</button>
+   <span class="mut">고속 모드는 폰 화면 미리보기·마커 표시 없음</span></div>
   <span id="phone" class="mut" style="margin-left:8px">폰: -</span>
   <div style="margin-top:8px">ARCore 루프 클로저
    <select id="loopmode"><option value="both">둘 다 (마커 + 특징점)</option><option value="marker">마커만</option><option value="feature">특징점만 (마커 없음)</option><option value="off">끔</option></select>
@@ -464,6 +499,7 @@ def main():
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--phone-port", type=int, default=8798)
     ap.add_argument("--adb", default=r"C:\Users\a3162\platform-tools\adb.exe")
+    ap.add_argument("--rec-dir", default=r"\\wsl.localhost\Ubuntu-22.04\home\system\scanner\StereoDepthSeg\scan3d\recordings", help="고속 녹화를 가져올 곳")
     ap.add_argument("--ov-dir", default=r"\\wsl.localhost\Ubuntu-22.04\home\system\scanner\android\phone_ov",
                     help="make_phone_ov.py output (config + lens0u_remap.bin)")
     a = ap.parse_args()
