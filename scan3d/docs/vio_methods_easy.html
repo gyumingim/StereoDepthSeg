@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VIO 방식 한눈에</title>
+<style>
+:root{--bg:#f7f7f5;--fg:#1c1f24;--mut:#6b7078;--card:#fff;--line:#e2e4e8;--a:#2563eb;--b:#dc2626;--c:#16a34a;--d:#d97706;--p:#9333ea;--chip:#eef2ff;--svgbg:#fbfbfa}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--p:#c084fc;--chip:#1e293b;--svgbg:#16191d}}
+:root[data-theme="dark"]{--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--p:#c084fc;--chip:#1e293b;--svgbg:#16191d}
+body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.75 system-ui,"Malgun Gothic",sans-serif}
+main{max-width:940px;margin:0 auto;padding:20px 16px 80px}
+h1{font-size:27px;margin:0 0 6px}h2{font-size:22px;margin:42px 0 8px;padding-top:8px;border-top:1px solid var(--line)}h3{margin:0 0 6px;font-size:19px}
+.lead{color:var(--mut);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.tag{display:inline-block;border-radius:999px;padding:1px 10px;font-size:14px;margin:0 6px 4px 0;background:var(--chip)}
+svg{width:100%;height:auto;display:block;background:var(--svgbg);border-radius:10px;margin:8px 0}
+svg text{fill:var(--fg);font:14px system-ui,"Malgun Gothic",sans-serif}svg .m{fill:var(--mut)}
+.pro{color:var(--c);font-weight:700}.con{color:var(--b);font-weight:700}
+table{border-collapse:collapse;width:100%;font-size:15px}th,td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}
+th{font-size:14px;color:var(--mut);font-weight:600}.scroll{overflow-x:auto}
+.key{border-left:5px solid var(--a);padding:8px 14px;margin:12px 0;background:var(--chip);border-radius:0 10px 10px 0}
+.small{font-size:15px;color:var(--mut)}
+</style>
+</head>
+<body><main>
+<h1>VIO 방식 한눈에 — 드론이 "내가 어디 있지?"를 아는 법</h1>
+<p class="lead">VIO = 카메라(눈) + IMU(속귀). 눈은 정확하지만 느리고 가끔 못 보고, 속귀는 빠르지만 조금씩 틀어집니다. 둘을 합치는 <b>방법</b>에 따라 이름이 갈립니다.</p>
+
+<h2>0. 공통 원리 — 눈과 속귀</h2>
+<div class="card">
+<svg viewBox="0 0 900 200">
+ <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--fg)"/></marker></defs>
+ <circle cx="120" cy="90" r="50" fill="none" stroke="var(--a)" stroke-width="3"/><text x="98" y="95" style="font-size:34px">👁️</text><text x="70" y="170">카메라 (30~60장/초)</text>
+ <circle cx="780" cy="90" r="50" fill="none" stroke="var(--d)" stroke-width="3"/><text x="758" y="95" style="font-size:34px">🌀</text><text x="720" y="170">IMU (500번/초)</text>
+ <rect x="330" y="45" width="240" height="90" rx="14" fill="none" stroke="var(--fg)" stroke-width="2"/><text x="372" y="85">합치는 방법</text><text x="350" y="112" class="m">(필터 / 최적화 / SLAM)</text>
+ <line x1="175" y1="90" x2="325" y2="90" stroke="var(--a)" stroke-width="3" marker-end="url(#ar)"/>
+ <line x1="725" y1="90" x2="575" y2="90" stroke="var(--d)" stroke-width="3" marker-end="url(#ar)"/>
+ <text x="190" y="75" class="m">"저 점이 이만큼 움직였다"</text><text x="590" y="75" class="m">"이만큼 돌고 밀렸다"</text>
+</svg>
+<p>카메라는 벽·바닥의 <b>특징점</b>(무늬 모서리)이 사진마다 어디로 갔는지 보고 움직임을 계산합니다. IMU는 사진 사이의 빠른 움직임을 메웁니다. 둘이 서로의 실수를 잡아 줍니다.</p>
+</div>
+
+<h2>1. 필터 방식 — OpenVINS (MSCKF)</h2>
+<div class="card">
+<span class="tag">OpenVINS</span><span class="tag">MSCKF</span><span class="tag">가벼움</span><span class="tag">GPLv3</span>
+<svg viewBox="0 0 900 170">
+ <g fill="var(--a)"><circle cx="100" cy="90" r="16"/><circle cx="260" cy="90" r="16"/><circle cx="420" cy="90" r="16"/><circle cx="580" cy="90" r="16"/></g>
+ <g fill="var(--a)" opacity=".25"><circle cx="740" cy="90" r="16"/></g>
+ <line x1="120" y1="90" x2="240" y2="90" stroke="var(--fg)" stroke-width="2" marker-end="url(#ar)"/><line x1="280" y1="90" x2="400" y2="90" stroke="var(--fg)" stroke-width="2" marker-end="url(#ar)"/>
+ <line x1="440" y1="90" x2="560" y2="90" stroke="var(--fg)" stroke-width="2" marker-end="url(#ar)"/><line x1="600" y1="90" x2="720" y2="90" stroke="var(--fg)" stroke-width="2" stroke-dasharray="5 5" marker-end="url(#ar)"/>
+ <text x="70" y="140" class="m">지금 추정 + 최근 사진 몇 장만 기억 → 새 사진 오면 고치고 앞으로. 지나간 건 다시 안 고침.</text>
+</svg>
+<p><b>원리</b>: 걸으면서 메모장 한 장만 들고 다니는 사람. 새 정보가 오면 메모를 고치고, 오래된 건 요약해서 버립니다.</p>
+<p><span class="pro">장점</span> 가볍고 빠름(폰에서 한 장 13 ms 측정), 수학적으로 꼼꼼(FEJ로 "모르는 걸 안다"고 착각 안 함), 보정값 실시간 추정 기능. <span class="con">단점</span> 지나간 실수를 못 고침, 오래 날면 조금씩 흘러감(루프 없음).</p>
+</div>
+
+<h2>2. 묶음 최적화 방식 — VINS-Mono/Fusion, Basalt, DM-VIO</h2>
+<div class="card">
+<span class="tag">VINS</span><span class="tag">Basalt (BSD)</span><span class="tag">DM-VIO</span><span class="tag">조금 더 무거움</span>
+<svg viewBox="0 0 900 180">
+ <rect x="200" y="40" width="500" height="100" rx="14" fill="none" stroke="var(--p)" stroke-width="2" stroke-dasharray="6 5"/><text x="210" y="32" class="m">최근 몇 초 창 (전부 다시 맞춤)</text>
+ <g fill="var(--a)"><circle cx="250" cy="90" r="14"/><circle cx="350" cy="80" r="14"/><circle cx="450" cy="95" r="14"/><circle cx="550" cy="82" r="14"/><circle cx="650" cy="92" r="14"/></g>
+ <g fill="var(--a)" opacity=".25"><circle cx="100" cy="90" r="14"/><circle cx="160" cy="88" r="14"/></g>
+ <g stroke="var(--d)" stroke-width="4" fill="none"><path d="M264 90 Q300 70 336 80"/><path d="M364 80 Q400 105 436 95"/><path d="M464 95 Q500 70 536 82"/><path d="M564 82 Q600 100 636 92"/></g>
+ <text x="70" y="165" class="m">창 밖으로 나간 건 요약(주변화). DM-VIO는 그 요약을 늦게 해서 정확도를 올림.</text>
+</svg>
+<p><b>원리</b>: 최근 몇 초의 자세들을 구슬처럼 놓고 사진(실)과 IMU(고무줄)로 묶어 <b>창 전체를 매번 다시 맞춤</b>.</p>
+<p><span class="pro">장점</span> 필터보다 보통 조금 더 정확, 최근 실수를 고칠 수 있음. Basalt는 BSD라 상업적으로 쓰기 쉬움. <span class="con">단점</span> 계산이 더 많음, VINS는 ROS1 필요(우리 환경에 안 맞아 제외).</p>
+</div>
+
+<h2>3. SLAM 방식 — ORB-SLAM3</h2>
+<div class="card">
+<span class="tag">ORB-SLAM3</span><span class="tag">지도 + 루프 클로저</span><span class="tag">무거움</span><span class="tag">GPLv3</span>
+<svg viewBox="0 0 900 220">
+ <path d="M120 170 C 220 40, 520 30, 700 90 S 760 190, 600 185 S 200 190, 140 172" fill="none" stroke="var(--a)" stroke-width="3"/>
+ <circle cx="130" cy="171" r="9" fill="var(--c)"/><text x="60" y="205">출발</text>
+ <circle cx="150" cy="168" r="9" fill="var(--b)"/><text x="160" y="150">돌아옴: "어, 여기 아까 거기네!"</text>
+ <line x1="138" y1="171" x2="146" y2="169" stroke="var(--c)" stroke-width="4"/>
+ <g fill="var(--p)"><rect x="300" y="50" width="10" height="10"/><rect x="450" y="40" width="10" height="10"/><rect x="620" y="70" width="10" height="10"/><rect x="680" y="160" width="10" height="10"/><rect x="420" y="185" width="10" height="10"/></g>
+ <text x="480" y="125" class="m">■ 지도에 저장한 장소들</text>
+</svg>
+<p><b>원리</b>: 다니면서 <b>지도</b>(장소 사진 모음)를 만들고, 전에 본 곳에 다시 오면 알아채서(<b>루프 클로저</b>) 그동안 쌓인 오차를 한 번에 바로잡습니다.</p>
+<p><span class="pro">장점</span> 오래 날아도 덜 흘러감, 지도를 다음에 다시 쓸 수 있음. <span class="con">단점</span> 무겁고(스레드 여러 개), 단안+IMU 시작이 까다로움, 루프가 걸리는 순간 위치가 "툭" 바뀜.</p>
+</div>
+
+<h2>4. 학습 IMU 방식 — AI-IO, AirIO, TLIO</h2>
+<div class="card">
+<span class="tag">카메라 없이 / 카메라 끊겼을 때</span><span class="tag">연구 단계</span>
+<svg viewBox="0 0 900 150">
+ <rect x="40" y="45" width="180" height="60" rx="10" fill="none" stroke="var(--d)" stroke-width="2"/><text x="60" y="80">IMU (+모터 회전수)</text>
+ <line x1="225" y1="75" x2="320" y2="75" stroke="var(--fg)" stroke-width="2" marker-end="url(#ar)"/>
+ <rect x="325" y="35" width="220" height="80" rx="10" fill="none" stroke="var(--p)" stroke-width="2"/><text x="345" y="70">신경망</text><text x="345" y="95" class="m">"이 흔들림이면 속도는 이 정도"</text>
+ <line x1="550" y1="75" x2="645" y2="75" stroke="var(--fg)" stroke-width="2" marker-end="url(#ar)"/>
+ <rect x="650" y="45" width="210" height="60" rx="10" fill="none" stroke="var(--a)" stroke-width="2"/><text x="670" y="80">필터 → 위치</text>
+</svg>
+<p><b>원리</b>: 신경망이 IMU 패턴에서 속도·이동을 추정해 필터에 넣습니다. 드론에선 모터 회전수를 같이 쓰면 훨씬 좋아집니다.</p>
+<p><span class="pro">장점</span> 어둠·빠른 회전처럼 카메라가 실패할 때 버팀. <span class="con">단점</span> 몇 초~십몇 초용, 학습한 상황(경로·기체) 밖에서는 약함. 이것만으로 자율 비행한 논문은 아직 못 찾음.</p>
+</div>
+
+<h2>5. 단안 vs 스테레오</h2>
+<div class="grid">
+ <div class="card"><h3>👁️ 단안 (카메라 1개)</h3>
+  <svg viewBox="0 0 400 140"><circle cx="80" cy="70" r="22" fill="none" stroke="var(--a)" stroke-width="3"/><line x1="102" y1="70" x2="360" y2="30" stroke="var(--mut)" stroke-dasharray="5 5"/><line x1="102" y1="70" x2="360" y2="110" stroke="var(--mut)" stroke-dasharray="5 5"/><text x="200" y="76">거리? 움직여 봐야 앎</text></svg>
+  <p><span class="pro">장점</span> 가볍고 간단. <span class="con">단점</span> 처음에 움직여야 크기(스케일)를 앎, 제자리 회전에 약함.</p></div>
+ <div class="card"><h3>👀 스테레오 (카메라 2개)</h3>
+  <svg viewBox="0 0 400 140"><circle cx="70" cy="50" r="18" fill="none" stroke="var(--a)" stroke-width="3"/><circle cx="70" cy="95" r="18" fill="none" stroke="var(--a)" stroke-width="3"/><line x1="88" y1="50" x2="330" y2="72" stroke="var(--c)"/><line x1="88" y1="95" x2="330" y2="72" stroke="var(--c)"/><circle cx="330" cy="72" r="6" fill="var(--c)"/><text x="150" y="130">두 눈 차이로 바로 거리</text></svg>
+  <p><span class="pro">장점</span> 바로 시작, 정확·튼튼. <span class="con">단점</span> 처리 2배, 우리 폰은 렌즈 간격 1~2 cm(가까운 거리만), 동시에 찍히는 조합이 2·6번뿐.</p></div>
+</div>
+
+<h2>한눈에 비교</h2>
+<div class="card scroll">
+<table>
+ <tr><th></th><th>필터 (OpenVINS)</th><th>묶음 최적화 (Basalt·DM-VIO)</th><th>SLAM (ORB-SLAM3)</th><th>학습 IMU</th></tr>
+ <tr><td>무게</td><td class="pro">가벼움</td><td>보통</td><td class="con">무거움</td><td>가벼움~보통</td></tr>
+ <tr><td>정확도 (짧게)</td><td>좋음</td><td class="pro">조금 더 좋음</td><td class="pro">좋음</td><td>카메라 없을 때만 의미</td></tr>
+ <tr><td>오래 날기</td><td>조금씩 흘러감</td><td>조금씩 흘러감</td><td class="pro">루프로 바로잡음</td><td class="con">빨리 흘러감</td></tr>
+ <tr><td>폰 실시간</td><td class="pro">됨 (13 ms)</td><td>될 듯</td><td class="con">부담</td><td>됨</td></tr>
+ <tr><td>상업 사용</td><td class="con">GPL (공개 의무)</td><td class="pro">Basalt BSD</td><td class="con">GPL / 유료 라이선스</td><td>논문마다 다름</td></tr>
+</table>
+</div>
+
+<h2>우리 계획</h2>
+<div class="card">
+<div class="key">연구·시험은 <b>OpenVINS</b>(가볍고 이미 폰·PC에 있음) + 비교용 <b>ORB-SLAM3</b>. 제품화가 필요해지면 <b>Basalt</b>(BSD)로 옮길 수 있게 연결부를 갈아 끼울 수 있게 만듭니다. 우리 기여는 VIO 본체가 아니라 <b>IMU 보정·시간 맞추기·정답 도구</b>, 그리고 카메라가 끊길 때 IMU로 버티기입니다.</div>
+<p class="small">근거: 2026 연구도 "정확한 사전 보정 + 같은 VIO에서 비교"를 권장(arXiv 2609.13777). 학습 IMU 단독 자율 비행은 아직 보고 없음(AI-IO 2026은 사람이 조종).</p>
+</div>
+</main></body></html>
