@@ -19,7 +19,7 @@ video{width:100%;background:#000;border-radius:10px}
 <div class="row">
  <b>녹화</b><select id="rec"></select>
  <b>렌즈</b><select id="cam"></select>
- <b>속도</b><select id="spd"><option>0.25</option><option>0.5</option><option selected>1</option><option>2</option></select>
+ <b>속도</b><select id="spd"><option>0.05</option><option>0.1</option><option>0.25</option><option>0.5</option><option selected>1</option><option>2</option></select>
  <button id="back">◀ 1프레임</button><button id="fwd">1프레임 ▶</button>
 </div>
 <video id="v" controls preload="metadata"></video>
@@ -30,8 +30,8 @@ video{width:100%;background:#000;border-radius:10px}
 const $=id=>document.getElementById(id);
 let fps=30;
 async function links(path){const t=await (await fetch(path)).text();return [...t.matchAll(/href="([^"]+)"/g)].map(m=>decodeURIComponent(m[1]));}
-async function loadRecs(){const L=(await links('/recordings/')).filter(x=>/^rec_\d+_\d+\/$/.test(x)).map(x=>x.slice(0,-1)).sort().reverse();
- $('rec').innerHTML=L.map(x=>`<option>${x}</option>`).join('');await loadCams();}
+async function loadRecs(){const L=(await links('/recordings/')).filter(x=>/^(rec|hs)_\d+_\d+\/$/.test(x)).map(x=>x.slice(0,-1)).sort((a,b)=>b.replace(/^\w+_/,'').localeCompare(a.replace(/^\w+_/,'')));
+ $('rec').innerHTML=L.map(x=>`<option value="${x}">${x}${x.startsWith('hs_')?' (240 fps)':''}</option>`).join('');await loadCams();}
 async function loadCams(){const r=$('rec').value;const L=(await links(`/recordings/${r}/`)).filter(x=>/^cam\d\.mp4$/.test(x));
  $('cam').innerHTML=L.map(x=>`<option value="${x}">${x.includes('5')?'광각 (5)':x.includes('2')?'초광각 (2)':x}</option>`).join('');
  try{const m=await (await fetch(`/recordings/${r}/meta.json`)).json();fps=m.save_fps||m.fps||30;
