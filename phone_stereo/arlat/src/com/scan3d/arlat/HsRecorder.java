@@ -68,7 +68,9 @@ class HsRecorder implements SensorEventListener {
     private long clockOffset;                    // BOOTTIME - MONOTONIC (ns)
     private long lastDelta, lastExp, lastSkew;
     int wantFps = 120;
-    int evComp = 0;                              // AE exposure compensation steps (high-speed sessions allow only AE controls)
+    int evComp = 0;
+    int wantKbps = 160_000;                      // S24 1080p240: 160 Mbps no dropped frames, 240 Mbps (encoder max) dropped 7 %; 0 = max
+    int bitrate;                              // AE exposure compensation steps (high-speed sessions allow only AE controls)
     Size size;
     Range<Integer> range;
 
@@ -112,11 +114,24 @@ class HsRecorder implements SensorEventListener {
 
         MediaFormat f = MediaFormat.createVideoFormat("video/avc", size.getWidth(), size.getHeight());
         f.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
-        f.setInteger(MediaFormat.KEY_BIT_RATE, 40_000_000);
+        // bitrate: the encoder's maximum for this size/rate unless 'kbps' asks for less. 40 Mbps at 1080p240 was
+        // ~0.08 bit/pixel (8x the compression of the 60 fps recorder) and blurs marker corners.
+        String encName = new android.media.MediaCodecList(android.media.MediaCodecList.REGULAR_CODECS).findEncoderForFormat(f);
+        int maxBps = 40_000_000;
+        try {
+            MediaCodecInfo.VideoCapabilities vc = null;      // read caps from the list (creating a codec here starved the real one)
+            for (MediaCodecInfo ci : new android.media.MediaCodecList(android.media.MediaCodecList.REGULAR_CODECS).getCodecInfos())
+                if (ci.getName().equals(encName)) vc = ci.getCapabilitiesForType("video/avc").getVideoCapabilities();
+            maxBps = vc.getBitrateRange().getUpper();
+            android.util.Log.i("arlat", "hs encoder " + encName + " bitrate max " + maxBps + " size/rate ok "
+                    + vc.areSizeAndRateSupported(size.getWidth(), size.getHeight(), wantFps));
+        } catch (Exception e) { android.util.Log.w("arlat", "encoder caps", e); }
+        bitrate = wantKbps > 0 ? Math.min(maxBps, wantKbps * 1000) : maxBps;
+        f.setInteger(MediaFormat.KEY_BIT_RATE, bitrate);
         f.setInteger(MediaFormat.KEY_FRAME_RATE, wantFps);
         f.setInteger(MediaFormat.KEY_OPERATING_RATE, wantFps);
         f.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
-        enc = MediaCodec.createEncoderByType("video/avc");
+        enc = encName != null ? MediaCodec.createByCodecName(encName) : MediaCodec.createEncoderByType("video/avc");
         enc.setCallback(new MediaCodec.Callback() {
             @Override public void onInputBufferAvailable(MediaCodec c, int i) { }
             @Override public void onOutputBufferAvailable(MediaCodec c, int i, MediaCodec.BufferInfo info) {
@@ -233,7 +248,8 @@ class HsRecorder implements SensorEventListener {
                     .put("fps", wantFps).put("save_fps", wantFps).put("frames", nFrames).put("imu_samples", nImu)
                     .put("timestamp_ref", "mid_exposure").put("start_elapsed_ns", t0Elapsed).put("end_elapsed_ns", SystemClock.elapsedRealtimeNanos())
                     .put("start_wall_ms", t0Wall).put("complete", true).put("app", "arlat hs")
-                    .put("clock_offset_ns", clockOffset).put("frames_unmatched", nUnmatched).put("ev_comp", evComp);
+                    .put("clock_offset_ns", clockOffset).put("frames_unmatched", nUnmatched).put("ev_comp", evComp)
+                    .put("bitrate_bps", bitrate);
             try (FileWriter w = new FileWriter(new File(dir, "meta.json"))) { w.write(m.toString(1)); }
         } catch (Exception ignored) { }
         status.show("HS done: " + nFrames + " frames, imu " + nImu + " -> " + dir.getName());

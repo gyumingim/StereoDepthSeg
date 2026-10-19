@@ -46,6 +46,8 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        setShowWhenLocked(true);      // started from the PC while the phone is locked: run over the lock screen
+        setTurnScreenOn(true);
         status = new TextView(this);
         status.setTextSize(18);
         status.setPadding(40, 120, 40, 40);
@@ -78,6 +80,7 @@ public class MainActivity extends Activity {
                 hs = new HsRecorder(this, this::show);
                 hs.wantFps = getIntent().getIntExtra("fps", 120);
                 hs.evComp = getIntent().getIntExtra("ev", 0);
+                hs.wantKbps = getIntent().getIntExtra("kbps", 160_000);
                 try { hs.start(); }
                 catch (Exception e) { status.setText("hs error: " + e); android.util.Log.e("arlat", "hs", e); hs = null; }
             }
@@ -147,6 +150,7 @@ public class MainActivity extends Activity {
     }
 
     private void show(final String s) {
+        android.util.Log.i("arlat", "status: " + s.replace('\n', ' '));
         runOnUiThread(() -> status.setText(s));
     }
 
