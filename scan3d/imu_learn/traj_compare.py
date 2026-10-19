@@ -29,7 +29,7 @@ def smooth(t, y):
 def main(rec):
     rec = Path(rec)
     g = dict(np.load(rec / "imu_gt" / "gt.npz"))
-    ok = g["ok"].astype(bool) & (g["t_ns"] > 0)
+    ok = g["ok"].astype(bool) & (g["t_ns"] > 0) & (np.linalg.norm(g["p_bc"], axis=1) < 1.2)   # same as train_imu
     t = (g["t_ns"][ok] - g["t_ns"][ok][0]) / 1e9
     p = g["p_bc"][ok]
     R = g["R_bc"][ok]

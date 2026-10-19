@@ -34,7 +34,8 @@ from imu_gt import read_imu  # noqa: E402
 HZ = 500          # S24 IMU 원래 비율 (가속도·자이로 약 499 Hz)
 WIN = HZ          # 1 s
 DT = 1.0 / HZ
-MAXF = 72         # 창 안 정답 프레임 최대 (60 fps × 1 s + 여유), --win 과 녹화 fps (240 fps 고속 녹화) 에 맞춰 늘림
+MAX_DIST_M = 1.2  # 정답 사진: 보드에서 이보다 멀면 버림 (hs_..151358 시작 0.4 s 가 3.3 m 에서 위치가 수십 cm 씩 튐)
+MAXF = 72        # 창 안 정답 프레임 최대 (60 fps × 1 s + 여유), --win 과 녹화 fps (240 fps 고속 녹화) 에 맞춰 늘림
 
 
 # ---------------------------------------------------------------- data
@@ -72,6 +73,7 @@ def load_rec(rec, max_jump_deg=3.0, smooth=False):
     g = np.stack([np.interp(grid, gyr[:, 0] + dt, gyr[:, 1 + j]) for j in range(3)], 1)
     a = np.stack([np.interp(grid, acc[:, 0] + dt, acc[:, 1 + j]) for j in range(3)], 1)
     ok = gt["ok"].astype(bool) & (gt["t_ns"] > t0) & (gt["t_ns"] < t1)
+    ok &= np.linalg.norm(gt["p_bc"], axis=1) < MAX_DIST_M     # far board = few px per square = unstable pose
     tf, Rbc, pbc = gt["t_ns"][ok], gt["R_bc"][ok], gt["p_bc"][ok]
     rms = np.nan_to_num(gt["rms_px"][ok], nan=1.5)
     n_raw = len(tf)

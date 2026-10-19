@@ -46,6 +46,7 @@ def fit(rec, win=2.0, knot=20.0, iters=400, dev="cuda", log=print):
     _, gyr = read_imu(rec / "imu.csv")
     tg = gyr[:, 0].astype(np.int64)
     ok = g["ok"].astype(bool) & (g["t_ns"] > tg[0] + 50_000_000) & (g["t_ns"] < tg[-1] - 50_000_000)
+    ok &= np.linalg.norm(g["p_bc"], axis=1) < 1.2             # far board (> 1.2 m): unstable pose (train_imu MAX_DIST_M)
     trim = rec / "imu_gt" / "trim.json"                      # board moved on screen at the start (board_shift.py)
     if trim.exists():
         ok &= g["t_ns"] >= json.load(open(trim))["start_ns"]
