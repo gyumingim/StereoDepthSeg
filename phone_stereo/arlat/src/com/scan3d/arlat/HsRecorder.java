@@ -63,9 +63,12 @@ class HsRecorder implements SensorEventListener {
     private BufferedWriter imuW, frW;
     private volatile boolean running;
     private final ConcurrentHashMap<Long, long[]> meta = new ConcurrentHashMap<>();   // sensor ts -> {exp, skew}
-    private int nFrames, nImu;
+    private int nFrames, nImu, nRes, nUnmatched;
     private long t0Elapsed, t0Wall;
+    private long clockOffset;                    // BOOTTIME - MONOTONIC (ns)
+    private long lastDelta, lastExp, lastSkew;
     int wantFps = 120;
+    int evComp = 0;                              // AE exposure compensation steps (high-speed sessions allow only AE controls)
     Size size;
     Range<Integer> range;
 
@@ -102,6 +105,7 @@ class HsRecorder implements SensorEventListener {
         frW = new BufferedWriter(new FileWriter(new File(dir, "frames_cam5.csv")), 1 << 16);
         frW.write("frame_idx,t_mid_ns,physical_ts_ns,logical_ts_ns,exposure_ns,rolling_shutter_skew_ns,pts_us\n");
         t0Elapsed = SystemClock.elapsedRealtimeNanos(); t0Wall = System.currentTimeMillis();
+        clockOffset = SystemClock.elapsedRealtimeNanos() - System.nanoTime();
         SensorManager sm = (SensorManager) ctx.getSystemService(Context.SENSOR_SERVICE);
         sm.registerListener(this, sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_FASTEST, h);
         sm.registerListener(this, sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_FASTEST, h);
@@ -120,10 +124,15 @@ class HsRecorder implements SensorEventListener {
                     ByteBuffer b = c.getOutputBuffer(i);
                     if ((info.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0 && info.size > 0 && track >= 0) {
                         mux.writeSampleData(track, b, info);
-                        long ts = info.presentationTimeUs * 1000L;           // surface timestamp = SENSOR_TIMESTAMP (ns)
-                        long[] m = meta.remove(ts);
-                        if (m == null) m = nearest(ts);
-                        long exp = m == null ? 0 : m[0], skew = m == null ? 0 : m[1];
+                        // encoder pts is CLOCK_MONOTONIC (no deep sleep) while SENSOR_TIMESTAMP and the IMU are
+                        // BOOTTIME (elapsedRealtimeNanos): measured 4189 s apart on the S24 (2026-10-19). Shift pts by
+                        // (boottime - monotonic) and take the exact sensor timestamp of the matching capture result.
+                        long guess = info.presentationTimeUs * 1000L + clockOffset;
+                        long[] m = nearestEntry(guess);
+                        long ts;
+                        if (m != null) { ts = m[2]; lastDelta = m[2] - guess; lastExp = m[0]; lastSkew = m[1]; }
+                        else { ts = guess + lastDelta; nUnmatched++; }   // result not here yet: same pts->sensor shift as the last match
+                        long exp = m == null ? lastExp : m[0], skew = m == null ? lastSkew : m[1];
                         frW.write(nFrames + "," + (ts + exp / 2 + skew / 2) + "," + ts + "," + ts + "," + exp + "," + skew + "," + info.presentationTimeUs + "\n");
                         nFrames++;
                         if (nFrames % 120 == 0) status.show(String.format(Locale.US, "HS %s@%d recording\nframes %d imu %d\n%s",
@@ -157,12 +166,14 @@ class HsRecorder implements SensorEventListener {
                                 rb.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, range);
                                 rb.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_OFF);
                                 rb.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_OFF);
+                                if (evComp != 0) rb.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, evComp);   // darker = shorter exposure, if AE obeys
                                 List<CaptureRequest> burst = sess.createHighSpeedRequestList(rb.build());
                                 sess.setRepeatingBurst(burst, new CameraCaptureSession.CaptureCallback() {
                                     @Override public void onCaptureCompleted(CameraCaptureSession ss, CaptureRequest q, TotalCaptureResult r) {
                                         Long ts = r.get(CaptureResult.SENSOR_TIMESTAMP), e = r.get(CaptureResult.SENSOR_EXPOSURE_TIME),
                                                 sk = r.get(CaptureResult.SENSOR_ROLLING_SHUTTER_SKEW);
-                                        if (ts != null) meta.put(ts, new long[]{e == null ? 0 : e, sk == null ? 0 : sk});
+                                        if (ts != null) meta.put(ts, new long[]{e == null ? 0 : e, sk == null ? 0 : sk, ts});
+                                        if (++nRes <= 3) android.util.Log.i("arlat", "hs result ts " + ts + " exp " + e + " skew " + sk);
                                         if (meta.size() > 2000) meta.clear();
                                     }
                                 }, h);
@@ -178,13 +189,14 @@ class HsRecorder implements SensorEventListener {
         }, h);
     }
 
-    private long[] nearest(long ts) {
-        long best = Long.MAX_VALUE; long[] v = null;
-        for (java.util.Map.Entry<Long, long[]> e : meta.entrySet()) {
-            long d = Math.abs(e.getKey() - ts);
-            if (d < best) { best = d; v = e.getValue(); }
+    private long[] nearestEntry(long ts) {
+        long best = Long.MAX_VALUE; Long key = null;
+        for (Long k : meta.keySet()) {
+            long d = Math.abs(k - ts);
+            if (d < best) { best = d; key = k; }
         }
-        return best < 2_000_000L ? v : null;
+        if (key == null || best > 2_000_000L) return null;     // within 2 ms (frames are 8.3 ms apart at 120 fps)
+        return meta.remove(key);
     }
 
     @Override public void onSensorChanged(SensorEvent e) {
@@ -220,7 +232,8 @@ class HsRecorder implements SensorEventListener {
                     .put("physical", new JSONArray(Arrays.asList("5"))).put("width", size.getWidth()).put("height", size.getHeight())
                     .put("fps", wantFps).put("save_fps", wantFps).put("frames", nFrames).put("imu_samples", nImu)
                     .put("timestamp_ref", "mid_exposure").put("start_elapsed_ns", t0Elapsed).put("end_elapsed_ns", SystemClock.elapsedRealtimeNanos())
-                    .put("start_wall_ms", t0Wall).put("complete", true).put("app", "arlat hs");
+                    .put("start_wall_ms", t0Wall).put("complete", true).put("app", "arlat hs")
+                    .put("clock_offset_ns", clockOffset).put("frames_unmatched", nUnmatched).put("ev_comp", evComp);
             try (FileWriter w = new FileWriter(new File(dir, "meta.json"))) { w.write(m.toString(1)); }
         } catch (Exception ignored) { }
         status.show("HS done: " + nFrames + " frames, imu " + nImu + " -> " + dir.getName());

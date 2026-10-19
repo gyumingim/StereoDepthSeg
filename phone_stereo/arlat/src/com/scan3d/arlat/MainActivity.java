@@ -77,6 +77,7 @@ public class MainActivity extends Activity {
             if (hs == null) {
                 hs = new HsRecorder(this, this::show);
                 hs.wantFps = getIntent().getIntExtra("fps", 120);
+                hs.evComp = getIntent().getIntExtra("ev", 0);
                 try { hs.start(); }
                 catch (Exception e) { status.setText("hs error: " + e); android.util.Log.e("arlat", "hs", e); hs = null; }
             }
