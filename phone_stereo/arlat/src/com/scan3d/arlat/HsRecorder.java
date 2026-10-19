@@ -208,7 +208,8 @@ class HsRecorder implements SensorEventListener {
                                         catch (Exception ignored) { }
                                         if (ts != null) meta.put(ts, new long[]{e == null ? 0 : e, sk == null ? 0 : sk, ts});
                                         if (++nRes <= 3) android.util.Log.i("arlat", "hs result ts " + ts + " exp " + e + " skew " + sk);
-                                        if (meta.size() > 2000) meta.clear();
+                                        // drop only stale entries (> 1 s old); clearing the whole map lost pending matches (525 frames per 134 s)
+                                        if (ts != null && meta.size() > 2000) meta.keySet().removeIf(k -> k < ts - 1_000_000_000L);
                                         if (fd != null) lastFocus = fd;
                                     }
                                 };
