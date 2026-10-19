@@ -30,7 +30,7 @@ video{width:100%;background:#000;border-radius:10px}
 const $=id=>document.getElementById(id);
 let fps=30;
 async function links(path){const t=await (await fetch(path)).text();return [...t.matchAll(/href="([^"]+)"/g)].map(m=>decodeURIComponent(m[1]));}
-async function loadRecs(){const L=(await links('/recordings/')).filter(x=>/^(rec|hs)_\d+_\d+\/$/.test(x)).map(x=>x.slice(0,-1)).sort((a,b)=>b.replace(/^\w+_/,'').localeCompare(a.replace(/^\w+_/,'')));
+async function loadRecs(){const L=(await links('/recordings/')).filter(x=>/^(rec|hs)_\d+_\d+\/$/.test(x)).map(x=>x.slice(0,-1)).sort((a,b)=>b.replace(/^[a-z]+_/,'').localeCompare(a.replace(/^[a-z]+_/,'')));
  $('rec').innerHTML=L.map(x=>`<option value="${x}">${x}${x.startsWith('hs_')?' (240 fps)':''}</option>`).join('');await loadCams();}
 async function loadCams(){const r=$('rec').value;const L=(await links(`/recordings/${r}/`)).filter(x=>/^cam\d\.mp4$/.test(x));
  $('cam').innerHTML=L.map(x=>`<option value="${x}">${x.includes('5')?'광각 (5)':x.includes('2')?'초광각 (2)':x}</option>`).join('');
