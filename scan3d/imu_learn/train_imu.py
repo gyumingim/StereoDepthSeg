@@ -52,6 +52,8 @@ def ang_deg(R):
 
 
 def load_rec(rec, max_jump_deg=3.0):
+    """rec = 녹화 폴더, 또는 'folder@a:b' = 그 녹화의 시간 비율 a~b 구간만 (녹화 하나를 학습/평가로 나눌 때)."""
+    rec, part = (str(rec).split("@") + [None])[:2]
     rec = Path(rec)
     gt = np.load(rec / "imu_gt" / "gt.npz")
     al = json.load(open(rec / "imu_gt" / "align.json"))
@@ -60,6 +62,9 @@ def load_rec(rec, max_jump_deg=3.0):
     dt = al["dt_ns"]
     t0 = max(acc[0, 0], gyr[0, 0]) + dt
     t1 = min(acc[-1, 0], gyr[-1, 0]) + dt
+    if part:
+        fa, fb = (float(v) for v in part.split(":"))
+        t0, t1 = int(t0 + fa * (t1 - t0)), int(t0 + fb * (t1 - t0))
     grid = np.arange(t0, t1, int(1e9 / HZ))
     g = np.stack([np.interp(grid, gyr[:, 0] + dt, gyr[:, 1 + j]) for j in range(3)], 1)
     a = np.stack([np.interp(grid, acc[:, 0] + dt, acc[:, 1 + j]) for j in range(3)], 1)
@@ -87,7 +92,7 @@ def load_rec(rec, max_jump_deg=3.0):
         still = np.argsort(np.linalg.norm(gi, axis=1))[:30]
     gb = -np.mean(np.einsum("nij,nj->ni", Rbi[still], ai[still]), 0)
     gb = gb / np.linalg.norm(gb) * 9.80665
-    return dict(name=rec.name, grid=grid, gyr=g, acc=a, tf=tf, Rbi=Rbi, p=pf, gb=gb,
+    return dict(name=rec.name + (f"@{part}" if part else ""), grid=grid, gyr=g, acc=a, tf=tf, Rbi=Rbi, p=pf, gb=gb,
                 n_still=len(still), n_bad=int(bad.sum()), n_gt=len(tf))
 
 
@@ -234,7 +239,7 @@ def main():
     a = ap.parse_args()
     global WIN, MAXF
     WIN = int(round(a.win * HZ))
-    fps = max(float(json.load(open(Path(r) / "meta.json")).get("save_fps") or 60) for r in a.train + a.val)
+    fps = max(float(json.load(open(Path(r.split("@")[0]) / "meta.json")).get("save_fps") or 60) for r in a.train + a.val)
     MAXF = int(fps * 1.2 * a.win)
     print(f"창 {a.win} s, 정답 프레임 최대 {MAXF} (최대 {fps:.0f} fps)", flush=True)
     dev = "cuda" if torch.cuda.is_available() else "cpu"
