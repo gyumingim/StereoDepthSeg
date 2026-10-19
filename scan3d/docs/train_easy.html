@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IMU 학습 쉽게 보기</title>
+<style>
+:root{--bg:#f7f7f5;--fg:#1c1f24;--mut:#6b7078;--card:#fff;--line:#e2e4e8;--a:#2563eb;--b:#dc2626;--c:#16a34a;--d:#d97706;--hl:rgba(37,99,235,.10)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--hl:rgba(96,165,250,.14)}}
+body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.6 system-ui,"Malgun Gothic",sans-serif}
+main{max-width:860px;margin:0 auto;padding:20px 16px 40px}
+.top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.dots{display:flex;gap:6px;flex:1}.dots span{flex:1;height:6px;border-radius:3px;background:var(--line)}.dots span.on{background:var(--a)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+h2{font-size:24px;margin:0 0 4px}
+.say{font-size:19px;margin:12px 0 0}.say b{color:var(--a)}
+.small{font-size:14px;color:var(--mut)}
+canvas{width:100%;display:block;margin-top:8px}
+.nav{display:flex;justify-content:space-between;margin-top:14px}
+button{font:inherit;font-size:16px;padding:8px 16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
+button.main{background:var(--a);color:#fff;border-color:var(--a)}
+.slide{display:none}.slide.on{display:block}
+.knobs{display:grid;grid-template-columns:auto 1fr auto;gap:6px 12px;align-items:center;margin-top:10px;font-size:16px}
+input[type=range]{width:100%}
+.score{font-size:22px;font-weight:700}
+table{border-collapse:collapse;width:100%;font-size:17px;margin-top:10px}td,th{border-bottom:1px solid var(--line);padding:8px;text-align:left}
+</style>
+</head>
+<body><main>
+<div class="top"><div class="dots" id="dots"></div><span class="small" id="cnt"></span></div>
+
+<section class="slide card">
+ <h2>1. 목표</h2>
+ <canvas id="c1" height="250"></canvas>
+ <p class="say">폰 센서(IMU)만으로 위치를 계산하면 <b>점점 틀어집니다</b>. 센서가 아주 조금씩 틀리기 때문입니다.</p>
+ <p class="say">목표: <b>센서가 어떻게 틀리는지 배워서</b> 미리 고쳐 주기.</p>
+ <p class="small">초록 = 실제로 움직인 길, 빨강 = 센서로 계산한 길</p>
+</section>
+
+<section class="slide card">
+ <h2>2. 재료: 영상 + 센서</h2>
+ <canvas id="c2" height="230"></canvas>
+ <p class="say">폰을 들고 <b>보정판(체크무늬 종이)</b> 앞에서 움직이며 녹화합니다. 두 가지가 동시에 기록됩니다.</p>
+ <p class="say">📷 카메라 영상 (1초에 60장) · 〰 센서 값 (1초에 500개)</p>
+</section>
+
+<section class="slide card">
+ <h2>3. 정답 만들기: 보정판이 "자" 역할</h2>
+ <canvas id="c3" height="270"></canvas>
+ <p class="say">보정판의 크기와 무늬를 알고 있어서, 사진 한 장만 보면 <b>폰이 판에서 어디에, 어떤 각도로</b> 있는지 계산됩니다.</p>
+ <p class="say">사진마다 하나씩 → 1초에 60개의 <b>정답 점</b>(파란 점)이 생깁니다.</p>
+</section>
+
+<section class="slide card">
+ <h2>4. 시계 맞추기</h2>
+ <canvas id="c4" height="240"></canvas>
+ <div class="knobs"><span>센서를 시간 이동</span><input id="shift" type="range" min="-30" max="30" value="18"><span id="shiftv"></span></div>
+ <p class="say">카메라와 센서가 <b>같은 순간</b>을 가리키게 맞춥니다. 영상으로 계산한 회전(파랑)과 자이로 센서의 회전(주황)이 <b>딱 겹치는 위치</b>를 찾습니다. 슬라이더를 움직여 보세요.</p>
+ <p class="small">실제 측정: 둘 사이는 1~5 ms 차이 → 거의 정확히 맞음</p>
+</section>
+
+<section class="slide card">
+ <h2>5. 센서로 길 그리기</h2>
+ <canvas id="c5" height="270"></canvas>
+ <p class="say">센서 값을 <b>조금씩 더해 가며</b> 길을 그립니다 (돌았다 → 밀렸다 → 빨라졌다 → 이만큼 왔다). 계산 공식은 정확한데, <b>센서 값이 살짝 틀려서</b> 정답 점(파랑)에서 점점 멀어집니다.</p>
+</section>
+
+<section class="slide card">
+ <h2>6. 3초씩 잘라서 채점</h2>
+ <canvas id="c6" height="270"></canvas>
+ <p class="say">긴 녹화를 <b>3초 조각</b>으로 자르고, 조각마다 "센서로 그린 길"과 "정답 점"의 <b>거리(빨간 선)</b>를 잽니다. 이 거리들의 크기가 <b>점수(오차)</b>입니다. 작을수록 좋습니다.</p>
+</section>
+
+<section class="slide card">
+ <h2>7. 손잡이 돌리기 (직접 해 보세요)</h2>
+ <canvas id="c7" height="270"></canvas>
+ <div class="knobs">
+  <span>센서 기본 오차 (바이어스)</span><input id="kb" type="range" min="-100" max="100" value="0"><span id="kbv"></span>
+  <span>센서 배율 (축척)</span><input id="ks" type="range" min="-100" max="100" value="0"><span id="ksv"></span>
+ </div>
+ <p class="score">오차: <span id="err7"></span></p>
+ <p class="say">센서를 고치는 <b>손잡이</b>가 있다고 생각하세요. 손잡이를 돌려 빨간 길이 파란 점에 붙게 만들면 오차가 줄어듭니다.</p>
+</section>
+
+<section class="slide card">
+ <h2>8. 학습 = 컴퓨터가 손잡이를 돌리기</h2>
+ <canvas id="c8" height="270"></canvas>
+ <div class="row"><button id="learn" class="main">학습 시작</button> <button id="reset8">처음으로</button></div>
+ <p class="score">오차: <span id="err8"></span> · 반복 <span id="it8">0</span>번</p>
+ <p class="say">컴퓨터는 "손잡이를 <b>어느 쪽으로 조금</b> 돌리면 오차가 줄어드나"를 계산해서 <b>조금씩 돌리기</b>를 수천 번 반복합니다. 이게 학습입니다.</p>
+</section>
+
+<section class="slide card">
+ <h2>9. 손잡이 종류</h2>
+ <table>
+  <tr><th>방식</th><th>손잡이 수</th><th>무엇을 고치나</th></tr>
+  <tr><td><b>물리 보정</b></td><td>27개</td><td>센서 기본 오차, 배율, 축 비뚤어짐, 카메라–센서 거리. 폰마다 고정된 성질</td></tr>
+  <tr><td><b>CNN</b></td><td>17만 개</td><td>진동·온도·동작에 따라 바뀌는 오차. 센서 값의 "모양"을 보고 그때그때 고침</td></tr>
+ </table>
+ <p class="say">손잡이가 많을수록 더 많이 고칠 수 있지만, <b>데이터가 적으면 외우기만</b> 합니다. 그래서 단순한 것(물리 보정)부터 맞추고, 남은 것만 CNN이 맡습니다.</p>
+</section>
+
+<section class="slide card">
+ <h2>10. 시험: 안 본 녹화로 채점</h2>
+ <canvas id="c10" height="230"></canvas>
+ <p class="say">학습에 쓴 녹화로 채점하면 <b>답을 외운 것</b>도 점수가 좋게 나옵니다. 그래서 녹화 하나는 <b>학습에 절대 안 쓰고</b> 시험용으로 둡니다.</p>
+ <p class="say">시험 점수가 좋아져야 "진짜로 고친 것"입니다.</p>
+</section>
+
+<section class="slide card">
+ <h2>11. 지금 결과</h2>
+ <table>
+  <tr><th>3초 동안 위치 오차 (시험 녹화)</th><th></th></tr>
+  <tr><td>고치기 전</td><td>2.45 cm</td></tr>
+  <tr><td>기본 오차만 빼기</td><td>2.79 cm (오히려 나빠짐)</td></tr>
+  <tr><td>CNN</td><td><b>2.30 cm</b> (6 % 좋아짐)</td></tr>
+ </table>
+ <p class="say">조금 좋아졌지만 아직 작습니다. 이유: <b>데이터가 4분뿐</b>이고, 빠르게 흔들 때 <b>정답(보정판)도 살짝 흔들리기</b> 때문입니다.</p>
+ <p class="say">다음: 녹화 더 하기 + 240 fps로 정답 더 정확하게 + 물리 보정 결과 확인.</p>
+</section>
+
+<div class="nav"><button id="prev">← 이전</button><button id="next" class="main">다음 →</button></div>
+</main>
+<script>
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function fit(c){const r=devicePixelRatio||1;if(!c.dataset.h){c.dataset.h=c.getAttribute('height');c.style.height=c.dataset.h+'px';}
+ const h=+c.dataset.h,w=c.clientWidth;if(c.width!==Math.round(w*r))c.width=Math.round(w*r);if(c.height!==Math.round(h*r))c.height=Math.round(h*r);
+ const x=c.getContext('2d');x.setTransform(r,0,0,r,0,0);x.clearRect(0,0,w,h);return [x,w,h];}
+function txt(x,s,px,py,col,size=15,al='left'){x.fillStyle=col||css('--fg');x.font=size+'px system-ui,sans-serif';x.textAlign=al;x.fillText(s,px,py);x.textAlign='left';}
+const slides=[...document.querySelectorAll('.slide')];let cur=0,t0=performance.now();
+const dots=document.getElementById('dots');slides.forEach(()=>dots.appendChild(document.createElement('span')));
+function show(i){cur=Math.max(0,Math.min(slides.length-1,i));slides.forEach((s,k)=>s.classList.toggle('on',k===cur));[...dots.children].forEach((d,k)=>d.classList.toggle('on',k<=cur));
+ document.getElementById('cnt').textContent=(cur+1)+' / '+slides.length;prev.disabled=cur===0;next.textContent=cur===slides.length-1?'처음으로':'다음 →';t0=performance.now();}
+next.onclick=()=>show(cur===slides.length-1?0:cur+1);prev.onclick=()=>show(cur-1);
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.key==='ArrowRight')show(cur+1);if(e.key==='ArrowLeft')show(cur-1);});
+
+// ---- toy world: true 2D path, true acceleration, IMU = scale*(a) + bias + noise ----
+const N=250,DT=0.02;      // 5 s
+const truth=[],acc=[];
+for(let i=0;i<N;i++){const t=i*DT;truth.push([Math.sin(t*0.9)*1.2+t*0.25,Math.sin(t*1.7)*0.6]);}
+for(let i=0;i<N;i++){const a=truth[Math.max(0,i-1)],b=truth[i],c=truth[Math.min(N-1,i+1)];acc.push([(a[0]-2*b[0]+c[0])/(DT*DT),(a[1]-2*b[1]+c[1])/(DT*DT)]);}
+const TB=[0.05,-0.04],TS=1.04;    // the sensor's true error: small bias + 4 % scale (realistic size)
+const meas=acc.map((a,i)=>[a[0]*TS+TB[0]+0.03*Math.sin(i*1.3),a[1]*TS+TB[1]+0.03*Math.cos(i*0.7)]);
+const v0=[(truth[1][0]-truth[0][0])/DT,(truth[1][1]-truth[0][1])/DT];
+function integ(bias,scale,n=N){const p=[truth[0].slice()];let v=v0.slice(),q=truth[0].slice();
+ for(let i=1;i<n;i++){const a=[(meas[i][0]-bias[0])/scale,(meas[i][1]-bias[1])/scale];v=[v[0]+a[0]*DT,v[1]+a[1]*DT];q=[q[0]+v[0]*DT,q[1]+v[1]*DT];p.push(q.slice());}return p;}
+const gtIdx=[];for(let i=0;i<N;i+=5)gtIdx.push(i);   // "board" answers every 5 samples
+function err(p){let s=0;for(const i of gtIdx)s+=Math.hypot(p[i][0]-truth[i][0],p[i][1]-truth[i][1]);return s/gtIdx.length;}
+function view(W,H,extra){let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;for(const q of truth.concat(extra||[])){x0=Math.min(x0,q[0]);x1=Math.max(x1,q[0]);y0=Math.min(y0,q[1]);y1=Math.max(y1,q[1]);}
+ const pad=0.15,sx=(W-40)/(x1-x0+pad*2),sy=(H-40)/(y1-y0+pad*2),s=Math.min(sx,sy);return q=>[20+(q[0]-x0+pad)*s,H-20-(q[1]-y0+pad)*s];}
+function path(x,P,V,col,w=3,n=P.length){x.strokeStyle=col;x.lineWidth=w;x.beginPath();for(let i=0;i<n;i++){const [a,b]=V(P[i]);i?x.lineTo(a,b):x.moveTo(a,b);}x.stroke();}
+function gtDots(x,V,n=N){x.fillStyle=css('--a');for(const i of gtIdx){if(i>=n)break;const [a,b]=V(truth[i]);x.beginPath();x.arc(a,b,3.5,0,7);x.fill();}}
+const raw=integ([0,0],1);
+
+function s1(t){const [x,W,H]=fit(c1);const V=view(W,H,raw);const n=Math.min(N,Math.floor(((t-t0)/20)%(N+80)));
+ path(x,truth,V,css('--c'),4,n);path(x,raw,V,css('--b'),3,n);
+ if(n>2){const [a,b]=V(truth[n-1]),[c,d]=V(raw[n-1]);x.setLineDash([5,5]);x.strokeStyle=css('--mut');x.beginPath();x.moveTo(a,b);x.lineTo(c,d);x.stroke();x.setLineDash([]);
+  txt(x,'틀어짐 '+(Math.hypot(raw[n-1][0]-truth[n-1][0],raw[n-1][1]-truth[n-1][1])*100).toFixed(0)+' cm',(a+c)/2+8,(b+d)/2,css('--b'),15);}}
+
+function s2(t){const [x,W,H]=fit(c2);const T=((t-t0)/1000)%4;
+ txt(x,'📷 영상',10,40,css('--fg'),16);txt(x,'〰 센서',10,150,css('--fg'),16);
+ for(let i=0;i<24;i++){const px=110+i*((W-130)/24);const on=i/24*4<T;x.globalAlpha=on?1:.15;x.fillStyle=css('--line');x.fillRect(px,15,(W-130)/24-4,45);
+  x.strokeStyle=css('--fg');x.lineWidth=1;for(let k=0;k<3;k++)for(let j=0;j<2;j++){if((k+j)%2){x.fillStyle=css('--fg');x.fillRect(px+4+k*6,25+j*8,6,8);}}}
+ x.globalAlpha=1;x.strokeStyle=css('--d');x.lineWidth=2;x.beginPath();const n=Math.floor(T/4*(W-130));for(let i=0;i<n;i++){const px=110+i,py=150+Math.sin(i*0.35)*22+Math.sin(i*0.05)*14;i?x.lineTo(px,py):x.moveTo(px,py);}x.stroke();
+ txt(x,'1초에 60장',110,85,css('--mut'),13);txt(x,'1초에 500개 (훨씬 촘촘)',110,205,css('--mut'),13);}
+
+function s3(t){const [x,W,H]=fit(c3);const T=((t-t0)/3000)%1;
+ // board
+ const bx=W*0.55,by=H-60;x.save();x.translate(bx,by);x.transform(1,0,-0.5,0.35,0,0);
+ for(let i=0;i<7;i++)for(let j=0;j<5;j++){x.fillStyle=(i+j)%2?css('--fg'):'#fff';x.fillRect(i*28-98,j*28-70,28,28);}x.restore();
+ txt(x,'보정판 (크기를 앎)',bx-60,H-8,css('--mut'),13);
+ // phone moving along an arc, dots left behind
+ const pts=[];for(let k=0;k<=40;k++){const s=k/40;pts.push([W*0.15+s*W*0.7,60+Math.sin(s*Math.PI)*-30+40]);}
+ const n=Math.floor(T*40);x.fillStyle=css('--a');for(let k=0;k<=n;k++){x.beginPath();x.arc(pts[k][0],pts[k][1],4,0,7);x.fill();}
+ const [px,py]=pts[n];x.fillStyle=css('--fg');x.fillRect(px-12,py-22,24,40);x.fillStyle=css('--card');x.fillRect(px-9,py-18,18,30);
+ x.strokeStyle=css('--a');x.setLineDash([4,4]);x.beginPath();x.moveTo(px,py+18);x.lineTo(bx,by-20);x.stroke();x.setLineDash([]);
+ txt(x,'사진마다 "폰이 여기 있다" 정답 점',W*0.15,22,css('--a'),15);}
+
+const sh=document.getElementById('shift');
+function s4(t){const [x,W,H]=fit(c4);const s=+sh.value;document.getElementById('shiftv').textContent=(s/2)+' ms';
+ const f=i=>Math.sin(i*0.045)*40+Math.sin(i*0.11)*18;x.strokeStyle=css('--a');x.lineWidth=3;x.beginPath();for(let i=0;i<W-20;i++){const py=H/2-f(i);i?x.lineTo(10+i,py):x.moveTo(10+i,py);}x.stroke();
+ x.strokeStyle=css('--d');x.lineWidth=2;x.beginPath();for(let i=0;i<W-20;i++){const py=H/2-f(i-s)+Math.sin(i*1.7)*2;i?x.lineTo(10+i,py):x.moveTo(10+i,py);}x.stroke();
+ const e=Math.abs(s);txt(x,e<2?'딱 맞음 ✓':'어긋남 — 슬라이더로 맞춰 보세요',10,24,e<2?css('--c'):css('--b'),17);
+ txt(x,'파랑 = 영상으로 본 회전 · 주황 = 자이로 센서',10,H-8,css('--mut'),13);}
+
+function s5(t){const [x,W,H]=fit(c5);const V=view(W,H,raw);const n=Math.min(N,Math.floor(((t-t0)/20)%(N+80)));
+ gtDots(x,V,n);path(x,raw,V,css('--b'),3,n);
+ if(n>1){const [a,b]=V(raw[n-1]);x.fillStyle=css('--b');x.beginPath();x.arc(a,b,6,0,7);x.fill();}
+ txt(x,'파란 점 = 정답 · 빨강 = 센서로 그린 길',10,22,css('--mut'),14);}
+
+function s6(t){const [x,W,H]=fit(c6);const V=view(W,H);const k=Math.floor(((t-t0)/2200)%4);const a=k*60,b=Math.min(N-1,a+150);
+ const [p0x,p0y]=V(truth[a]),[p1x]=V(truth[b]);x.fillStyle=css('--hl');x.fillRect(Math.min(p0x,p1x)-10,0,Math.abs(p1x-p0x)+20,H);
+ // re-start integration at window start from the answer
+ const seg=[truth[a].slice()];let v=[(truth[a+1][0]-truth[a][0])/DT,(truth[a+1][1]-truth[a][1])/DT],q=truth[a].slice();
+ for(let i=a+1;i<=b;i++){v=[v[0]+meas[i][0]*DT,v[1]+meas[i][1]*DT];q=[q[0]+v[0]*DT,q[1]+v[1]*DT];seg.push(q.slice());}
+ gtDots(x,V);path(x,seg,V,css('--b'),3);
+ x.strokeStyle=css('--b');x.lineWidth=1.5;let s=0,c=0;for(const i of gtIdx){if(i<a||i>b)continue;const [g1,g2]=V(truth[i]),[h1,h2]=V(seg[i-a]);x.beginPath();x.moveTo(g1,g2);x.lineTo(h1,h2);x.stroke();s+=Math.hypot(seg[i-a][0]-truth[i][0],seg[i-a][1]-truth[i][1]);c++;}
+ txt(x,'이 3초 조각 오차: '+(s/c*100).toFixed(1)+' cm',10,22,css('--b'),16);}
+
+const kb=document.getElementById('kb'),ks=document.getElementById('ks');
+const knob=()=>[[+kb.value/100*0.1,+kb.value/100*-0.08],1+ks.value/100*0.08];   // 정답 손잡이 = 50, 50
+function s7(){const [x,W,H]=fit(c7);const [b,s]=knob();const p=integ(b,s);const V=view(W,H,raw);gtDots(x,V);path(x,p,V,css('--b'),3);
+ document.getElementById('kbv').textContent=kb.value;document.getElementById('ksv').textContent=ks.value;
+ const e=err(p)*100;document.getElementById('err7').textContent=e.toFixed(1)+' cm'+(e<2?' 👍 거의 붙음':'');}
+
+// learning: gradient descent on (bias x, bias y, scale)
+const L0=()=>({th:[0,0,1],d:[0.02,0.02,0.02],it:0,run:false,hist:[]});
+let L=L0();
+document.getElementById('learn').onclick=()=>{L.run=true;};document.getElementById('reset8').onclick=()=>{L=L0();};
+// 손잡이 하나씩 조금 돌려 보고 오차가 줄면 그쪽으로, 안 줄면 다음엔 더 조금 (매번 오차가 줄거나 같음)
+function step(){const f=th=>err(integ([th[0],th[1]],th[2]));let e0=f(L.th);const k=L.it%3;
+ for(const sgn of [1,-1]){const t=L.th.slice();t[k]+=sgn*L.d[k];const e=f(t);if(e<e0){L.th=t;e0=e;L.d[k]*=1.3;L.hist.push(e0);L.it++;return;}}
+ L.d[k]*=0.5;L.hist.push(e0);L.it++;}
+function s8(){const [x,W,H]=fit(c8);if(L.run&&L.it<150){step();}if(L.it>=150)L.run=false;
+ const Vw=W*0.6;const V=view(Vw,H,raw);const p=integ([L.th[0],L.th[1]],L.th[2]);gtDots(x,V);path(x,p,V,css('--b'),3);
+ const e=err(p)*100;document.getElementById('err8').textContent=e.toFixed(1)+' cm';document.getElementById('it8').textContent=L.it;
+ const gx=Vw+20,gw=W-gx-10,gy=30,gh=H-70;x.strokeStyle=css('--line');x.strokeRect(gx,gy,gw,gh);txt(x,'오차',gx,gy-8,css('--mut'),13);txt(x,'반복 →',gx+gw-50,gy+gh+18,css('--mut'),13);
+ if(L.hist.length){const m=Math.max(...L.hist);x.strokeStyle=css('--b');x.lineWidth=2;x.beginPath();L.hist.forEach((v,i)=>{const px=gx+i/150*gw,py=gy+gh-v/m*gh*0.95;i?x.lineTo(px,py):x.moveTo(px,py);});x.stroke();}
+ txt(x,'손잡이: 기본오차 '+L.th[0].toFixed(3)+', '+L.th[1].toFixed(3)+' · 배율 '+L.th[2].toFixed(3)+'  (정답: 0.050, -0.040, 1.040)',10,H-8,css('--mut'),13);}
+
+function s10(t){const [x,W,H]=fit(c10);const bw=W*0.4,bh=110,y=50;
+ x.strokeStyle=css('--c');x.lineWidth=3;x.beginPath();x.roundRect(20,y,bw,bh,12);x.stroke();txt(x,'학습용 녹화 3개',20+bw/2,y+50,css('--c'),18,'center');txt(x,'손잡이를 돌리는 데 씀',20+bw/2,y+80,css('--mut'),14,'center');
+ x.strokeStyle=css('--d');x.beginPath();x.roundRect(W-20-bw,y,bw,bh,12);x.stroke();txt(x,'시험용 녹화 1개',W-20-bw/2,y+50,css('--d'),18,'center');txt(x,'채점에만 씀 (안 보여 줌)',W-20-bw/2,y+80,css('--mut'),14,'center');
+ const k=((t-t0)/1500)%2<1;txt(x,k?'학습 중…':'채점 중…',W/2,y+bh+40,k?css('--c'):css('--d'),18,'center');}
+
+function frame(t){const f=[s1,s2,s3,s4,s5,s6,s7,s8,null,s10,null][cur];if(f)f(t);requestAnimationFrame(frame);}
+show(0);requestAnimationFrame(frame);
+</script>
+</body></html>
