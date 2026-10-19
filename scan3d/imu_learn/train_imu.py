@@ -104,7 +104,7 @@ def load_rec(rec, max_jump_deg=3.0, smooth=False):
                 n_still=len(still), n_bad=int(bad.sum()), n_gt=len(tf))
 
 
-def windows(r, stride=HZ // 4, min_frames=25):
+def windows(r, stride=HZ // 4, min_frames=25):  # stride: --stride s
     """겹치는 1 s 창 (0.25 s 씩). 창 안 정답 프레임: 표본 위치 idx, 자세, 위치 (MAXF 로 채움 + mask)."""
     X, IDX, RG, PG, M, Q = [], [], [], [], [], []
     grid, tf = r["grid"], r["tf"]
@@ -244,6 +244,7 @@ def main():
     ap.add_argument("--win", type=float, default=1.0, help="창 길이 s (IMU 표류가 보드 정답 잡음보다 커지게 길게)")
     ap.add_argument("--eval-only", action="store_true", help="보정 없음·바이어스만 평가 (CNN 학습 안 함)")
     ap.add_argument("--rot-sigma", type=float, default=0.005, help="자세 손실 기준 rad (보드 정답 잡음이 크면 키움)")
+    ap.add_argument("--stride", type=float, default=0.25, help="창 시작 간격 s (데이터가 많으면 늘려 학습 시간 줄임)")
     ap.add_argument("--gt-smooth", action="store_true", help="정답을 사진만으로 그린 매끈한 곡선으로 (gt_smooth.py)")
     ap.add_argument("--out", default=str(HERE.parent / "runs" / time.strftime("imu_cnn_%Y%m%d-%H%M%S")))
     a = ap.parse_args()
@@ -262,7 +263,7 @@ def main():
         sets = []
         for rec in recs:
             r = load_rec(rec, smooth=a.gt_smooth)
-            W = windows(r)
+            W = windows(r, stride=max(1, int(a.stride * HZ)))
             print(f"{r['name']}: 정답 프레임 {r['n_gt']} (버림 {r['n_bad']}), 창 {len(W['X'])}, 정지 {r['n_still']}, "
                   f"g_b {np.round(r['gb'], 2)}", flush=True)
             if len(W["X"]):

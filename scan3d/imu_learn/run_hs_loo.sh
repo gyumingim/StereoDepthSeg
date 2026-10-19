@@ -12,7 +12,8 @@ if [ -z "${SKIP_SYNC:-}" ]; then
 fi
 echo "== training $(date +%T)"
 export IMU_VRAM_GB=1.9          # 1.25 GB already used + 6 x (1.9 cap + ~0.4 CUDA context) = 15.0 GB < 15.5 GB limit (user, 2026-10-19)
-COMMON="--win 3 --epochs 120 --gt-smooth"
+# 4 recordings ≈ 6x the windows of run A: stride 1 s (windows still overlap 3x) and 60 epochs → about 1 h with 6 in parallel
+COMMON="--win 3 --epochs 60 --stride 1.0 --gt-smooth"
 for k in "${!RECS[@]}"; do
   val=${RECS[$k]}; train=()
   for j in "${!RECS[@]}"; do [ "$j" != "$k" ] && train+=("${RECS[$j]}"); done
