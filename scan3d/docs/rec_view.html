@@ -55,7 +55,11 @@ function drawOv(t){const v=$('v'),c=$('ov');c.style.width=v.clientWidth+'px';c.s
  if(!OV||!$('showov').checked)return;const i=frameAt(t);if(i<0)return;
  const vw=v.videoWidth||OV.width,vh=v.videoHeight||OV.height,s=Math.min(W/vw,H/vh),ox=(W-vw*s)/2,oy=(H-vh*s)/2;
  const q=OV.quad[i],ok=OV.ok[i];
- if(q){x.strokeStyle=ok?'#22c55e':'#f59e0b';x.lineWidth=3*d;x.beginPath();for(let k=0;k<4;k++){const X=ox+q[2*k]*s,Y=oy+q[2*k+1]*s;k?x.lineTo(X,Y):x.moveTo(X,Y);}x.closePath();x.stroke();}
+ if(q){const col=ok?'#22c55e':'#f59e0b',P=k=>q[k]&&[ox+q[k][0]*s,oy+q[k][1]*s],gx=OV.gx||1;
+  x.strokeStyle=col;x.lineWidth=2*d;x.beginPath();
+  for(let k=0;k<q.length;k++){const a=P(k);if(!a)continue;const r=(k%gx<gx-1)&&P(k+1),u=P(k+gx);
+   if(r){x.moveTo(a[0],a[1]);x.lineTo(r[0],r[1]);}if(u){x.moveTo(a[0],a[1]);x.lineTo(u[0],u[1]);}}x.stroke();
+  x.fillStyle=col;for(let k=0;k<q.length;k++){const a=P(k);if(a){x.beginPath();x.arc(a[0],a[1],4*d,0,7);x.fill();}}}
  x.font=`bold ${20*d}px system-ui,sans-serif`;const msg=ok?`✓ 인식 · 모서리 ${OV.n[i]} · 오차 ${OV.rms[i]} px`:(OV.n[i]?`✗ 정답 안 씀 · 모서리 ${OV.n[i]}`+(OV.rms[i]!=null?` · 오차 ${OV.rms[i]} px`:''):'✗ 보드 못 찾음');
  x.fillStyle='rgba(0,0,0,.6)';x.fillRect(ox+8*d,oy+8*d,x.measureText(msg).width+24*d,36*d);x.fillStyle=ok?'#4ade80':'#f87171';x.fillText(msg,ox+20*d,oy+33*d);
  x.fillStyle='#fff';x.font=`${14*d}px system-ui,sans-serif`;x.fillText(`프레임 ${i}`,ox+20*d,oy+62*d);}

@@ -28,7 +28,18 @@ def quat_R(q):                                    # (x, y, z, w) → 3x3
                      [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]])
 
 
+def factory_R(rec):
+    """공장 렌즈 자세 (cameras.json); 고속 녹화 (arlat hs) 에는 없음 → None."""
+    if not (rec / "cameras.json").exists():
+        return None
+    cams = json.load(open(rec / "cameras.json"))
+    cam = cams[0] if isinstance(cams, list) else cams
+    return next((quat_R(p["pose_rotation"]) for p in cam.get("physical", []) if str(p.get("id")) == "5"), None)
+
+
 def ang(Ra, Rb):
+    if Ra is None or Rb is None:
+        return float("nan")
     return float(np.degrees(np.arccos(np.clip((np.trace(Ra.T @ Rb) - 1) / 2, -1, 1))))
 
 
@@ -84,11 +95,12 @@ def gyro_orientation(tg, wg):
 
 
 def increments(gt, n=12):
-    """보드 정답의 n 프레임 (60 fps 면 0.2 s) 자세 변화 (카메라 축 회전벡터) 와 그 두 시각."""
+    """보드 정답의 n 프레임 (60 fps 면 12, 240 fps 면 48 = 0.2 s) 자세 변화 (카메라 축 회전벡터) 와 그 두 시각."""
     t, R, ok = gt["t_ns"], gt["R_bc"], gt["ok"]
     a = np.where(ok)[0]
     a = a[a + n < len(t)]
-    a = a[ok[a + n] & ((t[a + n] - t[a]) < n * 25_000_000)]
+    step = np.median(np.diff(t[ok])) if ok.sum() > 2 else 16_666_667
+    a = a[ok[a + n] & ((t[a + n] - t[a]) < n * 1.5 * step)]
     dR = np.einsum("nji,njk->nik", R[a], R[a + n])            # R_a^T R_b
     return t[a], t[a + n], so3_log_v(dR)
 
@@ -120,11 +132,10 @@ def main_inc(a):
         _, gyr = read_imu(rec / "imu.csv")
         tg, wg = gyr[:, 0].astype(np.int64), gyr[:, 1:4]
         Q = gyro_orientation(tg, wg)
-        t0, t1, wci = increments(gt)
+        fps = float(json.load(open(rec / "meta.json")).get("save_fps") or 60)
+        t0, t1, wci = increments(gt, n=int(round(0.2 * fps)))
         dt, R, e = refine(t0, t1, wci, tg, Q)
-        cams = json.load(open(rec / "cameras.json"))
-        cam = cams[0] if isinstance(cams, list) else cams
-        fac = next((quat_R(p["pose_rotation"]) for p in cam.get("physical", []) if str(p.get("id")) == "5"), None)
+        fac = factory_R(rec)
         segs = []
         T = t0[0]
         while T + a.seg * 1e9 <= t0[-1]:
@@ -163,9 +174,7 @@ def main():
         _, gyr = read_imu(rec / "imu.csv")
         tg, wg = gyr[:, 0].astype(np.int64), gyr[:, 1:4]
         tc, wc = cam_omega(gt)
-        cams = json.load(open(rec / "cameras.json"))
-        cam = cams[0] if isinstance(cams, list) else cams
-        fac = next((quat_R(p["pose_rotation"]) for p in cam.get("physical", []) if str(p.get("id")) == "5"), None)
+        fac = factory_R(rec)
         full = estimate(tc, wc, tg, wg)
         segs = []
         t = tc[0]

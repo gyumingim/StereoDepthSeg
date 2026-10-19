@@ -34,7 +34,7 @@ from imu_gt import read_imu  # noqa: E402
 HZ = 500          # S24 IMU 원래 비율 (가속도·자이로 약 499 Hz)
 WIN = HZ          # 1 s
 DT = 1.0 / HZ
-MAXF = 72         # 창 안 정답 프레임 최대 (60 fps × 1 s + 여유), --win 에 맞춰 늘림
+MAXF = 72         # 창 안 정답 프레임 최대 (60 fps × 1 s + 여유), --win 과 녹화 fps (240 fps 고속 녹화) 에 맞춰 늘림
 
 
 # ---------------------------------------------------------------- data
@@ -234,7 +234,9 @@ def main():
     a = ap.parse_args()
     global WIN, MAXF
     WIN = int(round(a.win * HZ))
-    MAXF = int(72 * a.win)
+    fps = max(float(json.load(open(Path(r) / "meta.json")).get("save_fps") or 60) for r in a.train + a.val)
+    MAXF = int(fps * 1.2 * a.win)
+    print(f"창 {a.win} s, 정답 프레임 최대 {MAXF} (최대 {fps:.0f} fps)", flush=True)
     dev = "cuda" if torch.cuda.is_available() else "cpu"
 
     def prep(recs):
