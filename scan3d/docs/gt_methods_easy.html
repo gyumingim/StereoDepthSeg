@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>정답 만드는 방법들</title>
+<style>
+:root{--bg:#f7f7f5;--fg:#1c1f24;--mut:#6b7078;--card:#fff;--line:#e2e4e8;--a:#2563eb;--b:#dc2626;--c:#16a34a;--d:#d97706;--p:#9333ea;--chip:#eef2ff;--svgbg:#fbfbfa}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--p:#c084fc;--chip:#1e293b;--svgbg:#16191d}}
+:root[data-theme="dark"]{--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--p:#c084fc;--chip:#1e293b;--svgbg:#16191d}
+body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.75 system-ui,"Malgun Gothic",sans-serif}
+main{max-width:940px;margin:0 auto;padding:20px 16px 80px}
+h1{font-size:27px;margin:0 0 6px}h2{font-size:22px;margin:40px 0 8px}h3{margin:0 0 6px;font-size:20px}
+.lead{color:var(--mut);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+.tag{display:inline-block;border-radius:999px;padding:1px 10px;font-size:14px;margin-right:6px;background:var(--chip)}
+svg{width:100%;height:auto;display:block;background:var(--svgbg);border-radius:10px;margin:8px 0}
+svg text{fill:var(--fg);font:14px system-ui,"Malgun Gothic",sans-serif}svg .m{fill:var(--mut)}
+table{border-collapse:collapse;width:100%;font-size:15px}th,td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}
+th{font-size:14px;color:var(--mut);font-weight:600}
+.scroll{overflow-x:auto}
+.good{color:var(--c);font-weight:700}.mid{color:var(--d);font-weight:700}.bad{color:var(--b);font-weight:700}
+.key{border-left:5px solid var(--a);padding:8px 14px;margin:12px 0;background:var(--chip);border-radius:0 10px 10px 0}
+.small{font-size:15px;color:var(--mut)}
+</style>
+</head>
+<body><main>
+<h1>정답(GT) 만드는 방법 한눈에</h1>
+<p class="lead">목표는 모두 같습니다: "녹화 내내 폰이 <b>언제 어디서 어느 쪽을 보고 있었나</b>"를 최대한 정확히 알아내기. 차이는 <b>무엇으로</b>, <b>어떻게 묶어서</b> 계산하느냐입니다.</p>
+
+<h2>0. 지금 쓰는 것 — 사진마다 점 찍기</h2>
+<div class="card">
+<svg viewBox="0 0 900 120"><g fill="var(--b)">
+ <circle cx="80" cy="70" r="7"/><circle cx="200" cy="52" r="7"/><circle cx="320" cy="66" r="7"/><circle cx="440" cy="40" r="7"/><circle cx="560" cy="58" r="7"/><circle cx="680" cy="34" r="7"/><circle cx="800" cy="50" r="7"/></g>
+ <text x="60" y="108" class="m">사진마다 보드를 보고 따로 계산 → 점 하나씩. 점끼리는 서로 모름.</text></svg>
+<p>쉽고 빠르지만, 점마다 흔들림이 그대로 남고 롤링 셔터를 대충 처리합니다.</p>
+</div>
+
+<h2>방법 1. 구슬 꿰기 (팩터 그래프 · 전체 묶음 최적화)</h2>
+<div class="card">
+<span class="tag">VINS-Mono 정리용</span><span class="tag">GTSAM</span><span class="tag">Ceres</span>
+<svg viewBox="0 0 900 220">
+ <line x1="60" y1="40" x2="840" y2="40" stroke="var(--fg)" stroke-width="3"/><text x="60" y="28" class="m">보드 (고정된 기준)</text>
+ <g stroke="var(--b)" stroke-width="2" stroke-dasharray="4 4"><line x1="100" y1="40" x2="100" y2="140"/><line x1="250" y1="40" x2="250" y2="125"/><line x1="400" y1="40" x2="400" y2="150"/><line x1="550" y1="40" x2="550" y2="120"/><line x1="700" y1="40" x2="700" y2="140"/><line x1="820" y1="40" x2="820" y2="130"/></g>
+ <g stroke="var(--d)" stroke-width="5" fill="none"><path d="M100 140 Q175 115 250 125"/><path d="M250 125 Q325 160 400 150"/><path d="M400 150 Q475 110 550 120"/><path d="M550 120 Q625 150 700 140"/><path d="M700 140 Q760 125 820 130"/></g>
+ <g fill="var(--a)"><circle cx="100" cy="140" r="12"/><circle cx="250" cy="125" r="12"/><circle cx="400" cy="150" r="12"/><circle cx="550" cy="120" r="12"/><circle cx="700" cy="140" r="12"/><circle cx="820" cy="130" r="12"/></g>
+ <text x="60" y="190"><tspan fill="var(--a)">● 구슬</tspan> = 사진 순간의 폰 상태(위치·속도·자세)   <tspan fill="var(--b)">┆ 실</tspan> = 사진(보드를 봄)   <tspan fill="var(--d)">━ 고무줄</tspan> = IMU(사진 사이 움직임)</text>
+ <text x="60" y="212" class="m">전부 한꺼번에 당겨서 실·고무줄이 가장 덜 늘어나는 자리로 구슬을 옮김 → 과거 구슬까지 다시 고침</text>
+</svg>
+<p><b>한 줄</b>: 사진 순간마다 구슬을 두고, 사진(실)과 IMU(고무줄)로 묶은 뒤 <b>전체를 한 번에</b> 균형 잡히게 합니다.</p>
+<p>정확도는 곡선 방식(3번)과 비슷합니다. 로봇·VIO 분야에서 가장 흔한 "정리용" 방법입니다. 롤링 셔터는 구슬에서 IMU로 조금씩 옮겨 모서리 시각에 맞춥니다.</p>
+</div>
+
+<h2>방법 2. 앞으로 걸으며 메모 + 뒤에서 다시 읽기 (필터 + 스무더)</h2>
+<div class="card">
+<span class="tag">칼만 필터</span><span class="tag">RTS 스무더</span><span class="tag">OpenVINS = 앞부분만</span>
+<svg viewBox="0 0 900 170">
+ <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--fg)"/></marker></defs>
+ <line x1="80" y1="60" x2="820" y2="60" stroke="var(--a)" stroke-width="3" marker-end="url(#ar)"/><text x="80" y="45">① 필터: 처음부터 끝까지 한 번 걸으며 "지금까지 본 것"으로 추정</text>
+ <line x1="820" y1="120" x2="80" y2="120" stroke="var(--c)" stroke-width="3" marker-end="url(#ar)"/><text x="80" y="150">② 스무더: 끝에서 거꾸로 걸으며 "나중에 안 것"으로 과거 추정을 고침</text>
+</svg>
+<p><b>한 줄</b>: 앞으로 한 번(실시간처럼), 뒤로 한 번(되돌아보며 수정). 가볍고 빠르지만 1번보다 조금 덜 정확합니다.</p>
+<p class="small"><b>OpenVINS</b>는 ①만 하는 실시간용입니다(최근 몇 장만 보고, 지나간 건 안 고침). 그래서 정답 만들기보다는 "날면서 위치 알기"용입니다.</p>
+</div>
+
+<h2>방법 3. 휘는 철사 (연속 시간 곡선 · Kalibr 방식)</h2>
+<div class="card">
+<span class="tag">Kalibr</span><span class="tag">Basalt</span><span class="tag">iKalibr</span>
+<svg viewBox="0 0 900 150">
+ <path d="M60 110 C 180 20, 300 140, 450 70 S 700 30, 840 100" fill="none" stroke="var(--a)" stroke-width="4"/>
+ <g fill="var(--p)"><rect x="56" y="106" width="9" height="9"/><rect x="176" y="40" width="9" height="9"/><rect x="296" y="106" width="9" height="9"/><rect x="446" y="66" width="9" height="9"/><rect x="596" y="40" width="9" height="9"/><rect x="716" y="56" width="9" height="9"/><rect x="836" y="96" width="9" height="9"/></g>
+ <text x="60" y="140"><tspan fill="var(--a)">━ 철사</tspan> = 움직임 전체   <tspan fill="var(--p)">■ 손잡이</tspan>로 모양 조절. 아무 순간이나 꺼낼 수 있음</text>
+</svg>
+<p><b>한 줄</b>: 움직임을 철사 하나로 놓고, 사진 모서리 하나하나(<b>각자 찍힌 순간</b>)와 IMU를 모두 만족하게 모양을 잡습니다. 롤링 셔터가 저절로 풀립니다. 자세히: <a href="spline_std_easy.html">표준 곡선 방식</a></p>
+<p class="small">Kalibr·Basalt 같은 기성 도구는 AprilGrid 보드를 기본으로 받아서, 우리 ChArUco 모니터 보드는 바로 못 넣습니다.</p>
+</div>
+
+<h2>방법 4. 장비로 직접 재기</h2>
+<div class="card">
+<table>
+ <tr><th>장비</th><th>원리</th><th>정확도</th><th>값</th></tr>
+ <tr><td>모션 캡처 (Vicon·OptiTrack)</td><td>천장 카메라 수십 대가 폰에 붙인 반사 공을 추적</td><td class="good">0.1 mm 수준</td><td class="bad">수천만 원</td></tr>
+ <tr><td>HTC Vive 트래커</td><td>레이저 등대 2개가 트래커 위치를 잼 (VR용)</td><td class="mid">mm 수준</td><td class="good">수십만 원</td></tr>
+ <tr><td>로봇 팔</td><td>팔이 움직인 경로를 정확히 앎</td><td class="good">매우 정확</td><td class="mid">빌리기 나름</td></tr>
+</table>
+<p>카메라로 계산하지 않고 <b>다른 장비가 직접</b> 재므로, 보드가 안 보여도 되고 빠른 움직임·넓은 공간도 됩니다. 논문들의 "진짜 정답"은 대부분 모션 캡처입니다.</p>
+</div>
+
+<h2>한눈에 비교</h2>
+<div class="card scroll">
+<table>
+ <tr><th></th><th>0. 점 찍기 (지금)</th><th>1. 구슬 꿰기</th><th>2. 필터+스무더</th><th>3. 휘는 철사</th><th>4. 장비</th></tr>
+ <tr><td>정확도</td><td class="mid">보통</td><td class="good">높음</td><td class="mid">높음보다 조금 아래</td><td class="good">높음</td><td class="good">가장 높음</td></tr>
+ <tr><td>롤링 셔터</td><td class="mid">대충</td><td class="good">처리</td><td class="mid">처리 가능</td><td class="good">저절로</td><td class="good">상관없음</td></tr>
+ <tr><td>보드 안 보일 때</td><td class="bad">정답 없음</td><td class="mid">IMU로 잠깐 이음</td><td class="mid">IMU로 잠깐 이음</td><td class="mid">IMU로 잠깐 이음</td><td class="good">상관없음</td></tr>
+ <tr><td>만드는 데</td><td>있음</td><td>며칠</td><td>며칠</td><td>며칠 (우리 코드 확장)</td><td>장비 구입·설치</td></tr>
+ <tr><td>돈</td><td>0</td><td>0</td><td>0</td><td>0</td><td>수십만~수천만 원</td></tr>
+</table>
+</div>
+
+<h2>우리한테는?</h2>
+<div class="card">
+<div class="key"><b>추천: 3번 (휘는 철사)</b> — 이미 PyTorch로 만든 "전체 한 번에 맞추기"(batch_sync.py)에 위치를 넣고 모서리 픽셀을 직접 맞추게 넓히면 됩니다. 1번과 정확도는 비슷하고, 우리 코드에 더 잘 맞습니다.</div>
+<ul>
+ <li><b>학습용 정답</b>: 3번을 사진 + IMU로 (끊긴 구간도 메움)</li>
+ <li><b>평가용 정답</b>: 3번을 사진만으로 (공정한 채점)</li>
+ <li><b>나중에</b>: 더 넓고 빠른 움직임(드론 비행)까지 정답이 필요하면 4번의 Vive 트래커가 가성비 좋은 선택</li>
+</ul>
+</div>
+</main></body></html>
