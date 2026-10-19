@@ -18,9 +18,9 @@ body.full{cursor:none}body.full #bar{display:none}
 </style>
 </head>
 <body>
-<div id="wrap"><img id="board" src="charuco_monitor.png" alt="ChArUco 보정판 5x7, DICT_6X6_250"></div>
+<div id="wrap"><img id="board" src="charuco_monitor.png" alt="ChArUco 보정판 9x5, DICT_6X6_250"></div>
 <div id="bar">
- <div><b>모니터 보정판</b> — 칸 240 px · 마커 144 px (사진 1픽셀 = 화면 1픽셀)</div>
+ <div><b>모니터 보정판</b> — 9×5 칸 (모서리 32개) · 칸 272 px · 마커 160 px (사진 1픽셀 = 화면 1픽셀)</div>
  <div id="chk"></div>
  <div>예상 칸 크기 <b id="sq">-</b> — 패널 픽셀 간격 0.2331 mm 로 계산, <b>자로 잴 필요 없음</b> (설정에 이미 들어감)</div>
  <div style="margin-top:6px">(확인용·선택) 자로 잰 <b>짧은 쪽 (5칸)</b>: <input id="mm" type="number" step="0.5" placeholder="mm"> mm → 칸 <b id="sqm">-</b></div>
@@ -29,7 +29,7 @@ body.full{cursor:none}body.full #bar{display:none}
  <div style="margin-top:6px;font-size:13px;color:#555">밝기 최대 · 야간 모드 끄기 · 브라우저 확대 100 % · 반사 없게. 녹화 첫 1~2초는 보드를 비춰서 초점을 맞추세요.</div>
 </div>
 <script>
-const SQ_PX = 240, IMG_W = 1680, IMG_H = 1200, PITCH_MM = 0.2331, MON_W_PX = 2560;   // 27in QHD panel pixel pitch
+const SQ_PX = 272, IMG_W = 2448, IMG_H = 1360, PITCH_MM = 0.2331, MON_W_PX = 2560;   // 27in QHD panel pixel pitch
 const img = document.getElementById('board');
 function layout() {
   const dpr = window.devicePixelRatio || 1;
@@ -40,6 +40,9 @@ function layout() {
   document.getElementById('chk').innerHTML = ok
     ? `<span class="ok">✓ 모니터 ${devW} px 폭, 배율 ${dpr} — 픽셀 그대로 표시 중</span>`
     : `<span class="warn">⚠ 화면 폭 ${devW} px (기대 ${MON_W_PX}). 다른 모니터이거나 브라우저 확대가 100 %가 아님 → 크기가 틀립니다 (Ctrl+0)</span>`;
+  const fits = window.innerHeight * dpr >= IMG_H - 1 && window.innerWidth * dpr >= IMG_W - 1;
+  if (!fits) document.getElementById('chk').innerHTML +=
+    `<br><span class="warn">⚠ 보드가 창보다 큼 — 아래 "전체 화면" 을 눌러야 보드 전체가 보임</span>`;
   document.getElementById('sq').textContent = (SQ_PX * PITCH_MM).toFixed(3) + ' mm (짧은 쪽 ' + (5 * SQ_PX * PITCH_MM).toFixed(2) + ' mm)';
 }
 function measured() {
