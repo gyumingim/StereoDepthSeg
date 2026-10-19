@@ -377,7 +377,11 @@ def main():
                         G=cal.G.detach().cpu().tolist(), bg=cal.bg.detach().cpu().tolist(),
                         A=cal.A.detach().cpu().tolist(), ba=cal.ba.detach().cpu().tolist(), r=cal.r.detach().cpu().tolist())
     print("물리 보정 (축척·축·바이어스·레버암):", {k: res["calib"][k] for k in ("train", "val", "r")}, flush=True)
-    if a.eval_only:
+    if a.eval_only:                                 # still save: the physical calibration is used by vio_bench_hs.py
+        out = Path(a.out)
+        out.mkdir(parents=True, exist_ok=True)
+        json.dump(res, open(out / "result.json", "w"), indent=1, ensure_ascii=False)
+        print(f"→ {out}")
         return
     for prm in cal.parameters():
         prm.requires_grad_(False)
