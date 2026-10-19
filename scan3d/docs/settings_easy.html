@@ -26,45 +26,42 @@ b.k{color:var(--a)}
 </head>
 <body><main>
 <h1>카메라·센서 설정 한눈에 보기</h1>
-<p class="lead">지금 쓰는 촬영 방식 4가지와, 각 설정이 무슨 뜻인지 쉬운 말로 정리했습니다 (2026-10-19 기준).</p>
+<p class="lead">지금 쓰는 촬영 방식 3가지와, 각 설정이 무슨 뜻인지 쉬운 말로 정리했습니다 (2026-10-19 기준).</p>
 
-<h2>① 촬영 방식 4가지</h2>
+<h2>① 촬영 방식 3가지</h2>
 <div class="grid">
  <div class="card mode"><h3>📷 광각 단안 60 fps</h3><div class="where">스캐너 웹 :8795 → 깊이 렌즈 "광각만 (단안)"</div>
   <p>보정판 정답 녹화용 (지금 주력). 폰 화면에 실시간 마커 표시.</p>
   <span class="chip">렌즈 5 (광각)</span><span class="chip">960x720</span><span class="chip">60 fps</span><span class="chip">노출 2 ms</span></div>
- <div class="card mode"><h3>⚡ 고속 240 fps</h3><div class="where">VIO 웹 :8793 → "고속 녹화 시작"</div>
+ <div class="card mode"><h3>⚡ 고속 240 fps</h3><div class="where">측정 웹 :8793 → "고속 녹화 시작"</div>
   <p>보정판 정답 녹화용 (더 촘촘한 정답). 폰 화면 미리보기 없음.</p>
   <span class="chip">주 카메라</span><span class="chip">1920x1080</span><span class="chip">240 fps</span><span class="chip">노출 4 ms (자동)</span></div>
- <div class="card mode"><h3>🧭 OpenVINS 실시간</h3><div class="where">VIO 웹 :8793 → "OpenVINS 시작"</div>
-  <p>폰 안에서 위치 추적 (드론용 후보). 결과는 PC 웹에 실시간 표시.</p>
-  <span class="chip">렌즈 2 (초광각)</span><span class="chip">640x480</span><span class="chip">30 fps</span><span class="chip">노출 2 ms</span></div>
- <div class="card mode"><h3>📐 ARCore (비교용)</h3><div class="where">VIO 웹 :8793 → "ARCore 시작"</div>
+ <div class="card mode"><h3>📐 ARCore (비교용)</h3><div class="where">측정 웹 :8793 → "ARCore 시작"</div>
   <p>구글 위치 추적. 논문 비교용으로만 남김.</p>
   <span class="chip">렌즈 5</span><span class="chip">640x480</span><span class="chip">30 fps</span><span class="chip">노출 자동 (~17 ms)</span></div>
 </div>
 
 <h2>② 방식별 설정 비교</h2>
 <div class="card scroll"><table>
-<tr><th>설정</th><th>광각 단안 60</th><th>고속 240</th><th>OpenVINS</th><th>ARCore</th></tr>
-<tr><td>렌즈</td><td>광각 (5)</td><td>주 카메라 (광각)</td><td>초광각 (2)</td><td>광각 (5)</td></tr>
-<tr><td>해상도</td><td>960x720 (선택 가능)</td><td>1920x1080 (1280x720 가능)</td><td>640x480</td><td>640x480</td></tr>
-<tr><td>프레임</td><td>60 fps</td><td class="good">240 fps</td><td>30 fps</td><td>30 fps</td></tr>
-<tr><td>노출 (번짐)</td><td class="good">2 ms 고정</td><td class="mid">4.0 ms (못 바꿈)</td><td class="good">2 ms 고정</td><td class="bad">자동 ~17 ms</td></tr>
-<tr><td>밝기 맞춤</td><td>감도(ISO) 자동 조절</td><td>폰이 자동</td><td>감도 자동 조절</td><td>폰이 자동</td></tr>
-<tr><td>롤링 셔터 (위↔아래 시간차)</td><td class="bad">8.7 ms</td><td class="good">2.9 ms</td><td>측정 안 함</td><td>측정 안 함</td></tr>
-<tr><td>노이즈 제거 / 선명화</td><td class="good">끔</td><td>폰 기본 (못 바꿈)</td><td class="good">끔</td><td>폰 기본</td></tr>
-<tr><td>밝기 곡선</td><td>고정 (감마 2.2)</td><td>폰 기본</td><td>고정 (감마 2.2)</td><td>폰 기본</td></tr>
-<tr><td>화이트밸런스</td><td>노출 고정 후 잠금</td><td>폰 기본</td><td>노출 고정 후 잠금</td><td>폰 기본</td></tr>
-<tr><td>손떨림 보정 (OIS·영상)</td><td>끔</td><td>끔</td><td>끔</td><td>끔</td></tr>
-<tr><td>초점</td><td>1 m 고정</td><td>자동</td><td>렌즈 고정 초점</td><td>고정</td></tr>
-<tr><td>왜곡 보정 모드</td><td>원래 값으로 고정</td><td>폰 기본</td><td>원래 값으로 고정</td><td>폰 기본</td></tr>
-<tr><td>렌즈 보정값</td><td>체커보드 보정 파일</td><td>녹화 속 보정판으로 자동</td><td>보정 파일 (왜곡 편 영상)</td><td>구글 공장값</td></tr>
-<tr><td>IMU (센서)</td><td>500 Hz 원시값 전부</td><td>500 Hz 원시값 전부</td><td>500 Hz, 가속도 보간</td><td>ARCore 내부</td></tr>
-<tr><td>영상 시각</td><td>노출 가운데</td><td>노출 가운데 (시계 보정)</td><td>노출 가운데</td><td>ARCore 값</td></tr>
-<tr><td>폰 화면</td><td>흑백 60 fps + 마커 표시</td><td>없음</td><td>상태 글자만</td><td>상태 글자만</td></tr>
-<tr><td>저장</td><td>영상 + IMU → PC 자동</td><td>영상 + IMU → 버튼으로 PC</td><td>측정값만 PC</td><td>측정값만 PC</td></tr>
-<tr><td>용량 (1분)</td><td>약 190 MB</td><td>약 300 MB</td><td>-</td><td>-</td></tr>
+<tr><th>설정</th><th>광각 단안 60</th><th>고속 240</th><th>ARCore</th></tr>
+<tr><td>렌즈</td><td>광각 (5)</td><td>주 카메라 (광각)</td><td>광각 (5)</td></tr>
+<tr><td>해상도</td><td>960x720 (선택 가능)</td><td>1920x1080 (1280x720 가능)</td><td>640x480</td></tr>
+<tr><td>프레임</td><td>60 fps</td><td class="good">240 fps</td><td>30 fps</td></tr>
+<tr><td>노출 (번짐)</td><td class="good">2 ms 고정</td><td class="mid">4.0 ms (못 바꿈)</td><td class="bad">자동 ~17 ms</td></tr>
+<tr><td>밝기 맞춤</td><td>감도(ISO) 자동 조절</td><td>폰이 자동</td><td>폰이 자동</td></tr>
+<tr><td>롤링 셔터 (위↔아래 시간차)</td><td class="bad">8.7 ms</td><td class="good">2.9 ms</td><td>측정 안 함</td></tr>
+<tr><td>노이즈 제거 / 선명화</td><td class="good">끔</td><td>폰 기본 (못 바꿈)</td><td>폰 기본</td></tr>
+<tr><td>밝기 곡선</td><td>고정 (감마 2.2)</td><td>폰 기본</td><td>폰 기본</td></tr>
+<tr><td>화이트밸런스</td><td>노출 고정 후 잠금</td><td>폰 기본</td><td>폰 기본</td></tr>
+<tr><td>손떨림 보정 (OIS·영상)</td><td>끔</td><td>끔</td><td>끔</td></tr>
+<tr><td>초점</td><td>1 m 고정</td><td>자동</td><td>고정</td></tr>
+<tr><td>왜곡 보정 모드</td><td>원래 값으로 고정</td><td>폰 기본</td><td>폰 기본</td></tr>
+<tr><td>렌즈 보정값</td><td>체커보드 보정 파일</td><td>녹화 속 보정판으로 자동</td><td>구글 공장값</td></tr>
+<tr><td>IMU (센서)</td><td>500 Hz 원시값 전부</td><td>500 Hz 원시값 전부</td><td>ARCore 내부</td></tr>
+<tr><td>영상 시각</td><td>노출 가운데</td><td>노출 가운데 (시계 보정)</td><td>ARCore 값</td></tr>
+<tr><td>폰 화면</td><td>흑백 60 fps + 마커 표시</td><td>없음</td><td>상태 글자만</td></tr>
+<tr><td>저장</td><td>영상 + IMU → PC 자동</td><td>영상 + IMU → 버튼으로 PC</td><td>측정값만 PC</td></tr>
+<tr><td>용량 (1분)</td><td>약 190 MB</td><td>약 300 MB</td><td>-</td></tr>
 </table></div>
 
 <h2>③ 설정이 뭔 뜻인지 (쉬운 말)</h2>
