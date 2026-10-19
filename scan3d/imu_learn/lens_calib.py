@@ -3,7 +3,7 @@
 imu_gt.py 의 예전 자기 보정은 영상 앞쪽에서 아무 프레임 80 장 (흐린 것 포함) 이라 녹화마다 f 가 3 % 달랐음.
 여기서는:
   1. 자이로로 느린 프레임 (|ω| < 0.3 rad/s) 만 후보 → 흐림·롤링셔터가 작은 사진
-  2. 모서리 20 개 이상, 화면 3x3 칸·기울기마다 고르게 퍼지게 최대 n 장 (같은 칸만 많으면 렌즈 가장자리를 모름)
+  2. 모서리 20 개 이상, 화면 3x3 칸·기울기마다 고르게 퍼지게 최대 n 장 (기본 120) (같은 칸만 많으면 렌즈 가장자리를 모름)
   3. 왜곡 모델 3 가지 (k1 k2 p1 p2 / + k3 / 유리 모델) 를 반으로 나눈 사진으로 맞추고 나머지 반에서 오차 → 가장 좋은 모델
   4. 사진별 오차가 중앙의 2.5 배 넘는 사진은 빼고 다시 맞춤
 결과: config/lens/hs_<w>x<h>_f<초점 dpt>.json (초점 고정 녹화끼리 같이 씀) 또는 녹화 imu_gt/lens.json.
@@ -12,6 +12,7 @@ imu_gt.py 의 예전 자기 보정은 영상 앞쪽에서 아무 프레임 80 �
 import argparse
 import csv
 import json
+import pickle
 import sys
 import time
 from pathlib import Path
@@ -25,6 +26,7 @@ sys.path.insert(0, str(HERE))
 import aruco_scale  # noqa: E402
 from imu_gt import read_imu  # noqa: E402
 
+TERM = (cv2.TERM_CRITERIA_COUNT + cv2.TERM_CRITERIA_EPS, 60, 1e-7)   # 250 장 유리 모델이 30 분 넘게 안 끝난 일 (2026-10-19)
 MODELS = {"k1k2p": cv2.CALIB_FIX_K3, "k1k2p_k3": 0, "rational": cv2.CALIB_RATIONAL_MODEL}
 
 
@@ -75,7 +77,8 @@ def spread(views, size, n):
 
 
 def fit(views, size, flags):
-    rms, K, d, rv, tv = cv2.calibrateCamera([v[0] for v in views], [v[1] for v in views], size, None, None, flags=flags)
+    rms, K, d, rv, tv = cv2.calibrateCamera([v[0] for v in views], [v[1] for v in views], size, None, None, flags=flags,
+                                            criteria=TERM)
     return rms, K, d.ravel(), rv, tv
 
 
@@ -91,11 +94,17 @@ def holdout_err(views, size, flags):
     return float(np.median(errs))
 
 
-def calibrate(recs, board_json, n=250, log=print):
+def calibrate(recs, board_json, n=120, log=print):
     board = aruco_scale.Board(aruco_scale.load_board_spec(str(board_json)))
     views, size, n_slow = [], None, 0
     for rec in recs:
-        v, size, ns = collect(rec, board)
+        cache = Path(rec) / "imu_gt" / "lens_views.pkl"          # 모서리 찾기는 영상 전체를 읽어 느림 → 한 번만
+        if cache.exists():
+            v, size, ns = pickle.load(open(cache, "rb"))
+        else:
+            v, size, ns = collect(rec, board)
+            cache.parent.mkdir(exist_ok=True)
+            pickle.dump((v, size, ns), open(cache, "wb"))
         views += v
         n_slow += ns
         log(f"  {Path(rec).name}: 느린 프레임 {ns}, 보드 {len(v)} 장")
@@ -141,7 +150,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("recs", nargs="+")
     ap.add_argument("--board", default=str(HERE.parent / "config" / "charuco" / "board_monitor_6x6.json"))
-    ap.add_argument("--n", type=int, default=250)
+    ap.add_argument("--n", type=int, default=120)
     ap.add_argument("--save", default=None, help="렌즈 값 json (기본: 첫 녹화 imu_gt/lens.json)")
     a = ap.parse_args()
     K, d, info = calibrate(a.recs, a.board, a.n)
