@@ -57,6 +57,7 @@ class HsPreview {
     private volatile int front;
     private volatile float[] quads = new float[1];
     private volatile long lastOkMs;
+    private final java.util.ArrayDeque<long[]> hist = new java.util.ArrayDeque<>();   // {check time ms, board ok 1/0}
     private volatile double camFps, chkFps;
     private long camT0, chkT0; private int camN, chkN;
 
@@ -183,6 +184,7 @@ class HsPreview {
                 quads = r;
                 long t = SystemClock.elapsedRealtime();
                 if (r[0] >= 4) lastOkMs = t;
+                synchronized (hist) { hist.addLast(new long[]{t, r[0] >= 4 ? 1 : 0}); while (hist.size() > 120) hist.removeFirst(); }
                 if (chkT0 == 0) chkT0 = t;
                 if (++chkN >= 15) { chkFps = chkN * 1000.0 / Math.max(1, t - chkT0); chkN = 0; chkT0 = t; }
             } catch (Throwable ignored) {
@@ -222,9 +224,14 @@ class HsPreview {
             String head = ok ? "보정판 인식 ✓ " + n
                     : (lastOkMs > 0 ? String.format(Locale.US, "안 보임 %.1f s", (now - lastOkMs) / 1000.0) : "안 보임");
             big.setColor(ok ? Color.rgb(34, 197, 94) : Color.rgb(239, 68, 68));
-            c.drawRect(0, 0, vw, 160, box);
+            int tot = 0, miss = 0;                          // board checks in the last second and how many missed it
+            synchronized (hist) { for (long[] e : hist) if (now - e[0] <= 1000) { tot++; if (e[1] == 0) miss++; } }
+            c.drawRect(0, 0, vw, 215, box);
             c.drawText(head, 24, 90, big);
-            c.drawText(String.format(Locale.US, "화면 %.0f fps · 인식 확인 %.0f fps (녹화는 240 그대로)", camFps, chkFps), 24, 145, small);
+            small.setColor(miss == 0 ? Color.WHITE : Color.rgb(251, 191, 36));
+            c.drawText(String.format(Locale.US, "최근 1초 놓침 %d / %d 번 확인", miss, tot), 24, 145, small);
+            small.setColor(Color.WHITE);
+            c.drawText(String.format(Locale.US, "화면 %.0f fps · 인식 확인 %.0f fps (녹화는 240 그대로)", camFps, chkFps), 24, 195, small);
         }
     }
 }
