@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>점 찍기 vs 곡선 하나</title>
+<style>
+:root{--bg:#f7f7f5;--fg:#1c1f24;--mut:#6b7078;--card:#fff;--line:#e2e4e8;--a:#2563eb;--b:#dc2626;--c:#16a34a;--d:#d97706;--chip:#eef2ff;--svgbg:#fbfbfa}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--chip:#1e293b;--svgbg:#16191d}}
+:root[data-theme="dark"]{--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--chip:#1e293b;--svgbg:#16191d}
+body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.75 system-ui,"Malgun Gothic",sans-serif}
+main{max-width:900px;margin:0 auto;padding:20px 16px 80px}
+h1{font-size:27px;margin:0 0 6px}h2{font-size:22px;margin:40px 0 8px}
+.lead{color:var(--mut);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.emoji{font-size:44px;line-height:1.1}
+svg{width:100%;height:auto;display:block;background:var(--svgbg);border-radius:10px}
+svg text{fill:var(--fg);font:14px system-ui,"Malgun Gothic",sans-serif}svg .m{fill:var(--mut)}
+input[type=range]{width:100%}
+.pill{display:inline-block;border-radius:999px;padding:2px 12px;font-weight:700}
+.bad{background:color-mix(in srgb,var(--b) 15%,transparent);color:var(--b)}
+.good{background:color-mix(in srgb,var(--c) 15%,transparent);color:var(--c)}
+.small{font-size:15px;color:var(--mut)}
+.key{border-left:5px solid var(--a);padding:6px 14px;margin:12px 0;background:var(--chip);border-radius:0 10px 10px 0}
+</style>
+</head>
+<body><main>
+<h1>정답을 "점 찍기"로 할까, "곡선 하나"로 할까</h1>
+<p class="lead">문제는 두 가지입니다. ① 사진마다 따로 계산하면 흔들린다. ② 사진은 한순간에 찍히지 않는다(롤링 셔터). 둘 다 "곡선 하나"로 풀립니다.</p>
+
+<h2>문제 ① 점을 따로 찍으면 흔들린다</h2>
+<div class="grid">
+ <div class="card"><div class="emoji">✏️📍</div><h3>지금: 점 찍기</h3>
+  <p>사진 한 장마다 "이 순간 폰은 여기"라고 <b>점</b>을 하나씩 찍습니다. 점마다 계산이 조금씩 틀려서, 이어 보면 <b>지그재그</b>가 됩니다.</p>
+  <p>그런데 사람 손은 4 ms 사이에 지그재그로 못 움직입니다. 지그재그는 <b>계산 오차</b>입니다.</p></div>
+ <div class="card"><div class="emoji">〰️</div><h3>표준: 곡선 하나</h3>
+  <p>점들을 지나가는 <b>매끈한 곡선 하나</b>를 그립니다. 손은 매끈하게 움직이니까, 곡선은 지그재그(오차)를 걸러 냅니다.</p>
+  <p>점 하나가 튀어도 주변 수십 개 점이 곡선을 붙잡아 줍니다.</p></div>
+</div>
+<div class="card">
+<label>사진마다 계산 오차: <b id="nv">3</b> mm</label>
+<input type="range" id="noise" min="0.5" max="8" step="0.5" value="3">
+<svg id="pos" viewBox="0 0 900 260" role="img" aria-label="점과 곡선 비교"></svg>
+<p><span style="color:var(--mut)">━ 진짜 움직임</span> · <span style="color:var(--b)">● 점 찍기 (사진마다)</span> · <span style="color:var(--c)">━ 곡선 하나</span></p>
+<p>진짜와의 차이: 점 찍기 <span class="pill bad" id="e1">-</span> → 곡선 <span class="pill good" id="e2">-</span></p>
+</div>
+
+<h2>그리고 곡선에는 IMU도 같이 맞춘다</h2>
+<div class="card">
+<p>곡선이 좋은 이유가 하나 더 있습니다. 곡선에서는 바로 이걸 읽을 수 있습니다.</p>
+<ul>
+ <li><b>기울기</b> = 속도</li>
+ <li><b>휘어짐</b> = 가속도 → <b>가속도계</b>가 잰 값과 같아야 함</li>
+ <li><b>돌아가는 빠르기</b> → <b>자이로</b>가 잰 값과 같아야 함</li>
+</ul>
+<div class="key">그래서 곡선은 <b>사진(위치)</b>과 <b>IMU(휘어짐·돌기)</b>를 <b>동시에</b> 만족하게 그립니다. 사진은 "어디 있었나"를, IMU는 "어떻게 움직였나"를 알려 줘서 서로의 오차를 잡아 줍니다. 이게 Kalibr 같은 표준 도구가 하는 일입니다.</div>
+</div>
+
+<h2>문제 ② 사진은 한순간에 찍히지 않는다 (롤링 셔터)</h2>
+<div class="card">
+<p>카메라는 사진을 <b>맨 윗줄부터 맨 아랫줄까지 차례로</b> 읽습니다. 이 폰(240 fps)은 위→아래에 <b>2.9 ms</b> 걸립니다. 그 사이 폰이 움직이면, 윗줄과 아랫줄이 <b>다른 순간</b>의 모습이라 보드가 <b>기울어져</b> 찍힙니다.</p>
+<label>폰 돌리는 빠르기: <b id="wv">2.0</b> rad/s (빠르게 흔들면 2~5)</label>
+<input type="range" id="w" min="0" max="6" step="0.25" value="2">
+<svg id="rs" viewBox="0 0 900 300" role="img" aria-label="롤링 셔터로 기울어진 보드"></svg>
+<div class="grid">
+ <div class="card"><h3>지금 방식</h3>
+  <p>사진 한 장을 "보드 가운데 줄이 찍힌 <b>한순간</b>"으로 칩니다. 그러면 기울어진 모양을 <b>"보드가 진짜 기울어져 있다"</b>로 착각해서 자세가 조금 틀립니다.</p>
+  <p>위·아래 어긋남 <span class="pill bad" id="px">-</span></p></div>
+ <div class="card"><h3>곡선 방식</h3>
+  <p>모서리마다 "<b>그 줄이 찍힌 순간</b>"의 곡선 위 위치·자세로 계산합니다. 곡선이 있으니까 아무 순간이나 꺼내 쓸 수 있어서 가능한 일입니다.</p>
+  <p>기울어짐을 "움직임 때문"으로 정확히 설명 → <span class="pill good">착각 없음</span></p></div>
+</div>
+<p class="small">점 찍기 방식에서는 줄마다 다른 순간을 쓸 방법이 없습니다. 사진 하나에 점 하나뿐이라, 그 사이 순간의 자세를 모르기 때문입니다.</p>
+</div>
+
+<h2>한 줄 정리</h2>
+<div class="card">
+<table style="width:100%;border-collapse:collapse;font-size:16px">
+ <tr><th style="text-align:left;border-bottom:1px solid var(--line);padding:6px"></th><th style="text-align:left;border-bottom:1px solid var(--line);padding:6px">점 찍기 (지금)</th><th style="text-align:left;border-bottom:1px solid var(--line);padding:6px">곡선 하나 (표준)</th></tr>
+ <tr><td style="padding:6px">사진마다 오차</td><td style="padding:6px">그대로 남음</td><td style="padding:6px">주변 점들과 평균돼 줄어듦</td></tr>
+ <tr><td style="padding:6px">IMU 사용</td><td style="padding:6px">정답 만들 때 안 씀</td><td style="padding:6px">같이 맞춤 (서로 오차 잡기)</td></tr>
+ <tr><td style="padding:6px">롤링 셔터</td><td style="padding:6px">가운데 줄 시각 하나로 근사</td><td style="padding:6px">줄마다 정확한 순간</td></tr>
+ <tr><td style="padding:6px">만들기</td><td style="padding:6px">쉬움 (이미 있음)</td><td style="padding:6px">어려움 (며칠)</td></tr>
+</table>
+<p class="small">주의: 곡선 방식으로 만든 정답은 IMU를 일부 써서 만든 것이라, 그 정답으로 IMU를 평가할 때는 "평가할 IMU 구간은 곡선 만들 때 빼기" 같은 조심이 필요합니다.</p>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id),css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let seed=7;function rnd(){seed=(seed*16807)%2147483647;return(seed-1)/2147483646;}
+function gauss(){let u=0,v=0;while(!u)u=rnd();while(!v)v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+const truth=t=>40*Math.sin(2*Math.PI*0.9*t)+18*Math.sin(2*Math.PI*2.1*t+1)+8*Math.sin(2*Math.PI*3.3*t+2);   // mm
+function drawPos(){
+ const sig=+$('noise').value;$('nv').textContent=sig;seed=7;
+ const T=1.0,fps=240,ts=[],ys=[];for(let t=0;t<=T;t+=1/fps){ts.push(t);ys.push(truth(t)+sig*gauss());}
+ // smooth: local quadratic fit, ±25 ms
+ const h=0.025,zs=ts.map(t0=>{let S=[0,0,0,0,0],R=[0,0,0];ts.forEach((t,i)=>{const d=t-t0;if(Math.abs(d)>h)return;const w=1-(Math.abs(d)/h)**3;
+   S[0]+=w;S[1]+=w*d;S[2]+=w*d*d;S[3]+=w*d**3;S[4]+=w*d**4;R[0]+=w*ys[i];R[1]+=w*d*ys[i];R[2]+=w*d*d*ys[i];});
+   const A=[[S[0],S[1],S[2]],[S[1],S[2],S[3]],[S[2],S[3],S[4]]];const det=m=>m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])-m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])+m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);
+   const D=det(A),A0=[[R[0],S[1],S[2]],[R[1],S[2],S[3]],[R[2],S[3],S[4]]];return det(A0)/D;});
+ let e1=0,e2=0;ts.forEach((t,i)=>{e1+=(ys[i]-truth(t))**2;e2+=(zs[i]-truth(t))**2;});
+ $('e1').textContent=Math.sqrt(e1/ts.length).toFixed(2)+' mm';$('e2').textContent=Math.sqrt(e2/ts.length).toFixed(2)+' mm';
+ const t0=0.30,t1=0.55,X=t=>30+(t-t0)/(t1-t0)*840;let lo=1e9,hi=-1e9;ts.forEach((t,i)=>{if(t>=t0&&t<=t1){lo=Math.min(lo,ys[i]);hi=Math.max(hi,ys[i]);}});
+ const Y=v=>235-(v-lo)/(hi-lo)*205;let g='',d='';for(let t=t0;t<=t1;t+=0.001)d+=(d?'L':'M')+X(t).toFixed(1)+' '+Y(truth(t)).toFixed(1);
+ g+=`<path d="${d}" fill="none" stroke="${css('--mut')}" stroke-width="2" stroke-dasharray="6 4"/>`;
+ let zz='';ts.forEach((t,i)=>{if(t>=t0&&t<=t1)zz+=(zz?'L':'M')+X(t).toFixed(1)+' '+Y(zs[i]).toFixed(1);});
+ let zig='';ts.forEach((t,i)=>{if(t>=t0&&t<=t1)zig+=(zig?'L':'M')+X(t).toFixed(1)+' '+Y(ys[i]).toFixed(1);});
+ g+=`<path d="${zig}" fill="none" stroke="${css('--b')}" stroke-width="1" opacity=".5"/>`;
+ ts.forEach((t,i)=>{if(t>=t0&&t<=t1)g+=`<circle cx="${X(t).toFixed(1)}" cy="${Y(ys[i]).toFixed(1)}" r="3.2" fill="${css('--b')}"/>`;});
+ g+=`<path d="${zz}" fill="none" stroke="${css('--c')}" stroke-width="3.5"/>`;
+ g+=`<text x="30" y="254" class="m">0.25초 동안 (사진 60장)</text>`;$('pos').innerHTML=g;}
+function drawRS(){
+ const w=+$('w').value;$('wv').textContent=w.toFixed(2);
+ const f=1300,skew=0.0029,shift=w*f*skew;                     // px between top and bottom row of the image
+ $('px').textContent=`${shift.toFixed(1)} px (사진 1080줄 기준)`;
+ const s=0.22,ox=90,oy=30,H=1080*s,W=1920*s*0.55,sh=shift*s*6;   // drawn exaggerated ×6
+ let g=`<text x="${ox}" y="${oy-8}" class="m">실제 보드</text><text x="${ox+W+120}" y="${oy-8}" class="m">사진에 찍힌 모습 (어긋남 6배 과장)</text>`;
+ const board=(x0,shear)=>{let r='';const n=6,m=4,cw=W/n,chh=H/m;for(let i=0;i<n;i++)for(let j=0;j<m;j++){if((i+j)%2)continue;
+   const y0=oy+j*chh,y1=y0+chh,f0=(y0-oy)/H*shear,f1=(y1-oy)/H*shear;
+   r+=`<path d="M${x0+i*cw+f0} ${y0} L${x0+(i+1)*cw+f0} ${y0} L${x0+(i+1)*cw+f1} ${y1} L${x0+i*cw+f1} ${y1}Z" fill="${css('--fg')}" opacity=".85"/>`;}
+   return r+`<path d="M${x0} ${oy} L${x0+W} ${oy} L${x0+W+shear} ${oy+H} L${x0+shear} ${oy+H}Z" fill="none" stroke="${css('--a')}" stroke-width="2"/>`;};
+ g+=board(ox,0)+board(ox+W+120,sh);
+ const ax=ox+2*W+150+sh;g+=`<line x1="${ax}" y1="${oy}" x2="${ax}" y2="${oy+H}" stroke="${css('--d')}" stroke-width="3"/>`;
+ g+=`<text x="${ax+8}" y="${oy+14}">윗줄: 0 ms</text><text x="${ax+8}" y="${oy+H}">아랫줄: 2.9 ms</text>`;
+ $('rs').innerHTML=g;}
+$('noise').oninput=drawPos;$('w').oninput=drawRS;drawPos();drawRS();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{drawPos();drawRS();});
+</script>
+</body></html>
