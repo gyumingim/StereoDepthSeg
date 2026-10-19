@@ -72,7 +72,11 @@ class HsRecorder implements SensorEventListener {
     private long lastDelta, lastExp, lastSkew;
     int wantFps = 120;
     int evComp = 0;
-    int wantKbps = 160_000;                      // S24 1080p240: 160 Mbps no dropped frames, 240 Mbps (encoder max) dropped 7 %; 0 = max
+    float focusDpt = -2;                         // >= 0: fixed focus at this many diopters (1/m); -1: autofocus all along;
+                                                 // -2: autofocus for 1.5 s then lock there (aim at the board when starting)
+    private volatile float lastFocus, focusLocked = -1;
+    private long focusLockNs;
+    int wantKbps = 160_000;                     // S24 1080p240: 160 Mbps no dropped frames, 240 Mbps (encoder max) dropped 7 %; 0 = max
     int bitrate;                              // AE exposure compensation steps (high-speed sessions allow only AE controls)
     Size size;
     Range<Integer> range;
@@ -109,7 +113,7 @@ class HsRecorder implements SensorEventListener {
         imuW.write("type,t_ns,v0,v1,v2,v3,v4,v5\n");
         frW = new BufferedWriter(new FileWriter(new File(dir, "frames_cam5.csv")), 1 << 16);
         resW = new BufferedWriter(new FileWriter(new File(dir, "results_cam5.csv")), 1 << 16);
-        resW.write("sensor_ts_ns,exposure_ns,rolling_shutter_skew_ns,frame_number,arrive_elapsed_ns\n");
+        resW.write("sensor_ts_ns,exposure_ns,rolling_shutter_skew_ns,frame_number,arrive_elapsed_ns,focus_dpt,af_mode,lens_moving\n");
         frW.write("frame_idx,t_mid_ns,physical_ts_ns,logical_ts_ns,exposure_ns,rolling_shutter_skew_ns,pts_us\n");
         t0Elapsed = SystemClock.elapsedRealtimeNanos(); t0Wall = System.currentTimeMillis();
         clockOffset = SystemClock.elapsedRealtimeNanos() - System.nanoTime();
@@ -188,18 +192,28 @@ class HsRecorder implements SensorEventListener {
                                 rb.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_OFF);
                                 rb.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_OFF);
                                 if (evComp != 0) rb.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, evComp);   // darker = shorter exposure, if AE obeys
+                                if (focusDpt >= 0) {        // fixed focus: autofocus moves the lens and changes the intrinsics mid-recording
+                                    rb.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
+                                    rb.set(CaptureRequest.LENS_FOCUS_DISTANCE, focusDpt);
+                                }
                                 List<CaptureRequest> burst = sess.createHighSpeedRequestList(rb.build());
-                                sess.setRepeatingBurst(burst, new CameraCaptureSession.CaptureCallback() {
+                                final CameraCaptureSession.CaptureCallback cb = new CameraCaptureSession.CaptureCallback() {
                                     @Override public void onCaptureCompleted(CameraCaptureSession ss, CaptureRequest q, TotalCaptureResult r) {
                                         Long ts = r.get(CaptureResult.SENSOR_TIMESTAMP), e = r.get(CaptureResult.SENSOR_EXPOSURE_TIME),
                                                 sk = r.get(CaptureResult.SENSOR_ROLLING_SHUTTER_SKEW);
-                                        try { resW.write(ts + "," + e + "," + sk + "," + r.getFrameNumber() + "," + SystemClock.elapsedRealtimeNanos() + "\n"); }
+                                        Float fd = r.get(CaptureResult.LENS_FOCUS_DISTANCE);
+                                        Integer afm = r.get(CaptureResult.CONTROL_AF_MODE), lst = r.get(CaptureResult.LENS_STATE);
+                                        try { resW.write(ts + "," + e + "," + sk + "," + r.getFrameNumber() + "," + SystemClock.elapsedRealtimeNanos()
+                                                + "," + fd + "," + afm + "," + lst + "\n"); }
                                         catch (Exception ignored) { }
                                         if (ts != null) meta.put(ts, new long[]{e == null ? 0 : e, sk == null ? 0 : sk, ts});
                                         if (++nRes <= 3) android.util.Log.i("arlat", "hs result ts " + ts + " exp " + e + " skew " + sk);
                                         if (meta.size() > 2000) meta.clear();
+                                        if (fd != null) lastFocus = fd;
                                     }
-                                }, h);
+                                };
+                                sess.setRepeatingBurst(burst, cb, h);
+                                if (focusDpt == -2) h.postDelayed(() -> lockFocus(rb, cb), 1500);   // autofocus 1.5 s, then hold it
                                 h.postDelayed(heatCheck, 2000);
                                 status.show("HS " + size + "@" + wantFps + " recording -> " + dir.getName());
                             } catch (Exception e) { status.show("hs request: " + e); }
@@ -211,6 +225,18 @@ class HsRecorder implements SensorEventListener {
             @Override public void onDisconnected(CameraDevice d) { d.close(); }
             @Override public void onError(CameraDevice d, int e) { status.show("camera error " + e); d.close(); }
         }, h);
+    }
+
+    /** Freeze the lens where autofocus put it (AF off + that focus distance) for the rest of the recording. */
+    private void lockFocus(CaptureRequest.Builder rb, CameraCaptureSession.CaptureCallback cb) {
+        if (!running) return;
+        try {
+            rb.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
+            rb.set(CaptureRequest.LENS_FOCUS_DISTANCE, lastFocus);
+            sess.setRepeatingBurst(sess.createHighSpeedRequestList(rb.build()), cb, h);
+            focusLocked = lastFocus; focusLockNs = SystemClock.elapsedRealtimeNanos();
+            android.util.Log.i("arlat", "HS focus locked at " + lastFocus + " dpt");
+        } catch (Exception e) { android.util.Log.e("arlat", "focus lock", e); }
     }
 
     /** Overheating: stop the recording (the files up to now are closed normally and are usable data). */
@@ -280,7 +306,8 @@ class HsRecorder implements SensorEventListener {
                     .put("start_wall_ms", t0Wall).put("complete", true).put("app", "arlat hs")
                     .put("clock_offset_ns", clockOffset).put("frames_unmatched", nUnmatched).put("ev_comp", evComp)
                     .put("bitrate_bps", bitrate).put("stop_reason", stopReason)
-                    .put("battery_c_end", batteryTenthC() / 10.0);
+                    .put("battery_c_end", batteryTenthC() / 10.0).put("focus_dpt_request", focusDpt)
+                    .put("focus_locked_dpt", focusLocked).put("focus_lock_elapsed_ns", focusLockNs);
             try (FileWriter w = new FileWriter(new File(dir, "meta.json"))) { w.write(m.toString(1)); }
         } catch (Exception ignored) { }
         status.show((stopReason.startsWith("overheat") ? "과열로 녹화 멈춤 — 지금까지 저장됨\n" : "") + "HS done: " + nFrames + " frames, imu " + nImu + " -> " + dir.getName());

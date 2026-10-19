@@ -82,6 +82,7 @@ public class MainActivity extends Activity {
                 hs.wantFps = getIntent().getIntExtra("fps", 120);
                 hs.evComp = getIntent().getIntExtra("ev", 0);
                 hs.wantKbps = getIntent().getIntExtra("kbps", 160_000);
+                hs.focusDpt = getIntent().getFloatExtra("focus_dpt", -2f);
                 hs.maxBatteryTenthC = getIntent().getIntExtra("max_temp_dc", 460);
                 try {
                     if (getIntent().getIntExtra("preview", 1) != 0) {     // on-screen view + board detected / not detected
