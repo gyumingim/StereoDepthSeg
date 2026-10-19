@@ -9,7 +9,7 @@ RECS=(recordings/hs_20261019_114000 recordings/hs_20261019_115620 recordings/hs_
 echo "== batch sync $(date +%T)"
 $PY -u imu_learn/batch_sync.py "${RECS[@]}" --iters 600 --write 2>&1 | grep --line-buffered -v Warning
 echo "== training $(date +%T)"
-export IMU_VRAM_GB=2.5          # 6 runs x 2.5 = 15 GB < 15.5 GB limit (user, 2026-10-19)
+export IMU_VRAM_GB=1.9          # 1.25 GB already used + 6 x (1.9 cap + ~0.4 CUDA context) = 15.0 GB < 15.5 GB limit (user, 2026-10-19)
 COMMON="--win 3 --epochs 120 --gt-smooth"
 for k in "${!RECS[@]}"; do
   val=${RECS[$k]}; train=()
