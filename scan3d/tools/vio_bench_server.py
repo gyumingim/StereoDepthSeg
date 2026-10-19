@@ -249,6 +249,15 @@ class Hub:
         self.say(f"가져오는 중: {name} → {dst}")
         o = self.adb("pull", f"{base}/{name}", str(dst), timeout=3600)
         self.say(f"가져옴: {name} ({o.splitlines()[-1][:120] if o else ''})")
+        # 160 Mbps = 20 MB/s: delete the phone copy once the PC copy has the full video (phone storage + no re-pull)
+        try:
+            n_phone = int(self.adb("shell", f"stat -c %s {base}/{name}/cam5.mp4").strip() or -1)
+            n_pc = (dst / name / "cam5.mp4").stat().st_size
+            if n_phone == n_pc and (dst / name / "meta.json").exists():
+                self.adb("shell", f"rm -r {base}/{name}")
+                self.say(f"폰 사본 지움 ({n_pc / 1e6:.0f} MB, PC 와 크기 같음)")
+        except Exception as e:
+            self.say(f"폰 사본 그대로 둠 ({e})")
         return o
 
     def push_ov(self):
