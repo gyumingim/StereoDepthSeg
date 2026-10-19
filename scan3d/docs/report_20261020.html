@@ -1,0 +1,54 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>밤사이 결과 10-20</title><style>
+:root{--bg:#f7f7f5;--fg:#1c1f24;--mut:#6b7078;--card:#fff;--line:#e2e4e8;--a:#2563eb;--b:#dc2626;--c:#16a34a;--d:#d97706;--p:#9333ea;--chip:#eef2ff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--p:#c084fc;--chip:#1e293b}}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.7 system-ui,"Malgun Gothic",sans-serif}main{max-width:980px;margin:0 auto;padding:20px 16px 80px}
+h1{font-size:27px;margin:0 0 4px}h2{font-size:21px;margin:36px 0 8px;padding-top:8px;border-top:1px solid var(--line)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}.key{border-left:5px solid var(--a);padding:8px 14px;background:var(--chip);border-radius:0 10px 10px 0;margin:10px 0}
+table{border-collapse:collapse;width:100%;font-size:14.5px}th,td{border-bottom:1px solid var(--line);padding:6px 7px;text-align:left;vertical-align:top}th{color:var(--mut);font-size:13.5px}
+.scroll{overflow-x:auto}svg{width:100%;max-width:620px;height:auto;display:block}svg text{fill:var(--fg);font:13px system-ui,sans-serif}.small{font-size:14px;color:var(--mut)}
+.good{color:var(--c);font-weight:700}.bad{color:var(--b);font-weight:700}
+</style></head><body><main>
+<h1>밤사이 결과 (2026-10-20 아침)</h1>
+<p class="small">녹화 11개 (약 43분, 45 cm 고정 초점 8개) · 평가는 학습에 안 쓴 녹화로만 · 숫자는 3초 창 위치 오차 (보드 정답 대비, 중앙값)</p>
+
+<div class="key"><b>한 줄 결론</b> — <b>물리 보정(숫자 27개)이 IMU 오차를 약 47% 줄였고, 처음 보는 녹화에서도 그대로 통했습니다.</b>
+CNN은 데이터가 10배가 되어도 거의 더해 주지 못했습니다 → <b>CNN은 접고 물리 보정을 확정</b>. 정답의 롤링셔터를 펴니 보정 결과가 12% 더 좋아졌습니다 (정답 품질이 실제로 영향 있음).</div>
+
+<h2>1. IMU 보정 — 처음 보는 녹화에서 (롤링셔터 편 정답, 평균 4개)</h2>
+<div class="card"><svg viewBox="0 0 520 114" role="img"><text x="0" y="21">보정 없음</text><rect x="170" y="8" width="263.6" height="18" rx="4" fill="var(--mut)"/><text x="439.6" y="21">1.88 cm</text><text x="0" y="47">바이어스만</text><rect x="170" y="34" width="182.2" height="18" rx="4" fill="var(--d)"/><text x="358.2" y="47">1.30 cm</text><text x="0" y="73">물리 보정</text><rect x="170" y="60" width="138.8" height="18" rx="4" fill="var(--c)"/><text x="314.8" y="73">0.99 cm</text><text x="0" y="99">물리 보정 + CNN*</text><rect x="170" y="86" width="149.2" height="18" rx="4" fill="var(--p)"/><text x="325.2" y="99">1.07 cm</text></svg>
+<p class="small">* CNN 막대는 CNN 결과가 있는 녹화만의 평균이라 위 막대들과 녹화 구성이 조금 다름.</p><p>보정 없음 1.88 cm → 바이어스만 1.30 cm → <span class="good">물리 보정 0.99 cm</span> (바이어스만보다 24% 좋음) → CNN 을 더하면: 같은 평가 녹화 3개에서 물리 보정 1.05 cm → 물리+CNN 1.07 cm (+1.6%, 사실상 0).
+판단 기준이던 "바이어스만보다 30% 이상"은 <b>물리 보정만으로 거의 도달</b>, CNN 추가분은 0에 가까움.</p>
+<div class="scroll"><table><tr><th>평가 녹화</th><th>정답</th><th>보정 없음</th><th>바이어스만</th><th>물리 보정</th><th>물리+CNN</th></tr><tr><td>4번</td><td>기존</td><td>1.62 / 0.39°</td><td>1.02 / 0.21°</td><td>0.93 / 0.22°</td><td>- / -°</td></tr><tr><td>4번</td><td>롤링셔터 폄</td><td>1.63 / 0.38°</td><td>0.91 / 0.21°</td><td>0.82 / 0.20°</td><td>- / -°</td></tr><tr><td>6번</td><td>기존</td><td>1.41 / 0.55°</td><td>0.90 / 0.34°</td><td>0.70 / 0.33°</td><td>0.71 / 0.33°</td></tr><tr><td>6번</td><td>롤링셔터 폄</td><td>1.27 / 0.54°</td><td>0.82 / 0.32°</td><td>0.60 / 0.30°</td><td>0.58 / 0.31°</td></tr><tr><td>9번</td><td>기존</td><td>2.37 / 0.66°</td><td>1.84 / 0.45°</td><td>1.41 / 0.47°</td><td>1.39 / 0.46°</td></tr><tr><td>9번</td><td>롤링셔터 폄</td><td>2.30 / 0.63°</td><td>1.71 / 0.37°</td><td>1.17 / 0.38°</td><td>1.23 / 0.40°</td></tr><tr><td>10번</td><td>기존</td><td>2.36 / 0.56°</td><td>1.80 / 0.31°</td><td>1.49 / 0.33°</td><td>1.47 / 0.33°</td></tr><tr><td>10번</td><td>롤링셔터 폄</td><td>2.34 / 0.57°</td><td>1.77 / 0.29°</td><td>1.38 / 0.30°</td><td>1.39 / 0.31°</td></tr></table></div>
+<p class="small">칸 = 위치 오차 cm / 3초 끝 회전 오차. 기존 정답 평균: 없음 1.94 · 바이어스 1.39 · 물리 1.13 · +CNN 1.19 cm.
+물리 보정이 찾은 카메라-IMU 거리(레버암, IMU 축 cm): (4.3, 0.3, -1.3), (4.3, 0.4, -1.3), (4.3, 0.3, -1.3), (4.3, 0.4, -1.1) — 학습 녹화를 바꿔도 거의 같은 값 = 그럴듯한 물리값.</p>
+</div>
+
+<h2>2. 정답(GT) 품질</h2>
+<div class="card"><b>롤링셔터 펴기</b> (자이로로 줄마다 찍힌 순간을 맞춤) — 독립 잣대(자이로 0.2초 회전 일치)로 검증:
+<div class="scroll"><table><tr><th>녹화</th><th>기존 (전체/빠른 구간)</th><th>폄</th><th>반대 방향 (확인용)</th><th>쓸 수 있는 사진</th></tr><tr><td>2번</td><td>0.283° / 0.344°</td><td><b>0.1542° / 0.1563°</b></td><td>0.2943°</td><td>8010 → 8769</td></tr><tr><td>4번</td><td>0.1252° / 0.1765°</td><td><b>0.0779° / 0.1105°</b></td><td>0.1852°</td><td>8962 → 8963</td></tr><tr><td>6번</td><td>0.1045° / 0.16°</td><td><b>0.0831° / 0.0973°</b></td><td>0.1561°</td><td>9168 → 9202</td></tr><tr><td>9번</td><td>0.1358° / 0.1583°</td><td><b>0.0996° / 0.0796°</b></td><td>0.2158°</td><td>8333 → 8333</td></tr></table></div>
+<p>모든 녹화에서 좋아지고, 일부러 반대로 하면 나빠짐 → 계산 방향까지 맞음. 모서리 추가 정밀화는 이득 없어 안 씀.</p>
+<p><b>렌즈 값</b>: 고정 초점 녹화 8개로 다시 구해 봤지만 시험 사진에서 기존 값보다 나빠서 유지. 다만 두 값의 초점거리가 2% 다르고(1267 vs 1291) 평평한 보드로는 구분이 안 됨 →
+<b>가속도계로 정답 크기 확인</b>: 최적 배율 4번 1.0127, 6번 1.0333, 9번 1.0046 (모두 1~3% 안, 곡선이 평평) → 정답 크기는 약 ±2% 안에서 맞음.</p></div>
+
+<h2>3. VIO 시험대 (OpenVINS, 보드 정답 대비, 60초씩)</h2>
+<div class="card"><div class="scroll"><table><tr><th>설정</th><th>결과</th></tr><tr><td>30 fps</td><td>4번: ATE 1.16 cm · RPE1s 0.12 cm · 회전 0.413° · 추적 95% · 스케일 1.0543</td></tr><tr><td>60 fps</td><td>4번: ATE 0.99 cm · RPE1s 0.18 cm · 회전 0.565° · 추적 95% · 스케일 1.0762</td></tr><tr><td>120 fps</td><td>4번: ATE 1106.04 cm · RPE1s 68.33 cm · 회전 2.808° · 추적 95% · 스케일 0.0024</td></tr><tr><td>60 fps · 480×270</td><td>4번: ATE 1.37 cm · RPE1s 0.31 cm · 회전 0.772° · 추적 95% · 스케일 0.9589</td></tr><tr><td>60 fps · 잡음 실측값</td><td>4번: ATE 60.24 cm · RPE1s 4.15 cm · 회전 0.81° · 추적 95% · 스케일 0.0334</td></tr><tr><td>60 fps · 물리 보정 IMU</td><td>-</td></tr><tr><td>60 fps · 물리 보정 + 잡음 실측</td><td>-</td></tr><tr><td>카메라 끊김 2/5/10 s · 생 IMU</td><td>4번: ATE 184.37 cm · RPE1s 2.89 cm · 회전 0.609° · 추적 94% · 스케일 0.0101 · 끊김 최대오차 [78.0, 77.9, 260.3] cm</td></tr><tr><td>카메라 끊김 2/5/10 s · 보정 IMU + 실측 잡음</td><td>-</td></tr></table></div>
+<p class="small">ATE = 전체 위치 오차, RPE1s = 1초 동안 흘러간 오차, 스케일 = VIO 크기/정답 크기. 물리 보정은 그 녹화를 빼고 학습한 값만 사용(공정).</p>
+<b>속도 (PC 실측 → 폰 추정)</b>
+<div class="scroll"><table><tr><th>설정</th><th>PC 중앙</th><th>PC 상위10%</th><th>폰 추정 (중앙)</th><th>폰 지속 가능 fps (발열 ×1.4)</th></tr><tr><td colspan=5>측정 중/실패</td></tr></table></div>
+<p class="small">폰 추정 = PC 시간 × 비율. 비율은 예전 폰 실측(640×480 단안 13.1 ms)을 기준으로 잡은 추정치 — 오늘 폰으로 꼭 확인할 항목.</p></div>
+
+<h2>4. 밤사이 사고와 고친 것</h2>
+<div class="card"><ul>
+<li>정답 만드는 스크립트가 지워져 있었음 (Windows 쪽 셸로 WSL 파일을 고친 것이 원인) → 복구, 규칙으로 저장.</li>
+<li>회전 곡선이 180° 넘게 돌면 깨지는 버그 (6번 녹화 6°) → 1초 조각으로 고쳐 0.12°.</li>
+<li>학습 8개를 동시에 돌렸더니 예상보다 훨씬 느려 VIO 비교를 줄여서 실행 (녹화 2개 × 60초).</li>
+<li>WSL 쪽 git 은 GitHub 로그인이 없어 그동안 push 가 안 됐음 → Windows git 으로 push (전부 올라감).</li></ul></div>
+
+<h2>5. 오늘 할 것 / 정할 것</h2>
+<div class="card"><ol>
+<li><b>폰에서 OpenVINS 속도 실측</b> (60/120 fps, 해상도별) — 폰 연결만 해 주시면 제가 돌림.</li>
+<li><b>물리 보정값을 폰 OpenVINS 설정에 넣기</b> (축척·축·바이어스·레버암 + 시간차 −2 ms).</li>
+<li>CNN 접기 확정 → 남는 연구 방향: 카메라 끊김 버티기, 120 fps 단안 VIO 속도 최적화(추적/갱신 나누기).</li>
+<li>(선택) 실제 넓은 공간에서 VIO 녹화 — 보드 앞 50 cm 보다 어려운 조건 확인.</li></ol></div>
+</main></body></html>
