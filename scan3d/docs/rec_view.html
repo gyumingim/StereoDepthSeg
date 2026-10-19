@@ -11,7 +11,9 @@ body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,"Malg
 main{max-width:1100px;margin:0 auto;padding:16px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
 select,button{font:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg)}
-video{width:100%;background:#000;border-radius:10px}
+video{width:100%;background:#000;border-radius:10px;display:block}
+.vw{position:relative}#ov{position:absolute;left:0;top:0;pointer-events:none}
+#gt{font-variant-numeric:tabular-nums;font-weight:600}
 .mut{color:var(--mut);font-size:14px}
 </style>
 </head>
@@ -20,15 +22,17 @@ video{width:100%;background:#000;border-radius:10px}
  <b>녹화</b><select id="rec"></select>
  <b>렌즈</b><select id="cam"></select>
  <b>속도</b><select id="spd"><option>0.05</option><option>0.1</option><option>0.25</option><option>0.5</option><option selected>1</option><option>2</option></select>
+ <label><input type="checkbox" id="showov" checked> 보드 인식 표시</label>
  <button id="back">◀ 1프레임</button><button id="fwd">1프레임 ▶</button>
 </div>
-<video id="v" controls preload="metadata"></video>
+<div class="vw"><video id="v" controls preload="metadata"></video><canvas id="ov"></canvas></div>
+<p id="gt" class="mut">-</p>
 <p class="mut" id="info">-</p>
 <p class="mut">스페이스 = 재생/멈춤, ← → = 1프레임 이동. 최근 녹화가 위에 있습니다.</p>
 </main>
 <script>
 const $=id=>document.getElementById(id);
-let fps=30;
+let fps=30, OV=null;
 async function links(path){const t=await (await fetch(path)).text();return [...t.matchAll(/href="([^"]+)"/g)].map(m=>decodeURIComponent(m[1]));}
 async function loadRecs(){const L=(await links('/recordings/')).filter(x=>/^(rec|hs)_\d+_\d+\/$/.test(x)).map(x=>x.slice(0,-1)).sort((a,b)=>b.replace(/^[a-z]+_/,'').localeCompare(a.replace(/^[a-z]+_/,'')));
  $('rec').innerHTML=L.map(x=>`<option value="${x}">${x}${x.startsWith('hs_')?' (240 fps)':''}</option>`).join('');await loadCams();}
@@ -36,6 +40,8 @@ async function loadCams(){const r=$('rec').value;const L=(await links(`/recordin
  $('cam').innerHTML=L.map(x=>`<option value="${x}">${x.includes('5')?'광각 (5)':x.includes('2')?'초광각 (2)':x}</option>`).join('');
  try{const m=await (await fetch(`/recordings/${r}/meta.json`)).json();fps=m.save_fps||m.fps||30;
   $('info').textContent=`${r} · ${m.width}x${m.height} · ${fps} fps · 렌즈 ${(m.physical||[]).join(', ')}`;}catch(e){$('info').textContent=r;}
+ OV=null;$('gt').textContent='보드 인식 결과 없음 (PC 처리 전)';
+ try{const o=await fetch(`/recordings/${r}/imu_gt/overlay.json`);if(o.ok){OV=await o.json();const k=OV.ok.reduce((a,b)=>a+b,0);$('gt').textContent=`보드 인식 결과: 정답 OK ${k}/${OV.ok.length} 프레임 (${(k/OV.ok.length*100).toFixed(1)} %)`;}}catch(e){}
  play();}
 function play(){const r=$('rec').value,c=$('cam').value;if(!c){$('v').removeAttribute('src');return;}$('v').src=`/recordings/${r}/${c}`;$('v').playbackRate=+$('spd').value;}
 $('rec').onchange=loadCams;$('cam').onchange=play;$('spd').onchange=()=>$('v').playbackRate=+$('spd').value;
@@ -43,6 +49,19 @@ $('back').onclick=()=>{$('v').pause();$('v').currentTime=Math.max(0,$('v').curre
 $('fwd').onclick=()=>{$('v').pause();$('v').currentTime+=1/fps;};
 addEventListener('keydown',e=>{if(e.target.tagName==='SELECT')return;if(e.key===' '){e.preventDefault();$('v').paused?$('v').play():$('v').pause();}
  if(e.key==='ArrowLeft'){e.preventDefault();$('back').click();}if(e.key==='ArrowRight'){e.preventDefault();$('fwd').click();}});
+function frameAt(t){if(!OV)return -1;const T=OV.t;let lo=0,hi=T.length-1;while(lo<hi){const m=(lo+hi+1)>>1;if(T[m]<=t+1e-4)lo=m;else hi=m-1;}return lo;}
+function drawOv(t){const v=$('v'),c=$('ov');c.style.width=v.clientWidth+'px';c.style.height=v.clientHeight+'px';
+ const d=devicePixelRatio,W=c.width=v.clientWidth*d,H=c.height=v.clientHeight*d,x=c.getContext('2d');x.clearRect(0,0,W,H);
+ if(!OV||!$('showov').checked)return;const i=frameAt(t);if(i<0)return;
+ const vw=v.videoWidth||OV.width,vh=v.videoHeight||OV.height,s=Math.min(W/vw,H/vh),ox=(W-vw*s)/2,oy=(H-vh*s)/2;
+ const q=OV.quad[i],ok=OV.ok[i];
+ if(q){x.strokeStyle=ok?'#22c55e':'#f59e0b';x.lineWidth=3*d;x.beginPath();for(let k=0;k<4;k++){const X=ox+q[2*k]*s,Y=oy+q[2*k+1]*s;k?x.lineTo(X,Y):x.moveTo(X,Y);}x.closePath();x.stroke();}
+ x.font=`bold ${20*d}px system-ui,sans-serif`;const msg=ok?`✓ 인식 · 모서리 ${OV.n[i]} · 오차 ${OV.rms[i]} px`:(OV.n[i]?`✗ 정답 안 씀 · 모서리 ${OV.n[i]}`+(OV.rms[i]!=null?` · 오차 ${OV.rms[i]} px`:''):'✗ 보드 못 찾음');
+ x.fillStyle='rgba(0,0,0,.6)';x.fillRect(ox+8*d,oy+8*d,x.measureText(msg).width+24*d,36*d);x.fillStyle=ok?'#4ade80':'#f87171';x.fillText(msg,ox+20*d,oy+33*d);
+ x.fillStyle='#fff';x.font=`${14*d}px system-ui,sans-serif`;x.fillText(`프레임 ${i}`,ox+20*d,oy+62*d);}
+function tick(now,meta){drawOv(meta.mediaTime);$('v').requestVideoFrameCallback(tick);}
+$('v').requestVideoFrameCallback(tick);$('v').addEventListener('seeked',()=>drawOv($('v').currentTime));
+$('showov').onchange=()=>drawOv($('v').currentTime);addEventListener('resize',()=>drawOv($('v').currentTime));
 loadRecs();
 </script>
 </body></html>
