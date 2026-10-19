@@ -87,9 +87,25 @@ python3 -m pyflakes scan3d/<고친 파일>.py      # WSL. Windows 스크립트�
 - StarDesk 의 usbipd.exe 가 포트 3240 을 써서 usbipd-win 과 충돌.
 - PowerShell 5.1 은 BOM 없는 UTF-8 .ps1 의 한글을 깨뜨린다 → .ps1 은 UTF-8 BOM. .vbs 는 CRLF. 나머지는 LF.
 - PowerShell 5.1 이 네이티브 명령에 넘기는 인자 안의 큰따옴표는 망가진다 → `wsl ... bash -lc` 문자열 안에는 작은따옴표만.
+- (2026-10-19) **Git Bash `sed -i` 로 `\\wsl.localhost\...` 파일을 고치지 말 것** — 임시 파일 이름 바꾸기가 실패하면 원본이 지워지고
+  `.msys000…` 만 남는다 (redo_hs_gt.sh 가 사라져 녹화 2개 정답·학습 7개가 실패). WSL 안의 `sed -i`/python 이나 편집 도구로.
+  Windows python `open(..,'w')` 은 CRLF 로 써서 셸 스크립트가 안 돈다 → WSL 쪽에서 쓰거나 `sed -i 's/\r$//'`.
+- **무거운 계산(영상 디코드·정답·학습)은 WSL 안에서** (`venv_ffs`, OpenCV 5 + torch). Windows python 으로 `\\wsl.localhost` 를 읽으면 3~4 배 느림.
+- **push 는 Windows git 으로**: WSL git 에는 GitHub 로그인이 없어 https push 가 사용자 이름 질문에서 멈춘다 (백그라운드 push 는 조용히 영영 안 끝남).
+  `cd //wsl.localhost/Ubuntu-22.04/home/system/scanner/StereoDepthSeg && git -c safe.directory='*' push origin gyumingim` (Git Bash).
+- `vio_bench_server.py` 를 **녹화를 PC 로 가져오는 중에 재시작하지 말 것** (`GET /api/pull` 의 `active` 먼저 확인) — 가져오기는 이어져도 폰 사본 정리·진행률이 끊긴다.
+- WSL 백그라운드 실행은 `nohup … &` (그냥 `&` 는 `wsl -e` 가 끝나면 같이 죽는다).
 
 ## 10. 커밋 규칙
 - 사용자가 말할 때만 커밋·push. force push 금지. `git add -A` 금지 (다른 에이전트 작업 파일이 섞임) — 자기 파일만 경로로.
 - 메시지: 영어 한 줄 요약 (+ 본문). 끝에 attribution 줄:
   `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
 - 녹화(mp4)·recon 결과·runs/ 는 올리지 않는다.
+
+## 11. 오래 걸리는 작업을 맡겨 둘 때 (2026-10-19 밤 사고 → 규칙)
+- **시작 전에 작은 조각으로 시간을 잰다** (학습 1 epoch, 녹화 1 개 처리). 학습 8 개 동시 실행을 재지 않고 걸었다가 2~3 시간 예상이 9.5 시간 → VIO 비교를 못 함.
+- **끝 알림 + 10 분 감시견을 둘 다 건다**: 끝 알림만 걸면 느림·멈춤·조용한 실패를 아침까지 모른다 (Claude 는 알림이나 메시지가 와야만 움직인다).
+  감시견 = 백그라운드로 `sleep 600; bash scan3d/tools/watchdog.sh` (진행률 요약), 깨어날 때마다 확인하고 다시 건다.
+- **동시 실행 수는 CPU 에 맞춰** (IMU 적분 반복문이 CPU 를 씀): 학습은 4 개 안팎. 녹화 읽은 결과(창·정답 곡선)는 저장해 같이 쓰기.
+- **다음 단계가 기다리는 결과는 그 단계가 끝나는 즉시 저장** (train_imu 가 끝에서만 result.json 을 써서, 결론에 필요 없는 CNN 단계 때문에 VIO 비교가 막혔다).
+- 바뀔 예정인 앞 단계(렌즈·정답) 위에서 뒤 단계(학습)를 돌리지 않는다.
