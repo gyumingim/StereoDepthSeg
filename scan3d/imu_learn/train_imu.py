@@ -62,6 +62,9 @@ def load_rec(rec, max_jump_deg=3.0, smooth=False):
     dt = al["dt_ns"]
     t0 = max(acc[0, 0], gyr[0, 0]) + dt
     t1 = min(acc[-1, 0], gyr[-1, 0]) + dt
+    trim = rec / "imu_gt" / "trim.json"                     # e.g. board moved on screen at the start (board_shift.py)
+    if trim.exists():
+        t0 = max(t0, int(json.load(open(trim))["start_ns"]))
     if part:
         fa, fb = (float(v) for v in part.split(":"))
         t0, t1 = int(t0 + fa * (t1 - t0)), int(t0 + fb * (t1 - t0))

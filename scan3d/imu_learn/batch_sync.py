@@ -46,6 +46,9 @@ def fit(rec, win=2.0, knot=20.0, iters=400, dev="cuda", log=print):
     _, gyr = read_imu(rec / "imu.csv")
     tg = gyr[:, 0].astype(np.int64)
     ok = g["ok"].astype(bool) & (g["t_ns"] > tg[0] + 50_000_000) & (g["t_ns"] < tg[-1] - 50_000_000)
+    trim = rec / "imu_gt" / "trim.json"                      # board moved on screen at the start (board_shift.py)
+    if trim.exists():
+        ok &= g["t_ns"] >= json.load(open(trim))["start_ns"]
     tf, Rbc = g["t_ns"][ok], g["R_bc"][ok]
     T0 = tg[0]
     # windows of `win` s on camera time, frames inside; integrate gyro on a 500 Hz grid from the window's first frame

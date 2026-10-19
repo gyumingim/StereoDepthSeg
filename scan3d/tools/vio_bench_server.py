@@ -162,6 +162,7 @@ class Hub:
         self.phone_connected = False
         self.ov_pushed = False
         self.log = deque(maxlen=50)
+        self.pull = dict(active=False)                  # PC pull progress for the page
 
     def background(self, fn, *args):
         """adb commands off the HTTP thread, one at a time (double clicks queue up instead of racing)."""
@@ -267,13 +268,38 @@ class Hub:
         time.sleep(3)
         self.adb("shell", "am", "force-stop", PKG)
         base = f"/sdcard/Android/data/{PKG}/files"
-        name = self.adb("shell", f"ls -d {base}/hs_* | tail -1").strip().split("/")[-1]
-        if not name.startswith("hs_"):
+        # newest folder with a real video (> 1 MB): repeated start/stop clicks leave empty hs_ folders behind
+        ls = self.adb("shell", f"for d in {base}/hs_*; do echo $(stat -c %s $d/cam5.mp4 2>/dev/null || echo 0) $d; done")
+        cands = [(int(s), p) for s, p in (l.split(" ", 1) for l in ls.splitlines() if " " in l and l.split(" ", 1)[0].isdigit())]
+        cands = sorted([c for c in cands if c[0] > 1_000_000], key=lambda c: c[1])
+        if not cands:
             self.say("고속 녹화 폴더를 못 찾음")
             return ""
+        total, path = cands[-1]
+        name = path.strip().split("/")[-1]
         dst = Path(self.a.rec_dir)
-        self.say(f"가져오는 중: {name} → {dst}")
-        o = self.adb("pull", f"{base}/{name}", str(dst), timeout=3600)
+        self.say(f"가져오는 중: {name} ({total / 1e9:.2f} GB) → {dst}")
+        self.pull = dict(name=name, total=total, done=0, rate=0.0, eta=None, t0=time.time(), active=True)
+        stop = threading.Event()
+
+        def watch():                                   # progress = size of cam5.mp4 on the PC side
+            last = (time.time(), 0)
+            while not stop.wait(2.0):
+                try:
+                    n = (dst / name / "cam5.mp4").stat().st_size
+                except OSError:
+                    continue
+                t = time.time()
+                r = (n - last[1]) / max(t - last[0], 1e-3)
+                rate = r if self.pull["rate"] == 0 else 0.7 * self.pull["rate"] + 0.3 * r
+                self.pull.update(done=n, rate=rate, eta=(total - n) / rate if rate > 1e5 else None)
+                last = (t, n)
+        threading.Thread(target=watch, daemon=True).start()
+        try:
+            o = self.adb("pull", f"{base}/{name}", str(dst), timeout=3600)
+        finally:
+            stop.set()
+            self.pull.update(active=False, done=total, eta=0)
         self.say(f"가져옴: {name} ({o.splitlines()[-1][:120] if o else ''})")
         # 160 Mbps = 20 MB/s: delete the phone copy once the PC copy has the full video (phone storage + no re-pull)
         try:
@@ -377,6 +403,8 @@ def make_handler(hub):
                 self.send_header("Content-Length", str(len(b)))
                 self.end_headers()
                 self.wfile.write(b)
+            elif self.path == "/api/pull":
+                self._json(hub.pull)
             elif self.path == "/api/phone_temp":
                 try:
                     self._json(hub.phone_temp())
@@ -457,6 +485,9 @@ a{color:inherit}
  <button class="rec" onclick="startRec()">● 녹화 시작</button>
  <button onclick="stopRec()">■ 멈추고 PC로 가져오기</button>
  <div style="margin-top:10px"><span class="big" id="state">-</span></div>
+ <div id="pullbox" style="display:none;margin-top:8px;font-variant-numeric:tabular-nums">
+  <div style="height:12px;border-radius:6px;background:var(--line);overflow:hidden"><div id="pullbar" style="height:100%;width:0;background:var(--ok)"></div></div>
+  <div class="mut" id="pulltxt">-</div></div>
  <div style="margin-top:12px;font-variant-numeric:tabular-nums"><span class="mut">폰 온도</span> <span class="big" id="tbat" style="font-size:24px">-</span>
   <span id="tstat" style="font-weight:700;margin-left:8px">-</span><div class="mut" id="tmore">-</div></div>
  <div class="mut" style="margin-top:6px">처음 1~2초는 보드를 비춰 초점 맞추기 · 폰 화면 위 초록 "인식 ✓" 유지 · 뜨거우면 자동 멈춤(찍힌 데까지 저장) ·
@@ -480,6 +511,12 @@ function temp(){fetch('/api/phone_temp').then(r=>r.json()).then(d=>{
  const T=d.temps||{};document.getElementById('tmore').textContent=['SKIN','AP','BAT','USB'].filter(k=>T[k]!=null).map(k=>({SKIN:'겉면',AP:'칩',BAT:'배터리 센서',USB:'USB'}[k])+' '+T[k].toFixed(1)+'°').join(' · ')+
   ' · 충전 '+(d.charging?'중':'안 함')+(d.level!=null?' ('+d.level+'%)':'')+' · 멈추는 기준: 배터리 46 °C 또는 심한 과열';}).catch(()=>{});}
 temp();setInterval(temp,5000);
+function pull(){fetch('/api/pull').then(r=>r.json()).then(p=>{const b=document.getElementById('pullbox');
+ if(!p.name){b.style.display='none';return;}b.style.display='';const pct=p.total?Math.min(100,p.done/p.total*100):0;
+ document.getElementById('pullbar').style.width=pct.toFixed(1)+'%';
+ const eta=p.active?(p.eta!=null?(p.eta>=60?Math.floor(p.eta/60)+'분 '+Math.round(p.eta%60)+'초':Math.round(p.eta)+'초')+' 남음 (약 '+new Date(Date.now()+p.eta*1000).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})+' 끝)':'계산 중'):'완료';
+ document.getElementById('pulltxt').textContent=`PC로 가져오기 ${p.name}: ${(p.done/1e9).toFixed(2)} / ${(p.total/1e9).toFixed(2)} GB (${pct.toFixed(0)}%) · ${(p.rate/1e6).toFixed(1)} MB/s · ${eta}`;}).catch(()=>{});}
+pull();setInterval(pull,2000);
 const es=new EventSource('/events');
 es.onmessage=ev=>{const d=JSON.parse(ev.data);
  if(d.type==='log'){log(d.msg);if(/가져옴|폰 사본/.test(d.msg))busy=false;}};
