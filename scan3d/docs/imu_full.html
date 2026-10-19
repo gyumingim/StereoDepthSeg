@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IMU 보정 전체 설명</title>
+<style>
+:root{--bg:#f7f7f5;--fg:#1c1f24;--mut:#6b7078;--card:#fff;--line:#e2e4e8;--a:#2563eb;--b:#dc2626;--c:#16a34a;--d:#d97706;--chip:#eef2ff;--svgbg:#fbfbfa}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--chip:#1e293b;--svgbg:#16191d}}
+:root[data-theme="dark"]{--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--chip:#1e293b;--svgbg:#16191d}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.7 system-ui,"Malgun Gothic",sans-serif}
+main{max-width:980px;margin:0 auto;padding:20px 16px 80px}
+h1{font-size:27px;margin:0 0 4px}h2{font-size:22px;margin:44px 0 8px;padding-top:8px;border-top:1px solid var(--line)}h3{font-size:18px;margin:18px 0 4px}
+.lead{color:var(--mut);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+.num{display:inline-block;background:var(--a);color:#fff;border-radius:999px;min-width:30px;height:30px;text-align:center;line-height:30px;font-weight:700;margin-right:8px;font-size:16px}
+.eq{background:var(--chip);border-radius:10px;padding:10px 14px;font-family:ui-monospace,Consolas,monospace;font-size:15px;overflow-x:auto;white-space:pre;line-height:1.6}
+.small{font-size:14px;color:var(--mut)}
+svg{width:100%;height:auto;display:block;background:var(--svgbg);border-radius:10px}
+svg text{fill:var(--fg);font:13px system-ui,"Malgun Gothic",sans-serif}svg .m{fill:var(--mut)}
+table{border-collapse:collapse;width:100%;font-size:15px}th,td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}
+th{font-size:14px;color:var(--mut);font-weight:600}
+td.good{color:var(--c);font-weight:600}td.bad{color:var(--b);font-weight:600}td.mid{color:var(--d);font-weight:600}
+.scroll{overflow-x:auto}
+code{background:var(--chip);padding:0 5px;border-radius:5px;font-size:15px}
+b.k{color:var(--a)}
+.toc a{color:var(--a);text-decoration:none}.toc li{margin:2px 0}
+.qa{border-left:4px solid var(--a);padding:4px 12px;margin:10px 0}
+input[type=range]{width:100%}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.flow span{background:var(--chip);border-radius:10px;padding:6px 10px;font-size:15px}
+.flow i{color:var(--mut);font-style:normal}
+</style>
+</head>
+<body><main>
+<h1>IMU 보정 — 처음부터 끝까지</h1>
+<p class="lead">이 프로젝트에서 IMU를 어떻게 보정하는지 전부 한 곳에 정리했습니다. 위에서부터 차례로 읽으면 전체가 이어집니다. 숫자는 2026-10-19 녹화(240 fps, 모니터 보드) 기준입니다.</p>
+
+<div class="card toc"><b>차례</b>
+<ol>
+ <li><a href="#why">왜 보정하나 — IMU 오차는 시간이 갈수록 커진다</a></li>
+ <li><a href="#flow">전체 흐름 한 장</a></li>
+ <li><a href="#rec">촬영 — 무엇을 기록하나</a></li>
+ <li><a href="#gt">정답 만들기 — 보드로 폰 위치·자세 재기</a></li>
+ <li><a href="#sync">시간·축 맞추기</a></li>
+ <li><a href="#int">IMU로 위치 계산하기 (물리 적분)</a></li>
+ <li><a href="#cmp">IMU 계산과 정답을 비교하는 법 (3초 창)</a></li>
+ <li><a href="#models">보정 모델 3가지 — 바이어스 · 물리 보정 · CNN</a></li>
+ <li><a href="#train">학습 — 숫자를 어떻게 찾나</a></li>
+ <li><a href="#res">지금까지 결과와 뜻</a></li>
+ <li><a href="#next">다음에 할 것 · 판단 기준</a></li>
+ <li><a href="#code">어느 파일이 무엇을 하나</a></li>
+ <li><a href="#words">용어 사전</a></li>
+</ol></div>
+
+<!-- ================================================================ -->
+<h2 id="why"><span class="num">1</span>왜 보정하나 — IMU 오차는 시간이 갈수록 커진다</h2>
+<div class="card">
+<p>IMU는 두 가지를 잽니다.</p>
+<ul>
+ <li><b class="k">자이로</b>: 폰이 얼마나 빨리 <b>돌고</b> 있는지 (초당 몇 rad)</li>
+ <li><b class="k">가속도계</b>: 폰이 얼마나 <b>밀리고</b> 있는지 + 중력 (m/s²)</li>
+</ul>
+<p>위치를 알려면 가속도를 <b>두 번 더해야</b>(적분) 합니다. 가속도 → 속도 → 위치. 그런데 IMU 값에는 늘 작은 오차가 섞여 있습니다.</p>
+<div class="eq">IMU가 준 값 = 진짜 값 × (축척 오차) + 축 어긋남 + 바이어스(늘 붙는 작은 값) + 잡음</div>
+<p>가속도에 바이어스 <i>b</i>가 있으면 위치 오차는 <b>½ · b · t²</b> — 시간의 <b>제곱</b>으로 커집니다. 아래에서 직접 움직여 보세요.</p>
+<label>가속도 바이어스 <b id="bv">0.02</b> m/s² (이번 학습에서 찾은 값이 약 0.02)</label>
+<input type="range" id="bias" min="0" max="0.1" step="0.005" value="0.02">
+<svg id="drift" viewBox="0 0 900 260" role="img" aria-label="바이어스에 따른 위치 오차 그래프"></svg>
+<p class="small">그래서 "작은 바이어스 하나 빼기"만 해도 몇 초 뒤 위치가 크게 달라집니다. 자이로 오차는 더 무섭습니다 — 자세가 조금 틀리면 중력(9.8 m/s²)이 엉뚱한 방향으로 새어 들어가 가속도 오차가 됩니다 (1° 틀리면 0.17 m/s²).</p>
+<div class="qa"><b>목표</b>: IMU 값에서 이런 오차를 빼 주는 "보정"을 찾는 것. 보정이 좋으면 카메라가 잠깐 안 보일 때(가려짐·어둠·빠른 움직임) IMU만으로 버티는 시간이 길어집니다.</div>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="flow"><span class="num">2</span>전체 흐름 한 장</h2>
+<div class="card">
+<div class="flow">
+ <span>① 촬영<br><small>폰 240 fps 영상 + IMU 500 Hz</small></span><i>→</i>
+ <span>② 정답<br><small>사진마다 보드로 폰 위치·자세</small></span><i>→</i>
+ <span>③ 맞추기<br><small>시간차 dt · 축 방향 R</small></span><i>→</i>
+ <span>④ 학습<br><small>IMU 적분이 정답을 따르도록 보정값 찾기</small></span><i>→</i>
+ <span>⑤ 평가<br><small>학습에 안 쓴 녹화에서 오차 비교</small></span>
+</div>
+<p>핵심 아이디어는 하나입니다: <b>카메라+보드는 느리지만 정확한 자</b>, <b>IMU는 빠르지만 흐르는 자</b>. 정확한 자로 흐르는 자를 바로잡는 법을 배웁니다.</p>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="rec"><span class="num">3</span>촬영 — 무엇을 기록하나</h2>
+<div class="card">
+<table>
+ <tr><th>파일</th><th>내용</th><th>왜 필요</th></tr>
+ <tr><td><code>cam5.mp4</code></td><td>주 카메라 1920×1080, 240 fps, 노출 4 ms (자동)</td><td>보드를 찍어 정답을 만듦</td></tr>
+ <tr><td><code>frames_cam5.csv</code></td><td>사진마다 정확한 센서 시각, 노출, 롤링셔터 시간</td><td>사진이 "언제" 찍혔는지</td></tr>
+ <tr><td><code>results_cam5.csv</code></td><td>카메라가 준 시각 전부 + 초점</td><td>시각 짝짓기 검사·수리</td></tr>
+ <tr><td><code>imu.csv</code></td><td>가속도·자이로 각각 약 500 Hz, 같은 폰 시계</td><td>보정할 대상</td></tr>
+ <tr><td><code>meta.json</code></td><td>시계 차이, 초점, 멈춘 이유(과열 등)</td><td>나중에 다시 계산할 때</td></tr>
+</table>
+<p class="small">왜 240 fps: 정답이 4.2 ms마다 나와 촘촘하고, 롤링셔터(위→아래 줄 읽는 시간)가 2.9 ms로 60 fps(8.7 ms)의 1/3이라 빠른 움직임에서도 사진이 덜 찌그러짐. 초점은 45 cm 고정 — 초점이 바뀌면 렌즈 값(K)이 바뀌기 때문.</p>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="gt"><span class="num">4</span>정답 만들기 — 보드로 폰 위치·자세 재기</h2>
+<div class="card">
+<p><b>ChArUco 보드</b> = 체스판 + 칸마다 다른 무늬(마커). 무늬 덕에 "이 모서리가 보드의 몇 번째 모서리인지" 알 수 있습니다. 모니터 보드는 9×5칸, 안쪽 모서리 32개, 칸 63.403 mm (모니터 픽셀 간격으로 계산).</p>
+<svg viewBox="0 0 900 230" role="img" aria-label="보드 모서리에서 카메라 자세 계산">
+ <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--fg)"/></marker></defs>
+ <g transform="translate(40,40)">
+  <rect width="200" height="130" fill="none" stroke="var(--fg)"/>
+  <g fill="var(--fg)" opacity=".85"><rect x="0" y="0" width="40" height="43"/><rect x="80" y="0" width="40" height="43"/><rect x="160" y="0" width="40" height="43"/><rect x="40" y="43" width="40" height="44"/><rect x="120" y="43" width="40" height="44"/><rect x="0" y="87" width="40" height="43"/><rect x="80" y="87" width="40" height="43"/><rect x="160" y="87" width="40" height="43"/></g>
+  <g fill="var(--c)"><circle cx="40" cy="43" r="5"/><circle cx="80" cy="43" r="5"/><circle cx="120" cy="43" r="5"/><circle cx="160" cy="43" r="5"/><circle cx="40" cy="87" r="5"/><circle cx="80" cy="87" r="5"/><circle cx="120" cy="87" r="5"/><circle cx="160" cy="87" r="5"/></g>
+  <text x="0" y="160" class="m">보드: 모서리의 실제 위치(mm)를 앎</text>
+ </g>
+ <line x1="270" y1="105" x2="400" y2="105" stroke="var(--fg)" stroke-width="2" marker-end="url(#ar)"/>
+ <text x="285" y="95">사진 속 위치(픽셀)</text>
+ <g transform="translate(420,45)">
+  <rect width="190" height="120" rx="8" fill="none" stroke="var(--a)" stroke-width="2"/>
+  <text x="14" y="30">PnP 계산</text>
+  <text x="14" y="55" class="m">"실제 위치가 이 픽셀에</text>
+  <text x="14" y="75" class="m">찍히려면 카메라가</text>
+  <text x="14" y="95" class="m">어디서 어느 쪽을 봤나?"</text>
+ </g>
+ <line x1="620" y1="105" x2="700" y2="105" stroke="var(--fg)" stroke-width="2" marker-end="url(#ar)"/>
+ <g transform="translate(715,40)">
+  <text x="0" y="20">사진마다 정답</text>
+  <text x="0" y="48" class="m">위치 p (보드 기준, m)</text>
+  <text x="0" y="72" class="m">자세 R (회전)</text>
+  <text x="0" y="96" class="m">시각 t (노출 가운데)</text>
+ </g>
+ <text x="40" y="215" class="m">렌즈 값 K(초점거리·중심)와 왜곡을 알아야 PnP가 정확함 → 녹화 속 보드 사진으로 직접 구함(자기 보정)</text>
+</svg>
+<table>
+ <tr><th>확인</th><th>1번 녹화</th><th>2번 녹화</th><th>뜻</th></tr>
+ <tr><td>정답으로 쓴 사진</td><td>77%</td><td>77%</td><td>나머지는 보드가 다 안 보이거나 흐림·오차 큼</td></tr>
+ <tr><td>재투영 오차 (중앙)</td><td class="good">0.71 px</td><td class="good">0.80 px</td><td>계산한 자세로 모서리를 다시 그렸을 때 사진과의 차이. 작을수록 정답이 정확</td></tr>
+ <tr><td>보드까지 거리</td><td>57 cm</td><td>49 cm</td><td></td></tr>
+</table>
+<p class="small">정답 거르기: 재투영 오차 1.5 px 넘는 사진, 모서리 8개 미만 사진은 버림. 이웃 사진 사이 회전이 자이로와 3° 넘게 다르면 그 사진도 버림(보드 자세가 뒤집히는 드문 실수 방지).</p>
+<p class="small">롤링셔터 보정: 보드가 사진 위쪽에 찍혔으면 시각을 조금 앞으로, 아래쪽이면 뒤로 — <code>t = 노출 가운데 + (보드 y / 사진 높이 − 0.5) × 2.9 ms</code>.</p>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="sync"><span class="num">5</span>시간·축 맞추기</h2>
+<div class="card">
+<p>자세한 그림은 <a href="sync_easy.html">sync_easy.html</a>. 요약:</p>
+<ol>
+ <li><b>같은 시계</b>: 영상 파일 시각(깨어 있는 시계)을 IMU 시계(부팅 시계)로 옮기고, 카메라가 준 정확한 센서 시각과 짝지음 (차이 보통 1 µs, 최대 0.12 ms).</li>
+ <li><b>남은 시간차 dt</b>: 0.2초 동안 <i>보드가 본 회전</i>과 <i>자이로를 더한 회전</i>을 겹쳐서 가장 잘 맞는 dt를 찾음.</li>
+ <li><b>축 방향 R_ci</b>: IMU 칩과 카메라는 살짝 틀어져 있음 → 같은 계산에서 같이 구함.</li>
+</ol>
+<table>
+ <tr><th></th><th>60 fps (어제)</th><th>240 fps (오늘)</th></tr>
+ <tr><td>0.2초 회전 차이 (작을수록 잘 맞음)</td><td>0.54°</td><td class="good">0.43°</td></tr>
+ <tr><td>10초 구간마다 dt 흔들림</td><td>±4~5 ms</td><td class="good">±1.1 ms</td></tr>
+</table>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="int"><span class="num">6</span>IMU로 위치 계산하기 (물리 적분)</h2>
+<div class="card">
+<p>IMU 값 하나(2 ms마다)가 들어올 때마다 아래 네 줄을 반복합니다. 이게 전부입니다.</p>
+<div class="eq">R ← R · exp(ω · dt)          ① 자세: 자이로 ω만큼 2 ms 동안 돌림
+a = R · f + g                ② 가속도 f(폰 기준)를 보드 기준으로 돌리고 중력 g를 더함
+v ← v + a · dt               ③ 속도에 더함
+p ← p + v · dt + ½ a · dt²   ④ 위치에 더함</div>
+<ul>
+ <li><b>R</b>: 폰이 보드에 대해 어느 쪽을 보는지 (3×3 회전). <b>ω</b>: 자이로. <b>dt</b>: 2 ms.</li>
+ <li><b>f</b>: 가속도계 값. 가만히 있어도 +9.8 m/s²(위쪽)이 나옵니다 — 중력을 버티는 힘을 재기 때문. 그래서 ②에서 g(아래로 9.8)를 더하면 가만히 있을 땐 a = 0.</li>
+ <li><b>g</b>(보드 좌표에서 중력 방향)는 녹화마다 IMU로 맞춥니다 — 보드(모니터)가 약간 기울어져 있어서.</li>
+</ul>
+<p class="small">이 계산은 정확한 물리 공식이라 틀릴 게 없습니다. 틀리는 건 들어가는 <b>ω와 f</b>뿐 → 그래서 보정은 "ω와 f를 고치는 것"입니다.</p>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="cmp"><span class="num">7</span>IMU 계산과 정답을 비교하는 법 (3초 창)</h2>
+<div class="card">
+<p>녹화를 <b>3초짜리 창</b>으로 자릅니다 (0.25초씩 밀면서 겹치게). 창마다:</p>
+<ol>
+ <li>창의 첫 정답 사진의 <b>자세 R</b>에서 출발 (위치는 0).</li>
+ <li>3초 동안 IMU를 적분해 모든 순간의 R, p를 계산.</li>
+ <li>창 안의 <b>정답 사진 전부</b>(240 fps면 최대 약 700장)와 비교.</li>
+</ol>
+<svg viewBox="0 0 900 230" role="img" aria-label="3초 창에서 IMU 궤적과 정답 비교">
+ <path d="M40 180 C 200 170, 300 60, 450 90 S 700 170, 860 60" fill="none" stroke="var(--b)" stroke-width="3"/>
+ <path d="M40 180 C 200 168, 300 70, 450 108 S 700 195, 860 98" fill="none" stroke="var(--a)" stroke-width="3" stroke-dasharray="7 5"/>
+ <g fill="var(--b)"><circle cx="120" cy="174" r="4"/><circle cx="220" cy="140" r="4"/><circle cx="330" cy="80" r="4"/><circle cx="450" cy="90" r="4"/><circle cx="560" cy="128" r="4"/><circle cx="680" cy="150" r="4"/><circle cx="790" cy="100" r="4"/></g>
+ <text x="40" y="24"><tspan fill="var(--b)">● 정답(보드)</tspan>   <tspan fill="var(--a)">┅ IMU 적분</tspan>   <tspan class="m">— 갈수록 벌어짐 = 보정할 오차</tspan></text>
+ <text x="40" y="215" class="m">0초                                                                                                                   3초</text>
+</svg>
+<h3>시작 속도를 모르는 문제</h3>
+<p>적분하려면 시작 <b>속도</b>가 필요한데, 정답 위치를 미분해서 속도를 구하면 잡음이 큽니다. 그래서 <b>시작 위치 p0와 시작 속도 v0를 "가장 잘 맞게" 계산으로 정합니다</b> (최소제곱). 그 뒤 남는 차이만 오차로 봅니다.</p>
+<div class="eq">정답 p_j ≈ IMU 적분 q_j + p0 + v0 · τ_j     (τ_j = 창 시작부터 그 사진까지 시간)
+→ p0, v0 를 직선 맞추기로 구하고, 남은 차이 = "위치 잔차"</div>
+<p>즉 이 오차는 "IMU가 <b>궤적의 휘어짐</b>(가속·회전)을 얼마나 정확히 설명하나"입니다. 표에 나오는 두 숫자:</p>
+<ul>
+ <li><b>위치 오차 (cm)</b>: 창 안 위치 잔차의 RMS, 창들의 중앙값.</li>
+ <li><b>회전 오차 (°)</b>: 창 끝(3초 뒤) 자세가 정답과 몇 도 다른지, 중앙값.</li>
+</ul>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="models"><span class="num">8</span>보정 모델 3가지</h2>
+<div class="card">
+<table>
+ <tr><th>모델</th><th>하는 일</th><th>숫자 개수</th><th>비유</th></tr>
+ <tr><td><b>바이어스만</b></td><td>자이로 3 + 가속도 3 값을 늘 빼기</td><td>6</td><td>저울의 0점 맞추기</td></tr>
+ <tr><td><b>물리 보정</b></td><td>자이로·가속도 각각 3×3 행렬(축척·축 어긋남) + 바이어스 + 카메라↔IMU 거리(레버암)</td><td>27</td><td>저울 0점 + 눈금 간격 + 기울기 맞추기</td></tr>
+ <tr><td><b>CNN</b></td><td>지난 1.5초의 IMU를 보고, 그 순간 값을 얼마나 고칠지 매번 계산</td><td>약 17만 5천</td><td>상황(진동·온도·움직임)에 따라 다르게 고치는 사람</td></tr>
+</table>
+<h3>물리 보정 식</h3>
+<div class="eq">고친 자이로    ω' = G · ω + b_g        (G: 3×3, 처음엔 단위행렬 = 안 고침)
+고친 가속도    f' = A · f + b_a
+카메라 위치 = IMU 위치 + R · r     (r: IMU에서 카메라까지, 폰 기준 m)</div>
+<p class="small">레버암 r이 왜 필요: 정답은 <b>카메라</b> 위치인데 적분은 <b>IMU</b> 위치. 폰을 돌리기만 해도 두 점은 다르게 움직입니다. 1번 녹화에서 찾은 r ≈ (4.4, 0.5, 2.1) cm — 폰 안에서 그럴듯한 거리.</p>
+<h3>CNN 구조</h3>
+<svg viewBox="0 0 900 200" role="img" aria-label="인과 1차원 CNN">
+ <g>
+  <rect x="30" y="70" width="150" height="60" rx="8" fill="none" stroke="var(--fg)"/><text x="45" y="96">IMU 6채널</text><text x="45" y="116" class="m">500 Hz</text>
+  <line x1="185" y1="100" x2="240" y2="100" stroke="var(--fg)" stroke-width="2" marker-end="url(#ar)"/>
+  <rect x="245" y="40" width="360" height="120" rx="8" fill="none" stroke="var(--a)" stroke-width="2"/>
+  <text x="260" y="66">합성곱 7층 (필터 7칸, 간격 1·2·4·…·64)</text>
+  <text x="260" y="92" class="m">층마다 더 먼 과거를 봄 → 약 1.5초</text>
+  <text x="260" y="116" class="m">"과거만" 봄 (인과): 실시간에 쓸 수 있게</text>
+  <text x="260" y="140" class="m">채널 64개</text>
+  <line x1="610" y1="100" x2="665" y2="100" stroke="var(--fg)" stroke-width="2" marker-end="url(#ar)"/>
+  <rect x="670" y="70" width="200" height="60" rx="8" fill="none" stroke="var(--fg)"/><text x="685" y="96">보정값 6채널</text><text x="685" y="116" class="m">IMU 값에 더함</text>
+ </g>
+ <text x="30" y="190" class="m">처음엔 출력이 0(= 안 고침)에서 시작해, 학습하면서 필요한 만큼만 고치도록 함. "물리 보정 + CNN"은 물리 보정 뒤에 남은 것만 CNN이 고침.</text>
+</svg>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="train"><span class="num">9</span>학습 — 숫자를 어떻게 찾나</h2>
+<div class="card">
+<p>적분 네 줄(6장)이 모두 미분 가능한 계산이라, "보정 숫자를 아주 조금 바꾸면 오차가 얼마나 변하나"를 컴퓨터가 자동으로 구할 수 있습니다. 그 방향으로 숫자를 조금씩 고치기를 수천 번 반복 = <b>경사하강</b>.</p>
+<div class="eq">손실 = 평균 [ (회전 오차 / 0.005 rad)² + (위치 잔차 / 1 cm)² ] × 가중치
+가중치 = 1 / (1 + (그 순간 회전 빠르기 / 1 rad/s)²)   ← 빨리 돌 때 정답을 덜 믿음 (흐림·롤링셔터)</div>
+<ul>
+ <li><b>학습 / 평가 나누기</b>: 학습에 쓴 구간과 <b>다른</b> 구간(또는 다른 녹화)으로 점수를 매겨야 진짜 실력. 학습 구간 점수만 좋으면 = 외운 것(과적합).</li>
+ <li><b>물리 보정의 벌점</b>: 행렬이 단위행렬에서 너무 멀어지면 작은 벌점 → 정답 잡음까지 외우는 걸 막음.</li>
+ <li><b>중력 방향</b>: 보정 전에 녹화마다 원래 IMU로 먼저 맞춰 둠 → 모든 모델이 같은 출발선.</li>
+ <li>순서: 바이어스만 → 물리 보정 → (물리 보정 고정) + CNN → CNN 혼자 (비교용).</li>
+</ul>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="res"><span class="num">10</span>지금까지 결과와 뜻</h2>
+<div class="card">
+<h3>1번 녹화를 앞 70% 학습 / 뒤 30% 평가 (3초 창)</h3>
+<div class="scroll"><table>
+ <tr><th>방식</th><th>학습 구간 위치</th><th>평가 구간 위치</th><th>평가 회전 (3초 끝)</th><th>판정</th></tr>
+ <tr><td>보정 없음</td><td>2.36 cm</td><td>2.26 cm</td><td>0.88°</td><td>기준</td></tr>
+ <tr><td>바이어스만</td><td>1.89</td><td>2.28</td><td>0.77°</td><td class="mid">회전만 조금 나아짐</td></tr>
+ <tr><td>물리 보정</td><td>1.44</td><td class="good">2.13 (−6 %)</td><td class="good">0.75°</td><td class="good">유일하게 평가에서도 나아짐</td></tr>
+ <tr><td>물리 보정 + CNN</td><td class="good">0.99</td><td class="bad">2.70</td><td>0.84°</td><td class="bad">과적합</td></tr>
+ <tr><td>CNN만</td><td>1.41</td><td class="bad">2.97</td><td>0.86°</td><td class="bad">과적합</td></tr>
+</table></div>
+<p><b>읽는 법</b>: CNN은 학습 구간에서 0.99 cm까지 내려가지만 처음 보는 구간에서는 오히려 나빠집니다. 데이터 1분 30초로는 "규칙"이 아니라 "그 구간"을 외운 것입니다. 숫자가 27개뿐인 물리 보정은 외울 여지가 적어 평가에서도 조금 나아졌습니다.</p>
+<p class="small">돌아가는 중: 1번 학습 → 2번 평가 (녹화가 바뀌어도 통하나). 3·4번 정답이 나오면 4개 녹화로 다시.</p>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="next"><span class="num">11</span>다음에 할 것 · 판단 기준</h2>
+<div class="card">
+<ol>
+ <li><b>데이터 늘리기</b>: 45 cm 고정 초점으로 녹화를 더 모음 (지금 약 8분). CNN은 수십 분은 있어야 의미가 있을 가능성이 큼(추정).</li>
+ <li><b>렌즈 값 하나로</b>: 고정 초점 녹화들은 렌즈 값을 많은 사진으로 한 번 정확히 구해 같이 씀 (지금은 녹화마다 80장으로 따로 구해 3 % 차이 — 확인 중).</li>
+ <li><b>녹화 단위로 나눠 평가</b>: 4개 중 하나씩 빼고 학습 → 뺀 것으로 평가 (가장 정직한 점수).</li>
+ <li><b>판단 기준</b>: 처음 보는 녹화에서 <b>바이어스만보다 30 % 이상</b> 좋아지면 CNN을 계속, 아니면 물리 보정까지만 쓰고 다음 단계(VIO 결합)로.</li>
+</ol>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="code"><span class="num">12</span>어느 파일이 무엇을 하나</h2>
+<div class="card scroll">
+<table>
+ <tr><th>단계</th><th>파일</th><th>하는 일</th></tr>
+ <tr><td>촬영</td><td><code>phone_stereo/arlat/…/HsRecorder.java</code></td><td>240 fps 녹화, 시각 짝짓기, 초점 고정, 과열 멈춤</td></tr>
+ <tr><td></td><td><code>…/HsPreview.java</code></td><td>폰 화면 미리보기 + 마커 인식 표시</td></tr>
+ <tr><td></td><td><code>scan3d/tools/vio_bench_server.py</code></td><td>측정 웹 :8793 (녹화 시작·멈춤·PC로 가져오기)</td></tr>
+ <tr><td>정답</td><td><code>scan3d/imu_learn/imu_gt.py</code></td><td>자기 보정(렌즈 값) → 사진마다 PnP → <code>imu_gt/gt.npz</code></td></tr>
+ <tr><td></td><td><code>hs_fix_ts.py</code></td><td>녹화 뒤 시각 다시 짝짓기</td></tr>
+ <tr><td></td><td><code>gt_overlay.py</code> + <code>docs/rec_view.html</code></td><td>영상 위에 인식 결과 표시</td></tr>
+ <tr><td>맞추기</td><td><code>check_sync.py</code></td><td>정밀 dt · R_ci → <code>imu_gt/align.json</code></td></tr>
+ <tr><td>학습</td><td><code>train_imu.py</code></td><td>적분·손실·바이어스/물리 보정/CNN 학습·평가 → <code>runs/…/result.json</code></td></tr>
+ <tr><td>보드</td><td><code>config/charuco/board_monitor_6x6.json</code>, <code>docs/charuco_monitor.html</code></td><td>모니터 보드 크기·화면</td></tr>
+</table>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="words"><span class="num">13</span>용어 사전</h2>
+<div class="card scroll">
+<table>
+ <tr><th>말</th><th>뜻</th></tr>
+ <tr><td>IMU</td><td>자이로 + 가속도계 묶음</td></tr>
+ <tr><td>바이어스</td><td>가만히 있어도 붙는 작은 값 (0점이 어긋남)</td></tr>
+ <tr><td>적분</td><td>작은 조각을 계속 더하기 (가속도 → 속도 → 위치)</td></tr>
+ <tr><td>드리프트</td><td>적분 오차가 시간이 갈수록 쌓여 흘러가는 것</td></tr>
+ <tr><td>ChArUco</td><td>체스판 + 마커 보드. 모서리 번호를 알 수 있어 일부만 보여도 됨</td></tr>
+ <tr><td>PnP</td><td>알려진 3D 점과 사진 속 2D 점으로 카메라 위치·자세를 푸는 계산</td></tr>
+ <tr><td>재투영 오차</td><td>구한 자세로 점을 다시 그렸을 때 사진과 몇 픽셀 차이 나나</td></tr>
+ <tr><td>K (렌즈 값)</td><td>초점거리·중심점. 왜곡 계수와 함께 렌즈를 설명</td></tr>
+ <tr><td>롤링셔터</td><td>사진을 위 줄부터 차례로 읽어서 줄마다 찍힌 시각이 다름</td></tr>
+ <tr><td>dt / R_ci</td><td>카메라와 IMU 사이 시간차 / 축 방향 차이</td></tr>
+ <tr><td>레버암</td><td>IMU에서 카메라까지의 거리 (폰 안에서 몇 cm)</td></tr>
+ <tr><td>창 (window)</td><td>잘라서 보는 3초 구간</td></tr>
+ <tr><td>손실</td><td>"얼마나 틀렸나"를 숫자 하나로. 학습은 이걸 줄임</td></tr>
+ <tr><td>경사하강</td><td>손실이 줄어드는 방향으로 숫자를 조금씩 고치기 반복</td></tr>
+ <tr><td>과적합</td><td>학습 데이터만 외워서 처음 보는 데이터에서 오히려 나빠짐</td></tr>
+ <tr><td>인과(causal) CNN</td><td>과거 값만 보는 CNN — 실시간에 쓸 수 있음</td></tr>
+</table>
+</div>
+<p class="small">관련 페이지: <a href="sync_easy.html">시간·축 맞추기</a> · <a href="settings_easy.html">카메라 설정</a> · <a href="train_easy.html">학습 쉬운 설명</a> · <a href="cnn_easy.html">CNN 쉬운 설명</a></p>
+</main>
+<script>
+function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+function drawDrift(){
+ const b=+document.getElementById('bias').value;document.getElementById('bv').textContent=b.toFixed(3);
+ const s=document.getElementById('drift'),W=900,H=260,L=60,R=870,T=20,B=220,tmax=10,ymax=1.0;
+ const X=t=>L+(R-L)*t/tmax,Y=e=>B-(B-T)*Math.min(e,ymax)/ymax;
+ let g=`<line x1="${L}" y1="${B}" x2="${R}" y2="${B}" stroke="${css('--line')}"/><line x1="${L}" y1="${T}" x2="${L}" y2="${B}" stroke="${css('--line')}"/>`;
+ for(let t=0;t<=10;t+=2)g+=`<text x="${X(t)-6}" y="${B+18}" class="m">${t}s</text>`;
+ for(const e of [0.25,0.5,0.75,1])g+=`<line x1="${L}" y1="${Y(e)}" x2="${R}" y2="${Y(e)}" stroke="${css('--line')}" stroke-dasharray="3 5"/><text x="8" y="${Y(e)+4}" class="m">${e*100}cm</text>`;
+ let d='';for(let i=0;i<=200;i++){const t=tmax*i/200;d+=(i?'L':'M')+X(t).toFixed(1)+' '+Y(0.5*b*t*t).toFixed(1);}
+ g+=`<path d="${d}" fill="none" stroke="${css('--b')}" stroke-width="3"/>`;
+ const e3=0.5*b*9,e10=0.5*b*100;
+ g+=`<circle cx="${X(3)}" cy="${Y(e3)}" r="5" fill="${css('--a')}"/><text x="${X(3)+10}" y="${Y(e3)-8}">3초: ${(e3*100).toFixed(1)} cm</text>`;
+ g+=`<text x="${X(6.6)}" y="${T+16}">10초: ${(e10*100).toFixed(0)} cm</text>`;
+ s.innerHTML=g;}
+document.getElementById('bias').addEventListener('input',drawDrift);drawDrift();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',drawDrift);
+</script>
+</body></html>
