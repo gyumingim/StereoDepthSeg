@@ -163,6 +163,7 @@ class Hub:
         self.ov_pushed = False
         self.log = deque(maxlen=50)
         self.pull = dict(active=False)                  # PC pull progress for the page
+        self.rec = dict(active=False, reason=None)      # recording state (app may stop by itself on overheat)
 
     def background(self, fn, *args):
         """adb commands off the HTTP thread, one at a time (double clicks queue up instead of racing)."""
@@ -260,10 +261,30 @@ class Hub:
         o = self.adb("shell", "am", "start", "-n", f"{PKG}/.MainActivity", "--es", "mode", "hs", "--ei", "fps", str(int(fps)),
                      "--ef", "focus_dpt", str(FOCUS_DPT))
         self.say(f"고속 녹화 시작: {fps} fps, 초점 {100 / FOCUS_DPT:.0f} cm 고정 (멈추면 PC 로 가져옴)")
+        self.rec = dict(active=True, start=time.time(), reason=None)
+        threading.Thread(target=self._watch_rec, args=(self.rec,), daemon=True).start()
         return o
+
+    def _watch_rec(self, rec):
+        """The app can stop on its own (overheat): it then writes meta.json. Notice it, tell the page, pull the data."""
+        base = f"/sdcard/Android/data/{PKG}/files"
+        time.sleep(6)
+        while rec["active"]:
+            out = self.adb("shell", f"d=$(ls -d {base}/hs_* | tail -1); [ -f $d/meta.json ] && grep -o '\"stop_reason\": \"[^\"]*' $d/meta.json",
+                           timeout=15)
+            if '"stop_reason"' in out and rec["active"]:
+                reason = out.split('"stop_reason": "')[-1].strip()
+                rec.update(active=False, reason=reason)
+                if not reason.startswith("user"):
+                    self.say(f"폰이 녹화를 스스로 멈춤: {reason} → 지금까지 찍힌 것을 PC 로 가져옴")
+                    self.background(self.hs_stop)
+                return
+            time.sleep(3)
 
     def hs_stop(self):
         """홈 키 → 앱이 onPause 에서 파일을 닫음 → 끝낸 뒤 가장 최근 hs_ 폴더를 PC recordings/ 로 가져옴."""
+        if self.rec.get("active"):
+            self.rec.update(active=False, reason="user")
         self.adb("shell", "input", "keyevent", "KEYCODE_HOME")
         time.sleep(3)
         self.adb("shell", "am", "force-stop", PKG)
@@ -404,7 +425,8 @@ def make_handler(hub):
                 self.end_headers()
                 self.wfile.write(b)
             elif self.path == "/api/pull":
-                self._json(hub.pull)
+                self._json(dict(hub.pull, rec=dict(active=hub.rec.get("active"), reason=hub.rec.get("reason"),
+                                                   start=hub.rec.get("start"))))
             elif self.path == "/api/phone_temp":
                 try:
                     self._json(hub.phone_temp())
@@ -498,11 +520,11 @@ a{color:inherit}
 let t0=null, busy=false;
 function post(u,b){return fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})}).then(r=>r.json()).then(j=>{if(j.out)log(j.out);if(j.error)log('오류: '+j.error);});}
 function log(s){const e=document.getElementById('log');e.textContent=(s+'\n'+e.textContent).slice(0,8000);}
-function startRec(){t0=Date.now();post('/api/hs_start',{fps:240});}
+function startRec(){t0=Date.now();stopNote='';post('/api/hs_start',{fps:240});}
 function stopRec(){t0=null;busy=true;document.getElementById('state').textContent='가져오는 중…';post('/api/hs_stop').then(()=>{busy=false;});}
 setInterval(()=>{if(busy)return;const s=document.getElementById('state');
  if(t0){const k=Math.floor((Date.now()-t0)/1000);s.textContent='● 녹화 중 '+Math.floor(k/60)+':'+String(k%60).padStart(2,'0');s.style.color=getComputedStyle(document.documentElement).getPropertyValue('--rec');}
- else{s.textContent='대기';s.style.color='';}},500);
+ else{s.textContent=stopNote||'대기';s.style.color=stopNote?'#d97706':'';}},500);
 const TS=['정상','약간 뜨거움','뜨거움','심한 과열 (녹화 멈춤)','위험','긴급','종료 직전'],TC=['var(--ok)','var(--ok)','#d97706','var(--rec)','var(--rec)','var(--rec)','var(--rec)'];
 function temp(){fetch('/api/phone_temp').then(r=>r.json()).then(d=>{
  if(!d.ok){document.getElementById('tbat').textContent='폰 연결 안 됨';document.getElementById('tstat').textContent='';document.getElementById('tmore').textContent=d.error||'';return;}
@@ -511,7 +533,11 @@ function temp(){fetch('/api/phone_temp').then(r=>r.json()).then(d=>{
  const T=d.temps||{};document.getElementById('tmore').textContent=['SKIN','AP','BAT','USB'].filter(k=>T[k]!=null).map(k=>({SKIN:'겉면',AP:'칩',BAT:'배터리 센서',USB:'USB'}[k])+' '+T[k].toFixed(1)+'°').join(' · ')+
   ' · 충전 '+(d.charging?'중':'안 함')+(d.level!=null?' ('+d.level+'%)':'')+' · 멈추는 기준: 배터리 46 °C 또는 심한 과열';}).catch(()=>{});}
 temp();setInterval(temp,5000);
+let stopNote='';
 function pull(){fetch('/api/pull').then(r=>r.json()).then(p=>{const b=document.getElementById('pullbox');
+ const rc=p.rec||{};if(rc.active&&!t0&&rc.start)t0=rc.start*1000;                       // page reloaded mid-recording
+ if(t0&&rc.active===false&&rc.reason&&!rc.reason.startsWith('user')){t0=null;stopNote='폰이 스스로 멈춤 ('+(rc.reason.startsWith('overheat')?'과열':rc.reason)+') — 찍힌 데까지 자동으로 가져옴';}
+ if(stopNote&&!t0){const s=document.getElementById('state');if(!busy){s.textContent=stopNote;s.style.color='#d97706';}}
  if(!p.name){b.style.display='none';return;}b.style.display='';const pct=p.total?Math.min(100,p.done/p.total*100):0;
  document.getElementById('pullbar').style.width=pct.toFixed(1)+'%';
  const eta=p.active?(p.eta!=null?(p.eta>=60?Math.floor(p.eta/60)+'분 '+Math.round(p.eta%60)+'초':Math.round(p.eta)+'초')+' 남음 (약 '+new Date(Date.now()+p.eta*1000).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})+' 끝)':'계산 중'):'완료';
