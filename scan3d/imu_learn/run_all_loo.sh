@@ -7,8 +7,10 @@ PY=../venv_ffs/bin/python
 export PYTHONIOENCODING=utf-8
 OLD=(recordings/hs_20261019_114000 recordings/hs_20261019_115620 recordings/hs_20261019_125714)
 FIX=(recordings/hs_20261019_131326 recordings/hs_20261019_132803 recordings/hs_20261019_145816 recordings/hs_20261019_151358 recordings/hs_20261019_152631 recordings/hs_20261019_154320 recordings/hs_20261019_161035)
-ALL=("${OLD[@]}" "${FIX[@]}")
+EXTRA=(recordings/hs_20261019_163345)   # train only (fixed focus, recorded last)
+ALL=("${OLD[@]}" "${FIX[@]}" "${EXTRA[@]}")
 for R in "${ALL[@]}"; do
+  until [ -f "$R/meta.json" ]; do sleep 20; done   # still being pulled from the phone
   [ -f "$R/imu_gt/gt.npz" ] || bash imu_learn/redo_hs_gt.sh "$R" > "runs/redo_$(basename $R).log" 2>&1
   if ! grep -q batch_sync "$R/imu_gt/align.json"; then
     echo "== sync $R $(date +%T)"
