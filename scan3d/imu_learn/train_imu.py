@@ -51,7 +51,7 @@ def ang_deg(R):
     return np.degrees(np.arccos(np.clip((np.trace(R) - 1) / 2, -1, 1)))
 
 
-def load_rec(rec, max_jump_deg=3.0):
+def load_rec(rec, max_jump_deg=3.0, smooth=False):
     """rec = 녹화 폴더, 또는 'folder@a:b' = 그 녹화의 시간 비율 a~b 구간만 (녹화 하나를 학습/평가로 나눌 때)."""
     rec, part = (str(rec).split("@") + [None])[:2]
     rec = Path(rec)
@@ -70,6 +70,14 @@ def load_rec(rec, max_jump_deg=3.0):
     a = np.stack([np.interp(grid, acc[:, 0] + dt, acc[:, 1 + j]) for j in range(3)], 1)
     ok = gt["ok"].astype(bool) & (gt["t_ns"] > t0) & (gt["t_ns"] < t1)
     tf, Rbc, pbc = gt["t_ns"][ok], gt["R_bc"][ok], gt["p_bc"][ok]
+    rms = np.nan_to_num(gt["rms_px"][ok], nan=1.5)
+    n_raw = len(tf)
+    if smooth:                                              # 사진마다 점 → 사진만으로 그린 곡선 (gt_smooth.py, IMU 안 씀)
+        from gt_smooth import smooth_gt
+        k = np.r_[True, np.diff(tf) > 10_000]
+        tf, Rbc, pbc, rms = tf[k], Rbc[k], pbc[k], rms[k]
+        keep, Rbc, pbc = smooth_gt(tf, Rbc, pbc)
+        tf, Rbc, pbc, rms = tf[keep], Rbc[keep], pbc[keep], rms[keep]
     Rbi = Rbc @ R_ci                                        # IMU 축 → 보드
     # 정답 거르기: 이웃 프레임 사이 회전을 자이로 적분과 비교
     bad = np.zeros(len(tf), bool)
@@ -83,7 +91,7 @@ def load_rec(rec, max_jump_deg=3.0):
         if ang_deg((Rbi[k - 1].T @ Rbi[k]).T @ R) > max_jump_deg:
             bad[k] = True
     keep = ~bad
-    tf, Rbi, pf = tf[keep], Rbi[keep], pbc[keep]
+    tf, Rbi, pf, rms = tf[keep], Rbi[keep], pbc[keep], rms[keep]
     # 보드 좌표 중력: 거의 정지(자이로 작음) 프레임에서 g_b = -R_bi f
     gi = np.stack([np.interp(tf, grid, g[:, j]) for j in range(3)], 1)
     ai = np.stack([np.interp(tf, grid, a[:, j]) for j in range(3)], 1)
@@ -92,13 +100,13 @@ def load_rec(rec, max_jump_deg=3.0):
         still = np.argsort(np.linalg.norm(gi, axis=1))[:30]
     gb = -np.mean(np.einsum("nij,nj->ni", Rbi[still], ai[still]), 0)
     gb = gb / np.linalg.norm(gb) * 9.80665
-    return dict(name=rec.name + (f"@{part}" if part else ""), grid=grid, gyr=g, acc=a, tf=tf, Rbi=Rbi, p=pf, gb=gb,
+    return dict(name=rec.name + (f"@{part}" if part else ""), grid=grid, gyr=g, acc=a, tf=tf, Rbi=Rbi, p=pf, gb=gb, rms=rms,
                 n_still=len(still), n_bad=int(bad.sum()), n_gt=len(tf))
 
 
 def windows(r, stride=HZ // 4, min_frames=25):
     """겹치는 1 s 창 (0.25 s 씩). 창 안 정답 프레임: 표본 위치 idx, 자세, 위치 (MAXF 로 채움 + mask)."""
-    X, IDX, RG, PG, M = [], [], [], [], []
+    X, IDX, RG, PG, M, Q = [], [], [], [], [], []
     grid, tf = r["grid"], r["tf"]
     for i in range(0, len(grid) - WIN, stride):
         ta, tb = grid[i], grid[i + WIN - 1]
@@ -114,8 +122,9 @@ def windows(r, stride=HZ // 4, min_frames=25):
         RG.append(np.concatenate([r["Rbi"][js], np.repeat(r["Rbi"][js[-1:]], pad, 0)]))
         PG.append(np.concatenate([r["p"][js], np.repeat(r["p"][js[-1:]], pad, 0)]))
         M.append(np.r_[np.ones(n), np.zeros(pad)])
+        Q.append(np.r_[r["rms"][js], np.full(pad, 1.0)])
     f = lambda z, t=np.float32: np.asarray(z, t)
-    return dict(X=f(X), idx=f(IDX, np.int64), R=f(RG), p=f(PG), m=f(M), gb=r["gb"].astype(np.float32), name=r["name"])
+    return dict(X=f(X), idx=f(IDX, np.int64), R=f(RG), p=f(PG), m=f(M), q=f(Q), gb=r["gb"].astype(np.float32), name=r["name"])
 
 
 # ---------------------------------------------------------------- models + physics
@@ -235,6 +244,7 @@ def main():
     ap.add_argument("--win", type=float, default=1.0, help="창 길이 s (IMU 표류가 보드 정답 잡음보다 커지게 길게)")
     ap.add_argument("--eval-only", action="store_true", help="보정 없음·바이어스만 평가 (CNN 학습 안 함)")
     ap.add_argument("--rot-sigma", type=float, default=0.005, help="자세 손실 기준 rad (보드 정답 잡음이 크면 키움)")
+    ap.add_argument("--gt-smooth", action="store_true", help="정답을 사진만으로 그린 매끈한 곡선으로 (gt_smooth.py)")
     ap.add_argument("--out", default=str(HERE.parent / "runs" / time.strftime("imu_cnn_%Y%m%d-%H%M%S")))
     a = ap.parse_args()
     global WIN, MAXF
@@ -247,7 +257,7 @@ def main():
     def prep(recs):
         sets = []
         for rec in recs:
-            r = load_rec(rec)
+            r = load_rec(rec, smooth=a.gt_smooth)
             W = windows(r)
             print(f"{r['name']}: 정답 프레임 {r['n_gt']} (버림 {r['n_bad']}), 창 {len(W['X'])}, 정지 {r['n_still']}, "
                   f"g_b {np.round(r['gb'], 2)}", flush=True)
@@ -324,11 +334,12 @@ def main():
                 perm = torch.randperm(len(s["X"]), device=dev)
                 for b in range(0, len(perm), a.batch):
                     j = perm[b:b + a.batch]
-                    W = {k: s[k][j] for k in ("idx", "R", "p", "m")}
+                    W = {k: s[k][j] for k in ("idx", "R", "p", "m", "q")}
                     ang, res = window_loss(apply(model, s["X"][j]), W, s["gb"], lever_of(model))
                     # 빠르게 돌 때 보정판 정답 자체가 1~2° 흔들림(롤링셔터·번짐) → 그 프레임은 덜 믿음
                     wn = s["X"][j][..., :3].norm(dim=-1).gather(1, W["idx"])
-                    m = W["m"] / (1 + (wn / 1.0) ** 2)
+                    # + 재투영 오차가 큰 사진 (보통 0.7 px) 도 덜 믿음
+                    m = W["m"] / (1 + (wn / 1.0) ** 2) / (1 + (W["q"] / 1.0) ** 2)
                     loss = (((ang / a.rot_sigma) ** 2 + (res / 0.01) ** 2) * m).sum() / m.sum()
                     if isinstance(model, Calib):
                         loss = loss + 1e-3 * model.reg()
