@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>모니터 보정판</title>
+<style>
+/* the board must stay black on white in every theme: no dark mode on purpose */
+html,body{margin:0;height:100%;background:#fff;color:#111;font:15px/1.5 system-ui,"Malgun Gothic",sans-serif;overflow:hidden}
+#wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#board{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+#bar{position:fixed;left:12px;top:12px;max-width:min(560px,calc(100vw - 24px));background:rgba(255,255,255,.96);border:1px solid #ccc;border-radius:10px;padding:10px 14px;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+#bar b{color:#1d4ed8}#bar .warn{color:#b91c1c;font-weight:600}#bar .ok{color:#15803d;font-weight:600}
+#bar input{width:90px;font:inherit;padding:2px 6px}
+#bar button{font:inherit;padding:3px 10px;margin-right:6px;cursor:pointer}
+code{background:#f1f5f9;padding:0 4px;border-radius:4px}
+body.full{cursor:none}body.full #bar{display:none}
+</style>
+</head>
+<body>
+<div id="wrap"><img id="board" src="charuco_monitor.png" alt="ChArUco 보정판 5x7, DICT_6X6_250"></div>
+<div id="bar">
+ <div><b>모니터 보정판</b> — 칸 240 px · 마커 144 px (사진 1픽셀 = 화면 1픽셀)</div>
+ <div id="chk"></div>
+ <div>예상 칸 크기 <b id="sq">-</b> (모니터 크기 597 × 336 mm 기준)</div>
+ <div style="margin-top:6px">자로 잰 <b>보드 긴 쪽 (7칸)</b>: <input id="mm" type="number" step="0.5" placeholder="mm"> mm → 칸 <b id="sqm">-</b></div>
+ <div class="small" id="json"></div>
+ <div style="margin-top:8px"><button id="fs">전체 화면 (Esc 로 나감)</button><button id="hide">이 상자 숨기기</button></div>
+ <div style="margin-top:6px;font-size:13px;color:#555">밝기 최대 · 야간 모드 끄기 · 브라우저 확대 100 % · 반사 없게. 녹화 첫 1~2초는 보드를 비춰서 초점을 맞추세요.</div>
+</div>
+<script>
+const SQ_PX = 240, IMG_W = 1680, IMG_H = 1200, MON_W_MM = 597, MON_W_PX = 2560;
+const img = document.getElementById('board');
+function layout() {
+  const dpr = window.devicePixelRatio || 1;
+  img.style.width = (IMG_W / dpr) + 'px';            // CSS px -> exactly IMG_W device pixels
+  img.style.height = (IMG_H / dpr) + 'px';
+  const devW = Math.round(screen.width * dpr);
+  const ok = devW === MON_W_PX;
+  document.getElementById('chk').innerHTML = ok
+    ? `<span class="ok">✓ 모니터 ${devW} px 폭, 배율 ${dpr} — 픽셀 그대로 표시 중</span>`
+    : `<span class="warn">⚠ 화면 폭 ${devW} px (기대 ${MON_W_PX}). 다른 모니터이거나 브라우저 확대가 100 %가 아님 → 크기가 틀립니다 (Ctrl+0)</span>`;
+  document.getElementById('sq').textContent = (SQ_PX * MON_W_MM / MON_W_PX).toFixed(2) + ' mm';
+}
+function measured() {
+  const v = parseFloat(document.getElementById('mm').value);
+  if (!(v > 0)) { document.getElementById('sqm').textContent = '-'; document.getElementById('json').textContent = ''; return; }
+  const sq = v / 7;
+  document.getElementById('sqm').textContent = sq.toFixed(2) + ' mm';
+  document.getElementById('json').innerHTML =
+    `→ <code>config/charuco/board_monitor_6x6.json</code> 의 <code>"square_mm": ${sq.toFixed(2)}</code> 로 (이 값을 알려 주면 바꿔 둠)`;
+  try { localStorage.setItem('mon_mm', String(v)); } catch (e) {}
+}
+document.getElementById('mm').addEventListener('input', measured);
+try { const v = localStorage.getItem('mon_mm'); if (v) { document.getElementById('mm').value = v; } } catch (e) {}
+document.getElementById('fs').onclick = () => document.documentElement.requestFullscreen().then(() => document.body.classList.add('full'));
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('full'); });
+document.getElementById('hide').onclick = () => document.getElementById('bar').style.display = 'none';
+window.addEventListener('resize', layout);
+matchMedia('(resolution: 1dppx)').addEventListener?.('change', layout);
+layout(); measured();
+</script>
+</body>
+</html>

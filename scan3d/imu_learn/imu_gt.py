@@ -207,7 +207,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("rec")
     ap.add_argument("--cam", default="5")
+    ap.add_argument("--board", default=None,
+                    help="보드 json (기본 board_user_A4_6x6.json). 모니터에 띄운 보드: config/charuco/board_monitor_6x6.json")
     a = ap.parse_args()
+    if a.board:
+        global BOARD_JSON
+        BOARD_JSON = Path(a.board)
+    print(f"보드: {BOARD_JSON.name}")
     rec = Path(a.rec)
     meta = json.load(open(rec / "meta.json"))
     size = (int(meta["width"]), int(meta["height"]))
