@@ -36,15 +36,18 @@ def main(rec):
     keep = np.r_[True, np.diff(t) > 1e-5]                    # strictly increasing for the spline
     t, p, R = t[keep], p[keep], R[keep]
     ps, rv_pt, rv_sm, seg_id = np.full_like(p, np.nan), np.zeros_like(p), np.zeros_like(p), np.zeros(len(t), int)
+    from gt_smooth import smooth_rot
+    Rsm = R.copy()
     for k, s in enumerate(segments(t)):
         ps[s] = smooth(t[s], p[s])
-        ref = Rot.from_matrix(R[s[0]])
-        rv = (ref.inv() * Rot.from_matrix(R[s])).as_rotvec()       # small rotations from the segment start
-        rv_pt[s], rv_sm[s] = rv, smooth(t[s], rv)
+        Rsm[s], _ = smooth_rot(t[s], R[s])                            # 1 s chunks (no 180° wrap)
+        ref = Rot.from_matrix(R[s[0]])                                # display only: rotation from the segment start
+        rv_pt[s] = (ref.inv() * Rot.from_matrix(R[s])).as_rotvec()
+        rv_sm[s] = (ref.inv() * Rot.from_matrix(Rsm[s])).as_rotvec()
         seg_id[s] = k + 1
     m = seg_id > 0
     dp = (p[m] - ps[m]) * 1000
-    dr = np.degrees(np.linalg.norm(rv_pt[m] - rv_sm[m], axis=1))
+    dr = np.degrees((Rot.from_matrix(R[m]).inv() * Rot.from_matrix(Rsm[m])).magnitude())
     speed = np.r_[0, np.linalg.norm(np.diff(ps[m], axis=0), axis=1) / np.maximum(np.diff(t[m]), 1e-6)]
     stats = dict(frames=int(m.sum()), segments=int(seg_id.max()), seconds=float(t[-1]),
                  jitter_mm_rms=[round(float(v), 3) for v in np.sqrt(np.mean(dp ** 2, 0))],
