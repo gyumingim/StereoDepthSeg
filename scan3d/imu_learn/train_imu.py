@@ -253,6 +253,10 @@ def main():
     MAXF = int(fps * 1.2 * a.win)
     print(f"창 {a.win} s, 정답 프레임 최대 {MAXF} (최대 {fps:.0f} fps)", flush=True)
     dev = "cuda" if torch.cuda.is_available() else "cpu"
+    import os
+    if dev == "cuda" and os.environ.get("IMU_VRAM_GB"):     # several runs share the GPU: cap each (total under 15.5 GB)
+        tot = torch.cuda.get_device_properties(0).total_memory / 2**30
+        torch.cuda.set_per_process_memory_fraction(min(1.0, float(os.environ["IMU_VRAM_GB"]) / tot))
 
     def prep(recs):
         sets = []
