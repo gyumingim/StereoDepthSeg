@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>전체 한 번에 맞추기</title>
+<style>
+:root{--bg:#f7f7f5;--fg:#1c1f24;--mut:#6b7078;--card:#fff;--line:#e2e4e8;--a:#2563eb;--b:#dc2626;--c:#16a34a;--d:#d97706;--chip:#eef2ff;--svgbg:#fbfbfa}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--chip:#1e293b;--svgbg:#16191d}}
+:root[data-theme="dark"]{--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--chip:#1e293b;--svgbg:#16191d}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.7 system-ui,"Malgun Gothic",sans-serif}
+main{max-width:940px;margin:0 auto;padding:20px 16px 80px}
+h1{font-size:26px;margin:0 0 4px}h2{font-size:21px;margin:36px 0 8px}
+.lead{color:var(--mut);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.big{font-size:22px;font-weight:700}
+.small{font-size:14px;color:var(--mut)}
+svg{width:100%;height:auto;display:block;background:var(--svgbg);border-radius:10px}
+svg text{fill:var(--fg);font:13px system-ui,"Malgun Gothic",sans-serif}svg .m{fill:var(--mut)}
+input[type=range]{width:100%}
+button{font:inherit;padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
+.pill{display:inline-block;border-radius:999px;padding:2px 10px;font-weight:700}
+.bad{background:color-mix(in srgb,var(--b) 15%,transparent);color:var(--b)}
+.good{background:color-mix(in srgb,var(--c) 15%,transparent);color:var(--c)}
+.emoji{font-size:40px;line-height:1}
+</style>
+</head>
+<body><main>
+<h1>"두 장씩 비교" vs "전체를 한 번에 맞추기"</h1>
+<p class="lead">카메라와 IMU의 시간차(dt)를 찾는 두 가지 방법. 지금은 왼쪽 방법을 쓰고 있고, 오른쪽으로 바꾸자는 이야기입니다.</p>
+
+<h2>① 비유로 먼저</h2>
+<div class="grid">
+ <div class="card"><div class="emoji">📏</div><h3>두 장씩 비교 (지금)</h3>
+  <p>몸무게를 <b>한 번</b> 재고 끝. 저울이 0.3 kg씩 흔들리면 그 흔들림이 결과에 그대로 들어갑니다.</p>
+  <p>지금 방식은 0.2초 떨어진 <b>사진 두 장</b>의 회전 차이를 자이로와 비교합니다. 사진 한 장의 정답이 조금만 흔들려도 그 비교가 흔들립니다. 그걸 여러 번 해서 가운데 값을 고르지만, 각 비교가 이미 흔들려 있습니다.</p></div>
+ <div class="card"><div class="emoji">📈</div><h3>전체를 한 번에 (제안)</h3>
+  <p>몸무게를 <b>100번</b> 재서 평균. 흔들림이 서로 상쇄돼서 훨씬 정확합니다.</p>
+  <p>녹화 전체(수만 장)의 정답과, 자이로를 이어 붙인 <b>하나의 매끈한 곡선</b>을 겹쳐 놓고 "곡선을 dt만큼 밀었을 때 <b>모든 점</b>과 가장 잘 맞는 dt"를 찾습니다. 점 하나하나는 흔들려도 수만 개가 평균됩니다.</p></div>
+</div>
+
+<h2>② 직접 해 보기 (가짜 데이터로)</h2>
+<div class="card">
+<p>컴퓨터가 손 흔들기와 비슷한 회전을 만들고, <b>진짜 dt = <span id="tdt">2.0</span> ms</b>로 정답과 자이로를 어긋나게 만들었습니다. 두 방법이 이 값을 얼마나 잘 찾는지 봅니다.</p>
+<label>정답(보드)의 흔들림: <b id="nv">0.30</b>° (실제 녹화는 0.2~0.4° 정도로 추정)</label>
+<input type="range" id="noise" min="0.05" max="1" step="0.05" value="0.3">
+<label>녹화 길이: <b id="lv">20</b> 초</label>
+<input type="range" id="len" min="5" max="120" step="5" value="20">
+<button id="again">🎲 다시 뽑기</button>
+
+<h3>가까이 본 모습 (1초)</h3>
+<svg id="zoom" viewBox="0 0 900 220"></svg>
+<p class="small"><span style="color:var(--b)">● 보드가 본 각도 (사진마다, 흔들림 있음)</span> · <span style="color:var(--a)">— 자이로를 이어 붙인 각도 (매끈함)</span></p>
+
+<h3>방법 1: 두 장씩 비교 → 10초 구간마다 dt 하나</h3>
+<svg id="pair" viewBox="0 0 900 140"></svg>
+<p>구간마다 찾은 dt가 <span class="pill bad" id="pairres">-</span> — 진짜 값(초록 선) 주변에 흩어집니다.</p>
+
+<h3>방법 2: 전체를 한 번에 → "dt를 바꾸면 전체 어긋남이 얼마나?" 곡선</h3>
+<svg id="whole" viewBox="0 0 900 220"></svg>
+<p>곡선의 가장 낮은 곳 = 찾은 dt: <span class="pill good" id="wholeres">-</span></p>
+<p class="small">녹화를 길게 할수록, 흔들림이 작을수록 방법 2의 바닥이 더 뾰족해지고 정확해집니다. 슬라이더로 확인해 보세요.</p>
+</div>
+
+<h2>③ 실제로는 무엇을 같이 맞추나</h2>
+<div class="card">
+<p>방법 2에서 곡선을 "밀기(dt)"만 하는 게 아니라, 같은 계산에서 몇 가지를 <b>동시에</b> 조절합니다:</p>
+<ul>
+ <li><b>dt</b> — 시간차 (곡선을 좌우로 밀기)</li>
+ <li><b>R</b> — IMU 축과 카메라 축의 틀어짐 (곡선을 돌리기, 3D에서)</li>
+ <li><b>자이로 바이어스</b> — 자이로를 이어 붙이면 조금씩 흘러가는 기울기 (곡선을 기울이기)</li>
+</ul>
+<p>전부 "모든 사진과 가장 잘 맞게"를 기준으로 한꺼번에 찾습니다. 서로 얽혀 있어서 따로 찾을 때보다 같이 찾을 때 더 정확합니다. 이게 Kalibr 같은 도구가 쓰는 방식입니다.</p>
+<p class="small">기대 효과 (추정): 0.2초 회전 차이 0.43° 중 정답 흔들림 몫이 평균돼 줄어들고, 구간마다 ±1.1 ms 흔들리던 dt가 녹화 전체에서 하나로 0.1 ms 수준까지 정해짐.</p>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id), css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let seed=1; function rnd(){seed=(seed*16807)%2147483647;return (seed-1)/2147483646;}
+function gauss(){let u=0,v=0;while(!u)u=rnd();while(!v)v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+const DT_TRUE=0.002, FPS=60, IMU=500;
+let S=null;
+function make(){
+ const L=+$('len').value, sig=+$('noise').value*Math.PI/180;
+ const comps=[];for(let k=0;k<8;k++)comps.push({a:0.25*rnd()+0.05,f:0.3+2.7*rnd(),p:6.28*rnd()});
+ const th=t=>comps.reduce((s,c)=>s+c.a*Math.sin(2*Math.PI*c.f*t+c.p),0);
+ const n=Math.floor(L*IMU), G=new Float64Array(n+1), gt=new Float64Array(n+1);
+ for(let i=0;i<=n;i++){gt[i]=i/IMU;}
+ G[0]=th(0);for(let i=1;i<=n;i++){const t=gt[i-1]+0.5/IMU,w=(th(t+1e-4)-th(t-1e-4))/2e-4+0.003*gauss();G[i]=G[i-1]+w/IMU;}   // integrated gyro (noise)
+ const bt=[],bv=[];for(let t=0.1;t<L-0.1;t+=1/FPS){bt.push(t);bv.push(th(t-DT_TRUE)+sig*gauss());}           // camera time = imu time + dt
+ S={L,G,bt,bv,th};
+}
+function Gat(t){const x=t*IMU,i=Math.floor(x);if(i<0)return S.G[0];if(i>=S.G.length-1)return S.G[S.G.length-1];return S.G[i]+(S.G[i+1]-S.G[i])*(x-i);}
+function wholeCost(dt){ // fit offset + slope (gyro bias) by least squares, return rms residual
+ const bt=S.bt,bv=S.bv,n=bt.length;let st=0,stt=0,sy=0,sty=0;const y=new Float64Array(n);
+ for(let i=0;i<n;i++){y[i]=bv[i]-Gat(bt[i]-dt);st+=bt[i];stt+=bt[i]*bt[i];sy+=y[i];sty+=bt[i]*y[i];}
+ const b=(n*sty-st*sy)/(n*stt-st*st),a=(sy-b*st)/n;let e=0;for(let i=0;i<n;i++){const r=y[i]-a-b*bt[i];e+=r*r;}return Math.sqrt(e/n);}
+function pairEst(t0,t1){ // increments over 12 frames (0.2 s), median abs residual, best dt
+ const bt=S.bt,bv=S.bv,K=12;let best=null;
+ for(let dt=-0.012;dt<=0.012001;dt+=0.0002){const r=[];for(let i=0;i+K<bt.length;i++){if(bt[i]<t0||bt[i]>=t1)continue;
+   const db=bv[i+K]-bv[i],dg=Gat(bt[i+K]-dt)-Gat(bt[i]-dt);if(Math.abs(dg)<0.035)continue;r.push(Math.abs(db-dg));}
+  if(r.length<20)continue;r.sort((x,y)=>x-y);const m=r[r.length>>1];if(!best||m<best[0])best=[m,dt];}
+ return best&&best[1];}
+function draw(){
+ $('nv').textContent=(+$('noise').value).toFixed(2);$('lv').textContent=$('len').value;$('tdt').textContent=(DT_TRUE*1000).toFixed(1);
+ // zoom
+ let g='';const t0=2,t1=3,X=t=>40+(t-t0)/(t1-t0)*830;let lo=1e9,hi=-1e9;
+ for(let t=t0;t<=t1;t+=0.002){const v=Gat(t);lo=Math.min(lo,v);hi=Math.max(hi,v);}
+ const Y=v=>190-(v-lo)/(hi-lo+1e-9)*160;let d='';for(let t=t0;t<=t1;t+=0.002)d+=(d?'L':'M')+X(t).toFixed(1)+' '+Y(Gat(t-DT_TRUE)).toFixed(1);
+ g+=`<path d="${d}" fill="none" stroke="${css('--a')}" stroke-width="2.5"/>`;
+ S.bt.forEach((t,i)=>{if(t>=t0&&t<=t1)g+=`<circle cx="${X(t).toFixed(1)}" cy="${Y(S.bv[i]).toFixed(1)}" r="4" fill="${css('--b')}"/>`;});
+ $('zoom').innerHTML=g+`<text x="40" y="212" class="m">2초 ~ 3초 (가까이)</text>`;
+ // pair
+ const seg=10,est=[];for(let t=0;t+seg<=S.L+1e-9;t+=seg){const e=pairEst(t,t+seg);if(e!=null)est.push(e);}
+ if(S.L<seg){const e=pairEst(0,S.L);if(e!=null)est.push(e);}
+ const PX=v=>450+v*1000*35;let p=`<line x1="40" y1="70" x2="860" y2="70" stroke="${css('--line')}"/>`;
+ for(let v=-12;v<=12;v+=2)p+=`<text x="${PX(v/1000)-8}" y="120" class="m">${v}</text>`;
+ p+=`<line x1="${PX(DT_TRUE)}" y1="20" x2="${PX(DT_TRUE)}" y2="100" stroke="${css('--c')}" stroke-width="3"/>`;
+ est.forEach((e,k)=>p+=`<circle cx="${PX(e)}" cy="${55+(k%4)*10}" r="7" fill="${css('--b')}" opacity=".8"/>`);
+ p+=`<text x="40" y="135" class="m">ms</text>`;$('pair').innerHTML=p;
+ if(est.length){const mn=Math.min(...est)*1000,mx=Math.max(...est)*1000;$('pairres').textContent=`${mn.toFixed(1)} ~ ${mx.toFixed(1)} ms (${est.length}개 구간)`;}else $('pairres').textContent='구간 부족';
+ // whole
+ const ds=[],cs=[];for(let dt=-0.012;dt<=0.012001;dt+=0.0001){ds.push(dt);cs.push(wholeCost(dt));}
+ let bi=0;cs.forEach((c,i)=>{if(c<cs[bi])bi=i;});const cmax=Math.max(...cs),cmin=cs[bi];
+ const WX=v=>40+(v+0.012)/0.024*820,WY=c=>200-(c-cmin)/(cmax-cmin+1e-12)*170;
+ let w='';let dd='';ds.forEach((v,i)=>dd+=(i?'L':'M')+WX(v).toFixed(1)+' '+WY(cs[i]).toFixed(1));
+ w+=`<path d="${dd}" fill="none" stroke="${css('--a')}" stroke-width="3"/>`;
+ w+=`<line x1="${WX(DT_TRUE)}" y1="20" x2="${WX(DT_TRUE)}" y2="205" stroke="${css('--c')}" stroke-width="2" stroke-dasharray="5 4"/>`;
+ w+=`<circle cx="${WX(ds[bi])}" cy="${WY(cmin)}" r="7" fill="${css('--c')}"/>`;
+ for(let v=-12;v<=12;v+=4)w+=`<text x="${WX(v/1000)-8}" y="218" class="m">${v}</text>`;
+ w+=`<text x="44" y="30" class="m">전체 어긋남 (높을수록 안 맞음)</text>`;$('whole').innerHTML=w;
+ $('wholeres').textContent=`${(ds[bi]*1000).toFixed(1)} ms (진짜 ${(DT_TRUE*1000).toFixed(1)})`;
+}
+function regen(){make();draw();}
+$('noise').oninput=regen;$('len').oninput=regen;$('again').onclick=()=>{seed=Math.floor(Math.random()*1e9)+1;regen();};
+regen();
+</script>
+</body></html>
