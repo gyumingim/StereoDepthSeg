@@ -183,6 +183,29 @@ class Hub:
         r = subprocess.run([self.a.adb, *args], capture_output=True, text=True, timeout=timeout)
         return (r.stdout + r.stderr).strip()
 
+    def phone_temp(self):
+        """Battery / skin / chip temperatures and Android thermal status (0 none … 3 severe = recording stops)."""
+        import re
+        out = self.adb("shell", "dumpsys battery | grep -E 'temperature:|level:|powered:'; "
+                       "dumpsys thermalservice | grep -E 'Thermal Status|Temperature[{]'", timeout=15)
+        d = {"ok": "temperature" in out}
+        m = re.search(r"^\s*temperature: (\d+)", out, re.M)
+        if m:
+            d["battery_c"] = int(m.group(1)) / 10
+        m = re.search(r"^\s*level: (\d+)", out, re.M)
+        if m:
+            d["level"] = int(m.group(1))
+        d["charging"] = bool(re.search(r"(AC|USB|Wireless) powered: true", out))
+        m = re.search(r"Thermal Status: (\d)", out)
+        if m:
+            d["status"] = int(m.group(1))
+        temps = {}
+        for v, name in re.findall(r"mValue=([\d.]+), mType=\d+, mName=(\w+)", out):
+            if float(v) > 0:
+                temps[name] = float(v)                  # the later list (current HAL values) wins
+        d["temps"] = temps
+        return d
+
     def broadcast(self, d):
         s = json.dumps(d)
         for q in list(self.clients):
@@ -354,6 +377,11 @@ def make_handler(hub):
                 self.send_header("Content-Length", str(len(b)))
                 self.end_headers()
                 self.wfile.write(b)
+            elif self.path == "/api/phone_temp":
+                try:
+                    self._json(hub.phone_temp())
+                except Exception as e:
+                    self._json({"ok": False, "error": str(e)})
             elif self.path == "/api/runs":
                 self._json(hub.runs())
             elif self.path == "/events":
@@ -429,6 +457,8 @@ a{color:inherit}
  <button class="rec" onclick="startRec()">● 녹화 시작</button>
  <button onclick="stopRec()">■ 멈추고 PC로 가져오기</button>
  <div style="margin-top:10px"><span class="big" id="state">-</span></div>
+ <div style="margin-top:12px;font-variant-numeric:tabular-nums"><span class="mut">폰 온도</span> <span class="big" id="tbat" style="font-size:24px">-</span>
+  <span id="tstat" style="font-weight:700;margin-left:8px">-</span><div class="mut" id="tmore">-</div></div>
  <div class="mut" style="margin-top:6px">처음 1~2초는 보드를 비춰 초점 맞추기 · 폰 화면 위 초록 "인식 ✓" 유지 · 뜨거우면 자동 멈춤(찍힌 데까지 저장) ·
   <a href="http://localhost:8790/charuco_monitor.html" target="_blank">모니터 보드 열기</a></div>
 </div>
@@ -442,6 +472,14 @@ function stopRec(){t0=null;busy=true;document.getElementById('state').textConten
 setInterval(()=>{if(busy)return;const s=document.getElementById('state');
  if(t0){const k=Math.floor((Date.now()-t0)/1000);s.textContent='● 녹화 중 '+Math.floor(k/60)+':'+String(k%60).padStart(2,'0');s.style.color=getComputedStyle(document.documentElement).getPropertyValue('--rec');}
  else{s.textContent='대기';s.style.color='';}},500);
+const TS=['정상','약간 뜨거움','뜨거움','심한 과열 (녹화 멈춤)','위험','긴급','종료 직전'],TC=['var(--ok)','var(--ok)','#d97706','var(--rec)','var(--rec)','var(--rec)','var(--rec)'];
+function temp(){fetch('/api/phone_temp').then(r=>r.json()).then(d=>{
+ if(!d.ok){document.getElementById('tbat').textContent='폰 연결 안 됨';document.getElementById('tstat').textContent='';document.getElementById('tmore').textContent=d.error||'';return;}
+ const b=d.battery_c;const e=document.getElementById('tbat');e.textContent='배터리 '+b.toFixed(1)+' °C';e.style.color=b>=46?'var(--rec)':b>=42?'#d97706':'';
+ const st=document.getElementById('tstat');st.textContent=TS[d.status]??('상태 '+d.status);st.style.color=TC[d.status]||'';
+ const T=d.temps||{};document.getElementById('tmore').textContent=['SKIN','AP','BAT','USB'].filter(k=>T[k]!=null).map(k=>({SKIN:'겉면',AP:'칩',BAT:'배터리 센서',USB:'USB'}[k])+' '+T[k].toFixed(1)+'°').join(' · ')+
+  ' · 충전 '+(d.charging?'중':'안 함')+(d.level!=null?' ('+d.level+'%)':'')+' · 멈추는 기준: 배터리 46 °C 또는 심한 과열';}).catch(()=>{});}
+temp();setInterval(temp,5000);
 const es=new EventSource('/events');
 es.onmessage=ev=>{const d=JSON.parse(ev.data);
  if(d.type==='log'){log(d.msg);if(/가져옴|폰 사본/.test(d.msg))busy=false;}};
