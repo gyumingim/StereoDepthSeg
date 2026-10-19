@@ -402,103 +402,43 @@ def make_handler(hub):
     return H
 
 
+# only the 240 fps board recording is in use (2026-10-19); ARCore / OpenVINS APIs stay but have no buttons
 PAGE = r"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>VIO 지연 비교</title>
+<title>보정판 녹화</title>
 <style>
-:root{--bg:#f6f7f9;--fg:#1d2128;--mut:#6b7280;--card:#fff;--line:#e3e6ea;--ar:#2563eb;--ov:#dc2626;--lc:#16a34a}
-@media (prefers-color-scheme:dark){:root{--bg:#14161a;--fg:#e8eaed;--mut:#9aa0a6;--card:#1d2026;--line:#2c3038;--ar:#60a5fa;--ov:#f87171;--lc:#4ade80}}
-body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,sans-serif}
-main{max-width:1200px;margin:0 auto;padding:16px}
+:root{--bg:#f6f7f9;--fg:#1d2128;--mut:#6b7280;--card:#fff;--line:#e3e6ea;--rec:#dc2626;--ok:#16a34a}
+@media (prefers-color-scheme:dark){:root{--bg:#14161a;--fg:#e8eaed;--mut:#9aa0a6;--card:#1d2026;--line:#2c3038;--rec:#f87171;--ok:#4ade80}}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,"Malgun Gothic",sans-serif}
+main{max-width:640px;margin:0 auto;padding:20px 16px}
 h1{font-size:20px;margin:0 0 12px}
-.row{display:flex;gap:12px;flex-wrap:wrap}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;flex:1;min-width:280px}
-button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
-button.ar{border-color:var(--ar);color:var(--ar)} button.ov{border-color:var(--ov);color:var(--ov)}
-.big{font-size:32px;font-weight:700} .mut{color:var(--mut)} canvas{width:100%;height:260px;display:block}
-table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums} th,td{text-align:right;padding:4px 6px;border-bottom:1px solid var(--line)} th:first-child,td:first-child{text-align:left}
-#log{font:12px ui-monospace,monospace;color:var(--mut);max-height:120px;overflow:auto;white-space:pre-wrap}
-.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+button{font:inherit;font-size:17px;padding:12px 18px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer;margin-right:8px}
+button.rec{border-color:var(--rec);color:var(--rec);font-weight:700}
+.big{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums}.mut{color:var(--mut)}
+#log{font:12px ui-monospace,monospace;color:var(--mut);max-height:220px;overflow:auto;white-space:pre-wrap}
+a{color:inherit}
 </style></head><body><main>
-<h1>VIO 지연 비교 — ARCore vs OpenVINS (폰에서 실시간)</h1>
-<div class="row" style="margin-bottom:12px">
- <div class="card" style="flex:2">
-  <button class="ar" onclick="start('arcore')">ARCore 시작</button>
-  <button class="ov" onclick="start('ov')">OpenVINS 시작</button>
-  <button onclick="post('/api/stop')">멈춤</button>
-  <button onclick="post('/api/push_ov')">OpenVINS 설정 다시 보내기</button>
-  <div style="margin-top:8px">보정판 정답 녹화 (고속, 주 카메라 1920x1080 + IMU)
-   <select id="hsfps"><option>240</option><option>120</option></select> fps
-   <button class="ar" onclick="post('/api/hs_start',{fps:+document.getElementById('hsfps').value})">● 고속 녹화 시작</button>
-   <button onclick="post('/api/hs_stop')">■ 멈추고 PC로 가져오기</button>
-   <span class="mut">고속 모드는 폰 화면 미리보기·마커 표시 없음</span></div>
-  <span id="phone" class="mut" style="margin-left:8px">폰: -</span>
-  <div style="margin-top:8px">ARCore 루프 클로저
-   <select id="loopmode"><option value="both">둘 다 (마커 + 특징점)</option><option value="marker">마커만</option><option value="feature">특징점만 (마커 없음)</option><option value="off">끔</option></select>
-   마커 한 변 <input id="mlen" type="number" step="0.005" value="0.15" style="width:70px"> m (ArUco 4x4_50)
-   <label><input id="dump" type="checkbox"> 키프레임 저장 (PC 재생용)</label>
-   · OpenVINS 노출 상한 <input id="expms" type="number" step="0.5" min="0" value="2" style="width:56px"> ms (0 = 자동, 짧을수록 덜 번짐)</div>
-  <div class="mut" style="margin-top:6px">지연 = 촬영(센서 시각) → 앱에서 위치가 나온 시각, 폰 시계 하나로 잼. 한 번에 하나만 돌아감 (카메라 공유 안 됨).</div>
- </div>
+<h1>보정판 정답 녹화 — 240 fps</h1>
+<div class="card">
+ <button class="rec" onclick="startRec()">● 녹화 시작</button>
+ <button onclick="stopRec()">■ 멈추고 PC로 가져오기</button>
+ <div style="margin-top:10px"><span class="big" id="state">-</span></div>
+ <div class="mut" style="margin-top:6px">처음 1~2초는 보드를 비춰 초점 맞추기 · 폰 화면 위 초록 "인식 ✓" 유지 · 뜨거우면 자동 멈춤(찍힌 데까지 저장) ·
+  <a href="http://localhost:8790/charuco_monitor.html" target="_blank">모니터 보드 열기</a></div>
 </div>
-<div class="row">
- <div class="card"><div class="mut">지금 모드</div><div class="big" id="mode">-</div><div id="status" class="mut">-</div></div>
- <div class="card"><div class="mut">지연 (최근 3초 중앙값)</div><div class="big" id="latnow">-</div><div class="mut" id="latall">-</div></div>
- <div class="card"><div class="mut">추적 · 속도</div><div class="big" id="trk">-</div><div class="mut" id="fps">-</div></div>
-</div>
-<div class="row" style="margin-top:12px">
- <div class="card" style="flex:2"><div class="mut"><span class="dot" style="background:var(--ar)"></span>ARCore <span class="dot" style="background:var(--ov);margin-left:10px"></span>OpenVINS — 프레임별 지연 (ms, 최근 20초)</div><canvas id="lat"></canvas></div>
- <div class="card"><div class="mut">궤적 (위에서 본 것, m) — <span style="color:var(--ar)">ARCore</span> · <span style="color:var(--lc)">루프 보정</span> · <span style="color:var(--ov)">OpenVINS</span></div><canvas id="traj"></canvas><div class="mut" id="path">-</div></div>
-</div>
-<div class="card" style="margin-top:12px"><div class="mut">루프 클로저</div><div id="loopst" style="font-variant-numeric:tabular-nums">-</div><div id="loopev" class="mut" style="font:12px ui-monospace,monospace;white-space:pre-wrap"></div></div>
-<div class="card" style="margin-top:12px"><div class="mut">기록 (끝난 측정)</div>
- <table id="runs"><thead><tr><th>측정</th><th>초</th><th>프레임</th><th>추적 %</th><th>fps</th><th>지연 중앙</th><th>p90</th><th>최대</th><th>계산 ms</th><th>이동 m</th><th>시작↔끝 m</th><th>보정 시작↔끝 m</th><th>루프</th></tr></thead><tbody></tbody></table></div>
-<div class="card" style="margin-top:12px"><div class="mut">로그</div><div id="log"></div></div>
+<div class="card"><div class="mut">로그</div><div id="log"></div></div>
 </main><script>
-const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const pts={arcore:[],ov:[]}, traj={arcore:[],ov:[],lc:[]};
-function post(u,b){return fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})}).then(r=>r.json()).then(j=>{if(j.out)log(j.out);if(j.error)log('오류: '+j.error);loadRuns();});}
-function start(m){traj[m]=[];if(m==='arcore')traj.lc=[];post('/api/start',{mode:m,loop:document.getElementById('loopmode').value,mlen:parseFloat(document.getElementById('mlen').value)||0.15,dump:document.getElementById('dump').checked?1:0,exp_ms:parseFloat(document.getElementById('expms').value)||0});}
-function log(s){const e=document.getElementById('log');e.textContent=(s+'\n'+e.textContent).slice(0,6000);}
-function fmt(v,u=''){return v==null?'-':v+u}
+let t0=null, busy=false;
+function post(u,b){return fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})}).then(r=>r.json()).then(j=>{if(j.out)log(j.out);if(j.error)log('오류: '+j.error);});}
+function log(s){const e=document.getElementById('log');e.textContent=(s+'\n'+e.textContent).slice(0,8000);}
+function startRec(){t0=Date.now();post('/api/hs_start',{fps:240});}
+function stopRec(){t0=null;busy=true;document.getElementById('state').textContent='가져오는 중…';post('/api/hs_stop').then(()=>{busy=false;});}
+setInterval(()=>{if(busy)return;const s=document.getElementById('state');
+ if(t0){const k=Math.floor((Date.now()-t0)/1000);s.textContent='● 녹화 중 '+Math.floor(k/60)+':'+String(k%60).padStart(2,'0');s.style.color=getComputedStyle(document.documentElement).getPropertyValue('--rec');}
+ else{s.textContent='대기';s.style.color='';}},500);
 const es=new EventSource('/events');
 es.onmessage=ev=>{const d=JSON.parse(ev.data);
- if(d.type==='frame'&&!d.event){const now=performance.now()/1000;
-  if(d.t_sensor&&d.t_out){pts[d.src].push([now,(d.t_out-d.t_sensor)/1e6,/track/i.test(d.status)]);}
-  if(d.p&&/track/i.test(d.status)){const p=d.p; traj[d.src].push(d.src==='arcore'?[p[0],-p[2]]:[p[0],p[1]]); if(traj[d.src].length>20000)traj[d.src].shift();}
-  if(d.pc&&/track/i.test(d.status)){traj.lc.push([d.pc[0],-d.pc[2]]); if(traj.lc.length>20000)traj.lc.shift();}
- } else if(d.type==='frame'&&d.event){log('OpenVINS: '+JSON.stringify(d.event).slice(0,200));}
- else if(d.type==='stats'){const s=d.stats; document.getElementById('phone').textContent='폰: '+(d.phone?'연결됨':'연결 안 됨');
-  if(!s)return; document.getElementById('mode').textContent=s.mode==='ov'?'OpenVINS':'ARCore';
-  document.getElementById('mode').style.color=css(s.mode==='ov'?'--ov':'--ar');
-  const ev=(s.events||[]).filter(e=>e.type!=='ready');
-  document.getElementById('status').textContent=(s.status==='init'?'초기화 대기 (가만히 1~2초 뒤 움직이기)':s.status)+(ev.length?' · '+JSON.stringify(ev[ev.length-1]).slice(0,80):'');
-  document.getElementById('latnow').textContent=s.lat_recent_med!=null?s.lat_recent_med+' ms':(s.lat_all_recent_med!=null?s.lat_all_recent_med+' ms (추적 전)':'-');
-  document.getElementById('latall').textContent='전체 중앙 '+fmt(s.lat_med)+' · p90 '+fmt(s.lat_p90)+' · 최대 '+fmt(s.lat_max)+' ms'+(s.proc_med!=null?' · 계산 '+s.proc_med+' ms':'');
-  document.getElementById('trk').textContent=fmt(s.tracking_pct,' %');
-  document.getElementById('fps').textContent=fmt(s.fps,' fps')+' · '+s.frames+' 프레임 · '+s.secs+' 초';
-  document.getElementById('path').textContent='이동 '+s.path_m+' m · 시작↔지금 '+fmt(s.end_from_start_m,' m')+(s.corr_end_from_start_m!=null?' · 보정 시작↔지금 '+s.corr_end_from_start_m+' m':'');
-  const L=s.loop; if(L){document.getElementById('loopst').textContent=(s.loop_mode||'')+' · 키프레임 '+L.kf+' (깊이 있음 '+L.depth_kf+') · 특징점 루프 '+L.loops+' · 마커 '+L.markers+'개 / 관측 '+L.marker_edges+' · 최적화 '+L.opt+'회 ('+L.opt_ms+' ms) · 키프레임 처리 '+L.proc_ms+' ms · 보정 yaw '+L.corr_yaw_deg.toFixed(2)+'° 이동 '+L.corr_t.map(v=>v.toFixed(2)).join(', ')+' m';
-   document.getElementById('loopev').textContent=(L.events||[]).slice().reverse().join('\n');}}
- else if(d.type==='run_end'){loadRuns();}
- else if(d.type==='log'){log(d.msg);}
-};
-function draw(){const c=document.getElementById('lat'),x=c.getContext('2d');const W=c.width=c.clientWidth*devicePixelRatio,H=c.height=c.clientHeight*devicePixelRatio;
- const now=performance.now()/1000,span=20; let ymax=150; for(const k in pts){pts[k]=pts[k].filter(p=>now-p[0]<span);for(const p of pts[k])ymax=Math.max(ymax,p[1]*1.1);}
- x.clearRect(0,0,W,H);x.strokeStyle=css('--line');x.fillStyle=css('--mut');x.font=(11*devicePixelRatio)+'px sans-serif';
- for(let v=0;v<=ymax;v+=50){const y=H-v/ymax*H;x.beginPath();x.moveTo(0,y);x.lineTo(W,y);x.stroke();x.fillText(v+'',4,y-2);}
- for(const k of ['arcore','ov']){x.fillStyle=css(k==='ov'?'--ov':'--ar');for(const p of pts[k]){const X=W-(now-p[0])/span*W,Y=H-p[1]/ymax*H;x.globalAlpha=p[2]?1:.3;x.fillRect(X-2,Y-2,4,4);}}
- x.globalAlpha=1;
- const t=document.getElementById('traj'),y=t.getContext('2d');const TW=t.width=t.clientWidth*devicePixelRatio,TH=t.height=t.clientHeight*devicePixelRatio;
- y.clearRect(0,0,TW,TH);let all=[...traj.arcore,...traj.ov,...traj.lc];if(all.length){let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;for(const p of all){x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1]);}
-  const s=Math.min(TW/Math.max(x1-x0,1),TH/Math.max(y1-y0,1))*0.9,cx=(x0+x1)/2,cy=(y0+y1)/2;
-  y.strokeStyle=css('--line');y.strokeRect(TW/2+(Math.floor(x0)-cx)*s,TH/2-(Math.ceil(y1)-cy)*s,(Math.ceil(x1)-Math.floor(x0))*s,(Math.ceil(y1)-Math.floor(y0))*s);
-  for(const k of ['arcore','ov','lc']){const P=traj[k];if(!P.length)continue;y.strokeStyle=css(k==='ov'?'--ov':k==='lc'?'--lc':'--ar');y.lineWidth=2*devicePixelRatio;y.beginPath();P.forEach((p,i)=>{const X=TW/2+(p[0]-cx)*s,Y=TH/2-(p[1]-cy)*s;i?y.lineTo(X,Y):y.moveTo(X,Y);});y.stroke();}}
- requestAnimationFrame(draw);}
-requestAnimationFrame(draw);
-function loadRuns(){fetch('/api/runs').then(r=>r.json()).then(R=>{const b=document.querySelector('#runs tbody');b.innerHTML='';for(const s of R){const tr=document.createElement('tr');
- const c=[(s.mode==='ov'?'OpenVINS ':'ARCore ')+s.name.slice(10,25),s.secs,s.frames,s.tracking_pct,s.fps,s.lat_med,s.lat_p90,s.lat_max,s.proc_med,s.path_m,s.end_from_start_m,s.corr_end_from_start_m,s.loop?((s.loop_mode||'')+' '+s.loop.loops+'/'+s.loop.marker_edges):null];
- c.forEach((v,i)=>{const td=document.createElement('td');td.textContent=v==null?'-':v;if(i===0)td.style.color=css(s.mode==='ov'?'--ov':'--ar');tr.appendChild(td);});b.appendChild(tr);}});}
-loadRuns();
+ if(d.type==='log'){log(d.msg);if(/가져옴|폰 사본/.test(d.msg))busy=false;}};
 </script></body></html>"""
 
 
