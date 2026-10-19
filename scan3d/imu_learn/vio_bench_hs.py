@@ -1,0 +1,284 @@
+#!/usr/bin/env python3
+"""VIO testbed on the 240 fps board recordings: feed (subsampled, undistorted, resized) frames + raw IMU into the PC
+OpenVINS bridge (ov_bridge) and score its camera trajectory against the board ground truth of the same recording.
+
+Variants (same backend, only one thing changes at a time — the 2026 'same-backend control' advice):
+  --fps 30/60/120/240     camera rate fed to the VIO (every k-th frame of the 240 fps video)
+  --size 640x360 ...      VIO image size (pinhole after undistortion, aspect 16:9)
+  --npts / --clones       OpenVINS feature count / sliding-window clones
+  --noise cfg|meas        IMU noise densities: the old config guess (cfg) or measured from this recording (meas)
+  --imu-calib RESULT.json apply a learned physical calibration (train_imu result 'calib': G, bg, A, ba) to the IMU
+  --dropout T:D,...       camera off for D s starting T s after the first frame (IMU keeps running)
+Metrics: ATE (SE3-aligned position RMSE, cm), scale (Sim3), RPE over 1 s, rotation error, drift at the end of each
+dropout, OpenVINS time per frame (ms, PC) and the share of frames tracked.
+  ../venv_ffs/bin/python imu_learn/vio_bench_hs.py recordings/hs_... --fps 60 --size 640x360 [--out runs/vio/NAME.json]
+"""
+import argparse
+import csv
+import json
+import queue
+import struct
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+from pathlib import Path
+
+import cv2
+import numpy as np
+
+HERE = Path(__file__).resolve().parent
+SCAN3D = HERE.parent
+sys.path.insert(0, str(SCAN3D))
+sys.path.insert(0, str(HERE))
+import lens_calib  # noqa: E402
+from imu_gt import read_imu  # noqa: E402
+
+BRIDGE = SCAN3D / "ov_bridge" / "build" / "ov_bridge"
+TEMPLATE = SCAN3D / "config" / "mono" / "estimator_config.yaml"
+HDR = struct.Struct("<III")
+MAGIC = 0x4F564252
+
+
+def lens_for(rec, meta):
+    own = rec / "imu_gt" / "lens.json"
+    fd = meta.get("focus_dpt_request") or -1
+    shared = SCAN3D / "config" / "lens" / f"hs_{meta['width']}x{meta['height']}_f{fd:.2f}.json"
+    return lens_calib.load(own if own.exists() else shared)[:2]
+
+
+def measured_noise(acc, gyr):
+    """White-noise density from sample-to-sample differences in the quietest 10 % of the recording (sigma·sqrt(dt)),
+    random walk kept at 1/10 of the density (not observable from minutes of hand-held data; estimate)."""
+    dt = np.median(np.diff(gyr[:, 0])) / 1e9
+    w = np.linalg.norm(gyr[:, 1:4], axis=1)
+    quiet = w < np.quantile(w, 0.10)
+    sg = np.std(np.diff(gyr[:, 1:4], axis=0)[quiet[1:]], axis=0).mean() / np.sqrt(2)
+    a_i = np.stack([np.interp(gyr[:, 0], acc[:, 0], acc[:, 1 + j]) for j in range(3)], 1)
+    sa = np.std(np.diff(a_i, axis=0)[quiet[1:]], axis=0).mean() / np.sqrt(2)
+    nd_g, nd_a = sg * np.sqrt(dt), sa * np.sqrt(dt)
+    return dict(gyroscope_noise_density=nd_g, gyroscope_random_walk=nd_g / 10,
+                accelerometer_noise_density=nd_a, accelerometer_random_walk=nd_a / 10)
+
+
+def write_config(d, K, size, fps, R_ci, p_CinI, timeshift, noise, npts, clones):
+    W, H = size
+    txt = TEMPLATE.read_text()
+    rep = {"track_frequency:": f"track_frequency: {float(fps)}", "num_pts:": f"num_pts: {int(npts)}",
+           "max_clones:": f"max_clones: {int(clones)}", "init_dyn_use:": "init_dyn_use: true",
+           "verbosity:": 'verbosity: "WARNING"', "record_timing_information:": "record_timing_information: false",
+           "init_max_disparity:": f"init_max_disparity: {15.0 * W / 640:.1f}"}
+    out = []
+    for line in txt.splitlines():
+        key = next((k for k in rep if line.strip().startswith(k)), None)
+        out.append(rep[key] if key else line)
+    (d / "estimator_config.yaml").write_text("\n".join(out) + "\n")
+    R_CtoI = np.asarray(R_ci).T
+    T = np.eye(4)
+    T[:3, :3], T[:3, 3] = R_CtoI, p_CinI
+    rows = "\n".join("    - [" + ", ".join(f"{v:.12g}" for v in r) + "]" for r in T)
+    (d / "kalibr_imucam_chain.yaml").write_text(
+        "%YAML:1.0\ncam0:\n  T_imu_cam:\n" + rows + "\n  cam_overlaps: []\n  camera_model: pinhole\n"
+        "  distortion_coeffs: [0.0, 0.0, 0.0, 0.0]\n  distortion_model: radtan\n"
+        f"  intrinsics: [{K[0, 0]:.6f}, {K[1, 1]:.6f}, {K[0, 2]:.6f}, {K[1, 2]:.6f}]\n  resolution: [{W}, {H}]\n"
+        f"  rostopic: /cam0/image_raw\n  timeshift_cam_imu: {timeshift:.6f}\n")
+    imu = (SCAN3D / "config" / "mono" / "kalibr_imu_chain.yaml").read_text().splitlines()
+    out = []
+    for line in imu:
+        k = line.strip().split(":")[0]
+        out.append(f"  {k}: {noise[k]:.4e}" if k in noise else line)
+    (d / "kalibr_imu_chain.yaml").write_text("\n".join(out) + "\n")
+
+
+def umeyama(src, dst, scale=False):
+    mu_s, mu_d = src.mean(0), dst.mean(0)
+    S, D = src - mu_s, dst - mu_d
+    U, s, Vt = np.linalg.svd(D.T @ S / len(src))
+    Sg = np.eye(3)
+    if np.linalg.det(U @ Vt) < 0:
+        Sg[2, 2] = -1
+    R = U @ Sg @ Vt
+    c = (s * np.diag(Sg)).sum() / S.var(0).sum() if scale else 1.0
+    return R, c, mu_d - c * R @ mu_s
+
+
+def run(a):
+    rec = Path(a.rec)
+    meta = json.load(open(rec / "meta.json"))
+    K, dist = lens_for(rec, meta)
+    Wf, Hf = int(meta["width"]), int(meta["height"])
+    W, H = (int(v) for v in a.size.split("x"))
+    Knew, _ = cv2.getOptimalNewCameraMatrix(K, dist, (Wf, Hf), 0, (W, H))
+    m1, m2 = cv2.initUndistortRectifyMap(K, dist, None, Knew, (W, H), cv2.CV_16SC2)
+    rows = list(csv.DictReader(open(rec / "frames_cam5.csv")))
+    t_frames = np.array([int(r["t_mid_ns"]) for r in rows])
+    al = json.load(open(rec / "imu_gt" / "align.json"))
+    dt_ns, R_ci = int(al["dt_ns"]), np.asarray(al["R_ci"])
+    t_start = t_frames[0]
+    trim = rec / "imu_gt" / "trim.json"
+    if trim.exists():
+        t_start = max(t_start, json.load(open(trim))["start_ns"])
+    if a.max_secs:
+        t_end = t_start + int(a.max_secs * 1e9)
+    else:
+        t_end = t_frames[-1]
+    acc, gyr = read_imu(rec / "imu.csv")
+    noise = measured_noise(acc, gyr) if a.noise == "meas" else dict(
+        accelerometer_noise_density=1e-2, accelerometer_random_walk=1e-3, gyroscope_noise_density=1e-3,
+        gyroscope_random_walk=1e-4)
+    a_i = np.stack([np.interp(gyr[:, 0], acc[:, 0], acc[:, 1 + j]) for j in range(3)], 1)
+    g_i = gyr[:, 1:4].copy()
+    p_CinI = np.zeros(3)
+    if a.imu_calib:
+        cal = json.load(open(a.imu_calib))["calib"]
+        g_i = g_i @ np.asarray(cal["G"]).T + np.asarray(cal["bg"])
+        a_i = a_i @ np.asarray(cal["A"]).T + np.asarray(cal["ba"])
+        p_CinI = np.asarray(cal.get("r", [0, 0, 0]))
+    t_imu = gyr[:, 0].astype(np.int64)
+    drop = []
+    for s in (a.dropout.split(",") if a.dropout else []):
+        t0, d = (float(v) for v in s.split(":"))
+        drop.append((t_start + int(t0 * 1e9), t_start + int((t0 + d) * 1e9)))
+    k = max(1, int(round(float(meta.get("save_fps") or 240) / a.fps)))
+    tmp = Path(tempfile.mkdtemp(prefix="vio_", dir=str(SCAN3D / "runs")))
+    # OpenVINS: t_imu = t_cam + timeshift; ours: IMU time + dt = camera time  →  timeshift = −dt
+    write_config(tmp, Knew, (W, H), a.fps, R_ci, p_CinI, -dt_ns / 1e9, noise, a.npts, a.clones)
+    p = subprocess.Popen([str(BRIDGE), str(tmp / "estimator_config.yaml"), "--stdio", "--max-speed", "8",
+                          "--lost-frames", "1000000", "--startup-lost-frames", "1000000"],
+                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0)
+    poses = []
+
+    def reader():
+        for line in p.stdout:
+            try:
+                m = json.loads(line)
+            except Exception:
+                continue
+            if m.get("type") == "pose":
+                poses.append(m)
+    th = threading.Thread(target=reader, daemon=True)
+    th.start()
+    cap = cv2.VideoCapture(str(rec / "cam5.mp4"))
+    ii = int(np.searchsorted(t_imu, t_start - dt_ns - 2_000_000_000))
+    n_fed = 0
+    t_wall = time.time()
+    for fi in range(len(rows)):
+        ok_r = cap.grab()
+        if not ok_r:
+            break
+        tc = t_frames[fi]
+        if tc < t_start or fi % k:
+            continue
+        if tc > t_end:
+            break
+        tci = tc - dt_ns                                         # camera time on the IMU clock
+        while ii < len(t_imu) and t_imu[ii] <= tci + 5_000_000:
+            p.stdin.write(HDR.pack(MAGIC, 1, 56) + struct.pack("<q3d3d", int(t_imu[ii]), *g_i[ii], *a_i[ii]))
+            ii += 1
+        if any(d0 <= tc < d1 for d0, d1 in drop):
+            continue
+        _, f = cap.retrieve()
+        g = cv2.remap(cv2.cvtColor(f, cv2.COLOR_BGR2GRAY), m1, m2, cv2.INTER_LINEAR)
+        body = struct.pack("<qIIB3x", int(tci), W, H, 1) + np.ascontiguousarray(g).tobytes()
+        p.stdin.write(HDR.pack(MAGIC, 2, len(body)) + body)
+        n_fed += 1
+    for _ in range(200):                                         # flush: a bit more IMU so the last frame is processed
+        if ii >= len(t_imu):
+            break
+        p.stdin.write(HDR.pack(MAGIC, 1, 56) + struct.pack("<q3d3d", int(t_imu[ii]), *g_i[ii], *a_i[ii]))
+        ii += 1
+    p.stdin.write(HDR.pack(MAGIC, 4, 0))
+    p.stdin.close()
+    p.wait(timeout=120)
+    th.join(timeout=10)
+    wall = time.time() - t_wall
+    return evaluate(rec, a, poses, n_fed, drop, dt_ns, wall, noise, Knew)
+
+
+def evaluate(rec, a, poses, n_fed, drop, dt_ns, wall, noise, Knew):
+    gt_dir = rec / ("imu_gt_rs" if (rec / "imu_gt_rs" / "gt.npz").exists() else "imu_gt")
+    g = dict(np.load(gt_dir / "gt.npz", allow_pickle=True))
+    ok = g["ok"].astype(bool) & (np.linalg.norm(g["p_bc"], axis=1) < 1.2)
+    gt_t = g["t_ns"][ok]
+    gt_p, gt_R = g["p_bc"][ok], g["R_bc"][ok]
+    tr = [m for m in poses if m.get("status") == "tracking" and m.get("T_world_cam0")]
+    ms = np.array([m["ms"] for m in poses if "ms" in m])
+    res = dict(rec=rec.name, fps=a.fps, size=a.size, npts=a.npts, clones=a.clones, noise=a.noise,
+               imu_calib=bool(a.imu_calib), dropout=a.dropout, frames_fed=n_fed, poses=len(poses),
+               tracked=len(tr), tracked_frac=round(len(tr) / max(1, n_fed), 3),
+               ms_med=round(float(np.median(ms)), 2) if len(ms) else None,
+               ms_p90=round(float(np.percentile(ms, 90)), 2) if len(ms) else None, wall_s=round(wall, 1),
+               gt=gt_dir.name, noise_used={k: float(v) for k, v in noise.items()})
+    if len(tr) < 50:
+        res["error"] = "too few tracked poses"
+        return res
+    # VIO camera time (t_ns fed = camera time on the IMU clock) -> GT time (camera clock): + dt
+    vt = np.array([m["t_ns"] for m in tr]) + dt_ns
+    T = np.array([np.asarray(m["T_world_cam0"]).reshape(4, 4) for m in tr])
+    # nearest GT within 2 ms (RS GT is stamped at t_mid exactly; base GT within ±1.5 ms of it)
+    j = np.clip(np.searchsorted(gt_t, vt), 1, len(gt_t) - 1)
+    j = np.where(np.abs(gt_t[j - 1] - vt) < np.abs(gt_t[j] - vt), j - 1, j)
+    m = np.abs(gt_t[j] - vt) < 2_000_000
+    if m.sum() < 50:
+        res["error"] = "too few matched poses"
+        return res
+    P, Pg = T[m, :3, 3], gt_p[j[m]]
+    Rv, Rg = T[m, :3, :3], gt_R[j[m]]
+    tt = vt[m]
+    indrop = np.array([any(d0 <= t < d1 + 1 for d0, d1 in drop) for t in tt]) if drop else np.zeros(len(tt), bool)
+    R, _, t = umeyama(P[~indrop], Pg[~indrop])
+    Rs, c, ts = umeyama(P[~indrop], Pg[~indrop], scale=True)
+    e = np.linalg.norm((P @ R.T + t) - Pg, axis=1)
+    res.update(matched=int(m.sum()), ate_cm=round(float(np.sqrt(np.mean(e[~indrop] ** 2))) * 100, 2),
+               ate_sim3_cm=round(float(np.sqrt(np.mean(np.linalg.norm((c * P @ Rs.T + ts) - Pg, axis=1)[~indrop] ** 2))) * 100, 2),
+               scale=round(float(c), 4))
+    # rotation error after aligning orientations by themselves (a 40 cm position track fixes the frame only to a few °)
+    U, _, Vt = np.linalg.svd(np.einsum("nij,nkj->ik", Rg[~indrop], Rv[~indrop]))
+    Rrot = U @ np.diag([1, 1, np.linalg.det(U @ Vt)]) @ Vt
+    res["frame_rot_diff_deg"] = round(float(np.degrees(np.arccos(np.clip((np.trace(Rrot.T @ R) - 1) / 2, -1, 1)))), 2)
+    Ra = np.einsum("ij,njk->nik", Rrot, Rv)
+    ang = np.degrees(np.arccos(np.clip((np.einsum("nij,nij->n", Ra, Rg) - 1) / 2, -1, 1)))
+    res["rot_med_deg"] = round(float(np.median(ang[~indrop])), 3)
+    # RPE over 1 s: relative displacement error
+    rp = []
+    for i0 in range(0, len(tt), 5):
+        i1 = np.searchsorted(tt, tt[i0] + 1_000_000_000)
+        if i1 >= len(tt) or tt[i1] - tt[i0] > 1.2e9 or indrop[i0] or indrop[i1]:
+            continue
+        dv = R @ (P[i1] - P[i0])
+        dg = Pg[i1] - Pg[i0]
+        rp.append(np.linalg.norm(dv - dg))
+    res["rpe1s_cm"] = round(float(np.median(rp)) * 100, 2) if rp else None
+    drifts = []
+    for d0, d1 in drop:
+        w = (tt >= d0) & (tt <= d1 + 300_000_000)
+        if w.any():
+            drifts.append(round(float(e[w].max()) * 100, 1))
+    if drop:
+        res["dropout_max_err_cm"] = drifts
+    return res
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("rec")
+    ap.add_argument("--fps", type=float, default=60)
+    ap.add_argument("--size", default="640x360")
+    ap.add_argument("--npts", type=int, default=200)
+    ap.add_argument("--clones", type=int, default=11)
+    ap.add_argument("--noise", default="cfg", choices=["cfg", "meas"])
+    ap.add_argument("--imu-calib", default=None)
+    ap.add_argument("--dropout", default="")
+    ap.add_argument("--max-secs", type=float, default=0)
+    ap.add_argument("--out", default=None)
+    a = ap.parse_args()
+    r = run(a)
+    print(json.dumps(r, ensure_ascii=False))
+    if a.out:
+        Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+        json.dump(r, open(a.out, "w"), indent=1, ensure_ascii=False)
+
+
+if __name__ == "__main__":
+    main()
