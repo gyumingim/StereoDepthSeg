@@ -61,6 +61,7 @@ def main():
     ap.add_argument("--noise-scale", type=float, default=1.0)
     ap.add_argument("--max-secs", type=float, default=60)
     ap.add_argument("--decode-threads", type=int, default=2, help="video decode threads (load control only)")
+    ap.add_argument("--imu-lead", type=float, default=2.0, help="s of IMU before the first frame (bench default 2)")
     ap.add_argument("--imu-raw", action="store_true", help="uncalibrated IMU types 16/35 (new recordings only)")
     ap.add_argument("--imu-calib", default=None, help="calibration JSON {'calib': G, bg, A, ba, r} applied by the bench")
     ap.add_argument("--calib-label", default="none", help="name of the calibration (recorded only)")
@@ -71,7 +72,7 @@ def main():
     a = argparse.Namespace(rec=o.rec, fps=o.fps, size=o.size, npts=200, clones=o.clones, noise=o.noise,
                            noise_scale=o.noise_scale, imu_calib=o.imu_calib, dropout="", max_secs=o.max_secs,
                            imu_raw=o.imu_raw, gt="auto", out=None, init_cfg=o.init_cfg, start_off=o.start_off,
-                           decode_threads=o.decode_threads)
+                           decode_threads=o.decode_threads, imu_lead=o.imu_lead)
     load0 = open("/proc/loadavg").read().split()[:3]
     errlog = open(str(out) + ".stderr.log", "w")
     orig_popen = vb.subprocess.Popen

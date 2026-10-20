@@ -293,7 +293,8 @@ def run(a):
     nthr = int(getattr(a, "decode_threads", 0) or 0)            # 0 = OpenCV default (all cores); frames identical
     cap = (cv2.VideoCapture(str(rec / "cam5.mp4"), cv2.CAP_FFMPEG, [cv2.CAP_PROP_N_THREADS, nthr]) if nthr
            else cv2.VideoCapture(str(rec / "cam5.mp4")))
-    ii = int(np.searchsorted(t_imu, t_start - dt_ns - 2_000_000_000))
+    imu_lead = float(getattr(a, "imu_lead", 2.0))               # s of IMU before the first frame (default 2, unchanged)
+    ii = int(np.searchsorted(t_imu, t_start - dt_ns - int(imu_lead * 1e9)))
     n_fed = 0
     t_wall = time.time()
     crashed = None
@@ -332,7 +333,7 @@ def run(a):
     th.join(timeout=10)
     wall = time.time() - t_wall
     res = evaluate(rec, a, poses, n_fed, drop, dt_ns, wall, noise, Knew, frames)
-    res.update(init_cfg=init_cfg, config_used=cfg_used, start_off=start_off, **code_version())
+    res.update(init_cfg=init_cfg, config_used=cfg_used, start_off=start_off, imu_lead_s=imu_lead, **code_version())
     res["lens_file"] = str(lens_path(rec, meta).resolve().relative_to(SCAN3D))
     res["lens_blob"] = subprocess.run(["git", "-C", str(SCAN3D), "hash-object", res["lens_file"]],
                                       capture_output=True, text=True).stdout.strip()
@@ -445,6 +446,8 @@ def main():
     ap.add_argument("--init-cfg", default="strict", choices=["strict", "strict-dyn", "loose"],
                     help="OpenVINS init values: strict = make_ov_config (app), loose = old bench template (comparison)")
     ap.add_argument("--start-off", type=float, default=0.0, help="first VIO frame this many s later (other init)")
+    ap.add_argument("--imu-lead", type=float, default=2.0,
+                    help="IMU fed from this many s before the first frame (C5 retest 2026-10-21 uses 0)")
     ap.add_argument("--decode-threads", type=int, default=0, help="video decode threads (0 = OpenCV default)")
     ap.add_argument("--dropout", default="")
     ap.add_argument("--max-secs", type=float, default=0)
