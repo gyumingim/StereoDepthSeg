@@ -512,7 +512,9 @@ a{color:inherit}
   <div class="mut" id="pulltxt">-</div></div>
  <div style="margin-top:12px;font-variant-numeric:tabular-nums"><span class="mut">폰 온도</span> <span class="big" id="tbat" style="font-size:24px">-</span>
   <span id="tstat" style="font-weight:700;margin-left:8px">-</span><div class="mut" id="tmore">-</div></div>
- <div class="mut" style="margin-top:6px">처음 1~2초는 보드를 비춰 초점 맞추기 · 폰 화면 위 초록 "인식 ✓" 유지 · 뜨거우면 자동 멈춤(찍힌 데까지 저장) ·
+ <div style="margin-top:10px;line-height:1.6"><b>요령</b>: ① 폰을 세워 카메라가 보드와 주변 물건을 보게 둠 ② 시작 누르면 5초 뒤 녹화 시작 — 그동안 손 떼기
+  ③ <b>처음 5~10초 완전히 정지</b> ④ (본 녹화) 보드를 보며 천천히 움직이기, 3~5분 이내 ⑤ <b>끝나기 전 5~10초 내려놓고 정지</b> 후 멈춤 ⑥ 폰이 30 °C 아래일 때 시작 권장</div>
+ <div class="mut" style="margin-top:6px">폰 화면 위 초록 "인식 ✓" 유지 · 뜨거우면 자동 멈춤(찍힌 데까지 저장) ·
   <a href="http://localhost:8790/charuco_monitor.html" target="_blank">모니터 보드 열기</a></div>
 </div>
 <div class="card"><div class="mut">로그</div><div id="log"></div></div>
@@ -520,8 +522,11 @@ a{color:inherit}
 let t0=null, busy=false;
 function post(u,b){return fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})}).then(r=>r.json()).then(j=>{if(j.out)log(j.out);if(j.error)log('오류: '+j.error);});}
 function log(s){const e=document.getElementById('log');e.textContent=(s+'\n'+e.textContent).slice(0,8000);}
-function startRec(){t0=Date.now();stopNote='';post('/api/hs_start',{fps:240});}
-function stopRec(){t0=null;busy=true;document.getElementById('state').textContent='가져오는 중…';post('/api/hs_stop').then(()=>{busy=false;});}
+let cd=null;                                                   // 5 s countdown so the phone can be set down untouched before recording
+function startRec(){if(cd||t0)return;stopNote='';let n=5;const s=document.getElementById('state');busy=true;
+ const tick=()=>{if(n<=0){clearInterval(cd);cd=null;busy=false;t0=Date.now();post('/api/hs_start',{fps:240});return;}
+  s.textContent='손 떼세요… '+n+'초 뒤 녹화';s.style.color='#d97706';n--;};tick();cd=setInterval(tick,1000);}
+function stopRec(){if(cd){clearInterval(cd);cd=null;busy=false;stopNote='시작 취소됨';return;}t0=null;busy=true;document.getElementById('state').textContent='가져오는 중…';post('/api/hs_stop').then(()=>{busy=false;});}
 setInterval(()=>{if(busy)return;const s=document.getElementById('state');
  if(t0){const k=Math.floor((Date.now()-t0)/1000);s.textContent='● 녹화 중 '+Math.floor(k/60)+':'+String(k%60).padStart(2,'0');s.style.color=getComputedStyle(document.documentElement).getPropertyValue('--rec');}
  else{s.textContent=stopNote||'대기';s.style.color=stopNote?'#d97706':'';}},500);
