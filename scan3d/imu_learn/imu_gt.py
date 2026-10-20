@@ -88,7 +88,7 @@ def _rot_rays(om, tau, d):
 
 def gyro_cam(rec, al):
     """align.json (dt, R_ci, gyro bias) → function t_cam_ns → angular velocity in the camera frame (rad/s)."""
-    _, gyr = read_imu(Path(rec) / "imu.csv")
+    _, gyr = read_imu(Path(rec) / "imu.csv", raw=bool(al.get("imu_raw", False)))   # same gyro type as the alignment
     tg = gyr[:, 0].astype(np.int64) + int(al["dt_ns"])
     wg = gyr[:, 1:4] - np.mean(al.get("gyro_bias_knots", [[0, 0, 0]]), 0)
     R_ci = np.asarray(al["R_ci"])
@@ -152,6 +152,42 @@ def board_poses(video, frames_csv, K, dist, min_corners=8, max_rms=1.5, w_cam=No
         res["corners"] = np.array(cc_all, dtype=object)
         res["corner_ids"] = np.array(id_all, dtype=object)
     return res
+
+
+def board_info(board_json):
+    """Provenance of the board used for a GT: file, square size (mm) and where the square size came from.
+    Positions scale linearly with square_mm (rotations, dt, R_ci do not) → rescale_gt.py fixes a GT for a new square."""
+    spec = aruco_scale.load_board_spec(str(board_json))
+    raw = json.loads(Path(board_json).read_text())
+    return dict(board_json=str(Path(board_json).resolve()), board_name=Path(board_json).name,
+                square_mm=round(spec["square_m"] * 1000, 6),
+                square_mm_source=raw.get("square_mm_source") or raw.get("square_source") or spec.get("square_src"),
+                square_estimated=bool(raw.get("square_estimated", False)))
+
+
+def provenance(files=()):
+    """git HEAD (+ dirty flag) and sha256 of the code files that made an output (CLAUDE.md 12 rule 4)."""
+    import hashlib
+    import subprocess
+    import time
+    out = dict(made=time.strftime("%Y-%m-%d %H:%M:%S"))
+    try:
+        out["git_head"] = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=SCAN3D, capture_output=True,
+                                         text=True).stdout.strip()
+        dirty = subprocess.run(["git", "status", "--porcelain", "--", "imu_learn", "aruco_scale.py", "config/charuco"],
+                               cwd=SCAN3D, capture_output=True, text=True).stdout
+        out["git_dirty"] = [ln[3:] for ln in dirty.splitlines() if ln.endswith(".py") or ln.endswith(".json")]
+    except OSError:
+        pass
+    out["code_sha256"] = {Path(f).name: hashlib.sha256(Path(f).read_bytes()).hexdigest()[:16]
+                          for f in [__file__, SCAN3D / "aruco_scale.py", *files] if Path(f).exists()}
+    return out
+
+
+def write_board_info(out_dir, board_json, extra=None, files=()):
+    d = dict(board_info(board_json), **provenance(files), **(extra or {}))
+    json.dump(d, open(Path(out_dir) / "board.json", "w"), indent=1, ensure_ascii=False)
+    return d
 
 
 def read_imu(path, raw=False):
@@ -270,6 +306,8 @@ def main():
     ap.add_argument("--out-dir", default="imu_gt",
                     help="결과 폴더 이름 (imu_gt 가 아니면 align.json 은 imu_gt 것을 쓰고 새로 만들지 않음)")
     ap.add_argument("--keep-corners", action="store_true", help="프레임별 모서리를 gt.npz 에 저장 (곡선 맞춤용)")
+    ap.add_argument("--raw-imu", action="store_true",
+                    help="원본 IMU (type 35/16) 로 맞춤 (align.json imu_raw=true; batch_sync·--rs 가 같은 종류를 씀). 기본 = 보정판 1/4")
     a = ap.parse_args()
     if a.board:
         global BOARD_JSON
@@ -304,15 +342,25 @@ def main():
               f"f {K[0, 0]:.1f} {K[1, 1]:.1f})")
     gt = board_poses(rec / f"cam{a.cam}.mp4", rec / f"frames_cam{a.cam}.csv", K, dist, w_cam=w_cam,
                      keep_corners=a.keep_corners)
-    np.savez(out / "gt.npz", **gt, K=K, dist=dist, rs=bool(a.rs))
+    bi = board_info(BOARD_JSON)
+    np.savez(out / "gt.npz", **gt, K=K, dist=dist, rs=bool(a.rs), board_json=bi["board_json"], square_mm=bi["square_mm"])
     ok = gt["ok"]
+    write_board_info(out, BOARD_JSON, dict(
+        rec=rec.name, rs=bool(a.rs), keep_corners=bool(a.keep_corners),
+        align_used=(dict(dt_ns=al0["dt_ns"], imu_raw=bool(al0.get("imu_raw", False)), method=al0.get("method"))
+                    if a.rs else None),
+        frames=int(len(ok)), ok=int(ok.sum()),
+        rms_px_median=float(np.nanmedian(gt["rms_px"][ok])) if ok.any() else None,
+        dist_m_median=float(np.median(np.linalg.norm(gt["p_bc"][ok], axis=1))) if ok.any() else None,
+        corners_median=float(np.median(gt["n_corners"])), corners_median_ok=float(np.median(gt["n_corners"][ok])) if ok.any() else None))
     print(f"정답: 프레임 {len(ok)}, 자세 OK {ok.sum()} ({ok.mean()*100:.0f} %), 재투영 중앙 {np.nanmedian(gt['rms_px'][ok]):.2f} px, "
           f"거리 중앙 {np.median(np.linalg.norm(gt['p_bc'][ok], axis=1)):.2f} m")
     if a.out_dir != "imu_gt":                       # variant GT: keep the (batch_sync) alignment in imu_gt untouched
         return
-    acc, gyr = read_imu(rec / "imu.csv")
-    print(f"IMU: 가속도 {len(acc)} ({len(acc)/((acc[-1,0]-acc[0,0])*1e-9):.0f} Hz), 자이로 {len(gyr)} ({len(gyr)/((gyr[-1,0]-gyr[0,0])*1e-9):.0f} Hz)")
+    acc, gyr = read_imu(rec / "imu.csv", raw=a.raw_imu)
+    print(f"IMU ({'원본 35/16' if a.raw_imu else '보정판 1/4'}): 가속도 {len(acc)} ({len(acc)/((acc[-1,0]-acc[0,0])*1e-9):.0f} Hz), 자이로 {len(gyr)} ({len(gyr)/((gyr[-1,0]-gyr[0,0])*1e-9):.0f} Hz)")
     al, data = align(gt, gyr)
+    al["imu_raw"] = bool(a.raw_imu)
     json.dump(al, open(out / "align.json", "w"), indent=1)
     plot(out / "check.png", al, data)
     R = np.asarray(al["R_ci"])

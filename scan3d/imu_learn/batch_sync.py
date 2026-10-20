@@ -43,7 +43,7 @@ def fit(rec, win=2.0, knot=20.0, iters=400, dev="cuda", log=print):
     rec = Path(rec)
     g = dict(np.load(rec / "imu_gt" / "gt.npz"))
     al = json.load(open(rec / "imu_gt" / "align.json"))
-    _, gyr = read_imu(rec / "imu.csv")
+    _, gyr = read_imu(rec / "imu.csv", raw=bool(al.get("imu_raw", False)))   # gyro type chosen by imu_gt.py --raw-imu
     tg = gyr[:, 0].astype(np.int64)
     ok = g["ok"].astype(bool) & (g["t_ns"] > tg[0] + 50_000_000) & (g["t_ns"] < tg[-1] - 50_000_000)
     ok &= np.linalg.norm(g["p_bc"], axis=1) < 1.2             # far board (> 1.2 m): unstable pose (train_imu MAX_DIST_M)
@@ -153,7 +153,8 @@ def increment_check(rec, dt_ns, R_ci, bias_mean):
     import check_sync as cs
     rec = Path(rec)
     g = dict(np.load(rec / "imu_gt" / "gt.npz"))
-    _, gyr = read_imu(rec / "imu.csv")
+    raw = bool(json.load(open(rec / "imu_gt" / "align.json")).get("imu_raw", False))
+    _, gyr = read_imu(rec / "imu.csv", raw=raw)
     tg, wg = gyr[:, 0].astype(np.int64), gyr[:, 1:4] - np.asarray(bias_mean)
     Q = cs.gyro_orientation(tg, wg)
     fps = float(json.load(open(rec / "meta.json")).get("save_fps") or 60)
@@ -172,6 +173,7 @@ def main():
     ap.add_argument("--win", type=float, default=2.0)
     ap.add_argument("--iters", type=int, default=400)
     ap.add_argument("--write", action="store_true", help="imu_gt/align.json 을 이 값으로 (예전 값은 *_inc 로 남김)")
+    ap.add_argument("--json-out", default=str(HERE.parent / "runs" / "imu_batch_sync.json"), help="요약 json (기본 runs/imu_batch_sync.json)")
     a = ap.parse_args()
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     rows = []
@@ -190,9 +192,14 @@ def main():
             for k in ("dt_ns", "R_ci"):
                 al.setdefault(f"{k}_inc", al[k])
             al.update(dt_ns=r["dt_ns"], R_ci=r["R_ci"], gyro_bias_knots=r["gyro_bias_knots"], knot_s=r["knot_s"],
-                      method="whole-recording fit (batch_sync.py)", inc_res_deg=new, frame_res_deg=r["frame_res_deg_med"])
+                      method="whole-recording fit (batch_sync.py)", inc_res_deg=new, frame_res_deg=r["frame_res_deg_med"],
+                      frame_res_deg_p90=r["frame_res_deg_p90"], windows=r["windows"], frames_used=r["frames"])
+            from imu_gt import provenance
+            al["batch_sync_provenance"] = provenance([__file__])
             json.dump(al, open(al_p, "w"), indent=1)
-    json.dump(rows, open(HERE.parent / "runs" / "imu_batch_sync.json", "w"), indent=1, ensure_ascii=False)
+        rows[-1].update(imu_raw=bool(al.get("imu_raw", False)), frame_res_deg_p90=r["frame_res_deg_p90"],
+                        bias_mean=np.mean(r["gyro_bias_knots"], 0).tolist())
+    json.dump(rows, open(a.json_out, "w"), indent=1, ensure_ascii=False)
 
 
 if __name__ == "__main__":

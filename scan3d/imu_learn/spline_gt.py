@@ -133,7 +133,7 @@ class Spline:
 
 
 # ---------------------------------------------------------------- data
-def load(rec, gt_dir, start_s, secs, holdout=0):
+def load(rec, gt_dir, start_s, secs, holdout=0, board_override=None):
     """holdout = n > 0: frames with frame index % n == 0 are left out of the fit (their corners go to D['ho'])."""
     rec = Path(rec)
     g = dict(np.load(rec / gt_dir / "gt.npz", allow_pickle=True))
@@ -145,7 +145,9 @@ def load(rec, gt_dir, start_s, secs, holdout=0):
     meta = json.load(open(rec / "meta.json"))
     H = int(meta["height"])
     K, dist = g["K"], g["dist"]
-    board = aruco_scale.Board(aruco_scale.load_board_spec(str(BOARD)))
+    # board: --board > the board recorded in the per-frame GT (imu_gt.py, 2026-10-20+) > BOARD (monitor, older GTs)
+    bpath = Path(board_override) if board_override else (Path(str(g["board_json"])) if "board_json" in g else BOARD)
+    board = aruco_scale.Board(aruco_scale.load_board_spec(str(bpath)))
     T0 = tmid[0]
     lo = T0 + int(start_s * 1e9)
     trim = rec / "imu_gt" / "trim.json"
@@ -181,7 +183,7 @@ def load(rec, gt_dir, start_s, secs, holdout=0):
     k = np.r_[True, np.diff(tg) > 10_000]
     tg, Rg, pg = tg[k], Rg[k], pg[k]
     return dict(rec=rec, T0=int(T0), lo=int(lo), hi=int(hi), K=K, f=float((K[0, 0] + K[1, 1]) / 2), fi=fi, X=X, obs=obs,
-                t=t, tg=(tg - T0) / 1e9, Rg=Rg, pg=pg, tmid=tmid, skew=skew, H=H, n_frames=n, g=g, ho=ho)
+                t=t, tg=(tg - T0) / 1e9, Rg=Rg, pg=pg, tmid=tmid, skew=skew, H=H, n_frames=n, g=g, ho=ho, board_json=bpath)
 
 
 def slerp_at(tg, Rg, t):
@@ -289,7 +291,7 @@ def fit(D, knot=0.05, imu=False, iters=300, dev="cuda", log=print, sig_px=0.5, s
 def imu_data(D, dev, rate=200, bias_knot=10.0):
     rec = D["rec"]
     al = json.load(open(rec / "imu_gt" / "align.json"))
-    acc, gyr = read_imu(rec / "imu.csv")
+    acc, gyr = read_imu(rec / "imu.csv", raw=bool(al.get("imu_raw", False)))
     dt = int(al["dt_ns"])
     tg = (gyr[:, 0] + dt - D["T0"]) / 1e9                         # IMU samples on the camera clock, seconds
     lo, hi = (D["lo"] - D["T0"]) / 1e9, (D["hi"] - D["T0"]) / 1e9
@@ -367,11 +369,19 @@ def export(D, F, out_dir, min_corners=4, max_rms=1.5):
     ok = inwin & (cnt >= min_corners) & (rms <= max_rms)
     out = dict(t_ns=D["tmid"][:n].astype(np.int64), R_bc=R_all, p_bc=p_all, rms_px=rms, n_corners=cnt, ok=ok,
                K=g["K"], dist=g["dist"], spline=True, knot=F["sp"].k)
+    from imu_gt import board_info, write_board_info
+    bi = board_info(D["board_json"])
+    out.update(board_json=bi["board_json"], square_mm=bi["square_mm"])
     if "extra" in F:
         out["imu_params"] = json.dumps(F["extra"])
     od = D["rec"] / out_dir
     od.mkdir(exist_ok=True)
     np.savez(od / "gt.npz", **out)
+    ce = np.asarray(F["corner_err"])
+    write_board_info(od, D["board_json"], dict(
+        rec=D["rec"].name, spline=True, knot=F["sp"].k, imu_terms="extra" in F, frames=int(n), ok=int(ok.sum()),
+        corner_px_median=float(np.median(ce)), corner_px_p90=float(np.percentile(ce, 90)),
+        window_s=[(D["lo"] - D["T0"]) / 1e9, (D["hi"] - D["T0"]) / 1e9]), files=[__file__])
     if "extra" in F:
         json.dump(dict(F["extra"], imu_res=F.get("imu_res"), knot=F["sp"].k), open(od / "imu_params.json", "w"), indent=1)
     return ok
@@ -387,10 +397,11 @@ def main():
     ap.add_argument("--iters", type=int, default=300)
     ap.add_argument("--start", type=float, default=0)
     ap.add_argument("--secs", type=float, default=0, help="0 = whole recording")
+    ap.add_argument("--board", default=None, help="보드 json (기본: 정답 gt.npz 에 적힌 보드, 없으면 board_monitor_6x6.json)")
     a = ap.parse_args()
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     t0 = time.time()
-    D = load(a.rec, a.gt_dir, a.start, a.secs)
+    D = load(a.rec, a.gt_dir, a.start, a.secs, board_override=a.board)
     print(f"{D['rec'].name}: corners {len(D['fi'])} in {len(np.unique(D['fi']))} frames, "
           f"{(D['hi'] - D['lo']) / 1e9:.0f} s, knot {a.knot}, loaded {time.time() - t0:.0f} s", flush=True)
     log = lambda s: print(s, flush=True)

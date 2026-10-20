@@ -27,3 +27,21 @@
   아니면 지지 안 함. 녹화 단위 부호 검정으로 판단, 녹화 수가 적으면 "근거 약함" 표시.
 - 원본 vs 보정판 IMU: 같은 설정에서 녹화 단위로 ATE 중앙값 비교, 반복 흩어짐보다 작으면 "차이 없음".
 - 물리 보정: 보정 없음 대비 녹화 단위 개선 수 / 악화 수, 같은 기준.
+
+## 정답(GT) 만들기 — 노트북 화면 보드 (GT 담당, 2026-10-20 23:30~)
+- 보드: `config/charuco/board_laptop_6x6.json` (모니터 보드와 같은 사전·배치·마커 비율, **칸 40.70 mm = IMU 추정**, `square_mm_source` 에 표시).
+- 녹화마다 `imu_learn/overnight_gt.sh` (업로드 완료·sha256 확인 뒤 `overnight_gt_loop.sh` 가 차례로 부름):
+  imu_gt (원본 IMU 35/16 이 있으면 `--raw-imu`, align.json `imu_raw`) → board_shift (자르기) → batch_sync (dt·R_ci·자이로 바이어스)
+  → imu_gt `--rs --keep-corners` (imu_gt_rs) → spline_gt knot 0.0125 카메라만 (imu_gt_spl) → scale_ls (IMU 축척 확인) → gt_status.
+- 모든 정답 폴더에 `board.json` (보드 파일·칸 크기·출처·git HEAD·코드 sha256), gt.npz 에 `board_json`·`square_mm`.
+- 상태: `runs/overnight_gt_status.json`, 진행: `runs/overnight_gt.log`, 단계별 로그: `runs/overnight_gt/`.
+- 축척 확인 방법 치우침: 모니터 녹화 11 개(칸을 앎)에 같은 scale_ls → `runs/overnight_gt/scale_ref_monitor_*.json`.
+
+## 아침 할 일
+1. **노트북 화면 가로 길이 재기** (검은 테두리 안쪽, 빛나는 부분, mm) = W. 칸 = W / 7.07.
+2. 정답 축척 고치기 — 한 명령, 몇 초 (위치만 비례, 회전·dt·R_ci 는 그대로라 다시 돌릴 필요 없음):
+   `cd ~/scanner/StereoDepthSeg/scan3d && ../venv_ffs/bin/python imu_learn/rescale_gt.py --screen-width-mm W --update-board recordings/hs_20261020_2*`
+   (`--dry` 로 먼저 확인 가능. imu_gt·imu_gt_rs·imu_gt_spl 은 정확히 비례; imu_gt_spl_imu 는 가속도계가 축척을 정하므로 `spline_gt.py --imu` 다시)
+3. 확인: `../venv_ffs/bin/python imu_learn/scale_ls.py recordings/hs_20261020_2* --gt-dir imu_gt_rs` 의 s 가 모니터 녹화 값(ref)과 비슷해야 함,
+   그리고 `../venv_ffs/bin/python imu_learn/gt_status.py recordings/hs_20261020_2*` 로 상태 json 갱신.
+4. 정답 축척 위에서 돈 VIO 판정(ATE 10 cm, Sim3 축척)은 고친 축척으로 다시 계산 (ATE 는 축척에 비례).
