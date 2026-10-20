@@ -27,6 +27,21 @@ PARTS = {"raw": None, "lever": ("r",), "bias": ("bg", "ba"), "bias_G": ("bg", "b
          "bias_G_A": ("bg", "ba", "G", "A"), "full": ("bg", "ba", "G", "A", "r")}
 
 
+def code_version():
+    """git blob hashes of the bench and this wrapper as loaded (+ last commit of the bench, dirty flag): every result
+    records exactly which code made it (2026-10-20: the bench changed mid-matrix and mixed two frame pickers)."""
+    import subprocess
+    out = {}
+    for name, p in (("vio_bench_hs", Path(vb.__file__)), ("calib_vio_ablation", Path(__file__))):
+        run = lambda *c: subprocess.run(["git", *c], cwd=HERE, capture_output=True, text=True).stdout.strip()
+        out[name] = dict(blob=run("hash-object", str(p)), last_commit=run("log", "-1", "--format=%h", "--", str(p)),
+                         dirty=bool(run("status", "--porcelain", "--", str(p))))
+    return out
+
+
+CODE = code_version()
+
+
 def ablated(cal, keep):
     out = dict(G=np.eye(3).tolist(), A=np.eye(3).tolist(), bg=[0.0] * 3, ba=[0.0] * 3, r=[0.0] * 3)
     for k in keep:
@@ -59,7 +74,7 @@ def main():
         a.imu_calib = tf.name
     if o.start_off:
         orig_pick = vb.pick_by_time
-        vb.pick_by_time = lambda t_frames, t_start, t_end, fps: orig_pick(t_frames, t_start + int(o.start_off * 1e9), t_end, fps)
+        vb.pick_by_time = lambda t_frames, t_start, *rest: orig_pick(t_frames, t_start + int(o.start_off * 1e9), *rest)
         if o.max_secs:                                   # keep the scored length the same
             a.max_secs = o.max_secs + o.start_off
     saved = {}
@@ -72,7 +87,7 @@ def main():
     r = vb.run(a)
     if a.imu_calib:
         Path(a.imu_calib).unlink(missing_ok=True)
-    r.update(parts=o.parts, start_off=o.start_off, calib_file=o.calib, calib_used=used)
+    r.update(parts=o.parts, start_off=o.start_off, calib_file=o.calib, calib_used=used, code=CODE)
     out = Path(o.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     json.dump(r, open(out, "w"), indent=1, ensure_ascii=False)
