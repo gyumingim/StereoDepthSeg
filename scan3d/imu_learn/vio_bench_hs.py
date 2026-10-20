@@ -7,7 +7,8 @@ Variants (same backend, only one thing changes at a time — the 2026 'same-back
                           frame index, so dropped frames do not make the rate uneven; delivered rate/gaps reported)
   --size 640x360 ...      VIO image size (pinhole after undistortion, aspect 16:9)
   --npts / --clones       OpenVINS feature count / sliding-window clones
-  --noise cfg|meas        IMU noise densities: the old config guess (cfg) or measured from this recording (meas)
+  --noise cfg|meas|allan  IMU noise densities: the app config (cfg), measured from this recording (meas) or the Allan
+                          values of the long still recording (allan, runs/gyro_bias_stability.json)
   --imu-calib RESULT.json apply a learned physical calibration (train_imu result 'calib': G, bg, A, ba) to the IMU
   --dropout T:D,...       camera off for D s starting T s after the first frame (IMU keeps running)
   --imu-raw               use the uncalibrated IMU (Android types 16/35, values 0..2) instead of 1/4
@@ -64,6 +65,24 @@ def lens_path(rec, meta):
 
 def lens_for(rec, meta):
     return lens_calib.load(lens_path(rec, meta))[:2]
+
+
+ALLAN_JSON = SCAN3D / "runs" / "gyro_bias_stability.json"
+
+
+def allan_noise(path=ALLAN_JSON):
+    """Allan-deviation noise of the 43 min still recording (static_imu_20261020_095113, raw types 16/35): white noise =
+    mean over axes of N, random walk = mean over the axes where the Allan fit found K (rate random walk). Units in the
+    JSON are deg/s/sqrt(Hz), deg/s/sqrt(s), m/s^2/sqrt(Hz), m/s^3/sqrt(Hz) -> OpenVINS rad units. These are the sensor
+    floor (not inflated); secondary noise setting only (overnight 2026-10-20 plan)."""
+    al = json.load(open(path))["allan"]
+
+    def mean(sensor, key):
+        v = [ax[key] for ax in al[sensor].values() if isinstance(ax, dict) and ax.get(key) is not None]
+        return float(np.mean(v))
+    d2r = np.pi / 180
+    return dict(gyroscope_noise_density=mean("gyro_raw", "N") * d2r, gyroscope_random_walk=mean("gyro_raw", "K") * d2r,
+                accelerometer_noise_density=mean("accel_raw", "N"), accelerometer_random_walk=mean("accel_raw", "K"))
 
 
 def measured_noise(acc, gyr):
@@ -216,8 +235,12 @@ def run(a):
         sys.exit(str(e))
     print(f"IMU: {'raw types 16/35 (v0..2)' if a.imu_raw else 'Android-calibrated types 1/4'}", file=sys.stderr)
     # cfg = the app's values (make_ov_config.IMU_NOISE, same numbers as before 2026-10-20, now imported)
-    noise = {k: v * a.noise_scale for k, v in measured_noise(acc, gyr).items()} if a.noise == "meas" else dict(
-        make_ov_config.IMU_NOISE)
+    if a.noise == "meas":
+        noise = {k: v * a.noise_scale for k, v in measured_noise(acc, gyr).items()}
+    elif a.noise == "allan":
+        noise = {k: v * a.noise_scale for k, v in allan_noise().items()}
+    else:
+        noise = dict(make_ov_config.IMU_NOISE)
     a_i = np.stack([np.interp(gyr[:, 0], acc[:, 0], acc[:, 1 + j]) for j in range(3)], 1)
     g_i = gyr[:, 1:4].copy()
     p_CinI = np.zeros(3)
@@ -413,7 +436,7 @@ def main():
     ap.add_argument("--size", default="640x360")
     ap.add_argument("--npts", type=int, default=200)
     ap.add_argument("--clones", type=int, default=11)
-    ap.add_argument("--noise", default="cfg", choices=["cfg", "meas"])
+    ap.add_argument("--noise", default="cfg", choices=["cfg", "meas", "allan"])
     ap.add_argument("--noise-scale", type=float, default=1.0,
                     help="multiply measured noise (quiet-sample white noise underestimates real errors; Kalibr practice inflates)")
     ap.add_argument("--imu-calib", default=None)

@@ -2,7 +2,8 @@
 """C5 test run (docs/c5_test_plan.md): the bench (vio_bench_hs.py, as a module) with one OpenVINS init setting
 (--init-cfg strict | strict-dyn | loose), clone window and start offset, through the diag bridge (tools/ov_bridge_diag,
 same estimate as the shared bridge, see collapse_run.py) with the DEBUG log (init method / bias) and the full pose stream.
-No learned IMU calibration (parts=raw), Android types 1/4 IMU, as in runs/collapse.
+Default: no learned IMU calibration (parts=raw), Android types 1/4 IMU, as in runs/collapse. Overnight 2026-10-20
+options: --imu-raw (types 16/35), --imu-calib JSON (+ --calib-label), --noise allan (docs/overnight_vio_prereg.md).
 
   ../venv_ffs/bin/python imu_learn/c5_run.py recordings/hs_... --init-cfg strict --clones 11 --start-off 0 \
       --max-secs 60 --out runs/c5/NAME
@@ -22,6 +23,10 @@ sys.path.insert(0, str(HERE))
 import vio_bench_hs as vb  # noqa: E402
 
 DIAG_BRIDGE = vb.SCAN3D / "tools" / "ov_bridge_diag" / "build" / "ov_bridge"
+
+
+def sha256(path):
+    return hashlib.sha256(open(path, "rb").read()).hexdigest()
 
 
 def binary_hashes():
@@ -50,18 +55,22 @@ def main():
     ap.add_argument("--start-off", type=float, default=0.0)
     ap.add_argument("--fps", type=float, default=60)
     ap.add_argument("--size", default="640x360")
-    ap.add_argument("--noise", default="cfg", choices=["cfg", "meas"],
-                    help="cfg = app values (primary, plan change 1); meas (x noise-scale) = tuned on eval recs")
+    ap.add_argument("--noise", default="cfg", choices=["cfg", "meas", "allan"],
+                    help="cfg = app values (primary, plan change 1); meas (x noise-scale) = tuned on eval recs; "
+                         "allan = long still recording floor (overnight 2026-10-20, secondary)")
     ap.add_argument("--noise-scale", type=float, default=1.0)
     ap.add_argument("--max-secs", type=float, default=60)
     ap.add_argument("--decode-threads", type=int, default=2, help="video decode threads (load control only)")
+    ap.add_argument("--imu-raw", action="store_true", help="uncalibrated IMU types 16/35 (new recordings only)")
+    ap.add_argument("--imu-calib", default=None, help="calibration JSON {'calib': G, bg, A, ba, r} applied by the bench")
+    ap.add_argument("--calib-label", default="none", help="name of the calibration (recorded only)")
     ap.add_argument("--out", required=True, help="output prefix (no extension)")
     o = ap.parse_args()
     out = Path(o.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     a = argparse.Namespace(rec=o.rec, fps=o.fps, size=o.size, npts=200, clones=o.clones, noise=o.noise,
-                           noise_scale=o.noise_scale, imu_calib=None, dropout="", max_secs=o.max_secs, imu_raw=False,
-                           gt="auto", out=None, init_cfg=o.init_cfg, start_off=o.start_off,
+                           noise_scale=o.noise_scale, imu_calib=o.imu_calib, dropout="", max_secs=o.max_secs,
+                           imu_raw=o.imu_raw, gt="auto", out=None, init_cfg=o.init_cfg, start_off=o.start_off,
                            decode_threads=o.decode_threads)
     load0 = open("/proc/loadavg").read().split()[:3]
     errlog = open(str(out) + ".stderr.log", "w")
@@ -89,7 +98,14 @@ def main():
         vb.subprocess.Popen = orig_popen
         errlog.close()
     r.update(binary_sha256=binary_hashes(), decode_threads=o.decode_threads,
-             loadavg_start=load0, loadavg_end=open("/proc/loadavg").read().split()[:3], parts="raw", calib_used=None, bridge=str(DIAG_BRIDGE), runner="imu_learn/c5_run.py")
+             loadavg_start=load0, loadavg_end=open("/proc/loadavg").read().split()[:3],
+             parts="raw" if not o.imu_calib else "calib", calib_label=o.calib_label,
+             calib_used=json.load(open(o.imu_calib))["calib"] if o.imu_calib else None,
+             calib_file=o.imu_calib, calib_sha256=sha256(o.imu_calib) if o.imu_calib else None,
+             allan_sha256=sha256(vb.ALLAN_JSON) if o.noise == "allan" else None,
+             bridge=str(DIAG_BRIDGE), runner="imu_learn/c5_run.py",
+             runner_blob=subprocess.run(["git", "-C", str(vb.SCAN3D), "hash-object", "imu_learn/c5_run.py"],
+                                        capture_output=True, text=True).stdout.strip())
     json.dump(r, open(str(out) + ".json", "w"), indent=1, ensure_ascii=False)
     with gzip.open(str(out) + ".poses.jsonl.gz", "wt") as f:
         for m in saved.get("poses", []):
