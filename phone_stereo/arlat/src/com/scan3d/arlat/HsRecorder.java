@@ -52,7 +52,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 class HsRecorder implements SensorEventListener {
     interface Status { void show(String s); }
-    static final String VERSION = "hs-20261020-nroff";          // written to meta.json app_version + status line (nroff: NR/edge OFF requested)
+    static final String VERSION = "hs-20261020-nroff-ae";       // written to meta.json app_version + status line (nroff: NR/edge OFF requested; ae: AE/ISO/AWB/colour logged)
 
     static boolean has(int[] modes, int m) {
         if (modes == null) return false;
@@ -154,7 +154,8 @@ class HsRecorder implements SensorEventListener {
         resW = new BufferedWriter(new FileWriter(new File(dir, "results_cam5.csv")), 1 << 16);
         // new columns only at the end (old readers use the first 8 by name/position)
         resW.write("sensor_ts_ns,exposure_ns,rolling_shutter_skew_ns,frame_number,arrive_elapsed_ns,focus_dpt,af_mode,lens_moving"
-                + ",ois_mode,eis_mode,nr_mode,edge_mode,readout_ts_ns,distortion_mode,samsung_ldc_mode\n");
+                + ",ois_mode,eis_mode,nr_mode,edge_mode,readout_ts_ns,distortion_mode,samsung_ldc_mode"
+                + ",ae_mode,ae_state,ae_comp,iso,post_raw_boost,frame_duration_ns,awb_mode,awb_state,cc_mode,awb_gains_rggb,ccm_rowmajor,tonemap_mode,scene_mode,effect_mode\n");
         frW.write("frame_idx,t_mid_ns,physical_ts_ns,logical_ts_ns,exposure_ns,rolling_shutter_skew_ns,pts_us\n");
         t0Elapsed = SystemClock.elapsedRealtimeNanos(); t0Wall = System.currentTimeMillis();
         clockOffset = SystemClock.elapsedRealtimeNanos() - System.nanoTime();
@@ -354,7 +355,30 @@ class HsRecorder implements SensorEventListener {
         try { dc = r.get(CaptureResult.DISTORTION_CORRECTION_MODE); } catch (Throwable ignored) { }
         return r.get(CaptureResult.LENS_OPTICAL_STABILIZATION_MODE) + "," + r.get(CaptureResult.CONTROL_VIDEO_STABILIZATION_MODE)
                 + "," + r.get(CaptureResult.NOISE_REDUCTION_MODE) + "," + r.get(CaptureResult.EDGE_MODE)
-                + "," + readout + "," + dc + "," + ldc;
+                + "," + readout + "," + dc + "," + ldc + "," + exposureState(r);
+    }
+
+    // AE / ISO / AWB / colour processing actually applied (columns appended after samsung_ldc_mode)
+    static String exposureState(CaptureResult r) {
+        Object gains = null, ccm = null;
+        try {
+            android.hardware.camera2.params.RggbChannelVector g = r.get(CaptureResult.COLOR_CORRECTION_GAINS);
+            if (g != null) gains = g.getRed() + " " + g.getGreenEven() + " " + g.getGreenOdd() + " " + g.getBlue();
+        } catch (Throwable ignored) { }
+        try {
+            android.hardware.camera2.params.ColorSpaceTransform t = r.get(CaptureResult.COLOR_CORRECTION_TRANSFORM);
+            if (t != null) {
+                StringBuilder s = new StringBuilder();
+                for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++) s.append(i + j > 0 ? " " : "").append(t.getElement(j, i).floatValue());
+                ccm = s;
+            }
+        } catch (Throwable ignored) { }
+        return r.get(CaptureResult.CONTROL_AE_MODE) + "," + r.get(CaptureResult.CONTROL_AE_STATE) + ","
+                + r.get(CaptureResult.CONTROL_AE_EXPOSURE_COMPENSATION) + "," + r.get(CaptureResult.SENSOR_SENSITIVITY) + ","
+                + r.get(CaptureResult.CONTROL_POST_RAW_SENSITIVITY_BOOST) + "," + r.get(CaptureResult.SENSOR_FRAME_DURATION) + ","
+                + r.get(CaptureResult.CONTROL_AWB_MODE) + "," + r.get(CaptureResult.CONTROL_AWB_STATE) + ","
+                + r.get(CaptureResult.COLOR_CORRECTION_MODE) + "," + gains + "," + ccm + ","
+                + r.get(CaptureResult.TONEMAP_MODE) + "," + r.get(CaptureResult.CONTROL_SCENE_MODE) + "," + r.get(CaptureResult.CONTROL_EFFECT_MODE);
     }
 
     // ---------------- temperatures -> temps.csv ----------------
