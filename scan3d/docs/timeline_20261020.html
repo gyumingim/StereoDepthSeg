@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>밤사이 시간 분석</title>
+<style>
+:root{--bg:#f7f7f5;--fg:#1c1f24;--mut:#6b7078;--card:#fff;--line:#e2e4e8;--a:#2563eb;--b:#dc2626;--c:#16a34a;--d:#d97706;--p:#9333ea;--g:#94a3b8;--chip:#eef2ff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--p:#c084fc;--g:#64748b;--chip:#1e293b}}
+:root[data-theme="dark"]{--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--p:#c084fc;--g:#64748b;--chip:#1e293b}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.7 system-ui,"Malgun Gothic",sans-serif}
+main{max-width:1040px;margin:0 auto;padding:20px 16px 80px}
+h1{font-size:26px;margin:0 0 4px}h2{font-size:21px;margin:34px 0 8px;padding-top:8px;border-top:1px solid var(--line)}
+.lead{color:var(--mut);margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+.key{border-left:5px solid var(--b);padding:8px 14px;background:var(--chip);border-radius:0 10px 10px 0;margin:10px 0}
+table{border-collapse:collapse;width:100%;font-size:15px}th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{color:var(--mut);font-size:14px}.num{text-align:right;font-variant-numeric:tabular-nums}
+.scroll{overflow-x:auto}svg{width:100%;height:auto;display:block}svg text{fill:var(--fg);font:12px system-ui,"Malgun Gothic",sans-serif}svg .m{fill:var(--mut)}
+.small{font-size:14px;color:var(--mut)}.bad{color:var(--b);font-weight:700}.good{color:var(--c);font-weight:700}
+.legend span{display:inline-block;margin-right:14px;font-size:14px}.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:middle}
+</style>
+</head>
+<body><main>
+<h1>어제 18시 ~ 오늘 9시: 시간을 어디에 썼나</h1>
+<p class="lead">로그·결과 파일 시각으로 재구성 (WSL 서버 시각 기준). 목적: 병목 찾기.</p>
+
+<div class="key"><b>한 줄 요약</b> — 15시간 중 <b>약 10시간이 학습 8개</b>였고, 그중 <b>약 8시간이 IMU 적분 반복문</b>(GPU 에 아주 작은 계산을 수천 번 따로 보냄)에서 나갔습니다.
+8개를 동시에 돌려도 <b>총 처리량이 늘지 않았고</b>(각자 4.7배 느려짐), 그 사이 <b>9시간 동안 아무도 확인하지 않아</b>(22:03~07:02) 계획을 바꿀 기회를 놓쳤습니다.</div>
+
+<h2>1. 타임라인</h2>
+<div class="card">
+<div class="legend"><span><i style="background:var(--a)"></i>정답(GT) 만들기</span><span><i style="background:var(--p)"></i>학습</span><span><i style="background:var(--c)"></i>VIO·검증</span><span><i style="background:var(--b)"></i>실패·헛수고</span><span><i style="background:var(--g)"></i>아무도 안 봄</span></div>
+<svg id="gantt" viewBox="0 0 1000 400" role="img" aria-label="작업 타임라인"></svg>
+<p class="small">막대 안 숫자 = 걸린 시간. 학습 막대는 단계별(바이어스·물리 보정·물리+CNN·CNN 단독)로 나눔.</p>
+</div>
+
+<h2>2. 단계별 시간</h2>
+<div class="card scroll">
+<table>
+<tr><th>시각</th><th>작업</th><th class="num">걸린 시간</th><th>메모</th></tr>
+<tr><td>17:34–18:18</td><td class="bad">학습 7개 시작 → 전부 실패</td><td class="num">44분</td><td>정답 스크립트가 지워져 10·11번 녹화 정답이 없었음 (WSL 파일을 Windows 쪽 셸로 고친 사고)</td></tr>
+<tr><td>18:20–19:13</td><td>10·11번 정답 + 렌즈용 모서리 모으기 (9개 동시)</td><td class="num">53분</td><td>정답 1개 44~53분, 모서리 모으기 10~22분</td></tr>
+<tr><td>19:13–19:32</td><td>시간 맞추기 (전체 한 번에)</td><td class="num">19분</td><td>이미 한 녹화도 다시 함 (판별 조건 실수)</td></tr>
+<tr><td>19:32</td><td>렌즈 다시 구하기 → 기각</td><td class="num">수 초</td><td>모서리 캐시 덕에 빠름</td></tr>
+<tr><td>19:32–21:35</td><td>롤링셔터 편 정답 11개 (6개 동시)</td><td class="num">2시간 3분</td><td>녹화당 24~75분. 모서리마다 Python 반복문 → 지금은 한 번에 계산하게 고침</td></tr>
+<tr><td>21:35–07:42</td><td class="bad">학습 8개 동시</td><td class="num">10시간 7분</td><td>아래 3절. 예상은 2~3시간</td></tr>
+<tr><td>22:03–07:02</td><td class="bad">진행 확인 없음</td><td class="num">9시간</td><td>끝 알림만 걸어 둠 → 느린 걸 몰랐음</td></tr>
+<tr><td>07:03–07:11</td><td>VIO 비교 12개 (6개 동시)</td><td class="num"><span class="good">8분</span></td><td>VIO 시험대는 빠름</td></tr>
+<tr><td>07:43–08:44</td><td class="bad">물리 보정 다시 학습 — 녹화 읽기만</td><td class="num">61분</td><td>밤에 8번 읽은 것과 같은 일을 또 함 (가공 결과를 저장 안 함)</td></tr>
+<tr><td>07:56–08:16</td><td>VIO 확인 실험 (120 fps·잡음·끊김) + 속도 측정</td><td class="num">20분</td><td>이상한 결과 원인 확인</td></tr>
+<tr><td>08:44–(09:30)</td><td>물리 보정 학습 (2개)</td><td class="num">~45분</td><td>한 번 반복 약 77초</td></tr>
+</table>
+</div>
+
+<h2>3. 학습이 왜 10시간이었나</h2>
+<div class="card">
+<div class="scroll"><table>
+<tr><th>학습 1개 안의 단계</th><th class="num">반복 수</th><th class="num">걸린 시간</th><th class="num">반복 1번</th></tr>
+<tr><td>녹화 10개 읽기·가공 (창 자르기, 곡선, 거르기)</td><td class="num">-</td><td class="num">약 1.5시간</td><td class="num">-</td></tr>
+<tr><td>바이어스만</td><td class="num">20</td><td class="num">약 2.0시간</td><td class="num">약 6분</td></tr>
+<tr><td>물리 보정</td><td class="num">20</td><td class="num">약 2.0시간</td><td class="num">약 6분</td></tr>
+<tr><td>물리 보정 + CNN</td><td class="num">40</td><td class="num">약 3.5시간</td><td class="num">약 5분</td></tr>
+<tr><td>CNN 단독 (결론에 불필요, 아침에 멈춤)</td><td class="num">5~10/40</td><td class="num">0.3~0.6시간</td><td class="num">-</td></tr>
+</table></div>
+<svg viewBox="0 0 1000 150" role="img" aria-label="동시 실행 수에 따른 처리량">
+ <text x="10" y="22">동시 8개 (밤): 한 학습의 반복 1번 = 약 365초</text>
+ <rect x="10" y="30" width="730" height="22" rx="4" fill="var(--b)" opacity=".8"/><text x="750" y="46">365 s</text>
+ <text x="10" y="82">동시 2개 (아침): 반복 1번 = 약 77초</text>
+ <rect x="10" y="90" width="154" height="22" rx="4" fill="var(--c)"/><text x="174" y="106">77 s</text>
+ <text x="10" y="140" class="m">초당 처리한 반복 수: 8 ÷ 365 = 0.022  vs  2 ÷ 77 = 0.026 → 8개 동시가 오히려 약간 손해</text>
+</svg>
+<p><b>원인</b>: 3초 창의 IMU 를 적분할 때 1,500 걸음을 Python 반복문으로 하나씩 GPU 에 보냅니다. 걸음 하나하나는 아주 작은 계산이라
+GPU 는 대부분 "다음 지시"를 기다리며 놀고, 프로세스가 여러 개면 그 지시 줄에서 서로 기다립니다. 그래서 동시에 많이 돌려도 빨라지지 않았습니다.</p>
+</div>
+
+<h2>4. 병목 순위와 고칠 것</h2>
+<div class="card scroll">
+<table>
+<tr><th>순위</th><th>병목</th><th class="num">쓴 시간</th><th>고치는 법</th><th class="num">예상 효과</th></tr>
+<tr><td>1</td><td><b>IMU 적분 반복문</b> (학습의 대부분)</td><td class="num">약 8시간</td><td>걸음 여러 개를 묶어 한 번에 계산 (구간별 미리 적분), 또는 torch.compile / CUDA graph 로 GPU 지시를 한 번에</td><td class="num">5~20배 (추정)</td></tr>
+<tr><td>2</td><td><b>9시간 무확인</b></td><td class="num">기회 손실</td><td>10분 감시견 (오늘 아침부터 적용) + 시작 전 반복 1번 시간 재기</td><td class="num">문제를 10분 안에 발견</td></tr>
+<tr><td>3</td><td><b>녹화 읽기·가공 반복</b></td><td class="num">약 2.5시간 (밤 1.5 + 아침 1)</td><td>가공 결과(창·곡선)를 녹화마다 파일로 저장해 같이 쓰기</td><td class="num">1시간 → 수 초</td></tr>
+<tr><td>4</td><td>동시 실행이 처리량을 못 늘림</td><td class="num">-</td><td>1번을 고치기 전엔 2~4개만. 고친 뒤 다시 측정</td><td class="num">-</td></tr>
+<tr><td>5</td><td>정답 만들기 (영상 읽기 + 모서리 반복문)</td><td class="num">약 3시간</td><td>모서리 계산은 한 번에 하도록 이미 고침 (결과 동일 확인). 영상 읽기는 그대로</td><td class="num">2배 안팎 (추정)</td></tr>
+<tr><td>6</td><td>사고·헛수고 (지워진 스크립트, 이미 한 시간 맞추기 반복)</td><td class="num">약 1시간</td><td>CLAUDE.md 11절 규칙</td><td class="num">-</td></tr>
+</table>
+<p class="small">참고: VIO 비교(OpenVINS)는 12개를 8분에 끝냄 — 학습과 정답 만들기만 느림.</p>
+</div>
+</main>
+<script>
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+// hours since 17:00 (17:00 → 0, 09:30 next day → 16.5)
+const h=s=>{const[a,b]=s.split(':').map(Number);let x=a+b/60-17;if(x<0)x+=24;return x;};
+const rows=[
+ ['학습 7개 (실패)', [['17:34','18:18','--b','44분']]],
+ ['정답 10·11번 + 모서리', [['18:20','19:13','--a','53분']]],
+ ['시간 맞추기', [['19:13','19:32','--a','19분']]],
+ ['롤링셔터 정답 11개', [['19:32','21:35','--a','2시간 3분']]],
+ ['학습 8개 (단계별)', [['21:35','23:05','--g','읽기 1.5h'],['23:05','01:05','--p','바이어스 2h'],['01:05','03:05','--p','물리 2h'],['03:05','06:35','--p','물리+CNN 3.5h'],['06:35','07:42','--b','CNN단독']]],
+ ['진행 확인', [['22:03','07:02','--g','아무도 안 봄 9시간']]],
+ ['VIO 비교·확인·속도', [['07:03','07:11','--c','12개 8분'],['07:56','08:16','--c','확인 20분']]],
+ ['물리 보정 다시', [['07:43','08:44','--b','다시 읽기 61분'],['08:44','09:30','--p','학습']]],
+];
+function draw(){const s=document.getElementById('gantt');const L=150,R=990,T=30,rh=40,X=t=>L+(R-L)*h(t)/16.5;let g='';
+ for(let k=0;k<=16;k+=1){const x=L+(R-L)*k/16.5;const hh=(17+k)%24;g+=`<line x1="${x}" y1="${T-8}" x2="${x}" y2="${T+rows.length*rh}" stroke="${css('--line')}"/>`;if(k%2==0)g+=`<text x="${x-10}" y="${T-12}" class="m">${hh}시</text>`;}
+ rows.forEach((r,i)=>{const y=T+i*rh;g+=`<text x="4" y="${y+24}">${r[0]}</text>`;
+  r[1].forEach(([a,b,c,lab])=>{const x0=X(a),x1=X(b);g+=`<rect x="${x0}" y="${y+8}" width="${Math.max(2,x1-x0)}" height="24" rx="4" fill="${css(c)}" opacity=".85"/>`;
+   if(x1-x0>46)g+=`<text x="${x0+4}" y="${y+25}" style="fill:#fff;font-weight:600">${lab}</text>`;else g+=`<text x="${x1+4}" y="${y+25}" class="m">${lab}</text>`;});});
+ s.setAttribute('viewBox',`0 0 1000 ${T+rows.length*rh+10}`);s.innerHTML=g;}
+draw();matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw);
+</script>
+</body></html>
