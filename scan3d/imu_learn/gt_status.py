@@ -137,6 +137,9 @@ def one(rec):
                                 dt_change_ms=round((al["dt_ns"] - al.get("dt_ns_inc", al["dt_ns"])) / 1e6, 2))
         if al.get("frame_res_deg", 0) > 0.5:
             W.append(f"batch_sync frame residual {al['frame_res_deg']:.2f}° (> 0.5°)")
+    if al and al.get("method", "").startswith("borrowed"):
+        st["steps"].append("batch_sync(borrowed)")
+        W.append("alignment: " + al["method"])
     if (rec / "imu_gt_rs" / "gt.npz").exists():
         st["steps"].append("imu_gt_rs")
         st["imu_gt_rs"] = c = corner_stats(rec / "imu_gt_rs" / "gt.npz")

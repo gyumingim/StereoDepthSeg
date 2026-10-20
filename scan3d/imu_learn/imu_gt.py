@@ -195,15 +195,24 @@ def read_imu(path, raw=False):
     types 35/16, values 0..2 only (3..5 = Android's bias estimate); recordings before 2026-10-20 have none -> ValueError."""
     a_type, g_type = (ACC_RAW, GYR_RAW) if raw else (ACC, GYR)
     acc, gyr = [], []
+    bad = 0
     with open(path) as f:
         for r in csv.reader(f):
             if not r or r[0] == "type":
                 continue
-            t = int(r[0])
-            if t == a_type:
-                acc.append([int(r[1])] + [float(x) for x in r[2:5]])
-            elif t == g_type:
-                gyr.append([int(r[1])] + [float(x) for x in r[2:5]])
+            if len(r) < 5:
+                bad += 1
+                continue
+            try:                      # broken rows (app writes cut at a 4 KB boundary, e.g. hs_20261020_224323 row 318 '.0,0.0')
+                t = int(r[0])
+                if t == a_type:
+                    acc.append([int(r[1])] + [float(x) for x in r[2:5]])
+                elif t == g_type:
+                    gyr.append([int(r[1])] + [float(x) for x in r[2:5]])
+            except (ValueError, IndexError):
+                bad += 1
+    if bad:
+        print(f"read_imu: {path}: skipped {bad} malformed row(s)", file=sys.stderr)
     if raw and (not acc or not gyr):
         raise ValueError(f"{path}: no uncalibrated IMU rows (type {ACC_RAW}: {len(acc)}, type {GYR_RAW}: {len(gyr)}) "
                          "- recorded before raw logging was added; run without the raw option")
