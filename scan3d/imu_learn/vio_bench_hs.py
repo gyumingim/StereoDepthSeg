@@ -3,12 +3,18 @@
 OpenVINS bridge (ov_bridge) and score its camera trajectory against the board ground truth of the same recording.
 
 Variants (same backend, only one thing changes at a time — the 2026 'same-backend control' advice):
-  --fps 30/60/120/240     camera rate fed to the VIO (every k-th frame of the 240 fps video)
+  --fps 30/60/120/240     camera rate fed to the VIO (frame nearest to each 1/fps time step of t_mid — by TIME, not by
+                          frame index, so dropped frames do not make the rate uneven; delivered rate/gaps reported)
   --size 640x360 ...      VIO image size (pinhole after undistortion, aspect 16:9)
   --npts / --clones       OpenVINS feature count / sliding-window clones
   --noise cfg|meas        IMU noise densities: the old config guess (cfg) or measured from this recording (meas)
   --imu-calib RESULT.json apply a learned physical calibration (train_imu result 'calib': G, bg, A, ba) to the IMU
   --dropout T:D,...       camera off for D s starting T s after the first frame (IMU keeps running)
+  --imu-raw               use the uncalibrated IMU (Android types 16/35, values 0..2) instead of 1/4
+  --gt auto|spl|base|rs   scoring GT: auto = imu_gt_spl if present else imu_gt (both camera-only); rs = imu_gt_rs
+                          (rolling shutter undone with the gyro -> partly self-scoring, comparison only)
+Time: frames are sent on the IMU clock (t_mid - dt from align.json) and OpenVINS timeshift_cam_imu = 0, so the offset is
+applied exactly once; the online estimate (dt_cam_imu_*_ms in the result) should stay near 0.
 Metrics: ATE (SE3-aligned position RMSE, cm), scale (Sim3), RPE over 1 s, rotation error, drift at the end of each
 dropout, OpenVINS time per frame (ms, PC) and the share of frames tracked.
   ../venv_ffs/bin/python imu_learn/vio_bench_hs.py recordings/hs_... --fps 60 --size 640x360 [--out runs/vio/NAME.json]
@@ -103,6 +109,44 @@ def umeyama(src, dst, scale=False):
     return R, c, mu_d - c * R @ mu_s
 
 
+def gap_stats(t_ns, period_ns):
+    """Time-gap statistics of a frame time series: gaps = intervals > 1.5 x the nominal period (frame_idx and the
+    high-speed burst frame_number cannot show drops; only the time stamps can)."""
+    t = np.asarray(t_ns, np.int64)
+    if len(t) < 2:
+        return dict(n=int(len(t)))
+    d = np.diff(t)
+    gap = d > 1.5 * period_ns
+    return dict(n=int(len(t)), secs=round(float((t[-1] - t[0]) / 1e9), 2),
+                fps=round(float((len(t) - 1) / ((t[-1] - t[0]) / 1e9)), 2), nominal_fps=round(1e9 / period_ns, 2),
+                gaps=int(gap.sum()), missing_est=int(np.maximum(np.round(d[gap] / period_ns) - 1, 0).sum()),
+                max_gap_ms=round(float(d.max() / 1e6), 2), p99_ms=round(float(np.percentile(d, 99) / 1e6), 2))
+
+
+def pick_by_time(t_frames, t_start, t_end, fps):
+    """Indices of the frames nearest to the time grid t_start + n/fps (each within half a VIO period, strictly
+    increasing). A grid step inside a long drop gets no frame instead of shifting the whole later sequence."""
+    step = 1e9 / fps
+    grid = t_start + np.arange(0, int((t_end - t_start) / step) + 1) * step
+    j = np.clip(np.searchsorted(t_frames, grid), 1, len(t_frames) - 1)
+    j = np.where(np.abs(t_frames[j - 1] - grid) <= np.abs(t_frames[j] - grid), j - 1, j)
+    ok = (np.abs(t_frames[j] - grid) <= step / 2) & (t_frames[j] >= t_start) & (t_frames[j] <= t_end)
+    return np.unique(j[ok])
+
+
+def pick_gt(rec, mode):
+    """Scoring GT dir. auto: camera-only spline GT (imu_gt_spl) if present, else camera-only imu_gt."""
+    names = {"spl": "imu_gt_spl", "base": "imu_gt", "rs": "imu_gt_rs"}
+    if mode == "auto":
+        d = rec / "imu_gt_spl"
+        d = d if (d / "gt.npz").exists() else rec / "imu_gt"
+    else:
+        d = rec / names.get(mode, mode)
+    if not (d / "gt.npz").exists():
+        sys.exit(f"GT not found: {d}/gt.npz")
+    return d
+
+
 def run(a):
     rec = Path(a.rec)
     meta = json.load(open(rec / "meta.json"))
@@ -123,7 +167,12 @@ def run(a):
         t_end = t_start + int(a.max_secs * 1e9)
     else:
         t_end = t_frames[-1]
-    acc, gyr = read_imu(rec / "imu.csv")
+    t_end = min(t_end, t_frames[-1])
+    try:
+        acc, gyr = read_imu(rec / "imu.csv", raw=a.imu_raw)
+    except ValueError as e:
+        sys.exit(str(e))
+    print(f"IMU: {'raw types 16/35 (v0..2)' if a.imu_raw else 'Android-calibrated types 1/4'}", file=sys.stderr)
     noise = {k: v * a.noise_scale for k, v in measured_noise(acc, gyr).items()} if a.noise == "meas" else dict(
         accelerometer_noise_density=1e-2, accelerometer_random_walk=1e-3, gyroscope_noise_density=1e-3,
         gyroscope_random_walk=1e-4)
@@ -140,10 +189,22 @@ def run(a):
     for s in (a.dropout.split(",") if a.dropout else []):
         t0, d = (float(v) for v in s.split(":"))
         drop.append((t_start + int(t0 * 1e9), t_start + int((t0 + d) * 1e9)))
+    period = 1e9 / float(meta.get("save_fps") or 240)
+    sel = pick_by_time(t_frames, t_start, t_end, a.fps)
     k = max(1, int(round(float(meta.get("save_fps") or 240) / a.fps)))
+    old_idx = np.nonzero((t_frames >= t_start) & (t_frames <= t_end) & (np.arange(len(t_frames)) % k == 0))[0]
+    frames = dict(rec_all=gap_stats(t_frames, period),
+                  rec_window=gap_stats(t_frames[(t_frames >= t_start) & (t_frames <= t_end)], period),
+                  fed=gap_stats(t_frames[sel], 1e9 / a.fps),
+                  index_every_k_would_be=gap_stats(t_frames[old_idx], 1e9 / a.fps))
+    print(f"frames: recording {frames['rec_all']}\n  fed by time {frames['fed']}", file=sys.stderr)
+    selected = np.zeros(len(t_frames), bool)
+    selected[sel] = True
     tmp = Path(tempfile.mkdtemp(prefix="vio_", dir=str(SCAN3D / "runs")))
-    # OpenVINS: t_imu = t_cam + timeshift; ours: IMU time + dt = camera time  →  timeshift = −dt
-    write_config(tmp, Knew, (W, H), a.fps, R_ci, p_CinI, -dt_ns / 1e9, noise, a.npts, a.clones)
+    # OpenVINS: t_imu = t_cam + timeshift_cam_imu; ours: IMU time + dt = camera time. The frames below are already sent
+    # on the IMU clock (tci = tc - dt), so the shift is applied there and timeshift must be 0 (before 2026-10-20 it was
+    # also set to -dt here = applied twice, OpenVINS then started 2 ms off and had to estimate it away online).
+    write_config(tmp, Knew, (W, H), a.fps, R_ci, p_CinI, 0.0, noise, a.npts, a.clones)
     p = subprocess.Popen([str(BRIDGE), str(tmp / "estimator_config.yaml"), "--stdio", "--max-speed", "8",
                           "--lost-frames", "1000000", "--startup-lost-frames", "1000000"],
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0)
@@ -168,7 +229,7 @@ def run(a):
         if not ok_r:
             break
         tc = t_frames[fi]
-        if tc < t_start or fi % k:
+        if not selected[fi]:
             continue
         if tc > t_end:
             break
@@ -193,11 +254,12 @@ def run(a):
     p.wait(timeout=120)
     th.join(timeout=10)
     wall = time.time() - t_wall
-    return evaluate(rec, a, poses, n_fed, drop, dt_ns, wall, noise, Knew)
+    return evaluate(rec, a, poses, n_fed, drop, dt_ns, wall, noise, Knew, frames)
 
 
-def evaluate(rec, a, poses, n_fed, drop, dt_ns, wall, noise, Knew):
-    gt_dir = rec / ("imu_gt_rs" if (rec / "imu_gt_rs" / "gt.npz").exists() else "imu_gt")
+def evaluate(rec, a, poses, n_fed, drop, dt_ns, wall, noise, Knew, frames):
+    gt_dir = pick_gt(rec, a.gt)
+    print(f"scoring GT: {gt_dir.name} (mode {a.gt})", file=sys.stderr)
     g = dict(np.load(gt_dir / "gt.npz", allow_pickle=True))
     ok = g["ok"].astype(bool) & (np.linalg.norm(g["p_bc"], axis=1) < 1.2)
     gt_t = g["t_ns"][ok]
@@ -209,7 +271,14 @@ def evaluate(rec, a, poses, n_fed, drop, dt_ns, wall, noise, Knew):
                tracked=len(tr), tracked_frac=round(len(tr) / max(1, n_fed), 3),
                ms_med=round(float(np.median(ms)), 2) if len(ms) else None,
                ms_p90=round(float(np.percentile(ms, 90)), 2) if len(ms) else None, wall_s=round(wall, 1),
-               gt=gt_dir.name, noise_used={k: float(v) for k, v in noise.items()})
+               gt=gt_dir.name, gt_mode=a.gt, gt_uses_imu=gt_dir.name in ("imu_gt_rs", "imu_gt_spl_imu"),
+               imu_source="raw_16_35" if a.imu_raw else "calibrated_1_4", noise_scale=a.noise_scale,
+               timeshift_cam_imu=0.0, align_dt_ms=round(dt_ns / 1e6, 4), frames=frames,
+               noise_used={k: float(v) for k, v in noise.items()})
+    dts = np.array([m["dt_cam_imu"] for m in poses if m.get("dt_cam_imu") is not None], float) * 1e3
+    if len(dts):   # OpenVINS online camera-IMU time offset (ms); ~0 means the offset we applied was right
+        res.update(dt_cam_imu_init_ms=round(float(dts[0]), 4), dt_cam_imu_5s_ms=round(float(dts[min(len(dts) - 1, int(5 * a.fps))]), 4),
+                   dt_cam_imu_final_ms=round(float(dts[-1]), 4), dt_cam_imu_med_ms=round(float(np.median(dts)), 4))
     if len(tr) < 50:
         res["error"] = "too few tracked poses"
         return res
@@ -273,6 +342,9 @@ def main():
     ap.add_argument("--imu-calib", default=None)
     ap.add_argument("--dropout", default="")
     ap.add_argument("--max-secs", type=float, default=0)
+    ap.add_argument("--imu-raw", action="store_true", help="uncalibrated IMU (types 16/35); new recordings only")
+    ap.add_argument("--gt", default="auto",
+                    help="auto (imu_gt_spl if present else imu_gt, camera-only) | spl | base | rs | <dir name>")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
     r = run(a)

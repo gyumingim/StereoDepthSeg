@@ -29,6 +29,7 @@ import calib_scale  # noqa: E402
 
 BOARD_JSON = SCAN3D / "config" / "charuco" / "board_user_A4_6x6.json"
 ACC, GYR = 1, 4   # Android Sensor.TYPE_*
+ACC_RAW, GYR_RAW = 35, 16   # TYPE_ACCELEROMETER_UNCALIBRATED, TYPE_GYROSCOPE_UNCALIBRATED (read_imu(raw=True))
 
 
 def lens_K(rec, cam, size):
@@ -153,17 +154,23 @@ def board_poses(video, frames_csv, K, dist, min_corners=8, max_rms=1.5, w_cam=No
     return res
 
 
-def read_imu(path):
+def read_imu(path, raw=False):
+    """(acc, gyr) rows [t_ns, x, y, z]. raw=False (default): Android-calibrated types 1/4. raw=True: uncalibrated
+    types 35/16, values 0..2 only (3..5 = Android's bias estimate); recordings before 2026-10-20 have none -> ValueError."""
+    a_type, g_type = (ACC_RAW, GYR_RAW) if raw else (ACC, GYR)
     acc, gyr = [], []
     with open(path) as f:
         for r in csv.reader(f):
             if not r or r[0] == "type":
                 continue
             t = int(r[0])
-            if t == ACC:
+            if t == a_type:
                 acc.append([int(r[1])] + [float(x) for x in r[2:5]])
-            elif t == GYR:
+            elif t == g_type:
                 gyr.append([int(r[1])] + [float(x) for x in r[2:5]])
+    if raw and (not acc or not gyr):
+        raise ValueError(f"{path}: no uncalibrated IMU rows (type {ACC_RAW}: {len(acc)}, type {GYR_RAW}: {len(gyr)}) "
+                         "- recorded before raw logging was added; run without the raw option")
     return np.asarray(acc), np.asarray(gyr)
 
 
