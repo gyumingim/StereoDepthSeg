@@ -31,7 +31,8 @@ OUT = Path("runs/overnight_vio")
 INP = OUT / "inputs"
 LOG = Path("runs/overnight_vio.log")
 GTLOG = Path("runs/overnight_gt.log")
-RECS = ["hs_20261020_214138", "hs_20261020_221052", "hs_20261020_221925", "hs_20261020_222747", "hs_20261020_223815"]
+RECS = ["hs_20261020_214138", "hs_20261020_221052", "hs_20261020_221925", "hs_20261020_222747", "hs_20261020_223815",
+        "hs_20261020_224323"]                                   # 224323 added 2026-10-21 01:05 (coordinator)
 BIAS_FROM = {"hs_20261020_221925": "hs_20261020_221903"}      # same session, no still of its own
 CFGS = {"loose": "loose", "strict": "strict", "strictdyn": "strict-dyn"}
 PHASE_PRI = {"A": 0, "B": 1, "C": 2, "N": 3, "C2": 4, "D": 5}
