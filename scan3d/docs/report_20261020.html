@@ -8,7 +8,7 @@ h1{font-size:27px;margin:0 0 4px}h2{font-size:21px;margin:36px 0 8px;padding-top
 table{border-collapse:collapse;width:100%;font-size:14.5px}th,td{border-bottom:1px solid var(--line);padding:6px 7px;text-align:left;vertical-align:top}th{color:var(--mut);font-size:13.5px}
 .scroll{overflow-x:auto}svg{width:100%;max-width:620px;height:auto;display:block}svg text{fill:var(--fg);font:13px system-ui,sans-serif}.small{font-size:14px;color:var(--mut)}
 .good{color:var(--c);font-weight:700}.bad{color:var(--b);font-weight:700}
-</style></head><body><main>
+</style></head><body><main><div style="border:2px solid #e5484d;border-radius:8px;padding:10px 12px;margin:8px 0"><b>정정 (2026-10-20 11:00)</b> — 아래 내용 일부는 철회합니다. ① 물리 보정을 실제 VIO 에 넣으면 녹화 145816 에서 ATE 2.58 → 11.75 cm 로 나빠지고 131326 에서만 0.99 → 0.85 cm 로 좋아졌습니다 → <b>"OpenVINS 설정 확정" 철회</b>, 3 s IMU 지표가 VIO 를 돕는다는 증거 없음. ② "롤링셔터로 12% 개선" 의 대부분(약 9%)은 채점 정답을 바꾼 효과, 학습 효과는 2~3%. ③ VIO 시험 코드에 시간차 이중 적용 버그(영향 작음, 수정됨), 학습 적분 1 ms 어긋남(미수정), 녹화 IMU 가 Android 보정판·온도 영향 있음. 근거: docs/process_critique.md, docs/input_audit_report.md.</div>
 <h1>밤사이 결과 (2026-10-20 아침)</h1>
 <p class="small">녹화 11개 (약 43분, 45 cm 고정 초점 8개) · 평가는 학습에 안 쓴 녹화로만 · 숫자는 3초 창 위치 오차 (보드 정답 대비, 중앙값)</p>
 

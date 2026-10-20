@@ -120,6 +120,10 @@ class HsRecorder implements SensorEventListener {
         SensorManager sm = (SensorManager) ctx.getSystemService(Context.SENSOR_SERVICE);
         sm.registerListener(this, sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_FASTEST, h);
         sm.registerListener(this, sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_FASTEST, h);
+        // raw streams too (type 16 / 35: values 0-2 = uncalibrated, 3-5 = Android's current bias estimate) — we calibrate ourselves
+        Sensor gu = sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE_UNCALIBRATED), au = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER_UNCALIBRATED);
+        if (gu != null) sm.registerListener(this, gu, SensorManager.SENSOR_DELAY_FASTEST, h);
+        if (au != null) sm.registerListener(this, au, SensorManager.SENSOR_DELAY_FASTEST, h);
 
         MediaFormat f = MediaFormat.createVideoFormat("video/avc", size.getWidth(), size.getHeight());
         f.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
@@ -273,9 +277,13 @@ class HsRecorder implements SensorEventListener {
 
     @Override public void onSensorChanged(SensorEvent e) {
         if (!running) return;
-        int t = e.sensor.getType() == Sensor.TYPE_ACCELEROMETER ? 1 : 4;
+        int t = e.sensor.getType();                                   // Android ids: 1 acc, 4 gyro, 16 gyro raw, 35 acc raw
         try {
-            imuW.write(t + "," + e.timestamp + "," + e.values[0] + "," + e.values[1] + "," + e.values[2] + "\n");
+            if (t == Sensor.TYPE_GYROSCOPE_UNCALIBRATED || t == Sensor.TYPE_ACCELEROMETER_UNCALIBRATED)
+                imuW.write(t + "," + e.timestamp + "," + e.values[0] + "," + e.values[1] + "," + e.values[2]
+                        + "," + e.values[3] + "," + e.values[4] + "," + e.values[5] + "\n");
+            else
+                imuW.write(t + "," + e.timestamp + "," + e.values[0] + "," + e.values[1] + "," + e.values[2] + "\n");
             nImu++;
         } catch (Exception ignored) { }
     }
