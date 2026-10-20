@@ -65,12 +65,12 @@ def analyse_run(prefix, k=1.0):
                version=dict(bench_blob=d.get("bench_blob"), runner_blob=d.get("runner_blob"),
                             make_ov_config_blob=d.get("make_ov_config_blob"), template_blobs=d.get("template_blobs"),
                             binary_sha256=d.get("binary_sha256"), bench_dirty=d.get("bench_dirty"),
-                            lens_blob=d.get("lens_blob")),
+                            lens_blob=d.get("lens_blob"), imu_gt_blob=d.get("imu_gt_blob")),
                calib_sha256=d.get("calib_sha256"), dt_cam_imu_final_ms=d.get("dt_cam_imu_final_ms"), k=k)
     run = cs.load(prefix)
     ini = np.nonzero((run["status"] == "tracking") & np.isfinite(run["T"][:, 0]))[0]
     if not len(ini):
-        out.update(initialized=False, success=False, collapsed=None)
+        out.update(initialized=False, success=False, collapsed=None, success_full=False, collapsed_full=None)
         return out
     i0 = int(ini[0])
     info = run["init_info"]
@@ -111,6 +111,15 @@ def analyse_run(prefix, k=1.0):
         out["ate_win10_med_cm"] = float(np.median(wins)) if wins else None
         out["n_win10"] = len(wins)
         out["post_init_s"] = float((tt[-1] - tt[0]) / 1e9)
+    # full-run criterion (POST-HOC, added 2026-10-21 after the verdict, docs/overnight_20261020_plan.md amendment):
+    # diverged = full post-init Sim3 scale outside [0.5, 2] or full post-init SE3 ATE > 10 cm (catches late divergence
+    # that the pre-registered first-10 s window misses). Not computable (< 50 matched poses) -> unlabelled, not success.
+    if out.get("ate_full_cm") is not None:
+        sf, af = out["scale_full"], out["ate_full_cm"]
+        out["collapsed_full"] = bool(not (0.5 <= sf <= 2) or not (af <= 10))
+    else:
+        out["collapsed_full"] = None
+    out["success_full"] = out["collapsed_full"] is False
     return out
 
 
@@ -237,13 +246,29 @@ def summarize(d, k):
     for sj in (Path(d) / "inputs").glob("*_still.json"):
         s = json.load(open(sj))
         still[s["rec"]] = s
-    by = defaultdict(list)
-    for r in runs:
-        if r["name"].startswith("rep_"):
-            continue
-        rec6, setting = r["name"].split("_", 1)
-        setting = setting.rsplit("_o", 1)[0]
-        by[(setting, r["rec"])].append(r)
+    def group(rs):
+        by = defaultdict(list)
+        for r in rs:
+            if r["name"].startswith("rep_"):
+                continue
+            rec6, setting = r["name"].split("_", 1)
+            setting = setting.rsplit("_o", 1)[0]
+            by[(setting, r["rec"])].append(r)
+        return by
+
+    def verdicts(by):
+        v = dict(C5=c5_rule(by, recs_still),
+                 A_strictdyn_vs_loose=compare(by, "A_loose_cal", "A_strictdyn_cal", recs),
+                 A_strict_vs_loose_ate=compare(by, "A_loose_cal", "A_strict_cal", recs_still))
+        if best:
+            v["B_raw_vs_cal"] = compare(by, f"A_{best}_cal", f"B_{best}_raw", recs)
+            v["C_oldphys"] = compare(by, f"A_{best}_cal", f"C_{best}_oldphys", recs)
+            v["C_stillbias"] = compare(by, f"A_{best}_cal", f"C_{best}_stillbias", recs)
+            v["N_allan"] = compare(by, f"A_{best}_cal", f"N_{best}_allan", recs)
+            v["C2_raw_stillbias"] = compare(by, f"B_{best}_raw", f"C2_{best}_rawstillbias", recs)
+        return v
+
+    by = group(runs)
     recs = sorted({r["rec"] for r in runs})
     recs_still = [x for x in recs if still.get(x, {}).get("has_still")]
     best = json.load(open(Path(d) / "best_config.json"))["best"] if (Path(d) / "best_config.json").exists() else None
@@ -251,15 +276,17 @@ def summarize(d, k):
     res = dict(k=k, n_runs=len(runs), failed=failed, mixed_versions=len(versions) > 1, versions=versions, best=best,
                recs=recs, recs_still=recs_still, still=still,
                settings={f"{s}|{rec}": group_stats(v) for (s, rec), v in sorted(by.items())})
-    res["C5"] = c5_rule(by, recs_still)
-    res["A_strictdyn_vs_loose"] = compare(by, "A_loose_cal", "A_strictdyn_cal", recs)
-    res["A_strict_vs_loose_ate"] = compare(by, "A_loose_cal", "A_strict_cal", recs_still)
-    if best:
-        res["B_raw_vs_cal"] = compare(by, f"A_{best}_cal", f"B_{best}_raw", recs)
-        res["C_oldphys"] = compare(by, f"A_{best}_cal", f"C_{best}_oldphys", recs)
-        res["C_stillbias"] = compare(by, f"A_{best}_cal", f"C_{best}_stillbias", recs)
-        res["N_allan"] = compare(by, f"A_{best}_cal", f"N_{best}_allan", recs)
-        res["C2_raw_stillbias"] = compare(by, f"B_{best}_raw", f"C2_{best}_rawstillbias", recs)
+    res.update(verdicts(by))
+    # POST-HOC full-run criterion (2026-10-21): same rules, success/collapse from the full post-init run
+    byf = group([dict(r, success=r.get("success_full", False), collapsed=r.get("collapsed_full")) for r in runs])
+    res["full_run"] = dict(
+        criterion="POST-HOC 2026-10-21: diverged = full post-init Sim3 scale outside [0.5, 2] or full post-init SE3 ATE > 10 cm",
+        settings={f"{s}|{rec}": group_stats(v) for (s, rec), v in sorted(byf.items())},
+        window_ok_full_fail=[dict(name=r["name"], ate_full_cm=r.get("ate_full_cm"), scale_full=r.get("scale_full"),
+                                  ate10_cm=r.get("ate10_cm"), scale10=r.get("scale10"))
+                             for r in runs if r.get("success") and not r.get("success_full")],
+        window_fail_full_ok=[r["name"] for r in runs if r.get("success_full") and not r.get("success")],
+        **verdicts(byf))
     det = []
     for r in runs:
         if r["name"].startswith("rep_"):
@@ -331,6 +358,27 @@ def write_html(res, alt, path, concl):
                  f"<td>{fmt(s['t_init_med'])}</td><td>{fmt(s['tracked_med'])}</td></tr>")
     h.append("</table><small>성공 = 초기화 뒤 첫 10 s 창 Sim3 축척 0.5~2 그리고 SE3 ATE < 10 cm (계획 정의). ATE = 초기화 뒤 전체, SE3 정렬. "
              "초기화 시각 = 클립 시작부터.</small>")
+    fr = res.get("full_run")
+    if fr:
+        h.append("<h2>2b. 전 구간 기준 (사후 추가, 2026-10-21 — 계획에 없던 기준)</h2><div class='box'>사전 등록 기준은 초기화 뒤 첫 10 s 창만 봐서 "
+                 "늦은 발산을 놓쳤다. 그래서 <b>결과를 본 뒤</b> 전 구간 기준을 더했다: 초기화 뒤 전체 Sim3 축척이 0.5~2 밖이거나 전체 SE3 ATE > 10 cm 이면 "
+                 "발산(실패). 사전 기준을 대신하지 않고 나란히 적는다 (docs/overnight_20261020_plan.md 의 2026-10-21 수정 기록).</div>")
+        h.append("<table><tr><th>비교</th><th>사전 기준 (10 s 창)</th><th>전 구간 기준 (사후)</th><th>바뀜?</th></tr>")
+        for key in ("C5", "A_strict_vs_loose_ate", "A_strictdyn_vs_loose", "B_raw_vs_cal", "C_oldphys", "C_stillbias", "N_allan",
+                    "C2_raw_stillbias"):
+            if key in res and key in fr:
+                a_ = res[key]["verdict"] if key == "C5" else res[key]["overall"]
+                b_ = fr[key]["verdict"] if key == "C5" else fr[key]["overall"]
+                if key != "C5":
+                    a_ += f" (나음 {res[key]['better']}/나쁨 {res[key]['worse']}/같음 {res[key]['same']}/시험 안 됨 {res[key]['untested']})"
+                    b_ += f" (나음 {fr[key]['better']}/나쁨 {fr[key]['worse']}/같음 {fr[key]['same']}/시험 안 됨 {fr[key]['untested']})"
+                h.append(f"<tr><td>{key}</td><td>{html.escape(a_)}</td><td>{html.escape(b_)}</td><td>{'예' if a_ != b_ else '아니오'}</td></tr>")
+        h.append("</table><p>10 s 창은 성공인데 전 구간에서 발산한 실행:</p><table><tr><th>실행</th><th>10 s 창 ATE (cm)</th><th>10 s 창 축척</th>"
+                 "<th>전체 ATE (cm)</th><th>전체 축척</th></tr>")
+        for x in fr["window_ok_full_fail"]:
+            h.append(f"<tr><td>{html.escape(x['name'])}</td><td>{fmt(x['ate10_cm'])}</td><td>{fmt(x['scale10'], 3)}</td>"
+                     f"<td>{fmt(x['ate_full_cm'])}</td><td>{fmt(x['scale_full'], 3)}</td></tr>")
+        h.append("</table>")
     c5 = res["C5"]
     h.append(f"<h2>3. C5 (엄격한 정지 초기화가 무너짐을 절반 이하로 줄이나)</h2><p>strict 무너짐 {c5['collapsed_strict']}/{c5['labelled_strict']}, "
              f"loose 무너짐 {c5['collapsed_loose']}/{c5['labelled_loose']}; 녹화 단위 strict 나음 {c5['recs_strict_better']}, 나쁨 {c5['recs_strict_worse']}, "
@@ -388,7 +436,12 @@ def main():
     print(json.dumps(dict(n_runs=res["n_runs"], failed=len(res["failed"]), mixed=res["mixed_versions"], best=res["best"],
                           C5=res["C5"]["verdict"], **{x: res[x]["overall"] for x in ("B_raw_vs_cal", "C_oldphys", "C_stillbias",
                                                                                     "N_allan") if x in res},
-                          k_sens=res["k_sensitivity"]), ensure_ascii=False, indent=1))
+                          k_sens=res["k_sensitivity"],
+                          full_run=dict(C5=res["full_run"]["C5"]["verdict"],
+                                        **{x: res["full_run"][x]["overall"] for x in ("B_raw_vs_cal", "C_oldphys", "C_stillbias",
+                                                                                      "N_allan") if x in res["full_run"]},
+                                        window_ok_full_fail=[x["name"] for x in res["full_run"]["window_ok_full_fail"]])),
+                     ensure_ascii=False, indent=1))
 
 
 if __name__ == "__main__":

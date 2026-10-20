@@ -351,10 +351,12 @@ def code_version():
     def git(*c):
         return subprocess.run(["git", "-C", str(SCAN3D), *c], capture_output=True, text=True).stdout.strip()
     return dict(git_head=git("rev-parse", "--short", "HEAD"), bench_blob=git("hash-object", "imu_learn/vio_bench_hs.py"),
+                imu_gt_blob=git("hash-object", "imu_learn/imu_gt.py"),   # read_imu lives here (2026-10-21 verdict 11)
                 make_ov_config_blob=git("hash-object", "make_ov_config.py"),
                 template_blobs={f: git("hash-object", f"config/mono/{f}") for f in
                                 ("estimator_config.yaml", "kalibr_imu_chain.yaml")},
-                bench_dirty=bool(git("status", "--porcelain", "imu_learn/vio_bench_hs.py", "make_ov_config.py")))
+                bench_dirty=bool(git("status", "--porcelain", "imu_learn/vio_bench_hs.py", "make_ov_config.py",
+                                     "imu_learn/imu_gt.py")))
 
 
 def evaluate(rec, a, poses, n_fed, drop, dt_ns, wall, noise, Knew, frames):

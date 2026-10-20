@@ -84,8 +84,15 @@ def main():
         args = [str(DIAG_BRIDGE)] + list(args[1:]) + ["--diag"]
         kw["stderr"] = errlog
         return orig_popen(args, **kw)
-    vb.subprocess.Popen = popen
     saved = {}
+
+    def popen_rec(args, **kw):                  # also keep the exact config files the bridge reads (2026-10-21 verdict)
+        p = popen(args, **kw)
+        if str(args[0]).endswith("ov_bridge"):
+            d = Path(args[1]).parent
+            saved["ov_config"] = {f.name: f.read_text() for f in sorted(d.glob("*.yaml"))}
+        return p
+    vb.subprocess.Popen = popen_rec
     orig_eval = vb.evaluate
 
     def ev(rec, a_, poses, *rest):
@@ -106,7 +113,6 @@ def main():
              bridge=str(DIAG_BRIDGE), runner="imu_learn/c5_run.py",
              runner_blob=subprocess.run(["git", "-C", str(vb.SCAN3D), "hash-object", "imu_learn/c5_run.py"],
                                         capture_output=True, text=True).stdout.strip())
-    json.dump(r, open(str(out) + ".json", "w"), indent=1, ensure_ascii=False)
     with gzip.open(str(out) + ".poses.jsonl.gz", "wt") as f:
         for m in saved.get("poses", []):
             f.write(json.dumps(m) + "\n")
@@ -114,6 +120,19 @@ def main():
     with open(raw, "rb") as fi, gzip.open(str(raw) + ".gz", "wb") as fo:
         fo.write(fi.read())
     raw.unlink()
+    # actual config + initial state, per run (2026-10-21 verdict 11 / today item 5)
+    cfg = saved.get("ov_config", {})
+    r["ov_config_files"] = cfg                                   # exact yaml text the bridge read (after the DEBUG edit)
+    r["ov_config_sha256"] = {k: hashlib.sha256(v.encode()).hexdigest() for k, v in cfg.items()}
+    try:
+        import collapse_signals as cs
+        r["init_info"] = cs.parse_log(str(raw) + ".gz")["init_info"]   # method, disparity, bg/v/ba from the DEBUG log (4 dp)
+    except Exception as e:  # noqa: BLE001
+        r["init_info"] = {"error": repr(e)}
+    first = next((m for m in saved.get("poses", []) if m.get("status") == "tracking"), None)
+    # full precision, but AFTER the first update (differs slightly from init_info bg_init/ba_init = value at init)
+    r["state_first_tracking_pose"] = ({k: first.get(k) for k in ("t_ns", "bg", "ba", "v")} if first else None)
+    json.dump(r, open(str(out) + ".json", "w"), indent=1, ensure_ascii=False)
     print(json.dumps({k: r.get(k) for k in ("rec", "init_cfg", "noise", "noise_scale", "clones", "start_off", "t_init_clip_s", "covered_frac",
                                             "ate_cm", "scale", "wall_s", "bench_blob", "error")}))
 
