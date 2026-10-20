@@ -58,12 +58,17 @@ def log(msg):
 
 
 def gt_state(rec):
+    """ready only if the LAST GT-log line that names this recording is its "done:" line (a later "start", redo note or
+    step line = the GT is being rebuilt -> not ready; 2026-10-21 00:28 221052 was redone after its done line)."""
     if not GTLOG.exists():
         return "wait"
-    txt = GTLOG.read_text(errors="replace")
-    if re.search(rf"{rec} (imu_gt|batch_sync|imu_gt_rs) FAILED", txt):
+    lines = [ln for ln in GTLOG.read_text(errors="replace").splitlines() if rec[-6:] in ln.split("disagree")[0]]
+    if not lines:
+        return "wait"
+    last = lines[-1]
+    if re.search(rf"{rec} (imu_gt|batch_sync|imu_gt_rs) FAILED", last):
         return "failed"
-    if f"{rec} done:" in txt and Path(f"recordings/{rec}/imu_gt/align.json").exists():
+    if f"{rec} done:" in last and Path(f"recordings/{rec}/imu_gt/align.json").exists():
         return "ready"
     return "wait"
 
@@ -137,6 +142,21 @@ def main():
     while True:
         late = time.time() >= STOP_EPOCH
         for rec in RECS:
+            if state[rec] == "queued" and gt_state(rec) != "ready":     # GT being rebuilt -> discard and wait again
+                disc = OUT / f"discarded_{rec[-6:]}_{time.strftime('%H%M')}"
+                disc.mkdir(exist_ok=True)
+                for n, (p, j, t0) in list(running.items()):
+                    if j["rec"] == rec:
+                        p.kill()
+                        p.wait()
+                        del running[n]
+                for f in list(OUT.glob(f"{rec[-6:]}_*")) + list(INP.glob(f"{rec}_*")):
+                    f.rename(disc / f.name)
+                queue = [j for j in queue if j["rec"] != rec]
+                seen = {n for n in seen if not n.startswith(rec[-6:])}
+                state[rec] = None
+                log(f"{rec} GT changed after its done line -> runs killed, outputs moved to {disc}")
+                continue
             if state[rec] in ("queued", "failed"):
                 continue
             st = gt_state(rec)
