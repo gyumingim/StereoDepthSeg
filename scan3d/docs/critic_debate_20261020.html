@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>비판 토론 판정</title>
+<style>
+:root{--bg:#fcfcfb;--fg:#111;--mut:#5a5955;--panel:#f2f1ed;--line:#dedcd5;--keep:#e3f3e5;--mod:#fff3d1;--drop:#fbe3e0;--acc:#2a6fd6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1a19;--fg:#f0efec;--mut:#bdbcb2;--panel:#252523;--line:#3a3936;--keep:#1f3524;--mod:#3a3420;--drop:#40231f;--acc:#6ea4f0}}
+:root[data-theme="dark"]{--bg:#1a1a19;--fg:#f0efec;--mut:#bdbcb2;--panel:#252523;--line:#3a3936;--keep:#1f3524;--mod:#3a3420;--drop:#40231f;--acc:#6ea4f0}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:16px/1.7 system-ui,-apple-system,"Malgun Gothic",sans-serif;margin:0 auto;padding:16px;max-width:860px}
+h1{font-size:22px;margin:4px 0 6px}h2{font-size:18px;margin:30px 0 8px;border-bottom:1px solid var(--line);padding-bottom:4px}
+.mut{color:var(--mut);font-size:14px}
+.box{background:var(--panel);border-radius:10px;padding:12px 14px}
+.one{border-left:5px solid var(--acc);font-size:17px}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{border-bottom:1px solid var(--line);padding:7px 6px;text-align:left;vertical-align:top}
+td.v{white-space:nowrap;font-weight:600}
+.keep{background:var(--keep)}.mod{background:var(--mod)}.drop{background:var(--drop)}
+ol li,ul li{margin:6px 0}
+.done{color:var(--mut);font-size:14px;display:block}
+code{font-size:14px;background:var(--panel);padding:0 4px;border-radius:4px;overflow-wrap:anywhere}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+</style>
+</head>
+<body>
+<h1>비판 · 반박 토론 판정 (2026-10-20)</h1>
+<p class="mut">심판이 문서와 설정 파일을 직접 다시 읽고 판정했다. 파일은 고치지 않았다. 근거 문서: docs/ 안의 gyro_temp_table, temp_history_bias, vio_collapse_detect, calib_vio_verify, input_audit_report, spline_gt_result, todo_experiments, process_critique, config/*/estimator_config.yaml.</p>
+
+<h2>1. 결론 한 줄</h2>
+<p class="box one">방향은 맞다. 다만 <b>엄격한 정지 초기화가 붕괴를 막는지는 PC에서 다시 돌려 보기 전까지 모른다</b>. 실제 scan3d 설정도 정지 판정 시차가 15 px로 느슨하다. 비행 조건 시험은 앱 재설치 바로 다음 순서로 올린다.</p>
+
+<h2>2. 결론별 판정</h2>
+<table>
+<tr><th>결론</th><th>판정</th><th>이유 한 줄</th></tr>
+<tr class="keep"><td>C1 원본 자이로(16·35)로 바꾸기</td><td class="v">유지</td><td>보정된 자이로가 들어간 것은 확인됨. PC 쪽 <code>read_imu</code>도 아직 1·4만 읽으니 함께 고쳐야 한다(input_audit_report 19줄).</td></tr>
+<tr class="mod"><td>C2 온도가 자이로 바이어스를 설명</td><td class="v">수정</td><td>기울기와 r 0.99는 유지한다. 그런데 "히스테리시스가 거의 없다(0~1.7)"는 temp_history_bias 18줄과 맞지 않는다. 거기서는 −4~−11이고, 10 s를 앞당겨도 −1.6~−5.5다. 가열도 1번뿐이다.</td></tr>
+<tr class="keep"><td>C3 스플라인 이득 약 3 %</td><td class="v">유지</td><td>1.018→0.988 cm(−3 %)이고, 숫자 변화의 절반 이상은 자를 바꾼 효과다(spline_gt_result 14~15줄). 이 일은 멈춘다.</td></tr>
+<tr class="mod"><td>C4 물리 보정: 해친다는 증거 없음</td><td class="v">수정</td><td>"이득도 손해도 판정 불가"까지만 말할 수 있다. 둘 다 성공한 짝 5개 중 4개는 보정 쪽이 더 나빴다(calib_vio_verify 5절). A인지 A⁻¹인지는 6면 시험으로 가린다.</td></tr>
+<tr class="mod"><td>C5 붕괴 원인 = 느슨한 초기화</td><td class="v">수정</td><td>"가장 큰 원인 후보"로 낮춘다. 바이어스가 3.7~3.8 °/s인데도 정상으로 끝난 정지 초기화가 있다(154320). 동적 초기화 붕괴 가운데 151358 두 번은 원인이 적혀 있지 않다. 감지기 문턱은 같은 데이터로 정했다.</td></tr>
+<tr class="mod"><td>C6 내일 계획</td><td class="v">수정</td><td>비행 조건 시험과 PC 재실행을 앞으로 올린다. 다시 학습하는 일은 A 문제가 정리된 뒤로 미룬다. 판정 기준과 녹화를 뺄 기준은 실행하기 전에 문서로 적는다.</td></tr>
+</table>
+
+<h2>3. 누가 이겼나</h2>
+<div class="cols">
+<div class="box"><b>비판이 이긴 점</b><ul>
+<li>비행 조건(렌즈 2, 15 fps, 진동, 발열) 시험이 계획에서 빠져 있었다. 131326은 100 s에 과열로 멈췄고, 39.8 s부터 프레임이 8.9 % 빠졌다.</li>
+<li>C5 감지기는 문턱을 정한 데이터로 채점했다. 독립 단위는 녹화 7개뿐이다.</li>
+<li>C2가 VIO 결과를 좋게 만드는지는 아무 문서에도 없다. 그래서 가열 시험은 낮은 순위로 둔다.</li>
+<li>다시 학습하기 전에 A 문제부터 정리해야 한다. 같은 입력도 돌릴 때마다 결과가 달라진다(3.63 cm와 12.46 cm).</li>
+<li>스플라인 작업은 멈춘다.</li>
+</ul></div>
+<div class="box"><b>반박이 이긴 점</b><ul>
+<li>6면 시험은 남긴다. 데이터로는 A와 A⁻¹이 갈리지 않는다. 거리로는 A⁻¹이 4/4 더 가깝고, 잔차로는 A가 0.5 % 작다. 그래서 중력이라는 독립된 자가 필요하다.</li>
+<li>재설치보다 먼저 녹화하면 보정된 자이로가 또 들어간다. 그래서 재설치를 비행 조건 시험보다 먼저 한다.</li>
+<li>C5에서 자이로 바이어스가 2~3.8 °/s로 잡힌 것은 "움직이는 중에 정지 초기화가 됐다"는 직접 증거다. 다만 원인이라는 증명은 아니다.</li>
+<li>벤치는 <code>init_dyn_use=true</code>이고 scan3d 설정은 false다. 이 차이는 맞다.</li>
+</ul></div>
+</div>
+
+<h2>4. 바뀐 내일 계획</h2>
+<ol>
+<li><b>먼저 기준을 문서로 적는다.</b> 성공 기준, 161035를 뺄 기준, 판정 방식(녹화마다 시작 위치 5개 이상의 중앙값과 초기화 성공률)을 적는다.
+<span class="done">끝난 기준: 실행 전 시각이 찍힌 파일이 있다.</span></li>
+<li><b>PC 재실행을 백그라운드로 돌린다.</b> 설정은 <code>init_dyn_use=false</code>, 시차 1~2 px, 초기 바이어스 ≤ 0.5 °/s 게이트다. 여기에 clone 창을 늘린 설정과 녹화를 하나씩 빼고 다시 재는 감지기 검사를 더한다.
+<span class="done">끝난 기준: 녹화 7개 중 5개 이상에서 붕괴가 사라지면 C5를 다시 올린다. 아니면 C5는 철회한다. 감지기는 빼 둔 녹화에서 잰 감지율과 헛경보를 보고한다.</span></li>
+<li><b>앱을 재설치하고 10초 시험 녹화를 한다.</b>
+<span class="done">끝난 기준: 파일에 16·35 형식과 1 s 온도 기록이 들어 있다.</span></li>
+<li><b>비행 조건 녹화를 한다.</b> 렌즈 2, 15 fps로 찍는다. 폰은 틀에 단단히 묶고, 모터는 프롭 없이 돌린다. 사람이 지켜보고 배터리 42 °C나 발열 경고가 나오면 바로 멈춘다. 끝나면 카메라를 끈다.
+<span class="done">끝난 기준: 과열이나 fps 저하까지 몇 분 걸리는지, 그리고 프레임 누락률을 잰다. 폰 OpenVINS 빌드가 있으면 프레임당 시간도 잰다. 목표는 66 ms가 아니라 약 33 ms 아래다(추정, 여유 2배). 이유는 아래 5번에 있다.</span></li>
+<li><b>6면 시험을 한다(3~5분).</b>
+<span class="done">끝난 기준: 축척을 A와 A⁻¹ 중 어느 쪽이 더 잘 맞추는지 적는다. 차이가 측정 잡음보다 작으면 "판정 불가"라고 적는다.</span></li>
+<li><b>시작이 정지된 새 녹화를 한다.</b> 시작과 끝에 5~10 s씩 폰을 내려놓는다.</li>
+<li><b>A 문제가 정리되면 한 번만 다시 학습한다.</b> 1번에 적은 방식으로 판정한다. 161035는 넣은 값과 뺀 값을 둘 다 보고한다.</li>
+<li><b>카메라 없이 데우는 시험은 시간이 남으면 한다.</b>
+<span class="done">끝난 기준: 카메라를 끈 상태의 기울기가 ±20 % 안에 드는지, 1 s 온도 기록에서도 "10 s 먼저 움직임"이 남는지 본다.</span></li>
+</ol>
+
+<h2>5. 사실 확인에서 틀린 주장</h2>
+<table>
+<tr><th>누가</th><th>주장</th><th>실제</th></tr>
+<tr><td>반박 2</td><td>카메라 효과 +5.8/−5.2는 어떻게 셌는지 출처가 없다</td><td>틀림. temp_history_bias 19줄에 나온다. 1차식 M1에 "카메라 켬" 계단을 더해서 셌다. 같은 줄에 "10 s 먼저 움직임과 같은 현상일 수 있다, 분리 불가"라고 적혀 있다.</td></tr>
+<tr><td>비판 2 · 반박 2</td><td>히스테리시스는 0~1.7이라 작다. 그러니 둘 중 하나는 틀렸다</td><td>반만 맞다. 0~1.7은 gyro_temp_table(30 s 묶음) 값이다. temp_history_bias 18줄은 −4~−11이고, 10 s를 앞당기면 −1.6~−5.5다. 그러니 "모순"이 아니라 분석 방법에 따라 값이 다른 것이다. 카메라 효과(약 5)와도 맞을 수 있다.</td></tr>
+<tr><td>비판 2</td><td>"시간과 온도가 같이 움직였을 뿐"이라는 주장을 철회한다</td><td>철회가 너무 이르다. 위처럼 히스테리시스가 최대 5 mdeg/s 남고, 가열도 1번뿐이다. 낮은 순위로 두되 미결로 둔다.</td></tr>
+<tr><td>반박 2</td><td>동적 초기화 붕괴의 원인은 갱신 끊김(152631, 161035, 115620)과 약한 동적 초기화(145816)다</td><td>일부 틀림. 152631과 115620은 <b>정지</b> 초기화 실행이다(vio_collapse_detect 실행 목록). 동적 붕괴 6번은 145816 2번, 151358 2번, 161035 2번이고, 그중 151358 두 번은 원인이 안 적혀 있다.</td></tr>
+<tr><td>반박 1</td><td>바이어스 2~3.8 °/s가 원인을 직접 보여 준다</td><td>과장이다. 정지 초기화 15번 중 13번이 1.3~3.8 °/s였고, 그중 4번은 정상으로 끝났다(154320은 3.71·3.80). 바이어스 크기만으로는 붕괴가 갈리지 않는다.</td></tr>
+<tr><td>반박 2</td><td>실제 설정은 이미 false다. 그러니 "벤치를 실제 설정과 맞추면" 된다</td><td>빠진 것이 있다. 실제 <code>config/mono</code>, <code>640x480_15</code>도 <code>init_max_disparity: 15.0</code>이다. 실제 설정도 시차 문턱을 1~2 px로 줄이거나, 실시간 <code>--init-gate</code>를 반드시 써야 한다.</td></tr>
+<tr><td>반박 2</td><td>폰 OpenVINS가 프레임당 66 ms 아래면 된다</td><td>기준이 느슨하다. 15 fps의 한 프레임 시간이 66.7 ms라 남는 시간이 없다. 동적 초기화의 Ceres는 벽시계 한도가 있어서, CPU가 바쁘면 결과가 바뀐다(vio_collapse_detect). 발열로 느려지는 것도 생각하면 여유가 필요하다.</td></tr>
+<tr><td>반박 2</td><td>161035 제외 기준은 "정답 없이도 원인이 따로 있는 녹화"다</td><td>주의가 필요하다. 161035의 원인은 바로 C5의 잘못된 정지 초기화(15.0 px)와 갱신 끊김이다. 이것을 빼면 엄격한 초기화의 효과가 숨는다. 넣은 값과 뺀 값을 둘 다 보고하는 쪽이 맞다.</td></tr>
+<tr><td>비판 1</td><td>온도는 10 s마다만 기록된다</td><td>대체로 맞다. HAL 갱신은 약 10 s이고(todo_experiments 21줄), 이 녹화의 샘플 간격은 약 14 s다(temp_history_bias).</td></tr>
+</table>
+<p class="mut">확인한 대로 맞은 숫자: 131326은 100 s에 과열로 멈췄고 39.8 s부터 프레임 8.9 %가 빠졌다. 정지 초기화 붕괴 11/15, 동적 6/15. 헛경보 0.308·0.050. 161035는 9번 모두 발산. A⁻¹ 거리는 4/4. 스플라인은 −3 %. 6면 시험은 3~5분. 42 °C에서 멈춘다.</p>
+</body>
+</html>
