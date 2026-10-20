@@ -25,8 +25,9 @@ sys.path.insert(0, str(HERE))
 import collapse_signals as cs  # noqa: E402
 import vio_bench_hs as vb  # noqa: E402
 
+KEY_CORR = "GT 담당 최종 IMU 축척 (44.49 mm, 6 녹화, 추정)"
 K_ALT = {"13.3인치 (40.5 mm)": 40.5 / 40.70, "14인치 (42.7 mm)": 42.7 / 40.70,
-         "GT 담당 IMU 축척 합산 (44.27 mm, 01:08, 3 녹화)": 44.27 / 40.70}
+         KEY_CORR: 44.49 / 40.70}
 _GT = {}
 
 
@@ -320,11 +321,13 @@ def write_html(res, alt, path, concl):
                  f"<td>{fmt(np.round(np.degrees(g), 3).tolist() if g else None)}</td><td>{fmt((s.get('battery') or {}).get('first_c'))}→{fmt((s.get('battery') or {}).get('last_c'))}</td></tr>")
     h.append("</table>")
     h.append("<h2>2. 설정별 녹화별 표</h2><table><tr><th>설정</th><th>녹화</th><th>실행</th><th>초기화</th><th>성공</th><th>무너짐</th>"
-             "<th>ATE 중앙값 (성공, cm)</th><th>Sim3 ATE</th><th>Sim3 축척</th><th>10 s 창 ATE</th><th>초기화 시각 (s)</th><th>추적 비율</th></tr>")
+             "<th>ATE 중앙값 (성공, cm)</th><th>ATE ×1.093 (44.49 mm, 추정)</th><th>Sim3 ATE</th><th>Sim3 축척</th><th>Sim3 축척 ×1.093 (추정)</th><th>10 s 창 ATE</th><th>초기화 시각 (s)</th><th>추적 비율</th></tr>")
     for key, s in res["settings"].items():
         st, rec = key.split("|")
+        sc = res.get("settings_corrected", {}).get(key, {})
         h.append(f"<tr><td>{st}</td><td>{rec[-6:]}</td><td>{s['n']}</td><td>{s['n_init']}</td><td>{s['n_success']}</td><td>{s['n_collapsed']}</td>"
-                 f"<td>{fmt(s['ate_med'])}</td><td>{fmt(s['ate_sim3_med'])}</td><td>{fmt(s['scale_med'], 3)}</td><td>{fmt(s['ate_win10_med'])}</td>"
+                 f"<td>{fmt(s['ate_med'])}</td><td>{fmt(sc.get('ate_med'))}</td><td>{fmt(s['ate_sim3_med'])}</td>"
+                 f"<td>{fmt(s['scale_med'], 3)}</td><td>{fmt(sc.get('scale_med'), 3)}</td><td>{fmt(s['ate_win10_med'])}</td>"
                  f"<td>{fmt(s['t_init_med'])}</td><td>{fmt(s['tracked_med'])}</td></tr>")
     h.append("</table><small>성공 = 초기화 뒤 첫 10 s 창 Sim3 축척 0.5~2 그리고 SE3 ATE < 10 cm (계획 정의). ATE = 초기화 뒤 전체, SE3 정렬. "
              "초기화 시각 = 클립 시작부터.</small>")
@@ -373,7 +376,9 @@ def main():
         for lab, kk in K_ALT.items():
             _r = summarize(o.dir, o.k * kk)
             alt[lab] = (o.k * kk, {x: _r[x] for x in ("C5", "B_raw_vs_cal", "C_oldphys", "C_stillbias") if x in _r})
-    res["k_sensitivity"] = {lab: dict(k=v[0], **{x: (v[1][x]["verdict"] if x == "C5" else v[1][x]["overall"]) for x in v[1]})
+            if lab == KEY_CORR:
+                res["settings_corrected"] = _r["settings"]
+    res["k_sensitivity"] = {lab: dict(k=v[0], **{x: (v[1][x]["verdict"] if x == "C5" else v[1][x]["overall"]) for x in v[1] if x != "settings"})
                             for lab, v in alt.items()}
     out = o.out or str(Path(o.dir) / "summary.json")
     json.dump(res, open(out, "w"), indent=1, ensure_ascii=False, default=float)
