@@ -81,7 +81,10 @@ def load_rec(rec, max_jump_deg=3.0, smooth=False, gt_dir="imu_gt"):
         z = np.load(cache, allow_pickle=True)
         return {k: (z[k].item() if z[k].ndim == 0 else z[k]) for k in z.files}
     r = _load_rec(rec, max_jump_deg, smooth, gt_dir)
-    np.savez(cache, **r)
+    import os
+    tmp = cache.with_name(cache.stem + f".tmp{os.getpid()}.npz")    # atomic: parallel runs may build the same cache
+    np.savez(tmp, **r)
+    os.replace(tmp, cache)
     return r
 
 
