@@ -48,11 +48,44 @@ def so3_exp_np(w):
     return np.eye(3) + np.sin(th) * K + (1 - np.cos(th)) * K @ K
 
 
+def so3_exp_batch(w):
+    """(N,3) → (N,3,3) Rodrigues, vectorized (same as so3_exp_np per row)."""
+    th = np.linalg.norm(w, axis=1)
+    k = np.where(th[:, None] > 1e-12, w / np.maximum(th, 1e-12)[:, None], 0.0)
+    K = np.zeros((len(w), 3, 3))
+    K[:, 0, 1], K[:, 0, 2], K[:, 1, 0] = -k[:, 2], k[:, 1], k[:, 2]
+    K[:, 1, 2], K[:, 2, 0], K[:, 2, 1] = -k[:, 0], -k[:, 1], k[:, 0]
+    s, c = np.sin(th)[:, None, None], np.cos(th)[:, None, None]
+    return np.eye(3)[None] + s * K + (1 - c) * K @ K
+
+
 def ang_deg(R):
     return np.degrees(np.arccos(np.clip((np.trace(R) - 1) / 2, -1, 1)))
 
 
+CACHE_VERSION = 1
+
+
 def load_rec(rec, max_jump_deg=3.0, smooth=False, gt_dir="imu_gt"):
+    """Cached _load_rec: the prepared recording (IMU grid, filtered/smoothed GT) is saved next to the GT and reused while
+    its inputs (gt.npz, align.json, trim.json, imu.csv) and the options are unchanged — every training used to redo this
+    (≈1 h for 10 recordings, 2026-10-19 night)."""
+    import hashlib
+    base, part = (str(rec).split("@") + [None])[:2]
+    rb = Path(base)
+    deps = [rb / gt_dir / "gt.npz", rb / "imu_gt" / "align.json", rb / "imu_gt" / "trim.json", rb / "imu.csv"]
+    sig = "|".join(f"{p.name}:{p.stat().st_mtime_ns if p.exists() else 0}" for p in deps)
+    key = hashlib.md5(f"{CACHE_VERSION}|{sig}|{part}|{max_jump_deg}|{smooth}|{gt_dir}|{MAX_DIST_M}|{HZ}".encode()).hexdigest()[:12]
+    cache = rb / gt_dir / f"train_cache_{key}.npz"
+    if cache.exists():
+        z = np.load(cache, allow_pickle=True)
+        return {k: (z[k].item() if z[k].ndim == 0 else z[k]) for k in z.files}
+    r = _load_rec(rec, max_jump_deg, smooth, gt_dir)
+    np.savez(cache, **r)
+    return r
+
+
+def _load_rec(rec, max_jump_deg=3.0, smooth=False, gt_dir="imu_gt"):
     """rec = 녹화 폴더, 또는 'folder@a:b' = 그 녹화의 시간 비율 a~b 구간만 (녹화 하나를 학습/평가로 나눌 때)."""
     rec, part = (str(rec).split("@") + [None])[:2]
     rec = Path(rec)
@@ -84,17 +117,20 @@ def load_rec(rec, max_jump_deg=3.0, smooth=False, gt_dir="imu_gt"):
         keep, Rbc, pbc = smooth_gt(tf, Rbc, pbc)
         tf, Rbc, pbc, rms = tf[keep], Rbc[keep], pbc[keep], rms[keep]
     Rbi = Rbc @ R_ci                                        # IMU 축 → 보드
-    # 정답 거르기: 이웃 프레임 사이 회전을 자이로 적분과 비교
-    bad = np.zeros(len(tf), bool)
-    for k in range(1, len(tf)):
-        if tf[k] - tf[k - 1] > 40_000_000:
-            continue
-        i0, i1 = np.searchsorted(grid, [tf[k - 1], tf[k]])
-        R = np.eye(3)
-        for i in range(i0, i1):
-            R = R @ so3_exp_np(g[i] * DT)
-        if ang_deg((Rbi[k - 1].T @ Rbi[k]).T @ R) > max_jump_deg:
-            bad[k] = True
+    # 정답 거르기: 이웃 프레임 사이 회전을 자이로 적분과 비교. 자이로 자세 Q (Q[i] = 표본 0..i-1 의 회전 곱) 를 한 번 만들고
+    # 두 프레임 사이 = Q[i0]ᵀ Q[i1] (예전: 프레임마다 표본을 다시 곱하는 Python 이중 반복 — 녹화 읽기 병목, 2026-10-20)
+    Q = np.empty((len(grid) + 1, 3, 3))
+    Q[0] = np.eye(3)
+    E = so3_exp_batch(g * DT)
+    for i in range(len(grid)):
+        Q[i + 1] = Q[i] @ E[i]
+    i0 = np.searchsorted(grid, tf[:-1])
+    i1 = np.searchsorted(grid, tf[1:])
+    Rg = np.einsum("nji,njk->nik", Q[i0], Q[i1])
+    Rc = np.einsum("nji,njk->nik", Rbi[:-1], Rbi[1:])
+    D = np.einsum("nji,njk->nik", Rc, Rg)
+    ang = np.degrees(np.arccos(np.clip((np.trace(D, axis1=1, axis2=2) - 1) / 2, -1, 1)))
+    bad = np.r_[False, (ang > max_jump_deg) & (np.diff(tf) <= 40_000_000)]
     keep = ~bad
     tf, Rbi, pf, rms = tf[keep], Rbi[keep], pbc[keep], rms[keep]
     # 보드 좌표 중력: 거의 정지(자이로 작음) 프레임에서 g_b = -R_bi f
@@ -198,8 +234,45 @@ def so3_exp(w):                                  # (B,3) → (B,3,3)
     return torch.eye(3, device=w.device)[None] + s * K + (1 - c) * K @ K
 
 
+def prefix_prod(E):
+    """(B,T,3,3) → inclusive prefix products C_k = E_0 E_1 … E_k, in log2(T) batched steps (Hillis–Steele scan).
+    Matrix product is associative, so this equals the sequential chain; it replaces 1,500 tiny GPU launches per window
+    with ~11 big ones (the training bottleneck, 2026-10-19 night: ~8 h of 10 h)."""
+    C = E
+    d = 1
+    T = E.shape[1]
+    while d < T:
+        C = torch.cat([C[:, :d], C[:, :-d] @ C[:, d:]], 1)
+        d *= 2
+    return C
+
+
 def integrate_all(gyr, acc, R0, gb, start):
-    """창 첫 정답 프레임(표본 start)에서 R0, p=v=0 으로 출발해 모든 표본의 R, p (B,T,·). start 이전은 R0, 0."""
+    """창 첫 정답 프레임(표본 start)에서 R0, p=v=0 으로 출발해 모든 표본의 R, p (B,T,·). start 이전은 R0, 0.
+    Vectorized: R_k = R0 · P_startᵀ · P_k with P_k = E_0…E_{k−1} (prefix products), a_k = R_k f_k + g (zero before start),
+    v_k = Σ_{j<k} a_j dt, p_k = Σ_{j<k} (v_j dt + ½ a_j dt²) — identical to _integrate_all_loop (checked)."""
+    B, T, _ = gyr.shape
+    E = so3_exp((gyr * DT).reshape(-1, 3)).reshape(B, T, 3, 3)
+    C = prefix_prod(E)                                          # C_k = E_0 … E_k
+    I = torch.eye(3, device=gyr.device).expand(B, 1, 3, 3)
+    P = torch.cat([I, C[:, :-1]], 1)                            # P_k = E_0 … E_{k−1}
+    b = torch.arange(B, device=gyr.device)
+    Ps = P[b, start]                                            # (B,3,3)
+    Rk = R0[:, None] @ Ps.transpose(-1, -2)[:, None] @ P        # valid for k ≥ start
+    k = torch.arange(T, device=gyr.device)[None]
+    on = (k >= start[:, None]).float()                          # (B,T)
+    Rs = torch.where(on[..., None, None] > 0, Rk, R0[:, None].expand(B, T, 3, 3))
+    a_w = ((Rs @ acc[..., None])[..., 0] + gb) * on[..., None]
+    v = torch.cumsum(a_w, 1) * DT
+    v = torch.cat([torch.zeros_like(v[:, :1]), v[:, :-1]], 1)    # v_k uses a_j for j < k
+    dp = v * DT + 0.5 * a_w * DT * DT
+    p = torch.cumsum(dp, 1)
+    p = torch.cat([torch.zeros_like(p[:, :1]), p[:, :-1]], 1)
+    return Rs, p
+
+
+def _integrate_all_loop(gyr, acc, R0, gb, start):
+    """Reference (old, sequential) version of integrate_all — kept for the equivalence check."""
     B, T, _ = gyr.shape
     Rs, ps = [], []
     R = R0
@@ -248,6 +321,7 @@ def main():
     ap.add_argument("--batch", type=int, default=192)
     ap.add_argument("--win", type=float, default=1.0, help="창 길이 s (IMU 표류가 보드 정답 잡음보다 커지게 길게)")
     ap.add_argument("--eval-only", action="store_true", help="보정 없음·바이어스만 평가 (CNN 학습 안 함)")
+    ap.add_argument("--skip-bias", action="store_true", help="바이어스만 단계 건너뜀 (물리 보정값만 필요할 때)")
     ap.add_argument("--rot-sigma", type=float, default=0.005, help="자세 손실 기준 rad (보드 정답 잡음이 크면 키움)")
     ap.add_argument("--gt-dir", default="imu_gt", help="정답 폴더 (imu_gt_rs = 롤링셔터 펴기). align·trim 은 늘 imu_gt")
     ap.add_argument("--stride", type=float, default=0.25, help="창 시작 간격 s (데이터가 많으면 늘려 학습 시간 줄임)")
@@ -360,6 +434,9 @@ def main():
                     opt.step()
                     tot += loss.item()
             sched.step()
+            if ep == 1:                                 # early time estimate so a watchdog sees slow runs at once
+                dt1 = time.time() - t0
+                print(f"  ep 1 took {dt1:.1f} s → this stage ≈ {dt1 * epochs / 60:.1f} min", flush=True)
             if ep % max(1, epochs // 8) == 0 or ep == epochs:
                 model.eval()
                 print(f"  ep {ep:4d} 손실 {tot:.1f}  학습 {evaluate(model, tr)}  평가 {evaluate(model, va)}  "
@@ -369,9 +446,10 @@ def main():
     res = dict(train=[s["name"] for s in tr], val=[s["name"] for s in va])
     res["none"] = dict(train=evaluate(None, tr), val=evaluate(None, va))
     print("보정 없음:", res["none"], flush=True)
-    bias = train(BiasOnly().to(dev), max(20, a.epochs // 4), 3e-3)
-    res["bias"] = dict(train=evaluate(bias, tr), val=evaluate(bias, va), b=(bias.b.detach() * scale).cpu().tolist())
-    print("바이어스만:", res["bias"], flush=True)
+    if not a.skip_bias:
+        bias = train(BiasOnly().to(dev), max(20, a.epochs // 4), 3e-3)
+        res["bias"] = dict(train=evaluate(bias, tr), val=evaluate(bias, va), b=(bias.b.detach() * scale).cpu().tolist())
+        print("바이어스만:", res["bias"], flush=True)
     cal = train(Calib().to(dev), max(20, a.epochs // 3), 3e-3)
     res["calib"] = dict(train=evaluate(cal, tr), val=evaluate(cal, va),
                         G=cal.G.detach().cpu().tolist(), bg=cal.bg.detach().cpu().tolist(),
