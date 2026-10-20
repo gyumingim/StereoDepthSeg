@@ -52,7 +52,13 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 class HsRecorder implements SensorEventListener {
     interface Status { void show(String s); }
-    static final String VERSION = "hs-20261020-temps";          // written to meta.json app_version + status line
+    static final String VERSION = "hs-20261020-nroff";          // written to meta.json app_version + status line (nroff: NR/edge OFF requested)
+
+    static boolean has(int[] modes, int m) {
+        if (modes == null) return false;
+        for (int x : modes) if (x == m) return true;
+        return false;
+    }
     static final String LDC_TAG = "samsung.android.control.lensDistortionCorrectionMode";
 
     private final Context ctx;
@@ -234,6 +240,11 @@ class HsRecorder implements SensorEventListener {
                                 rb.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_OFF);
                                 rb.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_OFF);
                                 requestDistortionOff(rb);
+                                // noise reduction / edge enhancement OFF (TEMPLATE_RECORD defaults to FAST) — only if the camera offers OFF
+                                if (has(chars.get(CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES), CaptureRequest.NOISE_REDUCTION_MODE_OFF))
+                                    rb.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_OFF);
+                                if (has(chars.get(CameraCharacteristics.EDGE_AVAILABLE_EDGE_MODES), CaptureRequest.EDGE_MODE_OFF))
+                                    rb.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF);
                                 if (evComp != 0) rb.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, evComp);   // darker = shorter exposure, if AE obeys
                                 if (focusDpt >= 0) {        // fixed focus: autofocus moves the lens and changes the intrinsics mid-recording
                                     rb.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
