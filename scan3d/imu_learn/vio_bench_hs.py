@@ -123,15 +123,22 @@ def gap_stats(t_ns, period_ns):
                 max_gap_ms=round(float(d.max() / 1e6), 2), p99_ms=round(float(np.percentile(d, 99) / 1e6), 2))
 
 
-def pick_by_time(t_frames, t_start, t_end, fps):
-    """Indices of the frames nearest to the time grid t_start + n/fps (each within half a VIO period, strictly
-    increasing). A grid step inside a long drop gets no frame instead of shifting the whole later sequence."""
+def pick_by_time(t_frames, t_start, t_end, fps, period_ns):
+    """Indices of the frames nearest to the time grid t_start + n/fps: each within one camera period of its grid
+    step (and half a VIO period), at least 0.75 VIO period after the previous pick. A grid step inside a long drop
+    gets no frame instead of shifting the whole later sequence, and no short (< 0.75/fps) intervals appear after a drop."""
     step = 1e9 / fps
     grid = t_start + np.arange(0, int((t_end - t_start) / step) + 1) * step
     j = np.clip(np.searchsorted(t_frames, grid), 1, len(t_frames) - 1)
     j = np.where(np.abs(t_frames[j - 1] - grid) <= np.abs(t_frames[j] - grid), j - 1, j)
-    ok = (np.abs(t_frames[j] - grid) <= step / 2) & (t_frames[j] >= t_start) & (t_frames[j] <= t_end)
-    return np.unique(j[ok])
+    tol = min(step / 2, 1.01 * period_ns)
+    ok = (np.abs(t_frames[j] - grid) <= tol) & (t_frames[j] >= t_start) & (t_frames[j] <= t_end)
+    out, last = [], None
+    for i in np.unique(j[ok]):
+        if last is None or t_frames[i] - last >= 0.75 * step:
+            out.append(i)
+            last = t_frames[i]
+    return np.asarray(out, int)
 
 
 def pick_gt(rec, mode):
@@ -190,7 +197,7 @@ def run(a):
         t0, d = (float(v) for v in s.split(":"))
         drop.append((t_start + int(t0 * 1e9), t_start + int((t0 + d) * 1e9)))
     period = 1e9 / float(meta.get("save_fps") or 240)
-    sel = pick_by_time(t_frames, t_start, t_end, a.fps)
+    sel = pick_by_time(t_frames, t_start, t_end, a.fps, period)
     k = max(1, int(round(float(meta.get("save_fps") or 240) / a.fps)))
     old_idx = np.nonzero((t_frames >= t_start) & (t_frames <= t_end) & (np.arange(len(t_frames)) % k == 0))[0]
     frames = dict(rec_all=gap_stats(t_frames, period),
@@ -224,37 +231,45 @@ def run(a):
     ii = int(np.searchsorted(t_imu, t_start - dt_ns - 2_000_000_000))
     n_fed = 0
     t_wall = time.time()
-    for fi in range(len(rows)):
-        ok_r = cap.grab()
-        if not ok_r:
-            break
-        tc = t_frames[fi]
-        if not selected[fi]:
-            continue
-        if tc > t_end:
-            break
-        tci = tc - dt_ns                                         # camera time on the IMU clock
-        while ii < len(t_imu) and t_imu[ii] <= tci + 5_000_000:
+    crashed = None
+    try:
+        for fi in range(len(rows)):
+            ok_r = cap.grab()
+            if not ok_r:
+                break
+            tc = t_frames[fi]
+            if not selected[fi]:
+                continue
+            if tc > t_end:
+                break
+            tci = tc - dt_ns                                     # camera time on the IMU clock
+            while ii < len(t_imu) and t_imu[ii] <= tci + 5_000_000:
+                p.stdin.write(HDR.pack(MAGIC, 1, 56) + struct.pack("<q3d3d", int(t_imu[ii]), *g_i[ii], *a_i[ii]))
+                ii += 1
+            if any(d0 <= tc < d1 for d0, d1 in drop):
+                continue
+            _, f = cap.retrieve()
+            g = cv2.remap(cv2.cvtColor(f, cv2.COLOR_BGR2GRAY), m1, m2, cv2.INTER_LINEAR)
+            body = struct.pack("<qIIB3x", int(tci), W, H, 1) + np.ascontiguousarray(g).tobytes()
+            p.stdin.write(HDR.pack(MAGIC, 2, len(body)) + body)
+            n_fed += 1
+        for _ in range(200):                                     # flush: a bit more IMU so the last frame is processed
+            if ii >= len(t_imu):
+                break
             p.stdin.write(HDR.pack(MAGIC, 1, 56) + struct.pack("<q3d3d", int(t_imu[ii]), *g_i[ii], *a_i[ii]))
             ii += 1
-        if any(d0 <= tc < d1 for d0, d1 in drop):
-            continue
-        _, f = cap.retrieve()
-        g = cv2.remap(cv2.cvtColor(f, cv2.COLOR_BGR2GRAY), m1, m2, cv2.INTER_LINEAR)
-        body = struct.pack("<qIIB3x", int(tci), W, H, 1) + np.ascontiguousarray(g).tobytes()
-        p.stdin.write(HDR.pack(MAGIC, 2, len(body)) + body)
-        n_fed += 1
-    for _ in range(200):                                         # flush: a bit more IMU so the last frame is processed
-        if ii >= len(t_imu):
-            break
-        p.stdin.write(HDR.pack(MAGIC, 1, 56) + struct.pack("<q3d3d", int(t_imu[ii]), *g_i[ii], *a_i[ii]))
-        ii += 1
-    p.stdin.write(HDR.pack(MAGIC, 4, 0))
-    p.stdin.close()
+        p.stdin.write(HDR.pack(MAGIC, 4, 0))
+        p.stdin.close()
+    except BrokenPipeError:                                      # ov_bridge died (e.g. diverged) -> score what we got
+        crashed = f"ov_bridge exited (rc {p.poll()}) after {n_fed} frames"
+        print(crashed, file=sys.stderr)
     p.wait(timeout=120)
     th.join(timeout=10)
     wall = time.time() - t_wall
-    return evaluate(rec, a, poses, n_fed, drop, dt_ns, wall, noise, Knew, frames)
+    res = evaluate(rec, a, poses, n_fed, drop, dt_ns, wall, noise, Knew, frames)
+    if crashed:
+        res["bridge_crash"] = crashed
+    return res
 
 
 def evaluate(rec, a, poses, n_fed, drop, dt_ns, wall, noise, Knew, frames):
