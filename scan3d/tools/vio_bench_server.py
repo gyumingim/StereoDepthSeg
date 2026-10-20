@@ -276,18 +276,21 @@ class Hub:
                 reason = out.split('"stop_reason": "')[-1].strip()
                 rec.update(active=False, reason=reason)
                 if not reason.startswith("user"):
-                    self.say(f"폰이 녹화를 스스로 멈춤: {reason} → 지금까지 찍힌 것을 PC 로 가져옴")
-                    self.background(self.hs_stop)
+                    # no auto-pull (user 2026-10-20: move everything at once later via Cloudflare) — recording stays on the phone
+                    self.say(f"폰이 녹화를 스스로 멈춤: {reason} → 폰에 저장됨 (자동으로 가져오지 않음)")
                 return
             time.sleep(3)
 
-    def hs_stop(self):
-        """홈 키 → 앱이 onPause 에서 파일을 닫음 → 끝낸 뒤 가장 최근 hs_ 폴더를 PC recordings/ 로 가져옴."""
+    def hs_stop(self, pull=False):
+        """홈 키 → 앱이 onPause 에서 파일을 닫음. pull=True 일 때만 가장 최근 hs_ 폴더를 PC recordings/ 로 가져옴."""
         if self.rec.get("active"):
             self.rec.update(active=False, reason="user")
         self.adb("shell", "input", "keyevent", "KEYCODE_HOME")
         time.sleep(3)
         self.adb("shell", "am", "force-stop", PKG)
+        if not pull:
+            self.say("녹화 멈춤 — 폰에 저장됨 (가져오기는 따로)")
+            return ""
         base = f"/sdcard/Android/data/{PKG}/files"
         # newest folder with a real video (> 1 MB): repeated start/stop clicks leave empty hs_ folders behind
         ls = self.adb("shell", f"for d in {base}/hs_*; do echo $(stat -c %s $d/cam5.mp4 2>/dev/null || echo 0) $d; done")
@@ -474,7 +477,7 @@ def make_handler(hub):
                     hub.background(hub.hs_start, int(body.get("fps", 240)))
                     self._json({"ok": True})
                 elif self.path == "/api/hs_stop":
-                    hub.background(hub.hs_stop)
+                    hub.background(hub.hs_stop, bool(body.get("pull", False)))
                     self._json({"ok": True})
                 elif self.path == "/api/push_ov":
                     hub.background(hub.push_ov)
@@ -505,7 +508,7 @@ a{color:inherit}
 <h1>보정판 정답 녹화 — 240 fps</h1>
 <div class="card">
  <button class="rec" onclick="startRec()">● 녹화 시작</button>
- <button onclick="stopRec()">■ 멈추고 PC로 가져오기</button>
+ <button onclick="stopRec()">■ 멈춤 (폰에 저장)</button>
  <div style="margin-top:10px"><span class="big" id="state">-</span></div>
  <div id="pullbox" style="display:none;margin-top:8px;font-variant-numeric:tabular-nums">
   <div style="height:12px;border-radius:6px;background:var(--line);overflow:hidden"><div id="pullbar" style="height:100%;width:0;background:var(--ok)"></div></div>
@@ -526,7 +529,7 @@ let cd=null;                                                   // 5 s countdown 
 function startRec(){if(cd||t0)return;stopNote='';let n=5;const s=document.getElementById('state');busy=true;
  const tick=()=>{if(n<=0){clearInterval(cd);cd=null;busy=false;t0=Date.now();post('/api/hs_start',{fps:240});return;}
   s.textContent='손 떼세요… '+n+'초 뒤 녹화';s.style.color='#d97706';n--;};tick();cd=setInterval(tick,1000);}
-function stopRec(){if(cd){clearInterval(cd);cd=null;busy=false;stopNote='시작 취소됨';return;}t0=null;busy=true;document.getElementById('state').textContent='가져오는 중…';post('/api/hs_stop').then(()=>{busy=false;});}
+function stopRec(){if(cd){clearInterval(cd);cd=null;busy=false;stopNote='시작 취소됨';return;}t0=null;busy=true;document.getElementById('state').textContent='멈추는 중…';post('/api/hs_stop',{pull:false}).then(()=>{busy=false;stopNote='멈춤 — 폰에 저장됨';});}
 setInterval(()=>{if(busy)return;const s=document.getElementById('state');
  if(t0){const k=Math.floor((Date.now()-t0)/1000);s.textContent='● 녹화 중 '+Math.floor(k/60)+':'+String(k%60).padStart(2,'0');s.style.color=getComputedStyle(document.documentElement).getPropertyValue('--rec');}
  else{s.textContent=stopNote||'대기';s.style.color=stopNote?'#d97706':'';}},500);
