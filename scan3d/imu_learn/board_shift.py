@@ -13,10 +13,12 @@ from pathlib import Path
 import numpy as np
 
 
-def find_shift(g, within_s=60.0, step_mm=8.0, side_s=0.15, fit_mm=2.0, rot_deg=0.5):
+def find_shift(g, within_s=60.0, step_mm=8.0, side_s=0.15, fit_mm=2.0, rot_deg=0.5, max_gap_ms=None):
     """A board move = clean step: on each side of a frame boundary the camera path is smooth (straight line over
     side_s fits within fit_mm), the two lines disagree at the boundary by > step_mm, and orientation does not step.
-    Fast hand motion with noisy poses fails the smooth-sides test (checked on 5 recordings without a board move)."""
+    Fast hand motion with noisy poses fails the smooth-sides test (checked on 5 recordings without a board move).
+    max_gap_ms: ignore boundaries with a longer GT gap — extrapolating straight lines over seconds while the board is out
+    of view is not a step test (hs_20261020_214138: 4 false 'shifts' over 1.2-5.5 s gaps with the gyro turning 19-69°)."""
     from scipy.spatial.transform import Rotation as Rot
     ok = g["ok"].astype(bool) & (g["t_ns"] > 0)
     t = (g["t_ns"][ok] - g["t_ns"][ok][0]) / 1e9
@@ -26,7 +28,9 @@ def find_shift(g, within_s=60.0, step_mm=8.0, side_s=0.15, fit_mm=2.0, rot_deg=0
     for k in range(1, len(t)):
         if t[k] > within_s:
             break
-        A = np.arange(np.searchsorted(t, t[k - 1] - side_s), k)
+        if max_gap_ms is not None and (t[k] - t[k - 1]) * 1000 > max_gap_ms:
+            continue
+        A =np.arange(np.searchsorted(t, t[k - 1] - side_s), k)
         B = np.arange(k, np.searchsorted(t, t[k] + side_s, side="right"))
         if len(A) < 15 or len(B) < 15:
             continue
@@ -59,11 +63,17 @@ def main():
     ap.add_argument("recs", nargs="+")
     ap.add_argument("--within", type=float, default=60.0, help="only look in the first N seconds")
     ap.add_argument("--write", action="store_true", help="write imu_gt/trim.json (start after the last shift found)")
+    ap.add_argument("--max-gap-ms", type=float, default=None,
+                    help="ignore boundaries with a longer GT gap (board out of view; default: no limit = old behaviour)")
     a = ap.parse_args()
     for rec in a.recs:
         rec = Path(rec)
         g = dict(np.load(rec / "imu_gt" / "gt.npz"))
-        s = find_shift(g, a.within)
+        s = find_shift(g, a.within, max_gap_ms=a.max_gap_ms)
+        tp = rec / "imu_gt" / "trim.json"
+        if a.write and not s and tp.exists() and "board_shift" in json.load(open(tp)).get("reason", ""):
+            tp.rename(tp.with_suffix(".json.old"))                      # stale trim from an earlier run
+            print("  (old trim.json → trim.json.old)")
         print(f"{rec.name}: {len(s)} board shift(s) in the first {a.within:.0f} s " +
               " ".join(f"[{x['t_s']} s: {x['jump_mm']} mm in {x['gap_ms']} ms]" for x in s))
         if a.write and s:

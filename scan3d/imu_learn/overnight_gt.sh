@@ -5,7 +5,8 @@
 # Raw IMU (types 35/16) when the recording has them (align.json imu_raw), else Android-calibrated 1/4.
 # Progress lines → runs/overnight_gt.log (watchdog), step logs → runs/overnight_gt/<name>_<step>.log.
 #   bash imu_learn/overnight_gt.sh recordings/hs_20261020_214138 [...]
-# BOARD / KNOT / PY overridable from the environment. Re-scaling later: imu_learn/rescale_gt.py (no re-run needed).
+# BOARD / KNOT / PY overridable from the environment; FROM=board_shift|batch_sync|imu_gt_rs|spline|scale resumes
+# (earlier outputs kept). Re-scaling later: imu_learn/rescale_gt.py (no re-run needed).
 set -u
 cd "$(dirname "$0")/.."
 PY=${PY:-../venv_ffs/bin/python}
@@ -32,11 +33,17 @@ for R in "$@"; do
   RAW=""
   if grep -q -m1 '^16,' $R/imu.csv && grep -q -m1 '^35,' $R/imu.csv; then RAW="--raw-imu"; fi
   say "$N start (board $(basename $BOARD), imu ${RAW:-calibrated})"
+  if [ -z "${FROM:-}" ]; then
   step imu_gt $N $PY -u imu_learn/imu_gt.py $R --board $BOARD $RAW || { $PY imu_learn/gt_status.py $R; continue; }
-  step board_shift $N $PY imu_learn/board_shift.py $R --write
-  step batch_sync $N $PY -u imu_learn/batch_sync.py $R --write --json-out $OD/${N}_batch_sync.json || { $PY imu_learn/gt_status.py $R; continue; }
-  step imu_gt_rs $N $PY -u imu_learn/imu_gt.py $R --board $BOARD --rs --keep-corners --out-dir imu_gt_rs || { $PY imu_learn/gt_status.py $R; continue; }
-  step spline $N $PY -u imu_learn/spline_gt.py $R --knot $KNOT
+  fi
+  case "${FROM:-}" in ""|board_shift) RUN=1;; *) RUN=0;; esac
+  [ $RUN = 1 ] && step board_shift $N $PY imu_learn/board_shift.py $R --write --max-gap-ms 500
+  [ "${FROM:-}" = batch_sync ] && RUN=1
+  [ $RUN = 1 ] && { step batch_sync $N $PY -u imu_learn/batch_sync.py $R --write --json-out $OD/${N}_batch_sync.json || { $PY imu_learn/gt_status.py $R; continue; }; }
+  [ "${FROM:-}" = imu_gt_rs ] && RUN=1
+  [ $RUN = 1 ] && { step imu_gt_rs $N $PY -u imu_learn/imu_gt.py $R --board $BOARD --rs --keep-corners --out-dir imu_gt_rs || { $PY imu_learn/gt_status.py $R; continue; }; }
+  [ "${FROM:-}" = spline ] && RUN=1
+  [ $RUN = 1 ] && step spline $N $PY -u imu_learn/spline_gt.py $R --knot $KNOT
   step scale $N bash -c "$PY imu_learn/scale_ls.py $R --gt-dir imu_gt_rs --out $OD/${N}_scale_rs.json && \
                           $PY imu_learn/scale_ls.py $R --gt-dir imu_gt_spl --out $OD/${N}_scale_spl.json"
   $PY imu_learn/gt_status.py $R >> $OD/${N}_status.log 2>&1
