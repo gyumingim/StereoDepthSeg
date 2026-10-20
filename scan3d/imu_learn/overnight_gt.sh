@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Overnight 2026-10-20 ground truth for laptop-screen board recordings, one recording at a time (run from scan3d/):
-#   imu_gt (per-frame PnP, align) → board_shift (trim) → batch_sync (dt, R_ci, gyro bias) → imu_gt --rs --keep-corners
+#   imu_gt (per-frame PnP, align) → board_shift (report only) → batch_sync (dt, R_ci, gyro bias) → imu_gt --rs --keep-corners
 #   (imu_gt_rs) → spline_gt knot 0.0125 camera-only (imu_gt_spl) → scale_ls (IMU scale check) → gt_status.py
 # Raw IMU (types 35/16) when the recording has them (align.json imu_raw), else Android-calibrated 1/4.
 # Progress lines → runs/overnight_gt.log (watchdog), step logs → runs/overnight_gt/<name>_<step>.log.
@@ -37,7 +37,7 @@ for R in "$@"; do
   step imu_gt $N $PY -u imu_learn/imu_gt.py $R --board $BOARD $RAW || { $PY imu_learn/gt_status.py $R; continue; }
   fi
   case "${FROM:-}" in ""|board_shift) RUN=1;; *) RUN=0;; esac
-  [ $RUN = 1 ] && step board_shift $N $PY imu_learn/board_shift.py $R --write --max-gap-ms 500
+  [ $RUN = 1 ] && step board_shift $N $PY imu_learn/board_shift.py $R --max-gap-ms 500 --raw-jump   # diagnostic only, no trim (detector has false hits)
   [ "${FROM:-}" = batch_sync ] && RUN=1
   [ $RUN = 1 ] && { step batch_sync $N $PY -u imu_learn/batch_sync.py $R --write --json-out $OD/${N}_batch_sync.json || { $PY imu_learn/gt_status.py $R; continue; }; }
   [ "${FROM:-}" = imu_gt_rs ] && RUN=1

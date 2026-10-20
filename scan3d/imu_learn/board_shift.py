@@ -13,12 +13,14 @@ from pathlib import Path
 import numpy as np
 
 
-def find_shift(g, within_s=60.0, step_mm=8.0, side_s=0.15, fit_mm=2.0, rot_deg=0.5, max_gap_ms=None):
+def find_shift(g, within_s=60.0, step_mm=8.0, side_s=0.15, fit_mm=2.0, rot_deg=0.5, max_gap_ms=None, raw_jump=False):
     """A board move = clean step: on each side of a frame boundary the camera path is smooth (straight line over
     side_s fits within fit_mm), the two lines disagree at the boundary by > step_mm, and orientation does not step.
     Fast hand motion with noisy poses fails the smooth-sides test (checked on 5 recordings without a board move).
     max_gap_ms: ignore boundaries with a longer GT gap — extrapolating straight lines over seconds while the board is out
-    of view is not a step test (hs_20261020_214138: 4 false 'shifts' over 1.2-5.5 s gaps with the gyro turning 19-69°)."""
+    of view is not a step test (hs_20261020_214138: 4 false 'shifts' over 1.2-5.5 s gaps with the gyro turning 19-69°).
+    raw_jump: also require the two neighbouring frames themselves to be > step_mm apart (hs_20261020_221052: 6 false
+    'shifts' of 8-11 mm extrapolated during 1.3 rad/s turns while neighbouring frames were 1 mm apart)."""
     from scipy.spatial.transform import Rotation as Rot
     ok = g["ok"].astype(bool) & (g["t_ns"] > 0)
     t = (g["t_ns"][ok] - g["t_ns"][ok][0]) / 1e9
@@ -41,6 +43,8 @@ def find_shift(g, within_s=60.0, step_mm=8.0, side_s=0.15, fit_mm=2.0, rot_deg=0
         tm = (t[k - 1] + t[k]) / 2
         jump = np.linalg.norm((fb[0] * tm + fb[1]) - (fa[0] * tm + fa[1]))
         if jump < step_mm or ra > fit_mm or rb > fit_mm:
+            continue
+        if raw_jump and np.linalg.norm(p[k] - p[k - 1]) < step_mm:
             continue
         dr = np.degrees((Rot.from_matrix(R[k - 1]).inv() * Rot.from_matrix(R[k])).magnitude())
         if dr > rot_deg + 60 * (t[k] - t[k - 1]):                 # allow normal rotation over the gap (60 deg/s)
@@ -65,11 +69,13 @@ def main():
     ap.add_argument("--write", action="store_true", help="write imu_gt/trim.json (start after the last shift found)")
     ap.add_argument("--max-gap-ms", type=float, default=None,
                     help="ignore boundaries with a longer GT gap (board out of view; default: no limit = old behaviour)")
+    ap.add_argument("--raw-jump", action="store_true",
+                    help="neighbouring frames must also be > step apart (rejects line-extrapolation false steps in fast turns)")
     a = ap.parse_args()
     for rec in a.recs:
         rec = Path(rec)
         g = dict(np.load(rec / "imu_gt" / "gt.npz"))
-        s = find_shift(g, a.within, max_gap_ms=a.max_gap_ms)
+        s = find_shift(g, a.within, max_gap_ms=a.max_gap_ms, raw_jump=a.raw_jump)
         tp = rec / "imu_gt" / "trim.json"
         if a.write and not s and tp.exists() and "board_shift" in json.load(open(tp)).get("reason", ""):
             tp.rename(tp.with_suffix(".json.old"))                      # stale trim from an earlier run
