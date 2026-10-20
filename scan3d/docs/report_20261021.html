@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>밤샘 결과 보고</title>
+<style>
+:root{
+  --bg:#f7f7f5; --card:#ffffff; --text:#1d1d1f; --muted:#5f6368; --line:#e2e2de;
+  --accent:#1f5fbf; --ok:#1e7a3c; --okbg:#e6f4ea; --est:#8a5a00; --estbg:#fff4dc;
+  --bad:#b3261e; --badbg:#fde8e7; --code:#f0f0ec;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141416; --card:#1e1e21; --text:#ececec; --muted:#a3a3a8; --line:#33343a;
+    --accent:#7aa7ff; --ok:#7dd69a; --okbg:#173322; --est:#f0c060; --estbg:#3a2e12;
+    --bad:#ff8a80; --badbg:#3d1a18; --code:#2a2a2e;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141416; --card:#1e1e21; --text:#ececec; --muted:#a3a3a8; --line:#33343a;
+  --accent:#7aa7ff; --ok:#7dd69a; --okbg:#173322; --est:#f0c060; --estbg:#3a2e12;
+  --bad:#ff8a80; --badbg:#3d1a18; --code:#2a2a2e;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;line-height:1.65;font-size:16px}
+main{max-width:860px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:1.5rem;margin:.2em 0 .1em}
+h2{font-size:1.2rem;margin:2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+.sub{color:var(--muted);font-size:.9rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0}
+.top{border-left:5px solid var(--accent)}
+.top ol{margin:.3em 0;padding-left:1.3em}
+.top li{margin:.35em 0}
+.tag{display:inline-block;font-size:.78rem;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap}
+.t-ok{color:var(--ok);background:var(--okbg)}
+.t-est{color:var(--est);background:var(--estbg)}
+.t-bad{color:var(--bad);background:var(--badbg)}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:.88em;word-break:break-all}
+pre{background:var(--code);padding:10px 12px;border-radius:8px;overflow-x:auto;font-size:.85rem;white-space:pre-wrap;word-break:break-all}
+.tl{list-style:none;padding:0;margin:0}
+.tl li{display:flex;gap:12px;padding:6px 0;border-bottom:1px dashed var(--line)}
+.tl .t{flex:0 0 52px;color:var(--accent);font-variant-numeric:tabular-nums;font-weight:600}
+ul.plain{padding-left:1.2em}
+ul.plain li{margin:.3em 0}
+.small{font-size:.86rem;color:var(--muted)}
+@media (max-width:560px){
+  table{font-size:.85rem}
+  th,td{padding:6px 4px}
+}
+</style>
+</head>
+<body>
+<main>
+<h1>밤샘 결과 보고 (2026-10-20 밤 → 10-21 아침)</h1>
+<div class="sub">근거: <code>runs/overnight_vio/summary.json</code>, <code>docs/overnight_audit.md</code>, <code>docs/overnight_verdict.md</code> · 문구는 재판(JUDGE) 판정을 따름</div>
+
+<div class="card top">
+<b>결론 먼저 (3줄)</b>
+<ol>
+<li>처음에 10초 넘게 가만히 있던 녹화 5개에서는 strict와 loose 초기화가 똑같은 결과를 냈습니다. 그래서 "느슨한 초기화가 무너짐의 원인인가"(C5)는 <b>이번 데이터로는 판정할 수 없습니다</b>. 무너짐의 원인은 아직 모릅니다.</li>
+<li>IMU 원본과 보정판, 정지 바이어스 보정, 옛 물리 보정은 모두 <b>구별되는 차이가 없었습니다</b>. Allan 잡음값은 <b>나빴으니</b> 앱 기본값을 그대로 씁니다.</li>
+<li>정답(GT)을 만들 때 쓴 칸 크기 40.70 mm는 <b>너무 작습니다</b>(IMU 추정 44.49 mm). 아침에 노트북 화면 가로 길이를 자로 재 주시면 축척을 바로잡습니다.</li>
+</ol>
+</div>
+
+<h2>1. 밤사이 한 일</h2>
+<div class="card">
+<ul class="tl">
+<li><span class="t">21:59</span><span>폰 녹화 8개를 Cloudflare 터널로 받기 시작 (<code>runs/cf_upload_progress.log</code>)</span></li>
+<li><span class="t">23:06</span><span>밤샘 계획과 판정 기준을 결과보다 먼저 적어 커밋 (8408a72, <code>docs/overnight_20261020_plan.md</code>)</span></li>
+<li><span class="t">23:31</span><span>첫 녹화(214138) 도착, sha256 확인 뒤 정답(GT) 만들기 시작</span></li>
+<li><span class="t">23:58</span><span>VIO 실험 사전 규칙 커밋 (9b85621, <code>docs/overnight_vio_prereg.md</code>). 221903 제외 이유도 여기 적힘</span></li>
+<li><span class="t">00:10</span><span>첫 VIO 실행 시작</span></li>
+<li><span class="t">01:04</span><span>녹화 8개 모두 받음, sha256 모두 일치 (약 24.4 GB)</span></li>
+<li><span class="t">02:51</span><span>224100은 보드가 안 보여 정답 실패 → 제외. 224323은 IMU 파일의 깨진 줄 때문에 실패 → <code>read_imu</code>가 깨진 줄을 건너뛰도록 고친 뒤 다시 돌림</span></li>
+<li><span class="t">03:19</span><span>정답 6개 완료. 녹화 6개의 IMU로 추정한 칸 크기 <b>44.49 mm</b> (95% 43.6~45.4, 녹화끼리 일치)</span></li>
+<li><span class="t">03:41</span><span>VIO 146회 실행 끝, 실패 0, 한 코드 버전. 결과 커밋 e79f384 (<code>docs/overnight_vio_result.html</code>)</span></li>
+<li><span class="t">아침</span><span>감사(<code>docs/overnight_audit.md</code>)와 재판(<code>docs/overnight_verdict.md</code>)으로 문구를 고침 → 이 보고서</span></li>
+</ul>
+</div>
+
+<h2>2. 결과 표</h2>
+<p class="small"><span class="tag t-ok">확정</span> 데이터로 분명함 · <span class="tag t-est">추정</span> 녹화 수가 적거나 조건이 좁음 · <span class="tag t-bad">고침</span> VIO 담당 주장을 재판이 수정·철회함</p>
+<div class="tablewrap">
+<table>
+<tr><th>#</th><th>질문</th><th>재판 뒤 문구</th><th>표시</th></tr>
+<tr><td>1</td><td>C5: 느슨한 초기화가 무너짐 원인?</td><td>정지 시작에서는 두 설정이 같은 정적 초기화를 거쳐 구별이 안 된다(214138: ATE 1.5143 cm, 초기화 17.818 s 모두 같음). 무너짐의 원인은 아직 모른다.</td><td><span class="tag t-ok">판정 불가 확정</span></td></tr>
+<tr><td>2</td><td>오래 정지하면 초기화 설정 무관?</td><td>정지 10 s 이상인 녹화 5개에서 strict와 loose는 같았다(추정, 확정 아님). strict-dyn은 달랐다(221052: 1.11→1.47 cm).</td><td><span class="tag t-bad">고침</span> <span class="tag t-est">추정</span></td></tr>
+<tr><td>3</td><td>정지 없는 녹화(221925)</td><td>loose 3회 중 1회 무너짐, strict 3회 모두 초기화 못 함, strict-dyn 3회 모두 성공. 녹화 1개의 결과.</td><td><span class="tag t-est">추정</span></td></tr>
+<tr><td>4</td><td>IMU 원본 vs 보정판</td><td>구별되는 차이 없음(녹화 5개). 221052는 1.11→1.45 cm였지만 반복 흩어짐 안.</td><td><span class="tag t-est">추정</span></td></tr>
+<tr><td>5</td><td>정지 바이어스 보정</td><td>효과 없음. 보정값은 실제로 들어갔음(214138 차이 2.5e-5 cm). 정지 초기화가 같은 값을 추정하고, 남은 자이로 평균이 약 5e-4 rad/s로 작음.</td><td><span class="tag t-ok">확정</span> (정지 초기화일 때만)</td></tr>
+<tr><td>6</td><td>옛 물리 보정</td><td>차이의 근거 없음. 보정은 바꾸지 않는다. (40.70 mm 기준 나음 2/같음 3 → 44.49 mm 기준 나음 1/같음 4. 214138 이득 0.34 cm ≈ 흩어짐 0.31 cm)</td><td><span class="tag t-bad">고침</span></td></tr>
+<tr><td>7</td><td>Allan 잡음값</td><td>녹화 5개 중 3개에서 무너지거나 발산(222747 3/3 무너짐, 214138 914~977 cm, 221052 650/22/23 cm), 2개에서 나빠짐(223815 0.79→1.2 cm, 224323 0.97→4.7 cm). 앱 기본값을 유지한다.</td><td><span class="tag t-bad">고침</span> <span class="tag t-ok">결론 확정</span></td></tr>
+<tr><td>8</td><td>같은 입력이면 같은 결과?</td><td>부하가 달라도 ATE가 같았다(1.5143 / 0.8637 cm), 2/2.</td><td><span class="tag t-ok">확정</span></td></tr>
+<tr><td>9</td><td>칸 크기</td><td>40.70 mm는 작다(VIO와 IMU 모두). 정확한 칸 크기는 자로 재야 한다. (VIO 축척 0.939 → 43.35 mm로 IMU 95% 구간 밖이고, 둘 다 가속도계에 기대므로 독립 근거 아님)</td><td><span class="tag t-bad">고침</span></td></tr>
+<tr><td>10</td><td>221903·224100 제외</td><td>정당함. 23:58 사전 규칙에 기록, 첫 실행(00:10)보다 앞섬.</td><td><span class="tag t-ok">확정</span></td></tr>
+<tr><td>11</td><td>read_imu 수정 영향</td><td>결과에 영향 없음. 다만 실행 기록에 read_imu 버전이 빠짐 → 다음부터 기록.</td><td><span class="tag t-ok">확정</span></td></tr>
+</table>
+</div>
+
+<h2>3. 어제 믿던 것과 달라진 점</h2>
+<div class="card">
+<ul class="plain">
+<li><b>어제:</b> "느슨한 초기화(loose)가 무너짐의 주원인일 것"(C5) → <b>오늘:</b> 정지 시작 녹화로는 시험 자체가 갈리지 않음. 정지 없는 221925 하나에서만 차이가 보임. 원인은 열린 질문.</li>
+<li><b>어제:</b> 노트북 화면 칸 크기 40.70 mm(IMU 7.5 s 추정) → <b>오늘:</b> 녹화 6개로 44.49 mm 추정. 정답 위치가 약 9% 작게 만들어져 있음.</li>
+<li><b>어제:</b> IMU 보정·바이어스 보정이 VIO를 도울 수 있다 → <b>오늘:</b> 녹화 5개에서 구별되는 이득 없음.</li>
+<li><b>새로 안 것:</b> 시작 시점 0/1/2 s 반복은 무작위 반복이 아니라 시작 시점 민감도임(실행은 결정적).</li>
+</ul>
+</div>
+
+<h2>4. 드러난 문제와 정정</h2>
+<div class="card">
+<ul class="plain">
+<li><b>성공 판정 구멍:</b> "성공"을 초기화 뒤 첫 10 s만 보고 정해서, 나중에 수 m로 발산한 Allan 실행 6개를 성공으로 셈. A·B·C 주 결론에는 영향 없음(5 cm 넘는 성공 실행 없음). 오늘 전 구간 기준을 더함.</li>
+<li><b>빠진 계획 항목:</b> 계획 5절의 "새 녹화로 학습한 물리 보정"과 "바이어스+온도 1차식"은 사전 규칙에서 빠져 실행되지 않았는데, 결과 HTML은 "계획대로"라고 씀 → 정정 필요.</li>
+<li><b>"확정"이라는 말 과장:</b> 녹화 5개라 부호 검정 최소 p가 0.0625. 어떤 결과도 확정이 될 수 없음.</li>
+<li><b>기록 시각:</b> 사전 규칙 문서의 변경 기록 시각 몇 개가 실제 커밋보다 늦게 적힘. 내용 문제는 아님.</li>
+<li><b>앱 버그:</b> 녹화 3/8에서 IMU 파일 한 줄이 잘리고 176~288 ms 빈틈. 이번엔 분석 구간 밖이지만 앱에서 고칠 거리.</li>
+</ul>
+</div>
+
+<h2>5. 아침에 해 주실 일</h2>
+<div class="card">
+<ol>
+<li><b>노트북 화면 가로 길이 W 재기</b> — 검은 테두리 안쪽, 빛나는 부분의 가로를 자로 재서 mm로 알려 주세요. 가능하면 보드 칸 10개 길이도. (칸 = W / 7.07)</li>
+<li>W를 알려 주시면 정답 축척을 이 한 명령으로 고칩니다(몇 초, 직접 돌리셔도 됨):
+<pre>cd ~/scanner/StereoDepthSeg/scan3d && ../venv_ffs/bin/python imu_learn/rescale_gt.py --screen-width-mm W --update-board recordings/hs_20261020_2*</pre>
+<span class="small"><code>--dry</code>를 붙이면 먼저 확인만 합니다. (<code>docs/overnight_20261020_plan.md</code> "아침 할 일")</span></li>
+<li><b>정지 구간 없는 녹화 3개 이상</b> 추가. 폰이 식은 상태에서, 다른 날 또는 다른 거리로 1개 이상. 녹화가 끝나면 바로 멈춰 주세요.</li>
+<li>가능하면 <b>진동이 있는 정지 시작 녹화 1~2개</b>(모터나 선풍기 근처).</li>
+</ol>
+</div>
+
+<h2>6. 오늘 계획 (순서대로)</h2>
+<div class="card">
+<div class="tablewrap">
+<table>
+<tr><th>#</th><th>할 일</th><th>끝 기준</th></tr>
+<tr><td>1</td><td>칸 크기 확정 (사용자 측정값으로)</td><td>값과 측정 방법이 계획 문서에 기록됨</td></tr>
+<tr><td>2</td><td>GT 축척 다시 맞추기 (<code>rescale_gt.py</code>)</td><td>GT 6개 축척 바뀜, 입력·시각 기록</td></tr>
+<tr><td>3</td><td><code>spline_gt --imu</code> 다시, ATE 다시 계산</td><td>summary에 새 ATE와 이전 판정 비교표</td></tr>
+<tr><td>4</td><td>전 구간 기준(전체 ATE·축척·발산) 추가해 다시 집계</td><td>Allan 6개가 실패로 잡히고, A/B/C 결론 변화 기록</td></tr>
+<tr><td>5</td><td>실행 기록에 read_imu 버전, 실제 config, 초기 bias 넣기</td><td>새 실행 1개의 json에 세 항목 모두 있음</td></tr>
+<tr><td>6</td><td>결과 HTML 문구 고치기 ("확정" 삭제, 빠진 계획 항목 명시)</td><td><code>overnight_vio_result.html</code> 수정 커밋</td></tr>
+<tr><td>7</td><td>C5 재시험: 정지 시작 녹화를 정지 1~3 s만 남기고 잘라 loose / strict / strict-dyn 비교</td><td>사전 규칙 먼저 커밋 → 녹화×설정×3회 완료</td></tr>
+<tr><td>8</td><td>드론 결정: 이륙 전 정지 강제 vs strict-dyn 기본</td><td>7번 결과 뒤 결정 기록 (지금은 열린 결정)</td></tr>
+</table>
+</div>
+</div>
+
+<p class="small">만든 시각 2026-10-21 아침 · 데이터: 녹화 8개 받음(sha256 일치), 정답 6개, VIO 146회 · 칸 크기 숫자는 모두 IMU 추정(자로 재기 전).</p>
+</main>
+</body>
+</html>
