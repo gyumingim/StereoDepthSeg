@@ -92,6 +92,7 @@ public class MainActivity extends Activity {
                         hs.previewSurface = hsPrev.surface;
                     }
                     hs.start();
+                    if (hsPrev != null) hsPrev.startStillCountdown();
                 }
                 catch (Exception e) { status.setText("hs error: " + e); android.util.Log.e("arlat", "hs", e); hs = null; }
             }

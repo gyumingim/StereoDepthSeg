@@ -75,6 +75,33 @@ class HsPreview {
         status.setTextSize(13); status.setTextColor(Color.WHITE); status.setPadding(24, 16, 24, 16);
         root.addView(status, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM));
+        still = new TextView(act);
+        still.setTextSize(64); still.setGravity(Gravity.CENTER); still.setTextColor(Color.YELLOW);
+        still.setShadowLayer(12f, 0, 0, Color.BLACK); still.setVisibility(View.GONE);
+        root.addView(still, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
+    }
+
+    // big on-screen countdown for the still start (the PC page is not visible while the monitor shows the board)
+    static final int STILL_S = 10;
+    private TextView still;
+    private long recT0Ms;
+
+    /** Call when recording starts: "정지 10 … 1" then "움직여도 됨", then a small elapsed-time line. */
+    void startStillCountdown() {
+        recT0Ms = SystemClock.elapsedRealtime();
+        still.post(new Runnable() {
+            @Override public void run() {
+                long t = SystemClock.elapsedRealtime() - recT0Ms;
+                int left = STILL_S - (int) (t / 1000);
+                still.setVisibility(View.VISIBLE);
+                if (left > 0) { still.setTextSize(64); still.setTextColor(Color.YELLOW); still.setText("정지 " + left); }
+                else if (t < (STILL_S + 3) * 1000L) { still.setTextSize(48); still.setTextColor(Color.GREEN); still.setText("움직여도 됨"); }
+                else { still.setTextSize(20); still.setTextColor(Color.WHITE);
+                       still.setText(String.format(Locale.US, "녹화 %d:%02d · 끝나기 전 10초 정지", t / 60000, t / 1000 % 60)); }
+                still.postDelayed(this, 200);
+            }
+        });
     }
 
     /** Create the GL side; returns when the preview Surface exists (call before opening the camera session). */
