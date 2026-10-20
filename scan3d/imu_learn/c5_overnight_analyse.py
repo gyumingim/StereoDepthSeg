@@ -25,7 +25,8 @@ sys.path.insert(0, str(HERE))
 import collapse_signals as cs  # noqa: E402
 import vio_bench_hs as vb  # noqa: E402
 
-K_ALT = {"13.3인치 (40.5 mm)": 40.5 / 40.70, "14인치 (42.7 mm)": 42.7 / 40.70}
+K_ALT = {"13.3인치 (40.5 mm)": 40.5 / 40.70, "14인치 (42.7 mm)": 42.7 / 40.70,
+         "GT 담당 IMU 축척 합산 (44.27 mm, 01:08, 3 녹화)": 44.27 / 40.70}
 _GT = {}
 
 
@@ -176,7 +177,7 @@ def compare(by, x, y, recs):
     p = sign_p(better, worse)
     weak = n_rec < 6 or p is None or p >= 0.05
     return dict(x=x, y=y, rows=rows, better=better, worse=worse, same=same, untested=unt, sign_p=p,
-                overall=overall + (" — 근거 약함" if weak else ""), success_more=s_plus, success_less=s_minus,
+                overall=overall + (" — 근거 약함" if weak and n_rec else ""), success_more=s_plus, success_less=s_minus,
                 success_sign_p=sign_p(s_plus, s_minus))
 
 
