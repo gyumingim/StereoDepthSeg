@@ -63,7 +63,18 @@ def ang_deg(R):
     return np.degrees(np.arccos(np.clip((np.trace(R) - 1) / 2, -1, 1)))
 
 
-CACHE_VERSION = 1
+CACHE_VERSION = 2   # 2: IMU sampled at interval midpoints (imu_on_grid), 2026-10-20
+
+
+def imu_on_grid(acc, gyr, dt, grid):
+    """IMU (rows [t_ns, x, y, z], IMU clock) on the camera-clock grid for integration. Sample k drives the step
+    [grid[k], grid[k+1]] (R_{k+1} = R_k exp(w_k DT), v += a_k DT), so it is taken at the step MIDPOINT grid[k] + DT/2
+    (midpoint rule, same convention as batch_sync.py:103 which fitted dt). Before 2026-10-20 it was taken at grid[k]
+    (left rule) = the IMU entered DT/2 = 1 ms late vs the dt from batch_sync (docs/input_audit_report.md A5)."""
+    tm = grid + int(round(DT * 5e8))
+    g = np.stack([np.interp(tm, gyr[:, 0] + dt, gyr[:, 1 + j]) for j in range(3)], 1)
+    a = np.stack([np.interp(tm, acc[:, 0] + dt, acc[:, 1 + j]) for j in range(3)], 1)
+    return g, a
 
 
 def load_rec(rec, max_jump_deg=3.0, smooth=False, gt_dir="imu_gt"):
@@ -109,8 +120,7 @@ def _load_rec(rec, max_jump_deg=3.0, smooth=False, gt_dir="imu_gt"):
         fa, fb = (float(v) for v in part.split(":"))
         t0, t1 = int(t0 + fa * (t1 - t0)), int(t0 + fb * (t1 - t0))
     grid = np.arange(t0, t1, int(1e9 / HZ))
-    g = np.stack([np.interp(grid, gyr[:, 0] + dt, gyr[:, 1 + j]) for j in range(3)], 1)
-    a = np.stack([np.interp(grid, acc[:, 0] + dt, acc[:, 1 + j]) for j in range(3)], 1)
+    g, a = imu_on_grid(acc, gyr, dt, grid)
     ok = gt["ok"].astype(bool) & (gt["t_ns"] > t0) & (gt["t_ns"] < t1)
     ok &= np.linalg.norm(gt["p_bc"], axis=1) < MAX_DIST_M     # far board = few px per square = unstable pose
     tf, Rbc, pbc = gt["t_ns"][ok], gt["R_bc"][ok], gt["p_bc"][ok]
@@ -140,8 +150,8 @@ def _load_rec(rec, max_jump_deg=3.0, smooth=False, gt_dir="imu_gt"):
     keep = ~bad
     tf, Rbi, pf, rms = tf[keep], Rbi[keep], pbc[keep], rms[keep]
     # 보드 좌표 중력: 거의 정지(자이로 작음) 프레임에서 g_b = -R_bi f
-    gi = np.stack([np.interp(tf, grid, g[:, j]) for j in range(3)], 1)
-    ai = np.stack([np.interp(tf, grid, a[:, j]) for j in range(3)], 1)
+    gi = np.stack([np.interp(tf, grid + DT * 5e8, g[:, j]) for j in range(3)], 1)   # sample k = value at grid[k] + DT/2
+    ai = np.stack([np.interp(tf, grid + DT * 5e8, a[:, j]) for j in range(3)], 1)
     still = np.where(np.linalg.norm(gi, axis=1) < 0.05)[0]
     if len(still) < 10:
         still = np.argsort(np.linalg.norm(gi, axis=1))[:30]
