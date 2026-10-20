@@ -267,7 +267,9 @@ def run(a):
                 poses.append(m)
     th = threading.Thread(target=reader, daemon=True)
     th.start()
-    cap = cv2.VideoCapture(str(rec / "cam5.mp4"))
+    nthr = int(getattr(a, "decode_threads", 0) or 0)            # 0 = OpenCV default (all cores); frames identical
+    cap = (cv2.VideoCapture(str(rec / "cam5.mp4"), cv2.CAP_FFMPEG, [cv2.CAP_PROP_N_THREADS, nthr]) if nthr
+           else cv2.VideoCapture(str(rec / "cam5.mp4")))
     ii = int(np.searchsorted(t_imu, t_start - dt_ns - 2_000_000_000))
     n_fed = 0
     t_wall = time.time()
@@ -418,6 +420,7 @@ def main():
     ap.add_argument("--init-cfg", default="strict", choices=["strict", "strict-dyn", "loose"],
                     help="OpenVINS init values: strict = make_ov_config (app), loose = old bench template (comparison)")
     ap.add_argument("--start-off", type=float, default=0.0, help="first VIO frame this many s later (other init)")
+    ap.add_argument("--decode-threads", type=int, default=0, help="video decode threads (0 = OpenCV default)")
     ap.add_argument("--dropout", default="")
     ap.add_argument("--max-secs", type=float, default=0)
     ap.add_argument("--imu-raw", action="store_true", help="uncalibrated IMU (types 16/35); new recordings only")

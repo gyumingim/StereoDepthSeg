@@ -10,6 +10,9 @@ writes NAME.json (bench result + code version), NAME.poses.jsonl.gz, NAME.stderr
 """
 import argparse
 import gzip
+import hashlib
+import os
+import subprocess
 import json
 import sys
 from pathlib import Path
@@ -19,6 +22,24 @@ sys.path.insert(0, str(HERE))
 import vio_bench_hs as vb  # noqa: E402
 
 DIAG_BRIDGE = vb.SCAN3D / "tools" / "ov_bridge_diag" / "build" / "ov_bridge"
+
+
+def binary_hashes():
+    """sha256 of the diag bridge and the OpenVINS shared libraries it loads (ldd), so mixed builds are visible."""
+    out = {}
+    libs = [str(DIAG_BRIDGE)]
+    try:
+        for line in subprocess.run(["ldd", str(DIAG_BRIDGE)], capture_output=True, text=True).stdout.splitlines():
+            if "=>" in line and ("ov_" in line or "open_vins" in line or "ovbuild" in line):
+                libs.append(line.split("=>")[1].split("(")[0].strip())
+    except OSError:
+        pass
+    for f in libs:
+        try:
+            out[f] = hashlib.sha256(open(f, "rb").read()).hexdigest()
+        except OSError as e:
+            out[f] = f"unreadable: {e}"
+    return out
 
 
 def main():
@@ -33,13 +54,15 @@ def main():
                     help="cfg = app values (primary, plan change 1); meas (x noise-scale) = tuned on eval recs")
     ap.add_argument("--noise-scale", type=float, default=1.0)
     ap.add_argument("--max-secs", type=float, default=60)
+    ap.add_argument("--decode-threads", type=int, default=2, help="video decode threads (load control only)")
     ap.add_argument("--out", required=True, help="output prefix (no extension)")
     o = ap.parse_args()
     out = Path(o.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     a = argparse.Namespace(rec=o.rec, fps=o.fps, size=o.size, npts=200, clones=o.clones, noise=o.noise,
                            noise_scale=o.noise_scale, imu_calib=None, dropout="", max_secs=o.max_secs, imu_raw=False,
-                           gt="auto", out=None, init_cfg=o.init_cfg, start_off=o.start_off)
+                           gt="auto", out=None, init_cfg=o.init_cfg, start_off=o.start_off,
+                           decode_threads=o.decode_threads)
     load0 = open("/proc/loadavg").read().split()[:3]
     errlog = open(str(out) + ".stderr.log", "w")
     orig_popen = vb.subprocess.Popen
@@ -65,7 +88,8 @@ def main():
     finally:
         vb.subprocess.Popen = orig_popen
         errlog.close()
-    r.update(loadavg_start=load0, loadavg_end=open("/proc/loadavg").read().split()[:3], parts="raw", calib_used=None, bridge=str(DIAG_BRIDGE), runner="imu_learn/c5_run.py")
+    r.update(binary_sha256=binary_hashes(), decode_threads=o.decode_threads,
+             loadavg_start=load0, loadavg_end=open("/proc/loadavg").read().split()[:3], parts="raw", calib_used=None, bridge=str(DIAG_BRIDGE), runner="imu_learn/c5_run.py")
     json.dump(r, open(str(out) + ".json", "w"), indent=1, ensure_ascii=False)
     with gzip.open(str(out) + ".poses.jsonl.gz", "wt") as f:
         for m in saved.get("poses", []):
