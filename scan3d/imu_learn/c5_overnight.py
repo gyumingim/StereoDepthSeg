@@ -58,11 +58,14 @@ def log(msg):
 
 
 def gt_state(rec):
-    """ready only if the LAST GT-log line that names this recording is its "done:" line (a later "start", redo note or
-    step line = the GT is being rebuilt -> not ready; 2026-10-21 00:28 221052 was redone after its done line)."""
+    """ready only if the LAST GT pipeline line of this recording ("HH:MM:SS <rec> ...", written by overnight_gt.sh) is
+    its "done:" line (a later "start"/step line = the GT is being rebuilt -> not ready; 2026-10-21 00:28 221052 was
+    redone after its done line). Free-text builder notes are ignored (00:40 a "214138 NOT redone" note was misread);
+    a change of the GT files themselves is caught by gt_files_sig()."""
     if not GTLOG.exists():
         return "wait"
-    lines = [ln for ln in GTLOG.read_text(errors="replace").splitlines() if rec[-6:] in ln.split("disagree")[0]]
+    pat = re.compile(rf"^\d\d:\d\d:\d\d {rec} ")
+    lines = [ln for ln in GTLOG.read_text(errors="replace").splitlines() if pat.match(ln)]
     if not lines:
         return "wait"
     last = lines[-1]
@@ -71,6 +74,15 @@ def gt_state(rec):
     if f"{rec} done:" in last and Path(f"recordings/{rec}/imu_gt/align.json").exists():
         return "ready"
     return "wait"
+
+
+def gt_files_sig(rec):
+    """mtimes of the files the runs read (align/trim/GT); a change after the start of the runs = upstream changed."""
+    out = []
+    for f in ("imu_gt/align.json", "imu_gt/trim.json", "imu_gt/gt.npz", "imu_gt_spl/gt.npz"):
+        p = Path(f"recordings/{rec}/{f}")
+        out.append(p.stat().st_mtime if p.exists() else None)
+    return out
 
 
 def job(name, phase, rec, cfg, imu="cal", calib=None, calib_label="none", noise="cfg", off=0):
@@ -138,11 +150,12 @@ def main():
     queue, running, seen = [], {}, set()
     best = json.load(open(OUT / "best_config.json"))["best"] if (OUT / "best_config.json").exists() else None
     state = {r: None for r in RECS}
+    sig = {}
     det_queued = False
     while True:
         late = time.time() >= STOP_EPOCH
         for rec in RECS:
-            if state[rec] == "queued" and gt_state(rec) != "ready":     # GT being rebuilt -> discard and wait again
+            if state[rec] == "queued" and (gt_state(rec) != "ready" or gt_files_sig(rec) != sig.get(rec)):     # GT being rebuilt -> discard and wait again
                 disc = OUT / f"discarded_{rec[-6:]}_{time.strftime('%H%M')}"
                 disc.mkdir(exist_ok=True)
                 for n, (p, j, t0) in list(running.items()):
@@ -173,6 +186,7 @@ def main():
                 if best:
                     queue += later_jobs(rec, best)
                 state[rec] = "queued"
+                sig[rec] = gt_files_sig(rec)
         if best is None:
             cands = []
             for rec in RECS:
