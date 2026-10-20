@@ -99,6 +99,18 @@ eff = "".join(
     f"<tr><th>{dT} °C</th>" + "".join(f"<td>{cp[f'gyro_raw_mdeg_s_{a}']['slope_per_C'] * dT:.0f}</td>" for a in "xyz") + "</tr>"
     for dT in (1, 5, 10, 15))
 
+# first 240 fps camera interval: CP rise and the bias change it implies (CP slopes)
+_c0, _c1 = d["camera_intervals_s"][0]
+_Tcp = th["T_blocks"]["CP"]; _Tb = th["T_blocks"]["battery"]
+_i0 = max(i for i in range(len(t)) if t[i] <= _c0)
+_i1 = min(range(len(t)), key=lambda i: abs(t[i] - _c1))
+cam_min = (_c1 - _c0) / 60
+cp_rise = _Tcp[_i1] - _Tcp[_i0]
+bat_rise = _Tb[_i1] - _Tb[_i0]
+cp_bias = [cp[f"gyro_raw_mdeg_s_{a}"]["slope_per_C"] * cp_rise for a in "xyz"]
+import datetime as _dt
+start_txt = _dt.datetime.fromtimestamp(d["wall_start"], _dt.timezone(_dt.timedelta(hours=9))).strftime("%Y-%m-%d %H:%M")
+
 html = f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>자이로 바이어스와 온도</title>
 <style>
@@ -116,14 +128,16 @@ figure{{margin:0}} figure.wide{{grid-column:1/-1}} svg{{width:100%;height:auto}}
 .lg span{{display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 4px 0 10px}}
 </style></head><body>
 <h1>자이로 바이어스와 온도</h1>
-<p class="mut">S24 (자이로 칩 STM LSM6DSV), 원본 자이로 (type 16), 화면 아래로 책상 위 정지. {d['wall_start']} 부터 {d['duration_s'] / 60:.0f}분:
+<p class="mut">S24 (자이로 칩 STM LSM6DSV), 원본 자이로 (type 16), 화면 아래로 책상 위 정지. {start_txt} (KST) 부터 {d['duration_s'] / 60:.0f}분:
 실온 정지 {static_end / 60:.0f}분 → 240 fps 카메라로 데우기 → 식히기. 30초 묶음 평균, 지구 자전 뺀 값. 움직인 구간 {len(d['cuts'])}곳 뺌.</p>
 <div class="box"><b>결론</b><br>
 ① 자이로 바이어스는 온도를 거의 직선으로 따라간다 — <b>칩 쪽 온도(CP·PA) 1 °C 당 x 3.9 · y 7.0 · z 4.4 mdeg/s</b>, 상관 r 0.99~1.00.<br>
-② 데울 때·식을 때 차이(히스테리시스)가 CP·PA 기준 0~1.7 mdeg/s 로 거의 없다 → 지금 온도만 알면 보정된다. 과거 온도 평균은 필요 없음 (가장 잘 맞는 평균 길이 0~20 s).<br>
+② 데울 때·식을 때 차이(히스테리시스)가 CP·PA 기준 0~1.7 mdeg/s 로 거의 없다 → 지금 온도만 알면 보정된다. 과거 온도 평균은 필요 없음 (가장 잘 맞는 평균 길이 0~20 s).
+<span class="mut">(정정 15:20: 0~1.7 은 이 페이지의 조건 — 30초 묶음, 카메라 켬과 그 뒤 30초 제외 — 에서의 값. temp_history_bias.html 의 다른 방법으로는 CP·PA 현재 온도 기준 −4~−11 mdeg/s (10 s 앞당기면 −1.6~−5.5). 두 값이 맞지 않고 가열도 1번뿐이라 <b>히스테리시스 크기는 미결</b> — docs/critic_debate_20261020.html C2)</span><br>
 ③ 배터리·표면 온도는 칩보다 늦게 데워지고 식어서 히스테리시스가 2~5 mdeg/s 로 커진다 → 보정에는 CP 를 쓴다.<br>
-④ 240 fps 녹화 3분에 약 8~10 °C 오르므로 녹화 한 번 안에서 바이어스가 40~70 mdeg/s 움직인다.<br>
-<span class="mut">주의(추정): 데우기 = 카메라 켬이라 카메라 전원 효과(x +5.8, z −5.2 mdeg/s 정도)가 섞여 있고, 가열은 사실상 1번 → 카메라 없이 데우는 실험으로 확인 예정 (docs/todo_experiments.md).</span></div>
+④ 240 fps 녹화 {cam_min:.1f}분에 칩(CP)이 약 {cp_rise:.0f} °C (배터리는 약 {bat_rise:.0f} °C) 오르므로 녹화 한 번 안에서 바이어스가 x {cp_bias[0]:.0f} · y {cp_bias[1]:.0f} · z {cp_bias[2]:.0f} mdeg/s 움직인다 (y 가 가장 큼).
+<span class="mut">(정정 15:20: 전에는 "8~10 °C, 40~70 mdeg/s" 라고 잘못 적었음. 위 값은 첫 카메라 구간의 CP 온도 상승 × CP 기울기. 실측 10초 평균으로도 +69/+97/+70 — input_audit_verify.md C3)</span><br>
+<span class="mut">주의(추정): 데우기 = 카메라 켬이라 카메라 전원 효과(x +5.8, z −5.2 mdeg/s 정도 — 정정 15:20: 온도원을 PA 로 바꾸면 z 가 +12.6 으로 부호가 바뀜 → 크기·부호 모두 불확실)가 섞여 있고, 가열은 사실상 1번 → 카메라 없이 데우는 실험으로 확인 예정 (docs/todo_experiments.md).</span></div>
 
 <h2>1. 온도 센서별 상관 (mdeg/s per °C)</h2>
 <div class="tw"><table><thead><tr><th rowspan="2">온도 센서</th><th rowspan="2">온도 폭 °C</th><th colspan="3">x 축</th><th colspan="3">y 축</th><th colspan="3">z 축</th></tr>
@@ -140,10 +154,11 @@ figure{{margin:0}} figure.wide{{grid-column:1/-1}} svg{{width:100%;height:auto}}
 <div class="tw"><table><thead><tr><th>모델</th><th>x</th><th>y</th><th>z</th></tr></thead><tbody>
 <tr><th>온도 무시 (상수 바이어스)</th><td colspan="3" style="text-align:center">27 ~ 42</td></tr>
 <tr><th>지금 온도 1차식</th><td>3.41</td><td>3.63</td><td>6.06</td></tr>
-<tr class="best"><th>가장 좋은 모델</th><td>2.81 <span class="mut">(AP+BAT)</span></td><td>3.13 <span class="mut">(PA)</span></td><td>2.55 <span class="mut">(CP + 온도 변화 속도)</span></td></tr>
+<tr class="best"><th>가장 좋은 모델 <span class="mut">(낙관적)</span></th><td>2.81 <span class="mut">(AP+BAT)</span></td><td>3.13 <span class="mut">(PA)</span></td><td>2.55 <span class="mut">(CP + 온도 변화 속도)</span></td></tr>
 <tr><th>잡음 바닥 (10초 평균)</th><td colspan="3" style="text-align:center">1.7 ~ 2.1</td></tr>
 </tbody></table></div>
-<p class="mut">출처: docs/temp_history_bias.html. 두 센서 섞기는 다른 구간에서 나빠지기도 해서(z 1.86→7.73) 권장은 CP 1차식 하나.</p>
+<p class="mut">(정정 15:20: "가장 좋은 모델" 은 축마다 시험 점수가 가장 좋은 모델을 고른 값이라 낙관적. 미리 정한 단일 모델(지금 온도 1차식, M1)의 3.4/3.6/6.1 이 공정한 값 — input_audit_verify.md 2절.)
+출처: docs/temp_history_bias.html. 두 센서 섞기는 다른 구간에서 나빠지기도 해서(z 1.86→7.73) 권장은 CP 1차식 하나.</p>
 
 <h2>4. 그림</h2>
 <p class="lg mut"><span style="background:{COL['room']}"></span>실온 정지<span style="background:{COL['heat']}"></span>데우는 중<span style="background:{COL['cool']}"></span>식는 중 (테두리 = 카메라 켬)</p>

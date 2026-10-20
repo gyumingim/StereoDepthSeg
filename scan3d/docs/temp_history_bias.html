@@ -13,6 +13,16 @@ svg{max-width:100%;height:auto}
 <h1>IMU 바이어스는 온도 '이력'을 따르나?</h1>
 <p class=mut>녹화 static_imu_20261020_095113 · 만든 시각 2026-10-20 10:45:09 · 도구 tools/imu_shell/temp_history_bias.py, temp_history_report.py · 원자료 runs/temp_history_bias.json</p>
 
+<div class=box style="border:2px solid #e5484d">
+<b>정정 (2026-10-20 15:20, 검증 반영 — docs/input_audit_verify.md 2절)</b>
+<ul>
+<li><b>"온도보다 약 10 s 먼저 움직인다"</b> → 근거 약함. 앞당김 격자가 10 s 간격이라 10 s 는 0 다음 칸이고, 2 s 격자로 다시 맞추면 0~8 s, 개선은 0.03~0.1 mdeg/s 뿐. thermal HAL 값이 약 10 s 마다만 갱신(평균 ~5 s 늦은 값)되므로 <b>HAL 갱신 지연으로 설명되며, 물리적 앞섬이라는 근거는 없다</b>.</li>
+<li><b>카메라 켬 효과 "x +5.8, z −5.2"</b> → <b>불확실</b>. 축마다 다른 온도원(x CP, z AP)으로 맞춘 값이고, PA 로 맞추면 x +10.6, z +12.6 으로 z 부호가 바뀐다. 이 녹화로는 식별 불가.</li>
+<li><b>LOSO 2.5~3.1 mdeg/s</b> → <b>낙관적</b>. 축마다 7개 모델 중 시험 점수가 가장 좋은 것을 고른 값. 미리 정한 단일 모델 M1(CP/PA 현재 온도 1차식)은 <b>3.4 / 3.6 / 6.1</b> mdeg/s. 독립 가열 사건이 1번뿐이라 일반화 근거 없음.</li>
+<li><b>온도 기록 간격 "1 s"</b> → 사용자 결정은 <b>10 s</b> (HAL 이 ~10 s 마다만 갱신, root 없이 기록 — docs/todo_experiments.md). 아래 권장 1번의 "1 s" 는 이 결정으로 대체.</li>
+<li>히스테리시스: 이 페이지의 −4~−11 mdeg/s 와 gyro_temp_table.html 의 0~1.7 은 분석 방법이 달라 맞지 않음 → <b>미결</b> (docs/critic_debate_20261020.html C2).</li>
+</ul></div>
+
 <div class=box>
 <h2>결론 먼저</h2>
 <ul>
