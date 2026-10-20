@@ -1,0 +1,21 @@
+%YAML:1.0
+# generated 2026-10-16T11:30:34 by scan3d/make_ov_config.py
+# inputs: calib=/home/system/scanner/StereoDepthSeg/calib_phone_pair.json cameras=/home/system/scanner/StereoDepthSeg/phone_stereo/cameras_s24.json lenses L=2 R=5
+# rect: f=462.9355 cx=339.4814 cy=239.8733 baseline_m=0.015530 size=640x480
+# args: fps=15.0 imu_rate=400.0 init=static imu_origin=lens5 mono=True exposure_ms=0.0 rs_skew_ms=0.0
+
+cam0:
+  # rect0 = R1 @ lens 2 camera; R_ItoC = R1 @ quat_to_R(pose_rotation lens 2)
+  T_imu_cam: # rotation from camera to IMU R_CtoI, position of camera in IMU p_CinI
+    - [-0.011521417155, -0.999931398706, 0.00211064661927, 0]
+    - [-0.999586882902, 0.0114618134864, -0.0263569793643, 0.0157603546977]
+    - [0.0263309794035, -0.00241344442926, -0.999650366283, 0]
+    - [0, 0, 0, 1]
+  cam_overlaps: []
+  camera_model: pinhole
+  distortion_coeffs: [0.0, 0.0, 0.0, 0.0] # 정류 영상
+  distortion_model: radtan
+  intrinsics: [462.935471, 462.935471, 339.481367, 239.873329] # fu, fv, cu, cv (정류 P1)
+  resolution: [640, 480]
+  rostopic: /cam0/image_raw
+  timeshift_cam_imu: 0.000000 # t_imu = t_cam + timeshift (초기값, 온라인 보정)

@@ -11,6 +11,13 @@ Variants (same backend, only one thing changes at a time — the 2026 'same-back
   --imu-calib RESULT.json apply a learned physical calibration (train_imu result 'calib': G, bg, A, ba) to the IMU
   --dropout T:D,...       camera off for D s starting T s after the first frame (IMU keeps running)
   --imu-raw               use the uncalibrated IMU (Android types 16/35, values 0..2) instead of 1/4
+  --init-cfg strict|strict-dyn|loose
+                          OpenVINS initialization values. strict (default, 2026-10-20) = make_ov_config.init_params
+                          (the live app path, --init static): still = 0.3 deg disparity, 0.3 m/s^2, no dynamic init;
+                          strict-dyn = make_ov_config --init dynamic values; loose = the OLD bench (before 2026-10-20):
+                          template config/mono (15 px, 1.0 m/s^2) + init_dyn_use true + 15 px * W/640 (for comparison).
+  --start-off S           first VIO frame S seconds later (IMU feed unchanged) = another initialization; --max-secs
+                          counts from the first VIO frame
   --gt auto|spl|base|rs   scoring GT: auto = imu_gt_spl if present else imu_gt (both camera-only); rs = imu_gt_rs
                           (rolling shutter undone with the gyro -> partly self-scoring, comparison only)
 Time: frames are sent on the IMU clock (t_mid - dt from align.json) and OpenVINS timeshift_cam_imu = 0, so the offset is
@@ -39,6 +46,7 @@ SCAN3D = HERE.parent
 sys.path.insert(0, str(SCAN3D))
 sys.path.insert(0, str(HERE))
 import lens_calib  # noqa: E402
+import make_ov_config  # noqa: E402  (init_params: single source of the OpenVINS init thresholds)
 from imu_gt import read_imu  # noqa: E402
 
 BRIDGE = SCAN3D / "ov_bridge" / "build" / "ov_bridge"
@@ -47,11 +55,15 @@ HDR = struct.Struct("<III")
 MAGIC = 0x4F564252
 
 
-def lens_for(rec, meta):
+def lens_path(rec, meta):
     own = rec / "imu_gt" / "lens.json"
     fd = meta.get("focus_dpt_request") or -1
     shared = SCAN3D / "config" / "lens" / f"hs_{meta['width']}x{meta['height']}_f{fd:.2f}.json"
-    return lens_calib.load(own if own.exists() else shared)[:2]
+    return own if own.exists() else shared
+
+
+def lens_for(rec, meta):
+    return lens_calib.load(lens_path(rec, meta))[:2]
 
 
 def measured_noise(acc, gyr):
@@ -68,13 +80,27 @@ def measured_noise(acc, gyr):
                 accelerometer_noise_density=nd_a, accelerometer_random_walk=nd_a / 10)
 
 
-def write_config(d, K, size, fps, R_ci, p_CinI, timeshift, noise, npts, clones):
+def init_values(init_cfg, K, W):
+    """OpenVINS init keys for the config. strict/strict-dyn come from make_ov_config.init_params (the app path), with
+    the disparity threshold converted by THIS camera's focal length; loose = the old bench values (template + overrides)."""
+    if init_cfg == "loose":
+        return {"init_dyn_use": "true", "init_max_disparity": f"{15.0 * W / 640:.1f}"}   # rest from the template
+    ip = make_ov_config.init_params(float(K[0, 0]), dynamic=(init_cfg == "strict-dyn"))
+    return {"init_window_time": f"{ip['init_window_time']}", "init_imu_thresh": f"{ip['init_imu_thresh']}",
+            "init_max_disparity": f"{ip['init_max_disparity']:.2f}",
+            "init_dyn_use": "true" if ip["init_dyn_use"] else "false"}
+
+
+def write_config(d, K, size, fps, R_ci, p_CinI, timeshift, noise, npts, clones, init_cfg="strict"):
     W, H = size
     txt = TEMPLATE.read_text()
     rep = {"track_frequency:": f"track_frequency: {float(fps)}", "num_pts:": f"num_pts: {int(npts)}",
-           "max_clones:": f"max_clones: {int(clones)}", "init_dyn_use:": "init_dyn_use: true",
-           "verbosity:": 'verbosity: "WARNING"', "record_timing_information:": "record_timing_information: false",
-           "init_max_disparity:": f"init_max_disparity: {15.0 * W / 640:.1f}"}
+           "max_clones:": f"max_clones: {int(clones)}",
+           "verbosity:": 'verbosity: "WARNING"', "record_timing_information:": "record_timing_information: false"}
+    rep.update({k + ":": f"{k}: {v}" for k, v in init_values(init_cfg, K, W).items()})
+    missing = [k for k in rep if not any(line.strip().startswith(k) for line in txt.splitlines())]
+    if missing:
+        sys.exit(f"template {TEMPLATE} lacks keys {missing}")
     out = []
     for line in txt.splitlines():
         key = next((k for k in rep if line.strip().startswith(k)), None)
@@ -95,6 +121,13 @@ def write_config(d, K, size, fps, R_ci, p_CinI, timeshift, noise, npts, clones):
         k = line.strip().split(":")[0]
         out.append(f"  {k}: {noise[k]:.4e}" if k in noise else line)
     (d / "kalibr_imu_chain.yaml").write_text("\n".join(out) + "\n")
+    used = {}                                                    # what OpenVINS will actually read (recorded in results)
+    for line in (d / "estimator_config.yaml").read_text().splitlines():
+        body = line.split("#")[0]
+        k = body.split(":")[0].strip()
+        if ":" in body and (k.startswith("init_") or k in ("max_clones", "try_zupt", "zupt_max_disparity")):
+            used[k] = body.split(":", 1)[1].strip()
+    return used
 
 
 def umeyama(src, dst, scale=False):
@@ -170,6 +203,8 @@ def run(a):
     trim = rec / "imu_gt" / "trim.json"
     if trim.exists():
         t_start = max(t_start, json.load(open(trim))["start_ns"])
+    start_off = float(getattr(a, "start_off", 0.0) or 0.0)
+    t_start = t_start + int(start_off * 1e9)                 # IMU feed still starts 2 s before the (later) first frame
     if a.max_secs:
         t_end = t_start + int(a.max_secs * 1e9)
     else:
@@ -180,9 +215,9 @@ def run(a):
     except ValueError as e:
         sys.exit(str(e))
     print(f"IMU: {'raw types 16/35 (v0..2)' if a.imu_raw else 'Android-calibrated types 1/4'}", file=sys.stderr)
+    # cfg = the app's values (make_ov_config.IMU_NOISE, same numbers as before 2026-10-20, now imported)
     noise = {k: v * a.noise_scale for k, v in measured_noise(acc, gyr).items()} if a.noise == "meas" else dict(
-        accelerometer_noise_density=1e-2, accelerometer_random_walk=1e-3, gyroscope_noise_density=1e-3,
-        gyroscope_random_walk=1e-4)
+        make_ov_config.IMU_NOISE)
     a_i = np.stack([np.interp(gyr[:, 0], acc[:, 0], acc[:, 1 + j]) for j in range(3)], 1)
     g_i = gyr[:, 1:4].copy()
     p_CinI = np.zeros(3)
@@ -211,7 +246,12 @@ def run(a):
     # OpenVINS: t_imu = t_cam + timeshift_cam_imu; ours: IMU time + dt = camera time. The frames below are already sent
     # on the IMU clock (tci = tc - dt), so the shift is applied there and timeshift must be 0 (before 2026-10-20 it was
     # also set to -dt here = applied twice, OpenVINS then started 2 ms off and had to estimate it away online).
-    write_config(tmp, Knew, (W, H), a.fps, R_ci, p_CinI, 0.0, noise, a.npts, a.clones)
+    init_cfg = getattr(a, "init_cfg", None)
+    if init_cfg is None:                                     # callers built before 2026-10-20 (collapse_run, ablation)
+        init_cfg = "strict"
+        print("init_cfg not given -> strict (bench default since 2026-10-20; old runs used 'loose')", file=sys.stderr)
+    cfg_used = write_config(tmp, Knew, (W, H), a.fps, R_ci, p_CinI, 0.0, noise, a.npts, a.clones, init_cfg)
+    print(f"init: {init_cfg} {cfg_used}", file=sys.stderr)
     p = subprocess.Popen([str(BRIDGE), str(tmp / "estimator_config.yaml"), "--stdio", "--max-speed", "8",
                           "--lost-frames", "1000000", "--startup-lost-frames", "1000000"],
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0)
@@ -238,10 +278,10 @@ def run(a):
             if not ok_r:
                 break
             tc = t_frames[fi]
+            if tc > t_end:                                       # (before 2026-10-20 checked after 'selected' -> decoded
+                break                                            #  the rest of the video for nothing; output unchanged)
             if not selected[fi]:
                 continue
-            if tc > t_end:
-                break
             tci = tc - dt_ns                                     # camera time on the IMU clock
             while ii < len(t_imu) and t_imu[ii] <= tci + 5_000_000:
                 p.stdin.write(HDR.pack(MAGIC, 1, 56) + struct.pack("<q3d3d", int(t_imu[ii]), *g_i[ii], *a_i[ii]))
@@ -267,9 +307,29 @@ def run(a):
     th.join(timeout=10)
     wall = time.time() - t_wall
     res = evaluate(rec, a, poses, n_fed, drop, dt_ns, wall, noise, Knew, frames)
+    res.update(init_cfg=init_cfg, config_used=cfg_used, start_off=start_off, **code_version())
+    res["lens_file"] = str(lens_path(rec, meta).relative_to(SCAN3D))
+    res["lens_blob"] = subprocess.run(["git", "-C", str(SCAN3D), "hash-object", res["lens_file"]],
+                                      capture_output=True, text=True).stdout.strip()
+    tr_t = [m["t_ns"] for m in poses if m.get("status") == "tracking"]
+    t0c, t1c = int(t_frames[sel[0]] - dt_ns), int(t_frames[sel[-1]] - dt_ns)   # clip = fed frames, IMU clock
+    res["clip_s"] = round((t1c - t0c) / 1e9, 3)
+    res["t_init_clip_s"] = round((tr_t[0] - t0c) / 1e9, 3) if tr_t else None
+    res["covered_frac"] = round(max(0.0, (t1c - tr_t[0]) / max(1, t1c - t0c)), 3) if tr_t else 0.0
     if crashed:
         res["bridge_crash"] = crashed
     return res
+
+
+def code_version():
+    """git HEAD + blobs of the bench and make_ov_config (blob = exact file content, also when uncommitted)."""
+    def git(*c):
+        return subprocess.run(["git", "-C", str(SCAN3D), *c], capture_output=True, text=True).stdout.strip()
+    return dict(git_head=git("rev-parse", "--short", "HEAD"), bench_blob=git("hash-object", "imu_learn/vio_bench_hs.py"),
+                make_ov_config_blob=git("hash-object", "make_ov_config.py"),
+                template_blobs={f: git("hash-object", f"config/mono/{f}") for f in
+                                ("estimator_config.yaml", "kalibr_imu_chain.yaml")},
+                bench_dirty=bool(git("status", "--porcelain", "imu_learn/vio_bench_hs.py", "make_ov_config.py")))
 
 
 def evaluate(rec, a, poses, n_fed, drop, dt_ns, wall, noise, Knew, frames):
@@ -355,6 +415,9 @@ def main():
     ap.add_argument("--noise-scale", type=float, default=1.0,
                     help="multiply measured noise (quiet-sample white noise underestimates real errors; Kalibr practice inflates)")
     ap.add_argument("--imu-calib", default=None)
+    ap.add_argument("--init-cfg", default="strict", choices=["strict", "strict-dyn", "loose"],
+                    help="OpenVINS init values: strict = make_ov_config (app), loose = old bench template (comparison)")
+    ap.add_argument("--start-off", type=float, default=0.0, help="first VIO frame this many s later (other init)")
     ap.add_argument("--dropout", default="")
     ap.add_argument("--max-secs", type=float, default=0)
     ap.add_argument("--imu-raw", action="store_true", help="uncalibrated IMU (types 16/35); new recordings only")

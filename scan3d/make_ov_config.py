@@ -118,6 +118,18 @@ IMU_NOISE = dict(
     gyroscope_random_walk=1.0e-4,         # rad/s^2/sqrt(Hz)
 )
 
+INIT_STILL_DEG = 0.3    # 정지 판정 시차 (각도). 근거는 main() 의 init_disp_px 주석
+ZUPT_STILL_DEG = 0.05   # ZUPT 정지 판정 (각도/프레임)
+
+
+def init_params(f0, dynamic=False):
+    """OpenVINS 초기화 값 (한 곳에서만 정함: 이 파일의 설정 생성과 imu_learn/vio_bench_hs.py 가 같이 쓴다).
+    f0 = cam0 초점거리 px (시차 문턱을 각도에서 화소로 바꿈)."""
+    return dict(init_window_time=1.0 if dynamic else 1.5,
+                init_imu_thresh=0.5 if dynamic else 0.3,
+                init_max_disparity=float(f0 * np.tan(np.radians(INIT_STILL_DEG))),
+                init_dyn_use=bool(dynamic))
+
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -253,8 +265,9 @@ def write_configs(a):
     #   ≈0.001, 정지 구간 실측). 0.03 rad/s 바이어스 오차 = 1.7°/s 기울기 표류 → 중력이 새어 속도 ~0.3 m/s 로 흐름 (증상 그대로).
     #   진짜 정지일 때 시차는 0.04~0.09 px 라 0.3° 면 여유가 충분하다.
     #  zupt: 0.05°/프레임 (≈0.75°/s @15fps). ZUPT 갱신은 자이로 = 바이어스 로 보므로 느린 회전을 정지로 받으면 바이어스가 틀어진다.
-    init_disp_px = f0 * np.tan(np.radians(0.3))
-    zupt_disp_px = f0 * np.tan(np.radians(0.05))
+    ip = init_params(f0, dynamic=(a.init == "dynamic"))
+    init_disp_px = ip["init_max_disparity"]
+    zupt_disp_px = f0 * np.tan(np.radians(ZUPT_STILL_DEG))
 
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -269,7 +282,6 @@ def write_configs(a):
             f"# args: fps={a.fps} imu_rate={a.imu_rate} init={a.init} imu_origin={a.imu_origin} mono={a.mono} "
             f"exposure_ms={a.exposure_ms} rs_skew_ms={a.rs_skew_ms}\n")
     n_cams = 1 if a.mono else 2
-    dyn = a.init == "dynamic"
 
     est = f"""%YAML:1.0 # need to specify the file type at the top!
 {head}
@@ -310,14 +322,14 @@ zupt_only_at_beginning: false
 # 초기화. try_zupt=true 면 OpenVINS 는 "정지 판정"(두 반쪽 창 모두 시차·가속 흔들림이 문턱 아래) 순간 정적 초기화한다
 # (VioManager: wait_for_jerk = (ZUPT 없음)). 시작 때 폰을 1.5 s 넘게 가만히 들고 있어야 한다.
 # 문턱이 느슨하면 천천히 도는 중에 초기화돼 그 회전을 자이로 바이어스로 잡는다 → 속도 표류 (make_ov_config.py 주석, 실측).
-init_window_time: {1.0 if dyn else 1.5}
-init_imu_thresh: {0.5 if dyn else 0.3} # 가속도 표준편차 m/s^2. 실측: 정지 0.015~0.05, 살짝 건드림 0.1, 손 움직임 0.4~0.9 (전에는 1.0)
+init_window_time: {ip["init_window_time"]}
+init_imu_thresh: {ip["init_imu_thresh"]} # 가속도 표준편차 m/s^2. 실측: 정지 0.015~0.05, 살짝 건드림 0.1, 손 움직임 0.4~0.9 (전에는 1.0)
 init_max_disparity: {init_disp_px:.2f} # 정지 판정 최대 평균 시차 px = 0.3° × cam0 f (전에는 15 px, 실측 근거는 make_ov_config.py)
 init_max_features: 50
 
 # dynamic: rec_20261016_143702 를 5 s 부터(움직이는 중) 재생하면 21 s 동안 한 번도 성공 못 함 (opt 반복 한도·공분산 실패 —
 # 손 회전 위주라 이동이 작아 축척이 안 잡힘). 손에 든 폰은 정지 시작(static)이 현실적.
-init_dyn_use: {"true" if dyn else "false"}
+init_dyn_use: {"true" if ip["init_dyn_use"] else "false"}
 init_dyn_mle_opt_calib: false
 init_dyn_mle_max_iter: 50
 init_dyn_mle_max_time: 0.05
