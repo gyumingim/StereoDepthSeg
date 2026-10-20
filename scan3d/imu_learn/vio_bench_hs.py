@@ -308,7 +308,7 @@ def run(a):
     wall = time.time() - t_wall
     res = evaluate(rec, a, poses, n_fed, drop, dt_ns, wall, noise, Knew, frames)
     res.update(init_cfg=init_cfg, config_used=cfg_used, start_off=start_off, **code_version())
-    res["lens_file"] = str(lens_path(rec, meta).relative_to(SCAN3D))
+    res["lens_file"] = str(lens_path(rec, meta).resolve().relative_to(SCAN3D))
     res["lens_blob"] = subprocess.run(["git", "-C", str(SCAN3D), "hash-object", res["lens_file"]],
                                       capture_output=True, text=True).stdout.strip()
     tr_t = [m["t_ns"] for m in poses if m.get("status") == "tracking"]
