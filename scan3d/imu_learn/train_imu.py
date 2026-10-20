@@ -77,12 +77,15 @@ def load_rec(rec, max_jump_deg=3.0, smooth=False, gt_dir="imu_gt"):
     sig = "|".join(f"{p.name}:{p.stat().st_mtime_ns if p.exists() else 0}" for p in deps)
     key = hashlib.md5(f"{CACHE_VERSION}|{sig}|{part}|{max_jump_deg}|{smooth}|{gt_dir}|{MAX_DIST_M}|{HZ}".encode()).hexdigest()[:12]
     cache = rb / gt_dir / f"train_cache_{key}.npz"
+    import os
+    if os.environ.get("IMU_CACHE_DIR"):                     # keep GT folders untouched (cache elsewhere)
+        Path(os.environ["IMU_CACHE_DIR"]).mkdir(parents=True, exist_ok=True)
+        cache = Path(os.environ["IMU_CACHE_DIR"]) / f"{rb.name}_{gt_dir}_{key}.npz"
     if cache.exists():
         z = np.load(cache, allow_pickle=True)
         return {k: (z[k].item() if z[k].ndim == 0 else z[k]) for k in z.files}
     r = _load_rec(rec, max_jump_deg, smooth, gt_dir)
-    import os
-    tmp = cache.with_name(cache.stem + f".tmp{os.getpid()}.npz")    # atomic: parallel runs may build the same cache
+    tmp =cache.with_name(cache.stem + f".tmp{os.getpid()}.npz")    # atomic: parallel runs may build the same cache
     np.savez(tmp, **r)
     os.replace(tmp, cache)
     return r
@@ -329,8 +332,14 @@ def main():
     ap.add_argument("--gt-dir", default="imu_gt", help="정답 폴더 (imu_gt_rs = 롤링셔터 펴기). align·trim 은 늘 imu_gt")
     ap.add_argument("--stride", type=float, default=0.25, help="창 시작 간격 s (데이터가 많으면 늘려 학습 시간 줄임)")
     ap.add_argument("--gt-smooth", action="store_true", help="정답을 사진만으로 그린 매끈한 곡선으로 (gt_smooth.py)")
+    ap.add_argument("--calib-json", default=None,
+                    help="학습 안 함: 이 result.json 의 물리 보정값을 --val 에서 평가만 (다른 정답 잣대로 같은 보정을 채점)")
     ap.add_argument("--out", default=str(HERE.parent / "runs" / time.strftime("imu_cnn_%Y%m%d-%H%M%S")))
+    ap.add_argument("--seed", type=int, default=None, help="난수 고정 (중력 맞춤·학습 순서) — 평가끼리 비교할 때")
     a = ap.parse_args()
+    if a.seed is not None:
+        torch.manual_seed(a.seed)
+        np.random.seed(a.seed)
     global WIN, MAXF
     WIN = int(round(a.win * HZ))
     fps = max(float(json.load(open(Path(r.split("@")[0]) / "meta.json")).get("save_fps") or 60) for r in a.train + a.val)
@@ -447,6 +456,21 @@ def main():
         return model
 
     res = dict(train=[s["name"] for s in tr], val=[s["name"] for s in va])
+    if a.calib_json:                                # evaluate a saved physical calibration only (no training)
+        cj = json.load(open(a.calib_json))["calib"]
+        cal = Calib().to(dev)
+        with torch.no_grad():
+            for k in ("G", "bg", "A", "ba", "r"):
+                getattr(cal, k).copy_(torch.tensor(cj[k], device=dev))
+        res["calib_from"] = a.calib_json
+        res["none"] = dict(val=evaluate(None, va))
+        res["calib"] = dict(val=evaluate(cal, va))
+        print("보정 없음:", res["none"], "\n물리 보정 (불러옴):", res["calib"], flush=True)
+        out = Path(a.out)
+        out.mkdir(parents=True, exist_ok=True)
+        json.dump(res, open(out / "result.json", "w"), indent=1, ensure_ascii=False)
+        print(f"→ {out}")
+        return
     res["none"] = dict(train=evaluate(None, tr), val=evaluate(None, va))
     print("보정 없음:", res["none"], flush=True)
     if not a.skip_bias:

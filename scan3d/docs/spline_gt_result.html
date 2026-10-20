@@ -1,0 +1,79 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>곡선 정답 결과</title><style>
+:root{--bg:#f7f7f5;--fg:#1c1f24;--mut:#6b7078;--card:#fff;--line:#e2e4e8;--a:#2563eb;--b:#dc2626;--c:#16a34a;--d:#d97706;--p:#9333ea;--chip:#eef2ff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--p:#c084fc;--chip:#1e293b}}
+:root[data-theme="dark"]{--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--p:#c084fc;--chip:#1e293b}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.7 system-ui,"Malgun Gothic",sans-serif}main{max-width:980px;margin:0 auto;padding:20px 16px 80px}
+h1{font-size:27px;margin:0 0 4px}h2{font-size:21px;margin:36px 0 8px;padding-top:8px;border-top:1px solid var(--line)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}.key{border-left:5px solid var(--a);padding:8px 14px;background:var(--chip);border-radius:0 10px 10px 0;margin:10px 0}
+.warn{border-left:5px solid var(--d);padding:8px 14px;background:var(--card);border-radius:0 10px 10px 0;margin:10px 0}
+table{border-collapse:collapse;width:100%;font-size:14.5px}th,td{border-bottom:1px solid var(--line);padding:6px 7px;text-align:left;vertical-align:top}th{color:var(--mut);font-size:13.5px}
+.scroll{overflow-x:auto}.small{font-size:14px;color:var(--mut)}.good{color:var(--c);font-weight:700}.bad{color:var(--b);font-weight:700}
+</style></head><body><main>
+<h1>곡선 정답 (표준 스플라인) 결과 — 2026-10-20</h1>
+<p class="small">녹화 11개 전부에 Kalibr 식 곡선 정답을 새로 만들고, 그 정답으로 물리 보정(숫자 27개)을 다시 학습. 평가는 학습에 안 쓴 녹화 4개 (131326 · 145816 · 154320 · 161035), 숫자는 3초 창 IMU 위치 오차 중앙값의 평균.</p>
+
+<div class="key"><b>한 줄 결론</b> — 곡선 정답은 <b>정답 자체는 확실히 더 좋습니다</b> (가려 둔 사진 맞히기 0.20 → 0.17 px, 자이로와의 일치 20% 좋음).
+하지만 <b>그 정답으로 다시 학습한 물리 보정은 아주 조금만 좋아졌습니다</b>: 같은 자로 재면 1.018 → 0.988 cm (−3%), 곡선 자로 재면 0.941 → 0.907 cm (−4%).
+평가 녹화 4개 모두에서 같은 방향이라 우연은 아닌 것 같지만, 크기는 작습니다. 숫자가 0.99 → 0.91 처럼 보이는 것의 절반 이상은 <b>"자가 바뀐 효과"</b> 입니다.</div>
+
+<h2>1. 2×2 표 — 보정 두 개를 같은 자 두 개로</h2>
+<div class="card"><div class="scroll"><table>
+<tr><th>보정을 무엇으로 학습했나 \ 무엇으로 쟀나</th><th>지금 정답 (사진마다 점 + 매끈하게, 지금까지 쓰던 자)</th><th>곡선 정답 (새 자)</th><th>사진마다 점 그대로 (참고)</th></tr>
+<tr><td>보정 없음</td><td>1.887</td><td>1.877</td><td>1.900</td></tr>
+<tr><td>지금 정답으로 학습</td><td>1.018</td><td>0.941</td><td>0.990</td></tr>
+<tr><td><b>곡선 정답으로 학습</b></td><td class="good">0.988 (−3.0%)</td><td class="good">0.907 (−3.6%)</td><td class="good">0.972 (−1.8%)</td></tr>
+<tr><td>곡선+IMU 정답으로 학습 (참고)</td><td>0.999</td><td>0.916</td><td>0.978</td></tr>
+</table></div>
+<p class="small">단위 cm. 칸마다 = 평가 녹화 4개 평균, 각 녹화는 학습 난수 3개 (seed 없음·1·2) 평균. 평가 쪽 난수(녹화별 중력 맞춤)는 seed 0 하나로 고정 — 같은 난수라 줄끼리 비교는 공정. 학습 난수에 따른 차이: 녹화마다 0~0.06 cm (곡선+IMU 는 최대 0.11). 마지막 학습 회차(20회) 값.
+곡선으로 학습한 보정이 지금 보정보다 좋아진 정도는 녹화별로 0.003~0.06 cm 로, 4개 모두 같은 방향 (두 자 모두).</p></div>
+<div class="card"><div class="scroll"><table>
+<tr><th>평가 녹화</th><th>지금 보정 @지금 자</th><th>곡선 보정 @지금 자</th><th>지금 보정 @곡선 자</th><th>곡선 보정 @곡선 자</th></tr>
+<tr><td>131326</td><td>0.843</td><td>0.783</td><td>0.747</td><td>0.683</td></tr>
+<tr><td>145816</td><td>0.583</td><td>0.563</td><td>0.490</td><td>0.487</td></tr>
+<tr><td>154320</td><td>1.213</td><td>1.203</td><td>1.060</td><td>1.030</td></tr>
+<tr><td>161035</td><td>1.430</td><td>1.400</td><td>1.467</td><td>1.427</td></tr>
+</table></div>
+<p class="small">회전 끝 오차는 두 보정 모두 약 0.18~0.19° 로 거의 같음. 보정이 찾은 레버암 (IMU→카메라): 지금 정답 (4.39, 0.32, −1.23) cm, 곡선 정답 (4.38, 0.36, −1.27) cm — 거의 같음.</p></div>
+
+<h2>2. 정답 자체의 품질 — 매듭 간격 고르기</h2>
+<div class="card"><p>학습 오차가 아니라 <b>남이 채점하는 두 잣대</b>로 골랐습니다 (녹화 3개 × 30초).
+① 사진 5장 중 1장을 빼고 곡선을 그린 뒤, 뺀 사진의 모서리를 얼마나 맞히나 (px).
+② 0.2초 동안 정답이 말하는 회전 vs 자이로를 적분한 회전 (°).</p>
+<div class="scroll"><table>
+<tr><th>정답 방식</th><th>① 가려 둔 사진 (px, 중앙값)</th><th>② 자이로와 차이 (°)</th><th>빠를 때 (°)</th></tr>
+<tr><td>사진마다 점 (이웃 사진에서 끼워 넣기)</td><td>0.200 ~ 0.221</td><td>0.075 ~ 0.099</td><td>0.111 ~ 0.124</td></tr>
+<tr><td>사진마다 점 + 매끈하게 (지금 학습에 쓰는 것)</td><td class="bad">0.410 ~ 0.834</td><td>0.084 ~ 0.099</td><td>0.130 ~ 0.146</td></tr>
+<tr><td>곡선, 매듭 0.1 s</td><td>1.36 ~ 3.45</td><td>0.51 ~ 1.48</td><td>1.2 ~ 2.5</td></tr>
+<tr><td>곡선, 매듭 0.05 s</td><td>0.56 ~ 1.02</td><td>0.17 ~ 0.63</td><td>0.38 ~ 1.36</td></tr>
+<tr><td>곡선, 매듭 0.025 s</td><td>0.192 ~ 0.214</td><td>0.058 ~ 0.089</td><td>0.094 ~ 0.184</td></tr>
+<tr><td><b>곡선, 매듭 0.0125 s (선택)</b></td><td class="good">0.143 ~ 0.202</td><td class="good">0.058 ~ 0.076</td><td class="good">0.092 ~ 0.100</td></tr>
+<tr><td>곡선, 매듭 0.0083 s</td><td>0.144 ~ 0.202</td><td>0.059 ~ 0.073</td><td>0.091 ~ 0.098</td></tr>
+<tr><td>곡선, 매듭 0.00625 s</td><td>0.150 ~ 0.204</td><td>0.057 ~ 0.074</td><td>0.089 ~ 0.095</td></tr>
+</table></div>
+<p>→ 0.0125 s 보다 촘촘해도 더 나아지지 않아서 <b>0.0125 s</b> (240 fps 에서 사진 3장마다 매듭 하나). 곡선은 사진마다 점보다 가려 둔 사진을 더 잘 맞히고 자이로와 20~25% 더 잘 맞습니다.
+덤으로 발견: 지금 학습에 쓰는 <b>"매끈하게" 정답은 가려 둔 사진을 사진마다 점보다 2~4배 못 맞힙니다</b> (240 fps 의 빠른 흔들림을 깎아냄). 곡선 정답으로 바꾸면 이 문제가 같이 사라집니다.</p>
+<p class="small">곡선 정답 전체 (녹화 11개): 모서리 오차 중앙값 0.175~0.252 px, 녹화 하나 30초~2분 (GPU 1~3 GB). 사진마다 점 정답과 위치 차이 중앙값 약 0.35 mm.</p></div>
+
+<h2>3. IMU 를 같이 넣은 곡선 — 레버암</h2>
+<div class="card"><p>전에 만든 IMU 판은 레버암이 0 으로 나왔습니다. 원인: 회전을 "사진마다 점을 이은 것 × 작은 보정"으로 표현해서, 240 fps 사진 사이마다 꺾이는 회전을 2 ms 차분으로 두 번 미분 → 각가속도가 잡음뿐 → 레버암 신호가 묻힘.
+고친 것: 회전도 진짜 곡선(SO(3) 누적 B-스플라인)으로, 각속도·각가속도는 공식으로 바로 계산, 가중치는 잡음 크기 기준, 바이어스는 10초마다 바뀌게.</p>
+<div class="scroll"><table>
+<tr><th>시험</th><th>레버암 (cm)</th></tr>
+<tr><td>가짜 데이터 (진짜 값 4.3, 0.4, −1.2 를 넣고 만든 IMU)</td><td class="good">4.33, 0.42, −1.21 — 되찾음</td></tr>
+<tr><td>실제 131326 의 30초</td><td>4.81, 0.85, −1.61</td></tr>
+<tr><td>실제 녹화 11개 각각 (평균 ± 흩어짐)</td><td>4.82 ± 0.23, 0.99 ± 0.48, −1.48 ± 0.67</td></tr>
+<tr><td>물리 보정이 찾은 값 (비교)</td><td>4.39, 0.32, −1.23</td></tr>
+</table></div>
+<p>→ 이제 4 cm 대로 나옵니다. 보정값과 x 0.4 cm, y 0.7 cm 차이는 추정: 곡선+IMU 맞춤에는 가속도계 축척·축 어긋남(물리 보정의 3×3 행렬)이 없어서 그 몫을 레버암이 일부 떠안는 것으로 보입니다. 이 정답(imu_gt_spl_imu)은 보정 학습용 참고일 뿐, 평가 정답으로는 쓰지 않습니다 (IMU 가 자기 채점).</p></div>
+
+<h2>4. 주의 — 이 숫자를 읽을 때</h2>
+<div class="warn"><b>① 학습 쪽 시각 버그</b>: train_imu 의 적분이 batch_sync 보다 약 1 ms 늦습니다 (알려진 버그, 아직 안 고침). 그래서 위 숫자는 <b>서로 비교용</b>이지 절대값이 아닙니다.<br>
+<b>② 자이로 원본</b>: 녹화는 안드로이드가 이미 보정한 자이로(type 4)이고, 바이어스는 온도에 따라 바뀝니다 (녹화 한 번에 폰이 약 8~10 °C 데워짐). 상수 보정 27개로는 이 변화를 못 따라갑니다.<br>
+<b>③ 3초 IMU 숫자 ≠ VIO 성능</b>: 이 3초 창 숫자가 좋아져도 VIO 가 좋아진다는 것은 아직 보이지 않았습니다 — 오히려 물리 보정 IMU 를 넣었더니 145816 에서 VIO 전체 오차가 2.58 → 11.75 cm 로 나빠졌습니다.<br>
+<b>④ 평가 녹화 4개</b>뿐, 차이(−3%)는 학습 난수 차이(녹화마다 최대 0.06 cm)와 비슷한 크기라 "작지만 일관됨" 이상으로 말하기 어렵습니다.</div>
+
+<h2>5. 파일</h2>
+<div class="card small">imu_learn/spline_gt.py (곡선 정답, --imu) · spline_score.py (매듭 고르기 잣대) · spline_synth.py (가짜 데이터 레버암 시험) · spline_all.sh (녹화 전부) · cross_eval.sh / cross_table.py (2×2) · calib_folds.sh (163324 처럼 정답 없는 폴더 건너뜀, GT·seed 선택) · train_imu.py (--calib-json 평가만, --seed, IMU_CACHE_DIR) · prebuild_cache.py<br>
+결과: recordings/*/imu_gt_spl/gt.npz, imu_gt_spl_imu/gt.npz (+ imu_params.json) · runs/spline_score_a.json, spline_score_b.json, spline_2x2.json, runs/on_{rs,spl,splimu}[_s1,_s2]_*/result.json</div>
+</main></body></html>
