@@ -171,9 +171,11 @@ def main():
                 state[rec] = None
                 log(f"{rec} GT changed after its done line -> runs killed, outputs moved to {disc}")
                 continue
-            if state[rec] in ("queued", "failed"):
+            if state[rec] == "queued":
                 continue
-            st = gt_state(rec)
+            st = gt_state(rec)                                          # failed is re-checked: the GT may be redone
+            if st == "failed" and state[rec] == "failed":
+                continue
             if st == "failed":
                 state[rec] = "failed"
                 log(f"{rec} GT failed -> skipped")
