@@ -139,6 +139,7 @@ figure{{margin:0}} figure.wide{{grid-column:1/-1}} svg{{width:100%;height:auto}}
 <span class="mut">(정정 15:20: 전에는 "8~10 °C, 40~70 mdeg/s" 라고 잘못 적었음. 위 값은 첫 카메라 구간의 CP 온도 상승 × CP 기울기. 실측 10초 평균으로도 +69/+97/+70 — input_audit_verify.md C3)</span><br>
 <span class="mut">주의(추정): 데우기 = 카메라 켬이라 카메라 전원 효과(x +5.8, z −5.2 mdeg/s 정도 — 정정 15:20: 온도원을 PA 로 바꾸면 z 가 +12.6 으로 부호가 바뀜 → 크기·부호 모두 불확실)가 섞여 있고, 가열은 사실상 1번 → 카메라 없이 데우는 실험으로 확인 예정 (docs/todo_experiments.md).</span></div>
 
+<div class="box" style="border:2px solid #e5484d"><b>주의 (16:00, 3차 검사)</b>: ① 기울기는 거의 <b>식는 구간(27.8~37 °C)</b>에서만 맞춘 값이라, 37 °C 위(녹화 중 44.5 °C 까지)는 <b>외삽</b>. y 축은 실측 상승(97)보다 15% 크게 나옴. ② "CP" 는 삼성 표기로 <b>모뎀(통신 칩) 온도</b>이지 자이로 칩 온도가 아님 — 자이로 칩 온도와 가장 잘 따라가는 대용 값. ③ 히스테리시스 값도 실제 가열 구간이 짧아 근거 약함. 카메라 없이 데우는 실험(todo_experiments.md 2)으로 확인 예정.</div>
 <h2>1. 온도 센서별 상관 (mdeg/s per °C)</h2>
 <div class="tw"><table><thead><tr><th rowspan="2">온도 센서</th><th rowspan="2">온도 폭 °C</th><th colspan="3">x 축</th><th colspan="3">y 축</th><th colspan="3">z 축</th></tr>
 <tr><th>기울기</th><th>r</th><th>히스테리시스</th><th>기울기</th><th>r</th><th>히스테리시스</th><th>기울기</th><th>r</th><th>히스테리시스</th></tr></thead>
