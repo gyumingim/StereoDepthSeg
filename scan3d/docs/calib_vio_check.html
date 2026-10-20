@@ -1,0 +1,98 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>물리 보정과 VIO 점검</title><style>
+:root{--bg:#fff;--fg:#1d1d1f;--mut:#666;--line:#ddd;--bad:#fde8e8;--good:#e8f6ec;--box:#f5f6f8}
+@media (prefers-color-scheme:dark){:root{--bg:#16171a;--fg:#e8e8ea;--mut:#9a9aa0;--line:#33343a;--bad:#4a1f22;--good:#1d3a26;--box:#202226}}
+body{background:var(--bg);color:var(--fg);font:15px/1.6 system-ui,sans-serif;max-width:1100px;margin:0 auto;padding:16px}
+table{border-collapse:collapse;margin:8px 0 16px;font-size:13px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:4px 6px;text-align:center;vertical-align:top} td.bad{background:var(--bad)} td.na{color:var(--mut)}
+small{color:var(--mut)} .box{background:var(--box);border-radius:8px;padding:10px 14px;margin:10px 0} .concl{background:var(--good)}
+code{font-size:12px}</style></head><body>
+<h1>물리 보정을 넣으면 VIO 가 나빠지나? — 다시 확인 (2026-10-20)</h1>
+
+<div class="box concl">
+<b>결론</b>
+<ul>
+<li><b>물리 보정은 VIO 를 망가뜨리지 않는다.</b> 아침에 본 145816 "보정하면 축척 0.37 로 무너짐" 은 보정 탓이 아니었다.
+같은 녹화에서 <b>보정을 안 넣어도</b> 3 번 중 3 번 초기화가 실패했다 (깨끗한 벤치, 같은 코드 한 버전).</li>
+<li>무너짐의 원인은 <b>OpenVINS 초기화 운</b>이다. 시작 프레임을 1~2 초만 옮겨도, 같은 입력을 두 번 넣어도 결과가 크게 바뀐다.
+145816 은 초기화가 잘 안 되는 녹화이고, 161035 는 설정과 상관없이 9 번 모두 속도가 폭주해 발산했다.</li>
+<li>보정을 넣는 코드(<code>vio_bench_hs.py:184-186</code>)는 학습 코드(<code>train_imu.py</code> Calib.forward)와 같은 식이고,
+정답 궤적과 직접 비교해도 바이어스 부호·레버암 방향·자이로 행렬 방향이 맞았다 → <b>적용 버그 없음</b>.</li>
+<li>보정 "전부"(바이어스 + 행렬 + 레버암)는 초기화 성공이 9 번 중 7 번(보정 없음 5 번, 바이어스만 5 번, 161035 제외)이었다.
+초기화가 성공한 판끼리만 보면 정확도는 셋이 비슷하다 (중앙값 약 0.8~0.9 cm, 차이는 판마다 흔들림보다 작음).
+→ <b>도움이 된다면 레버암이 초기화를 돕는 쪽</b>이고(추정), 정확도 자체를 크게 올리지는 않는다.</li>
+</ul>
+</div>
+
+<h2>1. 무엇을 고쳤나 (이 점검에서 찾은 것)</h2>
+<table>
+<tr><th>무엇</th><th>어디</th><th>내용</th><th>영향</th></tr>
+<tr><td>학습 적분이 1 ms 늦음</td><td><code>train_imu.py</code> (예전 :112-113)</td>
+<td>표본 k 를 구간 [t<sub>k</sub>, t<sub>k+1</sub>] 의 시작 시각에서 뽑음 → 구간 가운데에서 뽑도록 <code>imu_on_grid()</code> 추가, 캐시 버전 2</td>
+<td>합성 시험: 늦음 1.0 ms → -0.0 ms. 다시 학습한 보정값은 거의 같음 (레버암 4.4 cm, 바이어스 같은 크기)</td></tr>
+<tr><td>벤치 버전이 행렬 도중에 바뀜</td><td><code>vio_bench_hs.py</code> 커밋 6253ee0 (다른 담당, 11:59)</td>
+<td>프레임 고르는 방식이 바뀌어 앞서 돌린 결과 일부는 옛 방식, 일부는 새 방식이었음</td>
+<td>사용자 규칙대로 <b>그때까지 결과를 전부 버리고</b> 한 버전(blob 93732ae)으로 다시 돌림. 결과마다 코드 해시 기록</td></tr>
+<tr><td>내 래퍼가 새 벤치와 안 맞음</td><td><code>calib_vio_ablation.py</code></td><td>pick_by_time 인자가 하나 늘어 시작 이동 판이 전부 실패 → 고침</td><td>다시 돌림</td></tr>
+<tr><td>보정 적용 방식</td><td><code>vio_bench_hs.py:184-186</code></td><td>g·Gᵀ + bg, a·Aᵀ + ba, OpenVINS p_CinI = r (IMU 축의 카메라 위치)</td><td><b>버그 없음</b> (아래 2)</td></tr>
+</table>
+<p><small>이미 다른 담당이 고친 것: OpenVINS 시간차 두 번 적용, 프레임을 번호 대신 시간으로 고르기, 채점 정답을 카메라만 쓴 것으로 (커밋 009b79b, 6253ee0).</small></p>
+
+<h2>2. 보정을 맞는 방향으로 넣고 있나 (단위 시험)</h2>
+<p>스플라인 정답(카메라만)으로 실제 각속도·비력(가속도계가 재야 할 값)을 IMU 축에서 계산하고, 기록된 IMU 에 보정을 여러 방식으로 넣어 비교했다
+(<code>imu_learn/calib_apply_test.py</code>, 보정 = 그 녹화를 빼고 학습한 것). 굵은 값 = 벤치가 쓰는 방식.</p>
+<table><tr><th>녹화</th><th>자이로 LSQ 행렬과의 거리 (×10⁻³)<br><small>I / G (벤치) / G⁻¹</small></th><th>자이로 평균 잔차 (mrad/s)<br><small>보정 없음 → 벤치 → 부호 반대</small></th><th>가속도 잔차 RMS (mm/s²)<br><small>레버암 0 / +r (벤치) / −r</small></th></tr>
+<tr><td>131326</td><td>22.93 / <b>15.33</b> / 31.73</td><td>2.05 → <b>0.58</b> → 4.29</td><td>402 / <b>365</b> / 493</td></tr>
+<tr><td>145816</td><td>28.31 / <b>31.53</b> / 28.14</td><td>2.84 → <b>1.19</b> → 4.88</td><td>1730 / <b>1655</b> / 1865</td></tr>
+<tr><td>154320</td><td>14.94 / <b>11.74</b> / 22.48</td><td>4.08 → <b>2.12</b> → 6.05</td><td>699 / <b>643</b> / 841</td></tr>
+<tr><td>161035</td><td>11.35 / <b>13.59</b> / 17.12</td><td>2.75 → <b>1.01</b> → 4.75</td><td>487 / <b>450</b> / 577</td></tr>
+</table>
+<ul>
+<li>자이로 바이어스: 벤치 방식이 평균 잔차를 줄이고, 부호를 뒤집으면 커진다 → 부호 맞음 (4/4 녹화).</li>
+<li>레버암: +r(벤치)이 0 이나 −r 보다 가속도 잔차가 작다 → 방향·좌표계 맞음 (4/4).</li>
+<li>자이로 행렬 G: 데이터에서 직접 맞춘 행렬이 G 쪽에 가깝고 G⁻¹ 과는 멀다 (131326, 154320). 나머지 둘은 잡음 수준.</li>
+<li>가속도 행렬 A: 1 % 이하의 차이라 이 시험의 잡음(정답 위치를 두 번 미분)보다 작아 방향을 판정 못 함. 145816 은 정답 가속도 잡음이 특히 큼.</li>
+</ul>
+
+<h2>3. VIO 비교 (깨끗한 벤치, 한 코드 버전)</h2>
+<p>설정: 60 fps, 640×360, 60 초, IMU 잡음 = 녹화에서 잰 값 ×10 (가장 좋았던 설정), 보정은 평가 녹화를 빼고 학습한 것 (seed 0).
+"시작 +1 s, +2 s" = 첫 VIO 프레임을 늦춘 반복 실행 (OpenVINS 는 같은 입력이면 대체로 같은 결과라 반복 대신 씀).
+칸 = 전체 ATE(cm) / 축척, 아래 작은 글씨 = 초기화 뒤 10 s 부터만 맞춘 ATE · 초기화 시각.
+<b>빨간 칸</b> = 축척이 0.8 아래나 1.25 위 (무너짐).</p>
+<table><tr><th>설정</th><th>131326<br><small>시작 +0 s</small></th><th>131326<br><small>시작 +1 s</small></th><th>131326<br><small>시작 +2 s</small></th><th>145816<br><small>시작 +0 s</small></th><th>145816<br><small>시작 +1 s</small></th><th>145816<br><small>시작 +2 s</small></th><th>154320<br><small>시작 +0 s</small></th><th>154320<br><small>시작 +1 s</small></th><th>154320<br><small>시작 +2 s</small></th><th>161035<br><small>시작 +0 s</small></th><th>161035<br><small>시작 +1 s</small></th><th>161035<br><small>시작 +2 s</small></th><th>ATE 중앙값</th><th>무너짐<br><small>(축척 &lt;0.8)</small></th><th>10 s 뒤 ATE 중앙값</th></tr>
+<tr><th>보정 없음</th><td class="">1.01 / 1.05<br><small>10 s 뒤: 0.46 · 초기화 2.68 s</small></td><td class="">1.07 / 1.03<br><small>10 s 뒤: 0.56 · 초기화 2.12 s</small></td><td class="bad">4.25 / 0.65<br><small>10 s 뒤: 1.94 · 초기화 2.19 s</small></td><td class="bad">24.02 / 0.11<br><small>10 s 뒤: 1.98 · 초기화 7.48 s</small></td><td class="bad">3125.53 / 0.00<br><small>10 s 뒤: 2979.6 · 초기화 4.51 s</small></td><td class="bad">6.99 / 0.61<br><small>10 s 뒤: 6.17 · 초기화 3.52 s</small></td><td class="">1.97 / 0.95<br><small>10 s 뒤: 1.97 · 초기화 0.88 s</small></td><td class="">0.88 / 1.00<br><small>10 s 뒤: 0.85 · 초기화 0.95 s</small></td><td class="">1.16 / 0.98<br><small>10 s 뒤: 1.07 · 초기화 0.88 s</small></td><td class="bad">4382.00 / 0.00<br><small>10 s 뒤: 4271.13 · 초기화 4.38 s</small></td><td class="bad">5177.75 / 0.00<br><small>10 s 뒤: 5489.55 · 초기화 3.3 s</small></td><td class="bad">4737.39 / 0.00<br><small>10 s 뒤: 4825.58 · 초기화 1.99 s</small></td><td><b>5.62</b> <small>(n 12)</small></td><td>7/12</td><td>1.98</td></tr>
+<tr><th>바이어스만</th><td class="">0.99 / 1.05<br><small>10 s 뒤: 0.47 · 초기화 2.68 s</small></td><td class="">1.04 / 1.03<br><small>10 s 뒤: 0.53 · 초기화 2.12 s</small></td><td class="bad">4.49 / 0.64<br><small>10 s 뒤: 1.81 · 초기화 2.19 s</small></td><td class="bad">16.61 / 0.20<br><small>10 s 뒤: 3.39 · 초기화 7.48 s</small></td><td class="bad">12.68 / 0.32<br><small>10 s 뒤: 8.04 · 초기화 4.51 s</small></td><td class="bad">5.16 / 0.74<br><small>10 s 뒤: 3.98 · 초기화 3.52 s</small></td><td class="">2.04 / 0.95<br><small>10 s 뒤: 2.05 · 초기화 0.88 s</small></td><td class="">0.81 / 1.00<br><small>10 s 뒤: 0.8 · 초기화 0.95 s</small></td><td class="">1.88 / 0.95<br><small>10 s 뒤: 1.76 · 초기화 0.88 s</small></td><td class="bad">5366.77 / 0.00<br><small>10 s 뒤: 5320.51 · 초기화 4.38 s</small></td><td class="bad">3118.16 / 0.00<br><small>10 s 뒤: 3365.97 · 초기화 3.3 s</small></td><td class="bad">4472.20 / 0.00<br><small>10 s 뒤: 4547.87 · 초기화 1.99 s</small></td><td><b>4.83</b> <small>(n 12)</small></td><td>7/12</td><td>2.72</td></tr>
+<tr><th>+ 자이로 행렬 G</th><td class="">0.98 / 1.04<br><small>10 s 뒤: 0.51 · 초기화 2.68 s</small></td><td class="na">-</td><td class="na">-</td><td class="bad">15.21 / 0.24<br><small>10 s 뒤: 1.45 · 초기화 7.48 s</small></td><td class="na">-</td><td class="na">-</td><td class="">2.07 / 0.94<br><small>10 s 뒤: 2.07 · 초기화 0.88 s</small></td><td class="na">-</td><td class="na">-</td><td class="na">-</td><td class="na">-</td><td class="na">-</td><td><b>2.07</b> <small>(n 3)</small></td><td>1/3</td><td>1.45</td></tr>
+<tr><th>+ 가속도 행렬 A</th><td class="">0.98 / 1.06<br><small>10 s 뒤: 0.62 · 초기화 2.68 s</small></td><td class="na">-</td><td class="na">-</td><td class="bad">14.87 / 0.25<br><small>10 s 뒤: 1.42 · 초기화 7.48 s</small></td><td class="na">-</td><td class="na">-</td><td class="">1.95 / 0.95<br><small>10 s 뒤: 1.98 · 초기화 0.88 s</small></td><td class="na">-</td><td class="na">-</td><td class="na">-</td><td class="na">-</td><td class="na">-</td><td><b>1.95</b> <small>(n 3)</small></td><td>1/3</td><td>1.42</td></tr>
+<tr><th>레버암만</th><td class="">1.31 / 1.02<br><small>10 s 뒤: 0.68 · 초기화 2.37 s</small></td><td class="na">-</td><td class="na">-</td><td class="bad">18.07 / 0.19<br><small>10 s 뒤: 2.84 · 초기화 1.81 s</small></td><td class="na">-</td><td class="na">-</td><td class="">1.40 / 0.96<br><small>10 s 뒤: 1.36 · 초기화 0.88 s</small></td><td class="na">-</td><td class="na">-</td><td class="na">-</td><td class="na">-</td><td class="na">-</td><td><b>1.40</b> <small>(n 3)</small></td><td>1/3</td><td>1.36</td></tr>
+<tr><th>전부 (G·A·바이어스·레버암)</th><td class="">0.71 / 1.07<br><small>10 s 뒤: 0.63 · 초기화 2.37 s</small></td><td class="">0.60 / 1.05<br><small>10 s 뒤: 0.53 · 초기화 1.65 s</small></td><td class="">0.65 / 1.03<br><small>10 s 뒤: 0.54 · 초기화 1.65 s</small></td><td class="bad">12.46 / 0.34<br><small>10 s 뒤: 0.61 · 초기화 1.65 s</small></td><td class="">2.33 / 0.96<br><small>10 s 뒤: 0.82 · 초기화 2.27 s</small></td><td class="bad">7.55 / 0.58<br><small>10 s 뒤: 2.14 · 초기화 1.62 s</small></td><td class="">2.28 / 1.00<br><small>10 s 뒤: 2.07 · 초기화 0.88 s</small></td><td class="">0.90 / 1.03<br><small>10 s 뒤: 0.94 · 초기화 0.95 s</small></td><td class="">2.05 / 1.02<br><small>10 s 뒤: 1.72 · 초기화 0.88 s</small></td><td class="bad">5594.20 / 0.00<br><small>10 s 뒤: 5725.59 · 초기화 4.33 s</small></td><td class="bad">3970.50 / 0.00<br><small>10 s 뒤: 4140.89 · 초기화 3.3 s</small></td><td class="bad">3510.26 / 0.00<br><small>10 s 뒤: 3686.3 · 초기화 1.72 s</small></td><td><b>2.30</b> <small>(n 12)</small></td><td>5/12</td><td>1.33</td></tr>
+</table>
+
+<h3>초기화 실패를 빼고 보면</h3>
+<p>"초기화 실패" = 초기화 직후 첫 10 s 구간만 따로 맞춘 축척이 0.5 아래 (궤적이 실제보다 2 배 넘게 큼).</p>
+<table><tr><th>설정</th><th>초기화 성공<br><small>131326·145816·154320 × 3</small></th><th>성공한 판의 전체 ATE 중앙값 (cm)</th><th>성공한 판의 10 s 뒤 ATE 중앙값 (cm)</th><th>실패 포함 전체 ATE 중앙값 (cm)</th><th>161035</th></tr>
+<tr><th>보정 없음</th><td>5 / 9</td><td>1.07</td><td>0.85</td><td>1.97</td><td>발산 3 / 3</td></tr>
+<tr><th>바이어스만</th><td>5 / 9</td><td>1.04</td><td>0.80</td><td>2.04</td><td>발산 3 / 3</td></tr>
+<tr><th>전부 (G·A·바이어스·레버암)</th><td>7 / 9</td><td>0.90</td><td>0.82</td><td>2.05</td><td>발산 3 / 3</td></tr>
+</table>
+
+<h2>4. 왜 무너지나 (145816, 161035)</h2>
+<ul>
+<li><b>145816</b>: 보정 없음·바이어스만은 7.5 s 에야 초기화되고, 첫 10 s 동안 VIO 경로 3.5 m vs 실제 1.1 m (축척 0.02). 그 뒤 10 s 구간들은 축척 0.85~1.03 으로 정상.
+즉 전체 ATE·축척은 <b>초기화 직후 몇 초</b>가 다 결정한다. 레버암을 넣으면 1.6~2.3 s 에 일찍 초기화되지만 그래도 3 번 중 2 번은 첫 구간 축척이 틀렸다.</li>
+<li><b>161035</b>: 초기화 직후 폰이 거의 멈춰 있는 구간(3~10 s, 각속도 중앙 0.08 rad/s)이 이어진다. VIO 속도가 0.2 m/s 로 잘못 시작해 끝까지 4 m/s 로 폭주 →
+9 번 모두 수십 m 발산. 보정 여부와 무관. 멈춘 동안 시차가 없어 속도·축척을 볼 수 없는 단안 VIO 의 약점과 맞다 (추정).</li>
+<li>같은 입력을 두 번 넣은 145816 "전부" 가 한 번은 3.6 cm, 한 번은 12.5 cm 였다 (버린 결과와 비교, 먹인 프레임 수 같음) → 스레드 순서에 따른 작은 차이도 초기화를 바꿀 수 있다 (추정).</li>
+<li>아침의 145816 보정 11.75 cm / 축척 0.37 vs 보정 없음 2.58 cm: 그때는 보정 없는 판이 운 좋게 초기화된 것. 지금 깨끗한 벤치에서는 보정 없는 판이 3 번 모두 실패했다.</li>
+</ul>
+
+<h2>5. 남은 것 · 다음</h2>
+<ul>
+<li>보정의 이득을 재려면 초기화를 고정해야 한다: 정답 자세·속도로 초기화하거나, 초기화 실패를 감지해 다시 시작 (다른 담당이 "무너짐 감지" 를 맡음).</li>
+<li>녹화 4 개 × 3 번이라 이득 크기(±0.1 cm 수준)는 판정 못 함. 지금 말할 수 있는 것은 "해치지 않는다" 와 "초기화 성공이 조금 많다(7/9 vs 5/9, 표본 작음)" 까지.</li>
+<li>보정은 Android 보정판 IMU(유형 1·4) 기준이다. 원본 IMU(16·35)는 이 녹화들에 없다.</li>
+</ul>
+<p><small>파일: <code>imu_learn/calib_apply_test.py</code>, <code>imu_learn/calib_vio_ablation.py</code>, <code>imu_learn/train_imu.py</code> (imu_on_grid);
+결과 <code>runs/vio_calibcheck/</code> (summary.json, apply_test.json, 버린 결과는 discarded_mixed_bench/), 진행 기록 <code>runs/calibcheck_progress.log</code>.</small></p>
+
+</body></html>
