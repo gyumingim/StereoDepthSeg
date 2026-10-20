@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>길 그리기 두 가지</title>
+<style>
+:root{--bg:#f7f7f5;--fg:#1c1f24;--mut:#6b7078;--card:#fff;--line:#e2e4e8;--a:#2563eb;--b:#dc2626;--c:#16a34a;--d:#d97706;--p:#9333ea;--chip:#eef2ff;--svgbg:#fbfbfa}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--p:#c084fc;--chip:#1e293b;--svgbg:#16191d}}
+:root[data-theme="dark"]{--bg:#121417;--fg:#e8eaed;--mut:#9aa0a6;--card:#1b1e23;--line:#2c3037;--a:#60a5fa;--b:#f87171;--c:#4ade80;--d:#fbbf24;--p:#c084fc;--chip:#1e293b;--svgbg:#16191d}
+body{margin:0;background:var(--bg);color:var(--fg);font:20px/1.7 system-ui,"Malgun Gothic",sans-serif}
+main{max-width:880px;margin:0 auto;padding:22px 16px 80px}
+h1{font-size:30px;margin:0 0 6px}h2{font-size:24px;margin:34px 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin:14px 0}
+.big{font-size:44px;line-height:1.2}
+.row{display:flex;gap:12px;flex-wrap:wrap}.row .card{flex:1;min-width:240px;margin:0}
+svg{width:100%;height:auto;display:block;background:var(--svgbg);border-radius:12px}
+button{font:inherit;font-size:19px;padding:10px 18px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer;margin:4px 8px 4px 0}
+button.on{border-color:var(--a);color:var(--a);font-weight:700}
+.say{font-size:22px;font-weight:600;margin:10px 0}
+.pill{display:inline-block;border-radius:999px;padding:2px 14px;font-weight:800}
+.bad{background:color-mix(in srgb,var(--b) 15%,transparent);color:var(--b)}
+.good{background:color-mix(in srgb,var(--c) 15%,transparent);color:var(--c)}
+.small{font-size:16px;color:var(--mut)}
+</style>
+</head>
+<body><main>
+<h1>폰이 지나간 길, 어떻게 그릴까?</h1>
+<p class="small">진짜 길(회색 점선)을 모른다고 치고, 단서만 보고 길을 그려 봅니다.</p>
+
+<div class="row">
+ <div class="card"><div class="big">📷</div><b>사진 단서</b><br>"이때 폰은 대충 여기"<br><span class="small">가끔씩 · 조금 틀림 · 흐린 사진은 많이 틀림</span></div>
+ <div class="card"><div class="big">🌀</div><b>IMU 단서</b><br>"이때 이쪽으로 이만큼 움직였다"<br><span class="small">아주 자주 · 위치는 모름 · 방향·빠르기만</span></div>
+</div>
+
+<h2>방법 ① 지금: 점 찍고 → 잇기</h2>
+<div class="card">
+<button id="a1" class="on">1. 사진마다 점 찍기</button><button id="a2">2. 흐린 사진 버리기</button><button id="a3">3. 점 잇기</button>
+<svg id="sa" viewBox="0 0 860 300"></svg>
+<div class="say" id="ta"></div>
+</div>
+
+<h2>방법 ② 표준: 선 하나 → 단서마다 당기기</h2>
+<div class="card">
+<button id="b1" class="on">1. 대충 선 하나</button><button id="b2">2. 단서들이 고무줄로 당김</button><button id="b3">3. 다 당긴 결과</button>
+<svg id="sb" viewBox="0 0 860 300"></svg>
+<div class="say" id="tb"></div>
+</div>
+
+<h2>결과</h2>
+<div class="card">
+<p class="say">진짜 길과의 차이: ① 점 찍고 잇기 <span class="pill bad" id="ea">-</span> &nbsp; ② 선 하나 당기기 <span class="pill good" id="eb">-</span></p>
+<ul>
+ <li>② 는 <b>흐린 사진도 버리지 않고</b> 약한 고무줄로 씀 → 빠르게 움직인 곳도 길이 이어짐</li>
+ <li>② 는 <b>IMU 도 고무줄</b>로 같이 당김 → 사진 사이 휘어짐이 정확</li>
+ <li>단서 수천 개가 <b>한 선을 같이 붙잡아서</b> 하나하나의 실수가 평균됨</li>
+</ul>
+<button id="again">🎲 다른 길로 다시</button>
+<p class="small">주의: 이 숫자는 그림 예시용입니다 (① 은 점을 단순하게 이음). 실제 우리 녹화에서 얼마나 좋아질지는 만들어서 재 봐야 압니다.</p>
+</div>
+<p class="small">실제로는 길이 3D(위치+자세)이고, 사진 단서는 "보드 모서리 하나하나"입니다 (그래서 흐린 사진도 보이는 모서리만큼 씀). 원리는 이 그림과 같습니다.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id),css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let seed=5;function rnd(){seed=(seed*16807)%2147483647;return(seed-1)/2147483646;}
+function gauss(){let u=0,v=0;while(!u)u=rnd();while(!v)v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+const W=860,H=300,T=1;let truth,photos,imu,ctrlA,ctrlB0,ctrlB;const NC=14,h=T/(NC-3);
+const knot=i=>(i-1)*h;function Bv(u){const a=Math.abs(u);return a<1?(4-6*a*a+3*a*a*a)/6:a<2?(2-a)**3/6:0;}
+function Bd(u){const a=Math.abs(u),s=Math.sign(u);return a<1?s*(-12*a+9*a*a)/6:a<2?-s*(2-a)**2/2:0;}
+const val=(c,t)=>{let s=0;for(let i=0;i<NC;i++)s+=c[i]*Bv((t-knot(i))/h);return s;};
+const der=(c,t)=>{let s=0;for(let i=0;i<NC;i++)s+=c[i]*Bd((t-knot(i))/h)/h;return s;};
+function make(){const c=[];for(let k=0;k<4;k++)c.push({a:30+50*rnd(),f:0.6+2*rnd(),p:6.28*rnd()});
+ truth=t=>150+c.reduce((s,q)=>s+q.a*Math.sin(2*Math.PI*q.f*t+q.p),0)*0.9;
+ const dtr=t=>c.reduce((s,q)=>s+q.a*2*Math.PI*q.f*Math.cos(2*Math.PI*q.f*t+q.p),0)*0.9;
+ photos=[];for(let t=0.03;t<0.98;t+=0.045){const blur=rnd()<0.3;photos.push({t,y:truth(t)+(blur?18:5)*gauss(),blur});}
+ imu=[];for(let t=0.005;t<1;t+=0.01)imu.push({t,v:dtr(t)+25*gauss()});
+ // method A: drop blurry, connect (Catmull-like through points)
+ // method B: least squares fit of spline to photos (blurry low weight) + imu velocities
+ ctrlB0=new Array(NC).fill(0).map((_,i)=>{const t=Math.min(Math.max(knot(i),0),1);let best=photos[0];photos.forEach(p=>{if(Math.abs(p.t-t)<Math.abs(best.t-t))best=p;});return best.y+20*gauss();});
+ ctrlB=fit();}
+function fit(){ // normal equations, small system
+ const A=[...Array(NC)].map(()=>new Array(NC).fill(0)),bb=new Array(NC).fill(0);
+ const add=(row,y,w)=>{for(let i=0;i<NC;i++){if(!row[i])continue;bb[i]+=w*row[i]*y;for(let j=0;j<NC;j++)A[i][j]+=w*row[i]*row[j];}};
+ photos.forEach(p=>add([...Array(NC)].map((_,i)=>Bv((p.t-knot(i))/h)),p.y,p.blur?1/18**2:1/5**2));
+ imu.forEach(q=>add([...Array(NC)].map((_,i)=>Bd((q.t-knot(i))/h)/h),q.v,1/25**2*0.5));
+ for(let i=0;i<NC;i++)A[i][i]+=1e-6;
+ // gaussian elimination
+ const n=NC,M=A.map((r,i)=>[...r,bb[i]]);for(let i=0;i<n;i++){let p=i;for(let r=i+1;r<n;r++)if(Math.abs(M[r][i])>Math.abs(M[p][i]))p=r;[M[i],M[p]]=[M[p],M[i]];for(let r=0;r<n;r++){if(r===i)continue;const f=M[r][i]/M[i][i];for(let k=i;k<=n;k++)M[r][k]-=f*M[i][k];}}
+ return M.map((r,i)=>r[n]/r[i]);}
+const X=t=>30+t*800;
+function base(){let s='';let d='';for(let t=0;t<=1;t+=0.004)d+=(d?'L':'M')+X(t).toFixed(1)+' '+truth(t).toFixed(1);
+ return `<path d="${d}" fill="none" stroke="${css('--mut')}" stroke-width="2.5" stroke-dasharray="7 6"/>`;}
+function photoDots(showBlur,dim){return photos.map(p=>{if(p.blur&&!showBlur)return `<text x="${X(p.t)-7}" y="${p.y+6}" style="fill:${css('--b')};font-size:20px">✗</text>`;
+ return `<circle cx="${X(p.t)}" cy="${p.y}" r="${p.blur?7:6}" fill="${p.blur?'none':css('--b')}" stroke="${css('--b')}" stroke-width="2.5" stroke-dasharray="${p.blur?'3 3':''}" opacity="${dim?0.6:1}"/>`;}).join('');}
+function lineA(){const P=photos.filter(p=>!p.blur);let d='M'+X(P[0].t)+' '+P[0].y;for(let i=1;i<P.length;i++){const a=P[i-1],b=P[i];const mx=(X(a.t)+X(b.t))/2;d+=` C ${mx} ${a.y}, ${mx} ${b.y}, ${X(b.t)} ${b.y}`;}return d;}
+function errA(){const P=photos.filter(p=>!p.blur);let e=0,n=0;for(let t=P[0].t;t<=P[P.length-1].t;t+=0.002){let i=0;while(i<P.length-2&&P[i+1].t<t)i++;const a=P[i],b=P[i+1],u=(t-a.t)/(b.t-a.t);const y=a.y+(b.y-a.y)*(u*u*(3-2*u));e+=(y-truth(t))**2;n++;}return Math.sqrt(e/n);}
+function errB(c){let e=0,n=0;for(let t=0.03;t<=0.97;t+=0.002){e+=(val(c,t)-truth(t))**2;n++;}return Math.sqrt(e/n);}
+let sa=1,sb=1;
+function drawA(){let s=base();if(sa===1){s+=photoDots(true);$('ta').textContent='사진 한 장마다 "폰은 여기!" 하고 점을 찍어요. 점마다 조금씩 틀려요.';}
+ if(sa===2){s+=photoDots(false);$('ta').textContent='흐린 사진(✗)은 믿기 어려워서 통째로 버려요. 그 자리가 비어요.';}
+ if(sa===3){s+=photoDots(false,true)+`<path d="${lineA()}" fill="none" stroke="${css('--b')}" stroke-width="3.5"/>`;$('ta').textContent='남은 점들을 이어요. 점의 실수가 그대로 선에 남고, 빈 곳은 대충 메워져요.';}
+ $('sa').innerHTML=s;['a1','a2','a3'].forEach((id,i)=>$(id).classList.toggle('on',sa===i+1));}
+function drawB(){let s=base();const c=sb===1?ctrlB0:ctrlB;
+ if(sb>=2){photos.forEach(p=>{const y=val(sb===2?ctrlB0:ctrlB,p.t);s+=`<line x1="${X(p.t)}" y1="${p.y}" x2="${X(p.t)}" y2="${y}" stroke="${css('--d')}" stroke-width="${p.blur?1.5:3.5}" opacity="${p.blur?0.6:0.9}"/>`;});}
+ s+=photoDots(true,true);
+ if(sb>=2){imu.forEach((q,k)=>{if(k%4)return;const y=val(sb===2?ctrlB0:ctrlB,q.t);const dx=14,dy=q.v*dx/800;s+=`<line x1="${X(q.t)-dx}" y1="${y-dy}" x2="${X(q.t)+dx}" y2="${y+dy}" stroke="${css('--p')}" stroke-width="2.5" opacity=".75"/>`;});}
+ let d='';for(let t=0;t<=1;t+=0.004)d+=(d?'L':'M')+X(t).toFixed(1)+' '+val(c,t).toFixed(1);s+=`<path d="${d}" fill="none" stroke="${css('--a')}" stroke-width="4"/>`;
+ $('tb').textContent=sb===1?'처음엔 대충 아무 선이나 하나 그려요 (파란 선).':sb===2?'사진 점은 주황 고무줄(흐린 사진은 가는 줄)로, IMU 는 보라 막대로 "이 기울기여야 해"라고 선을 당겨요.':'모든 단서가 동시에 당긴 결과 — 파란 선이 진짜 길(점선)에 붙었어요.';
+ $('sb').innerHTML=s;['b1','b2','b3'].forEach((id,i)=>$(id).classList.toggle('on',sb===i+1));}
+function all(){drawA();drawB();$('ea').textContent=errA().toFixed(1)+' 칸';$('eb').textContent=errB(ctrlB).toFixed(1)+' 칸';}
+['a1','a2','a3'].forEach((id,i)=>$(id).onclick=()=>{sa=i+1;drawA();});
+['b1','b2','b3'].forEach((id,i)=>$(id).onclick=()=>{sb=i+1;drawB();});
+$('again').onclick=()=>{seed=Math.floor(Math.random()*1e9)+1;make();all();};
+make();all();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',all);
+</script>
+</body></html>
