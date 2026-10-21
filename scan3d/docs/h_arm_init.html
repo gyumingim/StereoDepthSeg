@@ -4,7 +4,7 @@ table{border-collapse:collapse;font-size:.88em;margin:.6em 0;display:block;overf
 padding:3px 7px;text-align:right;white-space:nowrap}th{background:#f2f4f6}td.l,th.l{text-align:left}.ok{color:#11702f;font-weight:600}
 .bad{color:#b3261e;font-weight:600}.box{background:#f5f8fb;border-left:4px solid #3b6ea8;padding:.6em 1em}.small{color:#555;font-size:.9em}
 @media (prefers-color-scheme:dark){body{background:#16191d;color:#e3e6ea}th{background:#262b31}td,th{border-color:#3a4048}
-.box{background:#1f252c}.small{color:#aab}.ok{color:#6fd18f}.bad{color:#ff8a80}}</style></head><body><h1>정지 붙잡기를 OpenVINS 초기화 뒤에만 켜기</h1>
+.box{background:#1f252c}.small{color:#aab}.ok{color:#6fd18f}.bad{color:#ff8a80}}</style></head><body><div style="border:2px solid #e5484d;border-radius:8px;padding:10px 12px;margin:8px 0"><b>검증 반영 (docs/h_arm_init_verify.md)</b>: 틀린 주장 없음. 정정 ① F_224323 비율 3.9 % 는 맞지만 1152 는 같은 GT 구간 384 표본을 시작 3개가 세 번 센 값 (15/384). ② i3/i10 의 "18 묶음 통과" 는 <b>입력이 같다고 예측돼 복사한 결과</b> (직접 돌린 확인 실행 1개). ③ Hw15m05 는 붙잡기가 있는 10 짝만 다시 돌림 (44 칸은 base 복사). ④ i0 의 T_221052_S1 실패는 짝 1개, 여유 0.03 cm. ⑤ 복사 칸의 붙잡기 예측은 커밋 전 코드로 만들어짐 (실행 칸은 모두 일치). ":iD" 가 읽는 첫 tracking 포즈 = OpenVINS 초기화 는 이 데이터에서 맞음.</div><h1>정지 붙잡기를 OpenVINS 초기화 뒤에만 켜기</h1>
 <p class=small>만든 시각 2026-10-21 21:02:09 · git 31915ae · 계획 docs/h_arm_init_plan.md (사전 등록 31915ae) · 결과 runs/h_arm_init/</p>
 <div class=box>
 <p><b>결론 (추정)</b>: 초기화 뒤에만 켜는 변형 중 <b>원래 사전 등록 기준을 통과한 것은 없다</b>.
