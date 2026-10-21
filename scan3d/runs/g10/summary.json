@@ -1,0 +1,5285 @@
+{
+ "made": "2026-10-22 04:33:46",
+ "git": "0a90b63",
+ "checks": {
+  "gbridge_vs_diag": true,
+  "G_closed_vs_base": true,
+  "G_closed_gate_open_frames": 0
+ },
+ "dep_rows": [
+  {
+   "key": "B_213341_s0_d1",
+   "kind": "B",
+   "rec": "hs_20261021_213341",
+   "off": 52.38,
+   "window_inside": true,
+   "base": {
+    "name": "B_213341_s0_d1_base",
+    "status": "ok",
+    "n_match": 562,
+    "ate_cm": 1.584,
+    "ate_sim3_cm": 1.181,
+    "scale": 0.9199,
+    "t_dep_s": 69.78,
+    "first_trk_s": 53.25,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9606,
+    "zupt_still_n": 889,
+    "zupt_still_all": [
+     0.957,
+     908
+    ],
+    "bench_ate_cm": 2.26,
+    "bench_scale": 0.8696,
+    "t_init_clip_s": 0.868,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 52.38,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 893,
+    "n_pass_gt": 885,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/i3_takeoff/B_213341_s0_d1_base",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "B_213341_s0_d1_i3",
+    "status": "ok",
+    "n_match": 562,
+    "ate_cm": 3.058,
+    "ate_sim3_cm": 1.887,
+    "scale": 0.8333,
+    "t_dep_s": 69.78,
+    "first_trk_s": 53.25,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9854,
+    "zupt_still_n": 889,
+    "zupt_still_all": [
+     0.9813,
+     908
+    ],
+    "bench_ate_cm": 2.61,
+    "bench_scale": 0.8608,
+    "t_init_clip_s": 0.868,
+    "frames_held": 673,
+    "holds_s": [
+     [
+      56.26,
+      68.96
+     ]
+    ],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 52.38,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 12.699,
+    "arm_s": 3.016,
+    "n_pass": 915,
+    "n_pass_gt": 907,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/i3_takeoff/B_213341_s0_d1_i3",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "B_213341_s0_d1_G",
+    "status": "ok",
+    "n_match": 562,
+    "ate_cm": 1.611,
+    "ate_sim3_cm": 1.214,
+    "scale": 0.9196,
+    "t_dep_s": 69.78,
+    "first_trk_s": 53.25,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9854,
+    "zupt_still_n": 889,
+    "zupt_still_all": [
+     0.9813,
+     908
+    ],
+    "bench_ate_cm": 2.39,
+    "bench_scale": 0.8623,
+    "t_init_clip_s": 0.868,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 52.38,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 915,
+    "n_pass_gt": 907,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/g10/B_213341_s0_d1_G",
+    "gate_open_frames": 673
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "B_213341_s0_d5",
+   "kind": "B",
+   "rec": "hs_20261021_213341",
+   "off": 56.38,
+   "window_inside": true,
+   "base": {
+    "name": "B_213341_s0_d5_base",
+    "status": "ok",
+    "n_match": 562,
+    "ate_cm": 1.576,
+    "ate_sim3_cm": 1.172,
+    "scale": 0.9201,
+    "t_dep_s": 69.78,
+    "first_trk_s": 58.31,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.973,
+    "zupt_still_n": 593,
+    "zupt_still_all": [
+     0.9702,
+     671
+    ],
+    "bench_ate_cm": 2.11,
+    "bench_scale": 0.8825,
+    "t_init_clip_s": 1.932,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 56.38,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 676,
+    "n_pass_gt": 668,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/i3_takeoff/B_213341_s0_d5_base",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "B_213341_s0_d5_i3",
+    "status": "ok",
+    "n_match": 562,
+    "ate_cm": 2.75,
+    "ate_sim3_cm": 1.627,
+    "scale": 0.8448,
+    "t_dep_s": 69.78,
+    "first_trk_s": 58.31,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9899,
+    "zupt_still_n": 593,
+    "zupt_still_all": [
+     0.9851,
+     671
+    ],
+    "bench_ate_cm": 2.4,
+    "bench_scale": 0.8697,
+    "t_init_clip_s": 1.932,
+    "frames_held": 382,
+    "holds_s": [
+     [
+      61.33,
+      68.96
+     ]
+    ],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 56.38,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 7.634,
+    "arm_s": 3.016,
+    "n_pass": 686,
+    "n_pass_gt": 678,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/i3_takeoff/B_213341_s0_d5_i3",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "B_213341_s0_d5_G",
+    "status": "ok",
+    "n_match": 562,
+    "ate_cm": 1.571,
+    "ate_sim3_cm": 1.202,
+    "scale": 0.9229,
+    "t_dep_s": 69.78,
+    "first_trk_s": 58.31,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9899,
+    "zupt_still_n": 593,
+    "zupt_still_all": [
+     0.9851,
+     671
+    ],
+    "bench_ate_cm": 2.25,
+    "bench_scale": 0.8767,
+    "t_init_clip_s": 1.932,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 56.38,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 686,
+    "n_pass_gt": 678,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/g10/B_213341_s0_d5_G",
+    "gate_open_frames": 382
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "B_213341_s0_d10",
+   "kind": "B",
+   "rec": "hs_20261021_213341",
+   "off": 61.38,
+   "window_inside": true,
+   "base": {
+    "name": "B_213341_s0_d10_base",
+    "status": "ok",
+    "n_match": 560,
+    "ate_cm": 1.511,
+    "ate_sim3_cm": 1.188,
+    "scale": 0.9284,
+    "t_dep_s": 69.78,
+    "first_trk_s": 69.81,
+    "first_trk_before_dep": false,
+    "zupt_still": null,
+    "zupt_still_n": 0,
+    "zupt_still_all": [
+     0.9921,
+     381
+    ],
+    "bench_ate_cm": 0.97,
+    "bench_scale": 0.9591,
+    "t_init_clip_s": 8.419,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 61.38,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 403,
+    "n_pass_gt": 395,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/i3_takeoff/B_213341_s0_d10_base",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "B_213341_s0_d10_i3",
+    "status": "ok",
+    "n_match": 560,
+    "ate_cm": 1.511,
+    "ate_sim3_cm": 1.188,
+    "scale": 0.9284,
+    "t_dep_s": 69.78,
+    "first_trk_s": 69.81,
+    "first_trk_before_dep": false,
+    "zupt_still": null,
+    "zupt_still_n": 0,
+    "zupt_still_all": [
+     0.9921,
+     381
+    ],
+    "bench_ate_cm": 0.97,
+    "bench_scale": 0.9591,
+    "t_init_clip_s": 8.419,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 61.38,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 403,
+    "n_pass_gt": 395,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/i3_takeoff/B_213341_s0_d10_i3",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "B_213341_s0_d10_G",
+    "status": "ok",
+    "n_match": 560,
+    "ate_cm": 1.511,
+    "ate_sim3_cm": 1.188,
+    "scale": 0.9284,
+    "t_dep_s": 69.78,
+    "first_trk_s": 69.81,
+    "first_trk_before_dep": false,
+    "zupt_still": null,
+    "zupt_still_n": 0,
+    "zupt_still_all": [
+     0.9921,
+     381
+    ],
+    "bench_ate_cm": 0.97,
+    "bench_scale": 0.9591,
+    "t_init_clip_s": 8.419,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 61.38,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 403,
+    "n_pass_gt": 395,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/g10/B_213341_s0_d10_G",
+    "gate_open_frames": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "B_213955_s0_d1",
+   "kind": "B",
+   "rec": "hs_20261021_213955",
+   "off": 50.253,
+   "window_inside": true,
+   "base": {
+    "name": "B_213955_s0_d1_base",
+    "status": "ok",
+    "n_match": 547,
+    "ate_cm": 4.056,
+    "ate_sim3_cm": 1.546,
+    "scale": 0.7072,
+    "t_dep_s": 70.15,
+    "first_trk_s": 70.35,
+    "first_trk_before_dep": false,
+    "zupt_still": null,
+    "zupt_still_n": 0,
+    "zupt_still_all": [
+     1.0,
+     988
+    ],
+    "bench_ate_cm": 3.05,
+    "bench_scale": 0.7365,
+    "t_init_clip_s": 20.083,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 50.253,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 1005,
+    "n_pass_gt": 1003,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/i3_takeoff/B_213955_s0_d1_base",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "B_213955_s0_d1_i3",
+    "status": "ok",
+    "n_match": 547,
+    "ate_cm": 4.056,
+    "ate_sim3_cm": 1.546,
+    "scale": 0.7072,
+    "t_dep_s": 70.15,
+    "first_trk_s": 70.35,
+    "first_trk_before_dep": false,
+    "zupt_still": null,
+    "zupt_still_n": 0,
+    "zupt_still_all": [
+     1.0,
+     988
+    ],
+    "bench_ate_cm": 3.05,
+    "bench_scale": 0.7365,
+    "t_init_clip_s": 20.083,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 50.253,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 1005,
+    "n_pass_gt": 1003,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/i3_takeoff/B_213955_s0_d1_i3",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "B_213955_s0_d1_G",
+    "status": "ok",
+    "n_match": 547,
+    "ate_cm": 4.056,
+    "ate_sim3_cm": 1.546,
+    "scale": 0.7072,
+    "t_dep_s": 70.15,
+    "first_trk_s": 70.35,
+    "first_trk_before_dep": false,
+    "zupt_still": null,
+    "zupt_still_n": 0,
+    "zupt_still_all": [
+     1.0,
+     988
+    ],
+    "bench_ate_cm": 3.05,
+    "bench_scale": 0.7365,
+    "t_init_clip_s": 20.083,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 50.253,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 1005,
+    "n_pass_gt": 1003,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/g10/B_213955_s0_d1_G",
+    "gate_open_frames": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "B_213955_s0_d5",
+   "kind": "B",
+   "rec": "hs_20261021_213955",
+   "off": 54.253,
+   "window_inside": true,
+   "base": {
+    "name": "B_213955_s0_d5_base",
+    "status": "ok",
+    "n_match": 542,
+    "ate_cm": 1.517,
+    "ate_sim3_cm": 1.276,
+    "scale": 0.9163,
+    "t_dep_s": 70.15,
+    "first_trk_s": 70.45,
+    "first_trk_before_dep": false,
+    "zupt_still": null,
+    "zupt_still_n": 0,
+    "zupt_still_all": [
+     1.0,
+     762
+    ],
+    "bench_ate_cm": 1.26,
+    "bench_scale": 0.9271,
+    "t_init_clip_s": 16.199,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 54.253,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 781,
+    "n_pass_gt": 781,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/i3_takeoff/B_213955_s0_d5_base",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "B_213955_s0_d5_i3",
+    "status": "ok",
+    "n_match": 542,
+    "ate_cm": 1.517,
+    "ate_sim3_cm": 1.276,
+    "scale": 0.9163,
+    "t_dep_s": 70.15,
+    "first_trk_s": 70.45,
+    "first_trk_before_dep": false,
+    "zupt_still": null,
+    "zupt_still_n": 0,
+    "zupt_still_all": [
+     1.0,
+     762
+    ],
+    "bench_ate_cm": 1.26,
+    "bench_scale": 0.9271,
+    "t_init_clip_s": 16.199,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 54.253,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 781,
+    "n_pass_gt": 781,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/i3_takeoff/B_213955_s0_d5_i3",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "B_213955_s0_d5_G",
+    "status": "ok",
+    "n_match": 542,
+    "ate_cm": 1.517,
+    "ate_sim3_cm": 1.276,
+    "scale": 0.9163,
+    "t_dep_s": 70.15,
+    "first_trk_s": 70.45,
+    "first_trk_before_dep": false,
+    "zupt_still": null,
+    "zupt_still_n": 0,
+    "zupt_still_all": [
+     1.0,
+     762
+    ],
+    "bench_ate_cm": 1.26,
+    "bench_scale": 0.9271,
+    "t_init_clip_s": 16.199,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 54.253,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 781,
+    "n_pass_gt": 781,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/g10/B_213955_s0_d5_G",
+    "gate_open_frames": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "B_213955_s0_d10",
+   "kind": "B",
+   "rec": "hs_20261021_213955",
+   "off": 59.253,
+   "window_inside": true,
+   "base": {
+    "name": "B_213955_s0_d10_base",
+    "status": "ok",
+    "n_match": 543,
+    "ate_cm": 1.66,
+    "ate_sim3_cm": 1.209,
+    "scale": 0.888,
+    "t_dep_s": 70.15,
+    "first_trk_s": 70.44,
+    "first_trk_before_dep": false,
+    "zupt_still": null,
+    "zupt_still_n": 0,
+    "zupt_still_all": [
+     1.0,
+     509
+    ],
+    "bench_ate_cm": 1.23,
+    "bench_scale": 0.913,
+    "t_init_clip_s": 11.164,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 59.253,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 526,
+    "n_pass_gt": 526,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/i3_takeoff/B_213955_s0_d10_base",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "B_213955_s0_d10_i3",
+    "status": "ok",
+    "n_match": 543,
+    "ate_cm": 1.66,
+    "ate_sim3_cm": 1.209,
+    "scale": 0.888,
+    "t_dep_s": 70.15,
+    "first_trk_s": 70.44,
+    "first_trk_before_dep": false,
+    "zupt_still": null,
+    "zupt_still_n": 0,
+    "zupt_still_all": [
+     1.0,
+     509
+    ],
+    "bench_ate_cm": 1.23,
+    "bench_scale": 0.913,
+    "t_init_clip_s": 11.164,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 59.253,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 526,
+    "n_pass_gt": 526,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/i3_takeoff/B_213955_s0_d10_i3",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "B_213955_s0_d10_G",
+    "status": "ok",
+    "n_match": 543,
+    "ate_cm": 1.66,
+    "ate_sim3_cm": 1.209,
+    "scale": 0.888,
+    "t_dep_s": 70.15,
+    "first_trk_s": 70.44,
+    "first_trk_before_dep": false,
+    "zupt_still": null,
+    "zupt_still_n": 0,
+    "zupt_still_all": [
+     1.0,
+     509
+    ],
+    "bench_ate_cm": 1.23,
+    "bench_scale": 0.913,
+    "t_init_clip_s": 11.164,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 59.253,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 526,
+    "n_pass_gt": 526,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/g10/B_213955_s0_d10_G",
+    "gate_open_frames": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "B_214550_s0_d1",
+   "kind": "B",
+   "rec": "hs_20261021_214550",
+   "off": 48.902,
+   "window_inside": true,
+   "base": {
+    "name": "B_214550_s0_d1_base",
+    "status": "collapse",
+    "n_match": 573,
+    "ate_cm": 66.87,
+    "ate_sim3_cm": 9.12,
+    "scale": 0.072,
+    "t_dep_s": 69.3,
+    "first_trk_s": 49.54,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.2262,
+    "zupt_still_n": 1017,
+    "zupt_still_all": [
+     0.2253,
+     1021
+    ],
+    "bench_ate_cm": 83.99,
+    "bench_scale": 0.1087,
+    "t_init_clip_s": 0.617,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 48.902,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 305,
+    "n_pass_gt": 305,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/i3_takeoff/B_214550_s0_d1_base",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "B_214550_s0_d1_i3",
+    "status": "collapse",
+    "n_match": 573,
+    "ate_cm": 10.87,
+    "ate_sim3_cm": 6.157,
+    "scale": 0.4858,
+    "t_dep_s": 69.3,
+    "first_trk_s": 49.54,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.7817,
+    "zupt_still_n": 1017,
+    "zupt_still_all": [
+     0.7786,
+     1021
+    ],
+    "bench_ate_cm": 13.66,
+    "bench_scale": 0.4646,
+    "t_init_clip_s": 0.617,
+    "frames_held": 742,
+    "holds_s": [
+     [
+      52.54,
+      53.84
+     ],
+     [
+      55.47,
+      68.9
+     ]
+    ],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 48.902,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 14.73,
+    "arm_s": 3.004,
+    "n_pass": 867,
+    "n_pass_gt": 867,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/i3_takeoff/B_214550_s0_d1_i3",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "B_214550_s0_d1_G",
+    "status": "ok",
+    "n_match": 573,
+    "ate_cm": 6.231,
+    "ate_sim3_cm": 5.231,
+    "scale": 0.7281,
+    "t_dep_s": 69.3,
+    "first_trk_s": 49.54,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.7463,
+    "zupt_still_n": 1017,
+    "zupt_still_all": [
+     0.7434,
+     1021
+    ],
+    "bench_ate_cm": 5.36,
+    "bench_scale": 0.9363,
+    "t_init_clip_s": 0.617,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 48.902,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 833,
+    "n_pass_gt": 833,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/g10/B_214550_s0_d1_G",
+    "gate_open_frames": 742
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "B_214550_s0_d5",
+   "kind": "B",
+   "rec": "hs_20261021_214550",
+   "off": 52.902,
+   "window_inside": true,
+   "base": {
+    "name": "B_214550_s0_d5_base",
+    "status": "collapse",
+    "n_match": 573,
+    "ate_cm": 44.287,
+    "ate_sim3_cm": 10.353,
+    "scale": 0.0346,
+    "t_dep_s": 69.3,
+    "first_trk_s": 53.55,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.2135,
+    "zupt_still_n": 787,
+    "zupt_still_all": [
+     0.2127,
+     790
+    ],
+    "bench_ate_cm": 28.74,
+    "bench_scale": 0.2097,
+    "t_init_clip_s": 0.634,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 52.902,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 242,
+    "n_pass_gt": 242,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/i3_takeoff/B_214550_s0_d5_base",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "B_214550_s0_d5_i3",
+    "status": "ok",
+    "n_match": 573,
+    "ate_cm": 2.203,
+    "ate_sim3_cm": 1.758,
+    "scale": 0.886,
+    "t_dep_s": 69.3,
+    "first_trk_s": 53.55,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.8259,
+    "zupt_still_n": 787,
+    "zupt_still_all": [
+     0.8228,
+     790
+    ],
+    "bench_ate_cm": 2.3,
+    "bench_scale": 0.8722,
+    "t_init_clip_s": 0.634,
+    "frames_held": 622,
+    "holds_s": [
+     [
+      56.57,
+      68.9
+     ]
+    ],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 52.902,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 12.332,
+    "arm_s": 3.016,
+    "n_pass": 722,
+    "n_pass_gt": 722,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/i3_takeoff/B_214550_s0_d5_i3",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "B_214550_s0_d5_G",
+    "status": "ok",
+    "n_match": 573,
+    "ate_cm": 2.681,
+    "ate_sim3_cm": 2.191,
+    "scale": 0.8689,
+    "t_dep_s": 69.3,
+    "first_trk_s": 53.55,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.803,
+    "zupt_still_n": 787,
+    "zupt_still_all": [
+     0.8,
+     790
+    ],
+    "bench_ate_cm": 2.27,
+    "bench_scale": 0.8994,
+    "t_init_clip_s": 0.634,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 52.902,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 704,
+    "n_pass_gt": 704,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/g10/B_214550_s0_d5_G",
+    "gate_open_frames": 622
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "B_214550_s0_d10",
+   "kind": "B",
+   "rec": "hs_20261021_214550",
+   "off": 57.902,
+   "window_inside": true,
+   "base": {
+    "name": "B_214550_s0_d10_base",
+    "status": "collapse",
+    "n_match": 573,
+    "ate_cm": 95.989,
+    "ate_sim3_cm": 8.519,
+    "scale": 0.0598,
+    "t_dep_s": 69.3,
+    "first_trk_s": 58.58,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.2828,
+    "zupt_still_n": 534,
+    "zupt_still_all": [
+     0.2839,
+     539
+    ],
+    "bench_ate_cm": 142.39,
+    "bench_scale": 0.0626,
+    "t_init_clip_s": 0.68,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 57.902,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 226,
+    "n_pass_gt": 226,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/i3_takeoff/B_214550_s0_d10_base",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "B_214550_s0_d10_i3",
+    "status": "ok",
+    "n_match": 573,
+    "ate_cm": 7.436,
+    "ate_sim3_cm": 5.507,
+    "scale": 0.6405,
+    "t_dep_s": 69.3,
+    "first_trk_s": 58.58,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.7416,
+    "zupt_still_n": 534,
+    "zupt_still_all": [
+     0.7384,
+     539
+    ],
+    "bench_ate_cm": 6.32,
+    "bench_scale": 0.6992,
+    "t_init_clip_s": 0.68,
+    "frames_held": 361,
+    "holds_s": [
+     [
+      61.6,
+      68.9
+     ]
+    ],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 57.902,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 7.301,
+    "arm_s": 3.016,
+    "n_pass": 472,
+    "n_pass_gt": 472,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/i3_takeoff/B_214550_s0_d10_i3",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "B_214550_s0_d10_G",
+    "status": "ok",
+    "n_match": 573,
+    "ate_cm": 2.169,
+    "ate_sim3_cm": 1.762,
+    "scale": 0.8908,
+    "t_dep_s": 69.3,
+    "first_trk_s": 58.58,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.7285,
+    "zupt_still_n": 534,
+    "zupt_still_all": [
+     0.7254,
+     539
+    ],
+    "bench_ate_cm": 1.95,
+    "bench_scale": 0.9273,
+    "t_init_clip_s": 0.68,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 57.902,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 464,
+    "n_pass_gt": 464,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/g10/B_214550_s0_d10_G",
+    "gate_open_frames": 361
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "B_215348_s0_d1",
+   "kind": "B",
+   "rec": "hs_20261021_215348",
+   "off": 47.877,
+   "window_inside": true,
+   "base": {
+    "name": "B_215348_s0_d1_base",
+    "status": "ok",
+    "n_match": 565,
+    "ate_cm": 1.255,
+    "ate_sim3_cm": 0.657,
+    "scale": 0.8779,
+    "t_dep_s": 69.58,
+    "first_trk_s": 49.21,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9827,
+    "zupt_still_n": 1042,
+    "zupt_still_all": [
+     0.9797,
+     1084
+    ],
+    "bench_ate_cm": 2.32,
+    "bench_scale": 0.8332,
+    "t_init_clip_s": 1.318,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 47.877,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 1105,
+    "n_pass_gt": 1105,
+    "false_pass": 14,
+    "false_pass_v_cms": [
+     2.07,
+     2.85,
+     2.33,
+     2.35,
+     2.23,
+     2.14,
+     2.0,
+     2.06,
+     2.2,
+     2.05,
+     2.17,
+     2.53,
+     2.27,
+     2.42
+    ],
+    "prefix": "runs/i3_takeoff/B_215348_s0_d1_base",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "B_215348_s0_d1_i3",
+    "status": "ok",
+    "n_match": 565,
+    "ate_cm": 1.304,
+    "ate_sim3_cm": 0.671,
+    "scale": 0.8731,
+    "t_dep_s": 69.58,
+    "first_trk_s": 49.21,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9942,
+    "zupt_still_n": 1042,
+    "zupt_still_all": [
+     0.9908,
+     1084
+    ],
+    "bench_ate_cm": 2.3,
+    "bench_scale": 0.8339,
+    "t_init_clip_s": 1.318,
+    "frames_held": 775,
+    "holds_s": [
+     [
+      52.23,
+      53.88
+     ],
+     [
+      55.48,
+      68.74
+     ]
+    ],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 47.877,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 14.918,
+    "arm_s": 3.016,
+    "n_pass": 1116,
+    "n_pass_gt": 1116,
+    "false_pass": 12,
+    "false_pass_v_cms": [
+     2.07,
+     2.85,
+     2.23,
+     2.14,
+     2.0,
+     2.23,
+     2.2,
+     2.05,
+     2.17,
+     2.53,
+     2.27,
+     2.42
+    ],
+    "prefix": "runs/i3_takeoff/B_215348_s0_d1_i3",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "B_215348_s0_d1_G",
+    "status": "ok",
+    "n_match": 565,
+    "ate_cm": 1.119,
+    "ate_sim3_cm": 0.612,
+    "scale": 0.8915,
+    "t_dep_s": 69.58,
+    "first_trk_s": 49.21,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9952,
+    "zupt_still_n": 1042,
+    "zupt_still_all": [
+     0.9917,
+     1084
+    ],
+    "bench_ate_cm": 2.05,
+    "bench_scale": 0.8491,
+    "t_init_clip_s": 1.318,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 47.877,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 1119,
+    "n_pass_gt": 1119,
+    "false_pass": 14,
+    "false_pass_v_cms": [
+     2.07,
+     2.85,
+     2.33,
+     2.35,
+     2.23,
+     2.14,
+     2.0,
+     2.06,
+     2.2,
+     2.05,
+     2.17,
+     2.53,
+     2.27,
+     2.42
+    ],
+    "prefix": "runs/g10/B_215348_s0_d1_G",
+    "gate_open_frames": 775
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "B_215348_s0_d5",
+   "kind": "B",
+   "rec": "hs_20261021_215348",
+   "off": 51.877,
+   "window_inside": true,
+   "base": {
+    "name": "B_215348_s0_d5_base",
+    "status": "ok",
+    "n_match": 565,
+    "ate_cm": 1.43,
+    "ate_sim3_cm": 0.653,
+    "scale": 0.8581,
+    "t_dep_s": 69.58,
+    "first_trk_s": 52.54,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9359,
+    "zupt_still_n": 858,
+    "zupt_still_all": [
+     0.9317,
+     864
+    ],
+    "bench_ate_cm": 2.54,
+    "bench_scale": 0.816,
+    "t_init_clip_s": 0.663,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 51.877,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 847,
+    "n_pass_gt": 847,
+    "false_pass": 10,
+    "false_pass_v_cms": [
+     2.07,
+     2.85,
+     2.23,
+     2.14,
+     2.0,
+     2.2,
+     2.05,
+     2.17,
+     2.53,
+     2.42
+    ],
+    "prefix": "runs/i3_takeoff/B_215348_s0_d5_base",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "B_215348_s0_d5_i3",
+    "status": "ok",
+    "n_match": 565,
+    "ate_cm": 2.356,
+    "ate_sim3_cm": 0.772,
+    "scale": 0.7753,
+    "t_dep_s": 69.58,
+    "first_trk_s": 52.54,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.972,
+    "zupt_still_n": 858,
+    "zupt_still_all": [
+     0.9676,
+     864
+    ],
+    "bench_ate_cm": 3.87,
+    "bench_scale": 0.745,
+    "t_init_clip_s": 0.663,
+    "frames_held": 695,
+    "holds_s": [
+     [
+      55.56,
+      68.74
+     ]
+    ],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 51.877,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 13.183,
+    "arm_s": 3.016,
+    "n_pass": 874,
+    "n_pass_gt": 874,
+    "false_pass": 11,
+    "false_pass_v_cms": [
+     2.07,
+     2.85,
+     2.23,
+     2.14,
+     2.06,
+     2.2,
+     2.05,
+     2.17,
+     2.53,
+     2.27,
+     2.42
+    ],
+    "prefix": "runs/i3_takeoff/B_215348_s0_d5_i3",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "B_215348_s0_d5_G",
+    "status": "ok",
+    "n_match": 565,
+    "ate_cm": 1.283,
+    "ate_sim3_cm": 0.691,
+    "scale": 0.8767,
+    "t_dep_s": 69.58,
+    "first_trk_s": 52.54,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9744,
+    "zupt_still_n": 858,
+    "zupt_still_all": [
+     0.9699,
+     864
+    ],
+    "bench_ate_cm": 2.27,
+    "bench_scale": 0.8329,
+    "t_init_clip_s": 0.663,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 51.877,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 880,
+    "n_pass_gt": 880,
+    "false_pass": 9,
+    "false_pass_v_cms": [
+     2.07,
+     2.85,
+     2.23,
+     2.14,
+     2.0,
+     2.2,
+     2.05,
+     2.17,
+     2.42
+    ],
+    "prefix": "runs/g10/B_215348_s0_d5_G",
+    "gate_open_frames": 695
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "B_215348_s0_d10",
+   "kind": "B",
+   "rec": "hs_20261021_215348",
+   "off": 56.877,
+   "window_inside": true,
+   "base": {
+    "name": "B_215348_s0_d10_base",
+    "status": "ok",
+    "n_match": 565,
+    "ate_cm": 1.255,
+    "ate_sim3_cm": 0.697,
+    "scale": 0.8805,
+    "t_dep_s": 69.58,
+    "first_trk_s": 59.76,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9658,
+    "zupt_still_n": 497,
+    "zupt_still_all": [
+     0.9669,
+     634
+    ],
+    "bench_ate_cm": 1.96,
+    "bench_scale": 0.8396,
+    "t_init_clip_s": 2.883,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 56.877,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 648,
+    "n_pass_gt": 648,
+    "false_pass": 12,
+    "false_pass_v_cms": [
+     2.07,
+     2.85,
+     2.72,
+     2.58,
+     2.33,
+     2.23,
+     2.14,
+     2.05,
+     2.17,
+     2.53,
+     2.42,
+     2.46
+    ],
+    "prefix": "runs/i3_takeoff/B_215348_s0_d10_base",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "B_215348_s0_d10_i3",
+    "status": "ok",
+    "n_match": 565,
+    "ate_cm": 1.105,
+    "ate_sim3_cm": 0.652,
+    "scale": 0.896,
+    "t_dep_s": 69.58,
+    "first_trk_s": 59.76,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9759,
+    "zupt_still_n": 497,
+    "zupt_still_all": [
+     0.9748,
+     634
+    ],
+    "bench_ate_cm": 1.85,
+    "bench_scale": 0.8486,
+    "t_init_clip_s": 2.883,
+    "frames_held": 310,
+    "holds_s": [
+     [
+      62.78,
+      68.74
+     ]
+    ],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 56.877,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 5.966,
+    "arm_s": 3.016,
+    "n_pass": 664,
+    "n_pass_gt": 664,
+    "false_pass": 13,
+    "false_pass_v_cms": [
+     2.07,
+     2.85,
+     2.33,
+     2.35,
+     2.23,
+     2.14,
+     2.75,
+     2.05,
+     2.17,
+     2.53,
+     2.27,
+     2.42,
+     2.37
+    ],
+    "prefix": "runs/i3_takeoff/B_215348_s0_d10_i3",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "B_215348_s0_d10_G",
+    "status": "ok",
+    "n_match": 565,
+    "ate_cm": 1.266,
+    "ate_sim3_cm": 0.701,
+    "scale": 0.8795,
+    "t_dep_s": 69.58,
+    "first_trk_s": 59.76,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9799,
+    "zupt_still_n": 497,
+    "zupt_still_all": [
+     0.9779,
+     634
+    ],
+    "bench_ate_cm": 2.02,
+    "bench_scale": 0.835,
+    "t_init_clip_s": 2.883,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 56.877,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 657,
+    "n_pass_gt": 657,
+    "false_pass": 12,
+    "false_pass_v_cms": [
+     2.07,
+     2.85,
+     2.72,
+     2.58,
+     2.33,
+     2.23,
+     2.14,
+     2.05,
+     2.17,
+     2.53,
+     2.42,
+     2.46
+    ],
+    "prefix": "runs/g10/B_215348_s0_d10_G",
+    "gate_open_frames": 310
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "BA_214550_o0",
+   "kind": "BA",
+   "rec": "hs_20261021_214550",
+   "off": 0.0,
+   "window_inside": true,
+   "base": {
+    "name": "214550_base_o0",
+    "status": "ok",
+    "n_match": 578,
+    "ate_cm": 3.712,
+    "ate_sim3_cm": 2.844,
+    "scale": 0.8103,
+    "t_dep_s": 69.3,
+    "first_trk_s": 0.62,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.4145,
+    "zupt_still_n": 1105,
+    "zupt_still_all": [
+     0.4145,
+     1105
+    ],
+    "bench_ate_cm": 22.05,
+    "bench_scale": 0.2336,
+    "t_init_clip_s": 0.617,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 0.0,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 2502,
+    "n_pass_gt": 2501,
+    "false_pass": 8,
+    "false_pass_v_cms": [
+     2.22,
+     2.29,
+     2.44,
+     2.62,
+     3.56,
+     2.66,
+     2.97,
+     2.17
+    ],
+    "prefix": "runs/i3_confirm/214550_base_o0",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "214550_i3_o0",
+    "status": "ok",
+    "n_match": 578,
+    "ate_cm": 0.693,
+    "ate_sim3_cm": 0.69,
+    "scale": 0.9941,
+    "t_dep_s": 69.3,
+    "first_trk_s": 0.62,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.867,
+    "zupt_still_n": 1105,
+    "zupt_still_all": [
+     0.867,
+     1105
+    ],
+    "bench_ate_cm": 4.6,
+    "bench_scale": 0.8285,
+    "t_init_clip_s": 0.617,
+    "frames_held": 2843,
+    "holds_s": [
+     [
+      3.63,
+      8.88
+     ],
+     [
+      49.4,
+      53.83
+     ],
+     [
+      55.45,
+      68.9
+     ],
+     [
+      115.28,
+      119.03
+     ],
+     [
+      120.58,
+      null
+     ]
+    ],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 0.0,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 17.884,
+    "arm_s": 3.016,
+    "n_pass": 3262,
+    "n_pass_gt": 3261,
+    "false_pass": 9,
+    "false_pass_v_cms": [
+     2.22,
+     2.29,
+     2.17,
+     2.44,
+     2.62,
+     3.56,
+     2.66,
+     2.97,
+     2.17
+    ],
+    "prefix": "runs/i3_confirm/214550_i3_o0",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "BA_214550_o0_G",
+    "status": "ok",
+    "n_match": 578,
+    "ate_cm": 0.927,
+    "ate_sim3_cm": 0.76,
+    "scale": 0.9522,
+    "t_dep_s": 69.3,
+    "first_trk_s": 0.62,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9068,
+    "zupt_still_n": 1105,
+    "zupt_still_all": [
+     0.9068,
+     1105
+    ],
+    "bench_ate_cm": 4.74,
+    "bench_scale": 0.8591,
+    "t_init_clip_s": 0.617,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 0.0,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 3284,
+    "n_pass_gt": 3283,
+    "false_pass": 8,
+    "false_pass_v_cms": [
+     2.22,
+     2.29,
+     2.44,
+     2.62,
+     3.56,
+     2.66,
+     2.97,
+     2.17
+    ],
+    "prefix": "runs/g10/BA_214550_o0_G",
+    "gate_open_frames": 2843
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "BA_214550_o1",
+   "kind": "BA",
+   "rec": "hs_20261021_214550",
+   "off": 1.0,
+   "window_inside": true,
+   "base": {
+    "name": "214550_base_o1",
+    "status": "ok",
+    "n_match": 578,
+    "ate_cm": 2.791,
+    "ate_sim3_cm": 2.463,
+    "scale": 0.8868,
+    "t_dep_s": 69.3,
+    "first_trk_s": 1.65,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.3339,
+    "zupt_still_n": 1105,
+    "zupt_still_all": [
+     0.3339,
+     1105
+    ],
+    "bench_ate_cm": 18.29,
+    "bench_scale": 0.2963,
+    "t_init_clip_s": 0.651,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 1.0,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 2383,
+    "n_pass_gt": 2382,
+    "false_pass": 8,
+    "false_pass_v_cms": [
+     2.22,
+     2.29,
+     2.44,
+     2.62,
+     3.56,
+     2.66,
+     2.97,
+     2.17
+    ],
+    "prefix": "runs/i3_confirm/214550_base_o1",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "214550_i3_o1",
+    "status": "ok",
+    "n_match": 578,
+    "ate_cm": 0.59,
+    "ate_sim3_cm": 0.577,
+    "scale": 0.9884,
+    "t_dep_s": 69.3,
+    "first_trk_s": 1.65,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.8688,
+    "zupt_still_n": 1105,
+    "zupt_still_all": [
+     0.8688,
+     1105
+    ],
+    "bench_ate_cm": 2.78,
+    "bench_scale": 0.9208,
+    "t_init_clip_s": 0.651,
+    "frames_held": 2781,
+    "holds_s": [
+     [
+      4.67,
+      8.88
+     ],
+     [
+      49.4,
+      53.83
+     ],
+     [
+      55.45,
+      68.9
+     ],
+     [
+      115.28,
+      119.03
+     ],
+     [
+      120.58,
+      null
+     ]
+    ],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 1.0,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 17.884,
+    "arm_s": 3.016,
+    "n_pass": 3193,
+    "n_pass_gt": 3192,
+    "false_pass": 8,
+    "false_pass_v_cms": [
+     2.22,
+     2.29,
+     2.44,
+     2.62,
+     3.56,
+     2.66,
+     2.97,
+     2.17
+    ],
+    "prefix": "runs/i3_confirm/214550_i3_o1",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "BA_214550_o1_G",
+    "status": "ok",
+    "n_match": 578,
+    "ate_cm": 1.17,
+    "ate_sim3_cm": 1.047,
+    "scale": 0.9527,
+    "t_dep_s": 69.3,
+    "first_trk_s": 1.65,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.8923,
+    "zupt_still_n": 1105,
+    "zupt_still_all": [
+     0.8923,
+     1105
+    ],
+    "bench_ate_cm": 4.78,
+    "bench_scale": 0.8476,
+    "t_init_clip_s": 0.651,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 1.0,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 3196,
+    "n_pass_gt": 3195,
+    "false_pass": 8,
+    "false_pass_v_cms": [
+     2.22,
+     2.29,
+     2.44,
+     2.62,
+     3.56,
+     2.66,
+     2.97,
+     2.17
+    ],
+    "prefix": "runs/g10/BA_214550_o1_G",
+    "gate_open_frames": 2781
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "BA_214550_o2",
+   "kind": "BA",
+   "rec": "hs_20261021_214550",
+   "off": 2.0,
+   "window_inside": true,
+   "base": {
+    "name": "214550_base_o2",
+    "status": "ok",
+    "n_match": 578,
+    "ate_cm": 3.259,
+    "ate_sim3_cm": 2.63,
+    "scale": 0.842,
+    "t_dep_s": 69.3,
+    "first_trk_s": 2.65,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.5312,
+    "zupt_still_n": 1105,
+    "zupt_still_all": [
+     0.5312,
+     1105
+    ],
+    "bench_ate_cm": 20.7,
+    "bench_scale": 0.2401,
+    "t_init_clip_s": 0.634,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 2.0,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 2597,
+    "n_pass_gt": 2596,
+    "false_pass": 8,
+    "false_pass_v_cms": [
+     2.22,
+     2.29,
+     2.44,
+     2.62,
+     3.56,
+     2.66,
+     2.97,
+     2.17
+    ],
+    "prefix": "runs/i3_confirm/214550_base_o2",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "214550_i3_o2",
+    "status": "ok",
+    "n_match": 578,
+    "ate_cm": 0.806,
+    "ate_sim3_cm": 0.705,
+    "scale": 0.9643,
+    "t_dep_s": 69.3,
+    "first_trk_s": 2.65,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.8814,
+    "zupt_still_n": 1105,
+    "zupt_still_all": [
+     0.8814,
+     1105
+    ],
+    "bench_ate_cm": 4.97,
+    "bench_scale": 0.8467,
+    "t_init_clip_s": 0.634,
+    "frames_held": 2722,
+    "holds_s": [
+     [
+      5.67,
+      8.88
+     ],
+     [
+      49.4,
+      53.83
+     ],
+     [
+      55.45,
+      68.9
+     ],
+     [
+      115.28,
+      119.03
+     ],
+     [
+      120.58,
+      null
+     ]
+    ],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 2.0,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 17.884,
+    "arm_s": 3.016,
+    "n_pass": 3152,
+    "n_pass_gt": 3151,
+    "false_pass": 8,
+    "false_pass_v_cms": [
+     2.22,
+     2.29,
+     2.44,
+     2.62,
+     3.56,
+     2.66,
+     2.97,
+     2.17
+    ],
+    "prefix": "runs/i3_confirm/214550_i3_o2",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "BA_214550_o2_G",
+    "status": "ok",
+    "n_match": 578,
+    "ate_cm": 0.823,
+    "ate_sim3_cm": 0.687,
+    "scale": 0.9589,
+    "t_dep_s": 69.3,
+    "first_trk_s": 2.65,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9176,
+    "zupt_still_n": 1105,
+    "zupt_still_all": [
+     0.9176,
+     1105
+    ],
+    "bench_ate_cm": 7.46,
+    "bench_scale": 0.7516,
+    "t_init_clip_s": 0.634,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 2.0,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 3174,
+    "n_pass_gt": 3173,
+    "false_pass": 8,
+    "false_pass_v_cms": [
+     2.22,
+     2.29,
+     2.44,
+     2.62,
+     3.56,
+     2.66,
+     2.97,
+     2.17
+    ],
+    "prefix": "runs/g10/BA_214550_o2_G",
+    "gate_open_frames": 2722
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "BL_214550_L6",
+   "kind": "BL",
+   "rec": "hs_20261021_214550",
+   "off": 41.902,
+   "window_inside": true,
+   "base": {
+    "name": "B2_214550_L6_base",
+    "status": "collapse",
+    "n_match": 573,
+    "ate_cm": 57.837,
+    "ate_sim3_cm": 9.46,
+    "scale": 0.0728,
+    "t_dep_s": 69.3,
+    "first_trk_s": 48.98,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.2044,
+    "zupt_still_n": 1047,
+    "zupt_still_all": [
+     0.2046,
+     1051
+    ],
+    "bench_ate_cm": 70.3,
+    "bench_scale": 0.1187,
+    "t_init_clip_s": 7.067,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 41.902,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 223,
+    "n_pass_gt": 223,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/i3_takeoff/B2_214550_L6_base",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "B2_214550_L6_i3",
+    "status": "ok",
+    "n_match": 573,
+    "ate_cm": 7.261,
+    "ate_sim3_cm": 5.913,
+    "scale": 0.6721,
+    "t_dep_s": 69.3,
+    "first_trk_s": 48.98,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.7775,
+    "zupt_still_n": 1047,
+    "zupt_still_all": [
+     0.7755,
+     1051
+    ],
+    "bench_ate_cm": 5.46,
+    "bench_scale": 0.9463,
+    "t_init_clip_s": 7.067,
+    "frames_held": 773,
+    "holds_s": [
+     [
+      52.0,
+      53.84
+     ],
+     [
+      55.47,
+      68.9
+     ]
+    ],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 41.902,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 15.269,
+    "arm_s": 3.016,
+    "n_pass": 824,
+    "n_pass_gt": 824,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/i3_takeoff/B2_214550_L6_i3",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "BL_214550_L6_G",
+    "status": "ok",
+    "n_match": 573,
+    "ate_cm": 3.926,
+    "ate_sim3_cm": 3.072,
+    "scale": 0.8037,
+    "t_dep_s": 69.3,
+    "first_trk_s": 48.98,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.7564,
+    "zupt_still_n": 1047,
+    "zupt_still_all": [
+     0.7545,
+     1051
+    ],
+    "bench_ate_cm": 3.01,
+    "bench_scale": 0.8463,
+    "t_init_clip_s": 7.067,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 41.902,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 801,
+    "n_pass_gt": 801,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/g10/BL_214550_L6_G",
+    "gate_open_frames": 773
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "BL_214550_L3",
+   "kind": "BL",
+   "rec": "hs_20261021_214550",
+   "off": 44.902,
+   "window_inside": true,
+   "base": {
+    "name": "B2_214550_L3_base",
+    "status": "collapse",
+    "n_match": 573,
+    "ate_cm": 35.256,
+    "ate_sim3_cm": 10.063,
+    "scale": 0.0785,
+    "t_dep_s": 69.3,
+    "first_trk_s": 48.98,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.2894,
+    "zupt_still_n": 1047,
+    "zupt_still_all": [
+     0.2886,
+     1050
+    ],
+    "bench_ate_cm": 22.85,
+    "bench_scale": 0.2564,
+    "t_init_clip_s": 4.08,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 44.902,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 313,
+    "n_pass_gt": 313,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/i3_takeoff/B2_214550_L3_base",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "B2_214550_L3_i3",
+    "status": "ok",
+    "n_match": 573,
+    "ate_cm": 3.44,
+    "ate_sim3_cm": 2.96,
+    "scale": 0.8513,
+    "t_dep_s": 69.3,
+    "first_trk_s": 48.98,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.8004,
+    "zupt_still_n": 1047,
+    "zupt_still_all": [
+     0.7981,
+     1050
+    ],
+    "bench_ate_cm": 2.56,
+    "bench_scale": 0.8928,
+    "t_init_clip_s": 4.08,
+    "frames_held": 773,
+    "holds_s": [
+     [
+      52.0,
+      53.84
+     ],
+     [
+      55.47,
+      68.9
+     ]
+    ],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 44.902,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 15.269,
+    "arm_s": 3.016,
+    "n_pass": 847,
+    "n_pass_gt": 847,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/i3_takeoff/B2_214550_L3_i3",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "BL_214550_L3_G",
+    "status": "ok",
+    "n_match": 573,
+    "ate_cm": 4.069,
+    "ate_sim3_cm": 3.188,
+    "scale": 0.7976,
+    "t_dep_s": 69.3,
+    "first_trk_s": 48.98,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.7832,
+    "zupt_still_n": 1047,
+    "zupt_still_all": [
+     0.781,
+     1050
+    ],
+    "bench_ate_cm": 3.18,
+    "bench_scale": 0.8543,
+    "t_init_clip_s": 4.08,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 44.902,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 829,
+    "n_pass_gt": 829,
+    "false_pass": 0,
+    "false_pass_v_cms": [],
+    "prefix": "runs/g10/BL_214550_L3_G",
+    "gate_open_frames": 773
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "N_213341_s0_d1_m025",
+   "kind": "N",
+   "rec": "hs_20261021_213341",
+   "off": 52.13,
+   "window_inside": true,
+   "base": {
+    "name": "N_213341_s0_d1_m025_base",
+    "status": "ok",
+    "n_match": 562,
+    "ate_cm": 1.699,
+    "ate_sim3_cm": 1.495,
+    "scale": 0.9373,
+    "t_dep_s": 69.78,
+    "first_trk_s": 53.0,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9613,
+    "zupt_still_n": 905,
+    "zupt_still_all": [
+     0.9588,
+     923
+    ],
+    "bench_ate_cm": 2.54,
+    "bench_scale": 0.8585,
+    "t_init_clip_s": 0.868,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 52.13,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 909,
+    "n_pass_gt": 901,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/g10/N_213341_s0_d1_m025_base",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "N_213341_s0_d1_m025_i3",
+    "status": "ok",
+    "n_match": 562,
+    "ate_cm": 1.66,
+    "ate_sim3_cm": 1.354,
+    "scale": 0.9266,
+    "t_dep_s": 69.78,
+    "first_trk_s": 53.0,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9845,
+    "zupt_still_n": 905,
+    "zupt_still_all": [
+     0.9816,
+     923
+    ],
+    "bench_ate_cm": 2.51,
+    "bench_scale": 0.8572,
+    "t_init_clip_s": 0.868,
+    "frames_held": 688,
+    "holds_s": [
+     [
+      56.01,
+      68.96
+     ]
+    ],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 52.13,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 12.949,
+    "arm_s": 3.016,
+    "n_pass": 930,
+    "n_pass_gt": 922,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/g10/N_213341_s0_d1_m025_i3",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "N_213341_s0_d1_m025_G",
+    "status": "ok",
+    "n_match": 562,
+    "ate_cm": 1.658,
+    "ate_sim3_cm": 1.397,
+    "scale": 0.9313,
+    "t_dep_s": 69.78,
+    "first_trk_s": 53.0,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9867,
+    "zupt_still_n": 905,
+    "zupt_still_all": [
+     0.9837,
+     923
+    ],
+    "bench_ate_cm": 2.51,
+    "bench_scale": 0.8578,
+    "t_init_clip_s": 0.868,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 52.13,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 932,
+    "n_pass_gt": 924,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/g10/N_213341_s0_d1_m025_G",
+    "gate_open_frames": 688
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "N_213341_s0_d1_p025",
+   "kind": "N",
+   "rec": "hs_20261021_213341",
+   "off": 52.63,
+   "window_inside": true,
+   "base": {
+    "name": "N_213341_s0_d1_p025_base",
+    "status": "ok",
+    "n_match": 562,
+    "ate_cm": 1.561,
+    "ate_sim3_cm": 1.105,
+    "scale": 0.9167,
+    "t_dep_s": 69.78,
+    "first_trk_s": 53.65,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9561,
+    "zupt_still_n": 865,
+    "zupt_still_all": [
+     0.953,
+     893
+    ],
+    "bench_ate_cm": 2.18,
+    "bench_scale": 0.8769,
+    "t_init_clip_s": 1.018,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 52.63,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 875,
+    "n_pass_gt": 867,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/g10/N_213341_s0_d1_p025_base",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "N_213341_s0_d1_p025_i3",
+    "status": "ok",
+    "n_match": 562,
+    "ate_cm": 1.619,
+    "ate_sim3_cm": 1.229,
+    "scale": 0.92,
+    "t_dep_s": 69.78,
+    "first_trk_s": 53.65,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9838,
+    "zupt_still_n": 865,
+    "zupt_still_all": [
+     0.9798,
+     893
+    ],
+    "bench_ate_cm": 2.39,
+    "bench_scale": 0.8645,
+    "t_init_clip_s": 1.018,
+    "frames_held": 651,
+    "holds_s": [
+     [
+      56.66,
+      68.96
+     ]
+    ],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 52.63,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 12.298,
+    "arm_s": 3.016,
+    "n_pass": 899,
+    "n_pass_gt": 891,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/g10/N_213341_s0_d1_p025_i3",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "N_213341_s0_d1_p025_G",
+    "status": "ok",
+    "n_match": 562,
+    "ate_cm": 1.611,
+    "ate_sim3_cm": 1.202,
+    "scale": 0.9186,
+    "t_dep_s": 69.78,
+    "first_trk_s": 53.65,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.985,
+    "zupt_still_n": 865,
+    "zupt_still_all": [
+     0.981,
+     893
+    ],
+    "bench_ate_cm": 2.45,
+    "bench_scale": 0.8625,
+    "t_init_clip_s": 1.018,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 52.63,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 900,
+    "n_pass_gt": 892,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/g10/N_213341_s0_d1_p025_G",
+    "gate_open_frames": 651
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "N_213341_s0_d5_m025",
+   "kind": "N",
+   "rec": "hs_20261021_213341",
+   "off": 56.13,
+   "window_inside": true,
+   "base": {
+    "name": "N_213341_s0_d5_m025_base",
+    "status": "ok",
+    "n_match": 562,
+    "ate_cm": 1.771,
+    "ate_sim3_cm": 1.186,
+    "scale": 0.9021,
+    "t_dep_s": 69.78,
+    "first_trk_s": 57.26,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9586,
+    "zupt_still_n": 652,
+    "zupt_still_all": [
+     0.9548,
+     686
+    ],
+    "bench_ate_cm": 2.08,
+    "bench_scale": 0.8821,
+    "t_init_clip_s": 1.131,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 56.13,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 678,
+    "n_pass_gt": 670,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/g10/N_213341_s0_d5_m025_base",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "N_213341_s0_d5_m025_i3",
+    "status": "ok",
+    "n_match": 562,
+    "ate_cm": 1.542,
+    "ate_sim3_cm": 1.236,
+    "scale": 0.9293,
+    "t_dep_s": 69.78,
+    "first_trk_s": 57.26,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9877,
+    "zupt_still_n": 652,
+    "zupt_still_all": [
+     0.9825,
+     686
+    ],
+    "bench_ate_cm": 2.26,
+    "bench_scale": 0.8781,
+    "t_init_clip_s": 1.131,
+    "frames_held": 444,
+    "holds_s": [
+     [
+      60.27,
+      68.96
+     ]
+    ],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 56.13,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 8.698,
+    "arm_s": 3.004,
+    "n_pass": 698,
+    "n_pass_gt": 690,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/g10/N_213341_s0_d5_m025_i3",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "N_213341_s0_d5_m025_G",
+    "status": "ok",
+    "n_match": 562,
+    "ate_cm": 1.533,
+    "ate_sim3_cm": 1.206,
+    "scale": 0.9276,
+    "t_dep_s": 69.78,
+    "first_trk_s": 57.26,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9893,
+    "zupt_still_n": 652,
+    "zupt_still_all": [
+     0.984,
+     686
+    ],
+    "bench_ate_cm": 2.23,
+    "bench_scale": 0.8787,
+    "t_init_clip_s": 1.131,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 56.13,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 698,
+    "n_pass_gt": 690,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/g10/N_213341_s0_d5_m025_G",
+    "gate_open_frames": 444
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "N_213341_s0_d5_p025",
+   "kind": "N",
+   "rec": "hs_20261021_213341",
+   "off": 56.63,
+   "window_inside": true,
+   "base": {
+    "name": "N_213341_s0_d5_p025_base",
+    "status": "ok",
+    "n_match": 562,
+    "ate_cm": 1.529,
+    "ate_sim3_cm": 1.239,
+    "scale": 0.9311,
+    "t_dep_s": 69.78,
+    "first_trk_s": 58.1,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9702,
+    "zupt_still_n": 605,
+    "zupt_still_all": [
+     0.9664,
+     655
+    ],
+    "bench_ate_cm": 2.16,
+    "bench_scale": 0.8863,
+    "t_init_clip_s": 1.448,
+    "frames_held": null,
+    "holds_s": [],
+    "hold_wait_timeouts": null,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": null,
+    "start_off": 56.63,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 0,
+    "n_pass": 657,
+    "n_pass_gt": 649,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/g10/N_213341_s0_d5_p025_base",
+    "gate_open_frames": null
+   },
+   "i3": {
+    "name": "N_213341_s0_d5_p025_i3",
+    "status": "ok",
+    "n_match": 562,
+    "ate_cm": 1.543,
+    "ate_sim3_cm": 1.212,
+    "scale": 0.9269,
+    "t_dep_s": 69.78,
+    "first_trk_s": 58.1,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9868,
+    "zupt_still_n": 605,
+    "zupt_still_all": [
+     0.9817,
+     655
+    ],
+    "bench_ate_cm": 2.21,
+    "bench_scale": 0.8793,
+    "t_init_clip_s": 1.448,
+    "frames_held": 395,
+    "holds_s": [
+     [
+      61.11,
+      68.96
+     ]
+    ],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 56.63,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"9003f077b295d08cbab8dc3cd8e6e865f614167b87152d06102ab249fa3eaa16\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": {\"config/mono/estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"imu_learn/c5_run.py\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"imu_learn/imu_gt.py\": \"2c5d7bb80f937bc1dfd9b195747bd2324341a276\", \"imu_learn/vio_bench_hs.py\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"imu_learn/z2_isolate.py\": \"6a6beef810044f9f9aadf34126e0b828e7779158\", \"imu_learn/z2_regress.py\": \"4fc1954ddf89019a96a8900a7ab82f3163f7bef2\", \"make_ov_config.py\": \"1e94a7ea13711327281f8d39997737a907d16215\"}}",
+    "held_before_dep": 7.851,
+    "arm_s": 3.016,
+    "n_pass": 667,
+    "n_pass_gt": 659,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/g10/N_213341_s0_d5_p025_i3",
+    "gate_open_frames": null
+   },
+   "G": {
+    "name": "N_213341_s0_d5_p025_G",
+    "status": "ok",
+    "n_match": 562,
+    "ate_cm": 1.493,
+    "ate_sim3_cm": 1.238,
+    "scale": 0.9356,
+    "t_dep_s": 69.78,
+    "first_trk_s": 58.1,
+    "first_trk_before_dep": true,
+    "zupt_still": 0.9884,
+    "zupt_still_n": 605,
+    "zupt_still_all": [
+     0.9832,
+     655
+    ],
+    "bench_ate_cm": 2.19,
+    "bench_scale": 0.8853,
+    "t_init_clip_s": 1.448,
+    "frames_held": 0,
+    "holds_s": [],
+    "hold_wait_timeouts": 0,
+    "cfg_over": "num_opencv_threads=2",
+    "still_hold": "1.5:0.05:0.05:i3",
+    "start_off": 56.63,
+    "max_secs": null,
+    "error": null,
+    "version": "{\"bench\": \"dc53d2286050d4b289ee5df299ea0d9cc133ea40\", \"bin\": [\"46b070ed7f4dc2179731f91548c674a1ecb5ddcb5cb4cfb8b53335cac062e89d\", \"eeb1a89d4d2191731a8db5671acf08ab04d1caae40e93850fcdae1b8760c4f6f\"], \"mk\": \"1e94a7ea13711327281f8d39997737a907d16215\", \"runner\": \"f1dd13c7db25f76ba3e209a2847e91cdd9683761\", \"tmpl\": {\"estimator_config.yaml\": \"738e59c9911ed0bd32f7f437a4d0d931c51035ca\", \"kalibr_imu_chain.yaml\": \"2a13bdaa51b448c9bb5ed27993affaedf4550903\"}, \"z2\": null}",
+    "held_before_dep": 0,
+    "n_pass": 668,
+    "n_pass_gt": 660,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     3.25
+    ],
+    "prefix": "runs/g10/N_213341_s0_d5_p025_G",
+    "gate_open_frames": 395
+   },
+   "tested": true,
+   "why": ""
+  }
+ ],
+ "r_rows": [
+  {
+   "key": "R_F_214138_o0",
+   "kind": "R",
+   "rec": "hs_20261020_214138",
+   "gate_possible": true,
+   "base": {
+    "name": "R_F_214138_o0_base",
+    "status": "ok",
+    "ate_cm": 0.89,
+    "scale": 0.9891,
+    "t_init_clip_s": 18.819,
+    "n_pass": 1471,
+    "n_pass_gt": 1196,
+    "false_pass": 44,
+    "false_pass_v_cms": [
+     3.95,
+     3.02,
+     3.41,
+     2.42,
+     2.4,
+     16.45,
+     17.24,
+     4.0,
+     4.29,
+     2.91,
+     2.62,
+     3.43,
+     3.54,
+     3.64,
+     3.64,
+     3.28,
+     2.11,
+     2.49,
+     2.82,
+     3.19,
+     3.42,
+     3.72,
+     4.1,
+     8.51,
+     8.73,
+     8.76,
+     5.05,
+     4.51,
+     4.09,
+     3.73
+    ],
+    "gate_open_frames": null,
+    "false_acc": 0
+   },
+   "G": {
+    "name": "R_F_214138_o0_G",
+    "status": "ok",
+    "ate_cm": 0.89,
+    "scale": 0.9891,
+    "t_init_clip_s": 18.819,
+    "n_pass": 1471,
+    "n_pass_gt": 1196,
+    "false_pass": 44,
+    "false_pass_v_cms": [
+     3.95,
+     3.02,
+     3.41,
+     2.42,
+     2.4,
+     16.45,
+     17.24,
+     4.0,
+     4.29,
+     2.91,
+     2.62,
+     3.43,
+     3.54,
+     3.64,
+     3.64,
+     3.28,
+     2.11,
+     2.49,
+     2.82,
+     3.19,
+     3.42,
+     3.72,
+     4.1,
+     8.51,
+     8.73,
+     8.76,
+     5.05,
+     4.51,
+     4.09,
+     3.73
+    ],
+    "gate_open_frames": 0,
+    "false_acc": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "R_F_214138_o1",
+   "kind": "R",
+   "rec": "hs_20261020_214138",
+   "gate_possible": true,
+   "base": {
+    "name": "R_F_214138_o1_base",
+    "status": "ok",
+    "ate_cm": 1.37,
+    "scale": 0.974,
+    "t_init_clip_s": 17.818,
+    "n_pass": 1409,
+    "n_pass_gt": 1135,
+    "false_pass": 44,
+    "false_pass_v_cms": [
+     3.95,
+     3.02,
+     3.41,
+     2.42,
+     2.4,
+     12.67,
+     16.45,
+     17.24,
+     3.59,
+     4.0,
+     4.29,
+     2.91,
+     2.62,
+     2.01,
+     3.43,
+     3.54,
+     3.64,
+     3.64,
+     2.17,
+     2.11,
+     2.49,
+     2.82,
+     3.19,
+     3.42,
+     3.72,
+     4.1,
+     8.51,
+     8.73,
+     8.76,
+     5.05
+    ],
+    "gate_open_frames": null,
+    "false_acc": 0
+   },
+   "G": {
+    "name": "R_F_214138_o1_G",
+    "status": "ok",
+    "ate_cm": 1.37,
+    "scale": 0.974,
+    "t_init_clip_s": 17.818,
+    "n_pass": 1409,
+    "n_pass_gt": 1135,
+    "false_pass": 44,
+    "false_pass_v_cms": [
+     3.95,
+     3.02,
+     3.41,
+     2.42,
+     2.4,
+     12.67,
+     16.45,
+     17.24,
+     3.59,
+     4.0,
+     4.29,
+     2.91,
+     2.62,
+     2.01,
+     3.43,
+     3.54,
+     3.64,
+     3.64,
+     2.17,
+     2.11,
+     2.49,
+     2.82,
+     3.19,
+     3.42,
+     3.72,
+     4.1,
+     8.51,
+     8.73,
+     8.76,
+     5.05
+    ],
+    "gate_open_frames": 0,
+    "false_acc": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "R_F_214138_o2",
+   "kind": "R",
+   "rec": "hs_20261020_214138",
+   "gate_possible": true,
+   "base": {
+    "name": "R_F_214138_o2_base",
+    "status": "ok",
+    "ate_cm": 1.09,
+    "scale": 0.9827,
+    "t_init_clip_s": 16.804,
+    "n_pass": 1338,
+    "n_pass_gt": 1068,
+    "false_pass": 42,
+    "false_pass_v_cms": [
+     3.95,
+     8.68,
+     3.02,
+     3.41,
+     2.42,
+     2.4,
+     12.67,
+     16.45,
+     17.24,
+     4.0,
+     4.29,
+     2.91,
+     2.62,
+     3.43,
+     3.54,
+     3.64,
+     3.64,
+     2.11,
+     2.49,
+     2.82,
+     3.19,
+     3.42,
+     3.72,
+     4.1,
+     8.51,
+     8.73,
+     5.05,
+     4.51,
+     4.09,
+     3.73
+    ],
+    "gate_open_frames": null,
+    "false_acc": 0
+   },
+   "G": {
+    "name": "R_F_214138_o2_G",
+    "status": "ok",
+    "ate_cm": 1.09,
+    "scale": 0.9827,
+    "t_init_clip_s": 16.804,
+    "n_pass": 1338,
+    "n_pass_gt": 1068,
+    "false_pass": 42,
+    "false_pass_v_cms": [
+     3.95,
+     8.68,
+     3.02,
+     3.41,
+     2.42,
+     2.4,
+     12.67,
+     16.45,
+     17.24,
+     4.0,
+     4.29,
+     2.91,
+     2.62,
+     3.43,
+     3.54,
+     3.64,
+     3.64,
+     2.11,
+     2.49,
+     2.82,
+     3.19,
+     3.42,
+     3.72,
+     4.1,
+     8.51,
+     8.73,
+     5.05,
+     4.51,
+     4.09,
+     3.73
+    ],
+    "gate_open_frames": 0,
+    "false_acc": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "R_F_221052_o0",
+   "kind": "R",
+   "rec": "hs_20261020_221052",
+   "gate_possible": true,
+   "base": {
+    "name": "R_F_221052_o0_base",
+    "status": "ok",
+    "ate_cm": 1.43,
+    "scale": 1.1163,
+    "t_init_clip_s": 15.965,
+    "n_pass": 994,
+    "n_pass_gt": 607,
+    "false_pass": 8,
+    "false_pass_v_cms": [
+     2.11,
+     6.84,
+     2.01,
+     3.88,
+     3.99,
+     7.95,
+     5.18,
+     3.73
+    ],
+    "gate_open_frames": null,
+    "false_acc": 0
+   },
+   "G": {
+    "name": "R_F_221052_o0_G",
+    "status": "ok",
+    "ate_cm": 1.43,
+    "scale": 1.1163,
+    "t_init_clip_s": 15.965,
+    "n_pass": 994,
+    "n_pass_gt": 607,
+    "false_pass": 8,
+    "false_pass_v_cms": [
+     2.11,
+     6.84,
+     2.01,
+     3.88,
+     3.99,
+     7.95,
+     5.18,
+     3.73
+    ],
+    "gate_open_frames": 0,
+    "false_acc": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "R_F_221052_o1",
+   "kind": "R",
+   "rec": "hs_20261020_221052",
+   "gate_possible": true,
+   "base": {
+    "name": "R_F_221052_o1_base",
+    "status": "ok",
+    "ate_cm": 1.38,
+    "scale": 0.8985,
+    "t_init_clip_s": 14.931,
+    "n_pass": 936,
+    "n_pass_gt": 583,
+    "false_pass": 9,
+    "false_pass_v_cms": [
+     2.49,
+     6.84,
+     2.31,
+     2.01,
+     3.88,
+     3.99,
+     7.95,
+     5.18,
+     3.73
+    ],
+    "gate_open_frames": null,
+    "false_acc": 0
+   },
+   "G": {
+    "name": "R_F_221052_o1_G",
+    "status": "ok",
+    "ate_cm": 1.38,
+    "scale": 0.8985,
+    "t_init_clip_s": 14.931,
+    "n_pass": 936,
+    "n_pass_gt": 583,
+    "false_pass": 9,
+    "false_pass_v_cms": [
+     2.49,
+     6.84,
+     2.31,
+     2.01,
+     3.88,
+     3.99,
+     7.95,
+     5.18,
+     3.73
+    ],
+    "gate_open_frames": 0,
+    "false_acc": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "R_F_221052_o2",
+   "kind": "R",
+   "rec": "hs_20261020_221052",
+   "gate_possible": true,
+   "base": {
+    "name": "R_F_221052_o2_base",
+    "status": "ok",
+    "ate_cm": 1.76,
+    "scale": 0.8719,
+    "t_init_clip_s": 13.984,
+    "n_pass": 881,
+    "n_pass_gt": 546,
+    "false_pass": 9,
+    "false_pass_v_cms": [
+     2.49,
+     6.84,
+     2.31,
+     2.01,
+     3.88,
+     3.99,
+     7.95,
+     5.18,
+     3.73
+    ],
+    "gate_open_frames": null,
+    "false_acc": 0
+   },
+   "G": {
+    "name": "R_F_221052_o2_G",
+    "status": "ok",
+    "ate_cm": 1.76,
+    "scale": 0.8719,
+    "t_init_clip_s": 13.984,
+    "n_pass": 881,
+    "n_pass_gt": 546,
+    "false_pass": 9,
+    "false_pass_v_cms": [
+     2.49,
+     6.84,
+     2.31,
+     2.01,
+     3.88,
+     3.99,
+     7.95,
+     5.18,
+     3.73
+    ],
+    "gate_open_frames": 0,
+    "false_acc": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "R_F_221925_o0",
+   "kind": "R",
+   "rec": "hs_20261020_221925",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_F_221925_o1",
+   "kind": "R",
+   "rec": "hs_20261020_221925",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_F_221925_o2",
+   "kind": "R",
+   "rec": "hs_20261020_221925",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_F_222747_o0",
+   "kind": "R",
+   "rec": "hs_20261020_222747",
+   "gate_possible": true,
+   "base": {
+    "name": "R_F_222747_o0_base",
+    "status": "collapse",
+    "ate_cm": 155.78,
+    "scale": 0.0154,
+    "t_init_clip_s": 11.251,
+    "n_pass": 1467,
+    "n_pass_gt": 1465,
+    "false_pass": 60,
+    "false_pass_v_cms": [
+     2.17,
+     2.14,
+     2.33,
+     2.71,
+     3.19,
+     4.05,
+     2.28,
+     2.56,
+     4.83,
+     3.44,
+     7.73,
+     6.38,
+     6.08,
+     5.84,
+     5.63,
+     2.75,
+     2.51,
+     2.07,
+     2.61,
+     3.28,
+     2.09,
+     2.14,
+     2.08,
+     2.07,
+     3.01,
+     9.05,
+     10.67,
+     13.83,
+     5.49,
+     2.57
+    ],
+    "gate_open_frames": null,
+    "false_acc": 0
+   },
+   "G": {
+    "name": "R_F_222747_o0_G",
+    "status": "collapse",
+    "ate_cm": 155.78,
+    "scale": 0.0154,
+    "t_init_clip_s": 11.251,
+    "n_pass": 1467,
+    "n_pass_gt": 1465,
+    "false_pass": 60,
+    "false_pass_v_cms": [
+     2.17,
+     2.14,
+     2.33,
+     2.71,
+     3.19,
+     4.05,
+     2.28,
+     2.56,
+     4.83,
+     3.44,
+     7.73,
+     6.38,
+     6.08,
+     5.84,
+     5.63,
+     2.75,
+     2.51,
+     2.07,
+     2.61,
+     3.28,
+     2.09,
+     2.14,
+     2.08,
+     2.07,
+     3.01,
+     9.05,
+     10.67,
+     13.83,
+     5.49,
+     2.57
+    ],
+    "gate_open_frames": 0,
+    "false_acc": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "R_F_222747_o1",
+   "kind": "R",
+   "rec": "hs_20261020_222747",
+   "gate_possible": true,
+   "base": {
+    "name": "R_F_222747_o1_base",
+    "status": "collapse",
+    "ate_cm": 120.73,
+    "scale": 0.0199,
+    "t_init_clip_s": 10.25,
+    "n_pass": 1397,
+    "n_pass_gt": 1394,
+    "false_pass": 59,
+    "false_pass_v_cms": [
+     2.17,
+     2.14,
+     2.33,
+     2.71,
+     3.19,
+     4.05,
+     2.28,
+     2.56,
+     4.83,
+     3.44,
+     6.07,
+     6.38,
+     6.08,
+     5.84,
+     5.63,
+     2.75,
+     2.07,
+     2.61,
+     3.28,
+     2.09,
+     2.14,
+     2.08,
+     2.07,
+     3.01,
+     13.83,
+     5.49,
+     2.57,
+     5.56,
+     5.66,
+     5.67
+    ],
+    "gate_open_frames": null,
+    "false_acc": 0
+   },
+   "G": {
+    "name": "R_F_222747_o1_G",
+    "status": "collapse",
+    "ate_cm": 120.73,
+    "scale": 0.0199,
+    "t_init_clip_s": 10.25,
+    "n_pass": 1397,
+    "n_pass_gt": 1394,
+    "false_pass": 59,
+    "false_pass_v_cms": [
+     2.17,
+     2.14,
+     2.33,
+     2.71,
+     3.19,
+     4.05,
+     2.28,
+     2.56,
+     4.83,
+     3.44,
+     6.07,
+     6.38,
+     6.08,
+     5.84,
+     5.63,
+     2.75,
+     2.07,
+     2.61,
+     3.28,
+     2.09,
+     2.14,
+     2.08,
+     2.07,
+     3.01,
+     13.83,
+     5.49,
+     2.57,
+     5.56,
+     5.66,
+     5.67
+    ],
+    "gate_open_frames": 0,
+    "false_acc": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "R_F_222747_o2",
+   "kind": "R",
+   "rec": "hs_20261020_222747",
+   "gate_possible": true,
+   "base": {
+    "name": "R_F_222747_o2_base",
+    "status": "collapse",
+    "ate_cm": 6842.29,
+    "scale": 0.0004,
+    "t_init_clip_s": 9.236,
+    "n_pass": 1327,
+    "n_pass_gt": 1324,
+    "false_pass": 60,
+    "false_pass_v_cms": [
+     2.17,
+     2.14,
+     2.33,
+     2.71,
+     3.19,
+     4.05,
+     2.28,
+     2.56,
+     4.83,
+     3.44,
+     7.73,
+     6.38,
+     6.08,
+     5.84,
+     5.63,
+     2.75,
+     2.51,
+     2.07,
+     2.61,
+     3.28,
+     2.09,
+     2.14,
+     2.08,
+     2.07,
+     3.01,
+     9.05,
+     10.8,
+     13.83,
+     5.49,
+     2.57
+    ],
+    "gate_open_frames": null,
+    "false_acc": 0
+   },
+   "G": {
+    "name": "R_F_222747_o2_G",
+    "status": "collapse",
+    "ate_cm": 6842.29,
+    "scale": 0.0004,
+    "t_init_clip_s": 9.236,
+    "n_pass": 1327,
+    "n_pass_gt": 1324,
+    "false_pass": 60,
+    "false_pass_v_cms": [
+     2.17,
+     2.14,
+     2.33,
+     2.71,
+     3.19,
+     4.05,
+     2.28,
+     2.56,
+     4.83,
+     3.44,
+     7.73,
+     6.38,
+     6.08,
+     5.84,
+     5.63,
+     2.75,
+     2.51,
+     2.07,
+     2.61,
+     3.28,
+     2.09,
+     2.14,
+     2.08,
+     2.07,
+     3.01,
+     9.05,
+     10.8,
+     13.83,
+     5.49,
+     2.57
+    ],
+    "gate_open_frames": 0,
+    "false_acc": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "R_F_223815_o0",
+   "kind": "R",
+   "rec": "hs_20261020_223815",
+   "gate_possible": true,
+   "base": {
+    "name": "R_F_223815_o0_base",
+    "status": "ok",
+    "ate_cm": 0.42,
+    "scale": 0.992,
+    "t_init_clip_s": 10.951,
+    "n_pass": 989,
+    "n_pass_gt": 614,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     4.84
+    ],
+    "gate_open_frames": null,
+    "false_acc": 0
+   },
+   "G": {
+    "name": "R_F_223815_o0_G",
+    "status": "ok",
+    "ate_cm": 0.42,
+    "scale": 0.992,
+    "t_init_clip_s": 10.951,
+    "n_pass": 1051,
+    "n_pass_gt": 622,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     4.84
+    ],
+    "gate_open_frames": 378,
+    "false_acc": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "R_F_223815_o1",
+   "kind": "R",
+   "rec": "hs_20261020_223815",
+   "gate_possible": true,
+   "base": {
+    "name": "R_F_223815_o1_base",
+    "status": "ok",
+    "ate_cm": 0.42,
+    "scale": 0.9892,
+    "t_init_clip_s": 9.966,
+    "n_pass": 926,
+    "n_pass_gt": 555,
+    "false_pass": 2,
+    "false_pass_v_cms": [
+     4.84,
+     5.03
+    ],
+    "gate_open_frames": null,
+    "false_acc": 0
+   },
+   "G": {
+    "name": "R_F_223815_o1_G",
+    "status": "ok",
+    "ate_cm": 0.42,
+    "scale": 0.9892,
+    "t_init_clip_s": 9.966,
+    "n_pass": 992,
+    "n_pass_gt": 566,
+    "false_pass": 2,
+    "false_pass_v_cms": [
+     4.84,
+     5.03
+    ],
+    "gate_open_frames": 378,
+    "false_acc": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "R_F_223815_o2",
+   "kind": "R",
+   "rec": "hs_20261020_223815",
+   "gate_possible": true,
+   "base": {
+    "name": "R_F_223815_o2_base",
+    "status": "ok",
+    "ate_cm": 0.45,
+    "scale": 0.9879,
+    "t_init_clip_s": 8.936,
+    "n_pass": 859,
+    "n_pass_gt": 492,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     4.84
+    ],
+    "gate_open_frames": null,
+    "false_acc": 0
+   },
+   "G": {
+    "name": "R_F_223815_o2_G",
+    "status": "ok",
+    "ate_cm": 0.44,
+    "scale": 0.9879,
+    "t_init_clip_s": 8.936,
+    "n_pass": 936,
+    "n_pass_gt": 505,
+    "false_pass": 1,
+    "false_pass_v_cms": [
+     4.84
+    ],
+    "gate_open_frames": 378,
+    "false_acc": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "R_F_224323_o0",
+   "kind": "R",
+   "rec": "hs_20261020_224323",
+   "gate_possible": true,
+   "base": {
+    "name": "R_F_224323_o0_base",
+    "status": "ok",
+    "ate_cm": 2.55,
+    "scale": 0.9812,
+    "t_init_clip_s": 10.517,
+    "n_pass": 1629,
+    "n_pass_gt": 98,
+    "false_pass": 10,
+    "false_pass_v_cms": [
+     4.49,
+     12.69,
+     2.97,
+     3.36,
+     6.36,
+     3.71,
+     2.15,
+     3.22,
+     2.43,
+     2.08
+    ],
+    "gate_open_frames": null,
+    "false_acc": 0
+   },
+   "G": {
+    "name": "R_F_224323_o0_G",
+    "status": "ok",
+    "ate_cm": 1.3,
+    "scale": 0.9896,
+    "t_init_clip_s": 10.517,
+    "n_pass": 1744,
+    "n_pass_gt": 162,
+    "false_pass": 14,
+    "false_pass_v_cms": [
+     4.49,
+     12.69,
+     2.97,
+     3.36,
+     6.36,
+     3.71,
+     2.15,
+     3.22,
+     2.43,
+     2.02,
+     2.0,
+     2.08,
+     2.03,
+     2.05
+    ],
+    "gate_open_frames": 1052,
+    "false_acc": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "R_F_224323_o1",
+   "kind": "R",
+   "rec": "hs_20261020_224323",
+   "gate_possible": true,
+   "base": {
+    "name": "R_F_224323_o1_base",
+    "status": "ok",
+    "ate_cm": 5.03,
+    "scale": 0.9048,
+    "t_init_clip_s": 9.516,
+    "n_pass": 1570,
+    "n_pass_gt": 97,
+    "false_pass": 9,
+    "false_pass_v_cms": [
+     4.49,
+     12.69,
+     2.97,
+     3.36,
+     6.36,
+     2.15,
+     3.22,
+     2.08,
+     2.43
+    ],
+    "gate_open_frames": null,
+    "false_acc": 0
+   },
+   "G": {
+    "name": "R_F_224323_o1_G",
+    "status": "ok",
+    "ate_cm": 1.09,
+    "scale": 1.006,
+    "t_init_clip_s": 9.516,
+    "n_pass": 1684,
+    "n_pass_gt": 162,
+    "false_pass": 14,
+    "false_pass_v_cms": [
+     4.49,
+     12.69,
+     2.97,
+     3.36,
+     6.36,
+     2.15,
+     3.22,
+     2.08,
+     2.43,
+     2.02,
+     2.0,
+     2.08,
+     2.03,
+     2.05
+    ],
+    "gate_open_frames": 1052,
+    "false_acc": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "R_F_224323_o2",
+   "kind": "R",
+   "rec": "hs_20261020_224323",
+   "gate_possible": true,
+   "base": {
+    "name": "R_F_224323_o2_base",
+    "status": "ok",
+    "ate_cm": 5.41,
+    "scale": 0.8658,
+    "t_init_clip_s": 8.502,
+    "n_pass": 1501,
+    "n_pass_gt": 98,
+    "false_pass": 10,
+    "false_pass_v_cms": [
+     4.49,
+     12.69,
+     2.97,
+     3.36,
+     6.36,
+     2.15,
+     3.22,
+     2.08,
+     2.43,
+     2.08
+    ],
+    "gate_open_frames": null,
+    "false_acc": 0
+   },
+   "G": {
+    "name": "R_F_224323_o2_G",
+    "status": "ok",
+    "ate_cm": 1.07,
+    "scale": 0.9749,
+    "t_init_clip_s": 8.502,
+    "n_pass": 1632,
+    "n_pass_gt": 168,
+    "false_pass": 13,
+    "false_pass_v_cms": [
+     4.49,
+     12.69,
+     2.97,
+     3.36,
+     6.36,
+     2.15,
+     3.22,
+     2.08,
+     2.43,
+     2.02,
+     2.08,
+     2.03,
+     2.05
+    ],
+    "gate_open_frames": 1052,
+    "false_acc": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "R_O_131326_o0",
+   "kind": "R",
+   "rec": "hs_20261019_131326",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_O_131326_o1",
+   "kind": "R",
+   "rec": "hs_20261019_131326",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_O_131326_o2",
+   "kind": "R",
+   "rec": "hs_20261019_131326",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_O_154320_o0",
+   "kind": "R",
+   "rec": "hs_20261019_154320",
+   "gate_possible": true,
+   "base": {
+    "name": "R_O_154320_o0_base",
+    "status": "collapse",
+    "ate_cm": 11.09,
+    "scale": 0.7005,
+    "t_init_clip_s": 0.617,
+    "n_pass": 1602,
+    "n_pass_gt": 1538,
+    "false_pass": 241,
+    "false_pass_v_cms": [
+     6.16,
+     4.13,
+     3.47,
+     6.18,
+     6.4,
+     12.57,
+     12.17,
+     11.91,
+     6.9,
+     10.57,
+     11.77,
+     21.48,
+     14.14,
+     14.07,
+     13.83,
+     13.72,
+     12.59,
+     12.67,
+     7.68,
+     4.32,
+     4.15,
+     2.41,
+     2.39,
+     2.43,
+     2.45,
+     2.1,
+     2.27,
+     3.52,
+     3.89,
+     3.54
+    ],
+    "gate_open_frames": null,
+    "false_acc": 0
+   },
+   "G": {
+    "name": "R_O_154320_o0_G",
+    "status": "collapse",
+    "ate_cm": 11.09,
+    "scale": 0.7005,
+    "t_init_clip_s": 0.617,
+    "n_pass": 1602,
+    "n_pass_gt": 1538,
+    "false_pass": 241,
+    "false_pass_v_cms": [
+     6.16,
+     4.13,
+     3.47,
+     6.18,
+     6.4,
+     12.57,
+     12.17,
+     11.91,
+     6.9,
+     10.57,
+     11.77,
+     21.48,
+     14.14,
+     14.07,
+     13.83,
+     13.72,
+     12.59,
+     12.67,
+     7.68,
+     4.32,
+     4.15,
+     2.41,
+     2.39,
+     2.43,
+     2.45,
+     2.1,
+     2.27,
+     3.52,
+     3.89,
+     3.54
+    ],
+    "gate_open_frames": 20,
+    "false_acc": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "R_O_154320_o1",
+   "kind": "R",
+   "rec": "hs_20261019_154320",
+   "gate_possible": true,
+   "base": {
+    "name": "R_O_154320_o1_base",
+    "status": "ok",
+    "ate_cm": 3.0,
+    "scale": 0.9723,
+    "t_init_clip_s": 0.684,
+    "n_pass": 1610,
+    "n_pass_gt": 1541,
+    "false_pass": 248,
+    "false_pass_v_cms": [
+     6.16,
+     4.13,
+     3.47,
+     6.18,
+     4.55,
+     6.4,
+     12.57,
+     12.17,
+     11.91,
+     6.9,
+     10.57,
+     11.77,
+     14.14,
+     14.07,
+     13.83,
+     13.72,
+     12.59,
+     12.67,
+     7.68,
+     4.15,
+     2.41,
+     2.39,
+     2.43,
+     2.45,
+     2.1,
+     2.27,
+     3.52,
+     3.89,
+     3.54,
+     4.31
+    ],
+    "gate_open_frames": null,
+    "false_acc": 0
+   },
+   "G": {
+    "name": "R_O_154320_o1_G",
+    "status": "ok",
+    "ate_cm": 3.0,
+    "scale": 0.9723,
+    "t_init_clip_s": 0.684,
+    "n_pass": 1610,
+    "n_pass_gt": 1541,
+    "false_pass": 248,
+    "false_pass_v_cms": [
+     6.16,
+     4.13,
+     3.47,
+     6.18,
+     4.55,
+     6.4,
+     12.57,
+     12.17,
+     11.91,
+     6.9,
+     10.57,
+     11.77,
+     14.14,
+     14.07,
+     13.83,
+     13.72,
+     12.59,
+     12.67,
+     7.68,
+     4.15,
+     2.41,
+     2.39,
+     2.43,
+     2.45,
+     2.1,
+     2.27,
+     3.52,
+     3.89,
+     3.54,
+     4.31
+    ],
+    "gate_open_frames": 20,
+    "false_acc": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "R_O_154320_o2",
+   "kind": "R",
+   "rec": "hs_20261019_154320",
+   "gate_possible": true,
+   "base": {
+    "name": "R_O_154320_o2_base",
+    "status": "ok",
+    "ate_cm": 2.71,
+    "scale": 0.9686,
+    "t_init_clip_s": 0.834,
+    "n_pass": 1588,
+    "n_pass_gt": 1547,
+    "false_pass": 245,
+    "false_pass_v_cms": [
+     6.16,
+     7.39,
+     4.13,
+     3.47,
+     6.18,
+     6.4,
+     12.17,
+     11.91,
+     11.55,
+     6.9,
+     10.57,
+     11.77,
+     14.14,
+     14.07,
+     13.83,
+     13.72,
+     13.12,
+     12.59,
+     12.67,
+     7.68,
+     4.32,
+     4.15,
+     2.41,
+     2.39,
+     2.43,
+     2.45,
+     2.1,
+     2.27,
+     3.52,
+     3.89
+    ],
+    "gate_open_frames": null,
+    "false_acc": 0
+   },
+   "G": {
+    "name": "R_O_154320_o2_G",
+    "status": "ok",
+    "ate_cm": 2.71,
+    "scale": 0.9686,
+    "t_init_clip_s": 0.834,
+    "n_pass": 1588,
+    "n_pass_gt": 1547,
+    "false_pass": 245,
+    "false_pass_v_cms": [
+     6.16,
+     7.39,
+     4.13,
+     3.47,
+     6.18,
+     6.4,
+     12.17,
+     11.91,
+     11.55,
+     6.9,
+     10.57,
+     11.77,
+     14.14,
+     14.07,
+     13.83,
+     13.72,
+     13.12,
+     12.59,
+     12.67,
+     7.68,
+     4.32,
+     4.15,
+     2.41,
+     2.39,
+     2.43,
+     2.45,
+     2.1,
+     2.27,
+     3.52,
+     3.89
+    ],
+    "gate_open_frames": 20,
+    "false_acc": 0
+   },
+   "tested": true,
+   "why": ""
+  },
+  {
+   "key": "R_T_214138_S1_d0",
+   "kind": "R",
+   "rec": "hs_20261020_214138",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_214138_S1_dm025",
+   "kind": "R",
+   "rec": "hs_20261020_214138",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_214138_S1_dp025",
+   "kind": "R",
+   "rec": "hs_20261020_214138",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_214138_S2_d0",
+   "kind": "R",
+   "rec": "hs_20261020_214138",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_214138_S2_dm025",
+   "kind": "R",
+   "rec": "hs_20261020_214138",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_214138_S2_dp025",
+   "kind": "R",
+   "rec": "hs_20261020_214138",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_221052_S1_d0",
+   "kind": "R",
+   "rec": "hs_20261020_221052",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_221052_S1_dm025",
+   "kind": "R",
+   "rec": "hs_20261020_221052",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_221052_S1_dp025",
+   "kind": "R",
+   "rec": "hs_20261020_221052",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_221052_S2_d0",
+   "kind": "R",
+   "rec": "hs_20261020_221052",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_221052_S2_dm025",
+   "kind": "R",
+   "rec": "hs_20261020_221052",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_221052_S2_dp025",
+   "kind": "R",
+   "rec": "hs_20261020_221052",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_222747_S1_d0",
+   "kind": "R",
+   "rec": "hs_20261020_222747",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_222747_S1_dm025",
+   "kind": "R",
+   "rec": "hs_20261020_222747",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_222747_S1_dp025",
+   "kind": "R",
+   "rec": "hs_20261020_222747",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_222747_S2_d0",
+   "kind": "R",
+   "rec": "hs_20261020_222747",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_222747_S2_dm025",
+   "kind": "R",
+   "rec": "hs_20261020_222747",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_222747_S2_dp025",
+   "kind": "R",
+   "rec": "hs_20261020_222747",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_223815_S1_d0",
+   "kind": "R",
+   "rec": "hs_20261020_223815",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_223815_S1_dm025",
+   "kind": "R",
+   "rec": "hs_20261020_223815",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_223815_S1_dp025",
+   "kind": "R",
+   "rec": "hs_20261020_223815",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_223815_S2_d0",
+   "kind": "R",
+   "rec": "hs_20261020_223815",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_223815_S2_dm025",
+   "kind": "R",
+   "rec": "hs_20261020_223815",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_223815_S2_dp025",
+   "kind": "R",
+   "rec": "hs_20261020_223815",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_224323_S1_d0",
+   "kind": "R",
+   "rec": "hs_20261020_224323",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_224323_S1_dm025",
+   "kind": "R",
+   "rec": "hs_20261020_224323",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_224323_S1_dp025",
+   "kind": "R",
+   "rec": "hs_20261020_224323",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_224323_S2_d0",
+   "kind": "R",
+   "rec": "hs_20261020_224323",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_224323_S2_dm025",
+   "kind": "R",
+   "rec": "hs_20261020_224323",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  },
+  {
+   "key": "R_T_224323_S2_dp025",
+   "kind": "R",
+   "rec": "hs_20261020_224323",
+   "gate_possible": false,
+   "base": null,
+   "G": null,
+   "tested": false,
+   "why": "문 안 열림 (사전 계산) → G = base 구성상"
+  }
+ ],
+ "verdict": {
+  "c1_safety": {
+   "n_cells": 39,
+   "false_pass_worse": [
+    [
+     "R_F_224323_o0",
+     10,
+     14
+    ],
+    [
+     "R_F_224323_o1",
+     9,
+     14
+    ],
+    [
+     "R_F_224323_o2",
+     10,
+     13
+    ]
+   ],
+   "new_collapses": [],
+   "ok": false
+  },
+  "c2_regression": {
+   "n_opened_scored": 9,
+   "diffs": [
+    [
+     "R_F_223815_o0",
+     0.0
+    ],
+    [
+     "R_F_223815_o1",
+     0.0
+    ],
+    [
+     "R_F_223815_o2",
+     -0.01
+    ],
+    [
+     "R_F_224323_o0",
+     -1.25
+    ],
+    [
+     "R_F_224323_o1",
+     -3.94
+    ],
+    [
+     "R_F_224323_o2",
+     -4.34
+    ],
+    [
+     "R_O_154320_o0",
+     0.0
+    ],
+    [
+     "R_O_154320_o1",
+     0.0
+    ],
+    [
+     "R_O_154320_o2",
+     0.0
+    ]
+   ],
+   "median": 0.0,
+   "worst": 0.0,
+   "band": 1.439,
+   "band_parts": {
+    "d1_base": {
+     "vals": [
+      1.584,
+      1.699,
+      1.561
+     ],
+     "range": 0.138
+    },
+    "d1_i3": {
+     "vals": [
+      3.058,
+      1.66,
+      1.619
+     ],
+     "range": 1.439
+    },
+    "d5_base": {
+     "vals": [
+      1.576,
+      1.771,
+      1.529
+     ],
+     "range": 0.242
+    },
+    "d5_i3": {
+     "vals": [
+      2.75,
+      1.542,
+      1.543
+     ],
+     "range": 1.208
+    }
+   },
+   "a_ok": true,
+   "b_ok": true,
+   "ok": true,
+   "not_opened_but_possible": [
+    "R_F_214138_o0",
+    "R_F_214138_o1",
+    "R_F_214138_o2",
+    "R_F_221052_o0",
+    "R_F_221052_o1",
+    "R_F_221052_o2",
+    "R_F_222747_o0",
+    "R_F_222747_o1",
+    "R_F_222747_o2"
+   ],
+   "not_run": []
+  },
+  "c3_gain_214550": {
+   "n_tested": 8,
+   "diffs": [
+    [
+     "B_214550_s0_d1",
+     -60.639
+    ],
+    [
+     "B_214550_s0_d5",
+     -41.606
+    ],
+    [
+     "B_214550_s0_d10",
+     -93.82
+    ],
+    [
+     "BA_214550_o0",
+     -2.785
+    ],
+    [
+     "BA_214550_o1",
+     -1.621
+    ],
+    [
+     "BA_214550_o2",
+     -2.436
+    ],
+    [
+     "BL_214550_L6",
+     -53.911
+    ],
+    [
+     "BL_214550_L3",
+     -31.187
+    ]
+   ],
+   "median": -36.3965,
+   "prevented": [
+    "B_214550_s0_d1",
+    "B_214550_s0_d5",
+    "B_214550_s0_d10",
+    "BL_214550_L6",
+    "BL_214550_L3"
+   ],
+   "a_ok": true,
+   "b_ok": true,
+   "ok": true,
+   "base_collapses": [
+    "B_214550_s0_d1",
+    "B_214550_s0_d5",
+    "B_214550_s0_d10",
+    "BL_214550_L6",
+    "BL_214550_L3"
+   ],
+   "not_tested": {}
+  },
+  "conclusion": "214550 에서 G1.0 효과 있음 · 안전 실패 · 회귀 통과 (추정, 이득은 녹화 1 개)",
+  "checks_ok": true
+ },
+ "paired": {
+  "G-base": {
+   "n": 21,
+   "med": -0.136,
+   "good": 11,
+   "same": 10,
+   "bad": 0,
+   "p": 0.000495,
+   "diffs": [
+    [
+     "B_213341_s0_d1",
+     0.027
+    ],
+    [
+     "B_213341_s0_d5",
+     -0.005
+    ],
+    [
+     "B_213341_s0_d10",
+     0.0
+    ],
+    [
+     "B_213955_s0_d1",
+     0.0
+    ],
+    [
+     "B_213955_s0_d5",
+     0.0
+    ],
+    [
+     "B_213955_s0_d10",
+     0.0
+    ],
+    [
+     "B_214550_s0_d1",
+     -60.639
+    ],
+    [
+     "B_214550_s0_d5",
+     -41.606
+    ],
+    [
+     "B_214550_s0_d10",
+     -93.82
+    ],
+    [
+     "B_215348_s0_d1",
+     -0.136
+    ],
+    [
+     "B_215348_s0_d5",
+     -0.147
+    ],
+    [
+     "B_215348_s0_d10",
+     0.011
+    ],
+    [
+     "BA_214550_o0",
+     -2.785
+    ],
+    [
+     "BA_214550_o1",
+     -1.621
+    ],
+    [
+     "BA_214550_o2",
+     -2.436
+    ],
+    [
+     "BL_214550_L6",
+     -53.911
+    ],
+    [
+     "BL_214550_L3",
+     -31.187
+    ],
+    [
+     "N_213341_s0_d1_m025",
+     -0.041
+    ],
+    [
+     "N_213341_s0_d1_p025",
+     0.05
+    ],
+    [
+     "N_213341_s0_d5_m025",
+     -0.238
+    ],
+    [
+     "N_213341_s0_d5_p025",
+     -0.036
+    ]
+   ]
+  },
+  "i3-base": {
+   "n": 21,
+   "med": -0.039,
+   "good": 10,
+   "same": 7,
+   "bad": 4,
+   "p": 0.01194,
+   "diffs": [
+    [
+     "B_213341_s0_d1",
+     1.474
+    ],
+    [
+     "B_213341_s0_d5",
+     1.174
+    ],
+    [
+     "B_213341_s0_d10",
+     0.0
+    ],
+    [
+     "B_213955_s0_d1",
+     0.0
+    ],
+    [
+     "B_213955_s0_d5",
+     0.0
+    ],
+    [
+     "B_213955_s0_d10",
+     0.0
+    ],
+    [
+     "B_214550_s0_d1",
+     -56.0
+    ],
+    [
+     "B_214550_s0_d5",
+     -42.084
+    ],
+    [
+     "B_214550_s0_d10",
+     -88.553
+    ],
+    [
+     "B_215348_s0_d1",
+     0.049
+    ],
+    [
+     "B_215348_s0_d5",
+     0.926
+    ],
+    [
+     "B_215348_s0_d10",
+     -0.15
+    ],
+    [
+     "BA_214550_o0",
+     -3.019
+    ],
+    [
+     "BA_214550_o1",
+     -2.201
+    ],
+    [
+     "BA_214550_o2",
+     -2.453
+    ],
+    [
+     "BL_214550_L6",
+     -50.576
+    ],
+    [
+     "BL_214550_L3",
+     -31.816
+    ],
+    [
+     "N_213341_s0_d1_m025",
+     -0.039
+    ],
+    [
+     "N_213341_s0_d1_p025",
+     0.058
+    ],
+    [
+     "N_213341_s0_d5_m025",
+     -0.229
+    ],
+    [
+     "N_213341_s0_d5_p025",
+     0.014
+    ]
+   ]
+  },
+  "G-i3": {
+   "n": 21,
+   "med": -0.002,
+   "good": 7,
+   "same": 9,
+   "bad": 5,
+   "p": 0.0576,
+   "diffs": [
+    [
+     "B_213341_s0_d1",
+     -1.447
+    ],
+    [
+     "B_213341_s0_d5",
+     -1.179
+    ],
+    [
+     "B_213341_s0_d10",
+     0.0
+    ],
+    [
+     "B_213955_s0_d1",
+     0.0
+    ],
+    [
+     "B_213955_s0_d5",
+     0.0
+    ],
+    [
+     "B_213955_s0_d10",
+     0.0
+    ],
+    [
+     "B_214550_s0_d1",
+     -4.639
+    ],
+    [
+     "B_214550_s0_d5",
+     0.478
+    ],
+    [
+     "B_214550_s0_d10",
+     -5.267
+    ],
+    [
+     "B_215348_s0_d1",
+     -0.185
+    ],
+    [
+     "B_215348_s0_d5",
+     -1.073
+    ],
+    [
+     "B_215348_s0_d10",
+     0.161
+    ],
+    [
+     "BA_214550_o0",
+     0.234
+    ],
+    [
+     "BA_214550_o1",
+     0.58
+    ],
+    [
+     "BA_214550_o2",
+     0.017
+    ],
+    [
+     "BL_214550_L6",
+     -3.335
+    ],
+    [
+     "BL_214550_L3",
+     0.629
+    ],
+    [
+     "N_213341_s0_d1_m025",
+     -0.002
+    ],
+    [
+     "N_213341_s0_d1_p025",
+     -0.008
+    ],
+    [
+     "N_213341_s0_d5_m025",
+     -0.009
+    ],
+    [
+     "N_213341_s0_d5_p025",
+     -0.05
+    ]
+   ]
+  }
+ },
+ "paired_214550": {
+  "G-base": {
+   "n": 8,
+   "med": -36.3965,
+   "good": 8,
+   "same": 0,
+   "bad": 0,
+   "p": 0.0078125,
+   "diffs": [
+    [
+     "B_214550_s0_d1",
+     -60.639
+    ],
+    [
+     "B_214550_s0_d5",
+     -41.606
+    ],
+    [
+     "B_214550_s0_d10",
+     -93.82
+    ],
+    [
+     "BA_214550_o0",
+     -2.785
+    ],
+    [
+     "BA_214550_o1",
+     -1.621
+    ],
+    [
+     "BA_214550_o2",
+     -2.436
+    ],
+    [
+     "BL_214550_L6",
+     -53.911
+    ],
+    [
+     "BL_214550_L3",
+     -31.187
+    ]
+   ]
+  },
+  "i3-base": {
+   "n": 8,
+   "med": -36.95,
+   "good": 8,
+   "same": 0,
+   "bad": 0,
+   "p": 0.0078125,
+   "diffs": [
+    [
+     "B_214550_s0_d1",
+     -56.0
+    ],
+    [
+     "B_214550_s0_d5",
+     -42.084
+    ],
+    [
+     "B_214550_s0_d10",
+     -88.553
+    ],
+    [
+     "BA_214550_o0",
+     -3.019
+    ],
+    [
+     "BA_214550_o1",
+     -2.201
+    ],
+    [
+     "BA_214550_o2",
+     -2.453
+    ],
+    [
+     "BL_214550_L6",
+     -50.576
+    ],
+    [
+     "BL_214550_L3",
+     -31.816
+    ]
+   ]
+  }
+ },
+ "paired_not_214550": {
+  "G-base": {
+   "n": 13,
+   "med": 0.0,
+   "good": 3,
+   "same": 10,
+   "bad": 0,
+   "p": 0.13671875,
+   "diffs": [
+    [
+     "B_213341_s0_d1",
+     0.027
+    ],
+    [
+     "B_213341_s0_d5",
+     -0.005
+    ],
+    [
+     "B_213341_s0_d10",
+     0.0
+    ],
+    [
+     "B_213955_s0_d1",
+     0.0
+    ],
+    [
+     "B_213955_s0_d5",
+     0.0
+    ],
+    [
+     "B_213955_s0_d10",
+     0.0
+    ],
+    [
+     "B_215348_s0_d1",
+     -0.136
+    ],
+    [
+     "B_215348_s0_d5",
+     -0.147
+    ],
+    [
+     "B_215348_s0_d10",
+     0.011
+    ],
+    [
+     "N_213341_s0_d1_m025",
+     -0.041
+    ],
+    [
+     "N_213341_s0_d1_p025",
+     0.05
+    ],
+    [
+     "N_213341_s0_d5_m025",
+     -0.238
+    ],
+    [
+     "N_213341_s0_d5_p025",
+     -0.036
+    ]
+   ]
+  },
+  "i3-base": {
+   "n": 13,
+   "med": 0.0,
+   "good": 2,
+   "same": 7,
+   "bad": 4,
+   "p": 0.19921875,
+   "diffs": [
+    [
+     "B_213341_s0_d1",
+     1.474
+    ],
+    [
+     "B_213341_s0_d5",
+     1.174
+    ],
+    [
+     "B_213341_s0_d10",
+     0.0
+    ],
+    [
+     "B_213955_s0_d1",
+     0.0
+    ],
+    [
+     "B_213955_s0_d5",
+     0.0
+    ],
+    [
+     "B_213955_s0_d10",
+     0.0
+    ],
+    [
+     "B_215348_s0_d1",
+     0.049
+    ],
+    [
+     "B_215348_s0_d5",
+     0.926
+    ],
+    [
+     "B_215348_s0_d10",
+     -0.15
+    ],
+    [
+     "N_213341_s0_d1_m025",
+     -0.039
+    ],
+    [
+     "N_213341_s0_d1_p025",
+     0.058
+    ],
+    [
+     "N_213341_s0_d5_m025",
+     -0.229
+    ],
+    [
+     "N_213341_s0_d5_p025",
+     0.014
+    ]
+   ]
+  }
+ },
+ "takeoff_rules_G_vs_base": {
+  "n_cells": 12,
+  "n_run_cells": 12,
+  "n_tested": 12,
+  "tested": [
+   "B_213341_s0_d1",
+   "B_213341_s0_d5",
+   "B_213341_s0_d10",
+   "B_213955_s0_d1",
+   "B_213955_s0_d5",
+   "B_213955_s0_d10",
+   "B_214550_s0_d1",
+   "B_214550_s0_d5",
+   "B_214550_s0_d10",
+   "B_215348_s0_d1",
+   "B_215348_s0_d5",
+   "B_215348_s0_d10"
+  ],
+  "recs_tested": [
+   "213341",
+   "213955",
+   "214550",
+   "215348"
+  ],
+  "not_tested": [],
+  "skipped": {},
+  "base_collapses": [
+   "B_214550_s0_d1",
+   "B_214550_s0_d5",
+   "B_214550_s0_d10"
+  ],
+  "i_new": [],
+  "i_ok": true,
+  "ii_prevented": [
+   "B_214550_s0_d1",
+   "B_214550_s0_d5",
+   "B_214550_s0_d10"
+  ],
+  "ii_recs": [
+   "B"
+  ],
+  "ii_ok": false,
+  "ii_other_base_noinit_i3_ok": [],
+  "iii_n": 12,
+  "iii_base_med": 1.58,
+  "iii_i3_med": 1.591,
+  "iii_lim": 1.78,
+  "iii_ok": true,
+  "per_rec": {},
+  "conclusion": "이득 확인 안 됨",
+  "i3_active": [],
+  "n_i3_active": 0
+ },
+ "counts": {
+  "dep_tested": 21,
+  "dep_total": 21,
+  "r_tested": 18,
+  "r_total": 54,
+  "g_runs": 39
+ }
+}

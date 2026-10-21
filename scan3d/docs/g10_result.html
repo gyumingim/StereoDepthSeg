@@ -1,0 +1,119 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>G1.0 시험 결과</title><style>
+:root{--bg:#fff;--fg:#1d1d1f;--mut:#666;--ok:#0a7d32;--bad:#b3261e;--na:#8a6d00;--line:#ddd;--hd:#f4f4f6}
+@media (prefers-color-scheme:dark){:root{--bg:#18181a;--fg:#eee;--mut:#aaa;--ok:#5fd38a;--bad:#ff8a80;--na:#e6c35c;--line:#333;--hd:#242428}}
+body{background:var(--bg);color:var(--fg);font:15px/1.6 system-ui,sans-serif;max-width:1000px;margin:auto;padding:16px}
+table{border-collapse:collapse;margin:8px 0;font-size:13px;display:block;overflow-x:auto}th,td{border:1px solid var(--line);padding:3px 7px;text-align:right}
+th{background:var(--hd)}td.l,th.l{text-align:left}.ok{color:var(--ok)}.bad{color:var(--bad)}.na{color:var(--na)}.mut{color:var(--mut);font-size:13px}
+h1{font-size:22px}h2{font-size:18px;margin-top:28px}</style></head><body>
+<h1>G1.0 시험 결과 (자이로가 멈췄을 때만 ZUPT 문턱 1.0 px)</h1>
+<p class=mut>2026-10-22 02:44–04:30 실행 · 사전 등록 docs/g10_plan.md (커밋 e9e5740, 실행 전) · 결과는 모두 <b>추정</b>.</p>
+<h2>결론 먼저</h2>
+<ul>
+<li><b>214550 (시차 잡음 정지) 에서는 효과가 커요.</b> 출발 뒤 10 초 오차가 8 칸 모두 줄었고 (중앙 −36 cm), base 가 무너진 5 칸을 모두 막았어요 (예: 67 → 6.2 cm, 96 → 2.2 cm). i3 (프레임 붙잡기) 와 비슷한 크기예요.</li>
+<li><b>다른 녹화에서는 나빠지지 않았어요.</b> 214550 밖 출발 칸 13 개: 좋음 3 · 같음 10 · 나쁨 0. 회귀 묶음에서 문이 실제로 열린 9 칸도 악화 0 (F_224323 은 2.6–5.4 → 1.1–1.3 cm 로 좋아짐).</li>
+<li><b>그러나 미리 정한 안전 기준은 "실패" 예요.</b> F_224323 세 칸에서 "움직이는데 정지로 통과" 프레임이 실행당 3–5 개 늘었어요.
+모두 녹화 끝 정지 구간이고, 정답 속도가 2.00–2.08 cm/s (기준 2 cm/s 바로 위), 보드 코너가 적어 정답이 흔들리는 곳이라 <b>정답 잡음일 가능성이 커요 (추정)</b>. 그래도 규칙은 바꾸지 않아요.</li>
+<li>그래서: <b>앱에는 아직 안 넣어요.</b> 녹화 1 개 효과 + 안전 기준 실패. 다음 등록에서 "헛 통과" 정의에 정답 품질 조건을 미리 넣고, 새 녹화 (정지 뒤 출발, 어두운 띠 있음/없음) 로 다시 봐요.</li>
+<li>덤: 213341 에서 i3 가 1–1.5 cm 나빠졌던 것은 시작을 ±0.25 초 옮기면 사라져요 → 그 시작 위치 하나의 튐일 가능성 (추정).</li>
+</ul>
+<p class=mut>G1.0 = i3 와 같은 자이로 정지 문 (뒤쪽 1.5 s 최대 |자이로| &lt; 0.05 rad/s, 첫 추적 + 3 s 부터) 이 열린 프레임만 ZUPT 시차 문턱을 0.5 → 1.0 px 로, 프레임은 붙잡지 않음.
+OpenVINS 라이브러리·기존 브리지·벤치는 그대로, 복사한 브리지 (tools/ov_bridge_g10) 만 바꿈. 동일성 점검 2 개 통과, 독립 검산 불일치 0.</p>
+
+<h2>미리 정한 기준 판정</h2><table><tr><th class=l>기준</th><th class=l>내용</th><th>결과</th><th class=l>숫자</th></tr>
+<tr><td class=l>1 안전</td><td class=l>모든 칸 G 헛 통과 ≤ base, 새 무너짐 0</td><td><b class="bad">실패</b></td><td class=l>칸 39, 헛 통과 늘어난 칸 3 [[&#x27;R_F_224323_o0&#x27;, 10, 14], [&#x27;R_F_224323_o1&#x27;, 9, 14], [&#x27;R_F_224323_o2&#x27;, 10, 13]], 새 무너짐 []</td></tr>
+<tr><td class=l>2 회귀</td><td class=l>문 열린 R 칸 ATE 짝 차이 중앙 ≤ +0.1 cm, 최대 악화 ≤ 시작 민감도 띠</td><td><b class="ok">통과</b></td><td class=l>칸 9, 중앙 0.000 cm, 최대 0.000 cm, 띠 1.439 cm</td></tr>
+<tr><td class=l>3 이득 (214550)</td><td class=l>출발 10 s ATE 짝 차이 중앙 &lt; 0 그리고 base 무너짐→G 정상 ≥ 2</td><td><b class="ok">통과</b></td><td class=l>칸 8, 중앙 -36.397 cm, 막은 무너짐 5 [&#x27;B_214550_s0_d1&#x27;, &#x27;B_214550_s0_d5&#x27;, &#x27;B_214550_s0_d10&#x27;, &#x27;BL_214550_L6&#x27;, &#x27;BL_214550_L3&#x27;]</td></tr></table>
+<p>결론 문장 (규칙): <b>214550 에서 G1.0 효과 있음 · 안전 실패 · 회귀 통과 (추정, 이득은 녹화 1 개)</b></p>
+<p class=mut>동일성 점검: G 브리지(플래그 없음) = 진단 브리지 예, 문이 안 열린 G = base 예 (추적 포즈 비트 동일).</p>
+<p class=mut>독립 검산 (imu_learn/g10_check.py): 실행 99 개 비교, 불일치 0 개.</p>
+<h2>짝 판정 (칸별 차이, 출발 칸)</h2><table><tr><th class=l>묶음</th><th class=l>비교</th><th>칸</th><th>중앙 (cm)</th><th>좋음/같음/나쁨</th><th>부호 뒤집기 p</th></tr>
+<tr><td class=l>전체 출발 칸</td><td class=l>G-base</td><td>21</td><td>-0.136</td><td>11/10/0</td><td>0.000</td></tr>
+<tr><td class=l>전체 출발 칸</td><td class=l>i3-base</td><td>21</td><td>-0.039</td><td>10/7/4</td><td>0.012</td></tr>
+<tr><td class=l>전체 출발 칸</td><td class=l>G-i3</td><td>21</td><td>-0.002</td><td>7/9/5</td><td>0.058</td></tr>
+<tr><td class=l>214550</td><td class=l>G-base</td><td>8</td><td>-36.397</td><td>8/0/0</td><td>0.008</td></tr>
+<tr><td class=l>214550</td><td class=l>i3-base</td><td>8</td><td>-36.950</td><td>8/0/0</td><td>0.008</td></tr>
+<tr><td class=l>214550 밖</td><td class=l>G-base</td><td>13</td><td>0.000</td><td>3/10/0</td><td>0.137</td></tr>
+<tr><td class=l>214550 밖</td><td class=l>i3-base</td><td>13</td><td>0.000</td><td>2/7/4</td><td>0.199</td></tr>
+</table>
+<p class=mut>참고: i3 출발 시험의 (i)(ii)(iii) 규칙을 B 칸에 G 대 base 로 적용 — (i) 새 무너짐 [], (ii) 막은 무너짐 [&#x27;B_214550_s0_d1&#x27;, &#x27;B_214550_s0_d5&#x27;, &#x27;B_214550_s0_d10&#x27;] (녹화 [&#x27;B&#x27;]), (iii) 중앙 base 1.58 / G 1.59 한계 1.78 → 이득 확인 안 됨</p>
+<h2>출발 칸 (출발 뒤 10 s 창)</h2><p class=mut>상태 · ATE (cm) · 헛 통과 수 (ZUPT 통과 & 정답 > 2 cm/s & 코너 ≥ 12). G 문 열림 = G 실행에서 문이 열린 프레임 수.</p>
+<table><tr><th class=l>칸</th><th class=l>시험?</th><th>base</th><th>ATE</th><th>헛</th><th>i3</th><th>ATE</th><th>헛</th><th>G1.0</th><th>ATE</th><th>헛</th><th>G 문 열림</th><th>G−base</th></tr>
+<tr><td class=l>B_213341_s0_d1</td><td class=l>예</td><td class="">ok</td><td>1.58</td><td>1</td><td class="">ok</td><td>3.06</td><td>1</td><td class="">ok</td><td>1.61</td><td>1</td><td>673</td><td>0.03</td></tr>
+<tr><td class=l>B_213341_s0_d5</td><td class=l>예</td><td class="">ok</td><td>1.58</td><td>1</td><td class="">ok</td><td>2.75</td><td>1</td><td class="">ok</td><td>1.57</td><td>1</td><td>382</td><td>-0.01</td></tr>
+<tr><td class=l>B_213341_s0_d10</td><td class=l>예</td><td class="">ok</td><td>1.51</td><td>1</td><td class="">ok</td><td>1.51</td><td>1</td><td class="">ok</td><td>1.51</td><td>1</td><td>0</td><td>0.00</td></tr>
+<tr><td class=l>B_213955_s0_d1</td><td class=l>예</td><td class="">ok</td><td>4.06</td><td>0</td><td class="">ok</td><td>4.06</td><td>0</td><td class="">ok</td><td>4.06</td><td>0</td><td>0</td><td>0.00</td></tr>
+<tr><td class=l>B_213955_s0_d5</td><td class=l>예</td><td class="">ok</td><td>1.52</td><td>0</td><td class="">ok</td><td>1.52</td><td>0</td><td class="">ok</td><td>1.52</td><td>0</td><td>0</td><td>0.00</td></tr>
+<tr><td class=l>B_213955_s0_d10</td><td class=l>예</td><td class="">ok</td><td>1.66</td><td>0</td><td class="">ok</td><td>1.66</td><td>0</td><td class="">ok</td><td>1.66</td><td>0</td><td>0</td><td>0.00</td></tr>
+<tr><td class=l>B_214550_s0_d1</td><td class=l>예</td><td class="bad">collapse</td><td>66.87</td><td>0</td><td class="bad">collapse</td><td>10.87</td><td>0</td><td class="">ok</td><td>6.23</td><td>0</td><td>742</td><td>-60.64</td></tr>
+<tr><td class=l>B_214550_s0_d5</td><td class=l>예</td><td class="bad">collapse</td><td>44.29</td><td>0</td><td class="">ok</td><td>2.20</td><td>0</td><td class="">ok</td><td>2.68</td><td>0</td><td>622</td><td>-41.61</td></tr>
+<tr><td class=l>B_214550_s0_d10</td><td class=l>예</td><td class="bad">collapse</td><td>95.99</td><td>0</td><td class="">ok</td><td>7.44</td><td>0</td><td class="">ok</td><td>2.17</td><td>0</td><td>361</td><td>-93.82</td></tr>
+<tr><td class=l>B_215348_s0_d1</td><td class=l>예</td><td class="">ok</td><td>1.25</td><td>14</td><td class="">ok</td><td>1.30</td><td>12</td><td class="">ok</td><td>1.12</td><td>14</td><td>775</td><td>-0.14</td></tr>
+<tr><td class=l>B_215348_s0_d5</td><td class=l>예</td><td class="">ok</td><td>1.43</td><td>10</td><td class="">ok</td><td>2.36</td><td>11</td><td class="">ok</td><td>1.28</td><td>9</td><td>695</td><td>-0.15</td></tr>
+<tr><td class=l>B_215348_s0_d10</td><td class=l>예</td><td class="">ok</td><td>1.25</td><td>12</td><td class="">ok</td><td>1.10</td><td>13</td><td class="">ok</td><td>1.27</td><td>12</td><td>310</td><td>0.01</td></tr>
+<tr><td class=l>BA_214550_o0</td><td class=l>예</td><td class="">ok</td><td>3.71</td><td>8</td><td class="">ok</td><td>0.69</td><td>9</td><td class="">ok</td><td>0.93</td><td>8</td><td>2843</td><td>-2.79</td></tr>
+<tr><td class=l>BA_214550_o1</td><td class=l>예</td><td class="">ok</td><td>2.79</td><td>8</td><td class="">ok</td><td>0.59</td><td>8</td><td class="">ok</td><td>1.17</td><td>8</td><td>2781</td><td>-1.62</td></tr>
+<tr><td class=l>BA_214550_o2</td><td class=l>예</td><td class="">ok</td><td>3.26</td><td>8</td><td class="">ok</td><td>0.81</td><td>8</td><td class="">ok</td><td>0.82</td><td>8</td><td>2722</td><td>-2.44</td></tr>
+<tr><td class=l>BL_214550_L6</td><td class=l>예</td><td class="bad">collapse</td><td>57.84</td><td>0</td><td class="">ok</td><td>7.26</td><td>0</td><td class="">ok</td><td>3.93</td><td>0</td><td>773</td><td>-53.91</td></tr>
+<tr><td class=l>BL_214550_L3</td><td class=l>예</td><td class="bad">collapse</td><td>35.26</td><td>0</td><td class="">ok</td><td>3.44</td><td>0</td><td class="">ok</td><td>4.07</td><td>0</td><td>773</td><td>-31.19</td></tr>
+<tr><td class=l>N_213341_s0_d1_m025</td><td class=l>예</td><td class="">ok</td><td>1.70</td><td>1</td><td class="">ok</td><td>1.66</td><td>1</td><td class="">ok</td><td>1.66</td><td>1</td><td>688</td><td>-0.04</td></tr>
+<tr><td class=l>N_213341_s0_d1_p025</td><td class=l>예</td><td class="">ok</td><td>1.56</td><td>1</td><td class="">ok</td><td>1.62</td><td>1</td><td class="">ok</td><td>1.61</td><td>1</td><td>651</td><td>0.05</td></tr>
+<tr><td class=l>N_213341_s0_d5_m025</td><td class=l>예</td><td class="">ok</td><td>1.77</td><td>1</td><td class="">ok</td><td>1.54</td><td>1</td><td class="">ok</td><td>1.53</td><td>1</td><td>444</td><td>-0.24</td></tr>
+<tr><td class=l>N_213341_s0_d5_p025</td><td class=l>예</td><td class="">ok</td><td>1.53</td><td>1</td><td class="">ok</td><td>1.54</td><td>1</td><td class="">ok</td><td>1.49</td><td>1</td><td>395</td><td>-0.04</td></tr>
+</table><h2>회귀 칸 (z2_regress 묶음, 전체 실행)</h2><table><tr><th class=l>칸</th><th class=l>시험?</th><th>base</th><th>ATE</th><th>헛</th><th>G1.0</th><th>ATE</th><th>헛</th><th>G 문 열림</th><th>G−base</th></tr>
+<tr><td class=l>R_F_214138_o0</td><td class=l>예</td><td class="">ok</td><td>0.89</td><td>44</td><td class="">ok</td><td>0.89</td><td>44</td><td>0</td><td>0.000</td></tr>
+<tr><td class=l>R_F_214138_o1</td><td class=l>예</td><td class="">ok</td><td>1.37</td><td>44</td><td class="">ok</td><td>1.37</td><td>44</td><td>0</td><td>0.000</td></tr>
+<tr><td class=l>R_F_214138_o2</td><td class=l>예</td><td class="">ok</td><td>1.09</td><td>42</td><td class="">ok</td><td>1.09</td><td>42</td><td>0</td><td>0.000</td></tr>
+<tr><td class=l>R_F_221052_o0</td><td class=l>예</td><td class="">ok</td><td>1.43</td><td>8</td><td class="">ok</td><td>1.43</td><td>8</td><td>0</td><td>0.000</td></tr>
+<tr><td class=l>R_F_221052_o1</td><td class=l>예</td><td class="">ok</td><td>1.38</td><td>9</td><td class="">ok</td><td>1.38</td><td>9</td><td>0</td><td>0.000</td></tr>
+<tr><td class=l>R_F_221052_o2</td><td class=l>예</td><td class="">ok</td><td>1.76</td><td>9</td><td class="">ok</td><td>1.76</td><td>9</td><td>0</td><td>0.000</td></tr>
+<tr><td class=l>R_F_221925_o0</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_F_221925_o1</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_F_221925_o2</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_F_222747_o0</td><td class=l>예</td><td class="bad">collapse</td><td>155.78</td><td>60</td><td class="bad">collapse</td><td>155.78</td><td>60</td><td>0</td><td>0.000</td></tr>
+<tr><td class=l>R_F_222747_o1</td><td class=l>예</td><td class="bad">collapse</td><td>120.73</td><td>59</td><td class="bad">collapse</td><td>120.73</td><td>59</td><td>0</td><td>0.000</td></tr>
+<tr><td class=l>R_F_222747_o2</td><td class=l>예</td><td class="bad">collapse</td><td>6842.29</td><td>60</td><td class="bad">collapse</td><td>6842.29</td><td>60</td><td>0</td><td>0.000</td></tr>
+<tr><td class=l>R_F_223815_o0</td><td class=l>예</td><td class="">ok</td><td>0.42</td><td>1</td><td class="">ok</td><td>0.42</td><td>1</td><td>378</td><td>0.000</td></tr>
+<tr><td class=l>R_F_223815_o1</td><td class=l>예</td><td class="">ok</td><td>0.42</td><td>2</td><td class="">ok</td><td>0.42</td><td>2</td><td>378</td><td>0.000</td></tr>
+<tr><td class=l>R_F_223815_o2</td><td class=l>예</td><td class="">ok</td><td>0.45</td><td>1</td><td class="">ok</td><td>0.44</td><td>1</td><td>378</td><td>-0.010</td></tr>
+<tr><td class=l>R_F_224323_o0</td><td class=l>예</td><td class="">ok</td><td>2.55</td><td>10</td><td class="">ok</td><td>1.30</td><td>14</td><td>1052</td><td>-1.250</td></tr>
+<tr><td class=l>R_F_224323_o1</td><td class=l>예</td><td class="">ok</td><td>5.03</td><td>9</td><td class="">ok</td><td>1.09</td><td>14</td><td>1052</td><td>-3.940</td></tr>
+<tr><td class=l>R_F_224323_o2</td><td class=l>예</td><td class="">ok</td><td>5.41</td><td>10</td><td class="">ok</td><td>1.07</td><td>13</td><td>1052</td><td>-4.340</td></tr>
+<tr><td class=l>R_O_131326_o0</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_O_131326_o1</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_O_131326_o2</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_O_154320_o0</td><td class=l>예</td><td class="bad">collapse</td><td>11.09</td><td>241</td><td class="bad">collapse</td><td>11.09</td><td>241</td><td>20</td><td>0.000</td></tr>
+<tr><td class=l>R_O_154320_o1</td><td class=l>예</td><td class="">ok</td><td>3.00</td><td>248</td><td class="">ok</td><td>3.00</td><td>248</td><td>20</td><td>0.000</td></tr>
+<tr><td class=l>R_O_154320_o2</td><td class=l>예</td><td class="">ok</td><td>2.71</td><td>245</td><td class="">ok</td><td>2.71</td><td>245</td><td>20</td><td>0.000</td></tr>
+<tr><td class=l>R_T_214138_S1_d0</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_214138_S1_dm025</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_214138_S1_dp025</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_214138_S2_d0</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_214138_S2_dm025</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_214138_S2_dp025</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_221052_S1_d0</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_221052_S1_dm025</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_221052_S1_dp025</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_221052_S2_d0</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_221052_S2_dm025</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_221052_S2_dp025</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_222747_S1_d0</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_222747_S1_dm025</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_222747_S1_dp025</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_222747_S2_d0</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_222747_S2_dm025</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_222747_S2_dp025</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_223815_S1_d0</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_223815_S1_dm025</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_223815_S1_dp025</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_223815_S2_d0</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_223815_S2_dm025</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_223815_S2_dp025</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_224323_S1_d0</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_224323_S1_dm025</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_224323_S1_dp025</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_224323_S2_d0</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_224323_S2_dm025</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+<tr><td class=l>R_T_224323_S2_dp025</td><td class=l colspan=9>문 안 열림 (사전 계산) → G = base 구성상</td></tr>
+</table>
+<p class=mut>만든 시각 2026-10-22 04:33:46 · git 0a90b63 · 계획 docs/g10_plan.md · 실행기 imu_learn/g10.py · 분석 imu_learn/g10_analyse.py · 검산 imu_learn/g10_check.py · 결과 runs/g10/ · 진행 runs/g10.log</p></body></html>
