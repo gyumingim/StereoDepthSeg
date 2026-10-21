@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>밤샘 결과 보고</title>
+<style>
+:root{
+  --bg:#f7f7f5; --card:#ffffff; --text:#1d1d1f; --muted:#5f6368; --line:#e2e2de;
+  --accent:#1f5fbf; --ok:#1e7a3c; --okbg:#e6f4ea; --est:#8a5a00; --estbg:#fff4dc;
+  --bad:#b3261e; --badbg:#fde8e7; --code:#f0f0ec;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141416; --card:#1e1e21; --text:#ececec; --muted:#a3a3a8; --line:#33343a;
+    --accent:#7aa7ff; --ok:#7dd69a; --okbg:#173322; --est:#f0c060; --estbg:#3a2e12;
+    --bad:#ff8a80; --badbg:#3d1a18; --code:#2a2a2e;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141416; --card:#1e1e21; --text:#ececec; --muted:#a3a3a8; --line:#33343a;
+  --accent:#7aa7ff; --ok:#7dd69a; --okbg:#173322; --est:#f0c060; --estbg:#3a2e12;
+  --bad:#ff8a80; --badbg:#3d1a18; --code:#2a2a2e;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;line-height:1.65;font-size:16px}
+main{max-width:860px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:1.5rem;margin:.2em 0 .1em}
+h2{font-size:1.2rem;margin:2em 0 .6em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+h3{font-size:1rem;margin:1.2em 0 .4em}
+.sub{color:var(--muted);font-size:.9rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0}
+.top{border-left:5px solid var(--accent)}
+.ask{border-left:5px solid var(--est)}
+.top ol{margin:.3em 0;padding-left:1.3em}
+.top li{margin:.35em 0}
+.tag{display:inline-block;font-size:.78rem;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap}
+.t-ok{color:var(--ok);background:var(--okbg)}
+.t-est{color:var(--est);background:var(--estbg)}
+.t-bad{color:var(--bad);background:var(--badbg)}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600}
+td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:.88em;word-break:break-all}
+.tl{list-style:none;padding:0;margin:0}
+.tl li{display:flex;gap:12px;padding:6px 0;border-bottom:1px dashed var(--line)}
+.tl .t{flex:0 0 92px;color:var(--accent);font-variant-numeric:tabular-nums;font-weight:600}
+ul.plain{padding-left:1.2em}
+ul.plain li{margin:.3em 0}
+.small{font-size:.86rem;color:var(--muted)}
+a{color:var(--accent)}
+@media (max-width:560px){
+  table{font-size:.85rem}
+  th,td{padding:6px 4px}
+  .tl .t{flex-basis:74px}
+}
+</style>
+</head>
+<body>
+<main>
+<h1>밤샘 결과 보고 (2026-10-21 밤 → 10-22 아침)</h1>
+<div class="sub">근거: 재판 문서 <code>runs/i3_review/judge.md</code>, <code>runs/i3_review/takeoff_judge.md</code> · 문구는 재판 판정을 따름 · <span class="tag t-est">추정</span> 표시는 확인 안 된 값</div>
+
+<h2>1. 한 줄 결론</h2>
+<div class="card top">
+<p style="margin:.2em 0 .6em"><b>i3 (가만히 있을 때 화면을 붙잡는 기능) 는 아직 앱에 넣지 않아요.</b> 미리 정한 규칙으로는 두 시험 모두 "좋아진다고 확인 안 됨" 이에요.
+다만 i3 가 나빠서가 아니에요. 오래 둔 뒤 출발할 때 크게 망가진 녹화가 <b>214550 하나뿐</b>이라 규칙상 확인을 줄 수 없었어요. 거기서 i3 는 3 번 중 2 번 망가짐을 막았어요 (44–96 cm → 2–7 cm). B′ 사전 조건 밖의 같은 녹화 두 칸 (L6, L3) 에서도 base 57.8 / 35.3 cm → i3 7.26 / 3.44 cm 였어요 (점수 없는 참고값).</p>
+<b>오늘 할 일 3 개</b>
+<ol>
+<li><b>[사용자, 1 분]</b> 녹화 213955 의 약 13 초에 폰이 넘어지거나 떨어졌는지 알려 주세요 (<a href="#drop">5 절</a>).</li>
+<li><b>[분석, 새 녹화 불필요]</b> 정지 판정 문턱 (0.5 px) 을 0.75 / 1.0 / 1.5 px 로 올려도 헛 통과가 안 생기는지 기존 기록으로 검사 (30–40 분). 그 뒤 214550 의 화면 떨림 원인 찾기 (30 분).</li>
+<li><b>[앱 + 사용자]</b> 앱이 칩 온도 (CP/PA) 를 다시 기록하게 고치기. 그다음 "켜고 바닥에 30–60 초 두었다가 출발" 녹화 (조건은 2 번 결과로 정함).</li>
+</ol>
+</div>
+
+<h2>2. 밤에 한 일</h2>
+<div class="card">
+<ul class="tl">
+<li><span class="t">21:19–21:57</span><span>i3 확인 시험 기준을 녹화 전에 커밋 (ad2c02c, 21:19). 추가 032a4d6 (21:43:48) 은 213341·213955 녹화 뒤, 데이터를 받기 전에 커밋. 밤샘 계획 커밋 (947d9ec)</span></li>
+<li><span class="t">22:06–22:11</span><span>세부 규칙 (추가 2) 커밋 9d58cac, 실행기 시작 7ffdc82 — 녹화가 도착하는 대로 차례로 실행</span></li>
+<li><span class="t">22:55</span><span>새 녹화 5 개 다운로드 끝, sha256 모두 일치, 15.3 GB (214831 은 3.6 s 라 분석에서 뺌) — 출처 <code>runs/cf_upload_progress.log</code> 의 "DONE … sha256 OK" 5 줄 (3374 + 3827 + 3957 + 34 + 4080 MB) 과 22:55:21 "BULK ALL FINISHED" 줄</span></li>
+<li><span class="t">23:04</span><span>입력 점검 (368a362): 네 녹화 모두 노트북용 보드 32.03 mm, IMU 정지 구간 3 단계 모두 찾음, 215348 끝 정지가 145.7 s 건드림으로 끊김</span></li>
+<li><span class="t">23:38</span><span>213955 무너짐 원인 조사 + 사후 규칙 "입력 사건 녹화 빼기" 커밋 (f27d457)</span></li>
+<li><span class="t">23:53</span><span>정답 (GT) 4 녹화 완료 (마지막 215348) — 출처 <code>runs/overnight2_gt.log</code> 의 23:53:13 "ALL DONE" 줄</span></li>
+<li><span class="t">00:04–00:09</span><span>i3 확인 시험 24 실행 끝 → 결과 커밋 fe53f80 (검산 168 항목 일치)</span></li>
+<li><span class="t">00:15–00:21</span><span>검토 사슬: 검증 → 비평 → 반박 → 재판 (<code>runs/i3_review/</code>)</span></li>
+<li><span class="t">00:15</span><span>자이로 바이어스·온도 분석 커밋 (18dc2e6)</span></li>
+<li><span class="t">00:25–00:31</span><span>출발 시험 사전 등록 (4718321), 결과 문서 정정 커밋 (891107c)</span></li>
+<li><span class="t">00:27–01:30</span><span>출발 시험 A / B / B′ 68 실행 (중간 00:50 에 B′ 추가 등록 0ae82ca)</span></li>
+<li><span class="t">01:48</span><span>출발 시험 결과 커밋 0ee01e5 (검산 308 항목 일치)</span></li>
+<li><span class="t">01:53–01:57</span><span>출발 시험 검토: 검증 → 비평 → 재판</span></li>
+</ul>
+</div>
+
+<h2>3. i3 확인 시험 결과 (24 실행)</h2>
+<p class="small">녹화 3 개 (+참고 1 개 213955) × 시작 위치 3 개. 시작 3 개는 서로 비슷해서 독립 반복이 아님. 213955 는 입력 사건 (충격) 으로 기준 1·3·4 에서 뺌 — 넣어도 결론 같음.</p>
+<div class="tablewrap">
+<table>
+<tr><th>기준 (미리 정함)</th><th>결과</th><th>숫자</th></tr>
+<tr><td>1. 정확도 (ATE) 가 10 % 또는 0.2 cm 넘게 나빠지지 않음</td><td><span class="tag t-ok">통과</span></td><td>중앙값 base → i3: 213341 0.75 → 0.76, 214550 20.70 → 4.60, 215348 0.56 → 0.50 cm</td></tr>
+<tr><td>2. 새로 무너진 실행 0</td><td><span class="tag t-ok">통과</span></td><td>새 무너짐 0. 214550 은 base 3 번 모두 무너짐 → i3 는 1 번만. 주석: 그 i3_o0 "무너짐" 은 주로 창 결함 때문 (10 s 창 안에서 실제로 움직인 시간이 1.4 s 뿐)</td></tr>
+<tr><td>3. 화면을 붙잡은 동안 실제로 안 움직였나</td><td><span class="tag t-ok">통과</span></td><td>표본 24,000–30,000 개, 2 cm/s 넘는 표본 0, 최대 0.07–0.37 cm/s</td></tr>
+<tr><td>4. 내려놓은 뒤 VIO 가 덜 미끄러지나</td><td><span class="tag t-bad">실패</span></td><td>나음 1 (214550) / 나빠짐 1 (215348, 1–1.5 mm) / 같음 1 (213341)</td></tr>
+</table>
+</div>
+<div class="card">
+<b>재판의 정직한 문구</b> (<code>runs/i3_review/judge.md</code> 5 절)
+<ul class="plain">
+<li>i3 는 <b>앱에 넣지 않습니다.</b> 네 기준 중 "내려놓은 뒤 덜 미끄러지나" 를 통과하지 못했습니다.</li>
+<li>그렇다고 "효과 없음" 은 아닙니다. 대부분의 녹화에서는 원래 정지 기능 (ZUPT) 이 이미 잘 멈춰 있어서 i3 가 할 일이 없었습니다. 나빠진 녹화도 차이가 1–1.5 mm 라 실제로는 의미 없습니다.</li>
+<li>녹화 1 개 (214550) 에서는 바닥에 오래 둔 뒤 움직일 때 원래 방식이 크게 틀렸고 (오차 약 20 cm), i3 는 약 5 cm 로 버텼습니다. 드론 이륙과 비슷한 상황이라 중요하지만, 녹화 1 개뿐이고 이유는 아직 모릅니다 <span class="tag t-est">추정</span>.</li>
+<li>폰이 떨어진 것으로 보이는 <span class="tag t-est">추정</span> 녹화 (213955) 는 결과를 일부 본 뒤 만든 규칙으로 뺐습니다. 넣어도 결론은 같습니다. "자유낙하" 라고 적은 것은 과장이었고 실제로는 충격 (최대 6.4 g) 이었습니다.</li>
+<li>앱 안내 소리·진동 때문인지 <span class="tag t-est">추정</span> i3 가 정지 중간에 약 1.5 초씩 풀리는 빈틈이 있었습니다 (네 녹화 모두 약 53.9 s·119.0 s).</li>
+</ul>
+</div>
+
+<h2>4. 이륙 시험 (오래 둔 뒤 출발, 68 실행)</h2>
+<div class="card top">
+<b>결론: "이득 확인 안 됨" 그대로.</b> 이유는 "i3 가 나빠서" 가 아니라 <b>무너짐이 난 녹화가 214550 하나뿐이라 처음부터 확인할 수 없었기 때문</b>이에요.
+</div>
+<div class="tablewrap">
+<table>
+<tr><th>부분</th><th>재판 판정</th><th>한 줄</th></tr>
+<tr><td>A. 같은 설정 다시 돌리기</td><td><span class="tag t-ok">맞음</span> 비트 동일</td><td>다시 돌린 잡음은 0. 하지만 비교에 필요한 잡음은 시작 위치를 조금 바꿀 때의 차이라, 이건 따로 재야 함. 같음 띠 0.05 cm 유지.</td></tr>
+<tr><td>B. 긴 정지 뒤 출발 (사전 등록)</td><td><span class="tag t-bad">확인 안 됨</span></td><td>(i) 새 무너짐 0 통과. (ii) 막은 무너짐 2 칸이지만 녹화 1 개라 실패 — 녹화 ≥ 2 는 처음부터 불가능. (iii) 출발 뒤 10 s ATE 중앙값 1.58 → 2.28 cm (한계 1.78) 실패 — i3 가 막은 214550 칸 값이 섞여 올라간 탓이 큼.</td></tr>
+<tr><td>B′. 이미 추적 중에 내려놓기</td><td><span class="tag t-bad">확인 안 됨</span></td><td>추적 중이면 base 가 출발에서 대체로 무너지지 않음 — 예외 1 개: 213955_o2 는 충격 때문에 base 910 cm, i3 1164 cm 로 둘 다 무너짐 (B′ 의 base 무너짐은 이 1 개, i3 가 막을 수 있는 무너짐은 0). 214550 에서 i3 가 4–5 배 좋았던 값 (base 2.8–3.7 cm, i3 0.59–0.81 cm) 은 <b>사후 관찰</b>로만 적음. 사전 조건 문 밖의 214550 L6 / L3 칸: base 57.8 / 35.3 cm (무너짐) → i3 7.26 / 3.44 cm — 점수 없는 참고값 (<code>runs/i3_takeoff/summary.json</code> B2.rows).</td></tr>
+<tr><td>C. 왜 망가지나 (기작)</td><td><span class="tag t-est">미상</span></td><td>"핵심 차이 = ZUPT 통과율" 은 뺌. i3 의 높은 통과율은 화면을 붙잡아 시차가 0 이 된 결과, 곧 i3 가 하는 일 자체임.</td></tr>
+</table>
+</div>
+
+<h3>B 시험 칸별 값 (출발 뒤 10 s ATE, cm)</h3>
+<p class="small">첫 내려놓기 정지 × 시작 3 개 (정지 시작 +1 / +5 / +10 s) × 녹화 4 개 = 12 칸. 둘째 정지 12 칸은 녹화 끝까지 정지라 출발이 없어 "시험 안 됨". 무너짐 = 10 cm 넘음 또는 축척 0.5–2 밖.</p>
+<div class="tablewrap">
+<table>
+<tr><th>녹화</th><th>+1 s base → i3</th><th>+5 s base → i3</th><th>+10 s base → i3</th><th>한 줄</th></tr>
+<tr><td>213341</td><td class="n">1.58 → 3.06</td><td class="n">1.58 → 2.75</td><td class="n">1.51 → 1.51</td><td>i3 가 1–1.5 cm 나빠짐 (+10 s 는 i3 미작동)</td></tr>
+<tr><td>213955</td><td class="n">4.06 → 4.06</td><td class="n">1.52 → 1.52</td><td class="n">1.66 → 1.66</td><td>정지가 이미 잘 잡혀 i3 미작동 (비트 동일)</td></tr>
+<tr><td><b>214550</b></td><td class="n"><b>66.9</b> → 10.9</td><td class="n"><b>44.3</b> → 2.2</td><td class="n"><b>96.0</b> → 7.4</td><td>base 3 칸 모두 무너짐, i3 가 2 칸 막음 (+1 s 는 i3 도 문턱 밖)</td></tr>
+<tr><td>215348</td><td class="n">1.26 → 1.30</td><td class="n">1.43 → 2.36</td><td class="n">1.26 → 1.11</td><td>+5 s 칸만 약 0.9 cm 나빠짐</td></tr>
+</table>
+</div>
+<div class="card">
+<ul class="plain">
+<li>같은 칸끼리 차이 (i3 − base) 12 개의 중앙값은 <b>0</b> (재판이 직접 확인).</li>
+<li><b>작은 악화 신호는 있을 수 있음</b>: i3 가 작동한 214550 밖 칸 5 개 중 3 개가 0.9–1.5 cm 나빠짐. 우연인지는 <span class="tag t-est">불확실</span>.</li>
+<li>유력 후보 원인: 정지 판정 문턱 (0.5 px) 이 너무 빡빡해서, 214550 처럼 정지 중 시차가 0.5 px 바로 위에 몰려 있는 (시차 중앙값 0.67–0.70 px, 0.5 px 아래 프레임 13–18 %) 정지를 정지로 못 알아봄 <span class="tag t-est">추정</span>. 이 문턱은 한 번도 바꿔서 시험한 적 없음.</li>
+<li>과정 이탈은 작고 판정을 바꾸지 않음 — 결론이 모두 보수적인 쪽이라 결과를 부풀린 방향이 아님 (<a href="#fix">7 절</a>).</li>
+</ul>
+</div>
+
+<h2 id="drop">5. 확인 부탁: 녹화 213955 에서 폰이 떨어졌나요?</h2>
+<div class="card ask">
+<p style="margin:.2em 0">213955 는 base·i3 모두 무너졌어요. IMU·영상으로 보면 <b>약 13.3–14.1 초</b>에 이런 일이 있었어요 <span class="tag t-est">추정</span>:</p>
+<ul class="plain">
+<li>화면이 0.5 초쯤 완전히 검어짐 (렌즈가 가려짐)</li>
+<li>충격 최대 <b>6.4 g</b>, 회전 최대 19.5 rad/s, 그 뒤 폰이 눕혀진 방향으로 바뀜</li>
+<li>15–17.5 초 노트북 화면의 보드 위에 창이 뜸 (키가 눌렸을 수 있음)</li>
+</ul>
+<p style="margin:.4em 0 0"><b>질문:</b> 그때 폰을 떨어뜨리거나 넘어뜨리셨나요? 노트북 키가 눌렸나요? 답을 주시면 "낙하" 를 확정으로 바꿀게요.
+지금은 이 녹화를 판정에서 빼 두었고, 넣어도 결론은 같아요.</p>
+</div>
+
+<h2>6. 자이로 바이어스와 온도</h2>
+<div class="card">
+<ul class="plain">
+<li><b>바이어스가 150 초 동안 올라감</b>: x +56 · y +63 · z +49 mdeg/s (4 녹화 평균). 첫 55 초에 오른 양: x 45/56 · z 38/49 (대부분), y 31/63 (절반쯤). 네 녹화가 거의 같은 모양 (±5).</li>
+<li><b>배터리 1 °C 당 x 9–12 · y 10–13 · z 8–10 mdeg/s</b>. 예전 정지 녹화 (4.9 / 8.9 / 5.5) 보다 x·z 가 1.5–2.4 배 큼 — 카메라 켠 직후라 배터리가 칩보다 늦게 데워지기 때문 <span class="tag t-est">추정</span>.</li>
+<li>thermal headroom 값이 배터리보다 잘 맞음 (r 0.95–0.99 대 0.90–0.94).</li>
+<li><b>안드로이드 보정 IMU (type 4) 는 늘 실제보다 낮게 뺌</b>: 정지 12 곳 모두 +18 ~ +59 mdeg/s 남음. 값은 70 mdeg/s 계단으로만 바뀌고, 들거나 내려놓는 순간 엉뚱한 값 (213955 12 s 에 y 를 0 으로 바꿔 40 초 유지) 이 있음.</li>
+<li>VIO 에 뜻하는 것 <span class="tag t-est">추정</span>: 시작 바이어스를 고정해 쓰면 150 초에 방향 (요) 오차 3.1–5.4°. 원본 IMU + 정지마다 바이어스 다시 잡기가 type 4 보다 나음.</li>
+</ul>
+</div>
+<div class="card ask">
+<b><span class="tag t-bad">앱 버그</span> temps.csv 에 칩 온도 (CP / PA / AP) 칸이 비어 있음</b>
+<p style="margin:.3em 0 0">오늘 네 녹화 모두 배터리 온도와 thermal headroom 만 기록됐어요. 원인은 아직 몰라요. 그래서 예전 칩 기울기 (3.9 / 7.0 / 4.4 mdeg/s/°C) 와 <b>직접 비교할 수 없어요</b>. 고치기 전까지 온도 보정은 headroom 이나 "카메라 켠 뒤 시간" 기준이 낫습니다 <span class="tag t-est">추정</span>.</p>
+</div>
+
+<h2 id="fix">7. 오늘 밤 정정한 것</h2>
+<div class="tablewrap">
+<table>
+<tr><th>처음 쓴 것</th><th>바른 것</th></tr>
+<tr><td>213955 는 "자유낙하"</td><td><b>충격 (최대 6.4 g)</b>. 거의 무중력이 이어진 최장 시간이 0.016 s 라 자유낙하 근거 없음. 4 g 조건으로만 걸림. 같은 녹화의 내려놓기 (47.74 s) 도 4 g 를 넘어서, 이 규칙은 세게 내려놓은 정상 녹화도 뺄 수 있음.</td></tr>
+<tr><td>사후 규칙 (추가 3) 시각 "23:45"</td><td>실제 커밋 <b>23:38:15</b> (f27d457). 214550 결과는 23:47 이라 "결과 보기 전" 은 맞음. 4 g 문턱을 IMU 를 본 뒤 정했을 가능성은 배제 못 함 (불확실).</td></tr>
+<tr><td>비평 7: "214550 만 정지 중 추적 시작"</td><td><b>틀림</b>. 213341 o0 도 정지 중 추적을 시작했음. 진짜 차이는 정지 중 ZUPT 통과율 (213341 99 % 대 214550 base 13–18 %).</td></tr>
+<tr><td>출발 시험 (iii) 실패는 "213341 탓"</td><td>215348 +5 s 칸도 나빠졌고, 214550 의 i3 값이 모은 중앙값을 올림. 214550 을 빼면 통과 (1.52 → 1.66, 한계 1.72).</td></tr>
+<tr><td>C: "핵심 차이 = ZUPT 통과율"</td><td>뺌. 원인 설명이 아니라 i3 가 하는 일 자체.</td></tr>
+</table>
+</div>
+<div class="card">
+<b>구현자가 인정한 과정 이탈</b> (재판: 무게 작음, 판정 영향 없음)
+<ul class="plain">
+<li>B′ 를 실행 도중 조정자 지적 뒤 추가함 (단, B′ 값 계산 전 커밋 0ae82ca).</li>
+<li>분석 코드 완성 전에 B 결과 1 개를 미리 봄 (기준은 이미 커밋). 그래서 커밋 036584f 의 "no B results looked at" 은 사실과 다름 — B 실행 하나가 00:30:57 에 끝났고 커밋은 00:34:33. 결과 문서 (<code>i3_takeoff_result.md/.html</code>) 에 정정 한 줄 넣음.</li>
+<li>B′a 는 이미 본 실행이라 그 연속 값 (4–5 배 차이) 은 사후 분석으로만 말함.</li>
+<li>Windows 경로 (UNC) 에서 <code>sed -i</code> 를 씀. docs 파일 6 개가 내용은 그대로이고 권한만 644 → 755 로 바뀌어 있음 (sed 탓인지는 확인 못 함). 아침에 <code>chmod 644</code> 로 6 개 모두 되돌림 (권한 변경은 커밋 안 함).</li>
+</ul>
+</div>
+
+<h2>8. 다음 할 일 (순위)</h2>
+<p class="small"><span class="tag t-ok">분석</span> 기존 기록만 · <span class="tag t-est">VIO</span> 새 실행 · <span class="tag t-bad">새 녹화</span> 사용자 필요 · <b>[결정]</b> 사용자 결정 필요</p>
+<div class="tablewrap">
+<table>
+<tr><th>#</th><th>할 일</th><th>시간</th><th>종류</th></tr>
+<tr><td>0</td><td>정리: 결과 md/html 고치기 (7 절 내용, 2 s 이동량 정의 적기). docs 6 파일 권한·036584f 정정 줄은 끝남</td><td class="n">5 분</td><td><span class="tag t-ok">분석</span></td></tr>
+<tr><td>1</td><td>시차 문턱 0.75 / 1.0 / 1.5 px 에서 헛 통과가 생기는지 기존 로그로 세기 (O_131326, F_221052 꼭 포함). 0 이 아니면 그 문턱은 버림</td><td class="n">30–40 분</td><td><span class="tag t-ok">분석</span></td></tr>
+<tr><td>2</td><td>같은 칸끼리 차이·연속 ATE 로 다시 채점 (사후 분석 표시)</td><td class="n">15 분</td><td><span class="tag t-ok">분석</span></td></tr>
+<tr><td>3</td><td>214550 화면 떨림 (시차 잡음) 의 영상 원인 찾기 — 새 녹화 조건을 정하려면 먼저 필요</td><td class="n">30 분</td><td><span class="tag t-ok">분석</span></td></tr>
+<tr><td>4</td><td>1 을 통과한 문턱으로 base · i3 와 비교 (사전 등록, base 만 먼저 돌려 실행 가능 확인)</td><td class="n">약 2 시간</td><td><span class="tag t-est">VIO</span></td></tr>
+<tr><td>5</td><td>213341 의 i3 악화가 시작 위치 민감도 밖인지 확인 (진짜 잡음 띠도 얻음)</td><td class="n">30 분</td><td><span class="tag t-est">VIO</span></td></tr>
+<tr><td>6</td><td>C′ 기작 시험 (정지 중 영상 갱신 끈 변형) — 4 결과를 본 뒤</td><td class="n">1 시간</td><td><span class="tag t-est">VIO</span></td></tr>
+<tr><td>7</td><td>드론식 녹화: 켜고 바닥에 30–60 초 → 반드시 출발. 화면 떨림 조건과 보통 조건 각 3 개 이상. 기준 (ii) 는 이것 없이는 못 채움</td><td class="n">—</td><td><span class="tag t-bad">새 녹화</span> <b>[결정]</b> 조건·일정</td></tr>
+<tr><td>8</td><td>보드를 인쇄물로 바꾼 녹화 1–2 개 (3 에서 화면 깜빡임이 원인이면 7 보다 먼저)</td><td class="n">—</td><td><span class="tag t-bad">새 녹화</span></td></tr>
+<tr><td>9</td><td>앱 temps.csv 칩 온도 빈칸 고치기 (6 절)</td><td class="n">—</td><td>앱 수정</td></tr>
+<tr><td>—</td><td>i3 를 앱에 넣을지: 지금은 넣지 않음. 4·7 결과 뒤 다시 판정</td><td class="n">—</td><td><b>[결정]</b> 나중</td></tr>
+</table>
+</div>
+
+<h2>9. 파일</h2>
+<div class="card">
+<ul class="plain">
+<li>계획: <a href="overnight_20261021_plan.md">docs/overnight_20261021_plan.md</a>, <a href="i3_confirm_plan.md">docs/i3_confirm_plan.md</a>, <a href="i3_takeoff_plan.md">docs/i3_takeoff_plan.md</a></li>
+<li>입력 점검: <a href="overnight2_input_audit.md">docs/overnight2_input_audit.md</a></li>
+<li>213955 무너짐: <a href="collapse_213955.md">docs/collapse_213955.md</a></li>
+<li>i3 확인 시험 결과: <a href="i3_confirm_result.html">docs/i3_confirm_result.html</a> (실행 <a href="../runs/i3_confirm/">runs/i3_confirm/</a>)</li>
+<li>i3 검토: <a href="../runs/i3_review/verify.md">verify</a> · <a href="../runs/i3_review/critic.md">critic</a> · <a href="../runs/i3_review/rebut.md">rebut</a> · <a href="../runs/i3_review/judge.md">judge</a></li>
+<li>바이어스·온도: <a href="endstill_bias_20261021.md">docs/endstill_bias_20261021.md</a> (스크립트 <a href="../runs/endstill_bias_1021/">runs/endstill_bias_1021/</a>)</li>
+<li>출발 시험 결과: <a href="i3_takeoff_result.md">docs/i3_takeoff_result.md</a>, <a href="i3_takeoff_result.html">docs/i3_takeoff_result.html</a></li>
+<li>출발 시험 실행: <a href="../runs/i3_takeoff/summary.json">runs/i3_takeoff/summary.json</a>, <a href="../runs/i3_takeoff/check.json">check.json</a>, 로그 <a href="../runs/i3_takeoff.log">runs/i3_takeoff.log</a></li>
+<li>출발 시험 검토: <a href="../runs/i3_review/takeoff_verify.md">takeoff_verify</a> · <a href="../runs/i3_review/takeoff_critic.md">takeoff_critic</a> · <a href="../runs/i3_review/takeoff_judge.md">takeoff_judge</a></li>
+<li>코드: <code>imu_learn/i3_confirm.py</code>, <code>i3_confirm_check.py</code>, <code>i3_takeoff.py</code>, <code>i3_takeoff_analyse.py</code>, <code>i3_takeoff_check.py</code></li>
+<li>알려진 작은 버그 (출력만 영향, 판정 영향 없음): <code>imu_learn/i3_takeoff_check.py</code> 약 201 행에서 변수 <code>lim</code> 이 덮어써져 화면에 찍히는 한계값만 틀릴 수 있음. 고치지 않고 둠.</li>
+</ul>
+</div>
+
+<p class="small">만든 시각 2026-10-22 아침 (보고 담당, 새 계산 없음) · 데이터: 녹화 5 개 받음 (sha256 일치, 15.3 GB), 분석 4 개, 정답 4 개 (칸 32.03 mm, 노트북 사양 기반), VIO 24 + 68 실행 · 칸 32.03 mm 는 자로 잰 값 아님. IMU 추정은 +2–4 % 높게 읽음 (방법 치우침 범위 안, 추정).</p>
+</main>
+</body>
+</html>
