@@ -19,6 +19,11 @@ Variants (same backend, only one thing changes at a time — the 2026 'same-back
                           template config/mono (15 px, 1.0 m/s^2) + init_dyn_use true + 15 px * W/640 (for comparison).
   --start-off S           first VIO frame S seconds later (IMU feed unchanged) = another initialization; --max-secs
                           counts from the first VIO frame
+  --cfg-over k=v,...      extra OpenVINS config overrides (key must exist in the template; e.g. zupt_chi2_multipler=1)
+  --still-hold W:G:A      external IMU-only stillness detector (2026-10-21 set-down mitigation): if over the trailing
+                          W s of IMU (up to the frame time) max |gyro| < G rad/s and std |acc| < A m/s^2, the frame is
+                          replaced by the frame latched when the still began (identical image -> disparity 0 -> OpenVINS
+                          ZUPT passes). Releases on the first frame whose window fails. Off by default (output unchanged).
   --gt auto|spl|base|rs   scoring GT: auto = imu_gt_spl if present else imu_gt (both camera-only); rs = imu_gt_rs
                           (rolling shutter undone with the gyro -> partly self-scoring, comparison only)
 Time: frames are sent on the IMU clock (t_mid - dt from align.json) and OpenVINS timeshift_cam_imu = 0, so the offset is
@@ -146,7 +151,7 @@ def write_config(d, K, size, fps, R_ci, p_CinI, timeshift, noise, npts, clones, 
     for line in (d / "estimator_config.yaml").read_text().splitlines():
         body = line.split("#")[0]
         k = body.split(":")[0].strip()
-        if ":" in body and (k.startswith("init_") or k in ("max_clones", "try_zupt", "zupt_max_disparity")):
+        if ":" in body and (k.startswith("init_") or k.startswith("zupt_") or k in ("max_clones", "try_zupt")):
             used[k] = body.split(":", 1)[1].strip()
     return used
 
@@ -280,7 +285,21 @@ def run(a):
         init_over["init_window_time"] = f"{float(a.init_window)}"
     if getattr(a, "init_disp", None):
         init_over["init_max_disparity"] = f"{float(a.init_disp):.2f}"
+    for kv in (getattr(a, "cfg_over", "") or "").split(","):    # 2026-10-21 set-down mitigation (default: none)
+        if kv.strip():
+            k_, v_ = kv.split("=", 1)
+            init_over[k_.strip()] = v_.strip()
     cfg_used = write_config(tmp, Knew, (W, H), a.fps, R_ci, p_CinI, 0.0, noise, a.npts, a.clones, init_cfg, init_over)
+    hold_ok = None
+    if getattr(a, "still_hold", None):                        # causal IMU stillness flag per IMU sample
+        hw, hg, ha = (float(v) for v in a.still_hold.split(":"))
+        nwin = max(2, int(round(hw * 1e9 / float(np.median(np.diff(t_imu))))))
+        sw = np.lib.stride_tricks.sliding_window_view
+        gmax, astd = np.full(len(t_imu), np.inf), np.full(len(t_imu), np.inf)
+        gmax[nwin - 1:] = sw(np.linalg.norm(g_i, axis=1), nwin).max(1)
+        astd[nwin - 1:] = sw(np.linalg.norm(a_i, axis=1), nwin).std(1)
+        hold_ok = (gmax < hg) & (astd < ha)
+    held, hold_log, n_held = None, [], 0
     print(f"init: {init_cfg} {cfg_used}", file=sys.stderr)
     p = subprocess.Popen([str(BRIDGE), str(tmp / "estimator_config.yaml"), "--stdio", "--max-speed", "8",
                           "--lost-frames", "1000000", "--startup-lost-frames", "1000000"],
@@ -323,6 +342,17 @@ def run(a):
                 continue
             _, f = cap.retrieve()
             g = cv2.remap(cv2.cvtColor(f, cv2.COLOR_BGR2GRAY), m1, m2, cv2.INTER_LINEAR)
+            if hold_ok is not None:                              # only IMU samples up to this frame time (causal)
+                jh = int(np.searchsorted(t_imu, tci, side="right")) - 1
+                if jh >= 0 and hold_ok[jh]:
+                    if held is None:
+                        held = g
+                        hold_log.append([int(tci), None])
+                    g = held
+                    n_held += 1
+                elif held is not None:
+                    held = None
+                    hold_log[-1][1] = int(tci)
             body = struct.pack("<qIIB3x", int(tci), W, H, 1) + np.ascontiguousarray(g).tobytes()
             p.stdin.write(HDR.pack(MAGIC, 2, len(body)) + body)
             n_fed += 1
@@ -341,6 +371,10 @@ def run(a):
     wall = time.time() - t_wall
     res = evaluate(rec, a, poses, n_fed, drop, dt_ns, wall, noise, Knew, frames)
     res.update(init_cfg=init_cfg, config_used=cfg_used, start_off=start_off, imu_lead_s=imu_lead, **code_version())
+    if getattr(a, "cfg_over", None):
+        res["cfg_over"] = a.cfg_over
+    if hold_ok is not None:
+        res.update(still_hold=a.still_hold, frames_held=n_held, hold_segments_imu_ns=hold_log)
     res["lens_file"] = str(lens_path(rec, meta).resolve().relative_to(SCAN3D))
     res["lens_blob"] = subprocess.run(["git", "-C", str(SCAN3D), "hash-object", res["lens_file"]],
                                       capture_output=True, text=True).stdout.strip()
@@ -461,6 +495,8 @@ def main():
     ap.add_argument("--dropout", default="")
     ap.add_argument("--max-secs", type=float, default=0)
     ap.add_argument("--imu-raw", action="store_true", help="uncalibrated IMU (types 16/35); new recordings only")
+    ap.add_argument("--cfg-over", default="", help="k=v,... OpenVINS config overrides (keys must be in the template)")
+    ap.add_argument("--still-hold", default=None, help="W:G:A IMU-only stillness -> hold the latched frame (off)")
     ap.add_argument("--gt", default="auto",
                     help="auto (imu_gt_spl if present else imu_gt, camera-only) | spl | base | rs | <dir name>")
     ap.add_argument("--out", default=None)
