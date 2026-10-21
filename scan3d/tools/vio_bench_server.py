@@ -552,7 +552,8 @@ temp();setInterval(temp,5000);
 let stopNote='';
 function pull(){fetch('/api/pull').then(r=>r.json()).then(p=>{const b=document.getElementById('pullbox');
  const rc=p.rec||{};if(rc.active&&!t0&&rc.start)t0=rc.start*1000;                       // page reloaded mid-recording
- if(t0&&rc.active===false&&rc.reason&&!rc.reason.startsWith('user')){t0=null;stopNote='폰이 스스로 멈춤 ('+(rc.reason.startsWith('overheat')?'과열':rc.reason)+') — 찍힌 데까지 자동으로 가져옴';}
+ if(t0&&rc.active===false&&rc.reason){t0=null;const r=rc.reason;   // any stop the phone reports (overheat, guide end, board-page Ctrl)
+  stopNote=r.startsWith('overheat')?'폰이 과열로 멈춤 — 폰에 저장됨':r.includes('guide')?'가이드 끝 — 자동으로 멈춤 (폰에 저장)':'멈춤 — 폰에 저장됨';}
  if(stopNote&&!t0){const s=document.getElementById('state');if(!busy){s.textContent=stopNote;s.style.color='#d97706';}}
  if(!p.name){b.style.display='none';return;}b.style.display='';const pct=p.total?Math.min(100,p.done/p.total*100):0;
  document.getElementById('pullbar').style.width=pct.toFixed(1)+'%';
