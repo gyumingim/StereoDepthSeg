@@ -55,3 +55,12 @@
 
 ## 산출
 runs/z2_isolate/<이름>.{json,poses.jsonl.gz,stderr.log.gz,err}, summary.json, sched.log. 보고 docs/z2_isolate.html (+ 스스로 점검).
+
+## 사후 (실행 중 기록, 판정 규칙은 그대로)
+- 15:2x: 1 단계가 도는 중에 z2_isolate.py 의 **분석 부분만** 고침 (judge·짝별 최악을 짝 이름으로 맞춤, 커밋 321dd84). 실행 경로(job/cmd)는 그대로.
+  확인: 결과 JSON 65 개 모두 z2_dirty=False, runner blob 6a6beef (blob 은 실행이 **끝날 때** 해시함 → 처음 몇 실행은 570133a 코드로 돌았지만
+  job·cmd 부분은 두 버전이 글자까지 같음). 벤치·c5_run·브리지·yaml blob 은 같음 (분석의 버전 수 = 1).
+- 시간: 1 단계 + 결정성 = 15:12–16:59 (약 107 분, 예상 100 분). 2 단계 16:59 시작 (39 실행), 끝 예상 약 17:40 → 전체 약 2.5 h (계획 2 h 초과).
+- 17:00 메인 세션이 2 단계 동시 실행 5 개 + OpenVINS 스레드 2 로 줄이기를 허락함 → **안 씀**: 스케줄러를 다시 띄우면 돌던 3 실행이 중복되고,
+  스레드 수(num_opencv_threads 4) 를 바꾸면 복사해 쓰는 base·Z2 와 설정이 달라짐.
+- 끝: 2 단계 17:55 끝 (전체 약 2.7 h). 빠진 실행 0, 코드 버전 1, 스스로 점검 74 칸 불일치 0. 결과 docs/z2_isolate.html.
