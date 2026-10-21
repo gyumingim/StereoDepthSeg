@@ -110,13 +110,15 @@ def init_values(init_cfg, K, W):
             "init_dyn_use": "true" if ip["init_dyn_use"] else "false"}
 
 
-def write_config(d, K, size, fps, R_ci, p_CinI, timeshift, noise, npts, clones, init_cfg="strict"):
+def write_config(d, K, size, fps, R_ci, p_CinI, timeshift, noise, npts, clones, init_cfg="strict", init_over=None):
     W, H = size
     txt = TEMPLATE.read_text()
     rep = {"track_frequency:": f"track_frequency: {float(fps)}", "num_pts:": f"num_pts: {int(npts)}",
            "max_clones:": f"max_clones: {int(clones)}",
            "verbosity:": 'verbosity: "WARNING"', "record_timing_information:": "record_timing_information: false"}
-    rep.update({k + ":": f"{k}: {v}" for k, v in init_values(init_cfg, K, W).items()})
+    iv = init_values(init_cfg, K, W)
+    iv.update(init_over or {})                                   # --init-window / --init-disp (2026-10-21 init window test)
+    rep.update({k + ":": f"{k}: {v}" for k, v in iv.items()})
     missing = [k for k in rep if not any(line.strip().startswith(k) for line in txt.splitlines())]
     if missing:
         sys.exit(f"template {TEMPLATE} lacks keys {missing}")
@@ -273,7 +275,12 @@ def run(a):
     if init_cfg is None:                                     # callers built before 2026-10-20 (collapse_run, ablation)
         init_cfg = "strict"
         print("init_cfg not given -> strict (bench default since 2026-10-20; old runs used 'loose')", file=sys.stderr)
-    cfg_used = write_config(tmp, Knew, (W, H), a.fps, R_ci, p_CinI, 0.0, noise, a.npts, a.clones, init_cfg)
+    init_over = {}
+    if getattr(a, "init_window", None):
+        init_over["init_window_time"] = f"{float(a.init_window)}"
+    if getattr(a, "init_disp", None):
+        init_over["init_max_disparity"] = f"{float(a.init_disp):.2f}"
+    cfg_used = write_config(tmp, Knew, (W, H), a.fps, R_ci, p_CinI, 0.0, noise, a.npts, a.clones, init_cfg, init_over)
     print(f"init: {init_cfg} {cfg_used}", file=sys.stderr)
     p = subprocess.Popen([str(BRIDGE), str(tmp / "estimator_config.yaml"), "--stdio", "--max-speed", "8",
                           "--lost-frames", "1000000", "--startup-lost-frames", "1000000"],
@@ -448,6 +455,8 @@ def main():
     ap.add_argument("--start-off", type=float, default=0.0, help="first VIO frame this many s later (other init)")
     ap.add_argument("--imu-lead", type=float, default=2.0,
                     help="IMU fed from this many s before the first frame (C5 retest 2026-10-21 uses 0)")
+    ap.add_argument("--init-window", type=float, default=None, help="override init_window_time s (default: from --init-cfg)")
+    ap.add_argument("--init-disp", type=float, default=None, help="override init_max_disparity px (default: from --init-cfg)")
     ap.add_argument("--decode-threads", type=int, default=0, help="video decode threads (0 = OpenCV default)")
     ap.add_argument("--dropout", default="")
     ap.add_argument("--max-secs", type=float, default=0)
