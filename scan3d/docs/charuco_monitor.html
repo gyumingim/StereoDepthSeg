@@ -152,6 +152,27 @@ document.getElementById('rulerOn').addEventListener('change', drawRuler);
 window.addEventListener('resize', drawRuler);
 document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', drawRuler));
 document.getElementById('pitch').addEventListener('input', drawRuler);
+// Ctrl (pressed alone) on the board screen = stop the phone recording (recording server 127.0.0.1:8793, keeps the file on the phone)
+const REC = 'http://127.0.0.1:8793';
+function toast(msg, color) {
+  let t = document.getElementById('toast');
+  if (!t) { t = document.createElement('div'); t.id = 'toast'; document.body.appendChild(t);
+    t.style.cssText = 'position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:9;padding:24px 40px;border-radius:14px;font:bold 40px system-ui;color:#fff;box-shadow:0 4px 30px rgba(0,0,0,.4)'; }
+  t.textContent = msg; t.style.background = color; t.style.display = 'block';
+  clearTimeout(t._h); t._h = setTimeout(() => { t.style.display = 'none'; }, 4000);
+}
+let ctrlAlone = false;
+document.addEventListener('keydown', e => { ctrlAlone = e.key === 'Control' && !e.repeat ? true : (e.key === 'Control' ? ctrlAlone : false); });
+document.addEventListener('keyup', e => {
+  if (e.key !== 'Control' || !ctrlAlone) return;
+  ctrlAlone = false;
+  toast('녹화 끄는 중…', '#b45309');
+  fetch(REC + '/api/hs_stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"pull":false}' })
+    .then(() => new Promise(r => setTimeout(r, 5000)))
+    .then(() => fetch(REC + '/api/pull')).then(r => r.json())
+    .then(p => { const a = p.rec && p.rec.active; toast(a ? '⚠ 아직 녹화 중 — 다시 Ctrl' : '■ 녹화 꺼짐 (폰에 저장)', a ? '#b91c1c' : '#15803d'); })
+    .catch(() => toast('⚠ 녹화 서버 연결 안 됨 (127.0.0.1:8793)', '#b91c1c'));
+});
 window.addEventListener('resize', layout);
 matchMedia('(resolution: 1dppx)').addEventListener?.('change', layout);
 layout(); measured();
