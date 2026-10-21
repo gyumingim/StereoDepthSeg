@@ -4,7 +4,7 @@ table{border-collapse:collapse;font-size:.88em;margin:.6em 0;display:block;overf
 padding:3px 7px;text-align:right;white-space:nowrap}th{background:#f2f4f6}td.l,th.l{text-align:left}.ok{color:#11702f;font-weight:600}
 .bad{color:#b3261e;font-weight:600}.box{background:#f5f8fb;border-left:4px solid #3b6ea8;padding:.6em 1em}.small{color:#555;font-size:.9em}
 @media (prefers-color-scheme:dark){body{background:#16191d;color:#e3e6ea}th{background:#262b31}td,th{border-color:#3a4048}
-.box{background:#1f252c}.small{color:#aab}.ok{color:#6fd18f}.bad{color:#ff8a80}}</style></head><body>
+.box{background:#1f252c}.small{color:#aab}.ok{color:#6fd18f}.bad{color:#ff8a80}}</style></head><body><div style="border:2px solid #e5484d;border-radius:8px;padding:10px 12px;margin:8px 0"><b>검증 반영 (docs/gt_speed_noise_verify.md)</b>: 결론 (GT 잡음, 움직임 아님) 은 맞음. 정정 ① IMU 근거: 0.2 s 창 Δv ≤ 0.43 cm/s 이므로 20–30 ms 안의 계단은 실제 움직임이 아님. 다만 1 s 쯤 걸리는 느린 밀림 (≤ 약 1.6 cm/s) 은 IMU 로 배제할 수 없음. ② GT 계단은 3–4 mm 가 아니라 1.5–4 mm, 코너 수가 그대로여도 생김. ③ "확실한 정지 0/9469" 는 녹화 4 개의 시작 정지뿐 (코너 중앙 12–25), 코너가 적은 붙잡은 구간 (중앙 6) 과 직접 비교는 불확실. ④ 코너 ≥12 조건은 결과를 보고 고른 값 → 다음 시험 전에 사전 등록하고 새 녹화로 확인해야 함.</div>
 <h1>224323 끝 정지의 "GT 2 cm/s 넘음" — 잡음인가, 진짜 움직임인가</h1>
 <p class=small>2026-10-21 · 분석만 (VIO 실행 없음) · 스크립트 imu_learn/gtnoise_still.py, imu_learn/gtnoise_held.py · 결과 runs/gtnoise/gtnoise_still.json, gtnoise_held.json ·
 시각 = 녹화의 첫 IMU 표본부터 잰 초 (docs/setdown_failure.html 과 같은 기준)</p>

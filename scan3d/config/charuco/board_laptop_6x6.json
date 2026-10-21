@@ -3,9 +3,9 @@
  "squares_x": 9,
  "squares_y": 5,
  "marker_ratio": 0.5882352941176471,
- "square_mm": 42.72,
+ "square_mm": 42.86,
  "square_estimated": true,
- "square_mm_source": "laptop panel spec 2026-10-21: Lenovo IdeaPad Slim 3 14AHP10, 14.0in 1920x1200 -> width 301.5 mm, pixel 0.1570 mm x 272 px = 42.72 mm (spec-based estimate, +-1-2%; not measured)",
+ "square_mm_source": "measured 7 squares = 30 cm on laptop screen (user, 2026-10-21); spec 42.72",
  "square_mm_derivation": "accelerometer-integral LS on hs_20261020_221925 (first 7.5 s): GT scale s = 0.656 (95% 0.54-0.68) vs the 63.403 mm monitor square; same method on monitor recording hs_20261019_163345 gives 1.022 (method bias +2%) -> 63.403 x 0.656 / 1.022 = 40.70 mm (estimate). Refined per recording by imu_learn/scale_ls.py (runs/overnight_gt_status.json).",
  "screen_visible_squares_x": 7.07,
  "screen_visible_squares_y": 4.5,
@@ -18,6 +18,11 @@
    "at": "2026-10-21 09:42:14",
    "square_mm": 40.7,
    "source": "IMU estimate 2026-10-20, replace with measured screen width/7.07"
+  },
+  {
+   "at": "2026-10-21 21:19:04",
+   "square_mm": 42.72,
+   "source": "laptop panel spec 2026-10-21: Lenovo IdeaPad Slim 3 14AHP10, 14.0in 1920x1200 -> width 301.5 mm, pixel 0.1570 mm x 272 px = 42.72 mm (spec-based estimate, +-1-2%; not measured)"
   }
  ]
 }
