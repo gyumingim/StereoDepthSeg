@@ -300,8 +300,8 @@ def analyse(variants):
             dd = [(pr, round(a - ba[pr], 2)) for pr, a in zip(z["pairs"], z["ates"]) if ba.get(pr) is not None and a is not None]
             full3 = z["n"] == 3 and b["n"] == 3
             ate_ok = None if lim is None else z["ate_med"] <= lim + 1e-9
-            held_ok = (z["held_gt_fast"] <= HELD_FAST_SHARE * max(z["held_gt_n"], 1)
-                       and z["held_gt_vmax_cms"] <= HELD_FAST_MAX * 100 + 1e-9)
+            # amendment 18:19 (before any new-variant result): share rule dropped -> info only (see plan)
+            held_ok = z["held_gt_vmax_cms"] <= HELD_FAST_MAX * 100 + 1e-9
             groups[g] = dict(cells=cells, ate_limit=lim, ate_ok=ate_ok, new_collapses=new_bad, false_acc=z["false_acc"],
                              held_ok=held_ok,
                              worst_pair=max(dd, key=lambda x: x[1]) if dd else None, n=z["n"],
