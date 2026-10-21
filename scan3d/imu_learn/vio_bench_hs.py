@@ -28,6 +28,10 @@ Variants (same backend, only one thing changes at a time — the 2026 'same-back
                           m = armed only after the first fed frame whose window is NOT still (skips the start still /
                           initialization), mD = only after D s of continuous not-still fed frames, tS = armed only
                           from clip second S on (clip = from the first VIO frame).
+                          iD (2026-10-21 arm-after-init test, docs/h_arm_init_plan.md) = armed only for frames later
+                          than the bridge's first 'tracking' pose (= OpenVINS initialized) + D s. Until then the bench
+                          waits for the bridge's pose of the previous fed frame before each decision (deterministic;
+                          bridge sources unchanged), so the arming frame does not depend on bridge speed.
   --gt auto|spl|base|rs   scoring GT: auto = imu_gt_spl if present else imu_gt (both camera-only); rs = imu_gt_rs
                           (rolling shutter undone with the gyro -> partly self-scoring, comparison only)
 Time: frames are sent on the IMU clock (t_mid - dt from align.json) and OpenVINS timeshift_cam_imu = 0, so the offset is
@@ -197,15 +201,18 @@ class StillHold:
         hw, hg, ha = (float(v) for v in f[:3])
         opts = f[3:]
         num = (lambda x: x.replace(".", "", 1).isdigit())
-        bad = [o for o in opts if not (o == "m" or (o[:1] in "mt" and num(o[1:])))]
-        if bad:
-            sys.exit(f"--still-hold: unknown option(s) {bad}")
+        bad = [o for o in opts if not (o == "m" or (o[:1] in "mti" and num(o[1:])))]
+        io = [o for o in opts if o[:1] == "i"]
+        if bad or (io and len(opts) > 1):
+            sys.exit(f"--still-hold: unknown option(s) {bad} (iD cannot be combined)")
         mo = [o for o in opts if o[:1] == "m"]
         self.arm_motion = bool(mo)
         self.arm_motion_s = float(mo[0][1:] or 0) if mo else 0.0
         self.move_t0 = None
         self.arm_t = next((float(o[1:]) for o in opts if o[:1] == "t"), None)
-        self.armed = not (self.arm_motion or self.arm_t is not None)
+        self.arm_init = float(io[0][1:]) if io else None     # iD: armed for frames > init + D s (init_ns from the bridge)
+        self.init_ns = None
+        self.armed = not (self.arm_motion or self.arm_t is not None or self.arm_init is not None)
         self.t_imu = t_imu
         nwin = max(2, int(round(hw * 1e9 / float(np.median(np.diff(t_imu))))))
         sw = np.lib.stride_tricks.sliding_window_view
@@ -214,10 +221,17 @@ class StillHold:
         astd[nwin - 1:] = sw(np.linalg.norm(a_i, axis=1), nwin).std(1)
         self.ok = (gmax < hg) & (astd < ha)
 
+    def needs_init(self):
+        """True while the iD arming still waits for the bridge's first tracking pose."""
+        return self.arm_init is not None and self.init_ns is None
+
     def step(self, tci, clip_s):
         jh = int(np.searchsorted(self.t_imu, tci, side="right")) - 1
         still = bool(jh >= 0 and self.ok[jh])
-        if not self.armed:
+        if not self.armed and self.arm_init is not None:
+            if self.init_ns is not None and tci > self.init_ns and tci >= self.init_ns + self.arm_init * 1e9 - 1:
+                self.armed = True
+        elif not self.armed:
             if still:
                 self.move_t0 = None
             elif self.move_t0 is None:
@@ -343,6 +357,7 @@ def run(a):
                           "--lost-frames", "1000000", "--startup-lost-frames", "1000000"],
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0)
     poses = []
+    bst = {"last_t": -1, "init_t": None}                         # bridge progress (read only by the iD still-hold arming)
 
     def reader():
         for line in p.stdout:
@@ -352,6 +367,10 @@ def run(a):
                 continue
             if m.get("type") == "pose":
                 poses.append(m)
+                if m.get("status") == "tracking" and bst["init_t"] is None:
+                    bst["init_t"] = int(m["t_ns"])
+                bst["last_t"] = max(bst["last_t"], int(m.get("t_ns") or -1))
+        bst["last_t"] = 1 << 62                                  # bridge closed: stop any wait
     th = threading.Thread(target=reader, daemon=True)
     th.start()
     nthr = int(getattr(a, "decode_threads", 0) or 0)            # 0 = OpenCV default (all cores); frames identical
@@ -360,6 +379,7 @@ def run(a):
     imu_lead = float(getattr(a, "imu_lead", 2.0))               # s of IMU before the first frame (default 2, unchanged)
     ii = int(np.searchsorted(t_imu, t_start - dt_ns - int(imu_lead * 1e9)))
     n_fed = 0
+    last_fed_t, hold_wait_timeouts, hold_wait_s = None, 0, 0.0
     t_wall = time.time()
     crashed = None
     try:
@@ -380,6 +400,15 @@ def run(a):
                 continue
             _, f = cap.retrieve()
             g = cv2.remap(cv2.cvtColor(f, cv2.COLOR_BGR2GRAY), m1, m2, cv2.INTER_LINEAR)
+            if hold_ok is not None and hold_ok.needs_init() and last_fed_t is not None:
+                tw = time.time()                                 # iD: wait for the bridge's pose of the previous frame
+                while bst["last_t"] < last_fed_t and bst["init_t"] is None and time.time() - tw < 5.0:
+                    time.sleep(0.0005)
+                if bst["last_t"] < last_fed_t and bst["init_t"] is None:
+                    hold_wait_timeouts += 1
+                hold_wait_s += time.time() - tw
+                if bst["init_t"] is not None:
+                    hold_ok.init_ns = bst["init_t"]
             if hold_ok is not None:                              # only IMU samples up to this frame time (causal)
                 if hold_ok.step(tci, (tc - t_start) / 1e9):
                     if held is None:
@@ -393,6 +422,7 @@ def run(a):
             body = struct.pack("<qIIB3x", int(tci), W, H, 1) + np.ascontiguousarray(g).tobytes()
             p.stdin.write(HDR.pack(MAGIC, 2, len(body)) + body)
             n_fed += 1
+            last_fed_t = int(tci)
         for _ in range(200):                                     # flush: a bit more IMU so the last frame is processed
             if ii >= len(t_imu):
                 break
@@ -412,6 +442,9 @@ def run(a):
         res["cfg_over"] = a.cfg_over
     if hold_ok is not None:
         res.update(still_hold=a.still_hold, frames_held=n_held, hold_segments_imu_ns=hold_log)
+        if hold_ok.arm_init is not None:
+            res.update(hold_init_ns=hold_ok.init_ns, hold_wait_timeouts=hold_wait_timeouts,
+                       hold_wait_s=round(hold_wait_s, 2))
     res["lens_file"] = str(lens_path(rec, meta).resolve().relative_to(SCAN3D))
     res["lens_blob"] = subprocess.run(["git", "-C", str(SCAN3D), "hash-object", res["lens_file"]],
                                       capture_output=True, text=True).stdout.strip()
