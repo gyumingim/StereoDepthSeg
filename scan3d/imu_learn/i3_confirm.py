@@ -479,12 +479,49 @@ def f_(x, nd=2):
     return H.escape(str(x))
 
 
+def review_notes(res):
+    """Corrections / additions after the review (runs/i3_review/judge.md section 3, items 1-10; 2026-10-22). Values for
+    214550 are read from this summary; the rest are the reviewers' numbers (verify.md / rebut.md / critic.md)."""
+    R = res["recs"].get("hs_20261021_214550", {})
+    runs = R.get("runs") or {}
+    b = [runs.get(f"base_o{k}") or {} for k in range(3)]
+    z = [runs.get(f"i3_o{k}") or {} for k in range(3)]
+
+    def rng(xs, nd):
+        xs = [x for x in xs if x is not None]
+        return f"{min(xs):.{nd}f}–{max(xs):.{nd}f}" if xs else "–"
+    s214 = (f"base 전체 축척 {rng([x.get('scale') for x in b], 2)} / ATE {rng([x.get('ate_cm') for x in b], 1)} cm, "
+            f"i3 축척 {rng([x.get('scale') for x in z], 2)} / ATE {rng([x.get('ate_cm') for x in z], 1)} cm")
+    li = [
+        "<b>214550 (가장 중요한 신호):</b> 바닥에 오래 둔 뒤 움직이는 순간 base 가 크게 틀렸고 i3 는 버텼다 — " + H.escape(s214) +
+        ". 녹화 1 개뿐이고, 기작은 추정이며, 사전 등록 기준 1–4 어디에도 점수가 없다 (기준 2 는 막은 무너짐을 세지 않음).",
+        "기준 4 의 214550 '+' 는 녹화 1 개라 근거 약함 (축척 보정 뒤에도 + : 중앙값 base 1.58 vs i3 0.81 cm). "
+        "215348 '−' 는 1–1.5 mm 로 실용상 의미 없음 — 실행 잡음인지 작은 편향인지는 미확인 (실행 간 잡음을 재지 않음).",
+        "213955 표현 정정: '자유낙하' 가 아니라 <b>충격 6.4 g</b> (|a| &lt; 2 m/s² 최장 0.016 s, &lt; 5 m/s² 최장 약 0.032 s). 4 g 조건으로만 걸렸다. "
+        "낙하였는지는 추정.",
+        "추가 3 기록 오류: 계획 문서의 시각 '23:45' 는 틀림 — 커밋은 23:38:15 (f27d457), 214550 결과는 23:47. "
+        "4 g 문턱은 IMU 를 본 뒤 정했을 가능성을 로그로 배제할 수 없다 (불확실).",
+        "4 g 규칙의 한계: 세게 내려놓은 정상 녹화도 뺄 수 있다 — 213955 의 내려놓기 (47.74 s) 도 4 g 를 넘었다 (검사 창 밖이라 이번엔 영향 없음). "
+        "214550 최대 3.0 g 로 문턱과 1 g 차이.",
+        "반복 수: 녹화 3 개 (+참고 1 개, 213955) × <b>상관 높은 시작 3 개</b> — 독립 반복 아님 (213955 는 base·i3 가 70.2 s 까지 비트 동일, "
+        "215348·213955 는 세 시작의 첫 추적이 같은 시각).",
+        "214550 i3_o0 의 '무너짐' 표시는 주로 창 결함: 초기화 뒤 10 s 창 중 움직임이 1.4 s 뿐 (정지 끝 9.2 s, 창 끝 10.62 s). "
+        "i3_o1 은 정지 흐름이 같은데 축척 0.70, o0 의 정지 흐름을 없애도 0.27. 실제 정지 흐름 (10.7 cm) 은 보조 요인.",
+        "붙잡기 빈틈: 네 녹화 모두 약 53.9 s·119.0 s 에 약 1.5 s (1.52–1.62 s) 붙잡기가 풀렸다 — 가속도만 튀고 자이로는 조용, "
+        "원인은 앱 안내 진동·소리로 추정. 사전 등록 정지 판정 (자이로만) 과 i3 판정 (가속도 포함) 이 서로 다르다.",
+        "기준 3 표본 수가 독립 재계산보다 11–18 개 적다 (구간 끝 처리 차이로 추정, 빠름 0·최대값 같음 → 판정 영향 없음).",
+    ]
+    return ("<div style='border:1px solid #e0c36b;background:#fff8e1;padding:8px 12px;border-radius:8px'>"
+            "<b>검토 뒤 정정·보탬 (2026-10-22, runs/i3_review/judge.md 3 절 — 판정은 그대로)</b><ol>" +
+            "".join(f"<li>{x}</li>" for x in li) + "</ol></div>")
+
+
 def write_html(res, path, check=None):
     c = res["criteria"]
     N = c.get("n", 0)
     NA = c.get("n_agg", N)
     concl = (f"앱 설정에 넣어도 됨 (추정, 녹화 {NA} 개)" if c.get("adopt") else
-             f"앱 설정에 넣지 않음 (녹화 {N} 개로 판정, 기준 1·3·4 는 입력 사건을 뺀 {NA} 개)")
+             f"앱 설정에 넣지 않음 (녹화 {NA} 개 (+참고 {N - NA} 개) × 상관 높은 시작 3 개 — 독립 반복 아님)")
     if c.get("weak") and N:
         concl += f" — 근거 약함 (입력 사건을 빼고 남은 녹화 {NA} 개 < 3)"
     v3 = {"pass": "통과", "fail": "실패", "partly not tested": "일부 시험 안 됨 (통과 아님)", "not tested": "시험 안 됨",
@@ -499,7 +536,12 @@ def write_html(res, path, check=None):
     o.append("<h1>i3 (가만히 있을 때 화면 고정, 초기화 3 초 뒤부터) 확인 시험 — 새 녹화</h1>")
     o.append(f"<div class='big {'yes' if c.get('adopt') else 'no'}'>결론: {H.escape(concl)}</div>")
     if not c.get("adopt"):
-        o.append("<p>이유: " + "; ".join(H.escape(x) for x in c.get("reasons", [])) + "</p>")
+        rs = [x.replace("기준 4: not improve", "기준 4: 개선 아님").replace("기준 4: not tested", "기준 4: 시험 안 됨")
+              .replace("(+", "(개선 +").replace(" / -", " / 나빠짐 -") for x in c.get("reasons", [])]
+        o.append("<p>이유: " + "; ".join(H.escape(x) for x in rs) + ". <b>단, 'i3 효과 없음' 이 아니다.</b> ZUPT(원래 정지 기능)가 "
+                 "이미 통과하는 정지에서는 i3 가 하는 일이 없었다 (붙잡기가 갈라지기 전까지 base 와 비트 단위로 같음). 차이는 ZUPT 가 "
+                 "시차 잡음(&gt; 0.5 px)으로 실패한 정지 — 214550 하나 — 에서만 났다.</p>")
+    o.append(review_notes(res))
     o.append("<ul>")
     o.append(f"<li>기준 1 (정확도가 10 % 또는 0.2 cm 넘게 나빠지지 않음): <b class='{'ok' if c.get('c1_ok') else 'bad'}'>"
              f"{'통과' if c.get('c1_ok') else '실패'}</b></li>")
@@ -555,7 +597,7 @@ def write_html(res, path, check=None):
             o.append(row(rec, res["recs"][rec]))
         o.append("</table></div>")
     o.append("<h2>입력 사건 검출 (추가 3, 사후 규칙)</h2><div class='wrap'><table><tr><th>녹화</th><th>검사 창 (s, 녹화 시작 기준)</th>"
-             "<th>입력 사건?</th><th>사건 시각 (s)</th><th>최대 |a| (m/s²) @ s</th><th>가장 긴 자유낙하 (s)</th></tr>")
+             "<th>입력 사건?</th><th>사건 시각 (s)</th><th>최대 |a| (m/s²) @ s</th><th>가장 긴 |a| &lt; 2 m/s² 구간 (s)</th></tr>")
     for rec, R in res["recs"].items():
         e = R.get("input_event")
         if not e:
@@ -563,8 +605,11 @@ def write_html(res, path, check=None):
         o.append(f"<tr><td>{rec[-6:]}</td><td>{f_(e['window_s_meta'])}</td>"
                  f"<td class='{'bad' if e['event'] else 'ok'}'>{'예' if e['event'] else '아니오'} {H.escape('; '.join(e['reasons']))}</td>"
                  f"<td>{H.escape(', '.join(f'{a:.2f}–{b:.2f}' for a, b in e['event_clusters_meta']) or '–')}</td>"
-                 f"<td>{f_(e['max_abs_a'])} @ {f_(e['max_abs_a_t_meta'])}</td><td>{f_(e['longest_freefall_s'], 3)}</td></tr>")
-    o.append("</table></div><p class='mut'>시각은 meta.start_elapsed_ns 기준 (docs/collapse_213955.md 와 같은 시계).</p>")
+                 f"<td>{f_(e['max_abs_a'])} @ {f_(e['max_abs_a_t_meta'])}"
+                 f"{' — 충격 ' + format(e['max_abs_a'] / 9.81, '.1f') + ' g (자유낙하 아님 — |a|&lt;2 최장 ' + format(e['longest_freefall_s'], '.3f') + ' s)' if e['event'] else ''}"
+                 f"</td><td>{f_(e['longest_freefall_s'], 3)}</td></tr>")
+    o.append("</table></div><p class='mut'>시각은 meta.start_elapsed_ns 기준 (docs/collapse_213955.md 와 같은 시계). "
+             "213955 는 4 g 충격 조건으로만 걸렸다 (|a| &lt; 2 m/s² 최장 0.016 s, &lt; 5 m/s² 최장 약 0.032 s). 낙하였는지는 추정.</p>")
     o.append("<h2>내려놓은 뒤 정지 구간 (IMU 로 찾음)</h2><div class='wrap'><table><tr><th>녹화</th><th>정지 (s)</th><th>base 이동 3 개 (cm)</th>"
              "<th>i3 이동 3 개 (cm)</th><th>정답 이동 (cm)</th><th>시험?</th></tr>")
     for rec, R in res["recs"].items():
