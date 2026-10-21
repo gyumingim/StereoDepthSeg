@@ -2,6 +2,8 @@
 """Self-check of runs/i3_confirm/summary.json: recompute the verdict numbers from the raw run files (json, poses, GT npz,
 inputs json) WITHOUT i3_confirm / c5_overnight_analyse / z2_regress code (own Umeyama, own GT speed, own gate), compare.
 Writes runs/i3_confirm/check.json; exit 1 on any mismatch.
+Exception (amendment 3, post-hoc): the raw-accel input-event DETECTION is imported from imu_learn/input_events.py (which
+uses i3_confirm.still_runs); the exclusion / criteria arithmetic stays this file's own.
   ../venv_ffs/bin/python imu_learn/i3_confirm_check.py [runs/i3_confirm]
 """
 import gzip
@@ -123,12 +125,21 @@ def main(out="runs/i3_confirm"):
         elif a != b:
             mism.append(f"{key}: summary {a} vs check {b}")
 
+    # amendment 3 (post-hoc): raw-accel input-event detection is reused from imu_learn/input_events.py (raw-data detection,
+    # allowed); the exclusion arithmetic below is this checker's own.
+    sys.path.insert(0, str(SCAN3D / "imu_learn"))
+    import input_events  # noqa: E402
     signs, adopt_parts = {}, dict(c1=True, c2=True, c3=True)
-    judged = []
+    judged, events = [], []
     for rec, R in S["recs"].items():
         if "c1" not in R:
             continue
         judged.append(rec)
+        ev = input_events.detect(rec)
+        cmp(f"{rec} input event", (R.get("input_event") or {}).get("event"), ev["event"])
+        cmp(f"{rec} input event max|a|", (R.get("input_event") or {}).get("max_abs_a"), ev["max_abs_a"], 0.01)
+        if ev["event"]:
+            events.append(rec)
         inp = json.load(open(out / "inputs" / f"{rec}.json"))
         gt = gt_load(rec)
         st = {}
@@ -197,18 +208,27 @@ def main(out="runs/i3_confirm"):
         if tested:
             cmp(f"{rec} c4 base_sum", R["c4"]["base_sum"], sb, 0.01)
             cmp(f"{rec} c4 i3_sum", R["c4"]["i3_sum"], sz, 0.01)
+        adopt_parts["c2"] &= not new          # criterion 2: every judged recording, events included
+        if rec in events:                     # criteria 1/3/4: event recordings are reference only
+            continue
         signs[rec] = sign
         adopt_parts["c1"] &= ok1 is True
-        adopt_parts["c2"] &= not new
         adopt_parts["c3"] &= v3 in ("pass", "n/a (0 held)")
+    kept = [r for r in judged if r not in events]
     npl, nmi = sum(s == "+" for s in signs.values()), sum(s == "-" for s in signs.values())
     nt = sum(s in "+-=" for s in signs.values())
     c4 = "not tested" if nt == 0 else ("improve" if npl > nmi else "not improve")
-    adopt = bool(judged) and all(adopt_parts.values()) and c4 == "improve"
+    adopt = bool(kept) and all(adopt_parts.values()) and c4 == "improve"
     cmp("c4 overall", S["criteria"]["c4"], c4)
+    cmp("c1 overall", S["criteria"]["c1_ok"], bool(kept) and adopt_parts["c1"])
+    cmp("c2 overall", S["criteria"]["c2_ok"], bool(judged) and adopt_parts["c2"])
+    cmp("c3 overall", S["criteria"]["c3_ok"], bool(kept) and adopt_parts["c3"])
     cmp("adopt", S["criteria"]["adopt"], adopt)
     cmp("n judged", S["criteria"]["n"], len(judged), 0)
-    res = dict(made=time.strftime("%F %T"), n_checked=n, mismatch=mism, adopt=adopt, c4=c4, judged=judged)
+    cmp("event recs", sorted(S["criteria"].get("events") or []), sorted(events))
+    cmp("weak (< 3 kept)", S["criteria"].get("weak"), len(kept) < 3)
+    res = dict(made=time.strftime("%F %T"), n_checked=n, mismatch=mism, adopt=adopt, c4=c4, judged=judged,
+               events=events, kept=kept, weak=len(kept) < 3)
     json.dump(res, open(out / "check.json", "w"), indent=1, default=float)
     print(json.dumps(res, indent=1, default=float))
     return 1 if mism else 0

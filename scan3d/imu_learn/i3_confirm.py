@@ -345,6 +345,8 @@ def analyse():
         if inp["excluded"]:
             res["recs"][rec] = R
             continue
+        import input_events  # amendment 3 (post-hoc): raw-accel drop / impact detection
+        R["input_event"] = input_events.detect(rec)
         gts = gt_gated_speed(rec)
         runs = {}
         for j in jobs_for(rec, inp):
@@ -418,20 +420,25 @@ def analyse():
         R.update(c1=c1, c2=c2, c3=c3, c4=c4)
         res["recs"][rec] = R
     judged = [r for r, x in res["recs"].items() if "c1" in x]
-    c1_fail = [r for r in judged if res["recs"][r]["c1"]["ok"] is False]
-    c1_none = [r for r in judged if res["recs"][r]["c1"]["ok"] is None]
+    # amendment 3 (post-hoc): input-event recordings leave criteria 1/3/4, criterion 2 still counts all judged ones
+    events = [r for r in judged if res["recs"][r]["input_event"]["event"]]
+    agg = [r for r in judged if r not in events]
+    c1_fail = [r for r in agg if res["recs"][r]["c1"]["ok"] is False]
+    c1_none = [r for r in agg if res["recs"][r]["c1"]["ok"] is None]
     c2_new = [f"{r} {s}" for r in judged for s in res["recs"][r]["c2"]["new_collapses"]]
-    c3v = {r: res["recs"][r]["c3"]["verdict"] for r in judged}
-    signs = {r: res["recs"][r]["c4"]["sign"] for r in judged}
+    c3v = {r: res["recs"][r]["c3"]["verdict"] for r in agg}
+    signs = {r: res["recs"][r]["c4"]["sign"] for r in agg}
     npl, nmi = sum(s == "+" for s in signs.values()), sum(s == "-" for s in signs.values())
     nt4 = sum(s in "+-=" for s in signs.values())
     c4v = "not tested" if nt4 == 0 else ("improve" if npl > nmi else "not improve")
-    ok1 = bool(judged) and not c1_fail and not c1_none
+    ok1 = bool(agg) and not c1_fail and not c1_none
     ok2 = bool(judged) and not c2_new
-    ok3 = bool(judged) and all(v in ("pass", "n/a (0 held)") for v in c3v.values())
+    ok3 = bool(agg) and all(v in ("pass", "n/a (0 held)") for v in c3v.values())
     reasons = []
     if not judged:
         reasons.append("판정할 녹화 없음")
+    elif not agg:
+        reasons.append("입력 사건을 빼면 기준 1·3·4 를 판정할 녹화 없음")
     if c1_fail:
         reasons.append(f"기준 1 실패 {c1_fail}")
     if c1_none:
@@ -443,7 +450,10 @@ def analyse():
             reasons.append(f"기준 3 {r[-6:]}: {v}")
     if c4v != "improve":
         reasons.append(f"기준 4: {c4v} (+{npl} / -{nmi})")
-    res["criteria"] = dict(judged=judged, n=len(judged), c1_ok=ok1, c1_fail=c1_fail, c1_none=c1_none, c2_ok=ok2,
+    if judged and len(agg) < 3:
+        reasons.append(f"근거 약함: 입력 사건을 빼고 남은 녹화 {len(agg)} 개 (< 3)")
+    res["criteria"] = dict(judged=judged, n=len(judged), events=events, agg=agg, n_agg=len(agg), weak=len(agg) < 3,
+                           c1_ok=ok1, c1_fail=c1_fail, c1_none=c1_none, c2_ok=ok2,
                            c2_new=c2_new, c3_ok=ok3, c3=c3v, c4=c4v, c4_signs=signs, c4_plus=npl, c4_minus=nmi,
                            c4_tested=nt4, c4_weak=nt4 < 3, reasons=reasons,
                            adopt=bool(ok1 and ok2 and ok3 and c4v == "improve"))
@@ -472,8 +482,11 @@ def f_(x, nd=2):
 def write_html(res, path, check=None):
     c = res["criteria"]
     N = c.get("n", 0)
-    concl = (f"앱 설정에 넣어도 됨 (추정, 녹화 {N} 개)" if c.get("adopt") else
-             f"앱 설정에 넣지 않음 (녹화 {N} 개로 판정)")
+    NA = c.get("n_agg", N)
+    concl = (f"앱 설정에 넣어도 됨 (추정, 녹화 {NA} 개)" if c.get("adopt") else
+             f"앱 설정에 넣지 않음 (녹화 {N} 개로 판정, 기준 1·3·4 는 입력 사건을 뺀 {NA} 개)")
+    if c.get("weak") and N:
+        concl += f" — 근거 약함 (입력 사건을 빼고 남은 녹화 {NA} 개 < 3)"
     v3 = {"pass": "통과", "fail": "실패", "partly not tested": "일부 시험 안 됨 (통과 아님)", "not tested": "시험 안 됨",
           "n/a (0 held)": "붙잡은 프레임 없음"}
     o = ["<!doctype html><html lang='ko'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>",
@@ -499,37 +512,64 @@ def write_html(res, path, check=None):
     o.append(f"<li>기준 4 (내려놓은 뒤 VIO 가 덜 미끄러지나): <b class='{'ok' if c.get('c4') == 'improve' else 'bad'}'>{H.escape(str(c4t))}</b>"
              f" (녹화 개선 {c.get('c4_plus')} / 나빠짐 {c.get('c4_minus')} / 시험된 녹화 {c.get('c4_tested')})"
              f"{' — 녹화 수가 적어 근거 약함' if c.get('c4_weak') else ''}</li></ul>")
-    o.append("<p class='mut'>추정: 녹화 몇 개로 본 결과라 다른 장면·다른 사람 손에서는 달라질 수 있다. 판정 기준은 결과를 보기 전에 정해 둔 "
+    o.append("<p class='mut'>추정: 녹화 몇 개로 본 결과라 다른 장면·다른 사람 손에서는 달라질 수 있다. 판정 기준 1–4 는 결과를 보기 전에 정해 둔 "
              "docs/i3_confirm_plan.md (사전 등록 ad2c02c, 추가 1 032a4d6, 추가 2 9d58cac) 그대로.</p>")
+    ev = c.get("events") or []
+    o.append("<p><b>주의 — 추가 3 은 사후 규칙이다.</b> 이 규칙(녹화 중 낙하 같은 입력 사건이 있는 녹화는 기준 1·3·4 집계에서 빼고 "
+             "참고 표에만 적음, 기준 2 는 그대로 셈)은 <b>결과 일부(213341·213955)를 본 뒤</b>, 214550·215348 결과를 보기 전에 정했다 "
+             "(docs/i3_confirm_plan.md 추가 3, f27d457; 근거 docs/collapse_213955.md). 검출: 원본 가속도(type 35), 시작 정지 끝 → 첫 내려놓기 정지 시작, "
+             "|a| &gt; 39 m/s² 표본 하나 이상 또는 |a| &lt; 2 m/s² 가 0.1 s 넘게 이어짐 (imu_learn/input_events.py). "
+             f"입력 사건 녹화: <b>{H.escape(', '.join(r[-6:] for r in ev) or '없음')}</b>.</p>")
     if check is not None:
         o.append(f"<p class='mut'>검산 (i3_confirm_check.py, 분석 코드를 쓰지 않고 다시 계산): "
                  f"<b>{'일치' if not check.get('mismatch') else '불일치 ' + H.escape(str(check.get('mismatch'))[:400])}</b>"
                  f" — 비교 {check.get('n_checked')} 항목.</p>")
-    o.append("<h2>녹화별</h2><div class='wrap'><table><tr><th>녹화</th><th>보드</th><th>시작 정지 (s)</th><th>시작 위치 (s)</th>"
-             "<th>base ATE (cm) 3 개 → 중앙값</th><th>i3 ATE (cm) → 중앙값 / 한계</th><th>기준 1</th><th>상태 base → i3</th>"
-             "<th>기준 3: 문 통과 표본 / 빠름 / 최대 (cm/s)</th><th>기준 4: 내려놓은 뒤 이동 합 base → i3 (cm)</th></tr>")
-    for rec, R in res["recs"].items():
+    head = ("<div class='wrap'><table><tr><th>녹화</th><th>보드</th><th>시작 정지 (s)</th><th>시작 위치 (s)</th>"
+            "<th>base ATE (cm) 3 개 → 중앙값</th><th>i3 ATE (cm) → 중앙값 / 한계</th><th>기준 1</th><th>상태 base → i3 (기준 2)</th>"
+            "<th>기준 3: 문 통과 표본 / 빠름 / 최대 (cm/s)</th><th>기준 4: 내려놓은 뒤 이동 합 base → i3 (cm)</th></tr>")
+
+    def row(rec, R):
         inp = R.get("inputs") or {}
         bd = Path(R.get("board") or "").name or "–"
         if "c1" not in R:
-            o.append(f"<tr><td>{rec[-6:]}</td><td>{H.escape(bd)}</td><td>{f_(inp.get('start_still_len_s'))}</td>"
-                     f"<td colspan='7'>판정 안 함: {H.escape('; '.join(R.get('excluded') or []) or ('실행 미완료' if R.get('runs') is not None else R.get('state', '')))}</td></tr>")
-            continue
+            return (f"<tr><td>{rec[-6:]}</td><td>{H.escape(bd)}</td><td>{f_(inp.get('start_still_len_s'))}</td>"
+                    f"<td colspan='7'>판정 안 함: {H.escape('; '.join(R.get('excluded') or []) or ('실행 미완료' if R.get('runs') is not None else R.get('state', '')))}</td></tr>")
         c1, c2, c3, c4 = R["c1"], R["c2"], R["c3"], R["c4"]
-        o.append(f"<tr><td>{rec[-6:]}</td><td>{H.escape(bd)}</td><td>{f_(inp.get('start_still_len_s'))}</td>"
-                 f"<td>{f_(inp.get('offsets_s'))}</td><td>{f_(c1['base_ates'])} → {f_(c1['base_med'])}</td>"
-                 f"<td>{f_(c1['i3_ates'])} → {f_(c1['i3_med'])} / {f_(c1['lim'])}</td>"
-                 f"<td class='{'ok' if c1['ok'] else 'bad'}'>{'통과' if c1['ok'] else '실패'} (짝 최악 {f_(c1['worst_pair'])})</td>"
-                 f"<td>{f_(c2['base_status'])} → {f_(c2['i3_status'])}</td>"
-                 f"<td>{c3['gated_n']} / {c3['gated_fast']} / {f_(c3['vmax_cms'])} — {H.escape(v3.get(c3['verdict'], c3['verdict']))}"
-                 f"{'<br><span class=mut>시험 안 된 구간: ' + H.escape(', '.join(c3['untested'][:6])) + '</span>' if c3['untested'] else ''}</td>"
-                 f"<td>{f_(c4['base_sum'])} → {f_(c4['i3_sum'])} ({H.escape(c4['sign'])})</td></tr>")
+        return (f"<tr><td>{rec[-6:]}</td><td>{H.escape(bd)}</td><td>{f_(inp.get('start_still_len_s'))}</td>"
+                f"<td>{f_(inp.get('offsets_s'))}</td><td>{f_(c1['base_ates'])} → {f_(c1['base_med'])}</td>"
+                f"<td>{f_(c1['i3_ates'])} → {f_(c1['i3_med'])} / {f_(c1['lim'])}</td>"
+                f"<td class='{'ok' if c1['ok'] else 'bad'}'>{'통과' if c1['ok'] else '실패'} (짝 최악 {f_(c1['worst_pair'])})</td>"
+                f"<td>{f_(c2['base_status'])} → {f_(c2['i3_status'])}</td>"
+                f"<td>{c3['gated_n']} / {c3['gated_fast']} / {f_(c3['vmax_cms'])} — {H.escape(v3.get(c3['verdict'], c3['verdict']))}"
+                f"{'<br><span class=mut>시험 안 된 구간: ' + H.escape(', '.join(c3['untested'][:6])) + '</span>' if c3['untested'] else ''}</td>"
+                f"<td>{f_(c4['base_sum'])} → {f_(c4['i3_sum'])} ({H.escape(c4['sign'])})</td></tr>")
+
+    o.append("<h2>녹화별 (판정에 씀)</h2>" + head)
+    for rec, R in res["recs"].items():
+        if rec not in ev:
+            o.append(row(rec, R))
     o.append("</table></div>")
+    if ev:
+        o.append("<h2>입력 사건 녹화 (참고용 — 기준 1·3·4 판정에 안 씀, 기준 2 는 셈)</h2>" + head)
+        for rec in ev:
+            o.append(row(rec, res["recs"][rec]))
+        o.append("</table></div>")
+    o.append("<h2>입력 사건 검출 (추가 3, 사후 규칙)</h2><div class='wrap'><table><tr><th>녹화</th><th>검사 창 (s, 녹화 시작 기준)</th>"
+             "<th>입력 사건?</th><th>사건 시각 (s)</th><th>최대 |a| (m/s²) @ s</th><th>가장 긴 자유낙하 (s)</th></tr>")
+    for rec, R in res["recs"].items():
+        e = R.get("input_event")
+        if not e:
+            continue
+        o.append(f"<tr><td>{rec[-6:]}</td><td>{f_(e['window_s_meta'])}</td>"
+                 f"<td class='{'bad' if e['event'] else 'ok'}'>{'예' if e['event'] else '아니오'} {H.escape('; '.join(e['reasons']))}</td>"
+                 f"<td>{H.escape(', '.join(f'{a:.2f}–{b:.2f}' for a, b in e['event_clusters_meta']) or '–')}</td>"
+                 f"<td>{f_(e['max_abs_a'])} @ {f_(e['max_abs_a_t_meta'])}</td><td>{f_(e['longest_freefall_s'], 3)}</td></tr>")
+    o.append("</table></div><p class='mut'>시각은 meta.start_elapsed_ns 기준 (docs/collapse_213955.md 와 같은 시계).</p>")
     o.append("<h2>내려놓은 뒤 정지 구간 (IMU 로 찾음)</h2><div class='wrap'><table><tr><th>녹화</th><th>정지 (s)</th><th>base 이동 3 개 (cm)</th>"
              "<th>i3 이동 3 개 (cm)</th><th>정답 이동 (cm)</th><th>시험?</th></tr>")
     for rec, R in res["recs"].items():
         for w in (R.get("c4") or {}).get("windows", []):
-            o.append(f"<tr><td>{rec[-6:]}</td><td>{f_(w['still_s'])}</td><td>{f_(w['base_drifts'])}</td><td>{f_(w['i3_drifts'])}</td>"
+            o.append(f"<tr><td>{rec[-6:]}{' (참고, 입력 사건)' if rec in ev else ''}</td><td>{f_(w['still_s'])}</td><td>{f_(w['base_drifts'])}</td><td>{f_(w['i3_drifts'])}</td>"
                      f"<td>{f_(w['gt_drift'])}</td><td>{'예' if w['tested'] else '아니오 ' + H.escape(str(w['why'][:2]))}</td></tr>")
     o.append("</table></div>")
     o.append("<h2>실행 점검</h2><ul>")
