@@ -62,3 +62,7 @@
 - IMU 추정 44.49 mm (95 % 43.6–45.4) 보다 4 % 작음 → 사양 값을 쓴다. C5 재시험이 끝난 뒤(현재 GT 를 읽는 중이라 중간 변경 금지)
   `imu_learn/rescale_gt.py --square-mm 42.72 --update-board recordings/hs_20261020_2*` → ATE 다시 계산 → 보고서 숫자 정정.
 - (2026-10-21 09:45, 실행함) rescale_gt.py --square-mm 42.72 --update-board → 정답 6개 위치 ×1.0496, 보드 json 42.72 (출처 기록). 밤샘 재집계: 판정 변화 없음, 옛 물리 보정 녹화 수만 2/0/3 → 1/0/4. C5 재시험 재집계: 221052 strict-dyn 1개만 바뀜 (runs/endstill_vio/c5_retest_summary_sq42.72.json). 보고서 docs/report_20261021.html 7절.
+
+## 칸 크기 실측 (2026-10-21 21:30, 사용자)
+- 집 노트북 화면에서 칸 7개 = 약 30 cm → 칸 42.86 mm (자 오차 ±0.5 cm 가정 시 ±1.7 %). 사양 계산 42.72 mm 와 0.3 % 차이 → 일치.
+- 할 일: 정답 잡음 측정(gt_speed_noise) 끝난 뒤 imu_learn/rescale_gt.py --square-mm 42.86 --update-board recordings/hs_20261020_2* 로 바꾸고 숫자 다시 계산 (결론 영향 없음, cm 값 +0.3 %).
