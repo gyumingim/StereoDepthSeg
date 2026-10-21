@@ -185,6 +185,55 @@ def main():
     cmp("iii_base_med", bm, C["iii_base_med"], 0.003)
     cmp("iii_i3_med", zm, C["iii_i3_med"], 0.003)
     cmp("iii_ok", None if lim is None else bool(zm <= lim + 1e-9), C["iii_ok"])
+    # B': departure from the first set-down still; a = runs/i3_confirm o0-o2, b = runs/i3_takeoff/B2_* (gate: base first
+    # tracking pose before the still starts)
+    if "B2" in summ:
+        rows2 = {x["key"]: x for x in summ["B2"]["rows"]}
+        tested2 = []
+        for rec in RECS:
+            I = info[rec]
+            st = I["sd"][0]
+            cells = [(f"{rec[-6:]}_o{k}", str(SRC / f"{rec[-6:]}_{{}}_o{k}"), I["fl"], True) for k in range(3)]
+            for L in (6, 3):
+                off = round((st[0] - I["f0"]) / 1e9 - L, 3)
+                cells.append((f"{rec[-6:]}_L{L}", str(RUNS / f"B2_{rec[-6:]}_L{L}_{{}}"),
+                              min(I["fl"], I["f0"] + (off + 40) * 1e9), False))
+            for key, pat, lim, is_a in cells:
+                res = {}
+                for c in ("base", "i3"):
+                    p = Path(pat.format(c))
+                    if not Path(str(p) + ".json").exists():
+                        mism.append(f"B' {key} {c}: run missing")
+                        continue
+                    res[c] = win_status(p, rec, st[1], G[rec])
+                    th = rows2[key].get(c) or {}
+                    cmp(f"B' {key} {c} status", res[c]["status"], th.get("status"))
+                    if "ate_cm" in res[c]:
+                        cmp(f"B' {key} {c} ate", round(res[c]["ate_cm"], 3), th.get("ate_cm"), 0.002)
+                if len(res) < 2:
+                    continue
+                gate = True
+                if not is_a:
+                    t, _, _, _ = poses(Path(pat.format("base")))
+                    gate = bool(len(t)) and bool(t[0] < st[0])
+                    cmp(f"B' {key} gate", gate, rows2[key].get("gate"))
+                if st[1] + 10e9 <= lim and gate:
+                    tested2.append((rec, key, res))
+        C2 = summ["B2"]["criteria"]
+        cmp("B' n_tested", len(tested2), C2["n_tested"])
+        cmp("B' i_new", sorted(k for _, k, r in tested2 if r["base"]["status"] == "ok" and r["i3"]["status"] != "ok"),
+            sorted(C2["i_new"]))
+        cmp("B' ii_prevented", sorted(k for _, k, r in tested2 if r["base"]["status"] == "collapse" and r["i3"]["status"] == "ok"),
+            sorted(C2["ii_prevented"]))
+        cmp("B' base_collapses", sorted(k for _, k, r in tested2 if r["base"]["status"] == "collapse"),
+            sorted(C2["base_collapses"]))
+        both2 = [r for _, _, r in tested2 if "ate_cm" in r["base"] and "ate_cm" in r["i3"]]
+        if both2:
+            b2m = float(np.median([r["base"]["ate_cm"] for r in both2]))
+            z2m = float(np.median([r["i3"]["ate_cm"] for r in both2]))
+            cmp("B' iii_base_med", b2m, C2["iii_base_med"], 0.003)
+            cmp("B' iii_i3_med", z2m, C2["iii_i3_med"], 0.003)
+            cmp("B' iii_ok", bool(z2m <= max(1.1 * b2m, b2m + 0.2) + 1e-9), C2["iii_ok"])
     # A: criterion-4 window values (set-down stills trimmed 0.5 s, first/last tracked pose |dP|, >= 5 GT samples)
     rec = "hs_20261021_215348"
     I = info[rec]
