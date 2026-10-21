@@ -26,8 +26,8 @@ import collapse_signals as cs  # noqa: E402
 import vio_bench_hs as vb  # noqa: E402
 
 KEY_CORR = "GT 담당 최종 IMU 축척 (44.49 mm, 6 녹화, 추정)"
-K_ALT = {"13.3인치 (40.5 mm)": 40.5 / 40.70, "14인치 (42.7 mm)": 42.7 / 40.70,
-         KEY_CORR: 44.49 / 40.70}
+# what-if board squares (mm); k = alt / square of the GT on disk (read from gt.npz, 2026-10-21: 42.72 mm spec-based)
+K_ALT_MM = {"옛 IMU 추정 40.70 mm (정정 전 값)": 40.70, "13.3인치 (40.5 mm)": 40.5, KEY_CORR: 44.49}
 _GT = {}
 
 
@@ -225,6 +225,17 @@ def c5_rule(by, recs_still):
                 recs_strict_better=plus, recs_strict_worse=minus, sign_p=p, untested_recs=unt, verdict=v)
 
 
+def disk_square_mm(d):
+    for f in sorted(Path(d).glob("*.json")):
+        try:
+            x = json.load(open(f))
+            g = np.load(vb.SCAN3D / "recordings" / x["rec"] / (x.get("gt") or "imu_gt_spl") / "gt.npz", allow_pickle=True)
+            return float(g["square_mm"])
+        except Exception:  # noqa: BLE001
+            continue
+    return None
+
+
 def summarize(d, k):
     runs, failed = [], []
     for f in sorted(Path(d).glob("*.json")):
@@ -332,7 +343,9 @@ def write_html(res, alt, path, concl):
     h = [f"<!doctype html><html lang='ko'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
          f"<title>밤샘 VIO 결과</title><style>{css}</style></head><body><h1>밤샘 VIO 실험 결과 (2026-10-20 → 21)</h1>"]
     h.append(f"<div class='box concl'>{concl}</div>" if concl else "<div class='box'>결론 작성 전 (자동 표만)</div>")
-    h.append("<div class='box'><b>주의 — 정답 축척은 추정</b>: 보드가 노트북 화면이라 칸 크기 40.70 mm 는 IMU 로 추정한 값이다 (자로 안 잼). "
+    sq = res.get("gt_square_mm")
+    h.append(f"<div class='box'><b>주의 — 정답 축척은 추정</b>: 보드가 노트북 화면이라 칸 크기 {fmt(sq)} mm 는 자로 잰 값이 아니다 "
+             "(2026-10-21 부터 노트북 사양 계산값 42.72 mm, ±1~2 % 추정; 그 전 표는 IMU 추정 40.70 mm 였음 — 정정). "
              "SE3 ATE·10 cm 문턱·Sim3 축척 판정은 이 값에 기대어 있다. 아침에 화면 폭을 재서 <code>imu_learn/rescale_gt.py</code> 로 정답을 고친 뒤 "
              "<code>../venv_ffs/bin/python imu_learn/c5_overnight_analyse.py runs/overnight_vio --html docs/overnight_vio_result.html --concl runs/overnight_vio/conclusion.html</code> "
              "를 다시 돌리면 모든 숫자가 새 축척으로 다시 계산된다 (VIO 를 다시 돌릴 필요 없음 — 포즈를 저장해 둠). "
@@ -348,7 +361,8 @@ def write_html(res, alt, path, concl):
                  f"<td>{fmt(np.round(np.degrees(g), 3).tolist() if g else None)}</td><td>{fmt((s.get('battery') or {}).get('first_c'))}→{fmt((s.get('battery') or {}).get('last_c'))}</td></tr>")
     h.append("</table>")
     h.append("<h2>2. 설정별 녹화별 표</h2><table><tr><th>설정</th><th>녹화</th><th>실행</th><th>초기화</th><th>성공</th><th>무너짐</th>"
-             "<th>ATE 중앙값 (성공, cm)</th><th>ATE ×1.093 (44.49 mm, 추정)</th><th>Sim3 ATE</th><th>Sim3 축척</th><th>Sim3 축척 ×1.093 (추정)</th><th>10 s 창 ATE</th><th>초기화 시각 (s)</th><th>추적 비율</th></tr>")
+             f"<th>ATE 중앙값 (성공, cm)</th><th>ATE ×{fmt(res.get('k_corr'), 3)} (44.49 mm, 추정)</th><th>Sim3 ATE</th><th>Sim3 축척</th><th>Sim3 축척 ×{fmt(res.get('k_corr'), 3)} (추정)</th>"
+             "<th>10 s 창 ATE</th><th>초기화 시각 (s)</th><th>추적 비율</th></tr>")
     for key, s in res["settings"].items():
         st, rec = key.split("|")
         sc = res.get("settings_corrected", {}).get(key, {})
@@ -419,6 +433,10 @@ def main():
     ap.add_argument("--concl", default=None)
     o = ap.parse_args()
     res = summarize(o.dir, o.k)
+    sq = disk_square_mm(o.dir)
+    res["gt_square_mm"] = sq
+    K_ALT = {lab: mm / sq for lab, mm in K_ALT_MM.items()} if sq else {}
+    res["k_corr"] = K_ALT.get(KEY_CORR)
     alt = {}
     if o.html:
         for lab, kk in K_ALT.items():

@@ -3,14 +3,21 @@
  "squares_x": 9,
  "squares_y": 5,
  "marker_ratio": 0.5882352941176471,
- "square_mm": 40.70,
+ "square_mm": 42.72,
  "square_estimated": true,
- "square_mm_source": "IMU estimate 2026-10-20, replace with measured screen width/7.07",
+ "square_mm_source": "laptop panel spec 2026-10-21: Lenovo IdeaPad Slim 3 14AHP10, 14.0in 1920x1200 -> width 301.5 mm, pixel 0.1570 mm x 272 px = 42.72 mm (spec-based estimate, +-1-2%; not measured)",
  "square_mm_derivation": "accelerometer-integral LS on hs_20261020_221925 (first 7.5 s): GT scale s = 0.656 (95% 0.54-0.68) vs the 63.403 mm monitor square; same method on monitor recording hs_20261019_163345 gives 1.022 (method bias +2%) -> 63.403 x 0.656 / 1.022 = 40.70 mm (estimate). Refined per recording by imu_learn/scale_ls.py (runs/overnight_gt_status.json).",
  "screen_visible_squares_x": 7.07,
  "screen_visible_squares_y": 4.5,
  "paper": "laptop panel (16:10, 1920x1200 device px at 1:1) showing docs/charuco_monitor.png (square 272 px); only ~7.07 x 4.5 squares visible (board cropped by the screen)",
  "source_image": "charuco_monitor.png 2448x1360 px, square 272 px, marker 160 px (same image as board_monitor_6x6.json)",
  "how_to_fix": "measure the inner (lit) screen width in mm W -> square = W / 7.07; then: ../venv_ffs/bin/python imu_learn/rescale_gt.py --screen-width-mm W --update-board recordings/hs_20261020_* (docs/overnight_20261020_plan.md)",
- "note": "laptop-screen board for the 2026-10-20 night recordings; same dictionary/layout/marker ratio as board_monitor_6x6.json, only the square size differs"
+ "note": "laptop-screen board for the 2026-10-20 night recordings; same dictionary/layout/marker ratio as board_monitor_6x6.json, only the square size differs",
+ "square_history": [
+  {
+   "at": "2026-10-21 09:42:14",
+   "square_mm": 40.7,
+   "source": "IMU estimate 2026-10-20, replace with measured screen width/7.07"
+  }
+ ]
 }

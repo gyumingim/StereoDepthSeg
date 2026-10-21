@@ -259,9 +259,10 @@ def main():
     ap.add_argument("dir")
     ap.add_argument("--html", default=None)
     ap.add_argument("--concl", default=None)
+    ap.add_argument("--out", default=None, help="summary json path (default: DIR/summary.json)")
     o = ap.parse_args()
     res = summarize(o.dir)
-    json.dump(res, open(Path(o.dir) / "summary.json", "w"), indent=1, ensure_ascii=False, default=float)
+    json.dump(res, open(o.out or Path(o.dir) / "summary.json", "w"), indent=1, ensure_ascii=False, default=float)
     if o.html:
         concl = Path(o.concl).read_text() if o.concl and Path(o.concl).exists() else ""
         write_html(res, o.html, concl)

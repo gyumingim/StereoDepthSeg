@@ -76,6 +76,7 @@ def main():
     ap.add_argument("--board-name", default="board_laptop_6x6.json", help="only GTs made with this board ('' = any)")
     ap.add_argument("--update-board", action="store_true", help="also write the new square into the board json")
     ap.add_argument("--dry", action="store_true")
+    ap.add_argument("--source", default=None, help="text for the board json square_mm_source (where the value comes from)")
     a = ap.parse_args()
     new_sq = a.square_mm if a.square_mm else a.screen_width_mm / VISIBLE_SQUARES_X
     new_sq = round(new_sq, 4)
@@ -98,8 +99,8 @@ def main():
             hist.append(dict(at=time.strftime("%Y-%m-%d %H:%M:%S"), square_mm=spec.get("square_mm"),
                              source=spec.get("square_mm_source")))
             spec.update(square_mm=new_sq, square_estimated=not a.screen_width_mm,
-                        square_mm_source=(f"measured screen width {a.screen_width_mm} mm / {VISIBLE_SQUARES_X}"
-                                          if a.screen_width_mm else f"set by rescale_gt.py --square-mm {a.square_mm}"),
+                        square_mm_source=a.source or (f"measured screen width {a.screen_width_mm} mm / {VISIBLE_SQUARES_X}"
+                                                      if a.screen_width_mm else f"set by rescale_gt.py --square-mm {a.square_mm}"),
                         square_history=hist)
             Path(b).write_text(json.dumps(spec, indent=1, ensure_ascii=False) + "\n")
             print(f"board {b}: square_mm = {new_sq}")
