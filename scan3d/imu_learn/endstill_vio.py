@@ -135,6 +135,16 @@ def analyse_one(prefix, es):
     g_meas = np.asarray(e["end"][gyro_key]["mean"])                                  # mdeg/s
     a_meas = np.asarray(e["end"][acc_key]["mean"]) * 1e-3 * 9.80665                   # m/s^2
     res["bg_meas_mdps"] = g_meas.tolist()
+    try:                                   # GT camera positions in the same window (camera clock = IMU + align dt)
+        gt_t, gt_p, _ = an.gt(rec, d.get("gt") or "imu_gt_spl")
+        sh = int(d["align_dt_ms"] * 1e6)
+        gw = (gt_t >= w0 + sh) & (gt_t <= w1 + sh)
+        res["gt_n_endstill"] = int(gw.sum())
+        if gw.sum() >= 5:
+            res["gt_drift_cm"] = float(np.linalg.norm(gt_p[gw][-1] - gt_p[gw][0]) * 100)
+            res["gt_spread_cm"] = float(np.linalg.norm(gt_p[gw].std(0)) * 100)
+    except Exception as e:  # noqa: BLE001
+        res["gt_err"] = repr(e)
     if sel.sum() < 10:
         res["note"] = "VIO not tracking during the end still"
         return res
@@ -197,11 +207,12 @@ def write_html(res, path, concl):
              f"정답 칸 {fmt(res.get('gt_square_mm'))} mm (노트북 사양 계산, 추정).</p>")
     h.append("<h2>2. 끝 정지 동안 움직임 (VIO 단위 ≈ m, 축척 ≈ 1)</h2><table><tr><th>실행</th><th>끝 정지 창 (s, IMU 시작 기준)</th>"
              "<th>길이 (s)</th><th>평균 |v| (cm/s)</th><th>최대 |v| (cm/s)</th><th>위치 이동 (cm)</th><th>이동/초 (cm/s)</th><th>경로 길이 (cm)</th>"
-             "<th>전체 ATE (cm)</th><th>전체 Sim3 축척</th><th>초기화</th></tr>")
+             "<th>정답 이동 (cm, 정답 포즈 수)</th><th>전체 ATE (cm)</th><th>전체 Sim3 축척</th><th>초기화</th></tr>")
     for r in res["runs"]:
         h.append(f"<tr><td>{r['name']}</td><td>{fmt(r['endstill_window_s'], 1)}</td><td>{fmt(r.get('endstill_dur_s'))}</td>"
                  f"<td>{fmt(r.get('v_mean_cms'))}</td><td>{fmt(r.get('v_max_cms'))}</td><td>{fmt(r.get('drift_cm'))}</td>"
-                 f"<td>{fmt(r.get('drift_cm_per_s'))}</td><td>{fmt(r.get('path_cm'))}</td><td>{fmt(r.get('ate_full_cm'))}</td>"
+                 f"<td>{fmt(r.get('drift_cm_per_s'))}</td><td>{fmt(r.get('path_cm'))}</td>"
+                 f"<td>{fmt(r.get('gt_drift_cm'))} ({r.get('gt_n_endstill', 0)})</td><td>{fmt(r.get('ate_full_cm'))}</td>"
                  f"<td>{fmt(r.get('scale_full'), 3)}</td><td>{fmt(r.get('init_method'))} {fmt(r.get('t_init_clip_s'))} s</td></tr>")
     h.append("</table>")
     h.append("<h2>3. VIO 가 추정한 바이어스 vs 끝 정지에서 잰 바이어스</h2><table><tr><th>실행</th><th>자이로 VIO (mdeg/s, x/y/z)</th>"
@@ -213,7 +224,7 @@ def write_html(res, path, concl):
                  f"<td>{fmt(r.get('ba_err_norm_mg'), 1)}</td><td>{fmt(r.get('gravity_angle_deg'), 2)}</td></tr>")
     h.append("</table><small>자이로 잰 값 = 끝 정지 창 평균 (IMU 를 VIO 에 넣은 것과 같은 종류: 보정판은 type 4, 원본은 type 16). "
              "자이로 1 LSB = 70 mdeg/s 라 평균도 수십 mdeg/s 흔들림 (docs/endstill_check.html). "
-             "가속도 잰 값 = 끝 정지 평균 − (VIO 자세로 돌린 중력 9.80) → VIO 자세에 기대므로 <b>추정</b> (기울기 0.1° ≈ 17 mg).</small>")
+             "가속도 잰 값 = 끝 정지 평균 − (VIO 자세로 돌린 중력 9.80) → VIO 자세에 기대므로 <b>추정</b> (기울기 1° ≈ 17 mg).</small>")
     h.append("<h2>4. 녹화·IMU 별 중앙값 (반복 3)</h2><table><tr><th>녹화</th><th>IMU</th><th>평균 |v|</th><th>위치 이동 (cm)</th>"
              "<th>자이로 차이 (mdeg/s)</th><th>가속도 차이 (mg)</th><th>전체 ATE (cm)</th><th>축척</th></tr>")
     for k, g in res["groups"].items():

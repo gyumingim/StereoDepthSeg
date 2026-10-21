@@ -61,3 +61,4 @@
 - 노트북: Lenovo IdeaPad Slim 3 14AHP10 (2025), 14.0" 1920×1200 (16:10). 가로 = 355.6 × 16/√356 = 301.5 mm → 픽셀 0.1570 mm → 칸 272 px = **42.72 mm** (사양 기반, 가속도계와 독립; 실제 보이는 크기 차이로 ±1~2 % 추정).
 - IMU 추정 44.49 mm (95 % 43.6–45.4) 보다 4 % 작음 → 사양 값을 쓴다. C5 재시험이 끝난 뒤(현재 GT 를 읽는 중이라 중간 변경 금지)
   `imu_learn/rescale_gt.py --square-mm 42.72 --update-board recordings/hs_20261020_2*` → ATE 다시 계산 → 보고서 숫자 정정.
+- (2026-10-21 09:45, 실행함) rescale_gt.py --square-mm 42.72 --update-board → 정답 6개 위치 ×1.0496, 보드 json 42.72 (출처 기록). 밤샘 재집계: 판정 변화 없음, 옛 물리 보정 녹화 수만 2/0/3 → 1/0/4. C5 재시험 재집계: 221052 strict-dyn 1개만 바뀜 (runs/endstill_vio/c5_retest_summary_sq42.72.json). 보고서 docs/report_20261021.html 7절.
