@@ -110,6 +110,26 @@ def jobs():
     return js
 
 
+B2_LEADS = (6, 3)
+
+
+def b2_cells():
+    """B' b cells: clip start = setdown[0] still start - L (inside the set-down motion)."""
+    out = []
+    for rec in RECS:
+        x = inp(rec)
+        st = x["setdown"][0]["still_imu_ns"]
+        for L in B2_LEADS:
+            out.append(dict(rec=rec, L=L, still_imu_ns=st, still_s=x["setdown"][0]["still_s"], key=f"{rec[-6:]}_L{L}",
+                            off=round((st[0] - x["first_frame_imu_ns"]) / 1e9 - L, 3)))
+    return out
+
+
+def jobs2():
+    return [dict(kind="B2", rec=cl["rec"], cond=c, hold=hold, off=cl["off"], name=f"B2_{cl['key']}_{c}",
+                 args=zr.common(cl["rec"], cl["off"], 2.0, MAX_SECS, True)) for cl in b2_cells() for c, hold in CONDS.items()]
+
+
 def cmd(j):
     return [PY, "imu_learn/z2_isolate.py", "job", "--cfg-over", f"num_opencv_threads={THREADS}", "--still-hold",
             j["hold"], "--", *j["args"], "--out", str(OUT / j["name"])]
@@ -120,7 +140,7 @@ def n_running():
     return int(r.stdout.strip() or 0)
 
 
-def run_sched():
+def run_sched(second=False):
     OUT.mkdir(parents=True, exist_ok=True)
     head, b, dirty = blobs()
     if dirty:
@@ -129,7 +149,7 @@ def run_sched():
     for cl in cells():
         if cl.get("skip"):
             log(f"B cell {cl['key']} SKIPPED: {cl['skip']}")
-    queue = [j for j in jobs() if not (OUT / f"{j['name']}.json").exists()]
+    queue = [j for j in (jobs2() if second else jobs()) if not (OUT / f"{j['name']}.json").exists()]
     log(f"start git {head} PAR {PAR} threads {THREADS} conds {CONDS} jobs {len(queue)} blobs {b}")
     running = {}
     while queue or running:
@@ -160,14 +180,16 @@ def run_sched():
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["run", "list", "analyse", "html"])
+    ap.add_argument("cmd", choices=["run", "run2", "list", "analyse", "html"])
     o = ap.parse_args()
-    if o.cmd == "run":
-        return run_sched()
+    if o.cmd in ("run", "run2"):
+        return run_sched(second=o.cmd == "run2")
     if o.cmd == "list":
         for cl in cells():
             print(cl["key"], cl.get("off"), cl.get("left_s"), cl.get("skip", ""))
-        for j in jobs():
+        for cl in b2_cells():
+            print(cl["key"], cl["off"])
+        for j in jobs() + jobs2():
             print(j["name"], " ".join(cmd(j)))
         return
     import i3_takeoff_analyse as ta
@@ -177,6 +199,9 @@ def main():
         print(json.dumps(res["B"]["criteria"], ensure_ascii=False, default=float, indent=1))
         return
     res = json.load(open(OUT / "summary.json"))
+    lead = OUT / "lead.html"
+    if lead.exists():
+        ta.LEAD = lead.read_text(encoding="utf-8")
     chk = OUT / "check.json"
     ta.write_html(res, "docs/i3_takeoff_result.html", json.load(open(chk)) if chk.exists() else None)
     print("wrote docs/i3_takeoff_result.html")
