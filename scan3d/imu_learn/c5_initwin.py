@@ -61,9 +61,22 @@ def jobs():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", default=None)
+    ap.add_argument("--phase", default=None, help="coarse | repeat:W05_D5,W10_D5 | lead2:W05_D5 (plan amendment 10:40)")
     o = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
     js = jobs()
+    if o.phase:                                   # amendment 2026-10-21 10:40: staged matrix instead of the full 540
+        ph, _, arg = o.phase.partition(":")
+        sel = set(arg.split(",")) if arg else set()
+        if ph == "coarse":
+            js = [j for j in js if j["name"].startswith("L0_") and j["name"].endswith("_d0")]
+        elif ph == "repeat":
+            js = [j for j in js if j["name"].startswith("L0_") and not j["name"].endswith("_d0")
+                  and "_".join(j["name"].split("_")[2:4]) in sel]
+        elif ph == "lead2":
+            js = [j for j in js if j["name"].startswith("L2_") and "_".join(j["name"].split("_")[2:4]) in sel]
+        else:
+            raise SystemExit(f"unknown phase {o.phase}")
     if o.only:
         j = next(x for x in js if x["name"] == o.only)
         t0 = time.time()
@@ -75,7 +88,7 @@ def main():
     head = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
     blobs = {f: subprocess.run(["git", "hash-object", f], capture_output=True, text=True).stdout.strip() for f in files}
     dirty = subprocess.run(["git", "status", "--porcelain", *files], capture_output=True, text=True).stdout.strip()
-    log(f"scheduler start git {head} dirty={bool(dirty)} PAR {PAR} jobs {len(js)} blobs {blobs}")
+    log(f"scheduler start phase {o.phase} git {head} dirty={bool(dirty)} PAR {PAR} jobs {len(js)} blobs {blobs}")
     queue = [j for j in js if not (OUT / f"{j['name']}.json").exists()]
     running = {}
     nd = 0
