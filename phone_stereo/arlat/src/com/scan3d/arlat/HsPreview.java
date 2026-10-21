@@ -87,21 +87,51 @@ class HsPreview {
     private TextView still;
     private long recT0Ms;
 
-    /** Call when recording starts: "정지 10 … 1" then "움직여도 됨", then a small elapsed-time line. */
-    void startStillCountdown() {
+    // 2:30 guided recording (still start, two set-downs, still end), then auto stop so no hand enters the view to stop it.
+    // {end second, label, colour}; still phases yellow, motion green, set-down orange
+    static final Object[][] GUIDE = {
+        {10, "정지", Color.YELLOW},
+        {55, "들고 움직이기 (보드 보면서)", Color.GREEN},
+        {70, "세워서 내려놓고 정지", 0xFFFFA500},
+        {120, "들고 움직이기 (보드 보면서)", Color.GREEN},
+        {150, "세워서 내려놓고 정지", 0xFFFFA500},
+    };
+    static final int GUIDE_END_S = 150;
+
+    /** Call when recording starts: big phase text + seconds left in the phase + next step; vibrates at each phase change;
+     *  at GUIDE_END_S calls onEnd (auto stop). */
+    void startGuide(final Activity act, final Runnable onEnd) {
         recT0Ms = SystemClock.elapsedRealtime();
+        final int[] lastPhase = {-1};
         still.post(new Runnable() {
             @Override public void run() {
                 long t = SystemClock.elapsedRealtime() - recT0Ms;
-                int left = STILL_S - (int) (t / 1000);
+                int s = (int) (t / 1000);
+                if (s >= GUIDE_END_S) {
+                    still.setTextSize(48); still.setTextColor(Color.WHITE); still.setText("끝 — 자동으로 멈춤");
+                    buzz(act, 600);
+                    onEnd.run();
+                    return;
+                }
+                int ph = 0;
+                while ((Integer) GUIDE[ph][0] <= s) ph++;
+                if (ph != lastPhase[0]) { if (lastPhase[0] >= 0) buzz(act, 250); lastPhase[0] = ph; }
+                int left = (Integer) GUIDE[ph][0] - s;
+                String next = ph + 1 < GUIDE.length ? "다음: " + GUIDE[ph + 1][1] : "다음: 자동 멈춤";
                 still.setVisibility(View.VISIBLE);
-                if (left > 0) { still.setTextSize(64); still.setTextColor(Color.YELLOW); still.setText("정지 " + left); }
-                else if (t < (STILL_S + 3) * 1000L) { still.setTextSize(48); still.setTextColor(Color.GREEN); still.setText("움직여도 됨"); }
-                else { still.setTextSize(20); still.setTextColor(Color.WHITE);
-                       still.setText(String.format(Locale.US, "녹화 %d:%02d · 끝나기 전 10초 정지", t / 60000, t / 1000 % 60)); }
+                still.setTextSize(40); still.setTextColor((Integer) GUIDE[ph][2]);
+                still.setText(GUIDE[ph][1] + "\n" + left + "\n" + next
+                        + String.format(Locale.US, "\n녹화 %d:%02d / 2:30", s / 60, s % 60));
                 still.postDelayed(this, 200);
             }
         });
+    }
+
+    static void buzz(Activity act, long ms) {
+        try {
+            android.os.Vibrator v = (android.os.Vibrator) act.getSystemService(android.content.Context.VIBRATOR_SERVICE);
+            if (v != null) v.vibrate(android.os.VibrationEffect.createOneShot(ms, android.os.VibrationEffect.DEFAULT_AMPLITUDE));
+        } catch (Throwable ignored) { }
     }
 
     /** Create the GL side; returns when the preview Surface exists (call before opening the camera session). */

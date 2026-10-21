@@ -52,7 +52,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 class HsRecorder implements SensorEventListener {
     interface Status { void show(String s); }
-    static final String VERSION = "hs-20261020-still";       // written to meta.json app_version + status line (nroff: NR/edge OFF requested; ae: AE/ISO/AWB/colour logged)
+    static final String VERSION = "hs-20261021-guide";       // written to meta.json app_version + status line (nroff: NR/edge OFF requested; ae: AE/ISO/AWB/colour logged)
 
     static boolean has(int[] modes, int m) {
         if (modes == null) return false;

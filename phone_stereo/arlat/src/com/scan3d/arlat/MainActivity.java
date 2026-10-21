@@ -92,7 +92,10 @@ public class MainActivity extends Activity {
                         hs.previewSurface = hsPrev.surface;
                     }
                     hs.start();
-                    if (hsPrev != null) hsPrev.startStillCountdown();
+                    if (hsPrev != null) hsPrev.startGuide(this, () -> {
+                        if (hs != null) hs.stopReason = "user (guide end 150 s)";
+                        finish();                                     // onPause stops the recorder and closes the files
+                    });
                 }
                 catch (Exception e) { status.setText("hs error: " + e); android.util.Log.e("arlat", "hs", e); hs = null; }
             }
