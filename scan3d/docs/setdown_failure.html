@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>내려놓기 실패 진단</title>
+<style>
+:root{--bg:#fff;--fg:#1d1d1f;--mut:#666;--line:#ddd;--box:#f5f6f8;--good:#e8f6ec;--bad:#fbe9e9;--warn:#fdf5e0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16171a;--fg:#e8e8ea;--mut:#9a9aa0;--line:#33343a;--box:#202226;--good:#1d3a26;--bad:#3a1f1f;--warn:#3a321c}}
+body{background:var(--bg);color:var(--fg);font:15px/1.6 system-ui,sans-serif;max-width:1100px;margin:0 auto;padding:16px}
+table{border-collapse:collapse;margin:8px 0 16px;font-size:13px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:4px 6px;text-align:center}small{color:var(--mut)}
+.box{background:var(--box);border-radius:8px;padding:10px 14px;margin:10px 0}.concl{background:var(--good)}
+img{max-width:100%;height:auto;border:1px solid var(--line)}td.f{background:var(--bad)}td.z{background:var(--good)}
+</style></head><body>
+<h1>224323 내려놓기 실패 진단 (2026-10-21)</h1>
+
+<div class="box concl"><b>결론</b>
+<ol>
+<li><b>폰이 놓여 가만히 있는데 VIO 가 혼자 움직였다.</b> 224323 에서 오차가 커진 133–137 s 동안 폰은 탁자 위에 정지 상태였다
+(자이로 최대 0.036 rad/s, 가속도 흔들림 0.13 m/s² 이하). 그런데 VIO 속도는 0.03 → 0.46–0.57 m/s 로 커졌고, 정답 오차는 2.7 → 48–65 cm 가 됐다 (3 실행 모두).</li>
+<li><b>방아쇠 = 사람 손.</b> 133.0–133.3 s 에 녹화를 멈추려고 손이 화면에 들어온다 (장면 변화 0.2–0.34). 바로 그 프레임부터 ZUPT(정지 갱신)가
+시차 검사에서 떨어진다 (0.05 px → 1.0–1.4 px &gt; 문턱 0.5 px). ZUPT 는 <b>영상 시차만</b> 보므로 (설정 zupt_chi2_multipler 0) 장면이 움직이면
+IMU 가 정지라고 해도 정지로 안 친다. <b>확인</b> (시각이 프레임 단위로 맞음).</li>
+<li><b>그런데 영상 갱신도 없었다.</b> 113.8 s 의 내려놓기 충격(|a| ≈ 4.9 g) 직후 SLAM 특징이 49 → 0 개로 사라졌고(114–115 s),
+그 뒤 정지 18 s 동안 ZUPT 가 갱신을 대신해서 새 SLAM 특징이 생기지 않았다. 폰이 정지라 MSCKF 특징도 시차가 없어 0 개.
+그래서 ZUPT 가 빠지자 <b>IMU 만으로 적분</b> → 속도가 초당 약 0.1 m/s 씩 커짐. <b>확인</b> (로그의 갱신 특징 수 0).</li>
+<li><b>223815 도 같은 약점이 있다 — 다만 덜 드러났다.</b> 손은 136 s 에 들어와 ZUPT 가 떨어지지만, 그때는 SLAM 특징이 9–17 개 남아 있어 VIO 가 버텼다
+(오차 0.5–1.4 cm). 137 s 에 특징이 0 이 된 뒤 140–141 s 에 ZUPT 가 다시 떨어지자 속도가 0.01 → 0.04 m/s 로 오르기 시작했고, 녹화가 141.5 s 에 끝났다.
+223815 의 충격은 더 약했고 (|a| ≈ 2.9 g) SLAM 특징이 17 개 남았다. 길었으면 같은 일이 났을 것 — <b>추정</b>.</li>
+<li><b>아닌 것</b>: 센서 포화 아님 (가속도 최대 47 m/s² = 범위 156.9 의 30 %, 자이로 4.2 rad/s = 범위 34.9 의 12 %, 95 % 넘는 표본 0).
+흐림 아님 (실패 구간에 폰 정지, 선명도 정상). 카메라가 탁자에 붙은 것 아님 (노트북 화면을 비스듬히 봄, 모서리 점 500 개 꽉 참).
+Android 바이어스 계단 무관 (원본 16/35 IMU). 판이 시야에서 빠진 것(117 s 부터 판 검출 0–20 %)은 <b>정답만</b> 끊긴 것 — VIO 는 판이 아니라 일반 특징을 씀.</li>
+</ol>
+<b>대책 제안 (모두 추정, 이 녹화 2 개 근거)</b>:
+① <b>ZUPT 에 IMU 정지 판정을 같이 쓰기</b> — 자이로·가속도가 정지면 장면이 움직여도 정지 갱신 (zupt_chi2_multipler &gt; 0 또는 IMU 분산 기반 ZUPT; 착륙한 드론 옆을 사람이 지나가는 경우와 같음).
+② <b>충격 감지 → 착지 상태</b>: |a| 가 크게 튄 뒤 IMU 가 조용하면 "착지" 로 보고 위치를 붙잡거나(ZUPT 강제), 다시 이륙 전 정적 재초기화.
+③ <b>특징 수 게이트</b>: 갱신에 쓰인 특징(MSCKF+SLAM)이 0 인 채로 ZUPT 도 실패하면 VIO 출력을 "믿을 수 없음" 으로 표시 (비행 중이면 호버 유지·착륙, 지상이면 이륙 금지).
+이 녹화에서 ③ 은 133.0 s (오차 2.7 cm 때) 에 바로 걸렸을 것이다 — 0.5 s 안.</div>
+
+<h2>1. 무엇을 봤나</h2>
+<p>새 VIO 실행 없음. 기존 원본 IMU 실행 runs/endstill_vio/{224323,223815}_loose_raw_o{0,1,2} (전 구간, loose 설정, 시작 위치 3 개)의
+OpenVINS DEBUG 로그와 포즈 줄, 녹화의 원본 IMU(유형 16/35), 영상(cam5.mp4, 0.25 s 마다 처음부터 순서대로 디코드), 정답 판 검출(imu_gt/gt.npz).
+시각은 녹화의 첫 IMU 표본부터 잰 초 (docs/endstill_check.html 과 같은 기준). 점검 목록은 docs/init_window_plan.md 실험 2 에 실행 전 등록.
+코드 imu_learn/endstill_setdown.py, 결과 runs/setdown/{224323,223815}.json.</p>
+<p><small>정정 (작업 중 발견): 처음 그림은 OpenCV 프레임 이동(CAP_PROP_POS_FRAMES)으로 영상을 읽었는데 약 5 s 어긋나 손이 127 s 에 나오는 것처럼 보였다.
+처음부터 순서대로 읽게 고친 뒤 손은 132.7–133.7 s, 충격 프레임은 113.5 s 근처로 IMU 충격(113.84 s)과 맞는다. 아래 숫자는 모두 고친 뒤 값.</small></p>
+
+<h2>2. 224323 시간 순서</h2>
+<table>
+<tr><th>시각 (s)</th><th>무슨 일</th><th>근거</th></tr>
+<tr><td>~110–113.5</td><td>판을 비스듬히 보며 내려옴</td><td>영상</td></tr>
+<tr><td>113.84</td><td>탁자에 내려놓음: |a| − g = 38.2 m/s² (|a| ≈ 4.9 g), 114.5 s 에 두 번째 작은 충격 9.7 m/s²</td><td>원본 가속도</td></tr>
+<tr><td>114–115</td><td>SLAM 특징 49 → 7–16 → 0 (3 실행 모두). MSCKF 갱신 특징 0</td><td>포즈 줄 n_slam, 로그 "SLAM update (N feats)"</td></tr>
+<tr><td>115–132.5</td><td>정지. ZUPT 통과율 100 % (117.5 s 부터), 시차 0.04–0.08 px. VIO 이동 15 s 동안 2.9–4.5 cm, 속도 0.01–0.05 m/s. 정답 오차 0.9–2.4 cm (정답 있는 곳만)</td><td>로그 ZUPT, 포즈</td></tr>
+<tr><td>117 →</td><td>판 검출 0–20 % (비스듬해서) → 정답이 대부분 끊김</td><td>imu_gt ok</td></tr>
+<tr><td><b>133.0</b></td><td><b>손이 들어옴</b> (장면 변화 0.21–0.34). ZUPT 실패 시작: 시차 1.0–1.4 px, 추적 특징 182 → 108–142</td><td>영상 차이, 로그</td></tr>
+<tr><td>133–137</td><td>폰은 정지 (자이로 최대 0.036 rad/s). VIO 속도 0.03 → 0.41–0.51 m/s (136.5 s), 오차 2.7 → 48–65 cm. 갱신 특징 0–0.2</td><td>IMU, 포즈, 정답</td></tr>
+<tr><td>137–138.8</td><td>ZUPT 가 가끔 통과(62–92 %) 해도 속도는 0.42–0.57 m/s 그대로 (약한 ZUPT 잡음 배수 10)</td><td>로그</td></tr>
+</table>
+<img src="setdown_img/224323_timeline.png" alt="224323 시간축: 오차, 1 s 상대 오차, VIO 속도, 갱신 특징 수, 영상 지표, IMU 최대값">
+<img src="setdown_img/224323_frames.jpg" alt="224323 1 s 마다 영상">
+
+<h2>3. 223815 같은 점검</h2>
+<table>
+<tr><th>시각 (s)</th><th>무슨 일</th></tr>
+<tr><td>130.65</td><td>내려놓음: |a| − g = 18.4 m/s² (|a| ≈ 2.9 g) — 224323 보다 약함</td></tr>
+<tr><td>131–132</td><td>SLAM 특징 50 → 32 → 17 (0 이 아님)</td></tr>
+<tr><td>132–135.5</td><td>정지, ZUPT 통과 61–100 %, VIO 이동 0–0.1 cm</td></tr>
+<tr><td>136–137</td><td>손 들어옴 (장면 변화 0.25–0.33), ZUPT 실패 (통과 0–5 %). SLAM 특징 9 개 남아 VIO 이동 0.2–0.8 cm / 0.5 s, 오차 0.5–1.4 cm 로 버팀</td></tr>
+<tr><td>137</td><td>화면 내용이 바뀜(판 닫힘), SLAM 특징 0</td></tr>
+<tr><td>140–141.5</td><td>ZUPT 통과 15–30 % 로 떨어짐, VIO 속도 0.01 → 0.04 m/s 로 오르기 시작 — 녹화 끝 (정답 없음)</td></tr>
+</table>
+<p>223815 의 전체 ATE 는 0.41–0.45 cm 로 괜찮았지만, 같은 구조(특징 0 + ZUPT 실패 = IMU 만 적분)가 마지막 1.5 s 에 시작됐다. <b>추정</b>: 녹화가 길었거나 손이 특징이 남아 있지 않을 때 들어왔으면 224323 처럼 됐을 것.</p>
+<img src="setdown_img/223815_timeline.png" alt="223815 시간축">
+<img src="setdown_img/223815_frames.jpg" alt="223815 1 s 마다 영상">
+
+<h2>4. 점검 목록 결과</h2>
+<table>
+<tr><th>후보 원인</th><th>판정</th><th>근거</th></tr>
+<tr><td>정지 중 장면 움직임(손)으로 ZUPT 실패</td><td class="f">확인</td><td>ZUPT 실패 시작 133.0 s = 손 들어온 프레임, 그 전 18 s 는 통과 100 %</td></tr>
+<tr><td>갱신에 쓸 특징 0 (SLAM 사라짐, MSCKF 시차 없음)</td><td class="f">확인</td><td>114.5 s 부터 끝까지 MSCKF·SLAM 갱신 특징 0–0.2</td></tr>
+<tr><td>충격 때문에 SLAM 특징이 사라짐</td><td>추정</td><td>시각은 정확히 겹침 (113.84 s 충격 → 114–115 s 0). 223815 의 약한 충격에서는 17 개 남음. 원인이 충격의 흐림·추적 끊김인지, ZUPT 동안 새 특징을 안 만드는 OpenVINS 동작인지는 코드로 확인 안 함</td></tr>
+<tr><td>IMU 포화 (가속도·자이로)</td><td class="z">아님</td><td>최대 30 % / 12 % of range, 95 % 넘는 표본 0</td></tr>
+<tr><td>흐림</td><td class="z">아님 (실패 구간)</td><td>실패 구간 폰 정지; 선명도는 손 때문에만 변함</td></tr>
+<tr><td>카메라가 탁자에 너무 가까움</td><td class="z">아님</td><td>영상: 노트북 화면을 30–40 cm 거리(추정)에서 비스듬히 봄, 모서리 점 500 (상한)</td></tr>
+<tr><td>판이 시야 밖</td><td>정답에만 영향</td><td>117 s 부터 판 검출 0–20 %; VIO 는 판을 쓰지 않음. 오차 18–29 cm 는 판이 일부 다시 잡힌 133–137 s 값</td></tr>
+<tr><td>Android 바이어스 계단</td><td class="z">무관</td><td>원본 16/35 IMU 실행</td></tr>
+</table>
+
+<h2>5. 대책 (제안, 추정)</h2>
+<table>
+<tr><th>대책</th><th>이 녹화에서 무엇을 막나</th><th>주의</th></tr>
+<tr><td>① ZUPT 에 IMU 정지 판정 추가 (zupt_chi2_multipler &gt; 0, 또는 자이로·가속도 분산이 작으면 ZUPT)</td><td>133–138.8 s 의 IMU 만 적분 (폰은 정지였음)</td><td>천천히 미끄러지는 움직임을 정지로 오인할 수 있음 → 문턱은 녹화로 정해야</td></tr>
+<tr><td>② 충격 감지 → 착지 상태 (|a| 튐 + 뒤이은 IMU 정지 → 위치 고정, 다시 뜨기 전 정적 재초기화)</td><td>정지 구간 전체</td><td>드론 착지 충격 크기는 폰을 손으로 놓을 때와 다름 → 실제 착지 녹화 필요</td></tr>
+<tr><td>③ 특징 수 게이트 (갱신 특징 0 + ZUPT 실패가 N 프레임 → "믿을 수 없음")</td><td>133.0 s 에 바로 경고 (오차 2.7 cm 일 때)</td><td>막지는 못하고 알리기만 함 — 가장 쉽고 안전</td></tr>
+<tr><td>④ 정지 중에도 SLAM 특징 유지·보충</td><td>ZUPT 실패 때 버팀목 (223815 처럼)</td><td>OpenVINS 내부 동작 변경 → 범위 큼</td></tr>
+</table>
+<p><small>재현: <code>../venv_ffs/bin/python imu_learn/endstill_setdown.py</code> → runs/setdown/. 숫자는 runs/setdown/*.json 의 0.5 s 칸 값 (3 실행 범위로 적음).
+</small></p>
+<h2>6. 자기 검산 (원시 로그·IMU CSV 에서 다시 계산, imu_learn/endstill_setdown_check.py, 결과 runs/setdown/check.txt)</h2>
+<table>
+<tr><th>항목</th><th>문서 값</th><th>다시 계산</th><th>맞음?</th></tr>
+<tr><td>224323 ZUPT 연속 실패(5 프레임) 시작</td><td>133.0 s 칸</td><td>133.23 / 133.33 / 133.28 s (3 실행)</td><td>맞음 (같은 0.5 s 칸)</td></tr>
+<tr><td>224323 115 s 뒤 갱신 특징 평균</td><td>0–0.2</td><td>0.02–0.05</td><td>맞음</td></tr>
+<tr><td>224323 마지막 |v|</td><td>0.46–0.57 m/s (칸 평균)</td><td>0.43 / 0.49 / 0.58 (마지막 포즈)</td><td>맞음 (범위 근사)</td></tr>
+<tr><td>224323 충격</td><td>113.84 s, 38.2 m/s²</td><td>113.84 s, 38.2</td><td>맞음</td></tr>
+<tr><td>최대 |a| 축·|w| 축</td><td>47 / 4.2 (224323), 28 / 2.95 (223815)</td><td>47.2 / 4.22, 28.1 / 2.95</td><td>맞음</td></tr>
+<tr><td>223815 ZUPT 연속 실패 시작</td><td>136 s 칸</td><td>135.82 / 135.91 / 136.04 s</td><td>맞음 (135.5–136 칸 걸침)</td></tr>
+<tr><td>223815 충격</td><td>130.65 s, 18.4 m/s²</td><td>130.65 s, 18.4</td><td>맞음</td></tr>
+</table>
+</body></html>
