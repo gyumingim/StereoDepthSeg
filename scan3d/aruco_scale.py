@@ -82,7 +82,13 @@ class Board:
         self.square_m, self.marker_m = spec["square_m"], spec["marker_m"]
         self.dictionary = _dict_of(spec["dict"])
         if NEW_API:
-            self.board = cv2.aruco.CharucoBoard((self.sx, self.sy), self.square_m, self.marker_m, self.dictionary)
+            ids_start = int(spec.get("ids_start") or 0)       # different marker ids per board → the video tells which board
+            if ids_start:
+                n_mk = (self.sx * self.sy) // 2
+                self.board = cv2.aruco.CharucoBoard((self.sx, self.sy), self.square_m, self.marker_m, self.dictionary,
+                                                    np.arange(ids_start, ids_start + n_mk, dtype=np.int32))
+            else:
+                self.board = cv2.aruco.CharucoBoard((self.sx, self.sy), self.square_m, self.marker_m, self.dictionary)
             if self.sy % 2 == 0 and hasattr(self.board, "setLegacyPattern"):
                 self.board.setLegacyPattern(True)          # 짝수 행: 4.5 로 인쇄한 보드와 같은 무늬
             cp = cv2.aruco.CharucoParameters()
