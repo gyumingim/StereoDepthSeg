@@ -258,8 +258,9 @@ def analyse():
             r["src"] = src
             r["pred_held"] = mk[pr][v]["held"] if v in VARIANTS else 0
             r["pred_segs"] = mk[pr][v]["segs"] if v in VARIANTS else []
+            d = json.load(open(str(p) + ".json"))
+            r["threads"] = d.get("cfg_over")          # config_used lists only init/zupt keys; the override is here
             if src == "this run":
-                d = json.load(open(str(p) + ".json"))
                 r.update(hold_wait_timeouts=d.get("hold_wait_timeouts"), hold_init_ns=d.get("hold_init_ns"))
             runs[(pr, v)] = r
 
