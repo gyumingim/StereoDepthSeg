@@ -134,13 +134,15 @@ def frames_from_log(prefix, t0):
     for line in gzip.open(prefix + ".stderr.log.gz", "rt", errors="replace"):
         line = ANSI.sub("", line)
         if "[DIAGT]" in line:
-            cur = dict(t=float(line.split("[DIAGT]")[1]) - off, z=False, f=0, init=init)
+            cur = dict(t=float(line.split("[DIAGT]")[1]) - off, z=False, f=0, init=init, dfail=False)
             fr.append(cur)
         elif "successful initialization" in line:
             init = True
             if cur is not None:
                 cur["init"] = True
                 cur["t_init"] = True
+        elif cur is not None and "[ZUPT]: failed disparity" in line:
+            cur["dfail"] = True
         elif cur is not None and "[ZUPT]: accepted" in line:
             cur["z"] = True
         elif cur is not None and ("for MSCKF update (" in line or "for SLAM update (" in line):
@@ -220,6 +222,12 @@ def analyse_one(prefix, es):
         al = gate_alarms(fr, N)
         res[f"gate{N}"] = dict(first_after_100=next((round(x, 2) for x in al if x > ALIGN_MAX_S), None),
                                n_le_100=sum(x <= ALIGN_MAX_S for x in al), n_total=len(al))
+    # ZUPT accepted by the IMU chi2 test although the disparity check failed (Z conditions), t <= 100 s = hand-held motion
+    # part (+ the start still): candidates for a wrong 'still' during motion
+    m100 = [f for f in fr if f["init"] and f["t"] <= ALIGN_MAX_S]
+    res["imu_only_zupt_le_100"] = sum(f["z"] and f["dfail"] for f in m100)
+    res["zupt_le_100"] = sum(f["z"] for f in m100)
+    res["frames_le_100"] = len(m100)
     zs = [f for f in fr if f["t"] > ALIGN_MAX_S and f["init"]]
     res["zupt_frac_after_100"] = round(float(np.mean([f["z"] for f in zs])), 3) if zs else None
     # trajectory vs GT, aligned on t <= 100 s only
@@ -283,7 +291,8 @@ def summarize():
                 n=len(rs), n_init=sum(bool(r.get("initialized")) for r in rs),
                 **{k: med([r.get(k) for r in rs]) for k in ("lastwin_med_cm", "lastwin_max_cm", "drift_cm", "v_mean_cms",
                                                             "v_max_cms", "bench_ate_cm", "ate100_cm", "scale100",
-                                                            "after100_max_cm", "zupt_frac_after_100")},
+                                                            "after100_max_cm", "zupt_frac_after_100",
+                                                            "imu_only_zupt_le_100", "zupt_le_100")},
                 ok100=all(r.get("initialized") and r.get("scale100") is not None and 0.5 <= r["scale100"] <= 2
                           and r.get("ate100_cm", 99) <= 10 for r in rs) and len(rs) == 3)
     imp = {}
