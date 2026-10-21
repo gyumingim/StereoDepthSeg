@@ -1,0 +1,98 @@
+<!doctype html><html lang=ko><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><title>GT 속도 잡음</title><style>body{font-family:system-ui,'Malgun Gothic',sans-serif;max-width:1100px;margin:24px auto;padding:0 16px;
+line-height:1.55;color:#1d232a;background:#fff}h1{font-size:1.5em}h2{font-size:1.2em;margin-top:1.6em;border-bottom:1px solid #ddd}
+table{border-collapse:collapse;font-size:.88em;margin:.6em 0;display:block;overflow-x:auto}td,th{border:1px solid #ccc;
+padding:3px 7px;text-align:right;white-space:nowrap}th{background:#f2f4f6}td.l,th.l{text-align:left}.ok{color:#11702f;font-weight:600}
+.bad{color:#b3261e;font-weight:600}.box{background:#f5f8fb;border-left:4px solid #3b6ea8;padding:.6em 1em}.small{color:#555;font-size:.9em}
+@media (prefers-color-scheme:dark){body{background:#16191d;color:#e3e6ea}th{background:#262b31}td,th{border-color:#3a4048}
+.box{background:#1f252c}.small{color:#aab}.ok{color:#6fd18f}.bad{color:#ff8a80}}</style></head><body>
+<h1>224323 끝 정지의 "GT 2 cm/s 넘음" — 잡음인가, 진짜 움직임인가</h1>
+<p class=small>2026-10-21 · 분석만 (VIO 실행 없음) · 스크립트 imu_learn/gtnoise_still.py, imu_learn/gtnoise_held.py · 결과 runs/gtnoise/gtnoise_still.json, gtnoise_held.json ·
+시각 = 녹화의 첫 IMU 표본부터 잰 초 (docs/setdown_failure.html 과 같은 기준)</p>
+
+<div class=box>
+<b>결론</b><br>
+① 224323 붙잡은 구간의 2 cm/s 초과 표본(spl 15/384 = 3.9 %, 최대 2.08 cm/s; 1152 는 같은 384 표본을 시작 3개가 세 번 센 값)은 <b>GT 잡음</b>이다. 폰이 움직인 것이 아니다.
+근거: 같은 순간 IMU 로 구한 속도 변화 상한은 0.43 cm/s, 자이로 회전은 0.49° 인데 GT 는 2.3° 돌았다고 한다. GT 위치는 판 모서리(코너) 개수가 바뀌는 프레임에서 3–4 mm 씩 계단처럼 뛴다 — 판이 거의 화면 밖이라 코너 6–15 개로 잰 값.<br>
+② IMU 로 "확실히 정지"인 구간(새 녹화 5개의 시작 정지 + 끝 정지)에서는 GT 가 2 cm/s 를 넘은 표본이 <b>0 / 9 469</b> (spl, 붙잡은 구간 뺌), 최대 0.66 cm/s, 99 % 값 0.07–0.42 cm/s. rs 도 0 / 9 796, 최대 1.17 cm/s.<br>
+③ 그래서 3' 비율 기준(≤ 0.5 % 가 2 cm/s 초과) <b>자체는 이룰 수 있다</b> — 판이 잘 보이면 GT 잡음은 기준의 1/3 아래. 잘못된 것은 문턱값이 아니라 <b>GT 품질을 안 보고 센다는 점</b>이다. 판이 거의 안 보이는 구간의 GT 표본까지 세면 정지해 있어도 실패한다.<br>
+④ 제안 (사후 변경이므로 다음 실험 전에 미리 등록해야 함): 3' 에서 표본과 ±0.1 s 이웃 둘 다 코너 ≥ 12 개인 GT 만 센다. 이렇게 하면 확실한 정지 8 743 표본 중 초과 0, 224323 붙잡은 구간 107 표본 중 초과 0 (최대 0.97 cm/s).
+</div>
+
+<h2>1. 무엇을 쟀나</h2>
+<ul>
+<li>속도 = 3' 검사와 <b>똑같은 함수</b>: z2_regress.gt_speed (±0.1 s 중앙 차분, 이웃 GT 가 0.02 s 안에 있어야 함, 2 cm/s 초과 = 움직임). imu_gt_rs 에도 같은 코드를 씀 (spl 에서는 원래 함수와 결과가 같은지 assert).</li>
+<li>붙잡은 구간 숫자 = h_tune.held_motion 과 똑같이 셈 (15/384 재현 assert). 구간 = runs/h_arm_init/F_224323_Hw15m05_o0 의 붙잡기 118.82 s – 마지막 포즈 138.77 s. <b>이 안에 든 GT 표본은 122.7–136.9 s</b> (판이 117 s 부터 거의 안 보여 GT 가 드문드문).</li>
+<li>"확실히 정지" = GT 표본 시각 ±1 s 의 원본 IMU(16/35)에서 축별 자이로 표준편차 &lt; 0.005 rad/s, 가속도 표준편차 &lt; 0.05 m/s², 자이로가 중앙값에서 0.02 rad/s 이상 벗어나지 않음 (기본). 더 엄격(0.003 / 0.03 / 0.01)·더 느슨(0.01 / 0.1 / 0.05)도 봄.</li>
+<li>녹화: 새 녹화 6개 (214138, 221052, 221925, 222747, 223815, 224323). 221925 는 이 조건을 만족하는 구간이 없음. 옛 녹화 131326 / 154320 도 0 (원본 IMU 없음, 참고만).</li>
+</ul>
+
+<h2>2. 확실히 정지인 구간의 GT 속도 (기본 조건)</h2>
+<table><tr><th class=l>녹화</th><th class=l>정지 구간 (s)</th><th>spl 표본</th><th>&gt; 2 cm/s</th><th>최대 cm/s</th><th>99 % cm/s</th><th>코너 중앙</th><th>rs 표본</th><th>&gt; 2 cm/s</th><th>rs 최대</th></tr>
+<tr><td class=l>214138</td><td class=l>2.2–18.1 (시작)</td><td>3 798</td><td class=ok>0</td><td>0.15</td><td>0.08</td><td>19</td><td>3 798</td><td class=ok>0</td><td>0.14</td></tr>
+<tr><td class=l>221052</td><td class=l>1.6–18.1 (시작)</td><td>2 093</td><td class=ok>0</td><td>0.66</td><td>0.42</td><td>12</td><td>2 327</td><td class=ok>0</td><td>1.13</td></tr>
+<tr><td class=l>221925</td><td class=l>없음</td><td>0</td><td>–</td><td>–</td><td>–</td><td>–</td><td>0</td><td>–</td><td>–</td></tr>
+<tr><td class=l>222747</td><td class=l>1.4–8.1 (시작)</td><td>1 552</td><td class=ok>0</td><td>0.09</td><td>0.07</td><td>25</td><td>1 552</td><td class=ok>0</td><td>0.11</td></tr>
+<tr><td class=l>223815</td><td class=l>1.6–11.3 (시작)</td><td>2 026</td><td class=ok>0</td><td>0.22</td><td>0.18</td><td>20</td><td>2 119</td><td class=ok>0</td><td>0.33</td></tr>
+<tr><td class=l>224323</td><td class=l>120.6–130.5, 135.8–137.0 (끝; 붙잡은 구간 안)</td><td>55</td><td class=ok>0</td><td>0.73</td><td>0.73</td><td>6</td><td>23</td><td class=ok>0</td><td>1.17</td></tr>
+<tr><th class=l>합계</th><th class=l></th><th>9 524</th><th class=ok>0 (0 %)</th><th>0.73</th><th></th><th></th><th>9 819</th><th class=ok>0 (0 %)</th><th>1.17</th></tr></table>
+<p class=small>엄격 조건: spl 0 / 8 534 (최대 0.47), rs 0 / 8 858 (최대 1.13). 느슨 조건: spl 15 / 11 203 — 이 15 개는 모두 224323 붙잡은 구간의 그 15 개 (134–135 s 가 느슨 조건에는 "정지"로 들어감), 그 밖에는 0.
+새 녹화의 끝 정지는 대부분 GT 가 없음 (판이 화면 밖) — 끝 정지에서 GT 가 있는 곳은 224323 과 223815 136–137 s(느슨 조건, 최대 1.88 cm/s)뿐.</p>
+
+<h2>3. 224323 붙잡은 구간</h2>
+<table><tr><th class=l>항목</th><th class=l>spl</th><th class=l>rs</th></tr>
+<tr><td class=l>GT 표본 / 2 cm/s 초과</td><td class="l bad">384 / 15 (3.9 %)</td><td class=l>156 / 2 (1.3 %)</td></tr>
+<tr><td class=l>최대 속도</td><td class=l>2.08 cm/s</td><td class=l>2.19 cm/s</td></tr>
+<tr><td class=l>초과 표본 시각</td><td class=l>134.33–134.46 s (5), 135.07–135.15 s (10)</td><td class=l>134.49 s (2)</td></tr>
+<tr><td class=l>코너 개수 중앙 (구간 전체)</td><td class=l>6 (정지 구간 비교값 12–25)</td><td class=l>15</td></tr>
+<tr><td class=l>그중 IMU 기본 정지 조건 만족</td><td class=l>55 표본, 초과 0, 최대 0.73</td><td class=l>23 표본, 초과 0, 최대 1.17</td></tr></table>
+
+<h3>IMU 는 뭐라고 하나 (1 s 묶음, 원본 16/35)</h3>
+<table><tr><th class=l>시각 (s)</th><th>자이로 표준편차 rad/s</th><th>자이로 최대 벗어남</th><th>가속도 표준편차 m/s²</th><th>가속도 최대 벗어남</th><th class=l>해석</th></tr>
+<tr><td class=l>118–130</td><td>0.0013–0.0030</td><td>0.005–0.011</td><td>0.007–0.012</td><td>0.025–0.041</td><td class=l>정지 (센서 잡음 수준)</td></tr>
+<tr><td class=l>131–133</td><td>0.0049–0.0067</td><td>0.018–0.023</td><td>0.009–0.020</td><td>0.031–0.062</td><td class=l>손이 들어옴 (132.7–133.7 s, 화면 누름) — 약한 떨림</td></tr>
+<tr><td class=l>134</td><td>0.0095</td><td>0.039</td><td>0.021</td><td>0.108</td><td class=l>가장 큰 떨림</td></tr>
+<tr><td class=l>135–138</td><td>0.0020–0.0044</td><td>0.008–0.014</td><td>0.010–0.015</td><td>0.054–0.129</td><td class=l>거의 정지</td></tr></table>
+<ul>
+<li><b>IMU 속도 상한</b>: 133–137 s 의 모든 0.2 s 창(GT 속도 창과 같은 길이)에서 가속도(±1 s 평균 뺌)를 적분한 속도 변화 최대 = <b>0.43 cm/s</b>. 조용한 122–130 s 에서 같은 계산은 중앙 0.07, 최대 0.20 cm/s. 2 cm/s 를 만들려면 이것의 5 배가 필요. (기울어짐에 따른 중력 성분 변화는 무시 — 무시하면 상한이 커지는 쪽이라 결론에 불리하지 않음, 추정)</li>
+<li><b>회전</b>: 초과 표본에서 GT 각속도 0.06 rad/s, 같은 창의 자이로(정지 바이어스 뺌) 0.001–0.005 rad/s. 130.5→135.8 s 자이로 누적 회전 0.49°, GT 는 손 전·후 평균 자세가 2.27° (rs 2.09°) 다르다고 함.</li>
+<li>폰이 아주 조금 밀렸을 가능성(수 mm 이하)은 IMU 로 배제 못 함. 다만 그랬더라도 속도는 0.43 cm/s 아래 — 2 cm/s 기준으로는 "정지".</li>
+</ul>
+
+<h3>GT 위치가 왜 뛰나 (spl, 0.1 s 묶음 평균)</h3>
+<table><tr><th class=l>시각 (s)</th><th>x mm</th><th>y mm</th><th>z mm</th><th>코너</th><th>최대 속도 cm/s</th></tr>
+<tr><td class=l>133.0</td><td>147.7</td><td>257.2</td><td>−238.8</td><td>18</td><td>–</td></tr>
+<tr><td class=l>133.5</td><td>150.9</td><td>257.8</td><td>−241.2</td><td>6</td><td>–</td></tr>
+<tr><td class=l>134.1</td><td>151.7</td><td>258.1</td><td>−240.5</td><td>6</td><td>1.40</td></tr>
+<tr><td class=l>134.3</td><td>151.2</td><td>255.3</td><td>−240.6</td><td>6</td><td>2.00</td></tr>
+<tr><td class=l>134.4</td><td>149.2</td><td>254.7</td><td>−240.0</td><td>15</td><td>2.04</td></tr>
+<tr><td class=l>134.6</td><td>147.9</td><td>254.3</td><td>−238.8</td><td>18</td><td>0.84</td></tr>
+<tr><td class=l>134.9</td><td>149.0</td><td>254.8</td><td>−240.0</td><td>15</td><td>0.35</td></tr>
+<tr><td class=l>135.0</td><td>149.2</td><td>254.8</td><td>−240.1</td><td>15</td><td>2.08</td></tr>
+<tr><td class=l>135.2</td><td>152.7</td><td>255.6</td><td>−241.5</td><td>6</td><td>1.89</td></tr>
+<tr><td class=l>135.4</td><td>152.6</td><td>255.8</td><td>−241.1</td><td>6</td><td>0.25</td></tr>
+<tr><td class=l>136.8</td><td>152.7</td><td>256.5</td><td>−240.6</td><td>6</td><td>0.62</td></tr></table>
+<p>위치는 코너 개수가 바뀌는 곳(18→6, 6→15→18, 15→6)에서 3–4 mm 씩 옮겨가고, 개수가 같은 동안은 0.1–0.2 mm 안에서 가만히 있다. 같은 6 개 코너로 잰 133.5 s 와 135.2–136.8 s 는 거의 같은 자리,
+15–18 개로 잰 134.4–135.0 s 는 다른 자리 — <b>폰이 왔다 갔다 한 것이 아니라, 보이는 코너 묶음이 바뀌면 PnP 답이 바뀌는 것</b>. 계단이 ±0.1 s 창에 걸리면 3–4 mm / 0.2 s ≈ 2 cm/s 가 나온다.</p>
+
+<h2>4. 3' 기준은 잘못 정해졌나</h2>
+<ul>
+<li>문턱값(2 cm/s, ≤ 0.5 %) 자체: <b>이룰 수 있다</b>. 판이 잘 보이는 정지에서는 9 469 표본 중 초과 0, 최대 0.66 cm/s (기준의 1/3).</li>
+<li>잘못된 점: 판이 거의 안 보이는 GT 를 똑같이 센다. 224323 끝 정지처럼 코너가 6–15 개로 바뀌는 구간에서는 정지해 있어도 3.9 % 가 넘는다 — 이 구간에서는 3' 가 VIO 가 아니라 GT 를 시험한다.</li>
+<li>코너 개수 문(표본·±0.1 s 이웃 모두 코너 ≥ N, 선택으로 이웃 둘의 코너 개수 같음)을 넣었을 때:</li>
+</ul>
+<table><tr><th class=l>GT 문</th><th>확실한 정지 표본</th><th>초과</th><th>최대 cm/s</th><th>224323 붙잡은 구간 표본</th><th>초과</th><th>최대 cm/s</th></tr>
+<tr><td class=l>없음 (지금 3')</td><td>9 469</td><td class=ok>0</td><td>0.66</td><td>384</td><td class=bad>15</td><td>2.08</td></tr>
+<tr><td class=l>이웃 코너 개수 같음</td><td>9 200</td><td class=ok>0</td><td>0.66</td><td>212</td><td class=ok>0</td><td>1.48</td></tr>
+<tr><td class=l>코너 ≥ 12</td><td>8 743</td><td class=ok>0</td><td>0.66</td><td>107</td><td class=ok>0</td><td>0.97</td></tr>
+<tr><td class=l>코너 ≥ 12 + 같음</td><td>8 640</td><td class=ok>0</td><td>0.66</td><td>43</td><td class=ok>0</td><td>0.35</td></tr>
+<tr><td class=l>코너 ≥ 15</td><td>7 376</td><td class=ok>0</td><td>0.22</td><td>92</td><td class=ok>0</td><td>0.97</td></tr></table>
+<p class=small>주의: 문을 넣으면 F_224323 이 통과하게 되지만, 이것은 결과를 본 뒤의 변경이다. 쓰려면 다음 실험 계획에 미리 적고 시험해야 한다. 코너 ≥ 12 는 정지 표본을 8 % 만 버리면서 손 구간의 계단을 모두 걸러서 고른 값 (이 데이터 하나로 고름, 추정).
+붙잡은 구간에 남는 GT 가 107 개뿐이라 "시험 가능" 최소 표본 수도 같이 정해야 한다.</p>
+
+<h2>5. 한계</h2>
+<ul>
+<li>"확실한 정지"는 거의 모두 시작 정지(손에 들기 전, 판이 잘 보임). 판이 반만 보이는 정지 표본은 224323 끝 정지밖에 없어서, "코너가 적으면 정지에서도 2 cm/s 가 넘는다"는 사례는 이 녹화 하나 (rs 에서도 같은 모습).</li>
+<li>IMU 상한은 기울어짐을 무시한 근사 (추정). 자이로 회전 비교는 122–130 s 에서 잰 바이어스에 기댐.</li>
+<li>VIO 는 돌리지 않음. 기존 실행 결과(runs/h_arm_init)의 붙잡기 구간만 읽음.</li>
+</ul>
+</body></html>
