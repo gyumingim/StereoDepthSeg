@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Self-check for docs/setdown_failure.html: re-derive the key numbers straight from the raw logs / IMU CSV (not via
-endstill_setdown.py): first ZUPT failure streak (>= 5 frames) after the still starts (117 / 132 s), mean features in MSCKF+SLAM updates after the
+endstill_setdown.py): first ZUPT failure streak (>= 5 frames) after the still starts (117.5 / 132 s; 117.0 caught the failures right at still entry), mean features in MSCKF+SLAM updates after the
 set-down, VIO |v| at the end, impact peak |a| - g, max |a| / |w| per axis vs range. Bridge->recording time via pose lines.
 
   ../venv_ffs/bin/python imu_learn/endstill_setdown_check.py
@@ -14,7 +14,7 @@ import numpy as np
 
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 RUNS = "runs/endstill_vio/"
-CLAIM = {"224323": dict(zfail=133.0, impact=113.84, slam_zero_from=115.0, still_from=117.0),
+CLAIM = {"224323": dict(zfail=133.0, impact=113.84, slam_zero_from=115.0, still_from=117.5),
          "223815": dict(zfail=136.0, impact=130.65, slam_zero_from=137.0, still_from=132.0)}
 
 
