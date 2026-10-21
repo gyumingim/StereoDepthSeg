@@ -49,3 +49,8 @@
 - 결과: runs/c5_retest/<rec6>_S<S>_<cfg>_d<δ>.{json,poses.jsonl.gz,stderr.log.gz,err}, runs/c5_retest/summary.json, 진행 runs/c5_retest.log.
 - 보고: docs/c5_retest_result.html (결론 먼저, S × 설정 표, 확정/추정 표시). 결론 쓰기 전 원시 JSON 에서 주 표를 한 번 더 다시 계산해 대조.
 - 사후 변경이 생기면 이 문서 끝에 날짜와 함께 "사후" 로 적는다.
+
+## 사후 기록 (2026-10-21 09:40, 결과 뒤)
+- 실행 180/180 끝 (주 135 + 보조 45), 코드 버전 하나, 결과 없는 실행 0. 판정 규칙·기준은 바꾸지 않음.
+- 사후 추가 (판정에 안 씀): 초기화 방식(정적/동적)별 결과 집계, strict 초기화 실패 실행의 DEBUG 로그 시차 확인, 정답 칸 44.49 mm 가정(k = 1.093) 재집계.
+- 결과: docs/c5_retest_result.html.
