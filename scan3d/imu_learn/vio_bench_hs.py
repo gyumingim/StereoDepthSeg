@@ -24,6 +24,10 @@ Variants (same backend, only one thing changes at a time — the 2026 'same-back
                           W s of IMU (up to the frame time) max |gyro| < G rad/s and std |acc| < A m/s^2, the frame is
                           replaced by the frame latched when the still began (identical image -> disparity 0 -> OpenVINS
                           ZUPT passes). Releases on the first frame whose window fails. Off by default (output unchanged).
+                          Optional 4th+ fields (2026-10-21 H tuning, docs/h_tune_plan.md; none = old behaviour):
+                          m = armed only after the first fed frame whose window is NOT still (skips the start still /
+                          initialization), mD = only after D s of continuous not-still fed frames, tS = armed only
+                          from clip second S on (clip = from the first VIO frame).
   --gt auto|spl|base|rs   scoring GT: auto = imu_gt_spl if present else imu_gt (both camera-only); rs = imu_gt_rs
                           (rolling shutter undone with the gyro -> partly self-scoring, comparison only)
 Time: frames are sent on the IMU clock (t_mid - dt from align.json) and OpenVINS timeshift_cam_imu = 0, so the offset is
@@ -182,6 +186,48 @@ def gap_stats(t_ns, period_ns):
                 max_gap_ms=round(float(d.max() / 1e6), 2), p99_ms=round(float(np.percentile(d, 99) / 1e6), 2))
 
 
+class StillHold:
+    """--still-hold W:G:A[:m][:tS] decision per fed frame (causal: IMU samples up to the frame time only). still = over
+    the trailing W s of IMU max |gyro| < G rad/s and std |acc| < A m/s^2 (the 2026-10-21 rule, unchanged). Arming
+    (none given = armed from the start = old behaviour): m[D] = after D s (default 0) of continuous not-still fed
+    frames; tS = from clip second S on. step() returns True if this frame is to be replaced by the latched frame."""
+
+    def __init__(self, spec, t_imu, g_i, a_i):
+        f = spec.split(":")
+        hw, hg, ha = (float(v) for v in f[:3])
+        opts = f[3:]
+        num = (lambda x: x.replace(".", "", 1).isdigit())
+        bad = [o for o in opts if not (o == "m" or (o[:1] in "mt" and num(o[1:])))]
+        if bad:
+            sys.exit(f"--still-hold: unknown option(s) {bad}")
+        mo = [o for o in opts if o[:1] == "m"]
+        self.arm_motion = bool(mo)
+        self.arm_motion_s = float(mo[0][1:] or 0) if mo else 0.0
+        self.move_t0 = None
+        self.arm_t = next((float(o[1:]) for o in opts if o[:1] == "t"), None)
+        self.armed = not (self.arm_motion or self.arm_t is not None)
+        self.t_imu = t_imu
+        nwin = max(2, int(round(hw * 1e9 / float(np.median(np.diff(t_imu))))))
+        sw = np.lib.stride_tricks.sliding_window_view
+        gmax, astd = np.full(len(t_imu), np.inf), np.full(len(t_imu), np.inf)
+        gmax[nwin - 1:] = sw(np.linalg.norm(g_i, axis=1), nwin).max(1)
+        astd[nwin - 1:] = sw(np.linalg.norm(a_i, axis=1), nwin).std(1)
+        self.ok = (gmax < hg) & (astd < ha)
+
+    def step(self, tci, clip_s):
+        jh = int(np.searchsorted(self.t_imu, tci, side="right")) - 1
+        still = bool(jh >= 0 and self.ok[jh])
+        if not self.armed:
+            if still:
+                self.move_t0 = None
+            elif self.move_t0 is None:
+                self.move_t0 = clip_s
+            if (self.arm_motion and not still and clip_s - self.move_t0 >= self.arm_motion_s - 1e-9) or \
+                    (self.arm_t is not None and clip_s >= self.arm_t - 1e-9):
+                self.armed = True
+        return still and self.armed
+
+
 def pick_by_time(t_frames, t_start, t_end, fps, period_ns):
     """Indices of the frames nearest to the time grid t_start + n/fps: each within one camera period of its grid
     step (and half a VIO period), at least 0.75 VIO period after the previous pick. A grid step inside a long drop
@@ -290,15 +336,7 @@ def run(a):
             k_, v_ = kv.split("=", 1)
             init_over[k_.strip()] = v_.strip()
     cfg_used = write_config(tmp, Knew, (W, H), a.fps, R_ci, p_CinI, 0.0, noise, a.npts, a.clones, init_cfg, init_over)
-    hold_ok = None
-    if getattr(a, "still_hold", None):                        # causal IMU stillness flag per IMU sample
-        hw, hg, ha = (float(v) for v in a.still_hold.split(":"))
-        nwin = max(2, int(round(hw * 1e9 / float(np.median(np.diff(t_imu))))))
-        sw = np.lib.stride_tricks.sliding_window_view
-        gmax, astd = np.full(len(t_imu), np.inf), np.full(len(t_imu), np.inf)
-        gmax[nwin - 1:] = sw(np.linalg.norm(g_i, axis=1), nwin).max(1)
-        astd[nwin - 1:] = sw(np.linalg.norm(a_i, axis=1), nwin).std(1)
-        hold_ok = (gmax < hg) & (astd < ha)
+    hold_ok = StillHold(a.still_hold, t_imu, g_i, a_i) if getattr(a, "still_hold", None) else None
     held, hold_log, n_held = None, [], 0
     print(f"init: {init_cfg} {cfg_used}", file=sys.stderr)
     p = subprocess.Popen([str(BRIDGE), str(tmp / "estimator_config.yaml"), "--stdio", "--max-speed", "8",
@@ -343,8 +381,7 @@ def run(a):
             _, f = cap.retrieve()
             g = cv2.remap(cv2.cvtColor(f, cv2.COLOR_BGR2GRAY), m1, m2, cv2.INTER_LINEAR)
             if hold_ok is not None:                              # only IMU samples up to this frame time (causal)
-                jh = int(np.searchsorted(t_imu, tci, side="right")) - 1
-                if jh >= 0 and hold_ok[jh]:
+                if hold_ok.step(tci, (tc - t_start) / 1e9):
                     if held is None:
                         held = g
                         hold_log.append([int(tci), None])
