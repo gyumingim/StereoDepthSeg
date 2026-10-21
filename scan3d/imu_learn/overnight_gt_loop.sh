@@ -6,7 +6,8 @@
 set -u
 cd "$(dirname "$0")/.."
 UP=runs/cf_upload_progress.log
-LOG=runs/overnight_gt.log
+export LOG=${LOG:-runs/overnight_gt.log}
+export OD=${OD:-runs/overnight_gt}
 STALL_MIN=${STALL_MIN:-40}
 for N in "$@"; do
   stalled=0

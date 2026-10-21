@@ -5,16 +5,18 @@
 # Raw IMU (types 35/16) when the recording has them (align.json imu_raw), else Android-calibrated 1/4.
 # Progress lines → runs/overnight_gt.log (watchdog), step logs → runs/overnight_gt/<name>_<step>.log.
 #   bash imu_learn/overnight_gt.sh recordings/hs_20261020_214138 [...]
+# BOARD=auto (default since 2026-10-21 night): imu_learn/board_pick.py picks the board json from the marker ids
+# (0-21 -> laptop 42.86 mm / LOW_BOARD, 100-121 -> laptop_fit 32.03 mm). LOG / OD override the log file / step folder.
 # BOARD / KNOT / PY overridable from the environment; FROM=board_shift|batch_sync|imu_gt_rs|spline|scale resumes
 # (earlier outputs kept). Re-scaling later: imu_learn/rescale_gt.py (no re-run needed).
 set -u
 cd "$(dirname "$0")/.."
 PY=${PY:-../venv_ffs/bin/python}
-BOARD=${BOARD:-config/charuco/board_laptop_6x6.json}
+BOARD0=${BOARD:-auto}
 KNOT=${KNOT:-0.0125}
 export PYTHONIOENCODING=utf-8
-LOG=runs/overnight_gt.log
-OD=runs/overnight_gt
+LOG=${LOG:-runs/overnight_gt.log}
+OD=${OD:-runs/overnight_gt}
 mkdir -p $OD
 say() { echo "$(date +%T) $*" | tee -a $LOG; }
 step() {  # step <name> <rec> <cmd...>: run, log, record failure
@@ -31,6 +33,11 @@ for R in "$@"; do
   R=${R%/}
   N=$(basename $R)
   RAW=""
+  BOARD=$BOARD0
+  if [ "$BOARD" = auto ]; then
+    BOARD=$($PY imu_learn/board_pick.py $R 2>> $OD/${N}_board_pick.log | tail -1)
+    [ -f "$BOARD" ] || { say "$N board_pick FAILED: $(tail -1 $OD/${N}_board_pick.log)"; continue; }
+  fi
   if grep -q -m1 '^16,' $R/imu.csv && grep -q -m1 '^35,' $R/imu.csv; then RAW="--raw-imu"; fi
   say "$N start (board $(basename $BOARD), imu ${RAW:-calibrated})"
   if [ -z "${FROM:-}" ]; then
@@ -46,6 +53,9 @@ for R in "$@"; do
   [ $RUN = 1 ] && step spline $N $PY -u imu_learn/spline_gt.py $R --knot $KNOT
   step scale $N bash -c "$PY imu_learn/scale_ls.py $R --gt-dir imu_gt_rs --out $OD/${N}_scale_rs.json && \
                           $PY imu_learn/scale_ls.py $R --gt-dir imu_gt_spl --out $OD/${N}_scale_spl.json"
+  SC=$($PY -c "import json,sys; d=json.load(open(sys.argv[1]))[0]; print(d['s'], d['gt_square_mm'], d['square_mm_raw'])" $OD/${N}_scale_spl.json 2>/dev/null)
+  if [ -n "$SC" ]; then read -r S1 SQ SR <<< "$SC"
+    say "$N scale check (spl): s $S1 board $SQ mm -> IMU $SR mm $(python3 -c "print('OK' if abs($S1-1)<=0.15 else 'BOARD?')")"; fi
   $PY imu_learn/gt_status.py $R >> $OD/${N}_status.log 2>&1
   say "$N done: $(tail -1 $OD/${N}_status.log)"
 done
