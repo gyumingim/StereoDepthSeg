@@ -228,7 +228,11 @@ def judge(cells, cond):
     """z2_regress criteria 1-3 for one group, cond vs base (same code path)."""
     b, z = cells["base"], cells[cond]
     new_bad = []
-    for pr, sb, sz in zip(b["pairs"], b["status"], z["status"]):
+    zs = dict(zip(z["pairs"], z["status"]))
+    for pr, sb in zip(b["pairs"], b["status"]):
+        if pr not in zs:
+            continue
+        sz = zs[pr]
         if sb == "ok" and sz != "ok":
             new_bad.append(f"{pr}: base ok -> {cond} {sz}")
         elif sb == "noinit" and sz in ("collapse", "unscored"):
@@ -290,12 +294,12 @@ def summarize():
                             zupt_pre=[r.get("zupt_init_to_vis") for r in xs])
         judged = {c: judge(cells, c) for c in cells if c != "base" and "base" in cells}
         for c, jd in judged.items():                  # pairwise worst case (verifier request), not only medians
-            dd = [(pr, round(z - b, 2)) for pr, b, z in zip(cells[c]["pairs"], cells["base"]["ates"], cells[c]["ates"])
-                  if b is not None and z is not None]
+            ba = dict(zip(cells["base"]["pairs"], cells["base"]["ates"]))
+            tri = [(pr, ba.get(pr), z) for pr, z in zip(cells[c]["pairs"], cells[c]["ates"])
+                   if ba.get(pr) is not None and z is not None]
+            dd = [(pr, round(z - b, 2)) for pr, b, z in tri]
             jd["worst_pair"] = max(dd, key=lambda x: x[1]) if dd else None
-            jd["pair_worse_than_limit"] = [pr for (pr, b), z in zip(zip(cells[c]["pairs"], cells["base"]["ates"]),
-                                                                     cells[c]["ates"])
-                                           if b is not None and z is not None and z > max(b * 1.10, b + 0.2) + 1e-9]
+            jd["pair_worse_than_limit"] = [pr for pr, b, z in tri if z > max(b * 1.10, b + 0.2) + 1e-9]
         groups[g] = dict(cells=cells, judged=judged)
     # set-down help (setdown_mitig rule): 224323 last-window median <= 50 % base AND end-still drift median <= 50 % base
     sd = groups.get("F_224323", {}).get("cells", {})
