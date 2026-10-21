@@ -1,0 +1,43 @@
+<!doctype html><html lang='ko'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>i3 확인 시험</title><style>body{font-family:system-ui,'Malgun Gothic',sans-serif;max-width:980px;margin:0 auto;padding:16px;line-height:1.55;color:#1d232b;background:#fff}h1{font-size:1.5em}h2{margin-top:1.6em;font-size:1.15em}table{border-collapse:collapse;width:100%;font-size:.88em;margin:.5em 0}td,th{border:1px solid #ccd;padding:4px 6px;text-align:left;vertical-align:top}th{background:#f1f3f7}.big{font-size:1.25em;font-weight:700;padding:12px;border-radius:8px}.yes{background:#e3f6e8}.no{background:#fde8e6}.mut{color:#5b6573;font-size:.9em}.ok{color:#17803d;font-weight:600}.bad{color:#b42318;font-weight:600}.wrap{overflow-x:auto}</style></head><body>
+<h1>i3 (가만히 있을 때 화면 고정, 초기화 3 초 뒤부터) 확인 시험 — 새 녹화</h1>
+<div class='big no'>결론: 앱 설정에 넣지 않음 (녹화 4 개로 판정, 기준 1·3·4 는 입력 사건을 뺀 3 개)</div>
+<p>이유: 기준 4: not improve (+1 / -1)</p>
+<ul>
+<li>기준 1 (정확도가 10 % 또는 0.2 cm 넘게 나빠지지 않음): <b class='ok'>통과</b></li>
+<li>기준 2 (새로 무너진 실행 0): <b class='ok'>통과</b></li>
+<li>기준 3 (화면을 고정한 동안 실제로 안 움직였나, 정답 품질 문 통과 표본만): <b class='ok'>통과</b> — 213341 통과, 214550 통과, 215348 통과</li>
+<li>기준 4 (내려놓은 뒤 VIO 가 덜 미끄러지나): <b class='bad'>개선 아님</b> (녹화 개선 1 / 나빠짐 1 / 시험된 녹화 3)</li></ul>
+<p class='mut'>추정: 녹화 몇 개로 본 결과라 다른 장면·다른 사람 손에서는 달라질 수 있다. 판정 기준 1–4 는 결과를 보기 전에 정해 둔 docs/i3_confirm_plan.md (사전 등록 ad2c02c, 추가 1 032a4d6, 추가 2 9d58cac) 그대로.</p>
+<p><b>주의 — 추가 3 은 사후 규칙이다.</b> 이 규칙(녹화 중 낙하 같은 입력 사건이 있는 녹화는 기준 1·3·4 집계에서 빼고 참고 표에만 적음, 기준 2 는 그대로 셈)은 <b>결과 일부(213341·213955)를 본 뒤</b>, 214550·215348 결과를 보기 전에 정했다 (docs/i3_confirm_plan.md 추가 3, f27d457; 근거 docs/collapse_213955.md). 검출: 원본 가속도(type 35), 시작 정지 끝 → 첫 내려놓기 정지 시작, |a| &gt; 39 m/s² 표본 하나 이상 또는 |a| &lt; 2 m/s² 가 0.1 s 넘게 이어짐 (imu_learn/input_events.py). 입력 사건 녹화: <b>213955</b>.</p>
+<p class='mut'>검산 (i3_confirm_check.py, 분석 코드를 쓰지 않고 다시 계산): <b>일치</b> — 비교 168 항목.</p>
+<h2>녹화별 (판정에 씀)</h2><div class='wrap'><table><tr><th>녹화</th><th>보드</th><th>시작 정지 (s)</th><th>시작 위치 (s)</th><th>base ATE (cm) 3 개 → 중앙값</th><th>i3 ATE (cm) → 중앙값 / 한계</th><th>기준 1</th><th>상태 base → i3 (기준 2)</th><th>기준 3: 문 통과 표본 / 빠름 / 최대 (cm/s)</th><th>기준 4: 내려놓은 뒤 이동 합 base → i3 (cm)</th></tr>
+<tr><td>213341</td><td>board_laptop_fit_6x6.json</td><td>10.58</td><td>[0.0, 1.0, 2.0]</td><td>[1.17, 0.51, 0.75] → 0.75</td><td>[1.18, 0.52, 0.76] → 0.76 / 0.95</td><td class='ok'>통과 (짝 최악 [&#x27;o0&#x27;, 0.01])</td><td>[&#x27;ok&#x27;, &#x27;ok&#x27;, &#x27;ok&#x27;] → [&#x27;ok&#x27;, &#x27;ok&#x27;, &#x27;ok&#x27;]</td><td>28398 / 0 / 0.07 — 통과</td><td>0.11 → 0.10 (=)</td></tr>
+<tr><td>214550</td><td>board_laptop_fit_6x6.json</td><td>9.20</td><td>[0.0, 1.0, 2.0]</td><td>[22.05, 18.29, 20.7] → 20.70</td><td>[4.6, 2.78, 4.97] → 4.60 / 22.77</td><td class='ok'>통과 (짝 최악 [&#x27;o1&#x27;, -15.51])</td><td>[&#x27;collapse&#x27;, &#x27;collapse&#x27;, &#x27;collapse&#x27;] → [&#x27;collapse&#x27;, &#x27;ok&#x27;, &#x27;ok&#x27;]</td><td>30180 / 0 / 0.11 — 통과</td><td>6.89 → 1.10 (+)</td></tr>
+<tr><td>215348</td><td>board_laptop_fit_6x6.json</td><td>9.98</td><td>[0.0, 1.0, 2.0]</td><td>[0.57, 0.56, 0.5] → 0.56</td><td>[0.58, 0.5, 0.46] → 0.50 / 0.76</td><td class='ok'>통과 (짝 최악 [&#x27;o0&#x27;, 0.01])</td><td>[&#x27;ok&#x27;, &#x27;ok&#x27;, &#x27;ok&#x27;] → [&#x27;ok&#x27;, &#x27;ok&#x27;, &#x27;ok&#x27;]</td><td>24429 / 0 / 0.37 — 통과</td><td>0.26 → 0.40 (-)</td></tr>
+</table></div>
+<h2>입력 사건 녹화 (참고용 — 기준 1·3·4 판정에 안 씀, 기준 2 는 셈)</h2><div class='wrap'><table><tr><th>녹화</th><th>보드</th><th>시작 정지 (s)</th><th>시작 위치 (s)</th><th>base ATE (cm) 3 개 → 중앙값</th><th>i3 ATE (cm) → 중앙값 / 한계</th><th>기준 1</th><th>상태 base → i3 (기준 2)</th><th>기준 3: 문 통과 표본 / 빠름 / 최대 (cm/s)</th><th>기준 4: 내려놓은 뒤 이동 합 base → i3 (cm)</th></tr>
+<tr><td>213955</td><td>board_laptop_fit_6x6.json</td><td>10.05</td><td>[0.0, 1.0, 2.0]</td><td>[40.28, 12.25, 4154.65] → 40.28</td><td>[40.33, 12.29, 4388.51] → 40.33 / 44.31</td><td class='ok'>통과 (짝 최악 [&#x27;o2&#x27;, 233.86])</td><td>[&#x27;collapse&#x27;, &#x27;collapse&#x27;, &#x27;collapse&#x27;] → [&#x27;collapse&#x27;, &#x27;collapse&#x27;, &#x27;collapse&#x27;]</td><td>26526 / 0 / 0.09 — 통과</td><td>2.18 → 2.26 (-)</td></tr>
+</table></div>
+<h2>입력 사건 검출 (추가 3, 사후 규칙)</h2><div class='wrap'><table><tr><th>녹화</th><th>검사 창 (s, 녹화 시작 기준)</th><th>입력 사건?</th><th>사건 시각 (s)</th><th>최대 |a| (m/s²) @ s</th><th>가장 긴 자유낙하 (s)</th></tr>
+<tr><td>213341</td><td>[12.489, 53.289]</td><td class='ok'>아니오 </td><td>–</td><td>18.39 @ 52.87</td><td>0.000</td></tr>
+<tr><td>213955</td><td>[11.805, 51.005]</td><td class='bad'>예 |a| &gt; 39.0 m/s^2 x10</td><td>13.56–14.02, 47.74–47.74</td><td>62.67 @ 14.01</td><td>0.016</td></tr>
+<tr><td>214550</td><td>[11.006, 49.706]</td><td class='ok'>아니오 </td><td>–</td><td>29.69 @ 48.99</td><td>0.000</td></tr>
+<tr><td>215348</td><td>[11.609, 48.509]</td><td class='ok'>아니오 </td><td>–</td><td>14.07 @ 47.80</td><td>0.000</td></tr>
+</table></div><p class='mut'>시각은 meta.start_elapsed_ns 기준 (docs/collapse_213955.md 와 같은 시계).</p>
+<h2>내려놓은 뒤 정지 구간 (IMU 로 찾음)</h2><div class='wrap'><table><tr><th>녹화</th><th>정지 (s)</th><th>base 이동 3 개 (cm)</th><th>i3 이동 3 개 (cm)</th><th>정답 이동 (cm)</th><th>시험?</th></tr>
+<tr><td>213341</td><td>[51.38, 69.78]</td><td>[0.039, 0.055, 0.084]</td><td>[0.047, 0.013, 0.064]</td><td>[0.009, 0.009, 0.009]</td><td>예</td></tr>
+<tr><td>213341</td><td>[110.78, 148.88]</td><td>[0.021, 0.052, 0.07]</td><td>[0.054, 0.015, 0.062]</td><td>[0.007, 0.007, 0.007]</td><td>예</td></tr>
+<tr><td>213955 (참고, 입력 사건)</td><td>[49.25, 70.15]</td><td>[1.79, 1.212, 359.955]</td><td>[1.79, 1.212, 359.955]</td><td>[0.035, 0.035, 0.035]</td><td>예</td></tr>
+<tr><td>213955 (참고, 입력 사건)</td><td>[114.75, 148.95]</td><td>[0.369, 0.414, None]</td><td>[0.463, 0.475, None]</td><td>[0.013, 0.013, None]</td><td>예</td></tr>
+<tr><td>214550</td><td>[47.9, 69.3]</td><td>[6.75, 4.475, 12.062]</td><td>[2.324, 0.354, 0.957]</td><td>[0.035, 0.035, 0.035]</td><td>예</td></tr>
+<tr><td>214550</td><td>[113.8, 148.8]</td><td>[0.142, 0.078, 0.348]</td><td>[0.265, 0.147, 0.036]</td><td>[0.019, 0.019, 0.019]</td><td>예</td></tr>
+<tr><td>215348</td><td>[46.88, 69.58]</td><td>[0.213, 0.136, 0.176]</td><td>[0.171, 0.162, 0.176]</td><td>[0.018, 0.018, 0.018]</td><td>예</td></tr>
+<tr><td>215348</td><td>[115.98, 139.78]</td><td>[0.152, 0.075, 0.087]</td><td>[0.25, 0.227, 0.166]</td><td>[0.027, 0.027, 0.027]</td><td>예</td></tr>
+</table></div>
+<h2>실행 점검</h2><ul>
+<li>실행 수 24, 코드 버전 1 개 (1 이어야 함), OpenVINS 스레드 [&#x27;num_opencv_threads=2&#x27;], i3 대기 시간 초과 없음</li>
+<li>i3 가 처음 고정한 시각 − 초기화 시각 (s, 3 이상이어야 함): 213341_i3_o0: 3.016, 213341_i3_o1: 42.218, 213341_i3_o2: 43.82, 213955_i3_o0: 40.199, 213955_i3_o1: 40.199, 213955_i3_o2: 40.199, 214550_i3_o0: 3.016, 214550_i3_o1: 3.016, 214550_i3_o2: 3.016, 215348_i3_o0: 38.151, 215348_i3_o1: 38.151, 215348_i3_o2: 38.151</li>
+<li>git 1d10097, 분석 2026-10-22 00:08:05</li></ul>
+<p class='mut'>용어: ATE = 정답 궤적과 맞춘 뒤 남는 위치 오차 (작을수록 좋음). 무너짐 = 초기화 뒤 10 초 축척이 0.5–2 밖이거나 오차 10 cm 넘음 (또는 전체가 그러함). 붙잡은 구간 = i3 가 '가만히 있다' 고 보고 같은 화면을 다시 넣은 시간. 정답 품질 문 = 그 시각과 ±0.1 초에 보드 모서리가 12 개 이상 보인 정답만 씀. 코드 imu_learn/i3_confirm.py, 검산 imu_learn/i3_confirm_check.py, 결과 runs/i3_confirm/.</p>
+</body></html>
