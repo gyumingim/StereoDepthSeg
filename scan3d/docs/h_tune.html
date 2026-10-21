@@ -1,0 +1,99 @@
+<!doctype html><html lang=ko><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><title>H 다듬기</title><style>body{font-family:system-ui,'Malgun Gothic',sans-serif;max-width:1100px;margin:24px auto;padding:0 16px;
+line-height:1.55;color:#1d232a;background:#fff}h1{font-size:1.5em}h2{font-size:1.2em;margin-top:1.6em;border-bottom:1px solid #ddd}
+table{border-collapse:collapse;font-size:.88em;margin:.6em 0;display:block;overflow-x:auto}td,th{border:1px solid #ccc;
+padding:3px 7px;text-align:right;white-space:nowrap}th{background:#f2f4f6}td.l,th.l{text-align:left}.ok{color:#11702f;font-weight:600}
+.bad{color:#b3261e;font-weight:600}.box{background:#f5f8fb;border-left:4px solid #3b6ea8;padding:.6em 1em}.small{color:#555;font-size:.9em}
+@media (prefers-color-scheme:dark){body{background:#16191d;color:#e3e6ea}th{background:#262b31}td,th{border-color:#3a4048}
+.box{background:#1f252c}.small{color:#aab}.ok{color:#6fd18f}.bad{color:#ff8a80}}</style></head><body><h1>H 다듬기 — 시작 정지는 건너뛰는 붙잡기</h1>
+<p class=small>만든 시각 2026-10-21 19:08:00 · git 0cf7744 · 계획 docs/h_tune_plan.md · 결과 runs/h_tune/</p>
+<div class=box>
+<p><b>결론 (추정):</b> <b>Hw15m05</b> = <code>--still-hold 1.5:0.05:0.05:m0.5</code> — <b>시작 정지는 건너뛰고</b>
+(0.5 초 넘게 움직인 뒤에야 켜짐), <b>1.5 초 넘게 가만히 있을 때만</b> 프레임을 붙잡는 H — 가
+<b>18 묶음 모두에서 3 기준 + 3'(붙잡은 동안 실제로 멈춰 있었나)를 지켰고, 내려놓기 고침도 그대로</b>다.</p>
+<ul>
+<li>내려놓기 (224323, 시작 3 개 중앙값): 마지막 3 s 창 오차 <b>24.3 → 1.17 cm</b>, 끝 정지 이동 <b>40.4 → 0.64 cm</b>, ATE 5.03 → 0.81 cm.
+ 223815 끝 정지 이동 2.17 → 0.02 cm.</li>
+<li>예전 H 가 걸렸던 4 묶음 (F_222747, T_214138_S2, T_222747_S1, T_224323_S1): 이제 붙잡는 프레임이 0 → base 와 <b>똑같은</b> 결과.
+ 원인은 H 가 <b>시작 정지(초기화 전·중)</b> 를 붙잡은 것이었다 (그 묶음들의 유일한 붙잡기 구간).</li>
+<li>O_154320 o2 (H: 2.71 → 6.99 cm): 원인은 끝쪽 <b>0.11 초짜리 짧은 멈춤</b> 붙잡기. 창 1.5 s 로 사라져 <b>2.71 cm (base 와 같음)</b>.
+ 짝별 최악 (변형 − base, 같은 시작) 은 18 묶음 모두 0.0 cm 이하.</li>
+<li>3' 붙잡은 동안 GT 속도: 최대 2.08 cm/s (224323 내려놓은 뒤, GT 잡음 수준), 2 cm/s 넘는 표본 45/5868 — 모두 224323.</li>
+</ul>
+<p><b>조심할 점</b></p>
+<ul>
+<li>54 짝 중 <b>44 짝은 실제로 돌리지 않고 base 결과를 그대로 썼다</b> (붙잡을 프레임 0 → 입력이 base 와 글자까지 같음, 사전 등록한 복사 규칙).
+ 근거: 같은 판정 코드로 센 예측이 실행한 모든 짝의 frames_held 와 일치 (기존 H 54/54, 새 실행 전부), 복사 대상 2 짝을 실제로 돌려 base 와
+ 포즈 차 0 m, 새 벤치 + 스레드 2 도 저장 결과와 포즈 차 0 m.</li>
+<li>'움직인 뒤에만 켜기' 가 완벽하지 않다: F_214138_o0 은 클립 첫머리 IMU 가 0.5 s 넘게 '움직임' 으로 보여 시작 정지를 붙잡았다
+ (결과는 0.90 → 0.88 cm 로 괜찮았음). 창 2 s 판 (Hw2m05) 은 같은 이유로 F_222747_o0 시작 정지를 붙잡아 무너짐 ATE 가 155.8 → 186.8 cm 로
+ 커져 기준 1 실패. → 앱에 넣는다면 <b>OpenVINS 초기화가 끝난 뒤에만 켜기</b> 가 더 확실할 것 (추정 — 벤치가 결정적이어야 해서 이번엔 시험 안 함).</li>
+<li>O_154320 에서는 마지막 0.3 s 만 붙잡아 효과가 거의 없고, 끝에 내려놓는 녹화는 224323·223815 둘뿐. 녹화가 적고 같은 방·같은 손 → 모두 <b>추정</b>.</li>
+<li>판정 수정 1 건 (새 변형 결과를 보기 전, 그러나 옛 H 수치를 본 뒤): 3' 의 '빠른 표본 비율 ≤ 0.5 %' 를 빼고 '최대 GT 속도 ≤ 3 cm/s' 만 판정에 씀
+ (옛 H 의 224323 이 비율 3.9 %, 최대 2.08 cm/s — 내려놓은 뒤 GT 잡음). 비율로 보면 Hw15m05 도 224323 에서 3.9 % 라 <b>그 기준이면 실패</b>다.</li>
+</ul>
+<p class=small>시간: 실행 18:15–19:11 (56 분, 31 실행) — 동시 5, OpenVINS 스레드 2. 1 차 (시작 1 개) 16 실행 → 상위 2 개 (Hw15m05·Hw2m05) 를 3 시작으로.
+ 1 차 순위: 짝 한도 넘은 짝 Hm05 1 · Hsm05 2 · Hw15m05 0 · Hw2m05 0 → 18 묶음 판정에서 Hw2m05 는 F_222747 실패, Hw15m05 우승.
+ 긴 녹화를 창으로 자르는 건 안 했다 (벤치의 중간 시작은 새 초기화라 같은 실행이 아님) — 복사 규칙이 대신 시간을 줄였다.</p>
+</div>
+
+<h2>18 묶음 판정 — Hw15m05 (<code>--still-hold 1.5:0.05:0.05:m0.5</code>) 대 base</h2>
+<table><tr><th class=l>묶음</th><th>base ATE (cm)</th><th>변형 ATE (cm)</th><th>중앙값 base→변형</th><th>한도</th><th>1 ATE</th><th>2 새 무너짐</th><th>3 헛 통과</th><th>3' 붙잡은 동안 최대 GT 속도 (cm/s)</th><th>&gt;2 cm/s 표본</th><th>짝별 최악 (cm)</th><th>붙잡은 프레임</th><th class=l>변형 결과 출처</th><th>판정</th></tr>
+<tr><td class=l>F_214138</td><td>0.90 / 1.39 / 1.10</td><td>0.88 / 1.39 / 1.10</td><td>1.10 → 1.10</td><td>1.30</td><td><span class="ok">통과</span></td><td><span class="ok">통과</span></td><td>0</td><td>0.18</td><td>0/4326</td><td>[&#x27;F_214138_o1&#x27;, 0.0]</td><td>1082 / None / None</td><td class=l>base copy (0 held), this run</td><td><span class="ok">통과</span></td></tr>
+<tr><td class=l>F_221052</td><td>1.41 / 1.40 / 1.77</td><td>1.41 / 1.40 / 1.77</td><td>1.41 → 1.41</td><td>1.61</td><td><span class="ok">통과</span></td><td><span class="ok">통과</span></td><td>0</td><td>0</td><td>0/0</td><td>[&#x27;F_221052_o0&#x27;, 0.0]</td><td>None / None / None</td><td class=l>base copy (0 held)</td><td><span class="ok">통과</span></td></tr>
+<tr><td class=l>F_221925</td><td>1.55 / – / –</td><td>1.55 / – / –</td><td>1.55 → 1.55</td><td>1.75</td><td><span class="ok">통과</span></td><td><span class="ok">통과</span></td><td>0</td><td>0</td><td>0/0</td><td>[&#x27;F_221925_o0&#x27;, 0.0]</td><td>None / None / None</td><td class=l>base copy (0 held)</td><td><span class="ok">통과</span></td></tr>
+<tr><td class=l>F_222747</td><td>155.79 / 120.73 / 6842.29</td><td>155.79 / 120.73 / 6842.29</td><td>155.79 → 155.79</td><td>171.37</td><td><span class="ok">통과</span></td><td><span class="ok">통과</span></td><td>0</td><td>0</td><td>0/0</td><td>[&#x27;F_222747_o0&#x27;, 0.0]</td><td>None / None / None</td><td class=l>base copy (0 held)</td><td><span class="ok">통과</span></td></tr>
+<tr><td class=l>F_223815</td><td>0.44 / 0.44 / 0.46</td><td>0.43 / 0.43 / 0.46</td><td>0.44 → 0.43</td><td>0.64</td><td><span class="ok">통과</span></td><td><span class="ok">통과</span></td><td>0</td><td>1.88</td><td>0/390</td><td>[&#x27;F_223815_o2&#x27;, 0.0]</td><td>378 / 378 / 378</td><td class=l>this run</td><td><span class="ok">통과</span></td></tr>
+<tr><td class=l>F_224323</td><td>2.55 / 5.03 / 5.42</td><td>0.70 / 0.81 / 0.97</td><td>5.03 → 0.81</td><td>5.53</td><td><span class="ok">통과</span></td><td><span class="ok">통과</span></td><td>0</td><td>2.08</td><td>45/1152</td><td>[&#x27;F_224323_o0&#x27;, -1.85]</td><td>1052 / 1052 / 1052</td><td class=l>this run</td><td><span class="ok">통과</span></td></tr>
+<tr><td class=l>O_131326</td><td>4.22 / 2.10 / 3.58</td><td>4.22 / 2.10 / 3.58</td><td>3.58 → 3.58</td><td>3.94</td><td><span class="ok">통과</span></td><td><span class="ok">통과</span></td><td>0</td><td>0</td><td>0/0</td><td>[&#x27;O_131326_o0&#x27;, 0.0]</td><td>None / None / None</td><td class=l>base copy (0 held)</td><td><span class="ok">통과</span></td></tr>
+<tr><td class=l>O_154320</td><td>11.09 / 3.00 / 2.71</td><td>11.09 / 3.00 / 2.71</td><td>3.00 → 3.00</td><td>3.30</td><td><span class="ok">통과</span></td><td><span class="ok">통과</span></td><td>0</td><td>0</td><td>0/0</td><td>[&#x27;O_154320_o0&#x27;, 0.0]</td><td>20 / 20 / 20</td><td class=l>this run</td><td><span class="ok">통과</span></td></tr>
+<tr><td class=l>T_214138_S1</td><td>1.34 / 1.38 / 1.48</td><td>1.34 / 1.38 / 1.48</td><td>1.38 → 1.38</td><td>1.58</td><td><span class="ok">통과</span></td><td><span class="ok">통과</span></td><td>0</td><td>0</td><td>0/0</td><td>[&#x27;T_214138_S1_d0&#x27;, 0.0]</td><td>None / None / None</td><td class=l>base copy (0 held)</td><td><span class="ok">통과</span></td></tr>
+<tr><td class=l>T_214138_S2</td><td>0.79 / 0.85 / 0.89</td><td>0.79 / 0.85 / 0.89</td><td>0.85 → 0.85</td><td>1.05</td><td><span class="ok">통과</span></td><td><span class="ok">통과</span></td><td>0</td><td>0</td><td>0/0</td><td>[&#x27;T_214138_S2_d0&#x27;, 0.0]</td><td>None / None / None</td><td class=l>base copy (0 held)</td><td><span class="ok">통과</span></td></tr>
+<tr><td class=l>T_221052_S1</td><td>0.52 / 0.67 / 1.00</td><td>0.52 / 0.67 / 1.00</td><td>0.67 → 0.67</td><td>0.87</td><td><span class="ok">통과</span></td><td><span class="ok">통과</span></td><td>0</td><td>0</td><td>0/0</td><td>[&#x27;T_221052_S1_d0&#x27;, 0.0]</td><td>None / None / None</td><td class=l>base copy (0 held)</td><td><span class="ok">통과</span></td></tr>
+<tr><td class=l>T_221052_S2</td><td>1.46 / 1.24 / 1.24</td><td>1.46 / 1.24 / 1.24</td><td>1.24 → 1.24</td><td>1.44</td><td><span class="ok">통과</span></td><td><span class="ok">통과</span></td><td>0</td><td>0</td><td>0/0</td><td>[&#x27;T_221052_S2_d0&#x27;, 0.0]</td><td>None / None / None</td><td class=l>base copy (0 held)</td><td><span class="ok">통과</span></td></tr>
+<tr><td class=l>T_222747_S1</td><td>0.83 / 0.71 / 0.73</td><td>0.83 / 0.71 / 0.73</td><td>0.73 → 0.73</td><td>0.93</td><td><span class="ok">통과</span></td><td><span class="ok">통과</span></td><td>0</td><td>0</td><td>0/0</td><td>[&#x27;T_222747_S1_d0&#x27;, 0.0]</td><td>None / None / None</td><td class=l>base copy (0 held)</td><td><span class="ok">통과</span></td></tr>
+<tr><td class=l>T_222747_S2</td><td>0.68 / 0.69 / 0.86</td><td>0.68 / 0.69 / 0.86</td><td>0.69 → 0.69</td><td>0.89</td><td><span class="ok">통과</span></td><td><span class="ok">통과</span></td><td>0</td><td>0</td><td>0/0</td><td>[&#x27;T_222747_S2_d0&#x27;, 0.0]</td><td>None / None / None</td><td class=l>base copy (0 held)</td><td><span class="ok">통과</span></td></tr>
+<tr><td class=l>T_223815_S1</td><td>0.68 / 0.52 / 0.63</td><td>0.68 / 0.52 / 0.63</td><td>0.63 → 0.63</td><td>0.83</td><td><span class="ok">통과</span></td><td><span class="ok">통과</span></td><td>0</td><td>0</td><td>0/0</td><td>[&#x27;T_223815_S1_d0&#x27;, 0.0]</td><td>None / None / None</td><td class=l>base copy (0 held)</td><td><span class="ok">통과</span></td></tr>
+<tr><td class=l>T_223815_S2</td><td>0.63 / 0.59 / 0.57</td><td>0.63 / 0.59 / 0.57</td><td>0.59 → 0.59</td><td>0.79</td><td><span class="ok">통과</span></td><td><span class="ok">통과</span></td><td>0</td><td>0</td><td>0/0</td><td>[&#x27;T_223815_S2_d0&#x27;, 0.0]</td><td>None / None / None</td><td class=l>base copy (0 held)</td><td><span class="ok">통과</span></td></tr>
+<tr><td class=l>T_224323_S1</td><td>0.93 / 1.00 / 1.76</td><td>0.93 / 1.00 / 1.76</td><td>1.00 → 1.00</td><td>1.20</td><td><span class="ok">통과</span></td><td><span class="ok">통과</span></td><td>0</td><td>0</td><td>0/0</td><td>[&#x27;T_224323_S1_d0&#x27;, 0.0]</td><td>None / None / None</td><td class=l>base copy (0 held)</td><td><span class="ok">통과</span></td></tr>
+<tr><td class=l>T_224323_S2</td><td>0.79 / 0.52 / 0.66</td><td>0.79 / 0.52 / 0.66</td><td>0.66 → 0.66</td><td>0.86</td><td><span class="ok">통과</span></td><td><span class="ok">통과</span></td><td>0</td><td>0</td><td>0/0</td><td>[&#x27;T_224323_S2_d0&#x27;, 0.0]</td><td>None / None / None</td><td class=l>base copy (0 held)</td><td><span class="ok">통과</span></td></tr>
+</table>
+<p>내려놓기 (224323, 시작 3 개 중앙값): 마지막 3 s 창 오차 base 24.29 → 1.17 cm, 끝 정지 이동 40.42 → 0.64 cm → 고침 <span class="ok">통과</span></p>
+<h2>1 차 (시작 1 개) — 변형 4 개</h2><table><tr><th class=l>변형</th><th class=l>짝</th><th>base ATE</th><th>변형 ATE</th><th>짝 한도 넘음</th><th>상태</th><th>붙잡은 프레임</th><th>붙잡은 동안 최대 GT 속도</th><th>마지막 창 (base)</th><th>끝 정지 이동 (base)</th><th class=l>출처</th></tr>
+<tr><td class=l>Hm05 <code>1.0:0.05:0.05:m0.5</code></td><td class=l>O_154320_o2</td><td>2.71</td><td>6.99</td><td><span class=bad>예</span></td><td>ok→ok</td><td>56</td><td>0.55</td><td>– (–)</td><td>– (–)</td><td class=l>H copy (same held frames)</td></tr>
+<tr><td class=l>Hm05 <code>1.0:0.05:0.05:m0.5</code></td><td class=l>F_222747_o1</td><td>120.73</td><td>120.73</td><td>아니오</td><td>collapse→collapse</td><td>None</td><td>–</td><td>– (–)</td><td>– (–)</td><td class=l>base copy (0 held)</td></tr>
+<tr><td class=l>Hm05 <code>1.0:0.05:0.05:m0.5</code></td><td class=l>T_214138_S2_dm025</td><td>0.85</td><td>0.85</td><td>아니오</td><td>ok→ok</td><td>None</td><td>–</td><td>– (–)</td><td>– (–)</td><td class=l>base copy (0 held)</td></tr>
+<tr><td class=l>Hm05 <code>1.0:0.05:0.05:m0.5</code></td><td class=l>T_222747_S1_d0</td><td>0.83</td><td>0.83</td><td>아니오</td><td>ok→ok</td><td>None</td><td>–</td><td>– (–)</td><td>– (–)</td><td class=l>base copy (0 held)</td></tr>
+<tr><td class=l>Hm05 <code>1.0:0.05:0.05:m0.5</code></td><td class=l>T_224323_S1_dm025</td><td>1.00</td><td>1.00</td><td>아니오</td><td>ok→ok</td><td>None</td><td>–</td><td>– (–)</td><td>– (–)</td><td class=l>base copy (0 held)</td></tr>
+<tr><td class=l>Hm05 <code>1.0:0.05:0.05:m0.5</code></td><td class=l>F_224323_o0</td><td>2.55</td><td>0.70</td><td>아니오</td><td>ok→ok</td><td>1082</td><td>2.08</td><td>1.67 (8.54)</td><td>0.64 (30.62)</td><td class=l>this run</td></tr>
+<tr><td class=l>Hm05 <code>1.0:0.05:0.05:m0.5</code></td><td class=l>F_223815_o0</td><td>0.44</td><td>0.43</td><td>아니오</td><td>ok→ok</td><td>391</td><td>1.88</td><td>0.52 (0.57)</td><td>0.03 (1.05)</td><td class=l>this run</td></tr>
+<tr><td class=l>Hw15m05 <code>1.5:0.05:0.05:m0.5</code></td><td class=l>O_154320_o2</td><td>2.71</td><td>2.71</td><td>아니오</td><td>ok→ok</td><td>20</td><td>0.00</td><td>– (–)</td><td>– (–)</td><td class=l>this run</td></tr>
+<tr><td class=l>Hw15m05 <code>1.5:0.05:0.05:m0.5</code></td><td class=l>F_222747_o1</td><td>120.73</td><td>120.73</td><td>아니오</td><td>collapse→collapse</td><td>None</td><td>–</td><td>– (–)</td><td>– (–)</td><td class=l>base copy (0 held)</td></tr>
+<tr><td class=l>Hw15m05 <code>1.5:0.05:0.05:m0.5</code></td><td class=l>T_214138_S2_dm025</td><td>0.85</td><td>0.85</td><td>아니오</td><td>ok→ok</td><td>None</td><td>–</td><td>– (–)</td><td>– (–)</td><td class=l>base copy (0 held)</td></tr>
+<tr><td class=l>Hw15m05 <code>1.5:0.05:0.05:m0.5</code></td><td class=l>T_222747_S1_d0</td><td>0.83</td><td>0.83</td><td>아니오</td><td>ok→ok</td><td>None</td><td>–</td><td>– (–)</td><td>– (–)</td><td class=l>base copy (0 held)</td></tr>
+<tr><td class=l>Hw15m05 <code>1.5:0.05:0.05:m0.5</code></td><td class=l>T_224323_S1_dm025</td><td>1.00</td><td>1.00</td><td>아니오</td><td>ok→ok</td><td>None</td><td>–</td><td>– (–)</td><td>– (–)</td><td class=l>base copy (0 held)</td></tr>
+<tr><td class=l>Hw15m05 <code>1.5:0.05:0.05:m0.5</code></td><td class=l>F_224323_o0</td><td>2.55</td><td>0.70</td><td>아니오</td><td>ok→ok</td><td>1052</td><td>2.08</td><td>1.67 (8.54)</td><td>0.64 (30.62)</td><td class=l>this run</td></tr>
+<tr><td class=l>Hw15m05 <code>1.5:0.05:0.05:m0.5</code></td><td class=l>F_223815_o0</td><td>0.44</td><td>0.43</td><td>아니오</td><td>ok→ok</td><td>378</td><td>1.88</td><td>0.52 (0.57)</td><td>0.03 (1.05)</td><td class=l>this run</td></tr>
+<tr><td class=l>Hsm05 <code>1.0:0.03:0.03:m0.5</code></td><td class=l>O_154320_o2</td><td>2.71</td><td>2.71</td><td>아니오</td><td>ok→ok</td><td>49</td><td>0.00</td><td>– (–)</td><td>– (–)</td><td class=l>this run</td></tr>
+<tr><td class=l>Hsm05 <code>1.0:0.03:0.03:m0.5</code></td><td class=l>F_222747_o1</td><td>120.73</td><td>297.53</td><td><span class=bad>예</span></td><td>collapse→collapse</td><td>145</td><td>0.38</td><td>– (–)</td><td>– (–)</td><td class=l>this run</td></tr>
+<tr><td class=l>Hsm05 <code>1.0:0.03:0.03:m0.5</code></td><td class=l>T_214138_S2_dm025</td><td>0.85</td><td>1.09</td><td><span class=bad>예</span></td><td>ok→ok</td><td>39</td><td>0.18</td><td>– (–)</td><td>– (–)</td><td class=l>this run</td></tr>
+<tr><td class=l>Hsm05 <code>1.0:0.03:0.03:m0.5</code></td><td class=l>T_222747_S1_d0</td><td>0.83</td><td>0.83</td><td>아니오</td><td>ok→ok</td><td>None</td><td>–</td><td>– (–)</td><td>– (–)</td><td class=l>base copy (0 held)</td></tr>
+<tr><td class=l>Hsm05 <code>1.0:0.03:0.03:m0.5</code></td><td class=l>T_224323_S1_dm025</td><td>1.00</td><td>1.00</td><td>아니오</td><td>ok→ok</td><td>None</td><td>–</td><td>– (–)</td><td>– (–)</td><td class=l>base copy (0 held)</td></tr>
+<tr><td class=l>Hsm05 <code>1.0:0.03:0.03:m0.5</code></td><td class=l>F_224323_o0</td><td>2.55</td><td>0.73</td><td>아니오</td><td>ok→ok</td><td>1018</td><td>2.04</td><td>1.91 (8.54)</td><td>1.80 (30.62)</td><td class=l>this run</td></tr>
+<tr><td class=l>Hsm05 <code>1.0:0.03:0.03:m0.5</code></td><td class=l>F_223815_o0</td><td>0.44</td><td>0.43</td><td>아니오</td><td>ok→ok</td><td>315</td><td>1.88</td><td>0.52 (0.57)</td><td>0.60 (1.05)</td><td class=l>this run</td></tr>
+<tr><td class=l>Hw2m05 <code>2.0:0.05:0.05:m0.5</code></td><td class=l>O_154320_o2</td><td>2.71</td><td>2.71</td><td>아니오</td><td>ok→ok</td><td>None</td><td>–</td><td>– (–)</td><td>– (–)</td><td class=l>base copy (0 held)</td></tr>
+<tr><td class=l>Hw2m05 <code>2.0:0.05:0.05:m0.5</code></td><td class=l>F_222747_o1</td><td>120.73</td><td>120.73</td><td>아니오</td><td>collapse→collapse</td><td>None</td><td>–</td><td>– (–)</td><td>– (–)</td><td class=l>base copy (0 held)</td></tr>
+<tr><td class=l>Hw2m05 <code>2.0:0.05:0.05:m0.5</code></td><td class=l>T_214138_S2_dm025</td><td>0.85</td><td>0.85</td><td>아니오</td><td>ok→ok</td><td>None</td><td>–</td><td>– (–)</td><td>– (–)</td><td class=l>base copy (0 held)</td></tr>
+<tr><td class=l>Hw2m05 <code>2.0:0.05:0.05:m0.5</code></td><td class=l>T_222747_S1_d0</td><td>0.83</td><td>0.83</td><td>아니오</td><td>ok→ok</td><td>None</td><td>–</td><td>– (–)</td><td>– (–)</td><td class=l>base copy (0 held)</td></tr>
+<tr><td class=l>Hw2m05 <code>2.0:0.05:0.05:m0.5</code></td><td class=l>T_224323_S1_dm025</td><td>1.00</td><td>1.00</td><td>아니오</td><td>ok→ok</td><td>None</td><td>–</td><td>– (–)</td><td>– (–)</td><td class=l>base copy (0 held)</td></tr>
+<tr><td class=l>Hw2m05 <code>2.0:0.05:0.05:m0.5</code></td><td class=l>F_224323_o0</td><td>2.55</td><td>0.70</td><td>아니오</td><td>ok→ok</td><td>1022</td><td>2.08</td><td>1.67 (8.54)</td><td>0.64 (30.62)</td><td class=l>this run</td></tr>
+<tr><td class=l>Hw2m05 <code>2.0:0.05:0.05:m0.5</code></td><td class=l>F_223815_o0</td><td>0.44</td><td>0.43</td><td>아니오</td><td>ok→ok</td><td>350</td><td>1.88</td><td>0.52 (0.57)</td><td>0.03 (1.05)</td><td class=l>this run</td></tr>
+</table>
+<h2>점검</h2><ul>
+<li>det base: 새 벤치 + OpenVINS 스레드 2 대 저장 결과 — 포즈 3490/3490 개 공통, 최대 위치 차 0.0 m (ATE 1.0 vs 1.0)</li>
+<li>det H: 새 벤치 + OpenVINS 스레드 2 대 저장 결과 — 포즈 3491/3491 개 공통, 최대 위치 차 0.0 m (ATE 3.9 vs 3.9)</li>
+<li>det conf T_224323_S1_dm025: 새 벤치 + OpenVINS 스레드 2 대 저장 결과 — 포즈 3490/3490 개 공통, 최대 위치 차 0.0 m (ATE 1.0 vs 1.0)</li>
+<li>det conf F_222747_o1: 새 벤치 + OpenVINS 스레드 2 대 저장 결과 — 포즈 11889/11889 개 공통, 최대 위치 차 0.0 m (ATE 120.73 vs 120.73)</li>
+<li>붙잡을 프레임 예측 = 실제 frames_held: 실행 10 개 확인, 불일치 0</li>
+<li>코드 버전 수(분석이 셈): 2 ([98, 10]) — base·H 는 옛 벤치 blob, 새 실행은 새 blob. 둘이 같은 결과를 내는 것은 det 로 확인.</li>
+<li>스스로 점검 (원본 JSON·포즈에서 상태·중앙값·설정·출처 다시 계산): 108 칸, 불일치 0</li></ul>
+</body></html>
