@@ -347,6 +347,13 @@ def analyse(variants):
         if Path(str(p) + ".json").exists():
             det[v] = dict(zi.poses_diff(str(ref), str(p)), ate=json.load(open(str(p) + ".json")).get("ate_cm"),
                           ref_ate=json.load(open(str(ref) + ".json")).get("ate_cm"))
+    for pr in CONF_PAIRS:                 # copy-rule check runs vs the stored base
+        p = OUT / f"CONF_{name(pr, 'Hm05')}"
+        ref = zr.OUT / name(pr, "base")
+        if Path(str(p) + ".json").exists():
+            det[f"conf {pr}"] = dict(zi.poses_diff(str(ref), str(p)), ate=json.load(open(str(p) + ".json")).get("ate_cm"),
+                                      ref_ate=json.load(open(str(ref) + ".json")).get("ate_cm"),
+                                      held=json.load(open(str(p) + ".json")).get("frames_held"))
     pred = {}
     if (OUT / "mask.json").exists():
         mk = json.load(open(OUT / "mask.json"))["runs"]
