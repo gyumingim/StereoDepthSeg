@@ -4,7 +4,7 @@ table{border-collapse:collapse;font-size:.88em;margin:.6em 0;display:block;overf
 padding:3px 7px;text-align:right;white-space:nowrap}th{background:#f2f4f6}td.l,th.l{text-align:left}.ok{color:#11702f;font-weight:600}
 .bad{color:#b3261e;font-weight:600}.box{background:#f5f8fb;border-left:4px solid #3b6ea8;padding:.6em 1em}.small{color:#555;font-size:.9em}
 @media (prefers-color-scheme:dark){body{background:#16191d;color:#e3e6ea}th{background:#262b31}td,th{border-color:#3a4048}
-.box{background:#1f252c}.small{color:#aab}.ok{color:#6fd18f}.bad{color:#ff8a80}}</style></head><body><h1>H 다듬기 — 시작 정지는 건너뛰는 붙잡기</h1>
+.box{background:#1f252c}.small{color:#aab}.ok{color:#6fd18f}.bad{color:#ff8a80}}</style></head><body><div style="border:2px solid #e5484d;border-radius:8px;padding:10px 12px;margin:8px 0"><b>검증 반영 (docs/h_tune_verify.md)</b>: 핵심 수치는 모두 맞음. 정정 ① Hw15m05 는 <b>수정한 3' 기준 (최대 속도 ≤3 cm/s) 으로만 통과</b>, 원래 사전 등록한 비율 조건 (≤0.5 %) 으로는 F_224323 에서 3.9 % 로 <b>실패</b>. 수정은 형식상 결과 전이지만, 3' 는 VIO 없이 미리 계산된 붙잡기 구간으로 정해져 실패를 예측할 수 있었음 → 사전 등록 보호가 약함. ② 짝별 최악 ≤0 은 15 묶음이 base 복사라 당연한 값. ③ 복사 규칙: 입력 영상·IMU 는 같지만 설정 (스레드 4 vs 2, 벤치 버전) 이 달라 "글자까지 같음" 은 과장 — 같은 출력은 실행 4 개로 확인한 경험적 근거. ④ "시작 정지는 건너뜀" 은 과장: Hw15m05 도 F_214138_o0 에서 시작 정지 전체 (0.6–18.67 s) 를 붙잡음 (이번엔 무해). ⑤ O_154320 은 붙잡은 구간에 정답이 없어 3' 가 실제로 시험되지 않음. <b>결론: 앱 설정 확정 전 "OpenVINS 초기화가 끝난 뒤 켜기" 변형을 원래 기준으로 다시 시험.</b></div><h1>H 다듬기 — 시작 정지는 건너뛰는 붙잡기</h1>
 <p class=small>만든 시각 2026-10-21 19:08:00 · git 0cf7744 · 계획 docs/h_tune_plan.md · 결과 runs/h_tune/</p>
 <div class=box>
 <p><b>결론 (추정):</b> <b>Hw15m05</b> = <code>--still-hold 1.5:0.05:0.05:m0.5</code> — <b>시작 정지는 건너뛰고</b>
