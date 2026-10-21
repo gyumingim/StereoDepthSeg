@@ -56,3 +56,10 @@
 - 결과 runs/z2_regress/<이름>.{json,poses.jsonl.gz,stderr.log.gz,err}, runs/z2_regress/summary.json, 진행 runs/z2_regress/sched.log.
 - 보고 docs/z2_regression.html (쉬운 한국어, 결론 먼저, 추정 표시) + 스스로 점검(원시 JSON 에서 주 표 다시 계산해 대조).
 - 사후 변경이 생기면 이 문서 끝에 "사후" 로 적는다.
+
+## 실행 기록 (2026-10-21 12:41, 결과 보기 전 — 시간 규칙 적용, 판정 규칙은 그대로)
+- 잰 시간: 3 개 동시 264 s (224323 전체 137 s 녹화 = 녹화 1 초당 약 0.64 s, 3 개 동시 기준). 전체 예상: T 전체 길이면 약 3.3 h → 규칙 ① T 60 s
+  (약 2.3 h) → 규칙 ② 적용 조건 확인: F_224323_base_o0·Z2_o0 재실행이 setdown_mitig 와 **포즈까지 완전히 같음** (최대 위치 차 0.0 m,
+  ATE 2.55/0.52, 축척 0.978/0.988, 초기화 10.517 s; bench/runner blob·바이너리·yaml sha 같음) → 결정적. 224323·223815 의 나머지 10 실행은
+  복사해 씀 (원본 그대로) → 예상 약 2.0 h. 규칙 ③ (O 줄이기) 은 안 씀.
+- 진행: runs/z2_regress/sched.log, 남은 95 실행 (T_214138_S1_base_d0 는 잴 때 이미 같은 인자로 끝남).
