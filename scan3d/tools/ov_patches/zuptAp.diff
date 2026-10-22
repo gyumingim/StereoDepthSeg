@@ -1,0 +1,40 @@
+diff -ru open_vins_zbase/ov_msckf/src/core/VioManager.cpp open_vins_zuptAp/ov_msckf/src/core/VioManager.cpp
+--- open_vins_zbase/ov_msckf/src/core/VioManager.cpp	2026-10-20 12:21:38.421977669 +0900
++++ open_vins_zuptAp/ov_msckf/src/core/VioManager.cpp	2026-10-22 20:41:36.505409624 +0900
+@@ -295,6 +295,7 @@
+   if (is_initialized_vio && updaterZUPT != nullptr && (!params.zupt_only_at_beginning || !has_moved_since_zupt)) {
+     // If the same state time, use the previous timestep decision
+     if (state->_timestamp != message.timestamp) {
++      updaterZUPT->zuptAp_anchor = has_moved_since_zupt; // zuptAp: start-still exemption
+       did_zupt_update = updaterZUPT->try_update(state, message.timestamp);
+     }
+     if (did_zupt_update) {
+diff -ru open_vins_zbase/ov_msckf/src/update/UpdaterZeroVelocity.cpp open_vins_zuptAp/ov_msckf/src/update/UpdaterZeroVelocity.cpp
+--- open_vins_zbase/ov_msckf/src/update/UpdaterZeroVelocity.cpp	2026-10-20 12:19:38.385574027 +0900
++++ open_vins_zuptAp/ov_msckf/src/update/UpdaterZeroVelocity.cpp	2026-10-22 20:41:36.505409624 +0900
+@@ -220,7 +220,9 @@
+   if (override_with_disparity_check) {
+ 
+     // Get the disparity statistics from this image to the previous
+-    double time0_cam = state->_timestamp;
++    // zuptAp (2026-10-22, scan3d docs/zupt_fixAp_plan.md): fix A (reference = latest clone = last normal update, ZUPT frames
++    // add no clone) but only after the first normal update; before it (start still) keep the base reference (previous frame).
++    double time0_cam = (zuptAp_anchor && !state->_clones_IMU.empty()) ? state->_clones_IMU.rbegin()->first : state->_timestamp;
+     double time1_cam = timestamp;
+     int num_features = 0;
+     double disp_avg = 0.0;
+diff -ru open_vins_zbase/ov_msckf/src/update/UpdaterZeroVelocity.h open_vins_zuptAp/ov_msckf/src/update/UpdaterZeroVelocity.h
+--- open_vins_zbase/ov_msckf/src/update/UpdaterZeroVelocity.h	2026-10-20 12:19:38.385574027 +0900
++++ open_vins_zuptAp/ov_msckf/src/update/UpdaterZeroVelocity.h	2026-10-22 20:41:36.505409624 +0900
+@@ -154,6 +154,11 @@
+ 
+   /// Number of times we have called update
+   int last_zupt_count = 0;
++
++public:
++  /// zuptAp (2026-10-22, scan3d docs/zupt_fixAp_plan.md): set by VioManager before each try_update() to
++  /// has_moved_since_zupt. true -> disparity reference = latest clone (fix A); false (start still) -> base behaviour.
++  bool zuptAp_anchor = false;
+ };
+ 
+ } // namespace ov_msckf
