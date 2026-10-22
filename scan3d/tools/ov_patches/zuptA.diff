@@ -1,0 +1,14 @@
+diff -ru open_vins_zbase/ov_msckf/src/update/UpdaterZeroVelocity.cpp open_vins_zuptA/ov_msckf/src/update/UpdaterZeroVelocity.cpp
+--- open_vins_zbase/ov_msckf/src/update/UpdaterZeroVelocity.cpp	2026-10-20 12:19:38.385574027 +0900
++++ open_vins_zuptA/ov_msckf/src/update/UpdaterZeroVelocity.cpp	2026-10-22 15:02:54.260012506 +0900
+@@ -220,7 +220,9 @@
+   if (override_with_disparity_check) {
+ 
+     // Get the disparity statistics from this image to the previous
+-    double time0_cam = state->_timestamp;
++    // zuptA (2026-10-22, scan3d docs/zupt_fixA_plan.md): disparity reference = last clone time (last normal update,
++    // i.e. before the ZUPT streak; ZUPT frames add no clone) instead of the previous ZUPT frame.
++    double time0_cam = state->_clones_IMU.empty() ? state->_timestamp : state->_clones_IMU.rbegin()->first;
+     double time1_cam = timestamp;
+     int num_features = 0;
+     double disp_avg = 0.0;
