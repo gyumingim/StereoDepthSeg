@@ -82,6 +82,21 @@
   가능한 고침 (미시험): 첫 바이어스 확정을 "시작 정지 조각들이 끝날 때까지" 미루거나, 0.2–0.3 s 끊김은 같은 정지로 이어 붙이기.
 - 결론: 독립 녹화에서도 "B 보다 낫고 C 보다 나쁘지 않음" 은 확인 (녹화 1 개). 재보정 이득 자체는 독립 확인 안 됨.
 
+## 기본값 켬 (2026-10-22, 사용자 결정)
+사용자 결정 "손해 아니면 적용" → `vio_bench_hs.py` **명령줄 실행에서 `--imu-raw` 이면 재보정 기본 켬** (고정 시작 바이어스 방식). 커밋은 이 문서와 같은 커밋.
+- `--no-gyro-rebias` = 예전 그대로 (2026-10-22 이전 런 재현). `--gyro-rebias` 는 그대로 받음 (켬). type 1/4 (보정된 IMU) 실행에는 영향 없음.
+- 런 JSON 에 항상 `gyro_rebias: true/false` 기록 (켬이면 `gyro_rebias_events` 도). 2026-10-22 이전 런에는 이 키가 없음 = 꺼짐.
+- **`run(a)` 를 자기 Namespace 로 부르는 스크립트 (c5_run → z2_isolate, i3_confirm, i3_takeoff, g10, setdown_mitig, h_tune, z2_regress, endstill_vio 등) 는 꺼진 채 그대로**
+  (`a.gyro_rebias` 가 없으면 꺼짐). 확인: 저장소에서 벤치를 명령줄로 `--imu-raw` 와 함께 부르는 스크립트는 없음 → i3_confirm / i3_takeoff / g10 은 동작이 바뀌지 않아 수정하지 않음.
+  이 경로로 새 실험에서 켜려면 `a.gyro_rebias = True` 를 넣음 (예: `imu_learn/gyro_rebias_p2.py job G`).
+- 검증 (215348 o1, i3 base 설정, 가짜 브리지로 입력 바이트 해시): `--no-gyro-rebias` = 3d2fdac96c7e68a5 (예전과 같음), 속성 없는 Namespace = 같음;
+  명령줄 해석: 옵션 없음 → 꺼짐, `--imu-raw` → 켬, `--imu-raw --no-gyro-rebias` → 꺼짐, `--imu-raw --gyro-rebias` → 켬.
+
+## 남은 일
+- 정지가 여러 번 (4 s 이상) 있는 새 녹화를 찍으면 Part 1 (`gyro_rebias_eval.py --recs <새 녹화> --name part1_indep2`) 을 다시 돌려 재보정 이득을 독립 확인 (지금은 독립 녹화 1 개, G = C).
+- 시작 정지의 0.2–0.3 s 끊김을 같은 정지로 이어 붙이는 수정 (111836 사례) — 시험 전.
+- c5_run 경로 (대부분의 실험 실행기) 에도 기본 켬을 넣을지 결정 필요 (지금은 꺼짐; 넣으면 과거 실행기들이 조용히 바뀌므로 각 실행기에 명시 옵션이 먼저 필요).
+
 ## 이식 메모 (STM32 / 폰)
 의사코드 (표본마다, `gyro_rebias.py` 와 같음):
 ```
