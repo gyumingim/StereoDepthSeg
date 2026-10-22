@@ -256,8 +256,11 @@ class Hub:
         """고속 정답 녹화 (arlat mode hs): 주 카메라 1920x1080 fps + IMU → 폰 files/hs_<시각>/."""
         self.stop(quiet=True)
         self.adb("shell", "input", "keyevent", "KEYCODE_WAKEUP")
-        # fixed focus 45 cm (2.22 dpt) for every recording: one lens calibration fits all of them (autofocus-then-lock
+        # fixed focus 30 cm (FOCUS_DPT) for every recording: one lens calibration fits all of them (autofocus-then-lock
         # gave 32 cm / 46 cm on two recordings and per-recording self-calibration f differed 3 %)
+        # temps.csv AP/CP/PA: the app dumps thermalservice, which needs DUMP (adb-grantable; idempotent, no-op if granted)
+        for perm in ("android.permission.DUMP", "android.permission.PACKAGE_USAGE_STATS"):
+            self.adb("shell", "pm", "grant", PKG, perm)
         o = self.adb("shell", "am", "start", "-n", f"{PKG}/.MainActivity", "--es", "mode", "hs", "--ei", "fps", str(int(fps)),
                      "--ef", "focus_dpt", str(FOCUS_DPT))
         self.say(f"고속 녹화 시작: {fps} fps, 초점 {100 / FOCUS_DPT:.0f} cm 고정 (멈추면 PC 로 가져옴)")
@@ -392,7 +395,7 @@ def phone_conn(hub, c):
         hub.say("폰 연결 끊김")
 
 
-FOCUS_DPT = 2.22   # 1 / 0.45 m
+FOCUS_DPT = 3.33   # 1 / 0.30 m (was 2.22 = 45 cm until 2026-10-22: near laptop edge < 45 cm blurred)
 
 
 def stats_ticker(hub):

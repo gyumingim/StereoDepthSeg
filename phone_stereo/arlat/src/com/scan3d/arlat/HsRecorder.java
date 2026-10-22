@@ -52,7 +52,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 class HsRecorder implements SensorEventListener {
     interface Status { void show(String s); }
-    static final String VERSION = "hs-20261021-guide";       // written to meta.json app_version + status line (nroff: NR/edge OFF requested; ae: AE/ISO/AWB/colour logged)
+    static final String VERSION = "hs-20261022-temps-focus30";       // written to meta.json app_version + status line (nroff: NR/edge OFF requested; ae: AE/ISO/AWB/colour logged)
 
     static boolean has(int[] modes, int m) {
         if (modes == null) return false;
@@ -84,8 +84,8 @@ class HsRecorder implements SensorEventListener {
     private long lastDelta, lastExp, lastSkew;
     int wantFps = 120;
     int evComp = 0;
-    float focusDpt = -2;                         // >= 0: fixed focus at this many diopters (1/m); -1: autofocus all along;
-                                                 // -2: autofocus for 1.5 s then lock there (aim at the board when starting)
+    float focusDpt = 3.33f;                      // >= 0: fixed focus at this many diopters (1/m; default 3.33 = 30 cm, AF off);
+                                                 // -1: autofocus all along; -2: autofocus for 1.5 s then lock there
     private volatile float lastFocus, focusLocked = -1;
     private long focusLockNs;
     int wantKbps = 160_000;                     // S24 1080p240: 160 Mbps no dropped frames, 240 Mbps (encoder max) dropped 7 %; 0 = max
@@ -104,6 +104,8 @@ class HsRecorder implements SensorEventListener {
     private final JSONObject tempSources = new JSONObject();
     private Object thermalSvc;                     // IThermalService (hidden; reflection), null if not reachable
     private java.lang.reflect.Method thermalGet;   // getCurrentTemperatures()
+    private android.os.IBinder thermalBinder;      // thermalservice binder: dumped (needs adb 'pm grant <pkg> android.permission.DUMP')
+    private boolean thermalDump;                   // true if the dump route gave HAL temperatures at start
     private final List<String[]> zones = new ArrayList<>();   // readable /sys/class/thermal zones {type, temp path}
     private Object hpm;                            // HardwarePropertiesManager if getDeviceTemperatures is allowed
     private String lastTempKey = "";
@@ -405,6 +407,7 @@ class HsRecorder implements SensorEventListener {
             Class<?> smc = Class.forName("android.os.ServiceManager");
             android.os.IBinder b = (android.os.IBinder) smc.getMethod("getService", String.class).invoke(null, "thermalservice");
             if (b == null) throw new IllegalStateException("getService(thermalservice) = null");
+            thermalBinder = b;
             Object svc = Class.forName("android.os.IThermalService$Stub").getMethod("asInterface", android.os.IBinder.class).invoke(null, b);
             java.lang.reflect.Method m = svc.getClass().getMethod("getCurrentTemperatures");
             Object arr = m.invoke(svc);
@@ -413,6 +416,16 @@ class HsRecorder implements SensorEventListener {
         } catch (Throwable e) {
             Throwable c = e instanceof java.lang.reflect.InvocationTargetException && e.getCause() != null ? e.getCause() : e;
             put("thermal_hal", "denied/unreachable: " + c);
+        }
+        // fallback (v0.6.1): the app cannot call getCurrentTemperatures (hidden API + DEVICE_POWER), but with the DUMP
+        // permission granted over adb it can dump the thermalservice binder itself (= 'dumpsys thermalservice', which
+        // is where the old adb-logged AP/CP/PA came from) and parse "Current temperatures from HAL"
+        if (thermalGet == null && thermalBinder != null) {
+            java.util.LinkedHashMap<String, Float> d = dumpRead();
+            thermalDump = !d.isEmpty();
+            put("thermal_dump", thermalDump ? "yes (" + d.size() + " sensors: " + d.keySet() + ")"
+                    : "no (DUMP permission: " + (ctx.checkSelfPermission("android.permission.DUMP") == 0 ? "granted" : "not granted -> adb shell pm grant "
+                    + ctx.getPackageName() + " android.permission.DUMP") + ")");
         }
         // sysfs thermal zones (usually blocked by SELinux for apps)
         for (int i = 0; i < 100; i++) {
@@ -451,9 +464,39 @@ class HsRecorder implements SensorEventListener {
         try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.FileReader(f))) { return r.readLine().trim(); }
     }
 
+    private static final java.util.regex.Pattern HAL_T = java.util.regex.Pattern.compile("mValue=([-0-9.eE]+).*?mName=([^,}]+)");
+
+    /** thermalservice binder dump -> {name: °C} from the "Current temperatures from HAL" block (first value per name). */
+    private java.util.LinkedHashMap<String, Float> dumpRead() {
+        java.util.LinkedHashMap<String, Float> out = new java.util.LinkedHashMap<>();
+        if (thermalBinder == null) return out;
+        android.os.ParcelFileDescriptor[] p = null;
+        try {
+            p = android.os.ParcelFileDescriptor.createPipe();
+            thermalBinder.dumpAsync(p[1].getFileDescriptor(), new String[0]);   // oneway: no deadlock on a full pipe
+            p[1].close(); p[1] = null;
+            boolean in = false;
+            try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(
+                    new android.os.ParcelFileDescriptor.AutoCloseInputStream(p[0])))) {
+                p[0] = null;
+                for (String line; (line = r.readLine()) != null; ) {
+                    if (line.contains("Current temperatures from HAL")) { in = true; continue; }
+                    if (!in) continue;
+                    if (!line.isEmpty() && !Character.isWhitespace(line.charAt(0))) break;   // next unindented header
+                    java.util.regex.Matcher m = HAL_T.matcher(line);
+                    if (m.find() && !out.containsKey(m.group(2).trim())) out.put(m.group(2).trim(), Float.parseFloat(m.group(1)));
+                }
+            }
+        } catch (Throwable e) { put("thermal_dump_error", e.toString()); }
+        finally {
+            if (p != null) for (android.os.ParcelFileDescriptor f : p) if (f != null) try { f.close(); } catch (Exception ignored) { }
+        }
+        return out;
+    }
+
     private java.util.LinkedHashMap<String, Float> halRead() {
         java.util.LinkedHashMap<String, Float> out = new java.util.LinkedHashMap<>();
-        if (thermalGet == null) return out;
+        if (thermalGet == null) return thermalDump ? dumpRead() : out;
         try {
             Object arr = thermalGet.invoke(thermalSvc);
             for (int i = 0; i < java.lang.reflect.Array.getLength(arr); i++) {
