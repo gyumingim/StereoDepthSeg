@@ -43,8 +43,8 @@ def umeyama_se3(X, Y):
     return Rm, my - Rm @ mx
 
 
-def metrics(name, rec):
-    pre = BASE / f"{name}_base"
+def metrics(name, rec, pre=None):
+    pre = pre or BASE / f"{name}_base"
     j = json.load(open(str(pre) + ".json"))
     if j.get("ate_cm") is None:
         return dict(result=False)
