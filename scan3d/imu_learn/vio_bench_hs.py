@@ -32,6 +32,10 @@ Variants (same backend, only one thing changes at a time — the 2026 'same-back
                           than the bridge's first 'tracking' pose (= OpenVINS initialized) + D s. Until then the bench
                           waits for the bridge's pose of the previous fed frame before each decision (deterministic;
                           bridge sources unchanged), so the arming frame does not depend on bridge speed.
+  --focus-comp [--focus-k 0.0080] [--drop-lens-moving]
+                          (2026-10-22, off by default) per-frame focus from results_cam5.csv; the frame is rescaled
+                          about the principal point by 1/(1 + k (D - D_ref)) (D_ref = lens file focus) so the VIO sees
+                          the lens-file intrinsics; --drop-lens-moving drops frames during / 40 ms after lens motion
   --gt auto|spl|base|rs   scoring GT: auto = imu_gt_spl if present else imu_gt (both camera-only); rs = imu_gt_rs
                           (rolling shutter undone with the gyro -> partly self-scoring, comparison only)
 Time: frames are sent on the IMU clock (t_mid - dt from align.json) and OpenVINS timeshift_cam_imu = 0, so the offset is
@@ -78,6 +82,78 @@ def lens_path(rec, meta):
 
 def lens_for(rec, meta):
     return lens_calib.load(lens_path(rec, meta))[:2]
+
+
+class FocusComp:
+    """--focus-comp / --drop-lens-moving (2026-10-22, docs/focus_scale_20261022.md; off by default = output unchanged).
+    The image grows by k per dioptre of focus (fx, fy x (1 + k (D - D_ref)), measured k = 0.0080, linear 0.37-3.33 dpt;
+    principal point and distortion assumed unchanged = not measured). Per frame the focus D of the nearest capture
+    result (results_cam5.csv sensor_ts_ns vs the frame's physical_ts_ns, same sensor clock) gives s = 1 + k (D - D_ref);
+    the frame is rescaled about the principal point by 1/s so the VIO always sees the lens-file intrinsics (D_ref = the
+    lens file's focus_dpt). Done inside the undistort map (sample the raw frame at c + s (x - c)) = one interpolation.
+    Frames whose largest pixel shift (|s - 1| x half-diagonal) is below tol_px keep the original map (bit-identical).
+    Lens moving: the nearest result has lens_state 1, or a lens_state 1 result lies at most drop_ms before the frame."""
+
+    def __init__(self, rec, rows, K, dist, Knew, raw_size, size, d_ref, k, tol_px, drop_ms, comp, drop):
+        res = list(csv.DictReader(open(rec / "results_cam5.csv")))
+        rt = np.array([int(r["sensor_ts_ns"]) for r in res], np.int64)
+        col = "lens_state" if res and "lens_state" in res[0] else "lens_moving"   # older app: lens_moving only
+        o = np.argsort(rt, kind="stable")                    # results are written out of order (and sometimes twice)
+        self.rt = rt[o]
+        self.fd = np.array([float(r["focus_dpt"]) for r in res])[o]
+        self.mv = np.array([int(float(r.get(col) or 0)) for r in res])[o] == 1
+        self.tf = np.array([int(r["physical_ts_ns"]) for r in rows], np.int64)
+        self.d_ref, self.k, self.tol_px, self.drop_ns = float(d_ref), float(k), float(tol_px), int(drop_ms * 1e6)
+        self.comp, self.drop, self.col = comp, drop, col
+        self.half_diag = 0.5 * float(np.hypot(*raw_size))       # raw frame half-diagonal (largest-shift test)
+        self.mx, self.my = cv2.initUndistortRectifyMap(K, dist, None, Knew, size, cv2.CV_32FC1)
+        self.cx, self.cy = float(K[0, 2]), float(K[1, 2])
+        self.maps = {}
+        self.n_rescaled = self.n_dropped = 0
+        self.s_used, self.d_seen = [], []
+
+    def nearest(self, fi):
+        t = self.tf[fi]
+        j = int(np.clip(np.searchsorted(self.rt, t), 1, len(self.rt) - 1))
+        return j - 1 if abs(self.rt[j - 1] - t) <= abs(self.rt[j] - t) else j
+
+    def moving(self, fi):
+        t = self.tf[fi]
+        if self.mv[self.nearest(fi)]:
+            return True
+        j0, j1 = np.searchsorted(self.rt, t - self.drop_ns), np.searchsorted(self.rt, t, side="right")
+        return bool(self.mv[j0:j1].any())
+
+    def scale(self, fi):
+        return 1.0 + self.k * (self.fd[self.nearest(fi)] - self.d_ref)
+
+    def map_for(self, fi):
+        """None = keep the original map; else (m1, m2) sampling the raw frame at c + s (x - c)."""
+        s = self.scale(fi)
+        self.d_seen.append(float(self.fd[self.nearest(fi)]))
+        if abs(s - 1.0) * self.half_diag < self.tol_px:
+            return None
+        key = float(round(float(s), 7))                      # 1e-7 x 1100 px = 1e-4 px: same map within that
+        if key not in self.maps:
+            if len(self.maps) > 256:
+                self.maps.clear()
+            self.maps[key] = cv2.convertMaps((self.cx + key * (self.mx - self.cx)).astype(np.float32),
+                                             (self.cy + key * (self.my - self.cy)).astype(np.float32), cv2.CV_16SC2)
+        self.n_rescaled += 1
+        self.s_used.append(key)
+        return self.maps[key]
+
+    def summary(self):
+        img = 1.0 / np.asarray(self.s_used) if self.s_used else None
+        d = np.asarray(self.d_seen)
+        return dict(focus_comp=self.comp, focus_k=self.k, focus_d_ref=round(self.d_ref, 4), focus_tol_px=self.tol_px,
+                    focus_col_moving=self.col, frames_rescaled=self.n_rescaled,
+                    image_scale_min=round(float(img.min()), 6) if img is not None else None,
+                    image_scale_max=round(float(img.max()), 6) if img is not None else None,
+                    focus_fed_min=round(float(d.min()), 4) if len(d) else None,
+                    focus_fed_max=round(float(d.max()), 4) if len(d) else None,
+                    drop_lens_moving=self.drop, drop_lens_moving_ms=self.drop_ns / 1e6,
+                    frames_dropped_lens_moving=self.n_dropped)
 
 
 ALLAN_JSON = SCAN3D / "runs" / "gyro_bias_stability.json"
@@ -332,6 +408,18 @@ def run(a):
     print(f"frames: recording {frames['rec_all']}\n  fed by time {frames['fed']}", file=sys.stderr)
     selected = np.zeros(len(t_frames), bool)
     selected[sel] = True
+    fc = None
+    if getattr(a, "focus_comp", False) or getattr(a, "drop_lens_moving", False):
+        lj = lens_calib.load(lens_path(rec, meta))[2]
+        d_ref = lj.get("focus_dpt")
+        if d_ref is None or d_ref <= 0:
+            d_ref = meta.get("focus_dpt_request")
+        if a.focus_comp and (d_ref is None or d_ref <= 0):
+            sys.exit("--focus-comp: no reference focus (lens file focus_dpt / meta focus_dpt_request)")
+        fc = FocusComp(rec, rows, K, dist, Knew, (Wf, Hf), (W, H), d_ref or 0.0, float(getattr(a, "focus_k", 0.0080)),
+                       float(getattr(a, "focus_tol_px", 0.05)), 40.0, bool(a.focus_comp),
+                       bool(getattr(a, "drop_lens_moving", False)))
+        print(f"focus: comp={fc.comp} D_ref={fc.d_ref:.4f} k={fc.k} drop_lens_moving={fc.drop}", file=sys.stderr)
     tmp = Path(tempfile.mkdtemp(prefix="vio_", dir=str(SCAN3D / "runs")))
     # OpenVINS: t_imu = t_cam + timeshift_cam_imu; ours: IMU time + dt = camera time. The frames below are already sent
     # on the IMU clock (tci = tc - dt), so the shift is applied there and timeshift must be 0 (before 2026-10-20 it was
@@ -398,8 +486,12 @@ def run(a):
                 ii += 1
             if any(d0 <= tc < d1 for d0, d1 in drop):
                 continue
+            if fc is not None and fc.drop and fc.moving(fi):
+                fc.n_dropped += 1
+                continue
             _, f = cap.retrieve()
-            g = cv2.remap(cv2.cvtColor(f, cv2.COLOR_BGR2GRAY), m1, m2, cv2.INTER_LINEAR)
+            mp = fc.map_for(fi) if fc is not None and fc.comp else None
+            g = cv2.remap(cv2.cvtColor(f, cv2.COLOR_BGR2GRAY), *(mp or (m1, m2)), cv2.INTER_LINEAR)
             if hold_ok is not None and hold_ok.needs_init() and last_fed_t is not None:
                 tw = time.time()                                 # iD: wait for the bridge's pose of the previous frame
                 while bst["last_t"] < last_fed_t and bst["init_t"] is None and time.time() - tw < 5.0:
@@ -440,6 +532,8 @@ def run(a):
     res.update(init_cfg=init_cfg, config_used=cfg_used, start_off=start_off, imu_lead_s=imu_lead, **code_version())
     if getattr(a, "cfg_over", None):
         res["cfg_over"] = a.cfg_over
+    if fc is not None:
+        res.update(fc.summary())
     if hold_ok is not None:
         res.update(still_hold=a.still_hold, frames_held=n_held, hold_segments_imu_ns=hold_log)
         if hold_ok.arm_init is not None:
@@ -569,6 +663,13 @@ def main():
     ap.add_argument("--still-hold", default=None, help="W:G:A IMU-only stillness -> hold the latched frame (off)")
     ap.add_argument("--gt", default="auto",
                     help="auto (imu_gt_spl if present else imu_gt, camera-only) | spl | base | rs | <dir name>")
+    ap.add_argument("--focus-comp", action="store_true",
+                    help="rescale each frame about the principal point by 1/(1+k(D-D_ref)) from results_cam5 focus (off)")
+    ap.add_argument("--focus-k", type=float, default=0.0080, help="image scale per dioptre (docs/focus_scale_20261022.md)")
+    ap.add_argument("--focus-tol-px", type=float, default=0.05,
+                    help="--focus-comp: skip frames whose largest pixel shift is below this (keeps them bit-identical)")
+    ap.add_argument("--drop-lens-moving", action="store_true",
+                    help="drop frames whose nearest result has lens_state 1 or within 40 ms after one (off)")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
     r = run(a)
