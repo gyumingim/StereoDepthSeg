@@ -1,0 +1,181 @@
+{
+ "what": "per-focus lens intrinsics, 1920x1080 hs mode (cam5), for vio_bench_hs.py --focus-comp --focus-table (RECOMMENDED of the two tables, docs/focus_calib_20261022.md)",
+ "entries": [
+  {
+   "focus_dpt": 0.37133896,
+   "K": [
+    [
+     1249.7346742445052,
+     0.0,
+     963.043834197002
+    ],
+    [
+     0.0,
+     1249.3929696853138,
+     546.9436557573512
+    ],
+    [
+     0.0,
+     0.0,
+     1.0
+    ]
+   ],
+   "dist": [
+    27.939715017798317,
+    25.073701221875574,
+    -0.000618151605610727,
+    0.0006488333201310133,
+    -12.100234938206249,
+    27.76719392234789,
+    23.63226684761972,
+    -10.792108039144244,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "model": "rational",
+   "image_scale_vs_2p22": 0.986297,
+   "scale_p10_p90_pct": [
+    -1.405,
+    -1.059
+   ],
+   "n_frames": 185
+  },
+  {
+   "focus_dpt": 1.0007355,
+   "K": [
+    [
+     1254.8140867095074,
+     0.0,
+     963.043834197002
+    ],
+    [
+     0.0,
+     1254.4709933288061,
+     546.9436557573512
+    ],
+    [
+     0.0,
+     0.0,
+     1.0
+    ]
+   ],
+   "dist": [
+    27.939715017798317,
+    25.073701221875574,
+    -0.000618151605610727,
+    0.0006488333201310133,
+    -12.100234938206249,
+    27.76719392234789,
+    23.63226684761972,
+    -10.792108039144244,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "model": "rational",
+   "image_scale_vs_2p22": 0.990306,
+   "scale_p10_p90_pct": [
+    -1.01,
+    -0.644
+   ],
+   "n_frames": 145
+  },
+  {
+   "focus_dpt": 2.222321,
+   "K": [
+    [
+     1267.0667993679342,
+     0.0,
+     963.043834197002
+    ],
+    [
+     0.0,
+     1266.720355829904,
+     546.9436557573512
+    ],
+    [
+     0.0,
+     0.0,
+     1.0
+    ]
+   ],
+   "dist": [
+    27.939715017798317,
+    25.073701221875574,
+    -0.000618151605610727,
+    0.0006488333201310133,
+    -12.100234938206249,
+    27.76719392234789,
+    23.63226684761972,
+    -10.792108039144244,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "model": "rational",
+   "image_scale_vs_2p22": 0.999976,
+   "scale_p10_p90_pct": [
+    -0.014,
+    0.005
+   ],
+   "n_frames": 145
+  },
+  {
+   "focus_dpt": 3.3286483,
+   "K": [
+    [
+     1278.500204768364,
+     0.0,
+     963.043834197002
+    ],
+    [
+     0.0,
+     1278.1506350893756,
+     546.9436557573512
+    ],
+    [
+     0.0,
+     0.0,
+     1.0
+    ]
+   ],
+   "dist": [
+    27.939715017798317,
+    25.073701221875574,
+    -0.000618151605610727,
+    0.0006488333201310133,
+    -12.100234938206249,
+    27.76719392234789,
+    23.63226684761972,
+    -10.792108039144244,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "model": "rational",
+   "image_scale_vs_2p22": 1.008999,
+   "scale_p10_p90_pct": [
+    0.885,
+    0.915
+   ],
+   "n_frames": 147
+  }
+ ],
+ "source": "K/dist: hs_1920x1080_f2.22.json (rec ['hs_20261019_131326'], made 2026-10-19 13:59:33); fx, fy x image scale of each focus step vs 2.22 dpt measured at one pose on the focus-sweep clip hs_20261022_105441 (ArUco similarity fit, median over 145-185 frames). Principal point and distortion: unchanged (focus calibrations of 2026-10-22 could not resolve a change: cx, cy differences 3-6 px within 95 % CIs of +-3-10 px).",
+ "interpolation": "pixel-map blend linear in dpt between bracketing nodes (vio_bench_hs.FocusComp.table_map); clamped outside. Same model at all nodes and only fx, fy differ, so this equals a piecewise-linear --focus-k (non-linear near 0.37: 0.37->1.0 slope +0.64 %/dpt vs +0.80 overall).",
+ "caveat": "One pose, one clip, board at about 45 cm; fitted on the same clip used for its validation (not independent).",
+ "made": "2026-10-22 12:20:52"
+}

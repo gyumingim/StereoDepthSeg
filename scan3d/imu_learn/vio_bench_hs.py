@@ -36,6 +36,11 @@ Variants (same backend, only one thing changes at a time — the 2026 'same-back
                           (2026-10-22, off by default) per-frame focus from results_cam5.csv; the frame is rescaled
                           about the principal point by 1/(1 + k (D - D_ref)) (D_ref = lens file focus) so the VIO sees
                           the lens-file intrinsics; --drop-lens-moving drops frames during / 40 ms after lens motion
+  --focus-comp --focus-table config/lens/hs_1920x1080_focus_table_sweep.json
+                          (2026-10-22, off by default) instead of the k scale, undistort each frame with the table's
+                          per-focus K/distortion, blended (pixel maps, linear in dpt) at the frame's focus. _sweep =
+                          f2.22 lens x same-pose image scale per step (recommended); hs_1920x1080_focus_table.json =
+                          calibrations at 0.37/1.0/3.33 dpt (not recommended: docs/focus_calib_20261022.md)
   --gt auto|spl|base|rs   scoring GT: auto = imu_gt_spl if present else imu_gt (both camera-only); rs = imu_gt_rs
                           (rolling shutter undone with the gyro -> partly self-scoring, comparison only)
 Time: frames are sent on the IMU clock (t_mid - dt from align.json) and OpenVINS timeshift_cam_imu = 0, so the offset is
@@ -92,9 +97,16 @@ class FocusComp:
     the frame is rescaled about the principal point by 1/s so the VIO always sees the lens-file intrinsics (D_ref = the
     lens file's focus_dpt). Done inside the undistort map (sample the raw frame at c + s (x - c)) = one interpolation.
     Frames whose largest pixel shift (|s - 1| x half-diagonal) is below tol_px keep the original map (bit-identical).
-    Lens moving: the nearest result has lens_state 1, or a lens_state 1 result lies at most drop_ms before the frame."""
+    Lens moving: the nearest result has lens_state 1, or a lens_state 1 result lies at most drop_ms before the frame.
+    --focus-table FILE (2026-10-22, docs/focus_calib_20261022.md; off by default): instead of the linear k scale, each
+    frame is undistorted with the intrinsics (K, distortion) of fixed focus nodes (config/lens/
+    hs_1920x1080_focus_table_sweep.json), interpolated at the frame's focus D: per node the raw-frame sample map for the same
+    output (Knew, size) is built, and the map at D is the linear blend (in dpt) of the two bracketing node maps
+    (= linear interpolation of the projection, not of the distortion coefficients, which are ill-conditioned for the
+    rational model). D outside the nodes is clamped to the end node. Frames whose map differs from the lens-file map
+    by less than tol_px everywhere keep the original map."""
 
-    def __init__(self, rec, rows, K, dist, Knew, raw_size, size, d_ref, k, tol_px, drop_ms, comp, drop):
+    def __init__(self, rec, rows, K, dist, Knew, raw_size, size, d_ref, k, tol_px, drop_ms, comp, drop, table=None):
         res = list(csv.DictReader(open(rec / "results_cam5.csv")))
         rt = np.array([int(r["sensor_ts_ns"]) for r in res], np.int64)
         col = "lens_state" if res and "lens_state" in res[0] else "lens_moving"   # older app: lens_moving only
@@ -111,6 +123,42 @@ class FocusComp:
         self.maps = {}
         self.n_rescaled = self.n_dropped = 0
         self.s_used, self.d_seen = [], []
+        self.table = None
+        if table:
+            tj = json.load(open(table))
+            nodes = sorted(tj["entries"], key=lambda e: float(e["focus_dpt"]))
+            self.table, self.tab_d = str(table), np.array([float(e["focus_dpt"]) for e in nodes])
+            self.tab_maps = [cv2.initUndistortRectifyMap(np.asarray(e["K"], float), np.asarray(e["dist"], float), None,
+                                                         Knew, size, cv2.CV_32FC1) for e in nodes]
+            self.n_clamped, self.tab_shift = 0, []
+
+    def table_map(self, D):
+        """Raw-frame sample maps (float32) at focus D: linear blend of the two bracketing node maps (clamped)."""
+        d = self.tab_d
+        if len(d) == 1 or D <= d[0] or D >= d[-1]:
+            m = self.tab_maps[0 if len(d) == 1 or D <= d[0] else -1]
+            return m[0], m[1], len(d) > 1 and (D < d[0] or D > d[-1])
+        i = int(np.clip(np.searchsorted(d, D) - 1, 0, len(d) - 2))
+        w = float((D - d[i]) / (d[i + 1] - d[i]))
+        (ax, ay), (bx, by) = self.tab_maps[i], self.tab_maps[i + 1]
+        return ((1 - w) * ax + w * bx).astype(np.float32), ((1 - w) * ay + w * by).astype(np.float32), False
+
+    def map_for_table(self, fi):
+        D = float(self.fd[self.nearest(fi)])
+        self.d_seen.append(D)
+        key = round(D, 5)                                    # focus values are a few discrete steps
+        if key not in self.maps:
+            if len(self.maps) > 256:
+                self.maps.clear()
+            mx, my, clamped = self.table_map(D)
+            shift = float(np.max(np.hypot(mx - self.mx, my - self.my)))
+            self.maps[key] = (None if shift < self.tol_px else cv2.convertMaps(mx, my, cv2.CV_16SC2), clamped, shift)
+        mp, clamped, shift = self.maps[key]
+        self.n_clamped += int(clamped)
+        self.tab_shift.append(shift)
+        if mp is not None:
+            self.n_rescaled += 1
+        return mp
 
     def nearest(self, fi):
         t = self.tf[fi]
@@ -129,6 +177,8 @@ class FocusComp:
 
     def map_for(self, fi):
         """None = keep the original map; else (m1, m2) sampling the raw frame at c + s (x - c)."""
+        if self.table is not None:
+            return self.map_for_table(fi)
         s = self.scale(fi)
         self.d_seen.append(float(self.fd[self.nearest(fi)]))
         if abs(s - 1.0) * self.half_diag < self.tol_px:
@@ -146,7 +196,13 @@ class FocusComp:
     def summary(self):
         img = 1.0 / np.asarray(self.s_used) if self.s_used else None
         d = np.asarray(self.d_seen)
-        return dict(focus_comp=self.comp, focus_k=self.k, focus_d_ref=round(self.d_ref, 4), focus_tol_px=self.tol_px,
+        tab = {}
+        if self.table is not None:
+            sh = np.asarray(self.tab_shift)
+            tab = dict(focus_table=self.table, focus_table_dpt=[round(float(x), 4) for x in self.tab_d],
+                       frames_focus_clamped=self.n_clamped,
+                       table_map_shift_px_max=round(float(sh.max()), 4) if len(sh) else None)
+        return dict(focus_comp=self.comp, focus_k=self.k, focus_d_ref=round(self.d_ref, 4), focus_tol_px=self.tol_px, **tab,
                     focus_col_moving=self.col, frames_rescaled=self.n_rescaled,
                     image_scale_min=round(float(img.min()), 6) if img is not None else None,
                     image_scale_max=round(float(img.max()), 6) if img is not None else None,
@@ -418,8 +474,9 @@ def run(a):
             sys.exit("--focus-comp: no reference focus (lens file focus_dpt / meta focus_dpt_request)")
         fc = FocusComp(rec, rows, K, dist, Knew, (Wf, Hf), (W, H), d_ref or 0.0, float(getattr(a, "focus_k", 0.0080)),
                        float(getattr(a, "focus_tol_px", 0.05)), 40.0, bool(a.focus_comp),
-                       bool(getattr(a, "drop_lens_moving", False)))
-        print(f"focus: comp={fc.comp} D_ref={fc.d_ref:.4f} k={fc.k} drop_lens_moving={fc.drop}", file=sys.stderr)
+                       bool(getattr(a, "drop_lens_moving", False)), table=getattr(a, "focus_table", None))
+        print(f"focus: comp={fc.comp} D_ref={fc.d_ref:.4f} k={fc.k} drop_lens_moving={fc.drop}"
+              + (f" table={fc.table} nodes={fc.tab_d.tolist()}" if fc.table else ""), file=sys.stderr)
     tmp = Path(tempfile.mkdtemp(prefix="vio_", dir=str(SCAN3D / "runs")))
     # OpenVINS: t_imu = t_cam + timeshift_cam_imu; ours: IMU time + dt = camera time. The frames below are already sent
     # on the IMU clock (tci = tc - dt), so the shift is applied there and timeshift must be 0 (before 2026-10-20 it was
@@ -670,8 +727,13 @@ def main():
                     help="--focus-comp: skip frames whose largest pixel shift is below this (keeps them bit-identical)")
     ap.add_argument("--drop-lens-moving", action="store_true",
                     help="drop frames whose nearest result has lens_state 1 or within 40 ms after one (off)")
+    ap.add_argument("--focus-table", default=None,
+                    help="--focus-comp: undistort each frame with K/distortion interpolated at its focus from this table "
+                         "(config/lens/hs_1920x1080_focus_table_sweep.json) instead of the linear --focus-k scale (off)")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
+    if a.focus_table and not a.focus_comp:
+        sys.exit("--focus-table needs --focus-comp")
     r = run(a)
     print(json.dumps(r, ensure_ascii=False))
     if a.out:
