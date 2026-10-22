@@ -26,11 +26,11 @@ body.full{cursor:none}body.full #bar{display:none}
   <label><input type="radio" name="mode" value="fit"> 노트북용 보드 (보드 전체, 칸 204 px, 마커 번호 100번대 — 영상에서 자동 구분)</label></div>
  <div id="fitbox" style="display:none;margin-bottom:6px">픽셀 간격 <input id="pitch" type="number" step="0.0001" value="0.1570"> mm
   <span style="font-size:13px;color:#555">(Lenovo IdeaPad Slim 3 14AHP10: 14" 1920×1200 → 0.1570) · 다른 노트북: 화면 가로 mm ÷ 가로 픽셀</span>
-  <div style="margin-top:4px"><label><input type="checkbox" id="cardOn"> 카드로 맞추기</label>
+  <div>칸 크기 <b id="fitsq">-</b> (<code>config/charuco/board_laptop_fit_6x6.json</code> 는 32.03 mm — 다르게 나오면 알려 주세요)</div></div>
+  <div style="margin-bottom:6px"><label><input type="checkbox" id="cardOn"> 카드로 맞추기</label>
    <span style="font-size:13px;color:#555">— 신용·교통카드(가로 85.60 mm)를 화면의 파란 상자에 대고, 폭이 똑같아질 때까지 조절</span>
    <span id="cardCtl" style="display:none"><button id="cm10">−10</button><button id="cm1">−1</button><button id="cp1">+1</button><button id="cp10">+10</button>
    <span id="cardTxt"></span></span></div>
-  <div>칸 크기 <b id="fitsq">-</b> (<code>config/charuco/board_laptop_fit_6x6.json</code> 는 32.03 mm — 다르게 나오면 알려 주세요)</div></div>
  <div id="card" style="display:none;position:fixed;z-index:6;left:50%;top:50%;transform:translate(-50%,-50%);border:2px solid #1d4ed8;background:rgba(219,234,254,.85);box-sizing:border-box;font:13px system-ui;color:#1d4ed8;display:none;align-items:center;justify-content:center">카드를 여기 대세요 (85.60 × 53.98 mm)</div>
  <div><b>모니터 보정판</b> — 9×5 칸 (모서리 32개) · 칸 272 px · 마커 160 px (사진 1픽셀 = 화면 1픽셀)</div>
  <div id="chk"></div>
@@ -44,6 +44,8 @@ body.full{cursor:none}body.full #bar{display:none}
 </div>
 <script>
 const SQ_PX = 272, IMG_W = 2448, IMG_H = 1360, PITCH_MM = 0.2331, MON_W_PX = 2560;   // 27in QHD panel pixel pitch
+let monPitch = PITCH_MM;   // monitor pitch in use: spec 0.2331, or the card-calibrated value
+try { const v = parseFloat(localStorage.getItem('mon_pitch')); if (v > 0) monPitch = v; } catch (e) {}
 const img = document.getElementById('board');
 // laptop fit mode: draw the same board at exactly 0.75 scale (272→204, 160→120, 20→15 px — every edge of the board is a
 // multiple of 4 source px, so nearest-neighbour 0.75 keeps all edges exact) → 9×204 = 1836 × 1020 device px fits 1920×1200
@@ -87,7 +89,7 @@ function layout() {
   const fits = window.innerHeight * dpr >= IMG_H - 1 && window.innerWidth * dpr >= IMG_W - 1;
   if (!fits) document.getElementById('chk').innerHTML +=
     `<br><span class="warn">⚠ 보드가 창보다 큼 — 아래 "전체 화면" 을 눌러야 보드 전체가 보임</span>`;
-  document.getElementById('sq').textContent = (SQ_PX * PITCH_MM).toFixed(3) + ' mm (짧은 쪽 ' + (5 * SQ_PX * PITCH_MM).toFixed(2) + ' mm)';
+  document.getElementById('sq').textContent = (SQ_PX * monPitch).toFixed(3) + ' mm (짧은 쪽 ' + (5 * SQ_PX * monPitch).toFixed(2) + ' mm)' + (monPitch !== PITCH_MM ? ` · 카드 기준 픽셀 간격 ${monPitch.toFixed(4)} mm (사양 ${PITCH_MM})` : '');
 }
 function measured() {
   const v = parseFloat(document.getElementById('mm').value);
@@ -114,7 +116,7 @@ function drawRuler() {
   const rc = document.getElementById('ruler');
   if (!document.getElementById('rulerOn').checked) { rc.style.display = 'none'; return; }
   const dpr = window.devicePixelRatio || 1;
-  const pitch = mode() === 'fit' ? (parseFloat(document.getElementById('pitch').value) || 0.157) : PITCH_MM;
+  const pitch = mode() === 'fit' ? (parseFloat(document.getElementById('pitch').value) || 0.157) : monPitch;
   const sqDev = mode() === 'fit' ? SQ_PX * FIT : SQ_PX;           // board square in device px
   const W = Math.round(window.innerWidth * dpr), H = Math.round(70 * dpr);
   rc.width = W; rc.height = H; rc.style.width = (W / dpr) + 'px'; rc.style.height = (H / dpr) + 'px'; rc.style.display = 'block';
@@ -137,12 +139,14 @@ function cardShow() {
   document.getElementById('cardCtl').style.display = on ? 'inline' : 'none';
   if (!on) { el.style.display = 'none'; return; }
   const dpr = window.devicePixelRatio || 1;
-  if (!cardPx) cardPx = Math.round(85.60 / (parseFloat(document.getElementById('pitch').value) || 0.157));
+  const base = mode() === 'fit' ? (parseFloat(document.getElementById('pitch').value) || 0.157) : monPitch;
+  if (!cardPx) cardPx = Math.round(85.60 / base);
   el.style.display = 'flex';
   el.style.width = (cardPx / dpr) + 'px'; el.style.height = (cardPx * 53.98 / 85.60 / dpr) + 'px';
   const p = 85.60 / cardPx;
   document.getElementById('cardTxt').textContent = ` 카드 폭 ${cardPx} px → 픽셀 간격 ${p.toFixed(4)} mm`;
-  document.getElementById('pitch').value = p.toFixed(4);
+  if (mode() === 'fit') document.getElementById('pitch').value = p.toFixed(4);
+  else { monPitch = p; try { localStorage.setItem('mon_pitch', String(p)); } catch (e) {} }
   layout(); drawRuler();
 }
 document.getElementById('cardOn').addEventListener('change', () => { cardPx = 0; cardShow(); });
