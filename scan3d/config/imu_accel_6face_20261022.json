@@ -1,0 +1,11 @@
+{
+ "source": "6-face static IMU-only recording 2026-10-22 (recordings/sixface_20261022/, 30 s per face, raw accel type 35, ImuLog app_process, camera off)",
+ "location": "Pusan National University, engineering building 9, 2nd floor (user, 2026-10-22)",
+ "g_ref_mps2": 9.7973,
+ "g_ref_note": "WGS84 normal gravity at 35.233 N minus free-air for about 60 m (elevation estimated, not measured)",
+ "model": "a_meas = s * a_true + b, per axis, no cross-axis terms; 6 faces, 6 unknowns (exactly determined: residual 0, no redundancy)",
+ "scale_minus_1_pct": [0.102, 0.125, 0.088],
+ "bias_mps2": [-0.0273, -0.0152, -0.0334],
+ "face_means_mps2": {"px": [9.7799, 0.0191, -0.0253], "mx": [-9.8327, -0.0091, 0.1598], "py": [0.0341, 9.7938, 0.0502], "my": [-0.029, -9.822, 0.2009], "pz": [0.0383, -0.0537, 9.7722], "mz": [-0.0566, 0.0503, -9.8391]},
+ "caveats": "single session, one temperature; tilts 0.19-1.18 deg; g_ref elevation estimated; no repeat yet"
+}
