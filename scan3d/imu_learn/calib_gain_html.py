@@ -49,6 +49,8 @@ td:first-child{{text-align:left}} .mut{{color:var(--mut);font-size:13px}} svg{{m
 <p><b>정지마다 바이어스를 다시 잡으면 10 s 회전 오차가 {s['B']['median_of_medians']:.2f} → {s['D']['median_of_medians']:.2f} deg ({red:.0f} % 감소, 안드로이드 type 4 대비).</b>
 보정을 아예 안 하면 {s['A']['median_of_medians']:.2f} deg. 요 드리프트 {s['B']['yaw_dpm_median']:.1f} → {s['D']['yaw_dpm_median']:.1f} deg/분.
 사전 등록 판정 (D 가 B 보다 20 % 이상 낮은 녹화 ≥ 3): <b>{len(d['decision']['recs_D_beats_B'])} / {len(used)} → 통과</b>.</p>
+<p><b>하지만 OpenVINS 궤적에서는 차이 없음 (Part 2):</b> 같은 9 쌍 (녹화 3 × 시작 3) ATE 중앙값 0.75 → 0.75 cm, D 가 낮은 쌍 3 / 높은 쌍 3 (나머지 같음), 붕괴 3 → 3 (214550 은 둘 다 붕괴).
+OpenVINS 가 바이어스를 온라인으로 스스로 잡기 때문으로 추정. 독립 검사 PASS.</p>
 <p>단, 222747 에서는 D 가 C 보다 나쁨 (3.40 vs 1.27): 천천히 돌던 구간 (7.8–11.1 s, y 평균 −47 mdeg/s) 을 정지로 잘못 잡음. 사후 (등록 안 된) 게이트 D2 (직전 값과 100 mdeg/s 넘게 다르면 버림) 로는 1.27.</p>
 {svg}
 <h2>녹화별 (중앙값 / p90 deg / 요 deg/분)</h2>
