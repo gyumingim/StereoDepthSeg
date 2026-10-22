@@ -97,6 +97,25 @@ class HsPreview {
         {150, "세워서 내려놓고 정지", 0xFFFFA500},
     };
     static final int GUIDE_END_S = 150;
+    Object[][] guide = GUIDE;      // replaced by setGuide() for short test recordings
+    int guideEnd = GUIDE_END_S;
+
+    /** Custom cycling guide from an intent extra: "label:secs;label:secs" repeated until totalS, then auto stop. */
+    void setGuide(String spec, int totalS) {
+        if (spec == null || spec.isEmpty() || totalS <= 0) return;
+        String[] parts = spec.split(";");
+        java.util.ArrayList<Object[]> out = new java.util.ArrayList<>();
+        int[] cols = {Color.GREEN, 0xFF60A5FA, Color.YELLOW, 0xFFFFA500};
+        int t = 0, i = 0;
+        while (t < totalS) {
+            String[] kv = parts[i % parts.length].split(":");
+            int d = Math.max(1, Integer.parseInt(kv[kv.length - 1].trim()));
+            t = Math.min(totalS, t + d);
+            out.add(new Object[]{t, kv[0].trim(), cols[(i % parts.length) % cols.length]});
+            i++;
+        }
+        guide = out.toArray(new Object[0][]); guideEnd = totalS;
+    }
 
     /** Call when recording starts: big phase text + seconds left in the phase + next step; vibrates at each phase change;
      *  at GUIDE_END_S calls onEnd (auto stop). */
@@ -107,21 +126,21 @@ class HsPreview {
             @Override public void run() {
                 long t = SystemClock.elapsedRealtime() - recT0Ms;
                 int s = (int) (t / 1000);
-                if (s >= GUIDE_END_S) {
+                if (s >= guideEnd) {
                     still.setTextSize(48); still.setTextColor(Color.WHITE); still.setText("끝 — 자동으로 멈춤");
                     buzz(act, 600);
                     onEnd.run();
                     return;
                 }
                 int ph = 0;
-                while ((Integer) GUIDE[ph][0] <= s) ph++;
+                while ((Integer) guide[ph][0] <= s) ph++;
                 if (ph != lastPhase[0]) { if (lastPhase[0] >= 0) buzz(act, 250); lastPhase[0] = ph; }
-                int left = (Integer) GUIDE[ph][0] - s;
-                String next = ph + 1 < GUIDE.length ? "다음: " + GUIDE[ph + 1][1] : "다음: 자동 멈춤";
+                int left = (Integer) guide[ph][0] - s;
+                String next = ph + 1 < guide.length ? "다음: " + guide[ph + 1][1] : "다음: 자동 멈춤";
                 still.setVisibility(View.VISIBLE);
-                still.setTextSize(40); still.setTextColor((Integer) GUIDE[ph][2]);
-                still.setText(GUIDE[ph][1] + "\n" + left + "\n" + next
-                        + String.format(Locale.US, "\n녹화 %d:%02d / 2:30", s / 60, s % 60));
+                still.setTextSize(40); still.setTextColor((Integer) guide[ph][2]);
+                still.setText(guide[ph][1] + "\n" + left + "\n" + next
+                        + String.format(Locale.US, "\n녹화 %d:%02d / %d:%02d", s / 60, s % 60, guideEnd / 60, guideEnd % 60));
                 still.postDelayed(this, 200);
             }
         });

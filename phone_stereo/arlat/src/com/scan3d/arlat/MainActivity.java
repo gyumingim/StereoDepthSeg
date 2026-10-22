@@ -94,8 +94,9 @@ public class MainActivity extends Activity {
                         hs.previewSurface = hsPrev.surface;
                     }
                     hs.start();
+                    if (hsPrev != null) hsPrev.setGuide(getIntent().getStringExtra("guide"), getIntent().getIntExtra("guide_secs", 0));
                     if (hsPrev != null) hsPrev.startGuide(this, () -> {
-                        if (hs != null) hs.stopReason = "user (guide end 150 s)";
+                        if (hs != null) hs.stopReason = "user (guide end " + hsPrev.guideEnd + " s)";
                         finish();                                     // onPause stops the recorder and closes the files
                     });
                 }
