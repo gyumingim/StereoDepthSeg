@@ -52,7 +52,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 class HsRecorder implements SensorEventListener {
     interface Status { void show(String s); }
-    static final String VERSION = "hs-20261022-guide2";      // written to meta.json app_version + status line (nroff: NR/edge OFF requested; ae: AE/ISO/AWB/colour logged)
+    static final String VERSION = "hs-20261022-afreg";      // written to meta.json app_version + status line (nroff: NR/edge OFF requested; ae: AE/ISO/AWB/colour logged)
 
     static boolean has(int[] modes, int m) {
         if (modes == null) return false;
@@ -86,6 +86,7 @@ class HsRecorder implements SensorEventListener {
     int evComp = 0;
     float focusDpt = 3.33f;                      // >= 0: fixed focus at this many diopters (1/m; default 3.33 = 30 cm, AF off);
                                                  // -1: autofocus all along; -2: autofocus for 1.5 s then lock there
+    String afRegion = null;                     // intent af_region: "full" or "center:0.3" (box side as a fraction) -> CONTROL_AF_REGIONS
     int afMode = -1;                             // >= 0 (intent af_mode): CONTROL_AF_MODE = this value instead of fixed focus
                                                  // (AOSP 0-4, Samsung vendor 101/102 passed through as is)
     String focusSweep;                           // intent focus_sweep "0.37,3.33,1.0" (dpt): AF off, each value held 2 s, cycling
@@ -164,7 +165,7 @@ class HsRecorder implements SensorEventListener {
         resW.write("sensor_ts_ns,exposure_ns,rolling_shutter_skew_ns,frame_number,arrive_elapsed_ns,focus_dpt,af_mode,lens_moving"
                 + ",ois_mode,eis_mode,nr_mode,edge_mode,readout_ts_ns,distortion_mode,samsung_ldc_mode"
                 + ",ae_mode,ae_state,ae_comp,iso,post_raw_boost,frame_duration_ns,awb_mode,awb_state,cc_mode,awb_gains_rggb,ccm_rowmajor,tonemap_mode,scene_mode,effect_mode"
-                + ",lens_intrinsics,lens_distortion,lens_state,p5_intrinsics,p5_distortion,p5_focus_dpt\n");
+                + ",lens_intrinsics,lens_distortion,lens_state,p5_intrinsics,p5_distortion,p5_focus_dpt,af_state,af_regions\n");
         frW.write("frame_idx,t_mid_ns,physical_ts_ns,logical_ts_ns,exposure_ns,rolling_shutter_skew_ns,pts_us\n");
         t0Elapsed = SystemClock.elapsedRealtimeNanos(); t0Wall = System.currentTimeMillis();
         clockOffset = SystemClock.elapsedRealtimeNanos() - System.nanoTime();
@@ -262,6 +263,8 @@ class HsRecorder implements SensorEventListener {
                                     rb.set(CaptureRequest.LENS_FOCUS_DISTANCE, sweepDpt[0]);
                                 } else if (afMode >= 0) {   // explicit AF mode (e.g. 3 = CONTINUOUS_VIDEO): the lens may move
                                     rb.set(CaptureRequest.CONTROL_AF_MODE, afMode);
+                                    android.hardware.camera2.params.MeteringRectangle[] mr = afRegions(afRegion);
+                                    if (mr != null) rb.set(CaptureRequest.CONTROL_AF_REGIONS, mr);
                                 } else if (focusDpt >= 0) { // fixed focus: autofocus moves the lens and changes the intrinsics mid-recording
                                     rb.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
                                     rb.set(CaptureRequest.LENS_FOCUS_DISTANCE, focusDpt);
@@ -638,7 +641,29 @@ class HsRecorder implements SensorEventListener {
                 }
             }
         } catch (Throwable ignored) { }
-        return floats(k) + "," + floats(d) + "," + st + "," + floats(pk) + "," + floats(pd) + "," + pf;
+        Object as = null; String ar = "null";
+        try { as = r.get(CaptureResult.CONTROL_AF_STATE); } catch (Throwable ignored) { }
+        try {
+            android.hardware.camera2.params.MeteringRectangle[] m = r.get(CaptureResult.CONTROL_AF_REGIONS);
+            if (m != null) { StringBuilder b = new StringBuilder();
+                for (android.hardware.camera2.params.MeteringRectangle q : m)
+                    b.append(b.length() > 0 ? "|" : "").append(q.getX()).append(" ").append(q.getY()).append(" ").append(q.getWidth()).append(" ").append(q.getHeight()).append(" ").append(q.getMeteringWeight());
+                ar = b.length() > 0 ? b.toString() : "empty"; }
+        } catch (Throwable ignored) { }
+        return floats(k) + "," + floats(d) + "," + st + "," + floats(pk) + "," + floats(pd) + "," + pf + "," + as + "," + ar;
+    }
+
+    /** AF regions from the intent: "full" = whole active array, "center:F" = centred box of side F (fraction); null = camera default. */
+    android.hardware.camera2.params.MeteringRectangle[] afRegions(String spec) {
+        if (spec == null || spec.isEmpty()) return null;
+        android.graphics.Rect a = chars.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+        if (a == null) return null;
+        float f = 1f;
+        if (spec.startsWith("center:")) { try { f = Float.parseFloat(spec.substring(7)); } catch (Exception e) { f = 0.3f; } }
+        int w = Math.round(a.width() * f), h = Math.round(a.height() * f);
+        int x = a.left + (a.width() - w) / 2, y = a.top + (a.height() - h) / 2;
+        return new android.hardware.camera2.params.MeteringRectangle[]{
+            new android.hardware.camera2.params.MeteringRectangle(x, y, w, h, android.hardware.camera2.params.MeteringRectangle.METERING_WEIGHT_MAX)};
     }
 
     /** Freeze the lens where autofocus put it (AF off + that focus distance) for the rest of the recording. */
@@ -728,7 +753,7 @@ class HsRecorder implements SensorEventListener {
                     .put("clock_offset_ns", clockOffset).put("frames_unmatched", nUnmatched).put("ev_comp", evComp)
                     .put("bitrate_bps", bitrate).put("stop_reason", stopReason)
                     .put("battery_c_end", batteryTenthC() / 10.0).put("focus_dpt_request", focusDpt)
-                    .put("af_mode_request", afMode).put("focus_sweep_dpt", sweepDpt == null ? "none" : floats(sweepDpt))
+                    .put("af_mode_request", afMode).put("af_region_request", afRegion == null ? "default" : afRegion).put("active_array", String.valueOf(chars.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE))).put("focus_sweep_dpt", sweepDpt == null ? "none" : floats(sweepDpt))
                     .put("focus_sweep_hold_ms", SWEEP_HOLD_MS)
                     .put("focus_locked_dpt", focusLocked).put("focus_lock_elapsed_ns", focusLockNs)
                     .put("app_version", VERSION).put("temp_rows", nTemps).put("temp_sources", tempSources)
