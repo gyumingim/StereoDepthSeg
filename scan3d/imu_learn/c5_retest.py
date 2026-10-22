@@ -48,7 +48,7 @@ def jobs():
                         off = round(ms - S + d, 3)
                         args = [PY, "imu_learn/c5_run.py", f"recordings/{rec}", "--init-cfg", CFGS[c], "--clones", "11",
                                 "--noise", "cfg", "--start-off", str(off), "--imu-lead", str(lead), "--max-secs", "60",
-                                "--decode-threads", "2", "--out", str(OUT / name)]
+                                "--decode-threads", "2", "--no-gyro-rebias", "--out", str(OUT / name)]
                         out.append(dict(name=name, rec=rec, args=args))
     return out
 

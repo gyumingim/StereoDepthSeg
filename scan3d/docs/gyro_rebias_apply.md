@@ -83,19 +83,26 @@
 - 결론: 독립 녹화에서도 "B 보다 낫고 C 보다 나쁘지 않음" 은 확인 (녹화 1 개). 재보정 이득 자체는 독립 확인 안 됨.
 
 ## 기본값 켬 (2026-10-22, 사용자 결정)
-사용자 결정 "손해 아니면 적용" → `vio_bench_hs.py` **명령줄 실행에서 `--imu-raw` 이면 재보정 기본 켬** (고정 시작 바이어스 방식). 커밋은 이 문서와 같은 커밋.
-- `--no-gyro-rebias` = 예전 그대로 (2026-10-22 이전 런 재현). `--gyro-rebias` 는 그대로 받음 (켬). type 1/4 (보정된 IMU) 실행에는 영향 없음.
-- 런 JSON 에 항상 `gyro_rebias: true/false` 기록 (켬이면 `gyro_rebias_events` 도). 2026-10-22 이전 런에는 이 키가 없음 = 꺼짐.
-- **`run(a)` 를 자기 Namespace 로 부르는 스크립트 (c5_run → z2_isolate, i3_confirm, i3_takeoff, g10, setdown_mitig, h_tune, z2_regress, endstill_vio 등) 는 꺼진 채 그대로**
-  (`a.gyro_rebias` 가 없으면 꺼짐). 확인: 저장소에서 벤치를 명령줄로 `--imu-raw` 와 함께 부르는 스크립트는 없음 → i3_confirm / i3_takeoff / g10 은 동작이 바뀌지 않아 수정하지 않음.
-  이 경로로 새 실험에서 켜려면 `a.gyro_rebias = True` 를 넣음 (예: `imu_learn/gyro_rebias_p2.py job G`).
-- 검증 (215348 o1, i3 base 설정, 가짜 브리지로 입력 바이트 해시): `--no-gyro-rebias` = 3d2fdac96c7e68a5 (예전과 같음), 속성 없는 Namespace = 같음;
-  명령줄 해석: 옵션 없음 → 꺼짐, `--imu-raw` → 켬, `--imu-raw --no-gyro-rebias` → 꺼짐, `--imu-raw --gyro-rebias` → 켬.
+사용자 결정 "손해 아니면 적용" → **`--imu-raw` (raw type 16) 이면 재보정 기본 켬** (고정 시작 바이어스 방식). 명령줄 `vio_bench_hs.py` 와
+`run(a)` 경로 (c5_run 및 그 위의 실행기) 모두: `a.gyro_rebias` 가 없거나 None 이면 켬, False 면 끔. type 1/4 (보정된 IMU) 실행에는 영향 없음.
+- 끄기: `--no-gyro-rebias` (vio_bench_hs, c5_run) 또는 `a.gyro_rebias = False`. 런 JSON 에 항상 `gyro_rebias: true/false` (켬이면 `gyro_rebias_events`). 그 전 런에는 키 없음 = 꺼짐.
+- **과거 실험 재현**: 기본값을 바꾸기 전에 모든 기존 실행기가 끔을 명시하게 함 —
+  `z2_regress.common(..., rebias=)` 를 필수 인자로 바꾸고 (`--gyro-rebias` / `--no-gyro-rebias` 를 인자 목록에 씀) 호출하는 곳 전부 `rebias=False`
+  (z2_regress, i3_confirm, i3_takeoff, g10, calib_gain_p2; gyro_rebias_p2 는 U=False, G=True; z2_isolate · h_tune · h_arm_init 는 z2_regress 작업을 씀);
+  c5_run 인자를 직접 만드는 c5_initwin, c5_overnight, c5_retest, endstill_vio, setdown_mitig 에 `--no-gyro-rebias`;
+  자체 Namespace 인 calib_vio_ablation, collapse_run 에 `gyro_rebias=False` (둘 다 보정 IMU 라 원래 영향 없음). `c5_matrix.sh` 는 10-19 녹화 (raw 없음) 라 영향 없어 그대로.
+  새로 `z2_regress.common` 을 부르는 코드는 rebias 를 꼭 정해야 함 (안 주면 TypeError).
+- **검증**: (1) 실행기 14 개의 작업 전부 (i3_confirm 6, i3_takeoff 68, g10 32, calib_gain_p2 18, gyro_rebias_p2 18, z2_isolate 54, z2_regress 108, h_tune 54,
+  h_arm_init 54, setdown_mitig 30, c5_initwin 540, c5_retest 180, endstill_vio 12, c5_overnight 1) 를 c5_run 인자 해석까지 돌려 벤치에 들어가는 값이
+  꺼짐임을 확인 (gyro_rebias_p2 G 만 켬). 꺼짐 경로의 벤치 코드는 예전과 같은 줄이라 이것으로 입력 동일이 보장됨.
+  (2) i3_confirm 의 215348 base_o1 작업을 c5_run 경로 그대로 (가짜 브리지) 돌려 입력 바이트 해시 = **3d2fdac96c7e68a5 (예전과 같음, 확인)**.
+  (3) 같은 인자에서 끔 옵션만 뺀 새 기본 호출: 런 JSON **`gyro_rebias: true`** (갱신 3 번: 11.7 / 71.3 / 141.5 s), 해시 fc34f7ecd91d501a (다름, 확인).
+  (4) 명령줄 해석: 옵션 없음 (보정 IMU) → 꺼짐, `--imu-raw` → 켬, `--imu-raw --no-gyro-rebias` → 꺼짐, `--imu-raw --gyro-rebias` → 켬.
+- 이전 단계 (커밋 dec0a9b) 는 명령줄에서만 켬이었음; 이 커밋에서 run(a) 경로까지 켬.
 
 ## 남은 일
 - 정지가 여러 번 (4 s 이상) 있는 새 녹화를 찍으면 Part 1 (`gyro_rebias_eval.py --recs <새 녹화> --name part1_indep2`) 을 다시 돌려 재보정 이득을 독립 확인 (지금은 독립 녹화 1 개, G = C).
 - 시작 정지의 0.2–0.3 s 끊김을 같은 정지로 이어 붙이는 수정 (111836 사례) — 시험 전.
-- c5_run 경로 (대부분의 실험 실행기) 에도 기본 켬을 넣을지 결정 필요 (지금은 꺼짐; 넣으면 과거 실행기들이 조용히 바뀌므로 각 실행기에 명시 옵션이 먼저 필요).
 
 ## 이식 메모 (STM32 / 폰)
 의사코드 (표본마다, `gyro_rebias.py` 와 같음):

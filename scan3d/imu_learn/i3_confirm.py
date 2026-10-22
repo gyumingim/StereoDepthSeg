@@ -150,7 +150,7 @@ def jobs_for(rec, inp):
     for k, off in enumerate(inp.get("offsets_s") or []):
         for c, hold in CONDS.items():
             js.append(dict(rec=rec, cond=c, k=k, off=off, hold=hold, name=f"{rec[-6:]}_{c}_o{k}",
-                           args=zr.common(rec, off, 2.0, 0, True)))
+                           args=zr.common(rec, off, 2.0, 0, True, rebias=False)))
     return js
 
 

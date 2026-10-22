@@ -43,7 +43,7 @@ def jobs():
         for k, off in enumerate(offs):
             for c in ("U", "G"):
                 js.append(dict(rec=rec, cond=c, k=k, off=off, name=f"{rec[-6:]}_{c}_o{k}",
-                               args=zr.common(rec, off, 2.0, 0, True)))
+                               args=zr.common(rec, off, 2.0, 0, True, rebias=(c == "G"))))
     return js
 
 

@@ -56,7 +56,7 @@ def jobs():
                 name = f"{rec[-6:]}_loose_{imu}_o{o}"
                 args = [PY, "imu_learn/c5_run.py", f"recordings/{rec}", "--init-cfg", "loose", "--clones", "11",
                         "--noise", "cfg", "--start-off", str(o), "--max-secs", "0", "--decode-threads", "2",
-                        "--out", str(OUT / name)] + (["--imu-raw"] if imu == "raw" else [])
+                        "--no-gyro-rebias", "--out", str(OUT / name)] + (["--imu-raw"] if imu == "raw" else [])
                 out.append(dict(name=name, args=args))
     return out
 

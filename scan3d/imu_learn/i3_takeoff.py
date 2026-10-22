@@ -100,13 +100,13 @@ def jobs():
     for r in (1, 2):
         for c, hold in CONDS.items():
             js.append(dict(kind="A", rec=A_REC, cond=c, hold=hold, off=xa["offsets_s"][1], name=f"A_{A_REC[-6:]}_{c}_o1_r{r}",
-                           args=zr.common(A_REC, xa["offsets_s"][1], 2.0, 0, True)))
+                           args=zr.common(A_REC, xa["offsets_s"][1], 2.0, 0, True, rebias=False)))
     for cl in cells():
         if cl.get("skip"):
             continue
         for c, hold in CONDS.items():
             js.append(dict(kind="B", rec=cl["rec"], cond=c, hold=hold, off=cl["off"], name=f"B_{cl['key']}_{c}",
-                           args=zr.common(cl["rec"], cl["off"], 2.0, MAX_SECS, True)))
+                           args=zr.common(cl["rec"], cl["off"], 2.0, MAX_SECS, True, rebias=False)))
     return js
 
 
@@ -127,7 +127,7 @@ def b2_cells():
 
 def jobs2():
     return [dict(kind="B2", rec=cl["rec"], cond=c, hold=hold, off=cl["off"], name=f"B2_{cl['key']}_{c}",
-                 args=zr.common(cl["rec"], cl["off"], 2.0, MAX_SECS, True)) for cl in b2_cells() for c, hold in CONDS.items()]
+                 args=zr.common(cl["rec"], cl["off"], 2.0, MAX_SECS, True, rebias=False)) for cl in b2_cells() for c, hold in CONDS.items()]
 
 
 def cmd(j):

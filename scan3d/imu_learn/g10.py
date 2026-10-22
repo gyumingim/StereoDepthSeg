@@ -73,20 +73,20 @@ def cells():
     for cl in it.cells():
         if cl.get("skip") or cl["si"] != 0:
             continue
-        args = zr.common(cl["rec"], cl["off"], 2.0, it.MAX_SECS, True)
+        args = zr.common(cl["rec"], cl["off"], 2.0, it.MAX_SECS, True, rebias=False)
         out.append(dict(kind="B", key=f"B_{cl['key']}", rec=cl["rec"], off=cl["off"], args=args, dep=True,
                         still_imu_ns=cl["still_imu_ns"],
                         src={"base": str(it.OUT / f"B_{cl['key']}_base"), "i3": str(it.OUT / f"B_{cl['key']}_i3")}))
     x = it.inp(R41)
     st = x["setdown"][0]["still_imu_ns"]
     for k, off in enumerate(x["offsets_s"]):
-        out.append(dict(kind="BA", key=f"BA_{R41[-6:]}_o{k}", rec=R41, off=off, args=zr.common(R41, off, 2.0, 0, True), dep=True,
+        out.append(dict(kind="BA", key=f"BA_{R41[-6:]}_o{k}", rec=R41, off=off, args=zr.common(R41, off, 2.0, 0, True, rebias=False), dep=True,
                         still_imu_ns=st, src={c: str(it.SRC / f"{R41[-6:]}_{c}_o{k}") for c in ("base", "i3")}))
     for b2 in it.b2_cells():
         if b2["rec"] != R41:
             continue
         out.append(dict(kind="BL", key=f"BL_{b2['key']}", rec=R41, off=b2["off"],
-                        args=zr.common(R41, b2["off"], 2.0, it.MAX_SECS, True), dep=True, still_imu_ns=st,
+                        args=zr.common(R41, b2["off"], 2.0, it.MAX_SECS, True, rebias=False), dep=True, still_imu_ns=st,
                         src={c: str(it.OUT / f"B2_{b2['key']}_{c}") for c in ("base", "i3")}))
     for cl in it.cells():
         if cl["rec"] != R13 or cl["si"] != 0 or cl["d"] not in (1, 5):
@@ -94,7 +94,7 @@ def cells():
         for dn, dd in (("m025", -0.25), ("p025", 0.25)):
             off = round(cl["off"] + dd, 3)
             out.append(dict(kind="N", key=f"N_{cl['key']}_{dn}", rec=R13, off=off,
-                            args=zr.common(R13, off, 2.0, it.MAX_SECS, True), dep=True, still_imu_ns=cl["still_imu_ns"], src={}))
+                            args=zr.common(R13, off, 2.0, it.MAX_SECS, True, rebias=False), dep=True, still_imu_ns=cl["still_imu_ns"], src={}))
     for j in zr.jobs():
         if j["cond"] != "base":
             continue

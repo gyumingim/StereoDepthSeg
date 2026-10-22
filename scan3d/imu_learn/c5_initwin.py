@@ -53,7 +53,7 @@ def jobs():
                             args = [PY, "imu_learn/c5_run.py", f"recordings/{rec}", "--init-cfg", "strict",
                                     "--init-window", str(w), "--init-disp", str(disp), "--imu-raw",
                                     "--clones", "11", "--noise", "cfg", "--start-off", str(off), "--imu-lead", str(lead),
-                                    "--max-secs", str(MAX_SECS), "--decode-threads", "4", "--out", str(OUT / name)]
+                                    "--max-secs", str(MAX_SECS), "--decode-threads", "4", "--no-gyro-rebias", "--out", str(OUT / name)]
                             out.append(dict(name=name, rec=rec, args=args))
     return out
 

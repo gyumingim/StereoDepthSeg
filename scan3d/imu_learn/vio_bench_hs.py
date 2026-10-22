@@ -43,9 +43,9 @@ Variants (same backend, only one thing changes at a time — the 2026 'same-back
                           calibrations at 0.37/1.0/3.33 dpt (not recommended: docs/focus_calib_20261022.md)
   --gyro-rebias / --no-gyro-rebias
                           re-estimate the raw gyro bias causally at every still >= 4 s (imu_learn/gyro_rebias.py,
-                          docs/gyro_rebias_apply.md). Command line: ON by default with --imu-raw since 2026-10-22 (user
-                          decision); --no-gyro-rebias reproduces older runs. Callers of run(a) with their own Namespace
-                          (c5_run, z2_isolate, i3_*, g10, ...) stay OFF unless they set a.gyro_rebias = True.
+                          docs/gyro_rebias_apply.md). ON by default with --imu-raw since 2026-10-22 (user decision), also
+                          for run(a) callers whose Namespace has no gyro_rebias (or None); --no-gyro-rebias /
+                          a.gyro_rebias = False reproduces older runs (all runners written before then pass it).
   --gt auto|spl|base|rs   scoring GT: auto = imu_gt_spl if present else imu_gt (both camera-only); rs = imu_gt_rs
                           (rolling shutter undone with the gyro -> partly self-scoring, comparison only)
 Time: frames are sent on the IMU clock (t_mid - dt from align.json) and OpenVINS timeshift_cam_imu = 0, so the offset is
@@ -448,7 +448,10 @@ def run(a):
     a_i = np.stack([np.interp(gyr[:, 0], acc[:, 0], acc[:, 1 + j]) for j in range(3)], 1)
     g_i = gyr[:, 1:4].copy()
     rebias_log = None
-    if getattr(a, "gyro_rebias", False):                      # causal per-still gyro bias (imu_learn/gyro_rebias.py)
+    rb = getattr(a, "gyro_rebias", None)                      # None / missing = default: ON with raw IMU (2026-10-22)
+    if rb is None:
+        rb = bool(a.imu_raw)
+    if rb:                                                     # causal per-still gyro bias (imu_learn/gyro_rebias.py)
         if not a.imu_raw:
             sys.exit("--gyro-rebias needs --imu-raw")
         from gyro_rebias import correct_array
@@ -753,7 +756,7 @@ def main():
     a = ap.parse_args()
     if a.gyro_rebias and a.no_gyro_rebias:
         sys.exit("--gyro-rebias and --no-gyro-rebias")
-    a.gyro_rebias = a.gyro_rebias or (a.imu_raw and not a.no_gyro_rebias)   # default ON with --imu-raw (2026-10-22)
+    a.gyro_rebias = True if a.gyro_rebias else (False if a.no_gyro_rebias else None)   # None = default (ON with --imu-raw)
     if a.focus_table and not a.focus_comp:
         sys.exit("--focus-table needs --focus-comp")
     r = run(a)

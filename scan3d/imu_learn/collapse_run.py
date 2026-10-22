@@ -46,7 +46,7 @@ def main():
     out.parent.mkdir(parents=True, exist_ok=True)
     a = argparse.Namespace(rec=o.rec, fps=o.fps, size=o.size, npts=200, clones=11, noise=o.noise,
                            noise_scale=o.noise_scale, imu_calib=None, dropout="", max_secs=o.max_secs, imu_raw=False,
-                           gt="auto", out=None)
+                           gt="auto", out=None, gyro_rebias=False)
     used = None
     if PARTS[o.parts] is not None:
         used = ablated(json.load(open(o.calib))["calib"], PARTS[o.parts])

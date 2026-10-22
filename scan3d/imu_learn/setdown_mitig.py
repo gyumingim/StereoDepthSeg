@@ -64,7 +64,7 @@ def jobs():
                 args = [PY, "imu_learn/setdown_mitig.py", "job", "--cfg-over", over, "--still-hold", hold or "", "--",
                         f"recordings/{rec}", "--init-cfg", "strict", "--init-window", "1.0", "--init-disp", "15",
                         "--clones", "11", "--noise", "cfg", "--start-off", str(o), "--max-secs", "0",
-                        "--decode-threads", "2", "--imu-raw", "--out", str(OUT / name)]
+                        "--decode-threads", "2", "--imu-raw", "--no-gyro-rebias", "--out", str(OUT / name)]
                 out.append(dict(name=name, args=args))
     return out
 

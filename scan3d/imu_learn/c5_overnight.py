@@ -89,7 +89,7 @@ def gt_files_sig(rec):
 def job(name, phase, rec, cfg, imu="cal", calib=None, calib_label="none", noise="cfg", off=0):
     args = [PY, "imu_learn/c5_run.py", f"recordings/{rec}", "--init-cfg", CFGS[cfg], "--clones", "11",
             "--noise", noise, "--start-off", str(off), "--max-secs", "60", "--decode-threads", "2",
-            "--calib-label", calib_label, "--out", str(OUT / name)]
+            "--calib-label", calib_label, "--no-gyro-rebias", "--out", str(OUT / name)]
     if imu == "raw":
         args.append("--imu-raw")
     if calib:

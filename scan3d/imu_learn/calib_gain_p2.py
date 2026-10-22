@@ -93,7 +93,7 @@ def jobs():
         offs = json.load(open(f"runs/i3_confirm/inputs/{rec}.json"))["offsets_s"]
         for k, off in enumerate(offs):
             for c in ("U", "D"):
-                args = zr.common(rec, off, 2.0, 0, True)
+                args = zr.common(rec, off, 2.0, 0, True, rebias=False)
                 if c == "D":
                     args[0] = str(RECDIR / rec)
                 js.append(dict(rec=rec, cond=c, k=k, off=off, name=f"{rec[-6:]}_{c}_o{k}", args=args))

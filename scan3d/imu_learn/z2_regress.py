@@ -73,11 +73,13 @@ def blobs():
     return head, b, bool(dirty)
 
 
-def common(rec, off, lead, max_secs, raw):
+def common(rec, off, lead, max_secs, raw, *, rebias):
+    """rebias (required since 2026-10-22): gyro re-bias written explicitly as --gyro-rebias / --no-gyro-rebias
+    (c5_run / vio_bench_hs default is ON with --imu-raw; runners written before then pass False)."""
     a = [f"recordings/{rec}", "--init-cfg", "strict", "--init-window", "1.0", "--init-disp", "15", "--clones", "11",
          "--noise", "cfg", "--start-off", str(off), "--imu-lead", str(lead), "--max-secs", str(max_secs),
          "--decode-threads", "2"]
-    return a + (["--imu-raw"] if raw else [])
+    return a + (["--imu-raw"] if raw else []) + (["--gyro-rebias"] if rebias else ["--no-gyro-rebias"])
 
 
 def jobs():
@@ -86,18 +88,18 @@ def jobs():
         for rec in NEW:
             for o in OFFS:
                 out.append(dict(name=f"F_{rec[-6:]}_{cond}_o{o}", group=f"F_{rec[-6:]}", rec=rec, cond=cond, over=over,
-                                args=common(rec, o, 2.0, 0, True), pair=f"F_{rec[-6:]}_o{o}"))
+                                args=common(rec, o, 2.0, 0, True, rebias=False), pair=f"F_{rec[-6:]}_o{o}"))
         for S in SS:
             for rec in STILL_RECS:
                 ms = json.load(open(STILL / f"{rec}_still.json"))["motion_start_s"]
                 for dn, d in DS.items():
                     out.append(dict(name=f"T_{rec[-6:]}_S{S}_{cond}_{dn}", group=f"T_{rec[-6:]}_S{S}", rec=rec, cond=cond,
-                                    over=over, args=common(rec, round(ms - S + d, 3), 0.0, MAX_T, True),
+                                    over=over, args=common(rec, round(ms - S + d, 3), 0.0, MAX_T, True, rebias=False),
                                     pair=f"T_{rec[-6:]}_S{S}_{dn}"))
         for rec in OLD:
             for o in OFFS:
                 out.append(dict(name=f"O_{rec[-6:]}_{cond}_o{o}", group=f"O_{rec[-6:]}", rec=rec, cond=cond, over=over,
-                                args=common(rec, o, 2.0, 0, False), pair=f"O_{rec[-6:]}_o{o}"))
+                                args=common(rec, o, 2.0, 0, False, rebias=False), pair=f"O_{rec[-6:]}_o{o}"))
     # interleave base/Z2 of the same pair so a stopped matrix still has pairs
     out.sort(key=lambda j: (j["pair"][0] != "F", j["pair"], j["cond"]))
     return out
