@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/home/system/scanner/StereoDepthSeg/scan3d/runs/lens_calib_round2_20261022/calib_r2.py", line 33, in <module>
+    v, c = load_views(r, wmax=a.wmax)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/system/scanner/StereoDepthSeg/scan3d/runs/lens_calib_round2_20261022/common.py", line 24, in load_views
+    P = pickle.load(open(D / os.environ.get("LC_VIEWS", "views") / f"{rec}.pkl", "rb"))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/system/scanner/StereoDepthSeg/scan3d/runs/lens_calib_round2_20261022/views_w10/173113.pkl'
