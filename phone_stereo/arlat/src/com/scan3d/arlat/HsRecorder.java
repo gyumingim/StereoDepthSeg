@@ -49,10 +49,15 @@ import java.util.concurrent.ConcurrentHashMap;
  * temps.csv (battery + thermal status/headroom + whatever thermal HAL / sysfs source this app may read; every 10 s and
  * when a value changes), results_cam5.csv has the actual OIS/EIS/NR/edge/distortion state per frame (columns at the end),
  * and Samsung lens distortion correction is requested off. meta.json: app_version, temp_sources, capture.
+ * Since hs-20261022-std (v0.6.5): session = "std" records through a REGULAR capture session (same camera "0", same
+ * NR/edge/OIS/EIS/distortion/focus requests, same files) at 1920x1080 and CONTROL_AE_TARGET_FPS_RANGE [fps,fps]
+ * (default 60), optionally with manual exposure (exp_us / iso -> AE off), to compare its field of view (sensor crop /
+ * binning) with the 240 fps high-speed mode. Both sessions log SCALER_CROP_REGION per frame (results_cam5.csv last
+ * column crop_region = "left top width height") and the stream configuration in meta.json (session, stream_config).
  */
 class HsRecorder implements SensorEventListener {
     interface Status { void show(String s); }
-    static final String VERSION = "hs-20261022-afreg";      // written to meta.json app_version + status line (nroff: NR/edge OFF requested; ae: AE/ISO/AWB/colour logged)
+    static final String VERSION = "hs-20261022-std";        // written to meta.json app_version + status line (nroff: NR/edge OFF requested; ae: AE/ISO/AWB/colour logged)
 
     static boolean has(int[] modes, int m) {
         if (modes == null) return false;
@@ -66,7 +71,12 @@ class HsRecorder implements SensorEventListener {
     private HandlerThread th;
     private Handler h;
     private CameraDevice dev;
-    private CameraConstrainedHighSpeedCaptureSession sess;
+    private CameraCaptureSession sess;           // CameraConstrainedHighSpeedCaptureSession for session "hs"
+    String session = "hs";                       // intent session: "hs" (constrained high speed, default) | "std" (regular session)
+    int expUs = 0, iso = 0;                      // std only (intent exp_us / iso): either > 0 -> AE off, manual exposure
+    private long expNsUsed, frameDurNsUsed;      // std manual exposure actually requested (0 = AE)
+    private int isoUsed;
+    private final JSONObject streamCfg = new JSONObject();
     private MediaCodec enc;
     private MediaMuxer mux;
     private int track = -1;
@@ -147,7 +157,69 @@ class HsRecorder implements SensorEventListener {
         }
         size = best; range = bestR;
         android.util.Log.i("arlat", "high-speed configs: " + all);
+        try {
+            streamCfg.put("session", session).put("high_speed_configs", all.toString().trim());
+            if (!isStd()) streamCfg.put("type", "constrained_high_speed").put("size", String.valueOf(size)).put("fps_range", String.valueOf(range));
+        } catch (Exception ignored) { }
+        if (isStd()) chooseStd(map);
         return all.toString();
+    }
+
+    boolean isStd() { return "std".equals(session); }
+
+    /** Regular session: 1920x1080 encoder output at fixed [wantFps, wantFps]; what the camera offers goes to meta stream_config. */
+    private void chooseStd(StreamConfigurationMap map) {
+        size = new Size(1920, 1080);
+        range = new Range<>(wantFps, wantFps);
+        try {
+            boolean sizeOk = false;
+            StringBuilder sz = new StringBuilder();
+            Size[] out = map.getOutputSizes(MediaCodec.class);
+            if (out != null) for (Size s : out) { sz.append(s).append(' '); sizeOk |= s.equals(size); }
+            StringBuilder fr = new StringBuilder();
+            boolean rangeOk = false;
+            Range<Integer>[] rs = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
+            if (rs != null) for (Range<Integer> r : rs) { fr.append(r).append(' '); rangeOk |= r.equals(range); }
+            streamCfg.put("type", "regular").put("size", String.valueOf(size)).put("fps_range", String.valueOf(range))
+                    .put("size_offered", sizeOk).put("fps_range_offered", rangeOk)
+                    .put("mediacodec_sizes", sz.toString().trim()).put("ae_target_fps_ranges", fr.toString().trim());
+            if (sizeOk) streamCfg.put("min_frame_duration_ns", map.getOutputMinFrameDuration(MediaCodec.class, size))
+                    .put("stall_duration_ns", map.getOutputStallDuration(MediaCodec.class, size));
+            android.util.Log.i("arlat", "std stream config " + streamCfg);
+        } catch (Exception e) { try { streamCfg.put("std_error", e.toString()); } catch (Exception ignored) { } }
+    }
+
+    /** Repeating request(s) for the open session: high-speed burst list for "hs", one repeating request for "std". */
+    private void submit(CaptureRequest.Builder rb, CameraCaptureSession.CaptureCallback cb) throws Exception {
+        if (sess instanceof CameraConstrainedHighSpeedCaptureSession) {
+            CameraConstrainedHighSpeedCaptureSession hs = (CameraConstrainedHighSpeedCaptureSession) sess;
+            hs.setRepeatingBurst(hs.createHighSpeedRequestList(rb.build()), cb, h);
+        } else sess.setRepeatingRequest(rb.build(), cb, h);
+    }
+
+    /** std only: manual exposure (AE off) when exp_us or iso is given; the unset one gets a default (logged in meta). */
+    private void manualExposure(CaptureRequest.Builder rb) {
+        if (!isStd() || (expUs <= 0 && iso <= 0)) return;
+        frameDurNsUsed = 1_000_000_000L / wantFps;
+        expNsUsed = expUs > 0 ? Math.min(expUs * 1000L, frameDurNsUsed) : frameDurNsUsed / 2;
+        isoUsed = iso > 0 ? iso : 400;
+        android.util.Range<Long> er = chars.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
+        Range<Integer> sr = chars.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE);
+        if (er != null) expNsUsed = er.clamp(expNsUsed);
+        if (sr != null) isoUsed = sr.clamp(isoUsed);
+        rb.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+        rb.set(CaptureRequest.SENSOR_EXPOSURE_TIME, expNsUsed);
+        rb.set(CaptureRequest.SENSOR_SENSITIVITY, isoUsed);
+        rb.set(CaptureRequest.SENSOR_FRAME_DURATION, frameDurNsUsed);   // AE off: the fps range no longer sets the rate
+        try { capInfo.put("exposure_range_ns", String.valueOf(er)).put("sensitivity_range", String.valueOf(sr)); } catch (Exception ignored) { }
+    }
+
+    /** SCALER_CROP_REGION of a result as "left top width height" (null if not reported). */
+    static String cropRegion(CaptureResult r) {
+        try {
+            android.graphics.Rect c = r.get(CaptureResult.SCALER_CROP_REGION);
+            return c == null ? "null" : c.left + " " + c.top + " " + c.width() + " " + c.height();
+        } catch (Throwable e) { return "null"; }
     }
 
     void start() throws Exception {
@@ -155,7 +227,8 @@ class HsRecorder implements SensorEventListener {
         if (size == null) throw new IllegalStateException("no " + wantFps + " fps high-speed mode: " + cfgs);
         running = true;
         th = new HandlerThread("hs"); th.start(); h = new Handler(th.getLooper());
-        dir = new File(ctx.getExternalFilesDir(null), "hs_" + new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new java.util.Date()));
+        dir = new File(ctx.getExternalFilesDir(null), "hs_" + new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new java.util.Date())
+                + (isStd() ? "_std" + wantFps : ""));
         dir.mkdirs();
         imuW = new BufferedWriter(new FileWriter(new File(dir, "imu.csv")), 1 << 16);
         imuW.write("type,t_ns,v0,v1,v2,v3,v4,v5\n");
@@ -165,7 +238,7 @@ class HsRecorder implements SensorEventListener {
         resW.write("sensor_ts_ns,exposure_ns,rolling_shutter_skew_ns,frame_number,arrive_elapsed_ns,focus_dpt,af_mode,lens_moving"
                 + ",ois_mode,eis_mode,nr_mode,edge_mode,readout_ts_ns,distortion_mode,samsung_ldc_mode"
                 + ",ae_mode,ae_state,ae_comp,iso,post_raw_boost,frame_duration_ns,awb_mode,awb_state,cc_mode,awb_gains_rggb,ccm_rowmajor,tonemap_mode,scene_mode,effect_mode"
-                + ",lens_intrinsics,lens_distortion,lens_state,p5_intrinsics,p5_distortion,p5_focus_dpt,af_state,af_regions\n");
+                + ",lens_intrinsics,lens_distortion,lens_state,p5_intrinsics,p5_distortion,p5_focus_dpt,af_state,af_regions,crop_region\n");
         frW.write("frame_idx,t_mid_ns,physical_ts_ns,logical_ts_ns,exposure_ns,rolling_shutter_skew_ns,pts_us\n");
         t0Elapsed = SystemClock.elapsedRealtimeNanos(); t0Wall = System.currentTimeMillis();
         clockOffset = SystemClock.elapsedRealtimeNanos() - System.nanoTime();
@@ -218,8 +291,8 @@ class HsRecorder implements SensorEventListener {
                         long exp = m == null ? lastExp : m[0], skew = m == null ? lastSkew : m[1];
                         frW.write(nFrames + "," + (ts + exp / 2 + skew / 2) + "," + ts + "," + ts + "," + exp + "," + skew + "," + info.presentationTimeUs + "\n");
                         nFrames++;
-                        if (nFrames % 120 == 0) status.show(String.format(Locale.US, "HS %s@%d recording\nframes %d imu %d\n%s",
-                                size, wantFps, nFrames, nImu, dir.getName()));
+                        if (nFrames % 120 == 0) status.show(String.format(Locale.US, "%s %s@%d recording\nframes %d imu %d\n%s",
+                                isStd() ? "STD" : "HS", size, wantFps, nFrames, nImu, dir.getName()));
                     }
                     c.releaseOutputBuffer(i, false);
                     if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) finish();
@@ -240,9 +313,11 @@ class HsRecorder implements SensorEventListener {
             @Override public void onOpened(CameraDevice d) {
                 dev = d;
                 try {
-                    d.createConstrainedHighSpeedCaptureSession(previewSurface == null ? Arrays.asList(encSurface) : Arrays.asList(encSurface, previewSurface), new CameraCaptureSession.StateCallback() {
+                    List<Surface> outs = previewSurface == null ? Arrays.asList(encSurface) : Arrays.asList(encSurface, previewSurface);
+                    try { streamCfg.put("outputs", previewSurface == null ? "encoder" : "encoder+preview"); } catch (Exception ignored) { }
+                    CameraCaptureSession.StateCallback scb = new CameraCaptureSession.StateCallback() {
                         @Override public void onConfigured(CameraCaptureSession s) {
-                            sess = (CameraConstrainedHighSpeedCaptureSession) s;
+                            sess = isStd() ? s : (CameraConstrainedHighSpeedCaptureSession) s;
                             try {
                                 CaptureRequest.Builder rb = d.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
                                 rb.addTarget(encSurface);
@@ -257,6 +332,7 @@ class HsRecorder implements SensorEventListener {
                                 if (has(chars.get(CameraCharacteristics.EDGE_AVAILABLE_EDGE_MODES), CaptureRequest.EDGE_MODE_OFF))
                                     rb.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF);
                                 if (evComp != 0) rb.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, evComp);   // darker = shorter exposure, if AE obeys
+                                manualExposure(rb);         // std + exp_us/iso only (no-op for hs)
                                 sweepDpt = parseSweep(focusSweep);
                                 if (sweepDpt != null) {     // focus sweep test: AF off, LENS_FOCUS_DISTANCE stepped every 2 s
                                     rb.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
@@ -280,8 +356,12 @@ class HsRecorder implements SensorEventListener {
                                         Float fd = r.get(CaptureResult.LENS_FOCUS_DISTANCE);
                                         Integer afm = r.get(CaptureResult.CONTROL_AF_MODE), lst = r.get(CaptureResult.LENS_STATE);
                                         try { resW.write(ts + "," + e + "," + sk + "," + r.getFrameNumber() + "," + SystemClock.elapsedRealtimeNanos()
-                                                + "," + fd + "," + afm + "," + lst + "," + captureState(r) + "," + lensState(r) + "\n"); }
+                                                + "," + fd + "," + afm + "," + lst + "," + captureState(r) + "," + lensState(r) + "," + cropRegion(r) + "\n"); }
                                         catch (Exception ignored) { }
+                                        if (nRes == 0) try {      // first result: crop / zoom the camera actually applied
+                                            Float zr = android.os.Build.VERSION.SDK_INT >= 30 ? r.get(CaptureResult.CONTROL_ZOOM_RATIO) : null;
+                                            capInfo.put("first_crop_region", cropRegion(r)).put("first_zoom_ratio", String.valueOf(zr));
+                                        } catch (Throwable ignored) { }
                                         if (ts != null) meta.put(ts, new long[]{e == null ? 0 : e, sk == null ? 0 : sk, ts});
                                         if (++nRes <= 3) android.util.Log.i("arlat", "hs result ts " + ts + " exp " + e + " skew " + sk);
                                         // drop only stale entries (> 1 s old); clearing the whole map lost pending matches (525 frames per 134 s)
@@ -289,23 +369,25 @@ class HsRecorder implements SensorEventListener {
                                         if (fd != null) lastFocus = fd;
                                     }
                                 };
-                                try { sess.setRepeatingBurst(sess.createHighSpeedRequestList(rb.build()), cb, h); }
+                                try { submit(rb, cb); }
                                 catch (Exception be) {      // never lose the recording to the vendor tag: retry without it
                                     if (ldcReqKey == null) throw be;
                                     android.util.Log.w("arlat", "hs burst with " + LDC_TAG + " failed, retry without", be);
                                     rb.set((CaptureRequest.Key<Object>) ldcReqKey, null);
                                     ldcReqKey = null;
                                     try { capInfo.put("samsung_ldc_request", "set but burst failed (" + be + ") -> removed"); } catch (Exception ignored) { }
-                                    sess.setRepeatingBurst(sess.createHighSpeedRequestList(rb.build()), cb, h);
+                                    submit(rb, cb);
                                 }
                                 if (sweepDpt != null) h.postDelayed(() -> sweepStep(rb, cb), SWEEP_HOLD_MS);
                                 else if (afMode < 0 && focusDpt == -2) h.postDelayed(() -> lockFocus(rb, cb), 1500);   // autofocus 1.5 s, then hold it
                                 h.postDelayed(heatCheck, 2000);
-                                status.show("HS " + size + "@" + wantFps + " recording -> " + dir.getName() + "\n" + VERSION);
+                                status.show((isStd() ? "STD " : "HS ") + size + "@" + wantFps + " recording -> " + dir.getName() + "\n" + VERSION);
                             } catch (Exception e) { status.show("hs request: " + e); }
                         }
                         @Override public void onConfigureFailed(CameraCaptureSession s) { status.show("hs configure failed"); }
-                    }, h);
+                    };
+                    if (isStd()) d.createCaptureSession(outs, scb, h);     // regular session (60 fps is not a high-speed mode)
+                    else d.createConstrainedHighSpeedCaptureSession(outs, scb, h);
                 } catch (Exception e) { status.show("hs session: " + e); }
             }
             @Override public void onDisconnected(CameraDevice d) { d.close(); }
@@ -609,7 +691,7 @@ class HsRecorder implements SensorEventListener {
         try {
             sweepIdx = (sweepIdx + 1) % sweepDpt.length;
             rb.set(CaptureRequest.LENS_FOCUS_DISTANCE, sweepDpt[sweepIdx]);
-            sess.setRepeatingBurst(sess.createHighSpeedRequestList(rb.build()), cb, h);
+            submit(rb, cb);
             android.util.Log.i("arlat", "HS focus sweep -> " + sweepDpt[sweepIdx] + " dpt");
         } catch (Exception e) { android.util.Log.e("arlat", "focus sweep", e); return; }
         h.postDelayed(() -> sweepStep(rb, cb), SWEEP_HOLD_MS);
@@ -672,7 +754,7 @@ class HsRecorder implements SensorEventListener {
         try {
             rb.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
             rb.set(CaptureRequest.LENS_FOCUS_DISTANCE, lastFocus);
-            sess.setRepeatingBurst(sess.createHighSpeedRequestList(rb.build()), cb, h);
+            submit(rb, cb);
             focusLocked = lastFocus; focusLockNs = SystemClock.elapsedRealtimeNanos();
             android.util.Log.i("arlat", "HS focus locked at " + lastFocus + " dpt");
         } catch (Exception e) { android.util.Log.e("arlat", "focus lock", e); }
@@ -757,10 +839,16 @@ class HsRecorder implements SensorEventListener {
                     .put("focus_sweep_hold_ms", SWEEP_HOLD_MS)
                     .put("focus_locked_dpt", focusLocked).put("focus_lock_elapsed_ns", focusLockNs)
                     .put("app_version", VERSION).put("temp_rows", nTemps).put("temp_sources", tempSources)
-                    .put("capture", capInfo).put("imu_thread", "dedicated");
+                    .put("capture", capInfo).put("imu_thread", "dedicated")
+                    .put("session", session).put("stream_config", streamCfg)
+                    .put("pixel_array", String.valueOf(chars.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)))
+                    .put("pre_correction_active_array", String.valueOf(chars.get(CameraCharacteristics.SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE)))
+                    .put("exp_us_request", expUs).put("iso_request", iso)
+                    .put("ae", expNsUsed > 0 ? "off (manual)" : "auto").put("exposure_ns_set", expNsUsed)
+                    .put("iso_set", isoUsed).put("frame_duration_ns_set", frameDurNsUsed);
             try (FileWriter w = new FileWriter(new File(dir, "meta.json"))) { w.write(m.toString(1)); }
         } catch (Exception ignored) { }
-        status.show((stopReason.startsWith("overheat") ? "과열로 녹화 멈춤 — 지금까지 저장됨\n" : "") + "HS done: " + nFrames + " frames, imu " + nImu + " -> " + dir.getName());
+        status.show((stopReason.startsWith("overheat") ? "과열로 녹화 멈춤 — 지금까지 저장됨\n" : "") + (isStd() ? "STD" : "HS") + " done: " + nFrames + " frames, imu " + nImu + " -> " + dir.getName());
         android.util.Log.i("arlat", "HS DONE " + dir);
         if (th != null) th.quitSafely();
         if (imuTh != null) imuTh.quitSafely();

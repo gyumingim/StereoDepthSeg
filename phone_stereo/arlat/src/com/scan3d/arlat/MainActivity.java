@@ -79,7 +79,11 @@ public class MainActivity extends Activity {
         if ("hs".equals(mode)) {            // 120 fps high-speed recording (main camera + IMU) for board ground truth
             if (hs == null) {
                 hs = new HsRecorder(this, this::show);
-                hs.wantFps = getIntent().getIntExtra("fps", 120);
+                String sess = getIntent().getStringExtra("session");       // "hs" (default) | "std" (regular session, 1080p60)
+                hs.session = "std".equals(sess) ? "std" : "hs";
+                hs.wantFps = getIntent().getIntExtra("fps", hs.isStd() ? 60 : 120);
+                hs.expUs = getIntent().getIntExtra("exp_us", 0);              // std: manual exposure (AE off) in microseconds
+                hs.iso = getIntent().getIntExtra("iso", 0);                    // std: manual ISO (AE off)
                 hs.evComp = getIntent().getIntExtra("ev", 0);
                 hs.wantKbps = getIntent().getIntExtra("kbps", 160_000);
                 hs.focusDpt = getIntent().getFloatExtra("focus_dpt", 3.33f);
