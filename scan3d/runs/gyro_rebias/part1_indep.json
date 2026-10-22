@@ -1,0 +1,83 @@
+{
+ "made": "2026-10-22 13:27:00",
+ "git_head": "a8611b2",
+ "plan": "docs/gyro_rebias_followup_plan.md (a8611b2)",
+ "inputs": "recordings/<rec>/{imu.csv, imu_gt/align.json, imu_gt_spl/gt.npz}",
+ "recs": [
+  {
+   "rec": "hs_20261022_111605",
+   "G_events": [],
+   "n_windows": 0,
+   "excluded": "windows 0 < 100"
+  },
+  {
+   "rec": "hs_20261022_111836",
+   "G_events": [
+    [
+     2.2,
+     "update",
+     2.1,
+     [
+      139.5,
+      218.1,
+      103.2
+     ]
+    ]
+   ],
+   "n_windows": 6237,
+   "cond": {
+    "B": {
+     "median": 1.3016251935056362,
+     "p90": 1.5853409607324132,
+     "yaw_dpm_median": 2.3104514593253738
+    },
+    "C": {
+     "median": 0.5975583072284468,
+     "p90": 0.841631298921712,
+     "yaw_dpm_median": 2.083026357487238
+    },
+    "D": {
+     "median": 0.4881669691290998,
+     "p90": 0.735135868836052,
+     "yaw_dpm_median": 0.9258465835010915
+    },
+    "D2": {
+     "median": 0.4881669691290998,
+     "p90": 0.735135868836052,
+     "yaw_dpm_median": 0.9258465835010915
+    },
+    "G": {
+     "median": 0.5975583072284271,
+     "p90": 0.8416312989217035,
+     "yaw_dpm_median": 2.08302635748717
+    }
+   }
+  }
+ ],
+ "summary": {
+  "median_of_medians": {
+   "B": 1.3016251935056362,
+   "C": 0.5975583072284468,
+   "D": 0.4881669691290998,
+   "D2": 0.4881669691290998,
+   "G": 0.5975583072284271
+  },
+  "yaw_dpm_median_of_medians": {
+   "B": 2.3104514593253738,
+   "C": 2.083026357487238,
+   "D": 0.9258465835010915,
+   "D2": 0.9258465835010915,
+   "G": 2.08302635748717
+  },
+  "n_recs": 1
+ },
+ "criteria": {
+  "c1_rule": "G median <= 1.10 x C median on every recording",
+  "c1_recs_failing": [],
+  "c1_pass": true,
+  "c2_rule": "median-of-medians G < B",
+  "c2_pass": true,
+  "passed": true,
+  "reduction_B_to_G_pct": 54.0913689893296
+ }
+}
