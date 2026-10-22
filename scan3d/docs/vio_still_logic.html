@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VIO 정지 로직 변천</title>
+<style>
+:root{
+  --bg:#fbfaf7; --card:#ffffff; --ink:#1d1f23; --muted:#5d636d; --line:#dcd9d2;
+  --accent:#2d5fd3; --accent-soft:#e7eefc; --accent2:#9a5b00; --accent2-soft:#fbf0de;
+  --drop:#b3261e; --drop-bg:#fde8e6; --hold:#8a5a00; --hold-bg:#fbefd4;
+  --cand:#1f5fbf; --cand-bg:#e3edfc; --adopt:#1b6e3a; --adopt-bg:#e2f3e8;
+  --code:#f1efe9;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171b; --card:#1e2127; --ink:#e7e8ea; --muted:#a2a8b2; --line:#343841;
+    --accent:#8fb0ff; --accent-soft:#22304f; --accent2:#f0b968; --accent2-soft:#3a2d18;
+    --drop:#ff9b92; --drop-bg:#45201d; --hold:#f3c46e; --hold-bg:#3d3018;
+    --cand:#9cc0ff; --cand-bg:#1f3152; --adopt:#86d6a3; --adopt-bg:#1b3626;
+    --code:#2a2e35;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171b; --card:#1e2127; --ink:#e7e8ea; --muted:#a2a8b2; --line:#343841;
+  --accent:#8fb0ff; --accent-soft:#22304f; --accent2:#f0b968; --accent2-soft:#3a2d18;
+  --drop:#ff9b92; --drop-bg:#45201d; --hold:#f3c46e; --hold-bg:#3d3018;
+  --cand:#9cc0ff; --cand-bg:#1f3152; --adopt:#86d6a3; --adopt-bg:#1b3626;
+  --code:#2a2e35;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI","Malgun Gothic","맑은 고딕","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  font-size:17px;line-height:1.7;word-break:keep-all;overflow-wrap:anywhere}
+main{max-width:860px;margin:0 auto;padding:28px 16px 64px}
+h1{font-size:1.9rem;line-height:1.3;margin:0 0 6px}
+h2{font-size:1.45rem;line-height:1.35;margin:52px 0 14px;padding-top:6px;border-top:2px solid var(--line)}
+h3{font-size:1.2rem;line-height:1.35;margin:0}
+p{margin:10px 0}
+ul{margin:6px 0 10px;padding-left:1.2em}
+li{margin:4px 0}
+.sub{color:var(--muted);margin:0 0 20px}
+.src{color:var(--muted);font-size:.78rem;line-height:1.5;margin-top:12px}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:.88em;font-family:ui-monospace,Consolas,monospace}
+.lead{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:12px;padding:18px 18px 12px;margin:18px 0}
+.lead strong{color:var(--accent)}
+.prob{display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px}
+@media (min-width:640px){.prob{grid-template-columns:1fr 1fr}}
+.prob div{background:var(--accent-soft);border-radius:10px;padding:12px 14px}
+.terms{display:grid;grid-template-columns:1fr;gap:8px;margin:12px 0}
+@media (min-width:640px){.terms{grid-template-columns:1fr 1fr}}
+.terms div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:.95rem}
+.terms b{color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 18px 12px;margin:18px 0}
+.card-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:6px}
+.when{color:var(--muted);font-size:.85rem;width:100%}
+.one{font-weight:600;margin:6px 0 10px}
+.badge{display:inline-block;font-size:.85rem;font-weight:700;padding:2px 12px;border-radius:999px;white-space:nowrap}
+.b-drop{background:var(--drop-bg);color:var(--drop)}
+.b-hold{background:var(--hold-bg);color:var(--hold)}
+.b-cand{background:var(--cand-bg);color:var(--cand)}
+.b-adopt{background:var(--adopt-bg);color:var(--adopt)}
+.cols{display:grid;grid-template-columns:1fr;gap:10px}
+@media (min-width:680px){.cols{grid-template-columns:1fr 1fr}}
+.cols>div{border-radius:10px;padding:8px 12px}
+.add{background:var(--adopt-bg)}
+.rem{background:var(--drop-bg)}
+.cols h4{margin:4px 0 2px;font-size:.95rem}
+.add h4{color:var(--adopt)} .rem h4{color:var(--drop)}
+.param{font-size:.95rem;background:var(--accent2-soft);border-radius:10px;padding:8px 12px;margin:10px 0}
+.param b{color:var(--accent2)}
+.res{margin:10px 0 4px}
+.res b{color:var(--accent)}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:12px 0;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:.92rem;background:var(--card)}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:var(--code);font-weight:700}
+tr:last-child td{border-bottom:none}
+.diagram{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin:16px 0}
+.diagram svg{display:block;width:100%;max-width:560px;height:auto;margin:0 auto}
+.svg-box{fill:var(--card);stroke:var(--ink);stroke-width:1.5}
+.svg-det{fill:var(--accent2-soft);stroke:var(--accent2);stroke-width:2;stroke-dasharray:6 4}
+.svg-ov{fill:var(--accent-soft);stroke:var(--accent);stroke-width:2}
+.svg-zupt{fill:var(--card);stroke:var(--accent);stroke-width:2}
+.svg-pill{fill:var(--card);stroke:var(--accent2);stroke-width:1.5}
+.svg-t{fill:var(--ink);font-size:13px;font-family:inherit}
+.svg-tb{fill:var(--ink);font-size:14px;font-weight:700;font-family:inherit}
+.svg-ta{fill:var(--accent);font-size:12.5px;font-weight:700;font-family:inherit}
+.svg-t2{fill:var(--accent2);font-size:12.5px;font-weight:700;font-family:inherit}
+.svg-m{fill:var(--muted);font-size:11.5px;font-family:inherit}
+.svg-ar{stroke:var(--ink);stroke-width:1.6;fill:none}
+.svg-arG{stroke:var(--accent2);stroke-width:2;fill:none;stroke-dasharray:5 4}
+.svg-head{fill:var(--ink)}
+.svg-headG{fill:var(--accent2)}
+.legend{font-size:.9rem;color:var(--muted);margin:8px 4px 0}
+.concl{background:var(--card);border:2px solid var(--accent);border-radius:14px;padding:16px 18px}
+.concl ol{margin:4px 0;padding-left:1.3em}
+.concl li{margin:8px 0;font-size:1.05rem}
+.todo ol{padding-left:1.3em}
+.todo li{margin:8px 0}
+.foot{color:var(--muted);font-size:.8rem;margin-top:40px;border-top:1px solid var(--line);padding-top:12px}
+</style>
+</head>
+<body>
+<main>
+
+<h1>"가만히 있을 때" VIO 로직 — 무엇을 해 봤나</h1>
+<p class="sub">scan3d VIO 의 정지 처리 변형들을 시간 순서대로 정리. 2026-10-21 오전 ~ 10-22 새벽. 녹화 수가 적어 모든 결론은 <b>추정</b>입니다.</p>
+
+<div class="lead">
+  <p><strong>한 줄로:</strong> 이 변형들은 모두 같은 문제를 고치려는 시도입니다 — <b>"멈춰 있는데 위치가 흐르는 것"</b>과 <b>"오래 멈춰 있다 출발할 때 크게 튀는 것"</b>.</p>
+  <div class="prob">
+    <div><b>① 바닥에 앉아 있는데 흐름</b><br>녹화 224323: 폰은 탁자 위에 가만히 있었는데 VIO 속도가 0.46–0.57 m/s 로 커지고, 오차가 2.7 → 48–65 cm 가 됐다. 방아쇠는 녹화를 멈추려고 화면에 들어온 손.</div>
+    <div><b>② 오래 앉았다 출발하면 튐</b><br>녹화 214550: 바닥에 오래 둔 뒤 움직이자 출발 뒤 10 초 오차가 44–96 cm (기준 설정). 드론 이륙과 같은 상황.</div>
+  </div>
+  <p class="src">출처: docs/setdown_failure.html (결론), docs/i3_takeoff_result.md (B 결과)</p>
+</div>
+
+<h2>먼저, 용어 (한 줄씩)</h2>
+<div class="terms">
+  <div><b>VIO</b> — 카메라 사진과 IMU(자이로·가속도)를 합쳐 폰 위치를 계산하는 방법. 여기선 OpenVINS 프로그램.</div>
+  <div><b>ZUPT</b> — "지금 멈춰 있다"고 보면 속도를 0 으로 묶어 흐름을 막는 OpenVINS 안의 기능 ("정지 갱신").</div>
+  <div><b>시차 (disparity)</b> — 앞 사진과 지금 사진 사이에 특징점이 움직인 평균 거리 (픽셀). 멈춰 있으면 거의 0. 지금 문턱은 0.5 px.</div>
+  <div><b>초기화</b> — VIO 가 처음에 중력 방향·속도 등을 잡는 단계. 지금은 정지 1.0 초를 보고 함 (정적 전용).</div>
+  <div><b>chi² 배수</b> — ZUPT 가 IMU 만 보고 "정지"를 인정할 때 얼마나 너그러운지. 0 이면 IMU 로는 안 봄 (지금 설정).</div>
+  <div><b>헛 통과</b> — 실제로는 움직이는데 (정답 속도 &gt; 2 cm/s) ZUPT 가 "정지"로 받아 준 프레임. 위험 신호.</div>
+  <div><b>무너짐</b> — 축척이 0.5–2 밖이거나 오차가 10 cm 를 넘는 실행.</div>
+  <div><b>ATE</b> — 정답 궤적과 VIO 궤적을 겹쳐서 잰 평균 위치 오차 (cm).</div>
+</div>
+<p class="src">출처: docs/setdown_mitigation_plan.md (조건 표), docs/z2_regression_plan.md (판정), docs/zupt_threshold_screen.md 1 절 (통과 조건 disp &lt; 문턱 &amp;&amp; features &gt; 20)</p>
+
+<h2>어디에 끼워 넣었나</h2>
+<div class="diagram">
+<svg viewBox="0 0 360 530" role="img" aria-label="IMU와 카메라가 바깥 정지 판정기를 거쳐 OpenVINS로 들어가고, 그 안의 ZUPT를 거쳐 위치가 나오는 그림">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="svg-head"/></marker>
+    <marker id="ahG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="svg-headG"/></marker>
+  </defs>
+  <!-- sensors -->
+  <rect x="10" y="10" width="150" height="46" rx="8" class="svg-box"/>
+  <text x="85" y="30" text-anchor="middle" class="svg-tb">IMU</text>
+  <text x="85" y="47" text-anchor="middle" class="svg-m">자이로 · 가속도</text>
+  <rect x="200" y="10" width="150" height="46" rx="8" class="svg-box"/>
+  <text x="275" y="30" text-anchor="middle" class="svg-tb">카메라</text>
+  <text x="275" y="47" text-anchor="middle" class="svg-m">640×360, 초당 60 장</text>
+  <line x1="85" y1="56" x2="85" y2="98" class="svg-ar" marker-end="url(#ah)"/>
+  <line x1="275" y1="56" x2="275" y2="98" class="svg-ar" marker-end="url(#ah)"/>
+  <!-- external detector -->
+  <rect x="10" y="102" width="340" height="128" rx="10" class="svg-det"/>
+  <text x="180" y="124" text-anchor="middle" class="svg-t2">바깥 정지 판정기 (H · i3 · G1.0)</text>
+  <text x="180" y="143" text-anchor="middle" class="svg-m">지난 1–1.5 초 IMU 가 조용하면 "정지"</text>
+  <rect x="20" y="156" width="155" height="62" rx="8" class="svg-pill"/>
+  <text x="97" y="176" text-anchor="middle" class="svg-t2">H · i3</text>
+  <text x="97" y="194" text-anchor="middle" class="svg-t">정지면 같은 사진을</text>
+  <text x="97" y="210" text-anchor="middle" class="svg-t">반복해서 보냄</text>
+  <rect x="185" y="156" width="155" height="62" rx="8" class="svg-pill"/>
+  <text x="262" y="176" text-anchor="middle" class="svg-t2">G1.0</text>
+  <text x="262" y="194" text-anchor="middle" class="svg-t">사진은 그대로,</text>
+  <text x="262" y="210" text-anchor="middle" class="svg-t">ZUPT 문턱만 바꿈</text>
+  <!-- arrows into OpenVINS -->
+  <line x1="60" y1="230" x2="60" y2="268" class="svg-ar" marker-end="url(#ah)"/>
+  <text x="66" y="254" class="svg-m">IMU 그대로</text>
+  <line x1="150" y1="230" x2="150" y2="268" class="svg-ar" marker-end="url(#ah)"/>
+  <text x="156" y="254" class="svg-m">사진</text>
+  <path d="M300,218 L300,330" class="svg-arG" marker-end="url(#ahG)"/>
+  <text x="306" y="254" class="svg-t2">0.5→1.0 px</text>
+  <!-- OpenVINS -->
+  <rect x="10" y="272" width="340" height="170" rx="12" class="svg-ov"/>
+  <text x="24" y="296" class="svg-ta">OpenVINS (VIO)</text>
+  <text x="24" y="314" class="svg-m">특징점 추적 + IMU 적분 → 위치 추정</text>
+  <rect x="26" y="334" width="308" height="94" rx="9" class="svg-zupt"/>
+  <text x="40" y="356" class="svg-tb">ZUPT (정지 갱신)</text>
+  <text x="40" y="376" class="svg-t">시차 &lt; 0.5 px 이면 "정지" → 속도 0 으로 묶음</text>
+  <text x="40" y="396" class="svg-ta">Z1 · Z2 · Z3 · N1 · Z2c · Z2v :</text>
+  <text x="40" y="414" class="svg-t">여기 설정값 (chi² · 잡음 · 속도)을 직접 바꿈</text>
+  <line x1="180" y1="442" x2="180" y2="474" class="svg-ar" marker-end="url(#ah)"/>
+  <rect x="90" y="478" width="180" height="44" rx="8" class="svg-box"/>
+  <text x="180" y="505" text-anchor="middle" class="svg-tb">위치 · 자세</text>
+</svg>
+<p class="legend">Z 계열 = OpenVINS 안의 ZUPT 설정을 바꿈. H · i3 = 바깥 판정기가 "정지"라고 보면 같은 사진을 계속 넣어서 시차를 0 으로 만듦 (그러면 ZUPT 가 통과). G1.0 = 같은 바깥 판정기가 사진은 안 건드리고 ZUPT 의 시차 문턱만 올림.</p>
+<p class="src">출처: docs/setdown_mitigation_plan.md (H 정의), docs/g10_plan.md 구현 절 (G 브리지가 프레임마다 _zupt_max_disparity 를 바꿈), docs/z2_isolate_plan.md (조건 표)</p>
+</div>
+
+<h2>시도한 순서대로</h2>
+
+<p><b>출발점 (기준 설정, 지금 앱):</b> ZUPT 는 <b>영상 시차만</b> 본다 (chi² 배수 0, 잡음 배수 10, 시차 문턱 0.5 px). 그래서 손이 화면에 들어오면 폰이 멈춰 있어도 "정지"가 아니게 되고, 그 순간 갱신할 특징점도 0 이라 IMU 만으로 적분하다 흘렀다.</p>
+<p class="src">출처: docs/setdown_failure.html (결론), docs/setdown_mitigation.html ("왜 되나")</p>
+
+<!-- Z1 -->
+<div class="card">
+  <div class="card-head"><span class="when">10-21 오전 · 내려놓기 대책 시험</span><h3>Z1 — ZUPT 에 IMU 판정 켜기</h3><span class="badge b-drop">버림</span></div>
+  <p class="one">시차가 실패해도 IMU 가 "정지 같다"고 하면 정지로 받는다.</p>
+  <div class="cols">
+    <div class="add"><h4>추가된 로직</h4><ul>
+      <li>시차 검사 실패 → 대신 IMU 잔차 chi² 가 1 × (95 % 문턱) 안이고 속도 &lt; 0.1 m/s 면 정지 갱신</li></ul></div>
+    <div class="rem"><h4>바뀐 로직</h4><ul>
+      <li>"영상 시차만 보는 ZUPT" → "시차 또는 IMU"</li></ul></div>
+  </div>
+  <div class="param"><b>값:</b> <code>zupt_chi2_multipler</code> 0 → 1. 잡음 배수 10 그대로.</div>
+  <p class="res"><b>결과:</b> 224323 내려놓기는 고쳤다 (마지막 3 초 오차 24.3 → 1.3 cm). 하지만 손에 든 움직임 중에도 25–32 번 "정지"로 받았고, 나중 시험에서 옛 녹화 131326 을 3 번 모두 무너뜨렸다 (오차 5–12 m, 헛 통과 162 개).</p>
+  <p class="src">출처: docs/setdown_mitigation.html 표 1, docs/setdown_mitigation_verify.md (25–32 번), docs/z2_isolate.html 결론, docs/z2_isolate_verify.md</p>
+</div>
+
+<!-- Z2 -->
+<div class="card">
+  <div class="card-head"><span class="when">10-21 오전 시험 → 낮 회귀 점검 (108 실행)</span><h3>Z2 — Z1 + 정지 갱신을 더 세게</h3><span class="badge b-drop">버림</span></div>
+  <p class="one">Z1 에 더해 ZUPT 잡음 배수를 10 → 1 로. IMU 판정은 더 깐깐, 갱신은 더 셈.</p>
+  <div class="cols">
+    <div class="add"><h4>추가된 로직</h4><ul>
+      <li>Z1 의 "IMU 로도 정지 인정"</li>
+      <li>정지 갱신을 10 배 더 믿음 (잡음 배수 1)</li></ul></div>
+    <div class="rem"><h4>바뀐 로직</h4><ul>
+      <li>설정값 두 개를 한꺼번에 바꿈 (섞인 변수 — 나중에 나누어 봄)</li></ul></div>
+  </div>
+  <div class="param"><b>값:</b> <code>zupt_chi2_multipler 1</code> + <code>zupt_noise_multiplier 1</code>.</div>
+  <p class="res"><b>결과:</b> 첫 시험에선 가장 좋았다 (224323 마지막 창 24.3 → 0.8 cm, 끝 정지 이동 40.4 → 0.26 cm). 하지만 다른 녹화 회귀 점검에서 <b>새 무너짐 2 건</b> (221052 1.4 → 70.7 cm, 131326 4.2 → 22.5 cm) 과 헛 통과 3 묶음 → "아직 앱 설정에 넣지 말 것".</p>
+  <p class="src">출처: docs/setdown_mitigation.html 결론, docs/z2_regression.html 결론, docs/z2_regression_verify.md</p>
+</div>
+
+<!-- Z3 -->
+<div class="card">
+  <div class="card-head"><span class="when">10-21 오전 · 내려놓기 대책 시험</span><h3>Z3 — OpenVINS 기본값 (가장 느슨)</h3><span class="badge b-drop">버림</span></div>
+  <p class="one">IMU 판정을 가장 너그럽게 (chi² 배수 5).</p>
+  <div class="cols">
+    <div class="add"><h4>추가된 로직</h4><ul><li>IMU 로 정지 인정, 문턱 5 배로 느슨</li></ul></div>
+    <div class="rem"><h4>바뀐 로직</h4><ul><li>시차만 보던 ZUPT → 거의 항상 정지로 받기 쉬움</li></ul></div>
+  </div>
+  <div class="param"><b>값:</b> <code>zupt_chi2_multipler</code> 0 → 5.</div>
+  <p class="res"><b>결과:</b> 움직이는 중 101–150 번 잘못 정지 (첫 100 초 안). 첫 100 초 오차가 223815 0.47 → 4.21 cm, 224323 0.82 → 2.49 cm. "쓰면 안 됨".</p>
+  <p class="src">출처: docs/setdown_mitigation.html 결론·표 1, docs/setdown_mitigation_verify.md</p>
+</div>
+
+<!-- N1 / Z2c / Z2v -->
+<div class="card">
+  <div class="card-head"><span class="when">10-21 오후 · Z2 나누어 보기</span><h3>N1 · Z2c · Z2v — Z2 를 쪼개고 조이기</h3><span class="badge b-drop">버림</span></div>
+  <p class="one">Z2 의 어느 쪽이 무너짐을 만드는지 하나씩 떼어 봤다.</p>
+  <div class="cols">
+    <div class="add"><h4>추가·바꾼 로직</h4><ul>
+      <li><b>N1</b>: 잡음 배수 1 만 (IMU 판정은 끔)</li>
+      <li><b>Z2c</b>: Z2 인데 IMU 판정 더 깐깐 (chi² 0.5)</li>
+      <li><b>Z2v</b>: Z2 인데 속도 문턱 0.1 → 0.05 m/s</li></ul></div>
+    <div class="rem"><h4>없앤 로직</h4><ul>
+      <li>N1 은 Z1 의 "IMU 로 정지 인정"을 뺌</li></ul></div>
+  </div>
+  <p class="res"><b>결과:</b> 무너짐을 만드는 쪽은 "IMU 만으로 정지 받기" (추정). N1 은 무너짐 0 이지만 내려놓기를 못 고침 (224323 19.7 cm, 기준 24.3 cm). Z2c 는 131326 무너짐만 없애고 221052 무너짐·헛 통과는 남음. Z2v 는 Z2 와 결과가 완전히 같음 (속도 문턱이 한 번도 안 걸림).</p>
+  <p class="src">출처: docs/z2_isolate.html 결론·표 1·2, docs/z2_isolate_verify.md</p>
+</div>
+
+<!-- H -->
+<div class="card">
+  <div class="card-head"><span class="when">10-21 오전 처음 시험 · 오후 "최선"으로 뽑힘</span><h3>H — 바깥에서 정지 보고 같은 사진 반복</h3><span class="badge b-drop">버림 (다듬은 판으로 대체)</span></div>
+  <p class="one">OpenVINS 는 그대로 두고, 입력 쪽에서 IMU 로 정지를 보면 정지 시작 때 사진을 계속 다시 넣는다.</p>
+  <div class="cols">
+    <div class="add"><h4>추가된 로직</h4><ul>
+      <li>바깥 정지 판정: 지난 1.0 초 동안 자이로 최대 &lt; 0.05 rad/s 그리고 가속도 흔들림 (표준편차) &lt; 0.05 m/s²</li>
+      <li>정지면 정지 시작 때 프레임을 붙잡아 반복 전송 → 시차 0 → ZUPT 통과</li></ul></div>
+    <div class="rem"><h4>바뀌지 않은 것</h4><ul>
+      <li>ZUPT 설정은 기준 그대로 (chi² 0, 잡음 10)</li>
+      <li>Z 계열의 "IMU 로 정지 인정"은 없음</li></ul></div>
+  </div>
+  <div class="param"><b>값:</b> <code>--still-hold 1.0:0.05:0.05</code> (창 1.0 초 : 자이로 0.05 : 가속 흔들림 0.05).</div>
+  <p class="res"><b>결과:</b> 내려놓기 고침 (224323 24.3 → 1.26 cm, 끝 정지 이동 40.4 → 0.62 cm), 새 무너짐 0. 하지만 ATE 기준을 4 묶음에서 넘음 — 모두 <b>시작 정지(초기화 전후)를 붙잡은</b> 경우. 옛 녹화 154320 한 짝도 2.71 → 6.99 cm.</p>
+  <p class="src">출처: docs/setdown_mitigation_plan.md (H 정의), docs/z2_isolate.html 결론, docs/z2_isolate_verify.md 2 절, docs/h_tune_plan.md ("실행 전에 이미 본 것")</p>
+</div>
+
+<!-- Hw15m05 -->
+<div class="card">
+  <div class="card-head"><span class="when">10-21 저녁 · H 다듬기</span><h3>Hw15m05 — 더 오래 멈춰야, 움직인 뒤에만</h3><span class="badge b-drop">버림 (i3 로 대체)</span></div>
+  <p class="one">H 가 시작 정지를 붙잡아 손해 보던 것을 피하려는 판.</p>
+  <div class="cols">
+    <div class="add"><h4>추가된 로직</h4><ul>
+      <li>0.5 초 이상 계속 움직인 뒤에만 붙잡기 허용 (시작 정지 건너뛰기)</li>
+      <li>정지 창 1.0 → 1.5 초 (짧은 멈춤 무시)</li></ul></div>
+    <div class="rem"><h4>함께 시험하고 버린 판</h4><ul>
+      <li>Hm05 (창 1.0), Hsm05 (문턱 0.03), Hw2m05 (창 2.0 — 222747 에서 실패)</li></ul></div>
+  </div>
+  <div class="param"><b>값:</b> <code>--still-hold 1.5:0.05:0.05:m0.5</code>.</div>
+  <p class="res"><b>결과:</b> 18 묶음 모두 통과, 내려놓기 고침 유지 (24.3 → 1.17 cm). 단, "붙잡은 동안 정말 멈췄나" 기준을 결과 전에 느슨하게 고친 뒤의 통과 — 원래 기준으로는 224323 에서 실패 (빠른 표본 3.9 %, 최대 2.08 cm/s). 그리고 214138 한 실행에서 시작 정지 전체를 여전히 붙잡음.</p>
+  <p class="src">출처: docs/h_tune_plan.md (사후 기록), docs/h_tune_verify.md</p>
+</div>
+
+<!-- i0/i3/i10 -->
+<div class="card">
+  <div class="card-head"><span class="when">10-21 밤 · 초기화 뒤에 켜기</span><h3>i3 — VIO 초기화 3 초 뒤부터만 붙잡기</h3><span class="badge b-hold">보류</span></div>
+  <p class="one">"움직인 뒤" 대신 "VIO 가 초기화된 뒤 3 초" 를 켜는 조건으로.</p>
+  <div class="cols">
+    <div class="add"><h4>추가된 로직</h4><ul>
+      <li>H (창 1.5 초) + 첫 추적 위치가 나온 뒤 3 초가 지나야 붙잡기 무장</li>
+      <li>켜는 순간이 정지 한가운데면 그 프레임부터 붙잡음</li></ul></div>
+    <div class="rem"><h4>없앤 로직</h4><ul>
+      <li>Hw15m05 의 "0.5 초 움직인 뒤에만" 조건</li>
+      <li>같이 시험한 i0 (바로 켬 — 221052 짧은 클립에서 기준 실패), i10 (10 초 뒤 — i3 와 같은 결과)</li></ul></div>
+  </div>
+  <div class="param"><b>값:</b> <code>--still-hold 1.5:0.05:0.05:i3</code>.</div>
+  <p class="res"><b>결과 (옛 녹화):</b> 시작 정지 붙잡기는 사라졌지만 원래 기준으론 여전히 224323 끝 정지에서 실패 (3.9 %, 실행 전에 예측함). <b>새 녹화 3 개 (+참고 1):</b> 기준 1–3 통과, 4 ("내려놓은 뒤 덜 미끄러지나") 실패 → 앱에 안 넣음. ZUPT 가 이미 잘 되는 정지에선 하는 일이 없었고, 차이는 시차 잡음 정지가 있는 214550 에서만 (전체 ATE 중앙 20.70 → 4.60 cm). <b>출발 시험:</b> 214550 의 출발 무너짐 3 칸 중 2 칸을 막음 (44.3 / 96.0 → 2.2 / 7.4 cm) 이지만 녹화 1 개라 "이득 확인 안 됨". 정지 중 약 1.5 초씩 풀리는 빈틈도 있었음.</p>
+  <p class="src">출처: docs/h_arm_init_plan.md (사후 기록), docs/h_arm_init_verify.md, docs/i3_confirm_plan.md, docs/i3_confirm_result.html, runs/i3_review/judge.md, docs/i3_takeoff_result.md, runs/i3_review/takeoff_judge.md, docs/report_20261022.html 3–4 절</p>
+</div>
+
+<!-- D -->
+<div class="card">
+  <div class="card-head"><span class="when">10-22 새벽 · 기존 기록만 분석</span><h3>D — ZUPT 시차 문턱만 올리기</h3><span class="badge b-drop">버림</span></div>
+  <p class="one">214550 의 정지 시차가 0.5 px 바로 위 (중앙 0.67–0.70 px) 에 몰려 있어서, 문턱 자체를 올리면? 을 먼저 계산으로 봄.</p>
+  <div class="cols">
+    <div class="add"><h4>바꿔 본 로직</h4><ul><li>시차 문턱 0.5 → 0.75 / 1.0 / 1.5 px (항상)</li></ul></div>
+    <div class="rem"><h4>새 VIO 실행</h4><ul><li>없음 — 기록된 시차로 다시 셈 (1 차 근사)</li></ul></div>
+  </div>
+  <p class="res"><b>결과:</b> 0.75 px 에서도 움직이는 프레임을 정지로 받음 — 실행당 새 헛 통과 중앙 131326 43 개, 221052 18 개. 그래서 "자이로가 멈췄을 때만 올리기"(G) 로 방향을 바꿈. 214550 정지 잡음의 원인은 화면 아래 어둡고 무늬 없는 띠로 보임 (불확실).</p>
+  <p class="src">출처: docs/zupt_threshold_screen.md 결론·1 절, docs/report_20261022.html 10 절 (검증 반영)</p>
+</div>
+
+<!-- G1.0 -->
+<div class="card">
+  <div class="card-head"><span class="when">10-22 새벽 · 사전 등록 시험 (68 실행)</span><h3>G1.0 — 정지일 때만 문턱 1.0 px, 사진은 안 붙잡음</h3><span class="badge b-cand">후보 (앱엔 아직 안 넣음)</span></div>
+  <p class="one">i3 와 같은 바깥 정지 판정을 쓰되, 사진을 반복하지 않고 ZUPT 문턱만 그 순간 올린다. "붙잡지 않는 i3".</p>
+  <div class="cols">
+    <div class="add"><h4>추가된 로직</h4><ul>
+      <li>판정기가 "정지"인 프레임에서만 ZUPT 시차 문턱 0.5 → 1.0 px, 아니면 0.5</li>
+      <li>판정기는 i3 와 같음: 지난 1.5 초 자이로 최대 &lt; 0.05 rad/s, 가속 흔들림 &lt; 0.05 m/s², 초기화 + 3 초 뒤 무장</li></ul></div>
+    <div class="rem"><h4>없앤 로직</h4><ul>
+      <li>프레임 붙잡기 (같은 사진 반복) — 그래서 지연이 없음</li></ul></div>
+  </div>
+  <div class="param"><b>구현:</b> 브리지 사본 (tools/ov_bridge_g10) 이 프레임마다 문턱을 바꿈. OpenVINS 라이브러리는 그대로. 브리지 동일성 점검 통과 (비트 동일).</div>
+  <p class="res"><b>결과:</b> 214550 에서 8 칸 모두 좋아짐 (출발 뒤 10 초 오차 짝 차이 중앙 −36.4 cm), 원래 무너지던 5 칸 모두 버팀 (예: 66.9 / 44.3 / 96.0 → 6.23 / 2.68 / 2.17 cm). 회귀 통과. 그러나 <b>안전 기준 실패</b>: 224323 끝 정지에서 헛 통과가 실행당 10 / 9 / 10 → 14 / 14 / 13 (정답 속도 2.00–2.08 cm/s, 정답 잡음일 가능성 큼 — 추정). 이득은 녹화 1 개, i3 와 성능은 비김.</p>
+  <p class="src">출처: docs/g10_plan.md, docs/g10_result.md, runs/g10/judge.md, docs/report_20261022.html 11 절</p>
+</div>
+
+<h2>한눈에 보기</h2>
+<div class="tablewrap">
+<table>
+<thead><tr><th>변형</th><th>무엇을 바꾸나</th><th>도움 된 곳</th><th>손해 본 곳</th><th>상태</th></tr></thead>
+<tbody>
+<tr><td>Z1</td><td>ZUPT 가 IMU 로도 정지 인정 (chi² 1)</td><td>224323 내려놓기 24.3 → 1.3 cm</td><td>움직임 중 잘못 정지 25–32 번, 131326 3/3 무너짐</td><td><span class="badge b-drop">버림</span></td></tr>
+<tr><td>Z2</td><td>Z1 + 정지 갱신 세게 (잡음 1)</td><td>224323 24.3 → 0.8 cm</td><td>새 무너짐 2 건 (221052, 131326), 헛 통과 3 묶음</td><td><span class="badge b-drop">버림</span></td></tr>
+<tr><td>Z3</td><td>IMU 정지 인정 가장 느슨 (chi² 5)</td><td>내려놓기 일부 (5.4 cm)</td><td>잘못 정지 101–150 번, 첫 100 초 오차 0.47 → 4.21 cm</td><td><span class="badge b-drop">버림</span></td></tr>
+<tr><td>N1 · Z2c · Z2v</td><td>Z2 를 쪼개거나 조임</td><td>N1·Z2c: 일부 무너짐 없앰</td><td>N1 은 내려놓기 못 고침, Z2c·Z2v 는 무너짐 남음</td><td><span class="badge b-drop">버림</span></td></tr>
+<tr><td>H</td><td>바깥 판정 (1.0 초) → 같은 사진 반복</td><td>224323 24.3 → 1.26 cm, 새 무너짐 0</td><td>시작 정지 붙잡아 ATE 기준 4 묶음 넘음</td><td><span class="badge b-drop">버림</span></td></tr>
+<tr><td>Hw15m05</td><td>H + 창 1.5 초 + 움직인 뒤에만</td><td>고친 기준으로 18/18 통과</td><td>원래 기준 실패 (3.9 %), 시작 정지 붙잡기 남음</td><td><span class="badge b-drop">버림</span></td></tr>
+<tr><td>i3</td><td>H (1.5 초) + 초기화 3 초 뒤에만 켬</td><td>214550 출발 무너짐 3 칸 중 2 칸 막음</td><td>기준 4 실패, 다른 녹화 몇 칸 0.9–1.5 cm 나빠짐 (한 곳의 튐 추정)</td><td><span class="badge b-hold">보류</span></td></tr>
+<tr><td>D</td><td>시차 문턱만 항상 올림</td><td>214550 정지 프레임 더 잡음</td><td>0.75 px 도 헛 통과 다수 (131326 43 개/실행)</td><td><span class="badge b-drop">버림</span></td></tr>
+<tr><td>G1.0</td><td>정지 판정 때만 문턱 0.5 → 1.0, 붙잡기 없음</td><td>214550 8/8 좋아짐, 무너짐 5 칸 모두 막음</td><td>안전 기준 실패 (224323 헛 통과 +3–5 개/실행)</td><td><span class="badge b-cand">후보</span></td></tr>
+</tbody>
+</table>
+</div>
+<p class="src">출처: 위 카드들의 출처와 같음. "채택"된 변형은 없음 — 앱은 지금도 기준 설정 (docs/report_20261022.html 8 절 마지막 줄).</p>
+
+<h2>지금 결론</h2>
+<div class="concl">
+<ol>
+  <li><b>앱에는 아직 아무것도 안 넣었다.</b> 지금 앱 = 시차만 보는 기존 ZUPT.</li>
+  <li><b>ZUPT 안에서 IMU 판정을 켜는 길 (Z 계열) 은 닫혔다.</b> 다른 녹화에서 무너짐을 만들었다.</li>
+  <li><b>남은 후보는 바깥 자이로 정지 판정 (i3, G1.0).</b> 214550 의 "오래 앉았다 출발" 무너짐은 막지만 녹화 1 개뿐이고, G1.0 은 안전 기준을 아슬아슬하게 못 넘었다. 둘의 성능은 비김 — 고른다면 지연이 없는 G1.0.</li>
+</ol>
+<p class="src">출처: docs/report_20261022.html 1·11 절, runs/g10/judge.md 결론, docs/z2_isolate.html 결론</p>
+</div>
+
+<h2>앱에 넣으려면 필요한 것</h2>
+<div class="todo">
+<ol>
+  <li><b>드론 모터를 켠 IMU 기록</b> (프롭 없이 먼저: 시동 대기 → 공회전). 진동 때문에 정지 판정 문이 아예 안 열리면 G 는 드론에 쓸모가 없다. 가장 싸고 먼저.</li>
+  <li><b>천천히 미끄러지는 녹화</b> (회전 없이 1–5 cm/s). "회전은 없는데 움직이는" 걸 멈춘 줄 아는지 아직 한 번도 시험 안 했다 — 안전 근거의 가장 큰 구멍.</li>
+  <li><b>새 사전 등록</b>: 헛 통과 정의에 "정답 표본과 앞뒤 0.1 초 이웃 모두 보드 코너 12 개 이상"을 넣고, 회귀 띠는 기준 설정만으로 재고, 분석 코드도 첫 실행 전에 커밋.</li>
+  <li><b>214550 같은 새 녹화 2 개 이상</b>: 켜고 바닥에 30–60 초 → 반드시 출발. 화면 속 어둡고 무늬 없는 영역 ≤ 5 % 와 15–25 % 두 구도. 자동 노출은 잠그거나 ISO 를 기록.</li>
+  <li>모두 통과하면 G1.0 과 i3 중 하나를 고르고, 앱에는 <b>기본 꺼짐 플래그 + 문 열림 로그</b>만 먼저 넣는다.</li>
+</ol>
+<p class="src">출처: runs/g10/judge.md "앱에 넣으려면", docs/report_20261022.html 1 절 "오늘 할 일"·8 절·10 절 "새 녹화가 통제할 것"</p>
+</div>
+
+<p class="foot">만든 날 2026-10-22. 새 계산 없음 — 모든 숫자는 각 카드 아래에 적은 문서에서 옮김. 녹화 수가 적고 같은 방·손 움직임이라 모든 결론은 추정. 같은 녹화의 시작 위치 3 개는 독립 반복이 아님.</p>
+
+</main>
+</body>
+</html>
