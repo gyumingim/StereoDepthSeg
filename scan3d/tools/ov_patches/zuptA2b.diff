@@ -1,0 +1,79 @@
+diff -ru open_vins_zbase/ov_msckf/src/core/VioManager.cpp open_vins_zuptA2b/ov_msckf/src/core/VioManager.cpp
+--- open_vins_zbase/ov_msckf/src/core/VioManager.cpp	2026-10-20 12:21:38.421977669 +0900
++++ open_vins_zuptA2b/ov_msckf/src/core/VioManager.cpp	2026-10-23 07:45:57.492372561 +0900
+@@ -295,6 +295,7 @@
+   if (is_initialized_vio && updaterZUPT != nullptr && (!params.zupt_only_at_beginning || !has_moved_since_zupt)) {
+     // If the same state time, use the previous timestep decision
+     if (state->_timestamp != message.timestamp) {
++      updaterZUPT->zuptA2_cum = has_moved_since_zupt && zuptA2b_feat_seen; // zuptA2b: exemption until >= 10 feats
+       did_zupt_update = updaterZUPT->try_update(state, message.timestamp);
+     }
+     if (did_zupt_update) {
+@@ -620,6 +621,13 @@
+   }
+   PRINT_DEBUG(BLUE "[TIME]: %.4f seconds for re-tri & marg (%d clones in state)\n" RESET, time_marg, (int)state->_clones_IMU.size());
+ 
++  // zuptA2b: latch once a normal update had SLAM + MSCKF >= 10 features (same counts as the [TIME] lines above)
++  if (!zuptA2b_feat_seen && (int)featsup_MSCKF.size() + (int)state->_features_SLAM.size() >= 10) {
++    zuptA2b_feat_seen = true;
++    PRINT_INFO(CYAN "[ZUPTA2B]: cumulative test armed (%d msckf + %d slam feats)\n" RESET, (int)featsup_MSCKF.size(),
++               (int)state->_features_SLAM.size());
++  }
++
+   std::stringstream ss;
+   ss << "[TIME]: " << std::setprecision(4) << time_total << " seconds for total (camera";
+   for (const auto &id : message.sensor_ids) {
+diff -ru open_vins_zbase/ov_msckf/src/core/VioManager.h open_vins_zuptA2b/ov_msckf/src/core/VioManager.h
+--- open_vins_zbase/ov_msckf/src/core/VioManager.h	2026-10-20 12:19:38.377556203 +0900
++++ open_vins_zuptA2b/ov_msckf/src/core/VioManager.h	2026-10-23 07:45:57.492372561 +0900
+@@ -228,6 +228,9 @@
+   // If we did a zero velocity update
+   bool did_zupt_update = false;
+   bool has_moved_since_zupt = false;
++  /// zuptA2b (2026-10-23, scan3d docs/zupt_next_plan.md): true after the first normal update with
++  /// SLAM + MSCKF features >= 10 (latched); the cumulative ZUPT test is exempt until then.
++  bool zuptA2b_feat_seen = false;
+ 
+   // Good features that where used in the last update (used in visualization)
+   std::vector<Eigen::Vector3d> good_features_MSCKF;
+diff -ru open_vins_zbase/ov_msckf/src/update/UpdaterZeroVelocity.cpp open_vins_zuptA2b/ov_msckf/src/update/UpdaterZeroVelocity.cpp
+--- open_vins_zbase/ov_msckf/src/update/UpdaterZeroVelocity.cpp	2026-10-20 12:19:38.385574027 +0900
++++ open_vins_zuptA2b/ov_msckf/src/update/UpdaterZeroVelocity.cpp	2026-10-22 22:33:52.267093560 +0900
+@@ -234,6 +234,20 @@
+     } else {
+       PRINT_DEBUG(YELLOW "[ZUPT]: failed disparity (%.3f > %.3f, %d features)\n" RESET, disp_avg, _zupt_max_disparity, (int)num_features);
+     }
++
++    // zuptA2 (2026-10-22, scan3d docs/zupt_fixA2_plan.md): the per-frame test above is unchanged; after the first normal
++    // update, a ZUPT also needs the cumulative disparity against the latest clone (= last normal update; ZUPT frames add no
++    // clone) to stay under T_cum, with more than 20 features.
++    if (zuptA2_cum && disparity_passed && !state->_clones_IMU.empty()) {
++      double t_clone = state->_clones_IMU.rbegin()->first;
++      int n_cum = 0;
++      double d_cum = 0.0, v_cum = 0.0;
++      FeatureHelper::compute_disparity(_db, t_clone, time1_cam, d_cum, v_cum, n_cum);
++      bool cum_ok = (d_cum < zuptA2_tcum && n_cum > 20);
++      PRINT_INFO(CYAN "[ZUPTA2]: cumulative %s (%.3f vs %.2f, %d features, %.3f s)\n" RESET, cum_ok ? "ok" : "fail", d_cum,
++                 zuptA2_tcum, n_cum, time1_cam - t_clone);
++      disparity_passed = cum_ok;
++    }
+   }
+ 
+   // Check if we are currently zero velocity
+diff -ru open_vins_zbase/ov_msckf/src/update/UpdaterZeroVelocity.h open_vins_zuptA2b/ov_msckf/src/update/UpdaterZeroVelocity.h
+--- open_vins_zbase/ov_msckf/src/update/UpdaterZeroVelocity.h	2026-10-20 12:19:38.385574027 +0900
++++ open_vins_zuptA2b/ov_msckf/src/update/UpdaterZeroVelocity.h	2026-10-22 22:33:52.267093560 +0900
+@@ -154,6 +154,13 @@
+ 
+   /// Number of times we have called update
+   int last_zupt_count = 0;
++
++public:
++  /// zuptA2 (2026-10-22, scan3d docs/zupt_fixA2_plan.md): set by VioManager before each try_update() to
++  /// has_moved_since_zupt. true -> extra cumulative disparity test vs the latest clone; false (start still) -> base only.
++  bool zuptA2_cum = false;
++  /// zuptA2: cumulative threshold T_cum in px (chosen before running, runs/zupt_fixA2/tcum.json)
++  static constexpr double zuptA2_tcum = 0.7;
+ };
+ 
+ } // namespace ov_msckf
