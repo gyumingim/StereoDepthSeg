@@ -52,7 +52,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 class HsRecorder implements SensorEventListener {
     interface Status { void show(String s); }
-    static final String VERSION = "hs-20261022-temps-focus30";       // written to meta.json app_version + status line (nroff: NR/edge OFF requested; ae: AE/ISO/AWB/colour logged)
+    static final String VERSION = "hs-20261022-lensk";      // written to meta.json app_version + status line (nroff: NR/edge OFF requested; ae: AE/ISO/AWB/colour logged)
 
     static boolean has(int[] modes, int m) {
         if (modes == null) return false;
@@ -86,6 +86,12 @@ class HsRecorder implements SensorEventListener {
     int evComp = 0;
     float focusDpt = 3.33f;                      // >= 0: fixed focus at this many diopters (1/m; default 3.33 = 30 cm, AF off);
                                                  // -1: autofocus all along; -2: autofocus for 1.5 s then lock there
+    int afMode = -1;                             // >= 0 (intent af_mode): CONTROL_AF_MODE = this value instead of fixed focus
+                                                 // (AOSP 0-4, Samsung vendor 101/102 passed through as is)
+    String focusSweep;                           // intent focus_sweep "0.37,3.33,1.0" (dpt): AF off, each value held 2 s, cycling
+    private float[] sweepDpt;
+    private int sweepIdx;
+    static final long SWEEP_HOLD_MS = 2000;
     private volatile float lastFocus, focusLocked = -1;
     private long focusLockNs;
     int wantKbps = 160_000;                     // S24 1080p240: 160 Mbps no dropped frames, 240 Mbps (encoder max) dropped 7 %; 0 = max
@@ -157,7 +163,8 @@ class HsRecorder implements SensorEventListener {
         // new columns only at the end (old readers use the first 8 by name/position)
         resW.write("sensor_ts_ns,exposure_ns,rolling_shutter_skew_ns,frame_number,arrive_elapsed_ns,focus_dpt,af_mode,lens_moving"
                 + ",ois_mode,eis_mode,nr_mode,edge_mode,readout_ts_ns,distortion_mode,samsung_ldc_mode"
-                + ",ae_mode,ae_state,ae_comp,iso,post_raw_boost,frame_duration_ns,awb_mode,awb_state,cc_mode,awb_gains_rggb,ccm_rowmajor,tonemap_mode,scene_mode,effect_mode\n");
+                + ",ae_mode,ae_state,ae_comp,iso,post_raw_boost,frame_duration_ns,awb_mode,awb_state,cc_mode,awb_gains_rggb,ccm_rowmajor,tonemap_mode,scene_mode,effect_mode"
+                + ",lens_intrinsics,lens_distortion,lens_state,p5_intrinsics,p5_distortion,p5_focus_dpt\n");
         frW.write("frame_idx,t_mid_ns,physical_ts_ns,logical_ts_ns,exposure_ns,rolling_shutter_skew_ns,pts_us\n");
         t0Elapsed = SystemClock.elapsedRealtimeNanos(); t0Wall = System.currentTimeMillis();
         clockOffset = SystemClock.elapsedRealtimeNanos() - System.nanoTime();
@@ -249,7 +256,13 @@ class HsRecorder implements SensorEventListener {
                                 if (has(chars.get(CameraCharacteristics.EDGE_AVAILABLE_EDGE_MODES), CaptureRequest.EDGE_MODE_OFF))
                                     rb.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF);
                                 if (evComp != 0) rb.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, evComp);   // darker = shorter exposure, if AE obeys
-                                if (focusDpt >= 0) {        // fixed focus: autofocus moves the lens and changes the intrinsics mid-recording
+                                sweepDpt = parseSweep(focusSweep);
+                                if (sweepDpt != null) {     // focus sweep test: AF off, LENS_FOCUS_DISTANCE stepped every 2 s
+                                    rb.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
+                                    rb.set(CaptureRequest.LENS_FOCUS_DISTANCE, sweepDpt[0]);
+                                } else if (afMode >= 0) {   // explicit AF mode (e.g. 3 = CONTINUOUS_VIDEO): the lens may move
+                                    rb.set(CaptureRequest.CONTROL_AF_MODE, afMode);
+                                } else if (focusDpt >= 0) { // fixed focus: autofocus moves the lens and changes the intrinsics mid-recording
                                     rb.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
                                     rb.set(CaptureRequest.LENS_FOCUS_DISTANCE, focusDpt);
                                 }
@@ -264,7 +277,7 @@ class HsRecorder implements SensorEventListener {
                                         Float fd = r.get(CaptureResult.LENS_FOCUS_DISTANCE);
                                         Integer afm = r.get(CaptureResult.CONTROL_AF_MODE), lst = r.get(CaptureResult.LENS_STATE);
                                         try { resW.write(ts + "," + e + "," + sk + "," + r.getFrameNumber() + "," + SystemClock.elapsedRealtimeNanos()
-                                                + "," + fd + "," + afm + "," + lst + "," + captureState(r) + "\n"); }
+                                                + "," + fd + "," + afm + "," + lst + "," + captureState(r) + "," + lensState(r) + "\n"); }
                                         catch (Exception ignored) { }
                                         if (ts != null) meta.put(ts, new long[]{e == null ? 0 : e, sk == null ? 0 : sk, ts});
                                         if (++nRes <= 3) android.util.Log.i("arlat", "hs result ts " + ts + " exp " + e + " skew " + sk);
@@ -282,7 +295,8 @@ class HsRecorder implements SensorEventListener {
                                     try { capInfo.put("samsung_ldc_request", "set but burst failed (" + be + ") -> removed"); } catch (Exception ignored) { }
                                     sess.setRepeatingBurst(sess.createHighSpeedRequestList(rb.build()), cb, h);
                                 }
-                                if (focusDpt == -2) h.postDelayed(() -> lockFocus(rb, cb), 1500);   // autofocus 1.5 s, then hold it
+                                if (sweepDpt != null) h.postDelayed(() -> sweepStep(rb, cb), SWEEP_HOLD_MS);
+                                else if (afMode < 0 && focusDpt == -2) h.postDelayed(() -> lockFocus(rb, cb), 1500);   // autofocus 1.5 s, then hold it
                                 h.postDelayed(heatCheck, 2000);
                                 status.show("HS " + size + "@" + wantFps + " recording -> " + dir.getName() + "\n" + VERSION);
                             } catch (Exception e) { status.show("hs request: " + e); }
@@ -575,6 +589,58 @@ class HsRecorder implements SensorEventListener {
         if (tempH != null) tempH.removeCallbacks(tempTick);
     }
 
+    static float[] parseSweep(String s) {
+        if (s == null || s.trim().isEmpty()) return null;
+        String[] p = s.split("[,;\\s]+");
+        List<Float> v = new ArrayList<>();
+        for (String x : p) if (!x.isEmpty()) try { v.add(Float.parseFloat(x)); } catch (NumberFormatException ignored) { }
+        if (v.isEmpty()) return null;
+        float[] a = new float[v.size()];
+        for (int i = 0; i < a.length; i++) a[i] = v.get(i);
+        return a;
+    }
+
+    /** Focus sweep: next value (cycling) every SWEEP_HOLD_MS; the per-frame focus_dpt column shows when the lens got there. */
+    private void sweepStep(CaptureRequest.Builder rb, CameraCaptureSession.CaptureCallback cb) {
+        if (!running || sess == null) return;
+        try {
+            sweepIdx = (sweepIdx + 1) % sweepDpt.length;
+            rb.set(CaptureRequest.LENS_FOCUS_DISTANCE, sweepDpt[sweepIdx]);
+            sess.setRepeatingBurst(sess.createHighSpeedRequestList(rb.build()), cb, h);
+            android.util.Log.i("arlat", "HS focus sweep -> " + sweepDpt[sweepIdx] + " dpt");
+        } catch (Exception e) { android.util.Log.e("arlat", "focus sweep", e); return; }
+        h.postDelayed(() -> sweepStep(rb, cb), SWEEP_HOLD_MS);
+    }
+
+    static String floats(float[] a) {
+        if (a == null) return "null";
+        StringBuilder s = new StringBuilder();
+        for (int i = 0; i < a.length; i++) s.append(i > 0 ? " " : "").append(a[i]);
+        return s.toString();
+    }
+
+    /** lens_intrinsics, lens_distortion, lens_state, then the same from the physical camera "5" result if delivered. */
+    @SuppressWarnings("deprecation")
+    static String lensState(CaptureResult r) {
+        float[] k = null, d = null;
+        try { k = r.get(CaptureResult.LENS_INTRINSIC_CALIBRATION); } catch (Throwable ignored) { }
+        try { d = r.get(CaptureResult.LENS_DISTORTION); } catch (Throwable ignored) { }
+        Object st = null;
+        try { st = r.get(CaptureResult.LENS_STATE); } catch (Throwable ignored) { }
+        float[] pk = null, pd = null; Object pf = null;
+        try {
+            if (r instanceof TotalCaptureResult) {
+                CaptureResult p = ((TotalCaptureResult) r).getPhysicalCameraResults().get("5");
+                if (p != null) {
+                    pk = p.get(CaptureResult.LENS_INTRINSIC_CALIBRATION);
+                    pd = p.get(CaptureResult.LENS_DISTORTION);
+                    pf = p.get(CaptureResult.LENS_FOCUS_DISTANCE);
+                }
+            }
+        } catch (Throwable ignored) { }
+        return floats(k) + "," + floats(d) + "," + st + "," + floats(pk) + "," + floats(pd) + "," + pf;
+    }
+
     /** Freeze the lens where autofocus put it (AF off + that focus distance) for the rest of the recording. */
     private void lockFocus(CaptureRequest.Builder rb, CameraCaptureSession.CaptureCallback cb) {
         if (!running) return;
@@ -662,6 +728,8 @@ class HsRecorder implements SensorEventListener {
                     .put("clock_offset_ns", clockOffset).put("frames_unmatched", nUnmatched).put("ev_comp", evComp)
                     .put("bitrate_bps", bitrate).put("stop_reason", stopReason)
                     .put("battery_c_end", batteryTenthC() / 10.0).put("focus_dpt_request", focusDpt)
+                    .put("af_mode_request", afMode).put("focus_sweep_dpt", sweepDpt == null ? "none" : floats(sweepDpt))
+                    .put("focus_sweep_hold_ms", SWEEP_HOLD_MS)
                     .put("focus_locked_dpt", focusLocked).put("focus_lock_elapsed_ns", focusLockNs)
                     .put("app_version", VERSION).put("temp_rows", nTemps).put("temp_sources", tempSources)
                     .put("capture", capInfo).put("imu_thread", "dedicated");

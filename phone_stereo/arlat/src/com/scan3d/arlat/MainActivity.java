@@ -83,6 +83,8 @@ public class MainActivity extends Activity {
                 hs.evComp = getIntent().getIntExtra("ev", 0);
                 hs.wantKbps = getIntent().getIntExtra("kbps", 160_000);
                 hs.focusDpt = getIntent().getFloatExtra("focus_dpt", 3.33f);
+                hs.afMode = getIntent().getIntExtra("af_mode", -1);          // CONTROL_AF_MODE value instead of fixed focus
+                hs.focusSweep = getIntent().getStringExtra("focus_sweep");  // "0.37,3.33,1.0" dpt, each held 2 s (cycling)
                 hs.maxBatteryTenthC = getIntent().getIntExtra("max_temp_dc", 460);
                 try {
                     if (getIntent().getIntExtra("preview", 1) != 0) {     // on-screen view + board detected / not detected
