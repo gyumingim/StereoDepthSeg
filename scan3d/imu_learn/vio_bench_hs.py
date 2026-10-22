@@ -41,6 +41,8 @@ Variants (same backend, only one thing changes at a time — the 2026 'same-back
                           per-focus K/distortion, blended (pixel maps, linear in dpt) at the frame's focus. _sweep =
                           f2.22 lens x same-pose image scale per step (recommended); hs_1920x1080_focus_table.json =
                           calibrations at 0.37/1.0/3.33 dpt (not recommended: docs/focus_calib_20261022.md)
+  --gyro-rebias           (2026-10-22, off by default, needs --imu-raw) re-estimate the gyro bias causally at every
+                          still >= 4 s (imu_learn/gyro_rebias.py, docs/gyro_rebias_apply.md)
   --gt auto|spl|base|rs   scoring GT: auto = imu_gt_spl if present else imu_gt (both camera-only); rs = imu_gt_rs
                           (rolling shutter undone with the gyro -> partly self-scoring, comparison only)
 Time: frames are sent on the IMU clock (t_mid - dt from align.json) and OpenVINS timeshift_cam_imu = 0, so the offset is
@@ -442,6 +444,12 @@ def run(a):
         noise = dict(make_ov_config.IMU_NOISE)
     a_i = np.stack([np.interp(gyr[:, 0], acc[:, 0], acc[:, 1 + j]) for j in range(3)], 1)
     g_i = gyr[:, 1:4].copy()
+    rebias_log = None
+    if getattr(a, "gyro_rebias", False):                      # causal per-still gyro bias (imu_learn/gyro_rebias.py)
+        if not a.imu_raw:
+            sys.exit("--gyro-rebias needs --imu-raw")
+        from gyro_rebias import correct_array
+        g_i, _, rebias_log = correct_array(gyr[:, 0].astype(np.int64), g_i)
     p_CinI = np.zeros(3)
     if a.imu_calib:
         cal = json.load(open(a.imu_calib))["calib"]
@@ -591,6 +599,10 @@ def run(a):
         res["cfg_over"] = a.cfg_over
     if fc is not None:
         res.update(fc.summary())
+    if rebias_log is not None:
+        res.update(gyro_rebias=True, gyro_rebias_events=[[round((t - int(gyr[0, 0])) / 1e9, 2), ev, round(L, 1),
+                                                          [round(float(np.degrees(x)) * 1e3, 1) for x in v]]
+                                                         for t, ev, L, v in rebias_log])
     if hold_ok is not None:
         res.update(still_hold=a.still_hold, frames_held=n_held, hold_segments_imu_ns=hold_log)
         if hold_ok.arm_init is not None:
@@ -730,6 +742,8 @@ def main():
     ap.add_argument("--focus-table", default=None,
                     help="--focus-comp: undistort each frame with K/distortion interpolated at its focus from this table "
                          "(config/lens/hs_1920x1080_focus_table_sweep.json) instead of the linear --focus-k scale (off)")
+    ap.add_argument("--gyro-rebias", action="store_true",
+                    help="with --imu-raw: subtract a causal per-still gyro bias (imu_learn/gyro_rebias.py, off)")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
     if a.focus_table and not a.focus_comp:
