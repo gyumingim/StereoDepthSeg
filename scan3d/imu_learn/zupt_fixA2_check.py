@@ -145,7 +145,7 @@ def gt_centres(rec):
     p_bc = z["p_bc"].reshape(-1, 3)
     R_bc = z["R_bc"].reshape(-1, 3, 3)
     keep = ok & (np.linalg.norm(p_bc, axis=1) < 1.2)
-    c = -np.einsum("nji,nj->ni", R_bc[keep], p_bc[keep])          # c = -R^T p
+    c = p_bc[keep]  # GT fix 2026-10-23: p_bc is already the camera centre (was -R_bc^T p_bc)
     _gt_cache[rec] = (z["t_ns"][keep].astype(np.int64), c)
     return _gt_cache[rec]
 

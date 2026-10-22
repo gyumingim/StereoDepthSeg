@@ -113,7 +113,7 @@ def gt_speed_fn(rec, j, P0):
         return None
     g = np.load(f, allow_pickle=True)
     ok = g["ok"].astype(bool) & (np.linalg.norm(g["p_bc"], axis=1) < 1.2)
-    c = -np.einsum("nji,nj->ni", g["R_bc"][ok], g["p_bc"][ok])
+    c = g["p_bc"][ok].reshape(-1, 3)  # GT fix 2026-10-23: p_bc is already the camera centre (was -R_bc^T p_bc)
     off = P0["t_ns"] - P0["t"] * 1e9 + j["align_dt_ms"] * 1e6
     tt = (g["t_ns"][ok] - off) / 1e9
 
