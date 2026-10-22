@@ -9,6 +9,9 @@ s > 1 → GT positions too small → true square = square_mm * s (before the met
     slerped from the per-frame GT, dt / R_ci / IMU type (raw or calibrated) from <rec>/imu_gt/align.json (batch_sync)
   - IMU–camera lever arm and accelerometer bias are ignored → method bias; measure it on a recording whose square is known
     (monitor board, hs_20261019_163345: same tool, same settings) and divide by it (--ref-s).
+  - 2026-10-22: the lever arm is the main part of that bias (docs/ate_floor_20261022.md). 's' stays the old no-lever
+    value (logs comparable); added s_lever (lever r fitted, 3 more unknowns) and s_fixedlever (r fixed from
+    config/imu_cam_lever.json, model s*p_cam + R_bc r = IMU double integral). The OK/BOARD? check uses s_fixedlever.
 Overnight 2026-10-20 runs/overnight_tmp/scale_ls.py (first 7.5 s only) → this file (whole recording, any board).
   ../venv_ffs/bin/python imu_learn/scale_ls.py recordings/hs_... [--gt-dir imu_gt_rs] [--ref-s 1.022] [--out x.json]
 """
@@ -21,6 +24,8 @@ import numpy as np
 from scipy.spatial.transform import Rotation as Rot, Slerp
 
 HERE = Path(__file__).resolve().parent
+LEVER_JSON = HERE.parent / "config" / "imu_cam_lever.json"
+CHECK_TOL = 0.15                                     # scale check OK if |s_fixedlever - 1| <= CHECK_TOL
 sys.path.insert(0, str(HERE))
 from imu_gt import read_imu, provenance  # noqa: E402
 
@@ -50,7 +55,7 @@ def windows_eq(rec, gt_dir="imu_gt_rs", win=1.0, max_gap_ms=30.0, min_ok=0.8, ma
     ta = acc[:, 0].astype(np.int64) + int(al["dt_ns"])           # IMU samples on the camera clock
     lo = to[0] + int(start_s * 1e9)
     hi = (to[0] + int(end_s * 1e9)) if end_s else to[-1]
-    nrm, info = [], []
+    nrm, info, lev = [], [], []
     w0 = lo
     while w0 + win * 1e9 <= hi:
         w1 = w0 + int(win * 1e9)
@@ -78,11 +83,47 @@ def windows_eq(rec, gt_dir="imu_gt_rs", win=1.0, max_gap_ms=30.0, min_ok=0.8, ma
                         A[j::3, 1 + j] = -h
                     b = Dr.reshape(-1)
                     nrm.append((A.T @ A, A.T @ b, b @ b, len(b)))
+                    # lever-arm columns (2026-10-22): + R_bc(t) r, r = IMU offset in the camera frame (3 unknowns)
+                    RL = np.einsum("ab,bij->aij", Q, Ro[fi])
+                    L = np.zeros((3 * len(tf), 3))
+                    for j in range(3):
+                        L[j::3] = RL[:, j, :]
+                    lev.append((A.T @ L, L.T @ L, L.T @ b))
                     lin = ab - ab.mean(0)
                     info.append(dict(t0=(w0 - to[0]) / 1e9, acc_dyn_rms=float(np.sqrt((lin ** 2).sum(1).mean())),
                                      path_m=float(np.linalg.norm(np.diff(Po[fi], axis=0), axis=1).sum())))
         w0 = w1
-    return nrm, info, raw, float(np.asarray(g["square_mm"])) if "square_mm" in g else None
+    return nrm, info, raw, float(np.asarray(g["square_mm"])) if "square_mm" in g else None, lev
+
+
+def load_lever(path=LEVER_JSON):
+    """Fixed IMU-camera lever arm (m, camera frame) from config/imu_cam_lever.json."""
+    d = json.load(open(path))
+    return np.asarray(d["r_cm"], float) / 100.0, d
+
+
+def solve_lever(nrm, lev, sel, r_fixed=None):
+    """Same LS with the lever arm. r_fixed None → fit r (x = [s, g3, r3]); else r fixed (x = [s, g3]).
+    Returns x, residual rms (m)."""
+    AtA = sum(nrm[i][0] for i in sel)
+    Atb = sum(nrm[i][1] for i in sel)
+    AtL = sum(lev[i][0] for i in sel)
+    LtL = sum(lev[i][1] for i in sel)
+    Ltb = sum(lev[i][2] for i in sel)
+    btb = sum(nrm[i][2] for i in sel)
+    n = sum(nrm[i][3] for i in sel)
+    if r_fixed is None:
+        M = np.block([[AtA, AtL], [AtL.T, LtL]])
+        v = np.r_[Atb, Ltb]
+        x = np.linalg.solve(M, v)
+        res = btb - 2 * x @ v + x @ M @ x
+    else:                                            # b' = b - L r
+        r = np.asarray(r_fixed)
+        v = Atb - AtL @ r
+        x = np.linalg.solve(AtA, v)
+        bb = btb - 2 * r @ Ltb + r @ LtL @ r
+        res = bb - 2 * x @ v + x @ AtA @ x
+    return x, float(np.sqrt(max(res, 0) / n))
 
 
 def solve(nrm, sel):
@@ -96,7 +137,7 @@ def solve(nrm, sel):
 
 
 def run(rec, gt_dir="imu_gt_rs", win=1.0, nboot=200, ref_s=None, raw=None, start_s=0.0, end_s=0.0):
-    nrm, info, raw, sq = windows_eq(rec, gt_dir, win, raw=raw, start_s=start_s, end_s=end_s)
+    nrm, info, raw, sq, lev = windows_eq(rec, gt_dir, win, raw=raw, start_s=start_s, end_s=end_s)
     W = len(nrm)
     if W < 5:
         return dict(rec=Path(rec).name, gt_dir=gt_dir, windows=W, error="too few windows")
@@ -114,6 +155,24 @@ def run(rec, gt_dir="imu_gt_rs", win=1.0, nboot=200, ref_s=None, raw=None, start
             out.update(ref_s=ref_s, s_corr=round(float(x[0]) / ref_s, 4),
                        square_mm_est=round(sq * x[0] / ref_s, 2),
                        square_mm_ci95=[round(sq * c / ref_s, 2) for c in out["s_ci95"]])
+    # lever arm (added 2026-10-22, docs/gt_scale_lever_apply.md). 's' above is unchanged (no lever) for old logs.
+    rng2 = np.random.default_rng(1)
+    bsel = [rng2.integers(0, W, W) for _ in range(nboot)]
+    xl, resl = solve_lever(nrm, lev, range(W))
+    bl = np.array([solve_lever(nrm, lev, b)[0][0] for b in bsel])
+    r_fix, cfg = load_lever()
+    xf, resf = solve_lever(nrm, lev, range(W), r_fix)
+    bf = np.array([solve_lever(nrm, lev, b, r_fix)[0][0] for b in bsel])
+    ci = lambda b: [round(float(np.percentile(b, 2.5)), 4), round(float(np.percentile(b, 97.5)), 4)]  # noqa: E731
+    out.update(s_lever=round(float(xl[0]), 4), s_lever_ci95=ci(bl), s_lever_boot_std=round(float(bl.std()), 4),
+               lever_fit_cm=[round(float(v) * 100, 2) for v in xl[4:7]], res_lever_cm=round(resl * 100, 3),
+               s_fixedlever=round(float(xf[0]), 4), s_fixedlever_ci95=ci(bf), s_fixedlever_boot_std=round(float(bf.std()), 4),
+               lever_fixed_cm=[round(float(v) * 100, 2) for v in r_fix], lever_fixed_source=str(LEVER_JSON.relative_to(HERE.parent)),
+               res_fixedlever_cm=round(resf * 100, 3), g_norm_fixedlever=round(float(np.linalg.norm(xf[1:4])), 3),
+               check_uses="s_fixedlever", check_tol=CHECK_TOL,
+               check="OK" if abs(float(xf[0]) - 1) <= CHECK_TOL else "BOARD?")
+    if sq:
+        out["square_mm_raw_fixedlever"] = round(sq * float(xf[0]), 2)
     return out
 
 
@@ -134,7 +193,15 @@ def main():
         o = run(r, a.gt_dir, a.win, ref_s=a.ref_s, raw=raw, start_s=a.start, end_s=a.end)
         o["provenance"] = provenance([__file__])
         res.append(o)
-        print(f"RESULT {o['rec']} " + json.dumps({k: v for k, v in o.items() if k not in ("rec", "provenance")}), flush=True)
+        old = ("s_lever", "s_fixedlever", "lever", "res_lever", "res_fixedlever", "g_norm_fixedlever", "check",
+               "square_mm_raw_fixedlever")
+        print(f"RESULT {o['rec']} " + json.dumps({k: v for k, v in o.items()
+                                                  if k not in ("rec", "provenance") and not k.startswith(old)}), flush=True)
+        if "s_fixedlever" in o:
+            print(f"LEVER {o['rec']} s {o['s']} (no lever, old) | s_lever {o['s_lever']} {o['s_lever_ci95']} "
+                  f"r_fit {o['lever_fit_cm']} cm | s_fixedlever {o['s_fixedlever']} {o['s_fixedlever_ci95']} "
+                  f"r_fixed {o['lever_fixed_cm']} cm ({o['lever_fixed_source']}) | "
+                  f"check {o['check']} (|s_fixedlever-1| <= {o['check_tol']})", flush=True)
     if a.out:
         json.dump(res, open(a.out, "w"), indent=1)
 

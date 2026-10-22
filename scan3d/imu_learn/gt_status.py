@@ -29,21 +29,28 @@ def jload(p):
         return None
 
 
-def ref_scale(gt_dir="imu_gt_rs"):
-    r = jload(OD / f"scale_ref_monitor_{gt_dir}.json")
-    if not r:
-        return None
-    s = np.array([x["s"] for x in r if "s" in x])
-    sd = np.array([max(x["s_boot_std"], 1e-4) for x in r if "s" in x])
-    # random effects (DerSimonian-Laird): s_i = ref + systematic (sd tau, recording-to-recording) + bootstrap noise
+def dl_mean(s, sd):
+    """random effects (DerSimonian-Laird): s_i = mean + systematic (sd tau, recording-to-recording) + bootstrap noise.
+    Returns mean, se, tau."""
+    s, sd = np.asarray(s, float), np.maximum(np.asarray(sd, float), 1e-4)
     w = 1 / sd ** 2
     m0 = (w * s).sum() / w.sum()
     Q = float((w * (s - m0) ** 2).sum())
-    tau2 = max(0.0, (Q - (len(s) - 1)) / (w.sum() - (w ** 2).sum() / w.sum()))
+    tau2 = max(0.0, (Q - (len(s) - 1)) / (w.sum() - (w ** 2).sum() / w.sum())) if len(s) > 1 else 0.0
     ws = 1 / (sd ** 2 + tau2)
-    m = float((ws * s).sum() / ws.sum())
-    return dict(gt_dir=gt_dir, n=len(s), ref_s=round(m, 4), ref_se=round(float(1 / np.sqrt(ws.sum())), 4),
-                median=round(float(np.median(s)), 4), between_sd=round(float(np.sqrt(tau2)), 4),
+    return float((ws * s).sum() / ws.sum()), float(1 / np.sqrt(ws.sum())), float(np.sqrt(tau2))
+
+
+def ref_scale(gt_dir="imu_gt_rs", key="s"):
+    """method bias on the 10-19 monitor recordings; key 's' (old, no lever) or 's_fixedlever' (2026-10-22)"""
+    r = jload(OD / f"scale_ref_monitor_{gt_dir}.json")
+    r = [x for x in (r or []) if key in x]
+    if not r:
+        return None
+    s = np.array([x[key] for x in r])
+    m, se, tau = dl_mean(s, [x["s_boot_std" if key == "s" else key + "_boot_std"] for x in r])
+    return dict(gt_dir=gt_dir, key=key, n=len(s), ref_s=round(m, 4), ref_se=round(se, 4),
+                median=round(float(np.median(s)), 4), between_sd=round(tau, 4),
                 min=round(float(s.min()), 4), max=round(float(s.max()), 4), method="DerSimonian-Laird random effects",
                 recs=[x["rec"] for x in r])
 
@@ -176,6 +183,10 @@ def one(rec):
             x = r[0]
             e = dict(s=x["s"], s_ci95=x["s_ci95"], windows=x["windows"], g_norm=x["g_norm"], res_cm=x["res_cm"],
                      acc_dyn_rms_med=x["acc_dyn_rms_med"], gt_square_mm=x["gt_square_mm"], imu=x["imu"])
+            for k in ("s_lever", "s_lever_ci95", "lever_fit_cm", "s_fixedlever", "s_fixedlever_ci95",
+                      "s_fixedlever_boot_std", "lever_fixed_cm", "check", "check_uses"):
+                if k in x:
+                    e[k] = x[k]
             if ref and x["gt_square_mm"]:
                 q = x["gt_square_mm"] / ref["ref_s"]
                 e.update(ref_s=ref["ref_s"], ref_between_sd=ref["between_sd"],
@@ -208,29 +219,34 @@ def one(rec):
     return st
 
 
-def summary(recs, ref=None):
-    rows = []
+def summary_by_board(recs, ref=None):
+    """2026-10-22: pooled per board config (name + GT square), on s_fixedlever (lever arm from config/imu_cam_lever.json;
+    spl GT, rs if no spl). The old summary() mixed boards (laptop 42.86, laptop_fit 32.03, monitor) in one mean."""
+    groups = {}
     for k, v in recs.items():
-        e = (v.get("scale") or {}).get("rs")
-        if e and "square_mm_est" in e:
-            rows.append((k, e["square_mm_est"], e["square_mm_sd_total"], e["square_mm_ci95_stat"]))
-    if not rows:
-        return {}
-    x = np.array([r[1] for r in rows])
-    sd = np.array([max(r[2], 1e-3) for r in rows])
-    w = 1 / sd ** 2
-    m = float((w * x).sum() / w.sum())
-    se_stat = float(1 / np.sqrt(w.sum()))
-    ref_rel = (ref["ref_se"] / ref["ref_s"]) if ref else 0.0          # common to all recordings (same reference)
-    se = float(np.hypot(se_stat, m * ref_rel))
-    chi2 = float((((x - m) / sd) ** 2).sum())
-    flag = [r[0] for r, xi, si in zip(rows, x, sd) if abs(xi - m) > 2 * si]
-    return dict(square_mm_pooled=round(m, 2), square_mm_pooled_se=round(se, 2), square_mm_pooled_ci95=[round(m - 1.96 * se, 2), round(m + 1.96 * se, 2)],
-                se_recordings=round(se_stat, 2), se_reference=round(m * ref_rel, 2), n=len(rows),
-                chi2=round(chi2, 2), dof=len(rows) - 1, disagree=flag,
-                per_rec={r[0]: dict(square_mm_est=r[1], sd_total=r[2], ci95_stat=r[3]) for r in rows},
-                note="sd_total = bootstrap sd (within recording) ⊕ between-recording sd of the method on the monitor "
-                     "recordings (known square). Estimate only — measure the screen width (square = W / 7.07).")
+        sc = v.get("scale") or {}
+        e = sc.get("spl") if "s_fixedlever" in (sc.get("spl") or {}) else sc.get("rs")
+        if not e or "s_fixedlever" not in e or not e.get("gt_square_mm"):
+            continue
+        name = (v.get("board") or {}).get("name") or "unknown"
+        groups.setdefault(f"{name} {e['gt_square_mm']}", []).append((k, e))
+    out = {}
+    for g, rows in sorted(groups.items()):
+        s = [e["s_fixedlever"] for _, e in rows]
+        m, se, tau = dl_mean(s, [e["s_fixedlever_boot_std"] for _, e in rows])
+        sq = rows[0][1]["gt_square_mm"]
+        o = dict(n=len(rows), s_fixedlever_pooled=round(m, 4), se=round(se, 4), between_sd=round(tau, 4),
+                 s_lever_mean=round(float(np.mean([e["s_lever"] for _, e in rows])), 4),
+                 s_nolever_mean=round(float(np.mean([e["s"] for _, e in rows])), 4),
+                 gt_square_mm=sq, square_mm_imu=round(sq * m, 2), recs=[k for k, _ in rows])
+        if ref:
+            o.update(ref_s_fixedlever=ref["ref_s"], square_mm_est_refcorr=round(sq * m / ref["ref_s"], 2))
+        out[g] = o
+    return dict(by_board=out, check_uses="s_fixedlever",
+                note="Estimate only. Per-board s differs by 0.6-1.7 % between methods (lever fitted/fixed, q2), and the "
+                     "monitor board itself gives s 1.01-1.03, so a ~1-2 % method bias remains "
+                     "(runs/ate_floor_review/judge.md). square_mm_imu = gt_square_mm * s_fixedlever (no method-bias "
+                     "correction); square_mm_est_refcorr divides by the 10-19 monitor s_fixedlever.")
 
 
 def main():
@@ -243,14 +259,17 @@ def main():
               (f"spline px {st.get('spline', {}).get('corner_px_median')}; " if "spline" in st else "") +
               (f"square est {st['scale']['rs'].get('square_mm_est')} mm; " if st.get("scale", {}).get("rs") else "") +
               f"still {st.get('still_overlapping_video_s')} s; warnings {len(st['warnings'])}")
-    d["reference"] = dict(rs=ref_scale("imu_gt_rs"), spl=ref_scale("imu_gt_spl"))
-    d["square_consistency"] = summary(d["recordings"], d["reference"]["rs"])
+    d["reference"] = dict(rs=ref_scale("imu_gt_rs"), spl=ref_scale("imu_gt_spl"),
+                          spl_fixedlever=ref_scale("imu_gt_spl", "s_fixedlever"))
+    d.pop("square_consistency", None)                # old mixed-board pool (no lever), replaced 2026-10-22
+    d["square_by_board"] = summary_by_board(d["recordings"], d["reference"]["spl_fixedlever"])
     d["updated"] = time.strftime("%Y-%m-%d %H:%M:%S")
     json.dump(d, open(OUT, "w"), indent=1, ensure_ascii=False)
-    sc = d["square_consistency"]
-    if sc:
-        print(f"pooled square {sc['square_mm_pooled']} ± {sc['square_mm_pooled_se']} mm over {sc['n']} rec, "
-              f"chi2 {sc['chi2']}/{sc['dof']}, disagree {sc['disagree']}")
+    rf = d["reference"]["spl_fixedlever"]
+    for g, o in d["square_by_board"]["by_board"].items():
+        print(f"pooled square [{g}] s_fixedlever {o['s_fixedlever_pooled']} ± {o['se']} (between sd {o['between_sd']}, "
+              f"n {o['n']}; s_lever mean {o['s_lever_mean']}, old s mean {o['s_nolever_mean']}) -> IMU {o['square_mm_imu']} mm"
+              + (f", /monitor-ref {rf['ref_s']} -> {o['square_mm_est_refcorr']} mm" if rf else "") + " (estimate, method bias ~1-2 %)")
 
 
 if __name__ == "__main__":

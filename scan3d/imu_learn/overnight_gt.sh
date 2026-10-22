@@ -53,9 +53,11 @@ for R in "$@"; do
   [ $RUN = 1 ] && step spline $N $PY -u imu_learn/spline_gt.py $R --knot $KNOT
   step scale $N bash -c "$PY imu_learn/scale_ls.py $R --gt-dir imu_gt_rs --out $OD/${N}_scale_rs.json && \
                           $PY imu_learn/scale_ls.py $R --gt-dir imu_gt_spl --out $OD/${N}_scale_spl.json"
-  SC=$($PY -c "import json,sys; d=json.load(open(sys.argv[1]))[0]; print(d['s'], d['gt_square_mm'], d['square_mm_raw'])" $OD/${N}_scale_spl.json 2>/dev/null)
-  if [ -n "$SC" ]; then read -r S1 SQ SR <<< "$SC"
-    say "$N scale check (spl): s $S1 board $SQ mm -> IMU $SR mm $(python3 -c "print('OK' if abs($S1-1)<=0.15 else 'BOARD?')")"; fi
+  # 2026-10-22: OK/BOARD? now decided on s_fixedlever (IMU-camera lever arm from config/imu_cam_lever.json), same
+  # tolerance 0.15; the old no-lever s is still printed first so earlier logs stay comparable.
+  SC=$($PY -c "import json,sys; d=json.load(open(sys.argv[1]))[0]; print(d['s'], d['gt_square_mm'], d.get('square_mm_raw'), d['s_lever'], d['s_fixedlever'], d.get('square_mm_raw_fixedlever'), d['check'])" $OD/${N}_scale_spl.json 2>/dev/null)
+  if [ -n "$SC" ]; then read -r S1 SQ SR SL SF SRF CK <<< "$SC"
+    say "$N scale check (spl): s $S1 board $SQ mm -> IMU $SR mm | s_lever $SL s_fixedlever $SF -> IMU $SRF mm | $CK (decided on s_fixedlever, |s-1|<=0.15)"; fi
   $PY imu_learn/gt_status.py $R >> $OD/${N}_status.log 2>&1
   say "$N done: $(tail -1 $OD/${N}_status.log)"
 done

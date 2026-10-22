@@ -1,0 +1,8 @@
+{
+ "r_cm": [0.49, 4.60, -1.11],
+ "frame": "camera frame of the board GT (R_bc = camera-to-board rotation in gt.npz); model s*p_cam + R_bc r = IMU double integral, i.e. p_imu = s*p_cam + R_bc r (r in metres, not scaled)",
+ "use": "imu_learn/scale_ls.py s_fixedlever (GT scale check). Not used by GT generation or VIO.",
+ "source": "mean of the per-recording lever arm fitted with the scale check equations + per-window constant acceleration (q2lever) over 17 GT recordings (4 laptop 10-21, 2 monitor 10-22, 11 monitor 10-19): runs/ate_floor/scale2.json, imu_learn/ate_floor.py scale2, docs/ate_floor_20261022.md (commit ad24f0b). Agrees in x,y with OpenVINS online p_IinC0 (y 4.3-5.1 cm).",
+ "spread_cm": "between recordings: x 0.0-0.9, y 4.2-4.8, z -0.1 to -2.3 (z is the least certain; runs/ate_floor_review/verifier.md)",
+ "made": "2026-10-22"
+}
