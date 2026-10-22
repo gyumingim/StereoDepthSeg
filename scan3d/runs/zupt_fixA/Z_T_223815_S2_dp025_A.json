@@ -1,0 +1,225 @@
+{
+ "rec": "hs_20261020_223815",
+ "fps": 60,
+ "size": "640x360",
+ "npts": 200,
+ "clones": 11,
+ "noise": "cfg",
+ "imu_calib": false,
+ "dropout": "",
+ "frames_fed": 3427,
+ "poses": 3427,
+ "tracked": 3317,
+ "tracked_frac": 0.968,
+ "ms_med": 16.39,
+ "ms_p90": 23.86,
+ "wall_s": 180.0,
+ "gt": "imu_gt_spl",
+ "gt_mode": "auto",
+ "gt_uses_imu": false,
+ "imu_source": "raw_16_35",
+ "noise_scale": 1.0,
+ "timeshift_cam_imu": 0.0,
+ "align_dt_ms": -2.7697,
+ "frames": {
+  "rec_all": {
+   "n": 30388,
+   "secs": 139.91,
+   "fps": 217.19,
+   "nominal_fps": 240.0,
+   "gaps": 1017,
+   "missing_est": 3150,
+   "max_gap_ms": 70.93,
+   "p99_ms": 20.87
+  },
+  "rec_window": {
+   "n": 13420,
+   "secs": 59.99,
+   "fps": 223.7,
+   "nominal_fps": 240.0,
+   "gaps": 316,
+   "missing_est": 960,
+   "max_gap_ms": 62.59,
+   "p99_ms": 12.53
+  },
+  "fed": {
+   "n": 3427,
+   "secs": 59.97,
+   "fps": 57.13,
+   "nominal_fps": 60.0,
+   "gaps": 151,
+   "missing_est": 172,
+   "max_gap_ms": 66.76,
+   "p99_ms": 33.39
+  },
+  "index_every_k_would_be": {
+   "n": 3355,
+   "secs": 59.97,
+   "fps": 55.93,
+   "nominal_fps": 60.0,
+   "gaps": 302,
+   "missing_est": 336,
+   "max_gap_ms": 75.09,
+   "p99_ms": 33.39
+  }
+ },
+ "noise_used": {
+  "accelerometer_noise_density": 0.01,
+  "accelerometer_random_walk": 0.001,
+  "gyroscope_noise_density": 0.001,
+  "gyroscope_random_walk": 0.0001
+ },
+ "dt_cam_imu_init_ms": 0.0,
+ "dt_cam_imu_5s_ms": -1.3227,
+ "dt_cam_imu_final_ms": -0.886,
+ "dt_cam_imu_med_ms": -0.9541,
+ "matched": 3231,
+ "ate_cm": 0.67,
+ "ate_sim3_cm": 0.63,
+ "scale": 0.9817,
+ "frame_rot_diff_deg": 0.61,
+ "rot_med_deg": 0.379,
+ "rpe1s_cm": 0.4,
+ "init_cfg": "strict",
+ "config_used": {
+  "max_clones": "11",
+  "try_zupt": "true",
+  "zupt_chi2_multipler": "0",
+  "zupt_max_velocity": "0.1",
+  "zupt_noise_multiplier": "10",
+  "zupt_max_disparity": "0.5",
+  "zupt_only_at_beginning": "false",
+  "init_window_time": "1.0",
+  "init_imu_thresh": "0.3",
+  "init_max_disparity": "15.00",
+  "init_max_features": "50",
+  "init_dyn_use": "false",
+  "init_dyn_mle_opt_calib": "false",
+  "init_dyn_mle_max_iter": "50",
+  "init_dyn_mle_max_time": "0.05",
+  "init_dyn_mle_max_threads": "4",
+  "init_dyn_num_pose": "6",
+  "init_dyn_min_deg": "10.0",
+  "init_dyn_inflation_ori": "10",
+  "init_dyn_inflation_vel": "100",
+  "init_dyn_inflation_bg": "10",
+  "init_dyn_inflation_ba": "100",
+  "init_dyn_min_rec_cond": "1e-12",
+  "init_dyn_bias_g": "[ 0.0, 0.0, 0.0 ]",
+  "init_dyn_bias_a": "[ 0.0, 0.0, 0.0 ]"
+ },
+ "start_off": 8.75,
+ "imu_lead_s": 0.0,
+ "git_head": "87526ee",
+ "bench_blob": "5b1c7705f1cd616556c6ef812b23bcc7245553d7",
+ "imu_gt_blob": "2c5d7bb80f937bc1dfd9b195747bd2324341a276",
+ "make_ov_config_blob": "1e94a7ea13711327281f8d39997737a907d16215",
+ "template_blobs": {
+  "estimator_config.yaml": "738e59c9911ed0bd32f7f437a4d0d931c51035ca",
+  "kalibr_imu_chain.yaml": "2a13bdaa51b448c9bb5ed27993affaedf4550903"
+ },
+ "bench_dirty": false,
+ "cfg_over": "num_opencv_threads=2",
+ "gyro_rebias": false,
+ "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+ "lens_blob": "8ad9ccac2c8e1bc77236122b24445b83078b2443",
+ "clip_s": 59.969,
+ "t_init_clip_s": 2.019,
+ "covered_frac": 0.966,
+ "binary_sha256": {
+  "/home/system/scanner/StereoDepthSeg/scan3d/tools/ov_bridge_zuptA/build/ov_bridge": "4394d7dc4b8112d3a389b8d56c279163902264c15921d5e908a82d7ae77dbba7",
+  "/home/system/scanner/src/ovbuild_zuptA/libov_msckf_lib.so": "2afbb5edc0d26f9826cb76f883d0a55810e7839a111d60b77058f79094caa02e"
+ },
+ "decode_threads": 2,
+ "loadavg_start": [
+  "20.13",
+  "18.89",
+  "18.85"
+ ],
+ "loadavg_end": [
+  "24.84",
+  "20.61",
+  "19.45"
+ ],
+ "parts": "raw",
+ "calib_label": "none",
+ "calib_used": null,
+ "calib_file": null,
+ "calib_sha256": null,
+ "allan_sha256": null,
+ "bridge": "/home/system/scanner/StereoDepthSeg/scan3d/tools/ov_bridge_zuptA/build/ov_bridge",
+ "runner": "imu_learn/c5_run.py",
+ "runner_blob": "0dcd0032dd85f1550f4afc9bc5fa642b03fdde75",
+ "ov_config_files": {
+  "estimator_config.yaml": "%YAML:1.0 # need to specify the file type at the top!\n# generated 2026-10-16T11:30:34 by scan3d/make_ov_config.py\n# inputs: calib=/home/system/scanner/StereoDepthSeg/calib_phone_pair.json cameras=/home/system/scanner/StereoDepthSeg/phone_stereo/cameras_s24.json lenses L=2 R=5\n# rect: f=462.9355 cx=339.4814 cy=239.8733 baseline_m=0.015530 size=640x480\n# args: fps=15.0 imu_rate=400.0 init=static imu_origin=lens5 mono=True exposure_ms=0.0 rs_skew_ms=0.0\n\nverbosity: \"DEBUG\"\n\nuse_fej: true\nintegration: \"rk4\"\nuse_stereo: false # true = 정류 쌍 스테레오 KLT (클라이언트는 2장짜리만 보냄, 시각차 큰 쌍은 버림). false = cam0 만 (scan3d --vio-mode mono)\nmax_cameras: 1\n\ncalib_cam_extrinsics: true   # R_ItoC, p_CinI 온라인 보정 (p 초기값은 가정값)\ncalib_cam_intrinsics: false  # 정류 영상 -> 핀홀 고정\ncalib_cam_timeoffset: true   # 카메라-IMU 시간 오프셋 온라인 보정 (같은 elapsedRealtime 시계라 초기 0 근처)\ncalib_imu_intrinsics: false\ncalib_imu_g_sensitivity: false\n\nmax_clones: 11\nmax_slam: 50\nmax_slam_in_update: 25\nmax_msckf_in_update: 40\ndt_slam_delay: 1\n\ngravity_mag: 9.8000\n\nfeat_rep_msckf: \"GLOBAL_3D\"\nfeat_rep_slam: \"ANCHORED_MSCKF_INVERSE_DEPTH\"\nfeat_rep_aruco: \"ANCHORED_MSCKF_INVERSE_DEPTH\"\n\n# 정지(손에 들고 멈춤) 구간에서 드리프트 억제: 시차 기반 ZUPT\ntry_zupt: true\nzupt_chi2_multipler: 0 # 0 = 시차만 사용\nzupt_max_velocity: 0.1\nzupt_noise_multiplier: 10\nzupt_max_disparity: 0.5\nzupt_only_at_beginning: false\n\n# ==================================================================\n# 초기화. static: 시작 때 폰을 1~2 s 가만히 둔 뒤 움직인다 (가속도 흔들림이 init_imu_thresh 를 넘는 순간 초기화).\n# 손떨림으로 실패하면 init_imu_thresh 를 올리거나 --init dynamic.\ninit_window_time: 1.0\ninit_imu_thresh: 0.3\ninit_max_disparity: 15.00\ninit_max_features: 50\n\ninit_dyn_use: false\ninit_dyn_mle_opt_calib: false\ninit_dyn_mle_max_iter: 50\ninit_dyn_mle_max_time: 0.05\ninit_dyn_mle_max_threads: 4\ninit_dyn_num_pose: 6\ninit_dyn_min_deg: 10.0\n\ninit_dyn_inflation_ori: 10\ninit_dyn_inflation_vel: 100\ninit_dyn_inflation_bg: 10\ninit_dyn_inflation_ba: 100\ninit_dyn_min_rec_cond: 1e-12\n\ninit_dyn_bias_g: [ 0.0, 0.0, 0.0 ]\ninit_dyn_bias_a: [ 0.0, 0.0, 0.0 ]\n\n# ==================================================================\nrecord_timing_information: false\nrecord_timing_filepath: \"/home/system/scanner/StereoDepthSeg/scan3d/runs/ov_timing.txt\"\n\nsave_total_state: false\nfilepath_est: \"/home/system/scanner/StereoDepthSeg/scan3d/runs/ov_estimate.txt\"\nfilepath_std: \"/home/system/scanner/StereoDepthSeg/scan3d/runs/ov_estimate_std.txt\"\nfilepath_gt: \"/home/system/scanner/StereoDepthSeg/scan3d/runs/ov_groundtruth.txt\"\n\n# ==================================================================\nuse_klt: true\nnum_pts: 200\nfast_threshold: 15 # 폰 소형 센서 영상 대비가 낮아 euroc(20) 보다 낮춤 (추정)\ngrid_x: 5\ngrid_y: 5\nmin_px_dist: 10\nknn_ratio: 0.70\ntrack_frequency: 60.0\ndownsample_cameras: false\nnum_opencv_threads: 2\nhistogram_method: \"HISTOGRAM\"\n\nuse_aruco: false\nnum_aruco: 1024\ndownsize_aruco: true\n\n# ==================================================================\nup_msckf_sigma_px: 1\nup_msckf_chi2_multipler: 1\nup_slam_sigma_px: 1\nup_slam_chi2_multipler: 1\nup_aruco_sigma_px: 1\nup_aruco_chi2_multipler: 1\n\nuse_mask: false\n\nrelative_config_imu: \"kalibr_imu_chain.yaml\"\nrelative_config_imucam: \"kalibr_imucam_chain.yaml\"\n",
+  "kalibr_imu_chain.yaml": "%YAML:1.0\n# generated 2026-10-16T11:30:34 by scan3d/make_ov_config.py\n# inputs: calib=/home/system/scanner/StereoDepthSeg/calib_phone_pair.json cameras=/home/system/scanner/StereoDepthSeg/phone_stereo/cameras_s24.json lenses L=2 R=5\n# rect: f=462.9355 cx=339.4814 cy=239.8733 baseline_m=0.015530 size=640x480\n# args: fps=15.0 imu_rate=400.0 init=static imu_origin=lens5 mono=True exposure_ms=0.0 rs_skew_ms=0.0\n\nimu0:\n  T_i_b:\n    - [1, 0, 0, 0]\n    - [0, 1, 0, 0]\n    - [0, 0, 1, 0]\n    - [0, 0, 0, 1]\n  # 잡음: 폰 MEMS 데이터시트 값 x ~10-15 (추정, 조정 대상). 근거는 make_ov_config.py IMU_NOISE 주석.\n  accelerometer_noise_density: 1.0000e-02\n  accelerometer_random_walk: 1.0000e-03\n  gyroscope_noise_density: 1.0000e-03\n  gyroscope_random_walk: 1.0000e-04\n  rostopic: /imu0\n  time_offset: 0.0\n  update_rate: 400.0\n  # IMU 프레임 = Android 센서 좌표 (x 오른쪽, y 위, z 화면 밖). 가속도는 중력 포함 원시 비력 (TYPE_ACCELEROMETER).\n  model: \"kalibr\"\n  Tw:\n    - [1, 0, 0]\n    - [0, 1, 0]\n    - [0, 0, 1]\n  R_IMUtoGYRO:\n    - [1, 0, 0]\n    - [0, 1, 0]\n    - [0, 0, 1]\n  Ta:\n    - [1, 0, 0]\n    - [0, 1, 0]\n    - [0, 0, 1]\n  R_IMUtoACC:\n    - [1, 0, 0]\n    - [0, 1, 0]\n    - [0, 0, 1]\n  Tg:\n    - [0, 0, 0]\n    - [0, 0, 0]\n    - [0, 0, 0]\n",
+  "kalibr_imucam_chain.yaml": "%YAML:1.0\ncam0:\n  T_imu_cam:\n    - [0.0227165102588, -0.999731089202, -0.00465933960149, 0]\n    - [-0.999740333596, -0.022724599293, 0.00169055258053, 0]\n    - [-0.0017959795981, 0.00461972627249, -0.999987716218, 0]\n    - [0, 0, 0, 1]\n  cam_overlaps: []\n  camera_model: pinhole\n  distortion_coeffs: [0.0, 0.0, 0.0, 0.0]\n  distortion_model: radtan\n  intrinsics: [428.059056, 427.913051, 321.148557, 181.757765]\n  resolution: [640, 360]\n  rostopic: /cam0/image_raw\n  timeshift_cam_imu: 0.000000\n"
+ },
+ "ov_config_sha256": {
+  "estimator_config.yaml": "87782976cf4396b00e4dac28c9a80bb5a3c4c9bd8b163c61939186c38fb82cb6",
+  "kalibr_imu_chain.yaml": "0f8eefa54043fc3e89049938dc70ff8ecac083cb2551baf43a92c3a4d395a435",
+  "kalibr_imucam_chain.yaml": "f3058d3dd4acb6eeaf71c2997c7adb164eec50cf181fa9bf37227e453ae264df"
+ },
+ "init_info": {
+  "disp_old": 0.286,
+  "disp_new": 0.097,
+  "method": "static",
+  "acc_var_old": 0.011,
+  "acc_var_new": 0.011,
+  "bg_init": [
+   0.0029,
+   0.0034,
+   0.0021
+  ],
+  "v_init": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "ba_init": [
+   -0.0195,
+   0.0,
+   0.0094
+  ]
+ },
+ "state_first_tracking_pose": {
+  "t_ns": 205690030687336,
+  "bg": [
+   0.0029638837,
+   0.000946492593,
+   0.00218572342
+  ],
+  "ba": [
+   -0.0195769223,
+   -4.70610135e-06,
+   0.00921248902
+  ],
+  "v": [
+   0.00340835798,
+   -0.000152756018,
+   -0.000144444939
+  ]
+ },
+ "zfa_runner": "imu_learn/zupt_fixA.py",
+ "zfa_cond": "A",
+ "zfa_bridge": "/home/system/scanner/StereoDepthSeg/scan3d/tools/ov_bridge_zuptA/build/ov_bridge",
+ "zfa_head": "87526ee",
+ "zfa_blobs": {
+  "imu_learn/vio_bench_hs.py": "5b1c7705f1cd616556c6ef812b23bcc7245553d7",
+  "imu_learn/c5_run.py": "0dcd0032dd85f1550f4afc9bc5fa642b03fdde75",
+  "imu_learn/imu_gt.py": "2c5d7bb80f937bc1dfd9b195747bd2324341a276",
+  "imu_learn/z2_regress.py": "391175a59c2533139ae9b5b3bb50dd8e6efa9931",
+  "imu_learn/zupt_fixA.py": "ed89236700fe0b5b1735599b842e0db493644423",
+  "make_ov_config.py": "1e94a7ea13711327281f8d39997737a907d16215",
+  "config/mono/estimator_config.yaml": "738e59c9911ed0bd32f7f437a4d0d931c51035ca",
+  "tools/ov_bridge_zbase/main.cpp": "5d165f9c23ea15db30f536e773aaeadb3f6f3bd6",
+  "tools/ov_bridge_zbase/CMakeLists.txt": "e21a99fae01d7856f69b7a9e1bb2f1f88319298c",
+  "tools/ov_bridge_zuptA/main.cpp": "5d165f9c23ea15db30f536e773aaeadb3f6f3bd6",
+  "tools/ov_bridge_zuptA/CMakeLists.txt": "679b09bc5aafa3485de846a4bf64763371808fef",
+  "tools/ov_patches/zuptA.diff": "c8a7eb1bc67b2215a0680838f7cab49c66ca0e52"
+ },
+ "zfa_dirty": false,
+ "zfa_made": "2026-10-22 17:53:40",
+ "zfa_gyro_rebias_set": false,
+ "zfa_cfg_over": "num_opencv_threads=2"
+}
