@@ -1,4 +1,5 @@
 """Shared helpers for round-2 lens calibration (selection, coverage)."""
+import os
 import pickle
 from pathlib import Path
 import numpy as np, cv2
@@ -14,9 +15,13 @@ REC2F = {r: f for f, rs in FOCUS.items() for r in rs}
 DIRS4 = ["right", "down", "left", "up"]   # far edge direction of the board in the image
 
 
-def load_views(rec, wmax=0.05, sharp_frac=0.5, stand_w=0.015, thin_s=0.1):
-    """Usable views of one recording + filter counts."""
-    P = pickle.load(open(D / "views" / f"{rec}.pkl", "rb"))
+def load_views(rec, wmax=None, sharp_frac=0.5, stand_w=0.015, thin_s=0.1):
+    """Usable views of one recording + filter counts.
+    Env LC_VIEWS (default views) = detection folder, LC_WMAX (default 0.05) = default still threshold.
+    0.1 rad/s sensitivity: LC_VIEWS=views_w10 LC_WMAX=0.1 (detections from collect2.py --wmax 0.1 --step 2)."""
+    if wmax is None:
+        wmax = float(os.environ.get("LC_WMAX", 0.05))
+    P = pickle.load(open(D / os.environ.get("LC_VIEWS", "views") / f"{rec}.pkl", "rb"))
     V = sorted(P["views"], key=lambda v: v["fi"])
     cnt = dict(n_frames=P["n_frames"], n_still=P["n_still"], n_detected_ge12=len(V), step=P["step"],
                mirror_dup_markers_dropped=P["stats"]["dup_dropped"], mirror_small_dropped=P["stats"]["small_dropped"],

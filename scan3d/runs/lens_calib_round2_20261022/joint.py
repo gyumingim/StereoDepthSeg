@@ -4,7 +4,7 @@ sparse finite-difference Jacobian). Views = the same per-recording selection as 
 usage: joint.py --groups focus|rec [--model k5|rational] [--boot 40] [--exclude 173113] [--workers 16]
   groups=focus: per-focus intrinsics (main joint fit); groups=rec: per-recording intrinsics (repeatability with shared distortion)
 """
-import argparse, json, sys, time
+import argparse, json, os, sys, time
 from multiprocessing import Pool
 import numpy as np, cv2
 
@@ -21,6 +21,7 @@ ap.add_argument("--workers", type=int, default=16)
 ap.add_argument("--n", type=int, default=160)
 ap.add_argument("--tag", default="")
 ap.add_argument("--k1-per-group", action="store_true", help="k1 per group too (judge protocol variant)")
+ap.add_argument("--views-from", default=None, help="json {views: [[rec, fi], ...]}: fit exactly these views, no rejection")
 a = ap.parse_args()
 cv2.setNumThreads(1)
 ND = 5 if a.model == "k5" else 8
@@ -152,10 +153,17 @@ def solve(vidx, init=None):
 
 t0 = time.time()
 base = list(range(V))
-s1 = solve(base)
-keep = s1["per"] < 2.5 * np.median(s1["per"])          # same rejection rule as lens_calib
-base = [i for i, k in zip(base, keep) if k]
-s = solve(base, init=(s1["K4"], s1["dist"]))
+if a.views_from:                                         # fixed view set (e.g. intersection of two fits), no rejection
+    want = {(r, int(f)) for r, f in json.load(open(a.views_from))["views"]}
+    base = [i for i in base if (views[i]["rec"], int(views[i]["fi"])) in want]
+    s1 = solve(base)
+    keep = np.ones(len(base), bool)
+    s = s1
+else:
+    s1 = solve(base)
+    keep = s1["per"] < 2.5 * np.median(s1["per"])          # same rejection rule as lens_calib
+    base = [i for i, k in zip(base, keep) if k]
+    s = solve(base, init=(s1["K4"], s1["dist"]))
 print(f"joint {a.groups} {a.model}: views {len(base)} (rejected {(~keep).sum()}), rms {s['rms']:.3f}, nfev {s['nfev']}, "
       f"{time.time() - t0:.0f}s", flush=True)
 for g, n in enumerate(gnames):
@@ -167,7 +175,9 @@ out = dict(groups=a.groups, model=a.model, group_names=gnames, recs=recs, exclud
            K4={n: s["K4"][g].tolist() for g, n in enumerate(gnames)}, dist=s["dist"].tolist(), rms_px=s["rms"],
            rms_px_group={n: s["grms"][g] for g, n in enumerate(gnames)}, lm_iters=s["nfev"],
            made=time.strftime("%Y-%m-%d %H:%M:%S"), script="runs/lens_calib_round2_20261022/joint.py",
-           views="per recording: common.load_views (w<0.05 raw gyro, no stand, sharp>=0.5 med, 0.1 s thinning) + spread n=%d" % a.n)
+           views="per recording: common.load_views (w<0.05 raw gyro, no stand, sharp>=0.5 med, 0.1 s thinning) + spread n=%d" % a.n,
+           views_from=a.views_from, lc_views=os.environ.get("LC_VIEWS", "views"), lc_wmax=os.environ.get("LC_WMAX", "0.05"),
+           kept_views=[[views[i]["rec"], int(views[i]["fi"])] for i in base])
 name = f"joint_{a.groups}_{a.model}{'_k1g' if a.k1_per_group else ''}{a.tag}"
 json.dump(out, open(D / "results" / f"{name}.json", "w"), indent=1)
 
