@@ -1,0 +1,21 @@
+missing []
+c1 FAIL
+c2 FAIL
+c3 FAIL
+c4 OK
+ c1 BR_133820_o0 False ate 374.82 -> 1.66 allrej 2 -> 1 wipe 1 -> 0
+ c1 BR_133820_o1 False ate 385.71 -> 4.07 allrej 2 -> 1 wipe 1 -> 0
+ c1 BR_133820_o2 False ate 279.65 -> 1.83 allrej 2 -> 1 wipe 1 -> 0
+ c1 BR_134550_o0 True ate 2.33 -> 0.64 allrej 2 -> 0 wipe 1 -> 0
+ c1 BR_134550_o1 True ate 0.76 -> 0.76 allrej 1 -> 0 wipe 1 -> 0
+ c1 BR_134550_o2 True ate 18.45 -> 0.75 allrej 2 -> 0 wipe 1 -> 0
+ c2 fails [{"cell": "I3_213955_o0", "ok": false, "new_wipeouts": [{"t": 13.632, "maxdisp5_m": 3.04, "collapse": true}, {"t": 76.096, "maxdisp5_m": 30.469, "collapse": true}, {"t": 77.181, "maxdisp5_m": 22.235, "collapse": true}, {"t": 78.249, "maxdisp5_m": 18.835, "collapse": true}, {"t": 101.982, "maxdisp5_m": null, "collapse": false}, {"t": 110.313, "maxdisp5_m": null, "collapse": false}], "new_collapse": false, "base_wipeouts": [{"t": 17.946, "maxdisp5_m": 2.286, "collapse": true}, {"t": 18.797, "maxdisp5_m": 1.421, "collapse": true}], "Ap_wipeouts": [{"t": 13.632, "maxdisp5_m": 3.04, "collapse": true}, {"t": 18.68, "maxdisp5_m": 8.8, "collapse": true}, {"t": 76.096, "maxdisp5_m": 30.469, "collapse": true}, {"t": 77.181, "maxdisp5_m": 22.235, "collapse": true}, {"t": 78.249, "maxdisp5_m": 18.835, "collapse": true}, {"t": 101.982, "maxdisp5_m": null, "collapse": false}, {"t": 110.313, "maxdisp5_m": null, "collapse": false}], "base_ate": 40.28, "Ap_ate": 6901.34, "base_collapse": true, "Ap_collapse": true}, {"cell": "I3_213955_o1", "ok": false, "new_wipeouts": [{"t": 17.948, "maxdisp5_m": 13.744, "collapse": true}, {"t": 74.35, "maxdisp5_m": 34.132, "collapse": true}, {"t": 89.347, "maxdisp5_m": 28.427, "collapse": true}, {"t": 90.332, "maxdisp5_m": 28.041, "collapse": true}], "new_collapse": false, "base_wipeouts": [{"t": 12.9, "maxdisp5_m": 1.407, "collapse": true}], "Ap_wipeouts": [{"t": 12.883, "maxdisp5_m": 4.874, "collapse": true}, {"t": 17.948, "maxdisp5_m": 13.744, "collapse":
+ c3 134204 [{'cell': 'BR_134204_o0', 'base': 1.32, 'Ap': 1.32, 'lim': 2.084, 'ok': True}, {'cell': 'BR_134204_o1', 'base': 1.19, 'Ap': 1.2, 'lim': 1.928, 'ok': True}, {'cell': 'BR_134204_o2', 'base': 1.06, 'Ap': 1.06, 'lim': 1.772, 'ok': True}] 214550 [{'cell': 'I3_214550_o0', 'base': 22.05, 'Ap': 19.72, 'lim': 24.255, 'ok': True}, {'cell': 'I3_214550_o1', 'base': 18.29, 'Ap': 27.24, 'lim': 20.119, 'ok': False}, {'cell': 'I3_214550_o2', 'base': 20.7, 'Ap': 9.72, 'lim': 22.77, 'ok': True}]
+ c3 still min 0.9157 median 1.0 fails []
+ c4 BR_133820_o0 True [{'win': [35.646, 41.895], 'base_gap': 1.0846540000000005, 'Ap_gap': 0.17105799999999505}]
+ c4 BR_133820_o1 True [{'win': [34.932, 41.181], 'base_gap': 1.084654999999998, 'Ap_gap': 0.17105799999999505}]
+ c4 BR_133820_o2 True [{'win': [33.933, 40.182], 'base_gap': 1.0846540000000005, 'Ap_gap': 0.25031299999999845}]
+ c4 BR_134550_o0 True [{'win': [49.074, 52.941], 'base_gap': 0.7717960000000019, 'Ap_gap': 0.13349699999999842}]
+ c4 BR_134550_o1 True [{'win': [48.381, 52.248], 'base_gap': 0.7717960000000019, 'Ap_gap': 0.133498000000003}]
+ c4 BR_134550_o2 True [{'win': [47.382, 51.249], 'base_gap': 0.7717960000000019, 'Ap_gap': 0.133498000000003}]
+ALL False {'lib_sha256': {'base': ['213e6f0672e5eae0a38753786a70fa1b703a07378f36ab6fda54fea7e42315cf'], 'Ap': ['8c8b53e06a69ab427fb5183d21159e9197fa1d83b60808255f39ef06b6db4e5e']}, 'n_config_variants': 15, 'heads': ['04f179a', '05f27d7', '211bc9e', '292ad6f', '3cbe0fb', '4dffb6c', '87526ee'], 'any_dirty': False, 'recordings': ['hs_20261019_131326', 'hs_20261019_154320', 'hs_20261020_214138', 'hs_20261020_221052', 'hs_20261020_221925', 'hs_20261020_222747', 'hs_20261020_223815', 'hs_20261020_224323', 'hs_20261021_213341', 'hs_20261021_213955', 'hs_20261021_214550', 'hs_20261021_215348', 'hs_20261022_133820', 'hs_20261022_134204', 'hs_20261022_134550'], 'analyse_sha256': '8c7f19989f47c31e934e16171f52ffc808a51687ad167c9ede94c68757715bef'}
