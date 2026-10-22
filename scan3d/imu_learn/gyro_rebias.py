@@ -18,9 +18,10 @@ Rule (all thresholds below, rad/s unless noted):
   used once a bias exists: slow hand rotation (< 100 mdeg/s) looks like a short still (222747 9.2-11.1 s,
   215348 141.6-144 s) and the real bias drifts only ~1 mdeg/s per s, so nothing is lost by waiting. Gate: rejected if any axis differs from
   the current bias by more than GATE (slow rotation taken for still); the gate is skipped while no bias exists.
-- Start still (no bias yet): once the segment has lasted MIN_STILL_S the bias follows its running mean every block
-  (so a filter started during the first still is not handed a 0.25 deg/s step later); at its end the trimmed mean
-  replaces it and it becomes the first committed bias.
+- Start still (no bias yet): once the segment has lasted MIN_STILL_S the provisional bias = the mean of those first
+  1.5 s, then FROZEN (a filter started during the first still is not handed a 0.25 deg/s step later, nor a slowly
+  moving bias; docs/gyro_rebias_followup_plan.md); at the end of the still the trimmed mean replaces it once and
+  becomes the first committed bias. (Before 2026-10-22 follow-up: running mean updated every block.)
 - Before any bias: bias = 0 (raw passes through).
 
   ../venv_ffs/bin/python imu_learn/gyro_rebias.py recordings/hs_...   # print segments and bias updates
@@ -101,8 +102,8 @@ class GyroRebias:
                     self._seg_add(r)
             else:                      # extend by the newest block
                 self._seg_add(self.ring[-1])
-            if self.bias is None and self._seg_len() >= MIN_STILL_S - 1e-9 and self.seg[2]:
-                self.prov = [x / self.seg[2] for x in self.seg[3]]
+            if self.bias is None and self.prov is None and self._seg_len() >= MIN_STILL_S - 1e-9 and self.seg[2]:
+                self.prov = [x / self.seg[2] for x in self.seg[3]]   # frozen at 1.5 s (follow-up 2, 2026-10-22)
         elif self.seg is not None:
             self._seg_end(t_ns)
 

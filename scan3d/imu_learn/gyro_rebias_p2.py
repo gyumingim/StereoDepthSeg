@@ -22,8 +22,9 @@ import z2_regress as zr  # noqa: E402
 
 PY = "../venv_ffs/bin/python"
 BASE = Path("runs/gyro_rebias")
-OUT = BASE / "p2"
-LOG = BASE / "p2.log"
+OUT = BASE / os.environ.get("GRB_OUT", "p2")          # follow-up 2: GRB_OUT=p2b GRB_ONLY=214550_G_o0,...
+LOG = BASE / f"{OUT.name}.log"
+ONLY = [x for x in os.environ.get("GRB_ONLY", "").split(",") if x]
 PAR = int(os.environ.get("PAR", 5))
 
 
@@ -79,7 +80,7 @@ def run():
     if dirty:
         log(f"REFUSED: code not committed: {dirty}")
         sys.exit(1)
-    queue = [j for j in jobs() if not (OUT / f"{j['name']}.json").exists()]
+    queue = [j for j in jobs() if not (OUT / f"{j['name']}.json").exists() and (not ONLY or j["name"] in ONLY)]
     log(f"start git {head} PAR {PAR} jobs {len(queue)}")
     running = {}
     while queue or running:

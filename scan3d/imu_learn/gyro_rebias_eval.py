@@ -96,16 +96,27 @@ def run_rec(rec):
 
 
 def main():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--recs", default=",".join(RECS))
+    ap.add_argument("--name", default="part1")
+    ap.add_argument("--plan", default="docs/gyro_rebias_apply_plan.md (bd63072)")
+    o = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
     head = subprocess.run(["git", "-C", str(SCAN3D), "rev-parse", "--short", "HEAD"], capture_output=True,
                           text=True).stdout.strip()
-    out = dict(made=time.strftime("%F %T"), git_head=head, plan="docs/gyro_rebias_apply_plan.md (bd63072)",
+    out = dict(made=time.strftime("%F %T"), git_head=head, plan=o.plan,
                inputs="recordings/<rec>/{imu.csv, imu_gt/align.json, imu_gt_spl/gt.npz}", recs=[])
-    for rec in RECS:
+    for rec in o.recs.split(","):
         r = run_rec(rec)
         out["recs"].append(r)
         print(rec, r.get("excluded", ""), {c: round(v["median"], 3) for c, v in r.get("cond", {}).items()}, flush=True)
     used = [r for r in out["recs"] if "cond" in r]
+    if not used:
+        out["criteria"] = dict(passed=None, note="no usable recording")
+        json.dump(out, open(OUT / f"{o.name}.json", "w"), indent=1)
+        print(out)
+        return
     mm = {c: float(np.median([r["cond"][c]["median"] for r in used])) for c in ["B", "C", "D", "D2", "G"]}
     ym = {c: float(np.median([r["cond"][c]["yaw_dpm_median"] for r in used])) for c in ["B", "C", "D", "D2", "G"]}
     worse = [r["rec"] for r in used if r["cond"]["G"]["median"] > 1.10 * r["cond"]["C"]["median"]]
@@ -114,7 +125,7 @@ def main():
                            c1_pass=not worse, c2_rule="median-of-medians G < B", c2_pass=mm["G"] < mm["B"],
                            passed=(not worse) and mm["G"] < mm["B"],
                            reduction_B_to_G_pct=100 * (1 - mm["G"] / mm["B"]))
-    json.dump(out, open(OUT / "part1.json", "w"), indent=1)
+    json.dump(out, open(OUT / f"{o.name}.json", "w"), indent=1)
     print(json.dumps(out["summary"], indent=1), json.dumps(out["criteria"], indent=1))
 
 
