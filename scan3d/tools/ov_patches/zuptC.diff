@@ -1,0 +1,83 @@
+diff -ru open_vins_zbase/ov_msckf/src/core/VioManager.cpp open_vins_zuptC/ov_msckf/src/core/VioManager.cpp
+--- open_vins_zbase/ov_msckf/src/core/VioManager.cpp	2026-10-20 12:21:38.421977669 +0900
++++ open_vins_zuptC/ov_msckf/src/core/VioManager.cpp	2026-10-22 18:12:05.054405888 +0900
+@@ -295,9 +295,19 @@
+   if (is_initialized_vio && updaterZUPT != nullptr && (!params.zupt_only_at_beginning || !has_moved_since_zupt)) {
+     // If the same state time, use the previous timestep decision
+     if (state->_timestamp != message.timestamp) {
+-      did_zupt_update = updaterZUPT->try_update(state, message.timestamp);
++      // zuptC (2026-10-22, scan3d docs/zupt_fixC_plan.md): after zuptC_cap_frames consecutive accepted ZUPT frames, skip the
++      // ZUPT check for this frame so a normal update runs (counter resets below). Exempt before the first normal update
++      // (has_moved_since_zupt false = start still), to keep initialisation unchanged.
++      if (has_moved_since_zupt && zuptC_streak >= zuptC_cap_frames) {
++        PRINT_INFO(CYAN "[ZUPTC]: cap %d reached, forcing normal update\n" RESET, zuptC_streak);
++        updaterZUPT->zuptC_reset_streak(state);
++        did_zupt_update = false;
++      } else {
++        did_zupt_update = updaterZUPT->try_update(state, message.timestamp);
++      }
+     }
+     if (did_zupt_update) {
++      zuptC_streak++;
+       assert(state->_timestamp == message.timestamp);
+       propagator->clean_old_imu_measurements(message.timestamp + state->_calib_dt_CAMtoIMU->value()(0) - 0.10);
+       updaterZUPT->clean_old_imu_measurements(message.timestamp + state->_calib_dt_CAMtoIMU->value()(0) - 0.10);
+@@ -305,6 +315,7 @@
+       return;
+     }
+   }
++  zuptC_streak = 0; // zuptC: any frame that is not ZUPT-accepted goes on to the normal path
+ 
+   // If we do not have VIO initialization, then try to initialize
+   // TODO: Or if we are trying to reset the system, then do that here!
+diff -ru open_vins_zbase/ov_msckf/src/core/VioManager.h open_vins_zuptC/ov_msckf/src/core/VioManager.h
+--- open_vins_zbase/ov_msckf/src/core/VioManager.h	2026-10-20 12:19:38.377556203 +0900
++++ open_vins_zuptC/ov_msckf/src/core/VioManager.h	2026-10-22 18:11:49.210054949 +0900
+@@ -229,6 +229,11 @@
+   bool did_zupt_update = false;
+   bool has_moved_since_zupt = false;
+ 
++  /// zuptC (2026-10-22, scan3d docs/zupt_fixC_plan.md): consecutive ZUPT-accepted camera frames since the last normal update
++  int zuptC_streak = 0;
++  /// zuptC cap: 0.3 s at the 60 fps camera rate = 18 frames (not applied before the first normal update = start still)
++  static constexpr int zuptC_cap_frames = 18;
++
+   // Good features that where used in the last update (used in visualization)
+   std::vector<Eigen::Vector3d> good_features_MSCKF;
+ 
+diff -ru open_vins_zbase/ov_msckf/src/update/UpdaterZeroVelocity.cpp open_vins_zuptC/ov_msckf/src/update/UpdaterZeroVelocity.cpp
+--- open_vins_zbase/ov_msckf/src/update/UpdaterZeroVelocity.cpp	2026-10-20 12:19:38.385574027 +0900
++++ open_vins_zuptC/ov_msckf/src/update/UpdaterZeroVelocity.cpp	2026-10-22 18:11:49.210054949 +0900
+@@ -327,4 +327,15 @@
+   last_zupt_state_timestamp = timestamp;
+   last_zupt_count++;
+   return true;
+-}
+\ No newline at end of file
++}
++// zuptC (2026-10-22, scan3d docs/zupt_fixC_plan.md): same bookkeeping as the rejection path of try_update()
++// (time offset moves forward, streak counters cleared). No EKF update, no feature-database change.
++void UpdaterZeroVelocity::zuptC_reset_streak(std::shared_ptr<State> state) {
++  if (!have_last_prop_time_offset) {
++    last_prop_time_offset = state->_calib_dt_CAMtoIMU->value()(0);
++    have_last_prop_time_offset = true;
++  }
++  last_prop_time_offset = state->_calib_dt_CAMtoIMU->value()(0);
++  last_zupt_state_timestamp = 0.0;
++  last_zupt_count = 0;
++}
+diff -ru open_vins_zbase/ov_msckf/src/update/UpdaterZeroVelocity.h open_vins_zuptC/ov_msckf/src/update/UpdaterZeroVelocity.h
+--- open_vins_zbase/ov_msckf/src/update/UpdaterZeroVelocity.h	2026-10-20 12:19:38.385574027 +0900
++++ open_vins_zuptC/ov_msckf/src/update/UpdaterZeroVelocity.h	2026-10-22 18:11:49.210054949 +0900
+@@ -154,6 +154,11 @@
+ 
+   /// Number of times we have called update
+   int last_zupt_count = 0;
++
++public:
++  /// zuptC (2026-10-22, scan3d docs/zupt_fixC_plan.md): forget the ZUPT streak exactly as a rejected try_update() does
++  /// (used when the VioManager skips the ZUPT check because the consecutive-ZUPT cap was reached).
++  void zuptC_reset_streak(std::shared_ptr<State> state);
+ };
+ 
+ } // namespace ov_msckf
