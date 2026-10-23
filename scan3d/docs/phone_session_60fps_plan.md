@@ -22,3 +22,8 @@ Recording script: scratchpad `rec60.sh <ip:port> "<guide>" <secs> [exp_us] [iso]
 5. Optional: measure skew per mode (720p 240/120, 1080p 120) with 5 s clips.
 
 Phone care: cool below 36 °C between takes (recording stops above 40 °C SKIN). Never leave the camera running. Delete from the phone only recordings verified on the PC, and only when the user asks.
+
+## Rule: every recording starts with a still (user, 2026-10-23)
+- Every VIO recording begins with **at least 5 s completely still, phone resting on a surface** (not handheld), like a drone on the ground before takeoff. Only then does motion start.
+- Reason: 131326 initialized while slowly rotating and diverged (docs/collapse_nozupt_20261023.md). In flight, the start is always on the ground.
+- Evaluation: VIO initializes in that opening still. Recordings without one are not used for VIO verdicts.
