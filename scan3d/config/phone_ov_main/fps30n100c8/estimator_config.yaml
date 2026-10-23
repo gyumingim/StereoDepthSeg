@@ -1,0 +1,102 @@
+%YAML:1.0 # need to specify the file type at the top!
+# generated 2026-10-16T11:30:34 by scan3d/make_ov_config.py
+# inputs: calib=/home/system/scanner/StereoDepthSeg/calib_phone_pair.json cameras=/home/system/scanner/StereoDepthSeg/phone_stereo/cameras_s24.json lenses L=2 R=5
+# rect: f=462.9355 cx=339.4814 cy=239.8733 baseline_m=0.015530 size=640x480
+# args: fps=15.0 imu_rate=400.0 init=static imu_origin=lens5 mono=True exposure_ms=0.0 rs_skew_ms=0.0
+
+verbosity: "WARNING"
+
+use_fej: true
+integration: "rk4"
+use_stereo: false # true = 정류 쌍 스테레오 KLT (클라이언트는 2장짜리만 보냄, 시각차 큰 쌍은 버림). false = cam0 만 (scan3d --vio-mode mono)
+max_cameras: 1
+
+calib_cam_extrinsics: true   # R_ItoC, p_CinI 온라인 보정 (p 초기값은 가정값)
+calib_cam_intrinsics: false  # 정류 영상 -> 핀홀 고정
+calib_cam_timeoffset: true   # 카메라-IMU 시간 오프셋 온라인 보정 (같은 elapsedRealtime 시계라 초기 0 근처)
+calib_imu_intrinsics: false
+calib_imu_g_sensitivity: false
+
+max_clones: 8
+max_slam: 50
+max_slam_in_update: 25
+max_msckf_in_update: 40
+dt_slam_delay: 1
+
+gravity_mag: 9.8000
+
+feat_rep_msckf: "GLOBAL_3D"
+feat_rep_slam: "ANCHORED_MSCKF_INVERSE_DEPTH"
+feat_rep_aruco: "ANCHORED_MSCKF_INVERSE_DEPTH"
+
+# 정지(손에 들고 멈춤) 구간에서 드리프트 억제: 시차 기반 ZUPT
+try_zupt: false
+zupt_chi2_multipler: 0 # 0 = 시차만 사용
+zupt_max_velocity: 0.1
+zupt_noise_multiplier: 10
+zupt_max_disparity: 0.5
+zupt_only_at_beginning: false
+
+# ==================================================================
+# 초기화. static: 시작 때 폰을 1~2 s 가만히 둔 뒤 움직인다 (가속도 흔들림이 init_imu_thresh 를 넘는 순간 초기화).
+# 손떨림으로 실패하면 init_imu_thresh 를 올리거나 --init dynamic.
+init_window_time: 1.0
+init_imu_thresh: 0.3
+init_max_disparity: 15.00
+init_max_features: 50
+
+init_dyn_use: false
+init_dyn_mle_opt_calib: false
+init_dyn_mle_max_iter: 50
+init_dyn_mle_max_time: 0.05
+init_dyn_mle_max_threads: 4
+init_dyn_num_pose: 6
+init_dyn_min_deg: 10.0
+
+init_dyn_inflation_ori: 10
+init_dyn_inflation_vel: 100
+init_dyn_inflation_bg: 10
+init_dyn_inflation_ba: 100
+init_dyn_min_rec_cond: 1e-12
+
+init_dyn_bias_g: [ 0.0, 0.0, 0.0 ]
+init_dyn_bias_a: [ 0.0, 0.0, 0.0 ]
+
+# ==================================================================
+record_timing_information: true
+record_timing_filepath: "/storage/emulated/0/Android/data/com.scan3d.arlat/files/ov/fps30n100c8/ov_timing.txt"
+
+save_total_state: false
+filepath_est: "/storage/emulated/0/Android/data/com.scan3d.arlat/files/ov/fps30n100c8/ov_estimate.txt"
+filepath_std: "/storage/emulated/0/Android/data/com.scan3d.arlat/files/ov/fps30n100c8/ov_estimate_std.txt"
+filepath_gt: "/storage/emulated/0/Android/data/com.scan3d.arlat/files/ov/fps30n100c8/ov_groundtruth.txt"
+
+# ==================================================================
+use_klt: true
+num_pts: 100
+fast_threshold: 15 # 폰 소형 센서 영상 대비가 낮아 euroc(20) 보다 낮춤 (추정)
+grid_x: 5
+grid_y: 5
+min_px_dist: 10
+knn_ratio: 0.70
+track_frequency: 30.0
+downsample_cameras: false
+num_opencv_threads: 2
+histogram_method: "HISTOGRAM"
+
+use_aruco: false
+num_aruco: 1024
+downsize_aruco: true
+
+# ==================================================================
+up_msckf_sigma_px: 1
+up_msckf_chi2_multipler: 1
+up_slam_sigma_px: 1
+up_slam_chi2_multipler: 1
+up_aruco_sigma_px: 1
+up_aruco_chi2_multipler: 1
+
+use_mask: false
+
+relative_config_imu: "kalibr_imu_chain.yaml"
+relative_config_imucam: "kalibr_imucam_chain.yaml"

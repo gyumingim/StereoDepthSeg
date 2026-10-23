@@ -4,7 +4,14 @@
 //   ov_bridge <estimator_config.yaml> [--stdio | --tcp HOST:PORT] [--max-cam-queue N]
 //             [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]
 //             [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S] [--remap FILE]
-//             [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG]
+//             [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE]
+//
+// --timing-log FILE (2026-10-23, on-phone timing): one CSV row per camera frame fed to OpenVINS:
+//   t_ns,t,wait_ms,remap_ms,feed_ms,init,n_slam,n_msckf,cam_dropped,cam_queue
+//   wait_ms = record received -> feed_measurement_camera start (IMU wait + backlog), remap_ms = --remap undistort,
+//   feed_ms = feed_measurement_camera (OpenVINS track + propagate + update + marg = the "ms" of the pose line).
+// --remap v2 (2026-10-23): a remap file may end with int32 src_w, src_h; then frames of exactly that size are remapped
+//   to the map size (e.g. 1920x1080 raw -> 640x360 undistorted). Files without it: unchanged (map size = input size).
 //
 // --init-gate (2026-10-18, 10-18 오전 "그림자" 방식으로 바꿈): 기본 VioManager (원래 설정, 시차 기준 그대로) 옆에
 // init_max_disparity 를 DISP_DEG 각도 (cam0 fx 로 화소 환산) 로 넓힌 "그림자" VioManager 를 하나 더 돌린다 (초기화 전에만).
@@ -98,6 +105,7 @@ struct Args {
   // --remap FILE (2026-10-18, 폰 실시간): cam0 영상을 받은 뒤 이 맵으로 cv::remap (렌즈 2 원본 → lens0u 왜곡 편 영상).
   // 파일 = int32 w, h + float32 mapx[w*h] + float32 mapy[w*h] (scan3d/ov_bridge/android/make_phone_ov.py). 크기가 다른 영상은 그대로.
   std::string remap;
+  std::string timing_log;   // --timing-log FILE (per-frame CSV)
 };
 
 // JSON 문자열 이스케이프 (예외 메시지에 따옴표·줄바꿈이 들어 있음)
@@ -179,6 +187,8 @@ struct CamMsg {
   int64_t t_ns;
   double t;
   ov_core::CameraData data;
+  double remap_ms = 0.0;
+  std::chrono::steady_clock::time_point t_recv;
 };
 
 class Bridge {
@@ -191,6 +201,11 @@ public:
     params_.print_and_load(parser_);
     params_.use_multi_threading_subs = false;  // 순서대로 처리 (카메라 feed 는 이 스레드에서만)
     if (!a.remap.empty()) load_remap(a.remap);
+    if (!a.timing_log.empty()) {
+      tlog_ = std::fopen(a.timing_log.c_str(), "w");
+      if (tlog_) std::fprintf(tlog_, "t_ns,t,wait_ms,remap_ms,feed_ms,init,n_slam,n_msckf,cam_dropped,cam_queue\n");
+      else std::fprintf(stderr, "[ov_bridge] timing log: cannot open %s\n", a.timing_log.c_str());
+    }
     if (a.gate_mean > 0.0 && a.gate_disp_deg > 0.0 && params_.camera_intrinsics.count(0)) {
       double fx = params_.camera_intrinsics.at(0)->get_value()(0);
       double px = fx * std::tan(a.gate_disp_deg * M_PI / 180.0);
@@ -357,17 +372,24 @@ private:
     for (int i = 0; i < n; i++) {
       cv::Mat g(static_cast<int>(h), static_cast<int>(w), CV_8UC1);
       std::memcpy(g.data, p + 20 + i * img, img);
-      if (i == 0 && !map_x_.empty() && map_x_.cols == static_cast<int>(w) && map_x_.rows == static_cast<int>(h)) {
+      // legacy map (no source size): map size == frame size; v2 map: frame size == recorded source size
+      bool do_remap = i == 0 && !map_x_.empty() &&
+                      (remap_src_w_ > 0 ? (remap_src_w_ == static_cast<int>(w) && remap_src_h_ == static_cast<int>(h))
+                                        : (map_x_.cols == static_cast<int>(w) && map_x_.rows == static_cast<int>(h)));
+      if (do_remap) {
+        auto r0 = std::chrono::steady_clock::now();
         cv::Mat u;
         cv::remap(g, u, map_x_, map_y_, cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0));
         g = u;
+        c.remap_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - r0).count();
       }
+      if (i == 0) c.t_recv = std::chrono::steady_clock::now();  // after the remap: wait_ms = IMU wait + backlog only
       c.data.sensor_ids.push_back(i);
       c.data.images.push_back(g);
       if (params_.use_mask && params_.masks.count(i))
         c.data.masks.push_back(params_.masks.at(i));
       else
-        c.data.masks.push_back(cv::Mat::zeros(static_cast<int>(h), static_cast<int>(w), CV_8UC1));
+        c.data.masks.push_back(cv::Mat::zeros(g.rows, g.cols, CV_8UC1));
     }
     if (!cams_.empty() && c.t <= cams_.back().t) {
       n_cam_dropped_++;
@@ -462,6 +484,15 @@ private:
       return;
     }
     double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+    if (tlog_) {  // --timing-log: one row per fed frame
+      double wait_ms = std::chrono::duration<double, std::milli>(t0 - c.t_recv).count();
+      bool init = sys_->initialized();
+      size_t ns = init ? sys_->get_features_SLAM().size() : 0, nm = init ? sys_->get_good_features_MSCKF().size() : 0;
+      std::fprintf(tlog_, "%lld,%.6f,%.3f,%.3f,%.3f,%d,%zu,%zu,%llu,%zu\n", static_cast<long long>(c.t_ns), c.t, wait_ms,
+                   c.remap_ms, ms, init ? 1 : 0, ns, nm, static_cast<unsigned long long>(n_cam_dropped_), cams_.size());
+      std::fflush(tlog_);  // every row: the app may have to kill the bridge (no SIGTERM handler)
+      ++tlog_rows_;
+    }
     // --init-gate: 그림자 VioManager (기본 쪽이 아직 정지 초기화 전일 때만)
     const char *gate_tag = shadow_ ? feed_shadow(c) : nullptr;
     try {
@@ -661,6 +692,8 @@ private:
     jnum(o, st->_calib_dt_CAMtoIMU->value()(0));
     o << ",\"n_slam\":" << n_slam << ",\"n_msckf\":" << n_msckf << ",\"ms\":";
     jnum(o, ms);
+    o << ",\"remap_ms\":";
+    jnum(o, c.remap_ms);
     o << ",\"cam_dropped\":" << n_cam_dropped_ << ",\"imu_dropped\":" << n_imu_dropped_
       << ",\"cam_rejected\":" << n_cam_rejected_ << ",\"exceptions\":" << n_exceptions_
       << ",\"imu_held\":" << imu_hold_.size() << ",\"n_reinit_state\":" << n_reinit_state_;
@@ -691,14 +724,30 @@ private:
     cv::Mat mx(wh[1], wh[0], CV_32FC1), my(wh[1], wh[0], CV_32FC1);
     size_t n = static_cast<size_t>(wh[0]) * wh[1];
     bool ok = std::fread(mx.data, 4, n, f) == n && std::fread(my.data, 4, n, f) == n;
+    int32_t src[2] = {0, 0};  // v2: optional source frame size after the maps
+    if (ok && std::fread(src, 4, 2, f) == 2 && src[0] > 0 && src[1] > 0) {
+      remap_src_w_ = src[0];
+      remap_src_h_ = src[1];
+    }
     std::fclose(f);
     if (!ok) {
       std::fprintf(stderr, "[ov_bridge] remap: short file %s\n", path.c_str());
       return;
     }
     cv::convertMaps(mx, my, map_x_, map_y_, CV_16SC2);
-    std::fprintf(stderr, "[ov_bridge] remap %dx%d from %s\n", wh[0], wh[1], path.c_str());
+    std::fprintf(stderr, "[ov_bridge] remap %dx%d (source %dx%d) from %s\n", wh[0], wh[1],
+                 remap_src_w_ > 0 ? remap_src_w_ : wh[0], remap_src_h_ > 0 ? remap_src_h_ : wh[1], path.c_str());
   }
+  int remap_src_w_ = 0, remap_src_h_ = 0;  // v2 remap file: frames of this size are remapped (0 = map size)
+  FILE *tlog_ = nullptr;                   // --timing-log
+  uint64_t tlog_rows_ = 0;
+
+public:
+  ~Bridge() {
+    if (tlog_) std::fclose(tlog_);
+  }
+
+private:
 
   bool ok_ = true;
   std::shared_ptr<ov_core::YamlParser> parser_;
@@ -764,7 +813,7 @@ void usage() {
                "usage: ov_bridge <estimator_config.yaml> [--stdio | --tcp HOST:PORT] [--max-cam-queue N]\n"
                "                 [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]\n"
                "                 [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S] [--remap FILE]\n"
-               "                 [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG]\n");
+               "                 [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE]\n");
 }
 
 }  // namespace
@@ -805,6 +854,7 @@ int main(int argc, char **argv) {
     else if (s == "--imu-hold") a.imu_hold_s = std::max(0.0, std::stod(next()));
     else if (s == "--reinit-state") a.reinit_state = true;
     else if (s == "--remap") a.remap = next();
+    else if (s == "--timing-log") a.timing_log = next();
     else if (s == "--reinit-max-gap") a.reinit_max_gap = std::stod(next());
     else if (s == "--reinit-sigma") {  // ori_deg,pos_m,vel_m_s
       std::string v = next();

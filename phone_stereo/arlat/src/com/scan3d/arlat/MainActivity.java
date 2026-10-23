@@ -28,6 +28,9 @@ import java.util.Locale;
  * VIO latency/pose bench (PC page: scan3d/tools/vio_bench_server.py).
  * Intent extras: mode = arcore (default) | ov (live OpenVINS, OvRunner) | cam2 (camera2 delivery only, Cam2Probe);
  * secs = run length (0 = until the activity is stopped).
+ * ov (0.6.7): ov_cam lens2 (default) | main (std60 camera, baseline timing), ov_size, fps, exp_us, iso, focus_dpt,
+ * ov_cfg (config subdir of files/ov), ov_preset bench | live, imu raw | cal, ov_timing 0/1, max_temp_dc, pool;
+ * results in files/ov/run_<time>_.../ (OvRunner).
  * arcore: a GL thread loops Session.update() and per new frame logs/streams
  *   {"src":"arcore","t_sensor":android camera ts,"t_frame":ARCore ts,"t_call":..,"t_out":update() return,"status":..,"p":[..],"q":[..]}
  * also written to files/arlat_<ms>.csv. Latency = t_out - t_sensor (phone clock).
@@ -113,8 +116,38 @@ public class MainActivity extends Activity {
             if (ov == null) {
                 ov = new OvRunner(this, this::show, streamer);
                 ov.dumpSecs = getIntent().getIntExtra("dump", 0);
-                ov.expCapNs = getIntent().getIntExtra("exp_cap_us", 0) * 1000L;   // short exposure (less motion blur)
-                try { ov.start(); status.setText("OpenVINS starting..."); }
+                ov.expCapNs = getIntent().getIntExtra("exp_cap_us", 0) * 1000L;   // lens2: short exposure (less motion blur)
+                // 2026-10-23 (0.6.7): ov_cam main = the std60 recording camera with the baseline config (OvRunner doc)
+                String oc = getIntent().getStringExtra("ov_cam");
+                boolean main = "main".equals(oc);
+                ov.cam = main ? "main" : "lens2";
+                String sz = getIntent().getStringExtra("ov_size");
+                if (sz == null) sz = main ? "1920x1080" : "640x480";
+                ov.W = Integer.parseInt(sz.split("x")[0]);
+                ov.H = Integer.parseInt(sz.split("x")[1]);
+                ov.fps = getIntent().getIntExtra("fps", main ? 60 : 30);
+                ov.expUs = getIntent().getIntExtra("exp_us", main ? 2000 : 0);
+                ov.iso = getIntent().getIntExtra("iso", main ? 500 : 0);
+                ov.focusDpt = getIntent().getFloatExtra("focus_dpt", main ? 0.5f : -1f);
+                String cfg = getIntent().getStringExtra("ov_cfg");
+                ov.cfgName = cfg == null ? "" : cfg;
+                String pre = getIntent().getStringExtra("ov_preset");
+                ov.preset = pre != null ? pre : (main ? "bench" : "live");
+                String imu = getIntent().getStringExtra("imu");
+                ov.imuRaw = imu != null ? "raw".equals(imu) : main;
+                ov.ovTiming = getIntent().getIntExtra("ov_timing", 1) != 0;
+                ov.maxBatteryTenthC = getIntent().getIntExtra("max_temp_dc", 420);
+                ov.poolSize = Math.max(2, getIntent().getIntExtra("pool", 4));
+                ov.onAutoStop = () -> runOnUiThread(this::finish);      // onPause stops the runner and writes meta.json
+                try {
+                    ov.start(); status.setText("OpenVINS starting...");
+                    final OvRunner mine = ov;
+                    if (secs > 0) status.postDelayed(() -> {
+                        if (ov != mine) return;       // an older run's timer must not stop a newer run
+                        ov.stopReason = "secs " + secs;
+                        finish();
+                    }, secs * 1000L);
+                }
                 catch (Exception e) { status.setText("ov error: " + e); android.util.Log.e("arlat", "ov", e); }
             }
             return;

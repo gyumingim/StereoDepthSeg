@@ -16,6 +16,9 @@ build/ov_bridge ../config/estimator_config.yaml --tcp 127.0.0.1:7600
   `{"type":"reset","auto":true,"reason":"exception","where":..,"msg":..}` 를 보낸다 (프로세스는 안 죽음). `lost` auto-reset 은 `"reason":"lost"`.
 - `use_stereo: true` 설정이면 `n_cams=2` 레코드만 받는다 (1장짜리는 `cam_rejected` 로 셈). mono/stereo 를 섞으면 TrackKLT 가
   cam1 의 빈 이전 피라미드로 `calcOpticalFlowPyrLK` 를 불러 `levels2 >= 0` 단언으로 죽기 때문. 첫 레코드와 크기가 다른 영상도 버림.
+- (2026-10-23) `--timing-log FILE`: 받은 프레임마다 CSV 한 줄 `t_ns,t,wait_ms,remap_ms,feed_ms,init,n_slam,n_msckf,cam_dropped,cam_queue`
+  (폰 실시간 판정, `tools/ov_phone_timing.py`). pose 줄에 `remap_ms` 추가. `--remap` 파일 v2 = 끝에 int32 src_w, src_h 가 붙으면
+  그 크기 영상(예: 1920x1080 원본)을 맵 크기(640x360)로 편다 (`android/make_phone_ov_main.py`). 붙지 않은 옛 파일은 예전 그대로.
 - `--imu-hold S` (기본 0.25): 기다리는 카메라가 없으면 IMU 를 최대 S 초 붙잡아 두고, 카메라가 오면 그 카메라를 넘는 IMU 까지만 넣은 뒤
   카메라를 넣는다 (시간 순서 유지 → 초기화 직후 ZUPT "No IMU measurements to propagate with (0 of 2)" 방지).
 - pose 줄 추가 필드: `cam_rejected`, `exceptions`, `imu_held`. ready 줄: `imu_hold_s`.
