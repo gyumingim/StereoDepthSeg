@@ -7,7 +7,8 @@ imu_gt.py 의 예전 자기 보정은 영상 앞쪽에서 아무 프레임 80 �
   3. 왜곡 모델 3 가지 (k1 k2 p1 p2 / + k3 / 유리 모델) 를 반으로 나눈 사진으로 맞추고 나머지 반에서 오차 → 가장 좋은 모델
   4. 사진별 오차가 중앙의 2.5 배 넘는 사진은 빼고 다시 맞춤
 결과: config/lens/hs_<w>x<h>_f<초점 dpt>.json (초점 고정 녹화끼리 같이 씀) 또는 녹화 imu_gt/lens.json.
-  python imu_learn/lens_calib.py recordings/hs_A [recordings/hs_B ...] [--save config/lens/hs_1920x1080_f2.22.json]
+  python imu_learn/lens_calib.py recordings/hs_A [recordings/hs_B ...] [--save config/lens/hs_1920x1080_f2.22_cal<날짜>.json]
+기본으로 쓸 파일은 DEFAULT_LENS 표에 적는다 (2026-10-23 부터; 같은 이름에 덮어쓰지 않음).
 """
 import argparse
 import csv
@@ -28,6 +29,18 @@ from imu_gt import read_imu  # noqa: E402
 
 TERM = (cv2.TERM_CRITERIA_COUNT + cv2.TERM_CRITERIA_EPS, 60, 1e-7)   # 250 장 유리 모델이 30 분 넘게 안 끝난 일 (2026-10-19)
 MODELS = {"k1k2p": cv2.CALIB_FIX_K3, "k1k2p_k3": 0, "rational": cv2.CALIB_RATIONAL_MODEL}
+LENS_DIR = HERE.parent / "config" / "lens"
+# 공용 렌즈 기본값: 표에 있으면 그 파일, 없으면 hs_<W>x<H>_f<초점>.json (2026-10-23 사용자 결정, docs/lens_switch_20261023.md).
+# 2.22 dpt: 새 2.22 노드 (fx 1303.9, 반복 ±0.2 %). 옛 hs_1920x1080_f2.22.json (fx 1267.1, 10-19 녹화 하나) 은
+# hs_1920x1080_f2.22_cal20261019_old.json 으로 이름만 바꿔 보관.
+DEFAULT_LENS = {"hs_1920x1080_f2.22": "hs_1920x1080_f2.22_cal20261022.json"}
+
+
+def shared_lens_path(width, height, focus_dpt):
+    """초점 고정 녹화의 공용 렌즈 파일 (vio_bench_hs, imu_gt, gt_experiment 가 같이 씀)."""
+    fd = focus_dpt or -1
+    stem = f"hs_{int(width)}x{int(height)}_f{fd:.2f}"
+    return LENS_DIR / DEFAULT_LENS.get(stem, stem + ".json")
 
 
 def collect(rec, board, max_w=0.3, cand=1500, min_corners=20):

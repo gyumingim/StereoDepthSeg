@@ -32,7 +32,7 @@ LOG = Path("runs/lens_ab.log")
 PAR = int(os.environ.get("PAR", 3))                 # plan: at most 3 processes (another agent runs ZUPT fix C)
 THREADS = "2"
 BRIDGE = SCAN3D / "tools" / "ov_bridge_zbase" / "build" / "ov_bridge"
-LENS = {"A": SCAN3D / "config" / "lens" / "hs_1920x1080_f2.22.json",
+LENS = {"A": SCAN3D / "config" / "lens" / "hs_1920x1080_f2.22_cal20261019_old.json",   # renamed 2026-10-23, same bytes
         "B": SCAN3D / "config" / "lens" / "hs_1920x1080_f2.22_cal20261022.json"}
 RECS = ["hs_20261022_111836", "hs_20261022_133820", "hs_20261022_134204", "hs_20261022_134550"]
 GT_REC = "hs_20261022_134204"
@@ -40,7 +40,7 @@ GT_B = "imu_gt_spl_lensB"
 FILES = ("imu_learn/vio_bench_hs.py", "imu_learn/c5_run.py", "imu_learn/z2_regress.py", "imu_learn/lens_ab.py",
          "imu_learn/lens_ab_gt.sh", "make_ov_config.py", "config/mono/estimator_config.yaml",
          "tools/ov_bridge_zbase/main.cpp", "tools/ov_bridge_zbase/CMakeLists.txt",
-         "config/lens/hs_1920x1080_f2.22.json", "config/lens/hs_1920x1080_f2.22_cal20261022.json")
+         "config/lens/hs_1920x1080_f2.22_cal20261019_old.json", "config/lens/hs_1920x1080_f2.22_cal20261022.json")
 # identity gate: our A run of this cell must equal the zupt_fixA base run (same bridge, same args, same lens file)
 IDENT = {"L_134204_o0_A": "runs/zupt_fixA/BR_134204_o0_base"}
 POSE_KEYS = ("t", "t_ns", "status", "init", "p", "q", "v", "T_world_cam0", "n_slam", "n_msckf")

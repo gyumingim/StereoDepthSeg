@@ -50,7 +50,7 @@ def so3_log(R):
 def lens_for(rec, meta):
     own = rec / "imu_gt" / "lens.json"
     fd = meta.get("focus_dpt_request") or -1
-    shared = HERE.parent / "config" / "lens" / f"hs_{meta['width']}x{meta['height']}_f{fd:.2f}.json"
+    shared = lens_calib.shared_lens_path(meta["width"], meta["height"], fd)   # 2026-10-23 default table
     return lens_calib.load(own if own.exists() else shared)[:2]
 
 

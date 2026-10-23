@@ -59,6 +59,7 @@ dropout, OpenVINS time per frame (ms, PC) and the share of frames tracked.
 """
 import argparse
 import csv
+import hashlib
 import json
 import queue
 import struct
@@ -86,11 +87,27 @@ HDR = struct.Struct("<III")
 MAGIC = 0x4F564252
 
 
+LENS_OVERRIDE = None    # --lens-file / a.lens_file (2026-10-23): one explicit lens file for the run (None = default rule)
+
+
+def set_lens_override(p):
+    global LENS_OVERRIDE
+    LENS_OVERRIDE = Path(p).resolve() if p else None
+
+
 def lens_path(rec, meta):
+    """Lens file of a recording (docs/lens_switch_20261023.md): --lens-file if given, else the recording's own
+    imu_gt/lens.json, else the shared default for its size and focus (lens_calib.shared_lens_path). Since 2026-10-23 the
+    1920x1080 2.22 dpt default is config/lens/hs_1920x1080_f2.22_cal20261022.json (fx 1303.9); before it was
+    hs_1920x1080_f2.22.json (fx 1267.1, one 10-19 recording), kept as hs_1920x1080_f2.22_cal20261019_old.json."""
+    if LENS_OVERRIDE is not None:
+        return LENS_OVERRIDE
     own = rec / "imu_gt" / "lens.json"
-    fd = meta.get("focus_dpt_request") or -1
-    shared = SCAN3D / "config" / "lens" / f"hs_{meta['width']}x{meta['height']}_f{fd:.2f}.json"
-    return own if own.exists() else shared
+    return own if own.exists() else lens_calib.shared_lens_path(meta["width"], meta["height"], meta.get("focus_dpt_request"))
+
+
+def lens_source(rec):
+    return "cli" if LENS_OVERRIDE is not None else ("own" if (rec / "imu_gt" / "lens.json").exists() else "shared")
 
 
 def lens_for(rec, meta):
@@ -444,7 +461,9 @@ def fed_selection(rec, meta, rows, fps, start_off, max_secs):
 def run(a):
     rec = Path(a.rec)
     meta = json.load(open(rec / "meta.json"))
+    set_lens_override(getattr(a, "lens_file", None))          # None / missing = default rule (lens_path)
     K, dist = lens_for(rec, meta)
+    print(f"lens: {lens_path(rec, meta)} ({lens_source(rec)})", file=sys.stderr)
     Wf, Hf = int(meta["width"]), int(meta["height"])
     m1, m2, Knew, (W, H) = undistort_maps(rec, meta, a.size)
     rows = list(csv.DictReader(open(rec / "frames_cam5.csv")))
@@ -667,9 +686,12 @@ def run(a):
         if hold_ok.arm_init is not None:
             res.update(hold_init_ns=hold_ok.init_ns, hold_wait_timeouts=hold_wait_timeouts,
                        hold_wait_s=round(hold_wait_s, 2))
-    res["lens_file"] = str(lens_path(rec, meta).resolve().relative_to(SCAN3D))
-    res["lens_blob"] = subprocess.run(["git", "-C", str(SCAN3D), "hash-object", res["lens_file"]],
+    lp = lens_path(rec, meta).resolve()
+    res["lens_file"] = str(lp.relative_to(SCAN3D)) if lp.is_relative_to(SCAN3D) else str(lp)
+    res["lens_blob"] = subprocess.run(["git", "-C", str(SCAN3D), "hash-object", str(lp)],
                                       capture_output=True, text=True).stdout.strip()
+    res["lens_sha256"] = hashlib.sha256(lp.read_bytes()).hexdigest()
+    res["lens_source"] = lens_source(rec)
     tr_t = [m["t_ns"] for m in poses if m.get("status") == "tracking"]
     t0c, t1c = int(t_frames[sel[0]] - dt_ns), int(t_frames[sel[-1]] - dt_ns)   # clip = fed frames, IMU clock
     res["clip_s"] = round((t1c - t0c) / 1e9, 3)
@@ -811,6 +833,10 @@ def main():
                     help="camera-IMU lever arm file (r_cm = IMU position in the camera frame); p_CinI = -R_ci^T r. "
                          "Default ON (adopted 2026-10-23, docs/imucal_result.md); run(a) callers without a.lever = off")
     ap.add_argument("--no-lever", action="store_true", help="p_CinI = 0 (runs before 2026-10-23)")
+    ap.add_argument("--lens-file", default=None,
+                    help="lens json for this run (overrides own imu_gt/lens.json and the shared default; the 2.22 dpt "
+                         "default is config/lens/hs_1920x1080_f2.22_cal20261022.json since 2026-10-23, the old one is "
+                         "config/lens/hs_1920x1080_f2.22_cal20261019_old.json)")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
     if a.no_lever:

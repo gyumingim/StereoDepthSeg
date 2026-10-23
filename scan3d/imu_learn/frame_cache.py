@@ -191,8 +191,13 @@ def main():
     ap.add_argument("--offsets", default="0", help="start offsets s (comma list) whose fed frames are cached")
     ap.add_argument("--max-secs", type=float, default=0)
     ap.add_argument("--threads", type=int, default=0, help="decode threads (0 = OpenCV default; frames identical)")
+    ap.add_argument("--lens-file", default=None, help="as vio_bench_hs --lens-file (default: the bench's lens rule)")
     o = ap.parse_args()
     offs = [float(x) for x in o.offsets.split(",") if x.strip()]
+    if o.lens_file:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import vio_bench_hs as vb
+        vb.set_lens_override(o.lens_file)
     if o.cmd == "build":
         print(json.dumps(build(o.rec, o.size, o.fps, offs, o.max_secs, o.threads)), flush=True)
     else:

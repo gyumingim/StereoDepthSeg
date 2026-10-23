@@ -309,7 +309,8 @@ def main():
     ap.add_argument("--board", default=None,
                     help="보드 json (기본 board_user_A4_6x6.json). 모니터에 띄운 보드: config/charuco/board_monitor_6x6.json")
     ap.add_argument("--lens", default=None,
-                    help="렌즈 값 json (lens_calib.py). 없으면 imu_gt/lens.json → config/lens/hs_<w>x<h>_f<초점>.json → 새로 구함")
+                    help="렌즈 값 json (lens_calib.py). 없으면 imu_gt/lens.json → 공용 기본값 (lens_calib.shared_lens_path; 2.22 dpt = "
+                         "hs_1920x1080_f2.22_cal20261022.json, 2026-10-23~) → 새로 구함")
     ap.add_argument("--rs", action="store_true",
                     help="롤링셔터 펴기 (자이로; imu_gt/align.json 의 dt·R_ci·바이어스 필요 → batch_sync 뒤에)")
     ap.add_argument("--out-dir", default="imu_gt",
@@ -338,7 +339,7 @@ def main():
         # 고속 녹화 (16:9, 센서를 잘라 씀): 공장 렌즈 값을 못 쓰므로 보드로 구한 값. 초점 고정 녹화는 같은 값을 같이 씀.
         import lens_calib
         fd = meta.get("focus_dpt_request") or -1
-        shared = SCAN3D / "config" / "lens" / f"hs_{size[0]}x{size[1]}_f{fd:.2f}.json"
+        shared = lens_calib.shared_lens_path(size[0], size[1], fd)   # 2026-10-23: 2.22 dpt → cal20261022 (전엔 fx 1267 파일)
         cand = [Path(a.lens)] if a.lens else [out / "lens.json", rec / "imu_gt" / "lens.json", shared]
         lp = next((p for p in cand if p.exists()), None)
         if lp is None:

@@ -24,7 +24,7 @@ sys.path.insert(0, str(HERE))
 import aruco_scale  # noqa: E402
 import lens_calib  # noqa: E402
 
-SHARED = HERE.parent / "config" / "lens" / "hs_1920x1080_f2.22.json"
+SHARED = HERE.parent / "config" / "lens" / "hs_1920x1080_f2.22_cal20261019_old.json"   # = former hs_1920x1080_f2.22.json
 BOARD = HERE.parent / "config" / "charuco" / "board_monitor_6x6.json"
 
 
@@ -76,6 +76,8 @@ def main():
           f"(mean {e_old[1]:.3f})")
     res = dict(n_fit=len(sel), bins=nb, model=best, test_new=e_new, test_old=e_old, K=K.tolist(), dist=d.tolist())
     json.dump(res, open(HERE.parent / "runs" / "lens_pool.json", "w"), indent=1)
+    if a.write:      # 2026-10-23: the default lens is chosen in lens_calib.DEFAULT_LENS; never overwrite a lens file here
+        sys.exit("--write disabled (2026-10-23): save the result under a new name and add it to lens_calib.DEFAULT_LENS")
     if a.write and e_new[1] < e_old[1]:
         shutil.copy(SHARED, SHARED.with_name(SHARED.stem + "_v1_rec131326.json"))
         info = dict(model=best, rms_px=round(float(rms), 4), holdout_px={m: round(e, 4) for m, e in scores.items()},
