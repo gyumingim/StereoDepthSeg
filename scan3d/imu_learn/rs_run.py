@@ -204,7 +204,7 @@ def job(name):
 
 
 def run_sched():
-    dirty = subprocess.run(["git", "status", "--porcelain", "imu_learn/vio_bench_hs.py", "imu_learn/rs_run.py",
+    dirty = subprocess.run(["git", "status", "--porcelain", "--untracked-files=no", "imu_learn/vio_bench_hs.py", "imu_learn/rs_run.py",
                             "config/mono", BASE_TDIR, "tools/ov_bridge_rs", "tools/ov_patches/rs.diff"],
                            capture_output=True, text=True).stdout
     if dirty.strip():
