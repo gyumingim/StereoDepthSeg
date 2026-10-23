@@ -8,6 +8,7 @@ Init values are the same for both (strict, --init-window 1.0, --init-disp 15; th
   ../venv_ffs/bin/python imu_learn/phone60_run.py cache       # build frame caches (once)
   (setsid nohup ../venv_ffs/bin/python imu_learn/phone60_run.py run > runs/phone60/sched.out 2>&1 &)
   ../venv_ffs/bin/python imu_learn/phone60_run.py score       # -> runs/phone60/score.json
+  CONDS=V1,V2,V3 ... run / CONDS=base,phone60,V1,V2,V3 ... score  # ablations -> score_ablation.json
 """
 import argparse
 import gzip
@@ -32,7 +33,12 @@ RAW = ["hs_20261022_133820", "hs_20261022_134550", "hs_20261022_134204",
        "hs_20261020_224323"]
 OLD = ["hs_20261019_131326", "hs_20261019_154320"]          # no raw IMU (types 16/35) -> calibrated types 1/4
 DROP = "hs_20261021_213955"                                  # phone drop: reported separately
-CONDS = {"base": ("config/mono", 11), "phone60": ("config/phone60", 20)}
+CONDS = {"base": ("config/mono", 11, ""), "phone60": ("config/phone60", 20, ""),
+         # ablations (docs/phone60_ablation_plan.md): one change each
+         "V1": ("config/phone60", 20, "calib_cam_intrinsics=false"),
+         "V2": ("config/mono", 11, "zupt_only_at_beginning=true"),
+         "V3": ("config/mono", 11, "calib_cam_intrinsics=true")}
+ACTIVE = os.environ.get("CONDS", "base,phone60").split(",")
 
 
 def cells():
@@ -40,19 +46,19 @@ def cells():
 
 
 def jobs():
-    return [dict(c, cond=k, name=f"{c['key']}_{k}") for c in cells() for k in CONDS]
+    return [dict(c, cond=k, name=f"{c['key']}_{k}") for c in cells() for k in CONDS if k in ACTIVE]
 
 
 def job(name):
     import vio_bench_hs as vb
     j = next(x for x in jobs() if x["name"] == name)
-    tdir, clones = CONDS[j["cond"]]
+    tdir, clones, over = CONDS[j["cond"]]
     vb.TEMPLATE = SCAN3D / tdir / "estimator_config.yaml"
     a = argparse.Namespace(rec=f"recordings/{j['rec']}", fps=60.0, size="640x360", npts=200, clones=clones, noise="cfg",
                            noise_scale=1.0, imu_calib=None, dropout="", max_secs=0.0, imu_raw=j["rec"] not in OLD,
                            gt="auto", out=None, init_cfg="strict", start_off=float(j["off"]), decode_threads=2,
                            imu_lead=2.0, init_window=1.0, init_disp=15.0, frame_cache=True, gyro_rebias=False,
-                           cfg_over="num_opencv_threads=2", still_hold=None)
+                           cfg_over="num_opencv_threads=2" + ("," + over if over else ""), still_hold=None)
     saved = {}
     orig = vb.evaluate
 
@@ -64,7 +70,7 @@ def job(name):
     r = vb.run(a)
     P = saved.get("poses", [])
     intr = [m["intr0"] for m in P if m.get("intr0")]
-    r.update(p60_cond=j["cond"], p60_template=tdir, p60_made=time.strftime("%F %T"), p60_job_s=round(time.time() - t0, 1),
+    r.update(p60_cond=j["cond"], p60_template=tdir, p60_over=over, p60_made=time.strftime("%F %T"), p60_job_s=round(time.time() - t0, 1),
              p60_template_blobs={f: subprocess.run(["git", "hash-object", f"{tdir}/{f}"], capture_output=True,
                                                    text=True).stdout.strip()
                                  for f in ("estimator_config.yaml", "kalibr_imu_chain.yaml")},
@@ -127,21 +133,27 @@ def score():
                                intr_first=d.get("intr0_first"), intr_last=d.get("intr0_last"),
                                cache_hit=(d.get("frame_cache") or {}).get("hit"))
     res = dict(made=time.strftime("%F %T"), runs=runs, conds={})
-    for c in CONDS:
+    for c in ACTIVE:
         R = [r for r in runs.values() if r["cond"] == c]
         res["conds"][c] = dict(n_div_excl_drop=sum(bool(r["div"]) for r in R if r["rec"] != DROP),
                                n_div_drop=sum(bool(r["div"]) for r in R if r["rec"] == DROP),
                                job_s_med=float(np.median([r["job_s"] for r in R if r["job_s"]])))
-    normal = [k for k in {r["key"] for r in runs.values()}
-              if not runs[f"{k}_base"]["div"] and not runs[f"{k}_phone60"]["div"] and DROP[-6:] not in k]
-    mb = float(np.median([runs[f"{k}_base"]["ate_w"] for k in normal]))
-    mp = float(np.median([runs[f"{k}_phone60"]["ate_w"] for k in normal]))
-    nb, npx = res["conds"]["base"]["n_div_excl_drop"], res["conds"]["phone60"]["n_div_excl_drop"]
-    res["criteria"] = dict(a_div=dict(base=nb, phone60=npx, pass_=npx <= nb),
-                           b_ate=dict(n_normal=len(normal), med_base=round(mb, 2), med_phone60=round(mp, 2),
-                                      limit=round(1.2 * mb + 0.3, 2), pass_=mp <= 1.2 * mb + 0.3))
-    res["verdict"] = "phone60 채택" if res["criteria"]["a_div"]["pass_"] and res["criteria"]["b_ate"]["pass_"] else "base 유지"
-    json.dump(res, open(OUT / "score.json", "w"), indent=1, ensure_ascii=False)
+    res["criteria"], res["verdict"] = {}, {}
+    keys = sorted({r["key"] for r in runs.values()})
+    for c in ACTIVE:                                   # each condition vs base, same two criteria (plan)
+        if c == "base":
+            continue
+        normal = [k for k in keys if not runs[f"{k}_base"]["div"] and not runs[f"{k}_{c}"]["div"] and DROP[-6:] not in k]
+        mb = float(np.median([runs[f"{k}_base"]["ate_w"] for k in normal]))
+        mc = float(np.median([runs[f"{k}_{c}"]["ate_w"] for k in normal]))
+        nb, nc = res["conds"]["base"]["n_div_excl_drop"], res["conds"][c]["n_div_excl_drop"]
+        res["criteria"][c] = dict(a_div=dict(base=nb, cond=nc, pass_=nc <= nb),
+                                  b_ate=dict(n_normal=len(normal), med_base=round(mb, 2), med_cond=round(mc, 2),
+                                             limit=round(1.2 * mb + 0.3, 2), pass_=mc <= 1.2 * mb + 0.3))
+        ok = res["criteria"][c]["a_div"]["pass_"] and res["criteria"][c]["b_ate"]["pass_"]
+        res["verdict"][c] = "통과" if ok else "불통과"
+    name = "score.json" if ACTIVE == ["base", "phone60"] else "score_ablation.json"
+    json.dump(res, open(OUT / name, "w"), indent=1, ensure_ascii=False)
     print(json.dumps(dict(conds=res["conds"], criteria=res["criteria"], verdict=res["verdict"]), ensure_ascii=False, indent=1))
 
 
