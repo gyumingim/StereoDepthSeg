@@ -289,7 +289,7 @@ def write_config(d, K, size, fps, R_ci, p_CinI, timeshift, noise, npts, clones, 
         "  distortion_coeffs: [0.0, 0.0, 0.0, 0.0]\n  distortion_model: radtan\n"
         f"  intrinsics: [{K[0, 0]:.6f}, {K[1, 1]:.6f}, {K[0, 2]:.6f}, {K[1, 2]:.6f}]\n  resolution: [{W}, {H}]\n"
         f"  rostopic: /cam0/image_raw\n  timeshift_cam_imu: {timeshift:.6f}\n")
-    imu = (SCAN3D / "config" / "mono" / "kalibr_imu_chain.yaml").read_text().splitlines()
+    imu = (TEMPLATE.parent / "kalibr_imu_chain.yaml").read_text().splitlines()   # next to the template (config/mono default)
     out = []
     for line in imu:
         k = line.strip().split(":")[0]

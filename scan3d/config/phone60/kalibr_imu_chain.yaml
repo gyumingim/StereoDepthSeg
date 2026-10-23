@@ -1,0 +1,43 @@
+%YAML:1.0
+# generated 2026-10-16T11:30:34 by scan3d/make_ov_config.py
+# inputs: calib=/home/system/scanner/StereoDepthSeg/calib_phone_pair.json cameras=/home/system/scanner/StereoDepthSeg/phone_stereo/cameras_s24.json lenses L=2 R=5
+# rect: f=462.9355 cx=339.4814 cy=239.8733 baseline_m=0.015530 size=640x480
+# args: fps=15.0 imu_rate=400.0 init=static imu_origin=lens5 mono=True exposure_ms=0.0 rs_skew_ms=0.0
+
+imu0:
+  T_i_b:
+    - [1, 0, 0, 0]
+    - [0, 1, 0, 0]
+    - [0, 0, 1, 0]
+    - [0, 0, 0, 1]
+  # 잡음: 폰 MEMS 데이터시트 값 x ~10-15 (추정, 조정 대상). 근거는 make_ov_config.py IMU_NOISE 주석.
+  accelerometer_noise_density: 1.0000e-02  # [ m / s^2 / sqrt(Hz) ]
+  accelerometer_random_walk: 1.0000e-03    # [ m / s^3 / sqrt(Hz) ]
+  gyroscope_noise_density: 1.0000e-03     # [ rad / s / sqrt(Hz) ]
+  gyroscope_random_walk: 1.0000e-04       # [ rad / s^2 / sqrt(Hz) ]
+  rostopic: /imu0
+  time_offset: 0.0
+  # phone60 - 원시 IMU 실측 498.7-499.0 Hz
+  update_rate: 500.0
+  # IMU 프레임 = Android 센서 좌표 (x 오른쪽, y 위, z 화면 밖). 가속도는 중력 포함 원시 비력 (TYPE_ACCELEROMETER).
+  model: "kalibr"
+  Tw:
+    - [1, 0, 0]
+    - [0, 1, 0]
+    - [0, 0, 1]
+  R_IMUtoGYRO:
+    - [1, 0, 0]
+    - [0, 1, 0]
+    - [0, 0, 1]
+  Ta:
+    - [1, 0, 0]
+    - [0, 1, 0]
+    - [0, 0, 1]
+  R_IMUtoACC:
+    - [1, 0, 0]
+    - [0, 1, 0]
+    - [0, 0, 1]
+  Tg:
+    - [0, 0, 0]
+    - [0, 0, 0]
+    - [0, 0, 0]

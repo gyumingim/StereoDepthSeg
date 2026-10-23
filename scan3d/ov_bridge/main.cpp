@@ -654,6 +654,8 @@ private:
       jarr(o, R_ItoC);
       o << ",\"p_IinC0\":";
       jarr(o, p_IinC);
+      o << ",\"intr0\":";                                   // 2026-10-23: cam0 intrinsics (online calib check)
+      jarr(o, st->_cam_intrinsics.at(0)->value());
     }
     o << ",\"dt_cam_imu\":";
     jnum(o, st->_calib_dt_CAMtoIMU->value()(0));
