@@ -94,7 +94,7 @@ class HsRecorder implements SensorEventListener {
     private long lastDelta, lastExp, lastSkew;
     int wantFps = 120;
     int evComp = 0;
-    float focusDpt = 3.33f;                      // >= 0: fixed focus at this many diopters (1/m; default 3.33 = 30 cm, AF off);
+    float focusDpt = 0.5f;                       // >= 0: fixed focus at this many diopters (1/m; default 0.5 = 2 m, AF off; 2026-10-23 user decision, was 3.33);
                                                  // -1: autofocus all along; -2: autofocus for 1.5 s then lock there
     String afRegion = null;                     // intent af_region: "full" or "center:0.3" (box side as a fraction) -> CONTROL_AF_REGIONS
     int afMode = -1;                             // >= 0 (intent af_mode): CONTROL_AF_MODE = this value instead of fixed focus
