@@ -33,7 +33,7 @@ Tape two marks on the desk 30 cm apart, measured with a ruler. Rest the phone at
 This is a third independent scale reference, next to gravity (IMU) and the ruler-measured board. Takes about 1 min.
 
 ## Lens calibration shot list (user, 2026-10-23): one pose per recording
-Each recording is a single tripod pose: 2 s settle, then 4 s still. The phone does not move during a recording, so there is no blur and no rolling shutter in the calibration.
+Each recording is a single tripod pose: 4 s settle, then 4 s still (8 s total). The phone does not move during a recording, so there is no blur and no rolling shutter in the calibration.
 Poses, about 12 recordings:
 - Board in the centre, top-left, top-right, bottom-left, bottom-right, left edge, right edge (7), at about 2 m.
 - Centre and two opposite corners at about 1.5 m and 2.5 m (4).
