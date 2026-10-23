@@ -52,7 +52,8 @@
 
 ### 왜 특징이 다시 안 생기나 (추정)
 화면이 바뀐 직후 멈춰서, 새 특징을 SLAM 으로 넣으려면 삼각측량할 기준선(시차)이 필요한데 정지라 없다. 같은 장면을 보고 있다가 멈춘 다른 녹화는 기존 SLAM 특징이 그대로 남아 버틴다 (위 5).
-확인하려면: ov_bridge_diag 로 224323 V4 를 다시 돌려 특징별 시차·chi2 거절 수를 찍어 보면 된다 (안 함).
+특징 로그(아래 5 절)로 일부 확인: 정지 뒤 10 초 동안 새 점은 **전부 3D(삼각측량) 실패** (o0 8550 개, 사용 540 = 남은 SLAM 점 1 개 × 프레임), chi2 거절 0.
+삼각측량 실패 = 시차 부족이라는 연결은 여전히 추정 (실패 이유는 로그에 없음).
 
 ## 3. 점검한 것 / 안 한 것
 | 항목 | 131326 | 224323 |
@@ -63,9 +64,38 @@
 | 입력 프레임 끊김 | 초기화 뒤 3 s 없음 (전체 306 번) | 발산 무렵 최대 37.6 ms 1 번 수준 (전체 232 번) |
 | 밝기·흐림·질감 | 정상 | 정상 (Laplacian 다소 낮음) |
 | 초기화 질 | **나쁨** (bg0 0.12 rad/s, 움직이는 중 v=0) | 좋음 (bg0 0.005) |
-- 영상의 초록 점은 내가 따로 돌린 KLT(참고용)이다. OpenVINS 의 실제 특징 좌표는 V4 포즈 파일에 없어서 못 그림.
+- 영상의 점은 OpenVINS 특징 로그(5 절)다. 첫 판의 참고 KLT 점은 특징 로그가 없을 때만 회색으로 그린다.
 - 오차는 초기화 뒤 처음 3 s (131326 은 튀기 전 0.78–0.84 s) 로 SE3 정렬 (벤치 ATE 는 전 구간 정렬이라 다름).
 - 칸당 1 회. 6 개는 같은 녹화 2 개의 같은 사건이라 독립 표본은 2 개다.
+
+## 5. OpenVINS 특징 로그로 다시 돌린 것 (2026-10-23 오후, 사용자 피드백 "영상으론 이유를 모르겠다")
+- 방법: `~/scanner/src/open_vins` 의 **복사본** `open_vins_feat` (`tools/ov_featlog_patch.py` 로 UpdaterMSCKF/UpdaterSLAM 에 로그 줄만 추가; open_vins·open_vins_diag 는 안 건드림) →
+  `~/scanner/src/ovbuild_feat` (같은 CMake 설정: Release, ROS 끔) → **같은 브리지 실행 파일**(ov_bridge/build/ov_bridge)을 LD_LIBRARY_PATH 로 이 라이브러리에 연결.
+  실행 = `tools/collapse_feat_run.py` (phone60_run.job 그대로, 출력만 runs/collapse_feat/).
+- 로그 한 줄 = 종류(M=MSCKF, S=SLAM 갱신, N=새 SLAM) · 시각 · 특징 id · 결과(A 사용 / R chi2 거절 / T 삼각측량·정밀화 실패) · 측정 u,v · **예상 u,v (= 측정 − 잔차, nullspace 투영 전 최신 관측)** · chi2 · 문턱.
+- **포즈 비트 동일 확인**: V4 6 개 + 비교 2 개 모두 포즈 파일 전 행이 원래와 같음 (프레임당 계산 시간 'ms' 만 뺌; `runs/collapse_feat/identity.json`).
+
+| run | 초기화 뒤 첫 1 s (사용 / chi2 거절 / 3D 실패) | 1–3 s | 비고 |
+|---|---|---|---|
+| 131326 o0 V4 | **0 / 7 / 771** | 198 / 666 / 1308 | 0.25 s 칸별 중앙값: 거절 점의 예상-실제 차 4–22 px, 사용 점 2–4 px |
+| 131326 o1 V4 | 0 / 6 / 789 | 579 / 935 / 976 | |
+| 131326 o2 V4 | 0 / 6 / 785 | 331 / 727 / 1202 | |
+| 224323 o0 V4 (같은 V4, 정상 초기화) | **2143 / 88 / 286** | 6422 / 50 / 879 | 사용 점 예상-실제 차 ≈0.4–1 px |
+| 131326 o0 base (ZUPT 켬, 정지 초기화) | 0 / 0 / 248 | 0 / 0 / 498 | 정지라 시차 없음 → 3D 실패가 당연, ZUPT 가 버팀; 25 s 부터 사용 |
+
+| run | 정지 전 10 s (−15~−5 s) 사용 / 3D 실패 | 정지 뒤 10 s 사용 / 거절 / 3D 실패 |
+|---|---|---|
+| 224323 o0 V4 | 32330 / 2473 | **540 / 0 / 8550** |
+| 224323 o1 V4 | 32238 / 2492 | 0 / 0 / 8294 |
+| 224323 o2 V4 | 32173 / 2448 | 540 / 0 / 8145 |
+| 224323 o0 phone60 (ZUPT 켬) | 31785 / 1527 | 2152 / 0 / 4567 (+ ZUPT) |
+
+읽기:
+- 131326 V4: 초기화 직후 1 초 동안 **점이 전부 3D 실패** — 같은 V4 라도 정상 초기화(224323)는 첫 1 초에 2143 개 사용. 폰이 0.17 m/s 로 움직이고 있었으니 시차는 있었다 →
+  실패 원인은 틀린 자이로 바이어스로 계산한 카메라 자세 (추정, 실패 이유는 로그에 없음). 그 뒤 점이 들어와도 1–3 s 에 chi2 거절이 사용의 1.6–3.4 배.
+- 224323 V4: 정지 뒤 새 점 전부 3D 실패, chi2 거절 0 → '점이 틀려서 버려짐' 이 아니라 '점을 못 만듦'. ZUPT 켠 phone60 도 점 사정은 비슷하지만 ZUPT 가 속도를 0 으로 잡음.
+- 초기화 창 회전: 창을 [t_init−1.0, t_init−0.5] 로 잡으면 |자이로| 평균 0.28 rad/s (16°/s), 보드 0.25 rad/s (14°/s); 최신 IMU 를 t_init−0.083 s 로 맞추면 0.24 rad/s. 어느 쪽이든 bg0 0.125 rad/s 와 같은 크기.
+- 페이지: 영상의 점 = 이 로그 (초록 사용, 빨강 chi2 거절 + 십자 = 예상 위치, 주황 × = 3D 실패), 영상 아래 = 측정 자이로·보드 회전·VIO bg (°/s) 와 특징 운명 그래프 (초기화/정지 주변 확대).
 
 ## 4. 고칠 거리 (다음 실험 후보, 안 해 봄)
 - 131326: 초기화 정지 판정에 자이로 조건 추가 (옛 반 |w| 평균 < 0.05 rad/s 같은), 또는 ZUPT 없이도 `wait_for_jerk=false` 초기화(두 창 모두 정지) 쓰기 — 들어올림 대기 대신 진짜 정지 대기. 드론은 이륙 전 정지가 확실하므로 후자가 맞을 가능성 (추정).
@@ -76,5 +106,10 @@
 cd ~/scanner/StereoDepthSeg/scan3d
 ../venv_ffs/bin/python tools/collapse_review.py --out <폴더>          # 8 run, 영상 포함 약 6 분
 ../venv_ffs/bin/python tools/collapse_review.py --out <폴더> --no-video
+# 특징 로그 (한 번): open_vins_feat 복사 + 패치 + 빌드
+mkdir ~/scanner/src/open_vins_feat && cp -a ~/scanner/src/open_vins/{ov_core,ov_init,ov_msckf} ~/scanner/src/open_vins_feat/
+python3 tools/ov_featlog_patch.py ~/scanner/src/open_vins_feat
+mkdir ~/scanner/src/ovbuild_feat && cd ~/scanner/src/ovbuild_feat && cmake ../open_vins_feat/ov_msckf -DCMAKE_BUILD_TYPE=Release -DENABLE_ROS=OFF -DCMAKE_PREFIX_PATH=$HOME/scanner/local && make -j8 ov_msckf_lib
+../venv_ffs/bin/python tools/collapse_feat_run.py 131326_o0_V4 ...   # -> runs/collapse_feat/ (+ identity.json)
 ```
 입력: runs/phone60/<run>.json · .poses.jsonl.gz, recordings/<rec>/{frames_cam5.csv, imu.csv, imu_gt_spl/gt.npz, cache/frames_640x360_*}. 출력 data.js 에 만든 시각 기록.

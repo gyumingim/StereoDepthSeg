@@ -32,6 +32,7 @@ from frame_cache import FrameCache  # noqa: E402
 from imu_gt import read_imu  # noqa: E402
 
 RUN = SCAN3D / "runs" / "phone60"
+FEAT = SCAN3D / "runs" / "collapse_feat"     # tools/collapse_feat_run.py (per-feature OpenVINS log, poses identical)
 ALIGN_S = 3.0
 ONSET_M = 0.30
 DEFAULT = ["131326_o0_V4", "131326_o1_V4", "131326_o2_V4", "224323_o0_V4", "224323_o1_V4", "224323_o2_V4",
@@ -61,6 +62,24 @@ def rnd(a, d=3):
 
 
 _img_cache = {}
+
+
+def load_feat(name, t):
+    """Per pose row: list of (kind, status, u, v, pu, pv) from runs/collapse_feat/<name>.feat.{msckf,slam} (None if absent).
+    kind M = MSCKF, S = SLAM update, N = new SLAM; status A used, R chi2-rejected, T 3D (triangulation) failed."""
+    fs = [FEAT / f"{name}.feat.msckf", FEAT / f"{name}.feat.slam"]
+    if not all(f.exists() for f in fs):
+        return None
+    out = [[] for _ in t]
+    for f in fs:
+        for line in open(f):
+            k, tt, _, stt, u, v, pu, pv = line.split()[:8]
+            tt = float(tt)
+            i = int(np.clip(np.searchsorted(t, tt), 1, len(t) - 1))
+            i = i - 1 if abs(t[i - 1] - tt) < abs(t[i] - tt) else i
+            if abs(t[i] - tt) < 0.004:
+                out[i].append((k, stt, float(u), float(v), float(pu), float(pv)))
+    return out
 
 
 def frame_metrics(fc, fis):
@@ -261,19 +280,42 @@ def analyse(name, out_dir, video=True):
                 vblow_t=t_vblow, lost_t=lost_t, still_t=still_t, align_s=align_s, align_n=align_n, fi_res_ms=round(fi_res_ms, 3), init=init,
                 at_onset=at_onset, early=early, whole=whole, imu=imu, frames_rec=j["frames"]["rec_all"],
                 frames_fed=j["frames"]["fed"])
+    feat = load_feat(name, t)
+    fA = np.array([sum(1 for x in r if x[1] == "A") for r in feat]) if feat else np.zeros(len(t), int)
+    fR = np.array([sum(1 for x in r if x[1] == "R") for r in feat]) if feat else np.zeros(len(t), int)
+    fT = np.array([sum(1 for x in r if x[1] == "T") for r in feat]) if feat else np.zeros(len(t), int)
+    summ["feat"] = feat is not None
+    if feat is not None and t_init is not None:
+        for nm, (a_, b_) in dict(first1s=(0, 1.0), s1to3=(1.0, 3.0), whole=(0, 1e9)).items():
+            m = (t >= t_init + a_) & (t < t_init + b_)
+            summ.setdefault("feat_counts", {})[nm] = dict(A=int(fA[m].sum()), R=int(fR[m].sum()), T=int(fT[m].sum()))
+        if still_t is not None:
+            m = (t >= still_t) & (t < still_t + 10)
+            summ["feat_counts"]["still10s"] = dict(A=int(fA[m].sum()), R=int(fR[m].sum()), T=int(fT[m].sum()))
+            m = (t >= still_t - 15) & (t < still_t - 5)
+            summ["feat_counts"]["before_still"] = dict(A=int(fA[m].sum()), R=int(fR[m].sum()), T=int(fT[m].sum()))
+    gmean = np.array([gn[gi[i - 1]:max(gi[i], gi[i - 1] + 1)].mean() if i else gn[0] for i in range(len(t))])
+    bgn = np.linalg.norm(bg, axis=1)
+    if t_init is not None:
+        w = (t >= t_init - 1.0) & (t <= t_init - 0.5)
+        summ["init"]["gt_angrate_ovwin"] = round(float(np.nanmedian(gw[w])), 3) if np.isfinite(gw[w]).any() else None
     # series for the page (every frame -> too big; every 2nd row ~30 Hz)
     s = slice(None, None, 2)
     ser = dict(t=rnd(t[s], 3), gx=rnd(gp[s, 0]), gy=rnd(gp[s, 1]), gz=rnd(gp[s, 2]), vx=rnd(pa[s, 0]), vy=rnd(pa[s, 1]),
                vz=rnd(pa[s, 2]), err=rnd(err[s]), gspeed=rnd(gspeed[s], 2), vspeed=rnd(np.where(trk, vspeed, np.nan)[s], 2),
                gw=rnd(gw[s], 2), gyro=rnd(gmax[s], 2), nslam=nsl[s].tolist(), nmsckf=nms[s].tolist(),
-               klt=rnd(klt[s], 2), lap=rnd(lap[s], 0), fast=fastn[s].tolist(), mean=rnd(mean[s], 0))
+               klt=rnd(klt[s], 2), lap=rnd(lap[s], 0), fast=fastn[s].tolist(), mean=rnd(mean[s], 0),
+               gyrm=rnd(gmean[s], 3), bgn=rnd(bgn[s], 4),
+               fA=(fA[0::2] + np.r_[fA[1::2], 0][:len(fA[0::2])]).tolist(),
+               fR=(fR[0::2] + np.r_[fR[1::2], 0][:len(fR[0::2])]).tolist(),
+               fT=(fT[0::2] + np.r_[fT[1::2], 0][:len(fT[0::2])]).tolist())
     vt = rnd(t, 3)                                               # video frame k -> run time t[k] (60 fps CFR video)
     if video:
-        write_video(out_dir / f"{name}.mp4", fc, fi, t, status, nsl, nms, err, onset, t_init, fm, fed_dt)
+        write_video(out_dir / f"{name}.mp4", fc, fi, t, status, nsl, nms, err, onset, t_init, fm, fed_dt, feat)
     return summ, ser, vt
 
 
-def write_video(path, fc, fi, t, status, nsl, nms, err, onset, t_init, fm, fed_dt):
+def write_video(path, fc, fi, t, status, nsl, nms, err, onset, t_init, fm, fed_dt, feat=None):
     import av
     cont = av.open(str(path), "w", options={"movflags": "+faststart"})
     st = cont.add_stream("libx264", rate=60)
@@ -282,10 +324,26 @@ def write_video(path, fc, fi, t, status, nsl, nms, err, onset, t_init, fm, fed_d
     font = cv2.FONT_HERSHEY_SIMPLEX
     for k, f in enumerate(fi):
         img = cv2.cvtColor(fc.get(int(f)), cv2.COLOR_GRAY2BGR)
-        pts = fm[k]["pts"]
-        if pts is not None:
-            for x, y in pts:
-                cv2.circle(img, (int(x), int(y)), 2, (0, 255, 0), -1, cv2.LINE_AA)
+        cnt = None
+        if feat is not None:                  # OpenVINS features of this frame: green used, red chi2-rejected, orange no 3D
+            cnt = {"A": 0, "R": 0, "T": 0}
+            for kind, stt_, u, v, pu, pv in feat[k]:
+                cnt[stt_] += 1
+                p = (int(round(u)), int(round(v)))
+                if stt_ == "T":
+                    cv2.drawMarker(img, p, (0, 140, 255), cv2.MARKER_TILTED_CROSS, 9, 2, cv2.LINE_AA)
+                    continue
+                col = (0, 220, 0) if stt_ == "A" else (40, 40, 255)
+                if np.isfinite(pu) and np.isfinite(pv) and abs(pu) < 4000 and abs(pv) < 4000:
+                    q = (int(round(pu)), int(round(pv)))
+                    cv2.line(img, p, q, col, 1, cv2.LINE_AA)
+                    cv2.drawMarker(img, q, col, cv2.MARKER_CROSS, 9, 2, cv2.LINE_AA)
+                cv2.circle(img, p, 4, col, -1, cv2.LINE_AA)
+        else:
+            pts = fm[k]["pts"]
+            if pts is not None:
+                for x, y in pts:
+                    cv2.circle(img, (int(x), int(y)), 1, (150, 150, 150), -1, cv2.LINE_AA)
         if onset is not None and t[k] >= onset:
             cv2.rectangle(img, (0, 0), (640, 30), (0, 0, 200), -1)
             cv2.putText(img, f"DIVERGED  onset {onset:.2f}s  (+{t[k] - onset:.1f}s)", (8, 21), font, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
@@ -293,7 +351,8 @@ def write_video(path, fc, fi, t, status, nsl, nms, err, onset, t_init, fm, fed_d
         e = err[k]
         lines = [f"t {t[k]:7.2f}s  frame {k}  fi {int(f)}",
                  f"{stt.upper():9s} slam {nsl[k]:3d} msckf {nms[k]:3d}" + (f"  err {e * 100:6.1f}cm" if np.isfinite(e) else ""),
-                 f"KLT ref {fm[k]['klt'] * 100:3.0f}%  blur(lap) {fm[k]['lap']:5.0f}" if np.isfinite(fm[k]["klt"]) else ""]
+                 (f"used {cnt['A']:3d}  chi2-rejected {cnt['R']:3d}  no-3D {cnt['T']:3d}" if cnt is not None else
+                  (f"KLT ref {fm[k]['klt'] * 100:3.0f}%  blur(lap) {fm[k]['lap']:5.0f}" if np.isfinite(fm[k]["klt"]) else ""))]
         if np.isfinite(fed_dt[k]) and fed_dt[k] > 25:
             lines.append(f"FRAME GAP {fed_dt[k]:.0f} ms")
         if t_init is not None and t_init <= t[k] < t_init + 1.0:
