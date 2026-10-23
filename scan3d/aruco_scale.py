@@ -89,8 +89,13 @@ class Board:
                                                     np.arange(ids_start, ids_start + n_mk, dtype=np.int32))
             else:
                 self.board = cv2.aruco.CharucoBoard((self.sx, self.sy), self.square_m, self.marker_m, self.dictionary)
-            if self.sy % 2 == 0 and hasattr(self.board, "setLegacyPattern"):
-                self.board.setLegacyPattern(True)          # 짝수 행: 4.5 로 인쇄한 보드와 같은 무늬
+            # 짝수 행: 4.5 로 인쇄한 보드와 같은 무늬 (기본). 새 OpenCV 로 만든 보드 그림은 board json 에
+            # "legacy_pattern": false 를 넣는다 (예: board_laptop_6x4.json — legacy 로는 모서리 0 개, 2026-10-23).
+            legacy = spec.get("legacy_pattern")
+            if legacy is None:
+                legacy = self.sy % 2 == 0
+            if legacy and hasattr(self.board, "setLegacyPattern"):
+                self.board.setLegacyPattern(True)
             cp = cv2.aruco.CharucoParameters()
             cp.minMarkers = 1
             cp.tryRefineMarkers = True                   # 놓친 마커를 보드 배치로 다시 찾음
