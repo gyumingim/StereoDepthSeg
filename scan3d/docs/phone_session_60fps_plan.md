@@ -39,3 +39,9 @@ Poses, about 12 recordings:
 - Centre and two opposite corners at about 1.5 m and 2.5 m (4).
 - Board tilted about 30°, left and right (2).
 The fit uses all recordings jointly. Repeatability check: fit two disjoint halves of the poses; require fx within ±0.3 % and the principal point within ±3 px.
+
+## Heat test in the VIO capture mode (user, 2026-10-23), after the calibrations
+- Record continuously in the VIO mode (std60, 0.5 dpt, 2 ms / ISO 500) with the phone in its flight position. Log the app's thermalservice temperatures (SKIN, AP, battery, throttling status) every few seconds.
+- Stop rules, enforced by the script, never left running: SKIN ≥ 40 °C, throttling ≥ moderate, a frame drop, or 15 min. Then force-stop and confirm that no camera client remains.
+- Report: time to 38/40 °C, frame-rate drops, throttling steps, and the room temperature (assumption: about 22–24 °C indoors).
+- Later: repeat with live OpenVINS running on the phone (mode ov), which heats more, and with the drone's airflow if available.
