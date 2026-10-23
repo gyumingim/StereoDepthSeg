@@ -91,24 +91,125 @@ def gyro_cam(rec, al):
     _, gyr = read_imu(Path(rec) / "imu.csv", raw=bool(al.get("imu_raw", False)))   # same gyro type as the alignment
     tg = gyr[:, 0].astype(np.int64) + int(al["dt_ns"])
     wg = gyr[:, 1:4] - np.mean(al.get("gyro_bias_knots", [[0, 0, 0]]), 0)
-    R_ci = np.asarray(al["R_ci"])
-    return lambda t: R_ci @ np.array([np.interp(t, tg, wg[:, j]) for j in range(3)])
+    return GyroCam(tg, wg, np.asarray(al["R_ci"]))
 
 
-def board_poses(video, frames_csv, K, dist, min_corners=8, max_rms=1.5, w_cam=None, keep_corners=False):
+class GyroCam:
+    """t_cam_ns → ω in the camera frame (same numbers as the former lambda; a class so --chunks workers can pickle it)."""
+
+    def __init__(self, tg, wg, R_ci):
+        self.tg, self.wg, self.R_ci = tg, wg, R_ci
+
+    def __call__(self, t):
+        return self.R_ci @ np.array([np.interp(t, self.tg, self.wg[:, j]) for j in range(3)])
+
+
+_CHUNK = {}   # board_poses(chunks=N): per-worker context (set by _chunk_init in each spawned worker)
+
+
+def _chunk_init(ctx):
+    cv2.setNumThreads(1)
+    _CHUNK.clear()
+    _CHUNK.update(ctx)
+    _CHUNK["board"] = aruco_scale.Board(aruco_scale.load_board_spec(str(ctx["board_json"])))
+
+
+def _chunk_worker(rng):
+    """Frames [s, e) (e None = to the end of the video). Single-threaded: OpenCV 1 thread, FFmpeg decoder 1 thread.
+    Frames before s are grab()bed (decoded, not converted) from frame 0 = exact frame indices (no seeking)."""
+    s, e = rng
+    c = _CHUNK
+    cap = cv2.VideoCapture(str(c["video"]), cv2.CAP_FFMPEG, [cv2.CAP_PROP_N_THREADS, 1])
+    for _ in range(s):
+        if not cap.grab():
+            return s, [], True
+    res, i = [], s
+    while e is None or i < e:
+        r, f = cap.read()
+        if not r:
+            return s, res, True
+        res.append(_frame_pose(i, f, c))
+        i += 1
+    return s, res, False
+
+
+def _frame_pose(i, f, c):
+    """One frame of board_poses: → (t_ns, R_bc, p_bc, rms_px, n_corners, ok, corners, ids)."""
+    K, dist, Kn, w_cam, t_mid, skew = c["K"], c["dist"], c["Kn"], c["w_cam"], c["t_mid"], c["skew"]
+    board, min_corners, max_rms = c["board"], c["min_corners"], c["max_rms"]
+    g = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY)
+    corners, ids, _ = board.detect(g)
+    R, p, rms, ok = np.eye(3), np.zeros(3), np.nan, False
+    t_row = 0
+    if len(ids) >= min_corners:
+        if w_cam is not None and i in t_mid:
+            n = cv2.undistortPoints(corners.reshape(-1, 1, 2), K, dist).reshape(-1, 2)
+            d = np.c_[n, np.ones(len(n))]
+            tau = (corners[:, 1] / g.shape[0] - 0.5) * skew.get(i, 0) / 1e9
+            om = w_cam(t_mid[i])
+            d = _rot_rays(om, tau, d)
+            und = (d[:, :2] / d[:, 2:3]) * [Kn[0, 0], Kn[1, 1]] + [Kn[0, 2], Kn[1, 2]]
+        else:
+            und = cv2.undistortPoints(corners.reshape(-1, 1, 2), K, dist, P=Kn).reshape(-1, 2)
+        pose = aruco_scale.solve_pose(board, und, ids, Kn)
+        if pose["ok"]:
+            R_cb, t_cb = pose["R"], pose["t"]
+            R = R_cb.T
+            p = -R_cb.T @ t_cb
+            rms = pose["rms"]
+            ok = rms <= max_rms
+            if w_cam is None:
+                t_row = int((corners[:, 1].mean() / g.shape[0] - 0.5) * skew.get(i, 0))
+    t = t_mid.get(i, -1) + t_row if i in t_mid else -1
+    return t, R, p, rms, len(ids), ok, corners.astype(np.float32), ids.astype(np.int16)
+
+
+def _board_poses_chunked(video, rows, t_mid, skew, K, dist, min_corners, max_rms, w_cam, keep_corners, chunks, max_frames=0):
+    """board_poses split into `chunks` contiguous frame ranges in spawned worker processes (2026-10-23, --chunks;
+    same per-frame code as the serial loop up to the same stop rule: the first frame the decoder cannot read).
+    spawn, not fork: a fork after OpenCV's thread pool has run deadlocks the children (seen 2026-10-23)."""
+    import multiprocessing as mp
+    ctx = dict(video=str(video), K=K, dist=dist, Kn=K.copy(), w_cam=w_cam, t_mid=t_mid, skew=skew,
+               min_corners=min_corners, max_rms=max_rms, board_json=str(BOARD_JSON))
+    n = len(rows) if max_frames <= 0 else min(len(rows), max_frames)
+    b = [int(round(n * k / chunks)) for k in range(chunks + 1)]
+    rngs = [(b[k], b[k + 1] if (k < chunks - 1 or max_frames > 0) else None) for k in range(chunks)]
+    with mp.get_context("spawn").Pool(chunks, initializer=_chunk_init, initargs=(ctx,)) as pool:
+        parts = sorted(pool.map(_chunk_worker, rngs, chunksize=1))
+    frames = []
+    for s, res, eof in parts:
+        if len(frames) != s:          # an earlier chunk hit the end of the video: the serial loop would have stopped
+            break
+        frames.extend(res)
+        if eof:
+            break
+    out = {k: np.asarray([fr[j] for fr in frames]) for j, k in enumerate(("t_ns", "R_bc", "p_bc", "rms_px", "n_corners", "ok"))}
+    if keep_corners:
+        out["corners"] = np.array([fr[6] for fr in frames], dtype=object)
+        out["corner_ids"] = np.array([fr[7] for fr in frames], dtype=object)
+    return out
+
+
+def board_poses(video, frames_csv, K, dist, min_corners=8, max_rms=1.5, w_cam=None, keep_corners=False, chunks=0,
+                max_frames=0):
     """w_cam (gyro_cam): rolling-shutter derotation — every corner is rotated from the moment its image row was read
     to the frame's middle row with the gyro, then one PnP at t_mid (gt_experiment.py, 4 recordings 2026-10-19: gyro
-    0.2 s disagreement −20…−45 %, fast segments about halved, +9 % frames under the 1.5 px gate; flipped sign worse)."""
+    0.2 s disagreement −20…−45 %, fast segments about halved, +9 % frames under the 1.5 px gate; flipped sign worse).
+    chunks > 1 (--chunks, 2026-10-23; default 0 = this serial loop, unchanged): parallel frame ranges, same output.
+    max_frames > 0: only the first max_frames frames (imu_gt_chunk_check.py; default 0 = all)."""
     board = aruco_scale.Board(aruco_scale.load_board_spec(str(BOARD_JSON)))
     rows = list(csv.DictReader(open(frames_csv)))
     t_mid = {int(r["frame_idx"]): int(r["t_mid_ns"]) for r in rows}
     skew = {int(r["frame_idx"]): int(r.get("rolling_shutter_skew_ns") or 0) for r in rows}
+    if chunks and chunks > 1:
+        return _board_poses_chunked(video, rows, t_mid, skew, K, dist, min_corners, max_rms, w_cam, keep_corners, chunks,
+                                    max_frames)
     cap = cv2.VideoCapture(str(video))
     out = dict(t_ns=[], R_bc=[], p_bc=[], rms_px=[], n_corners=[], ok=[])
     cc_all, id_all = [], []
     Kn = K.copy()
     i = 0
-    while True:
+    while not (max_frames > 0 and i >= max_frames):
         r, f = cap.read()
         if not r:
             break
@@ -316,6 +417,8 @@ def main():
     ap.add_argument("--out-dir", default="imu_gt",
                     help="결과 폴더 이름 (imu_gt 가 아니면 align.json 은 imu_gt 것을 쓰고 새로 만들지 않음)")
     ap.add_argument("--keep-corners", action="store_true", help="프레임별 모서리를 gt.npz 에 저장 (곡선 맞춤용)")
+    ap.add_argument("--chunks", type=int, default=0,
+                    help="보드 검출을 프레임 구간 N 개로 나눠 병렬 (프로세스마다 1 스레드; 0 = 예전 그대로 한 줄로). 결과 같음")
     ap.add_argument("--raw-imu", action="store_true",
                     help="원본 IMU (type 35/16) 로 맞춤 (align.json imu_raw=true; batch_sync·--rs 가 같은 종류를 씀). 기본 = 보정판 1/4")
     a = ap.parse_args()
@@ -351,7 +454,7 @@ def main():
         print(f"렌즈 값: {lp} ({info.get('model')}, rms {info.get('rms_px')} px, 사진 {info.get('n_views')} 장, "
               f"f {K[0, 0]:.1f} {K[1, 1]:.1f})")
     gt = board_poses(rec / f"cam{a.cam}.mp4", rec / f"frames_cam{a.cam}.csv", K, dist, w_cam=w_cam,
-                     keep_corners=a.keep_corners)
+                     keep_corners=a.keep_corners, chunks=a.chunks)
     bi = board_info(BOARD_JSON)
     np.savez(out / "gt.npz", **gt, K=K, dist=dist, rs=bool(a.rs), board_json=bi["board_json"], square_mm=bi["square_mm"])
     ok = gt["ok"]
