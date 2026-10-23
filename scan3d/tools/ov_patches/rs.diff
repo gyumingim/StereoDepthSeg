@@ -1,0 +1,166 @@
+diff -ru open_vins_zbase/ov_msckf/src/core/VioManager.cpp open_vins_rs/ov_msckf/src/core/VioManager.cpp
+--- open_vins_zbase/ov_msckf/src/core/VioManager.cpp	2026-10-20 12:21:38.421977669 +0900
++++ open_vins_rs/ov_msckf/src/core/VioManager.cpp	2026-10-23 10:45:44.252218415 +0900
+@@ -176,6 +176,13 @@
+   }
+   propagator->feed_imu(message, oldest_time);
+ 
++  // RS (open_vins_rs): keep the last ~1 s of IMU for the per-row correction
++  if (params.rs_readout_time != 0.0) {
++    rs_imu.push_back(message);
++    while (!rs_imu.empty() && rs_imu.front().timestamp < message.timestamp - 1.0)
++      rs_imu.pop_front();
++  }
++
+   // Push back to our initializer
+   if (!is_initialized_vio) {
+     initializer->feed_imu(message, oldest_time);
+@@ -281,6 +288,11 @@
+   // Perform our feature tracking!
+   trackFEATS->feed_new_camera(message);
+ 
++  // RS (open_vins_rs): per-feature gyro rolling-shutter correction (off when rs_readout_time == 0)
++  if (params.rs_readout_time != 0.0) {
++    rs_correct_features(message);
++  }
++
+   // If the aruco tracker is available, the also pass to it
+   // NOTE: binocular tracking for aruco doesn't make sense as we by default have the ids
+   // NOTE: thus we just call the stereo tracking if we are doing binocular!
+@@ -713,3 +725,75 @@
+                state->_calib_imu_tg->value()(7), state->_calib_imu_tg->value()(8));
+   }
+ }
++
++void VioManager::rs_correct_features(const ov_core::CameraData &message) {
++  // Row time model: t(v) = t_frame + rs_readout_time * rs_row_scale * (v / H - 0.5). The frame stamp (t_mid = sensor ts +
++  // exposure/2 + skew/2) is the centre row, so the centre row is the reference. Body rate w_I (gyro - bias) is taken
++  // constant over the readout (mean of the IMU samples within readout/2 + 2 ms). Bearing at the reference time:
++  // b_ref = Exp(R_ItoC w_I tau) b_row, tau = t(v) - t_ref (pure rotation; translation and depth ignored).
++  double dt_ci = state->_calib_dt_CAMtoIMU->value()(0);
++  double t_imu = message.timestamp + dt_ci;
++  double half = 0.5 * std::abs(params.rs_readout_time) + 0.002;
++  Eigen::Vector3d wsum = Eigen::Vector3d::Zero();
++  int nw = 0;
++  for (const auto &m : rs_imu) {
++    if (m.timestamp >= t_imu - half && m.timestamp <= t_imu + half) {
++      wsum += m.wm;
++      nw++;
++    }
++  }
++  if (nw == 0) {
++    double best = 1e9;
++    for (const auto &m : rs_imu) {
++      if (std::abs(m.timestamp - t_imu) < best) {
++        best = std::abs(m.timestamp - t_imu);
++        wsum = m.wm;
++        nw = 1;
++      }
++    }
++    if (nw == 0 || best > 0.02)
++      return;
++  }
++  Eigen::Vector3d w_I = wsum / nw;
++  if (is_initialized_vio)
++    w_I -= state->_imu->bias_g();
++  auto db = trackFEATS->get_feature_database();
++  std::vector<std::shared_ptr<ov_core::Feature>> feats = db->features_containing(message.timestamp, false, true);
++  rs_n_frames++;
++  rs_sum_w += w_I.norm();
++  for (size_t cam_id : message.sensor_ids) {
++    Eigen::Matrix3d R_ItoC = state->_calib_IMUtoCAM.at(cam_id)->Rot();
++    Eigen::Vector3d w_C = R_ItoC * w_I;
++    auto cam = state->_cam_intrinsics_cameras.at(cam_id);
++    double H = (double)cam->h();
++    for (auto &f : feats) {
++      if (f->timestamps.find(cam_id) == f->timestamps.end())
++        continue;
++      auto &ts = f->timestamps.at(cam_id);
++      for (int k = (int)ts.size() - 1; k >= 0; k--) {
++        if (ts.at(k) != message.timestamp)
++          continue;
++        Eigen::VectorXf &uv = f->uvs.at(cam_id).at(k);
++        Eigen::VectorXf &un = f->uvs_norm.at(cam_id).at(k);
++        double tau = params.rs_readout_time * params.rs_row_scale * ((double)uv(1) / H - 0.5);
++        Eigen::Vector3d b((double)un(0), (double)un(1), 1.0);
++        Eigen::Vector3d b2 = ov_core::exp_so3(w_C * tau) * b;
++        Eigen::Vector2f n2((float)(b2(0) / b2(2)), (float)(b2(1) / b2(2)));
++        Eigen::Vector2f uv2 = cam->distort_f(n2);
++        double sh = std::sqrt(std::pow((double)uv2(0) - uv(0), 2) + std::pow((double)uv2(1) - uv(1), 2));
++        rs_sum_shift += sh;
++        rs_max_shift = std::max(rs_max_shift, sh);
++        rs_n_feats++;
++        uv(0) = uv2(0);
++        uv(1) = uv2(1);
++        un(0) = n2(0);
++        un(1) = n2(1);
++        break;
++      }
++    }
++  }
++  if (rs_n_frames % 300 == 0) {
++    PRINT_WARNING("[RS] frames %ld feats %ld mean_shift_px %.4f max_shift_px %.4f mean_w_rad_s %.4f\n", rs_n_frames, rs_n_feats,
++                  rs_n_feats ? rs_sum_shift / rs_n_feats : 0.0, rs_max_shift, rs_sum_w / rs_n_frames);
++  }
++}
+diff -ru open_vins_zbase/ov_msckf/src/core/VioManager.h open_vins_rs/ov_msckf/src/core/VioManager.h
+--- open_vins_zbase/ov_msckf/src/core/VioManager.h	2026-10-20 12:19:38.377556203 +0900
++++ open_vins_rs/ov_msckf/src/core/VioManager.h	2026-10-23 10:45:44.252218415 +0900
+@@ -27,6 +27,7 @@
+ #include <atomic>
+ #include <boost/filesystem.hpp>
+ #include <fstream>
++#include <deque>
+ #include <memory>
+ #include <mutex>
+ #include <string>
+@@ -153,6 +154,15 @@
+    */
+   void do_feature_propagate_update(const ov_core::CameraData &message);
+ 
++  /// RS (open_vins_rs): rotate the newest feature measurements of this frame from their row time to the frame-centre time
++  /// using the gyro (pure rotation, translation ignored). Only called when params.rs_readout_time != 0.
++  void rs_correct_features(const ov_core::CameraData &message);
++
++  /// RS: recent raw IMU samples (only filled when rs_readout_time != 0) and running statistics
++  std::deque<ov_core::ImuData> rs_imu;
++  long rs_n_frames = 0, rs_n_feats = 0;
++  double rs_sum_shift = 0.0, rs_max_shift = 0.0, rs_sum_w = 0.0;
++
+   /**
+    * @brief This function will try to initialize the state.
+    *
+diff -ru open_vins_zbase/ov_msckf/src/core/VioManagerOptions.h open_vins_rs/ov_msckf/src/core/VioManagerOptions.h
+--- open_vins_zbase/ov_msckf/src/core/VioManagerOptions.h	2026-10-20 12:19:38.377556203 +0900
++++ open_vins_rs/ov_msckf/src/core/VioManagerOptions.h	2026-10-23 10:45:44.252218415 +0900
+@@ -94,6 +94,13 @@
+   /// If we should only use the zupt at the very beginning static initialization phase
+   bool zupt_only_at_beginning = false;
+ 
++  /// RS (open_vins_rs, 2026-10-23): rolling-shutter readout time of the fed image rows, seconds (first->last row, signed:
++  /// > 0 = top row exposed first). 0 = off (default): no code path changes, output identical to the base build.
++  double rs_readout_time = 0.0;
++
++  /// RS: multiplier on the row fraction (v/H - 0.5) (e.g. raw-sensor rows covered by the fed image after undistort crop). 1 = none
++  double rs_row_scale = 1.0;
++
+   /// If we should record the timing performance to file
+   bool record_timing_information = false;
+ 
+@@ -118,6 +125,8 @@
+       parser->parse_config("zupt_max_disparity", zupt_max_disparity);
+       parser->parse_config("zupt_only_at_beginning", zupt_only_at_beginning);
+       parser->parse_config("record_timing_information", record_timing_information);
++      parser->parse_config("rs_readout_time", rs_readout_time, false);
++      parser->parse_config("rs_row_scale", rs_row_scale, false);
+       parser->parse_config("record_timing_filepath", record_timing_filepath);
+     }
+     PRINT_DEBUG("  - dt_slam_delay: %.1f\n", dt_slam_delay);
+@@ -127,6 +136,7 @@
+     PRINT_DEBUG("  - zupt_max_disparity: %.4f\n", zupt_max_disparity);
+     PRINT_DEBUG("  - zupt_only_at_beginning?: %d\n", zupt_only_at_beginning);
+     PRINT_DEBUG("  - record timing?: %d\n", (int)record_timing_information);
++    PRINT_INFO("  - rs_readout_time: %.6f s, rs_row_scale: %.4f\n", rs_readout_time, rs_row_scale);
+     PRINT_DEBUG("  - record timing filepath: %s\n", record_timing_filepath.c_str());
+   }
+ 
