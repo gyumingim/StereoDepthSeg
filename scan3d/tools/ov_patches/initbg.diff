@@ -1,0 +1,55 @@
+diff -ru open_vins/ov_init/src/init/InertialInitializerOptions.h open_vins_initbg/ov_init/src/init/InertialInitializerOptions.h
+--- open_vins/ov_init/src/init/InertialInitializerOptions.h	2026-10-16 09:08:28.098302786 +0900
++++ open_vins_initbg/ov_init/src/init/InertialInitializerOptions.h	2026-10-23 14:05:56.747255482 +0900
+@@ -69,6 +69,12 @@
+   /// Max disparity we will consider the unit to be stationary
+   double init_max_disparity = 1.0;
+ 
++  /// (open_vins_initbg) static init gyro bias: 0 = window mean (stock), 1 = zero, 2 = init_bg_prior
++  int init_bg_mode = 0;
++
++  /// (open_vins_initbg) gyro bias prior for init_bg_mode 2 (rad/s)
++  Eigen::Vector3d init_bg_prior = Eigen::Vector3d::Zero();
++
+   /// Number of features we should try to track
+   int init_max_features = 50;
+ 
+@@ -127,6 +133,10 @@
+       parser->parse_config("init_window_time", init_window_time);
+       parser->parse_config("init_imu_thresh", init_imu_thresh);
+       parser->parse_config("init_max_disparity", init_max_disparity);
++      parser->parse_config("init_bg_mode", init_bg_mode, false);
++      std::vector<double> bg_prior = {0, 0, 0};
++      parser->parse_config("init_bg_prior", bg_prior, false);
++      init_bg_prior << bg_prior.at(0), bg_prior.at(1), bg_prior.at(2);
+       parser->parse_config("init_max_features", init_max_features);
+       parser->parse_config("init_dyn_use", init_dyn_use);
+       parser->parse_config("init_dyn_mle_opt_calib", init_dyn_mle_opt_calib);
+@@ -150,6 +160,7 @@
+     PRINT_DEBUG("  - init_window_time: %.2f\n", init_window_time);
+     PRINT_DEBUG("  - init_imu_thresh: %.2f\n", init_imu_thresh);
+     PRINT_DEBUG("  - init_max_disparity: %.2f\n", init_max_disparity);
++    PRINT_DEBUG("  - init_bg_mode: %d prior %.5f, %.5f, %.5f\n", init_bg_mode, init_bg_prior(0), init_bg_prior(1), init_bg_prior(2));
+     PRINT_DEBUG("  - init_max_features: %.2f\n", init_max_features);
+     if (init_max_features < 15) {
+       PRINT_ERROR(RED "number of requested feature tracks to init not enough!!\n" RESET);
+diff -ru open_vins/ov_init/src/static/StaticInitializer.cpp open_vins_initbg/ov_init/src/static/StaticInitializer.cpp
+--- open_vins/ov_init/src/static/StaticInitializer.cpp	2026-10-16 09:08:28.098302786 +0900
++++ open_vins_initbg/ov_init/src/static/StaticInitializer.cpp	2026-10-23 14:05:56.747255482 +0900
+@@ -128,6 +128,16 @@
+   Eigen::Vector3d gravity_inG;
+   gravity_inG << 0.0, 0.0, params.gravity_mag;
+   Eigen::Vector3d bg = w_avg_2to1;
++  // (open_vins_initbg) bias from a prior instead of the window mean
++  if (params.init_bg_mode == 1) {
++    bg.setZero();
++  } else if (params.init_bg_mode == 2) {
++    bg = params.init_bg_prior;
++  }
++  if (params.init_bg_mode != 0) {
++    PRINT_INFO(GREEN "[init-s]: bg mode %d -> %.5f, %.5f, %.5f (window mean %.5f, %.5f, %.5f)\n" RESET, params.init_bg_mode, bg(0), bg(1),
++               bg(2), w_avg_2to1(0), w_avg_2to1(1), w_avg_2to1(2));
++  }
+   Eigen::Vector3d ba = a_avg_2to1 - quat_2_Rot(q_GtoI) * gravity_inG;
+ 
+   // Set our state variables
