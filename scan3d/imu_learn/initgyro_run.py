@@ -28,11 +28,14 @@ sys.path.insert(0, str(HERE))
 from phone60_run import RAW, OLD, DROP  # noqa: E402
 
 PY = "../venv_ffs/bin/python"
-OUT = Path("runs/initgyro")
+# IG_TH / IG_OUT (env, inherited by job subprocesses): 2026-10-23 POST-HOC loose gate 0.25 -> runs/initgyro_025
+# (docs/initgyro025_plan.md). Defaults = the first pre-registered run (0.05, runs/initgyro).
+OUT = Path(os.environ.get("IG_OUT", "runs/initgyro"))
 REF_DIR = Path("runs/phone60")
 PAR = int(os.environ.get("PAR", 12))
 BRIDGE = Path.home() / "scanner" / "src" / "ovbuild_initgyro_bridge" / "ov_bridge"
-TH = 0.05                       # rad/s, fixed from runs/initgyro/thresh.json BEFORE the comparison (plan)
+BITCHECK = Path("runs/initgyro/bitcheck.json")   # same bridge for every threshold
+TH = float(os.environ.get("IG_TH", 0.05))  # rad/s; 0.05 fixed from runs/initgyro/thresh.json BEFORE the first comparison
 CONDS = {"ig0": 0.0, "ig": TH}
 
 
@@ -110,10 +113,10 @@ def job(name):
 def run_sched():
     dirty = subprocess.run(["git", "status", "--porcelain", "--untracked-files=no", "imu_learn/vio_bench_hs.py",
                             "imu_learn/initgyro_run.py", "config/mono", "ov_bridge/main.cpp", "tools/ov_patches/initgyro.diff",
-                            "docs/initgyro_plan.md"], capture_output=True, text=True).stdout
+                            "docs/initgyro_plan.md", "docs/initgyro025_plan.md"], capture_output=True, text=True).stdout
     if dirty.strip():
         sys.exit(f"REFUSED: uncommitted {dirty}")
-    if not (OUT / "bitcheck.json").exists() or not json.load(open(OUT / "bitcheck.json")).get("identical"):
+    if not BITCHECK.exists() or not json.load(open(BITCHECK)).get("identical"):
         sys.exit("REFUSED: bitcheck missing or not identical")
     q = [j for j in jobs() if not (OUT / f"{j['name']}.json").exists()]
     running, t_all = {}, time.time()
