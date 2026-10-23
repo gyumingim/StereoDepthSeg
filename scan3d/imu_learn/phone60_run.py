@@ -37,7 +37,9 @@ CONDS = {"base": ("config/mono", 11, ""), "phone60": ("config/phone60", 20, ""),
          # ablations (docs/phone60_ablation_plan.md): one change each
          "V1": ("config/phone60", 20, "calib_cam_intrinsics=false"),
          "V2": ("config/mono", 11, "zupt_only_at_beginning=true"),
-         "V3": ("config/mono", 11, "calib_cam_intrinsics=true")}
+         "V3": ("config/mono", 11, "calib_cam_intrinsics=true"),
+         "V4": ("config/mono", 11, "try_zupt=false"),
+         "zob": ("config/base_zob", 11, "")}   # = V2 via the template file (identity check)
 ACTIVE = os.environ.get("CONDS", "base,phone60").split(",")
 
 
