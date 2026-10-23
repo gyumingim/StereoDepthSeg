@@ -157,6 +157,37 @@ def sanity(rec="recordings/hs_20261022_133820", secs=30.0):
         json.dump(res, open(OUT / "sanity.json", "w"), indent=1)
 
 
+V2_DIR = Path("runs/phone60")                               # phone60 ablation V2 = config/mono + zupt_only_at_beginning
+
+
+def reuse_v2():
+    """Base runs are taken from runs/phone60/<key>_V2 only if v2check found pose-level identity (2026-10-23 amendment)."""
+    p = OUT / "v2check.json"
+    return p.exists() and json.load(open(p)).get("identical") is True
+
+
+def base_pre(name):
+    key = name.rsplit("_", 1)[0]
+    return V2_DIR / f"{key}_V2" if reuse_v2() else OUT / name
+
+
+def v2check(key="133820_o0"):
+    """Full-length run of one cell: RS bridge rs=0 (base) vs the stored V2 poses of the same cell."""
+    OUT.mkdir(parents=True, exist_ok=True)
+    rec = next(r for r in RAW + OLD if r.endswith(key.split("_")[0]))
+    r, P = replay(f"recordings/{rec}", int(key.split("_o")[1]), 0.0, RS_BRIDGE)
+    V = [json.loads(x) for x in gzip.open(str(V2_DIR / f"{key}_V2") + ".poses.jsonl.gz", "rt") if x.strip()]
+    strip = lambda Q: [{k: v for k, v in m.items() if k not in ("ms", "wall_ms")} for m in Q]
+    same = strip(P) == strip(V)
+    res = dict(made=time.strftime("%F %T"), key=key, n_poses=[len(P), len(V)], identical=same,
+               ate=[r.get("ate_cm"), json.load(open(V2_DIR / f"{key}_V2.json")).get("ate_cm")],
+               template=r.get("rs_template"), cfg_over=r.get("rs_cfg_over"), keys_ignored=["ms", "wall_ms"])
+    if not same:
+        res["first_diff"] = next((i for i, (x, y) in enumerate(zip(strip(P), strip(V))) if x != y), None)
+    json.dump(res, open(OUT / "v2check.json", "w"), indent=1)
+    print(json.dumps(res, indent=1))
+
+
 def jobs():
     return [dict(rec=r, off=o, cond=c, name=f"{r[-6:]}_o{o}_{c}") for r in RAW + OLD for o in (0, 1, 2) for c in CONDS]
 
@@ -178,7 +209,7 @@ def run_sched():
                            capture_output=True, text=True).stdout
     if dirty.strip():
         sys.exit(f"REFUSED: uncommitted {dirty}")
-    q = [j for j in jobs() if not (OUT / f"{j['name']}.json").exists()]
+    q = [j for j in jobs() if not (OUT / f"{j['name']}.json").exists() and not (j["cond"] == "base" and reuse_v2())]
     running = {}
     print(f"{time.strftime('%F %T')} start {len(q)} jobs PAR {PAR}", flush=True)
     while q or running:
@@ -201,12 +232,13 @@ def score():
     os.chdir(SCAN3D)
     runs = {}
     for j in jobs():
-        pre = OUT / j["name"]
+        pre = base_pre(j["name"]) if j["cond"] == "base" else OUT / j["name"]
         d = json.load(open(str(pre) + ".json")) if Path(str(pre) + ".json").exists() else {}
         m = zs.run_metrics(pre, j["rec"]) if d else dict(divergent=True, why="missing")
         runs[j["name"]] = dict(rec=j["rec"], key=j["name"].rsplit("_", 1)[0], cond=j["cond"], div=bool(m.get("divergent")),
                                ate_w=m.get("ate_w"), rel5_max=m.get("rel5_max"), dt_final_ms=d.get("dt_cam_imu_final_ms"))
-    res = dict(made=time.strftime("%F %T"), runs=runs, conds={}, criteria={})
+    res = dict(made=time.strftime("%F %T"), runs=runs, conds={}, criteria={},
+               base_source=str(V2_DIR / "<key>_V2") if reuse_v2() else str(OUT / "<key>_base"))
     for c in CONDS:
         R = [r for r in runs.values() if r["cond"] == c]
         res["conds"][c] = dict(n_div_excl_drop=sum(r["div"] for r in R if r["rec"] != DROP),
@@ -231,6 +263,8 @@ def main():
     if cmd == "job":
         OUT.mkdir(parents=True, exist_ok=True)
         return job(sys.argv[2])
+    if cmd == "v2check":
+        return v2check(*sys.argv[2:3])
     if cmd in ("bitcheck", "sanity"):
         rec = sys.argv[2] if len(sys.argv) > 2 else "recordings/hs_20261022_133820"
         secs = float(sys.argv[3]) if len(sys.argv) > 3 else 30.0

@@ -33,7 +33,11 @@
   **비교 시작 전에 `config/base_zob` 가 커밋되어 있어야 한다** (러너가 미커밋이면 거부).
 - 나머지는 phone60 비교와 같다: 60 fps 640x360, `--clones 11`, strict 초기화 (init_window 1.0, init_disp 15), `--frame-cache`,
   원시 IMU (131326·154320 은 원시 없음 → 보정 IMU, 세 조건 같음), `gyro_rebias False`, `num_opencv_threads 2`, still-hold 꺼짐, IMU lead 2 s, 끝까지.
-- 세 조건 모두 같은 다리 `tools/ov_bridge_rs` 로 돌린다. base(0) 가 stock 다리와 같은 결과인지는 `rs_run.py bitcheck` 로 확인 (아래 정상성 시험).
+- **수정 (2026-10-23, RS run 시작 전)**: base 는 다시 돌리지 않고 phone60 ablation 의 V2 run (`runs/phone60/<칸>_V2`,
+  = config/mono + zupt_only_at_beginning true, stock 다리, 같은 45 칸·같은 설정) 을 재사용한다.
+  조건: RS 다리 rs=0 (config/base_zob) 로 133820 o0 전체를 돌려 V2 포즈와 포즈 단위로 같아야 함 → **같음** (3833 포즈, ATE 1.57 = 1.57,
+  `runs/rs_corr/v2check.json`). 러너는 v2check.json 이 identical 일 때만 재사용한다. 새로 돌리는 run = 90 개 (rs294, rs221).
+- 세 조건 모두 같은 다리 `tools/ov_bridge_rs` 로 돌린다 (base 재사용 시 base 는 stock 다리, 위 확인으로 같은 결과). base(0) 가 stock 다리와 같은 결과인지는 `rs_run.py bitcheck` 로 확인 (아래 정상성 시험).
   같다면 ablation 의 base_zob run 을 재사용해도 되지만, 이 계획은 base 도 다시 돌린다 (같은 날·같은 다리, 단순하게).
 
 ## 녹화 × 오프셋
