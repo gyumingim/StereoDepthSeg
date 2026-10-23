@@ -1,0 +1,69 @@
+[
+ {
+  "rec": "hs_20261021_214550",
+  "gt_dir": "imu_gt_spl",
+  "win_s": 1.0,
+  "windows": 126,
+  "imu": "raw35",
+  "s": 1.0246,
+  "s_ci95": [
+   1.0066,
+   1.0379
+  ],
+  "s_boot_std": 0.0083,
+  "g_norm": 9.79,
+  "res_cm": 0.247,
+  "acc_dyn_rms_med": 0.75,
+  "gt_square_mm": 32.03,
+  "start_s": 0.0,
+  "end_s": 0.0,
+  "square_mm_raw": 32.82,
+  "s_lever": 1.0322,
+  "s_lever_ci95": [
+   1.0234,
+   1.0414
+  ],
+  "s_lever_boot_std": 0.0049,
+  "lever_fit_cm": [
+   0.17,
+   4.42,
+   -0.52
+  ],
+  "res_lever_cm": 0.141,
+  "s_fixedlever": 1.0257,
+  "s_fixedlever_ci95": [
+   1.0199,
+   1.0306
+  ],
+  "s_fixedlever_boot_std": 0.0027,
+  "lever_fixed_cm": [
+   0.49,
+   4.6,
+   -1.11
+  ],
+  "lever_fixed_source": "config/imu_cam_lever.json",
+  "res_fixedlever_cm": 0.143,
+  "g_norm_fixedlever": 9.782,
+  "check_uses": "s_fixedlever",
+  "check_tol": 0.15,
+  "check": "OK",
+  "square_mm_raw_fixedlever": 32.85,
+  "provenance": {
+   "made": "2026-10-23 16:49:34",
+   "git_head": "6325b31",
+   "git_dirty": [
+    "scan3d/imu_learn/board_rotation_power.py",
+    "scan3d/imu_learn/focus_scale.py",
+    "scan3d/imu_learn/imu_gt.py",
+    "scan3d/imu_learn/imu_gt_chunk_check.py",
+    "scan3d/imu_learn/lens_switch_gtscore.py",
+    "scan3d/imu_learn/zupt_fixA2b_dev.py"
+   ],
+   "code_sha256": {
+    "imu_gt.py": "33b1904b894051cb",
+    "aruco_scale.py": "25ee01d12a61ae37",
+    "scale_ls.py": "b23c89985ef5cd81"
+   }
+  }
+ }
+]

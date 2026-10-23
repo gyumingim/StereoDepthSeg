@@ -1,0 +1,4803 @@
+{
+ "made": "2026-10-23 18:33:06",
+ "doc": "docs/final_baseline_20261023.md",
+ "cmp": {
+  "final": "runs/final_baseline/{k}_final",
+  "morning": "runs/phone60/{k}_base",
+  "V4": "runs/phone60/{k}_V4"
+ },
+ "gts": {
+  "newK": "imu_gt_spl_cal1022",
+  "oldK": "imu_gt_spl"
+ },
+ "excluded": "hs_20261021_213955",
+ "reproduce_stored_with_oldK": "135/135",
+ "o0_identical_to_lens_switch_new": "15/15",
+ "summary": {
+  "newK": {
+   "per_config": {
+    "final": {
+     "div": 5,
+     "n": 42,
+     "n_normal": 37,
+     "ate_w_med": 0.675,
+     "sim3_med": 0.67,
+     "scale_med": 0.9969,
+     "abs_scale_err_med": 0.0065
+    },
+    "morning": {
+     "div": 16,
+     "n": 42,
+     "n_normal": 26,
+     "ate_w_med": 1.0881,
+     "sim3_med": 1.02,
+     "scale_med": 1.0059,
+     "abs_scale_err_med": 0.0205
+    },
+    "V4": {
+     "div": 6,
+     "n": 42,
+     "n_normal": 36,
+     "ate_w_med": 0.817,
+     "sim3_med": 0.805,
+     "scale_med": 1.0072,
+     "abs_scale_err_med": 0.0193
+    }
+   },
+   "per_offset": {
+    "0": {
+     "final": {
+      "div": 1,
+      "n": 14,
+      "n_normal": 13,
+      "ate_w_med": 0.6724,
+      "sim3_med": 0.67,
+      "scale_med": 1.0002,
+      "abs_scale_err_med": 0.0065
+     },
+     "morning": {
+      "div": 5,
+      "n": 14,
+      "n_normal": 9,
+      "ate_w_med": 1.1157,
+      "sim3_med": 1.08,
+      "scale_med": 0.9959,
+      "abs_scale_err_med": 0.0212
+     },
+     "V4": {
+      "div": 2,
+      "n": 14,
+      "n_normal": 12,
+      "ate_w_med": 0.9688,
+      "sim3_med": 0.935,
+      "scale_med": 1.0029,
+      "abs_scale_err_med": 0.025
+     }
+    },
+    "1": {
+     "final": {
+      "div": 3,
+      "n": 14,
+      "n_normal": 11,
+      "ate_w_med": 0.7287,
+      "sim3_med": 0.71,
+      "scale_med": 0.9954,
+      "abs_scale_err_med": 0.0062
+     },
+     "morning": {
+      "div": 5,
+      "n": 14,
+      "n_normal": 9,
+      "ate_w_med": 1.0096,
+      "sim3_med": 0.78,
+      "scale_med": 1.0168,
+      "abs_scale_err_med": 0.0208
+     },
+     "V4": {
+      "div": 2,
+      "n": 14,
+      "n_normal": 12,
+      "ate_w_med": 0.8019,
+      "sim3_med": 0.795,
+      "scale_med": 1.0067,
+      "abs_scale_err_med": 0.0183
+     }
+    },
+    "2": {
+     "final": {
+      "div": 1,
+      "n": 14,
+      "n_normal": 13,
+      "ate_w_med": 0.675,
+      "sim3_med": 0.63,
+      "scale_med": 0.9969,
+      "abs_scale_err_med": 0.0105
+     },
+     "morning": {
+      "div": 6,
+      "n": 14,
+      "n_normal": 8,
+      "ate_w_med": 0.9959,
+      "sim3_med": 0.915,
+      "scale_med": 0.9945,
+      "abs_scale_err_med": 0.0185
+     },
+     "V4": {
+      "div": 2,
+      "n": 14,
+      "n_normal": 12,
+      "ate_w_med": 0.8012,
+      "sim3_med": 0.785,
+      "scale_med": 1.0111,
+      "abs_scale_err_med": 0.0171
+     }
+    }
+   },
+   "paired_morning_to_final": {
+    "n_both_normal": 25,
+    "d_med": -0.276,
+    "n_b_better": 22,
+    "med_a": 1.0814,
+    "med_b": 0.675
+   },
+   "paired_V4_to_final": {
+    "n_both_normal": 35,
+    "d_med": -0.165,
+    "n_b_better": 29,
+    "med_a": 0.8244,
+    "med_b": 0.6724
+   }
+  },
+  "oldK": {
+   "per_config": {
+    "final": {
+     "div": 5,
+     "n": 42,
+     "n_normal": 37,
+     "ate_w_med": 0.8159,
+     "sim3_med": 0.66,
+     "scale_med": 0.9726,
+     "abs_scale_err_med": 0.0281
+    },
+    "morning": {
+     "div": 16,
+     "n": 42,
+     "n_normal": 26,
+     "ate_w_med": 1.1803,
+     "sim3_med": 0.955,
+     "scale_med": 0.9766,
+     "abs_scale_err_med": 0.0295
+    },
+    "V4": {
+     "div": 6,
+     "n": 42,
+     "n_normal": 36,
+     "ate_w_med": 0.8059,
+     "sim3_med": 0.74,
+     "scale_med": 0.9803,
+     "abs_scale_err_med": 0.0197
+    }
+   },
+   "per_offset": {
+    "0": {
+     "final": {
+      "div": 1,
+      "n": 14,
+      "n_normal": 13,
+      "ate_w_med": 0.7286,
+      "sim3_med": 0.7,
+      "scale_med": 0.9738,
+      "abs_scale_err_med": 0.0269
+     },
+     "morning": {
+      "div": 5,
+      "n": 14,
+      "n_normal": 9,
+      "ate_w_med": 1.3152,
+      "sim3_med": 1.07,
+      "scale_med": 0.9683,
+      "abs_scale_err_med": 0.0344
+     },
+     "V4": {
+      "div": 2,
+      "n": 14,
+      "n_normal": 12,
+      "ate_w_med": 0.8998,
+      "sim3_med": 0.79,
+      "scale_med": 0.9784,
+      "abs_scale_err_med": 0.0216
+     }
+    },
+    "1": {
+     "final": {
+      "div": 3,
+      "n": 14,
+      "n_normal": 11,
+      "ate_w_med": 0.8587,
+      "sim3_med": 0.66,
+      "scale_med": 0.97,
+      "abs_scale_err_med": 0.03
+     },
+     "morning": {
+      "div": 5,
+      "n": 14,
+      "n_normal": 9,
+      "ate_w_med": 1.1907,
+      "sim3_med": 0.76,
+      "scale_med": 0.9888,
+      "abs_scale_err_med": 0.026
+     },
+     "V4": {
+      "div": 2,
+      "n": 14,
+      "n_normal": 12,
+      "ate_w_med": 0.7848,
+      "sim3_med": 0.74,
+      "scale_med": 0.9793,
+      "abs_scale_err_med": 0.0207
+     }
+    },
+    "2": {
+     "final": {
+      "div": 1,
+      "n": 14,
+      "n_normal": 13,
+      "ate_w_med": 0.8159,
+      "sim3_med": 0.62,
+      "scale_med": 0.9691,
+      "abs_scale_err_med": 0.0309
+     },
+     "morning": {
+      "div": 6,
+      "n": 14,
+      "n_normal": 8,
+      "ate_w_med": 1.0722,
+      "sim3_med": 0.875,
+      "scale_med": 0.9738,
+      "abs_scale_err_med": 0.0262
+     },
+     "V4": {
+      "div": 2,
+      "n": 14,
+      "n_normal": 12,
+      "ate_w_med": 0.7603,
+      "sim3_med": 0.725,
+      "scale_med": 0.9835,
+      "abs_scale_err_med": 0.0165
+     }
+    }
+   },
+   "paired_morning_to_final": {
+    "n_both_normal": 25,
+    "d_med": -0.128,
+    "n_b_better": 19,
+    "med_a": 1.17,
+    "med_b": 0.7228
+   },
+   "paired_V4_to_final": {
+    "n_both_normal": 35,
+    "d_med": 0.004,
+    "n_b_better": 17,
+    "med_a": 0.8117,
+    "med_b": 0.8252
+   }
+  }
+ },
+ "rows": {
+  "133820_o0": {
+   "rec": "hs_20261022_133820",
+   "key": "133820_o0",
+   "off": 0,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.3843816156202127,
+     "rel5_max": 6.851716622846078,
+     "ate_cm": 1.38,
+     "ate_sim3_cm": 1.29,
+     "scale": 0.9734,
+     "matched": 3351,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.4332622895200198,
+     "rel5_max": 7.378838079899992,
+     "ate_cm": 1.43,
+     "ate_sim3_cm": 1.21,
+     "scale": 0.9588,
+     "matched": 3351,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 7.0
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": true,
+     "ate_w": 374.5555384920202,
+     "rel5_max": 649.1511880320389,
+     "ate_cm": 374.56,
+     "ate_sim3_cm": 7.44,
+     "scale": 0.0422,
+     "matched": 3358,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 374.81515200826084,
+     "rel5_max": 649.6828254126741,
+     "ate_cm": 374.82,
+     "ate_sim3_cm": 7.34,
+     "scale": 0.0415,
+     "matched": 3358,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 6.883
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.2803706010064027,
+     "rel5_max": 7.031591356668096,
+     "ate_cm": 1.28,
+     "ate_sim3_cm": 1.12,
+     "scale": 0.9669,
+     "matched": 3351,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.3849729880239794,
+     "rel5_max": 7.569930553115204,
+     "ate_cm": 1.38,
+     "ate_sim3_cm": 1.06,
+     "scale": 0.9523,
+     "matched": 3351,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 7.0
+    }
+   }
+  },
+  "133820_o1": {
+   "rec": "hs_20261022_133820",
+   "key": "133820_o1",
+   "off": 1,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.4573821166164633,
+     "rel5_max": 6.77984919233525,
+     "ate_cm": 1.46,
+     "ate_sim3_cm": 1.25,
+     "scale": 0.9603,
+     "matched": 3351,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.5543963310870157,
+     "rel5_max": 7.314658469952443,
+     "ate_cm": 1.55,
+     "ate_sim3_cm": 1.18,
+     "scale": 0.9458,
+     "matched": 3351,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 5.999
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": true,
+     "ate_w": 385.44930848649534,
+     "rel5_max": 669.20001471986,
+     "ate_cm": 385.45,
+     "ate_sim3_cm": 7.44,
+     "scale": 0.041,
+     "matched": 3359,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 385.70962278896644,
+     "rel5_max": 669.7285506008415,
+     "ate_cm": 385.71,
+     "ate_sim3_cm": 7.35,
+     "scale": 0.0404,
+     "matched": 3359,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 5.865
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.4425030813518358,
+     "rel5_max": 6.836872246759644,
+     "ate_cm": 1.44,
+     "ate_sim3_cm": 1.24,
+     "scale": 0.9607,
+     "matched": 3351,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.53051976617901,
+     "rel5_max": 7.373379285566522,
+     "ate_cm": 1.53,
+     "ate_sim3_cm": 1.15,
+     "scale": 0.9463,
+     "matched": 3351,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 5.999
+    }
+   }
+  },
+  "133820_o2": {
+   "rec": "hs_20261022_133820",
+   "key": "133820_o2",
+   "off": 2,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.7879103638247726,
+     "rel5_max": 7.177010315603302,
+     "ate_cm": 1.79,
+     "ate_sim3_cm": 1.49,
+     "scale": 0.948,
+     "matched": 3351,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.8710637609884582,
+     "rel5_max": 7.711777432643864,
+     "ate_cm": 1.87,
+     "ate_sim3_cm": 1.39,
+     "scale": 0.9339,
+     "matched": 3351,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 4.985
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": true,
+     "ate_w": 279.3868477548,
+     "rel5_max": 451.25775605396774,
+     "ate_cm": 279.39,
+     "ate_sim3_cm": 7.59,
+     "scale": 0.0555,
+     "matched": 3357,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 279.6468347287576,
+     "rel5_max": 451.78489714829635,
+     "ate_cm": 279.65,
+     "ate_sim3_cm": 7.5,
+     "scale": 0.0546,
+     "matched": 3357,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 4.885
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 2.067704182170127,
+     "rel5_max": 10.06923502199971,
+     "ate_cm": 2.07,
+     "ate_sim3_cm": 1.33,
+     "scale": 0.9191,
+     "matched": 3351,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 2.2608638465281663,
+     "rel5_max": 10.618923591206917,
+     "ate_cm": 2.26,
+     "ate_sim3_cm": 1.29,
+     "scale": 0.9051,
+     "matched": 3351,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 4.985
+    }
+   }
+  },
+  "134550_o0": {
+   "rec": "hs_20261022_134550",
+   "key": "134550_o0",
+   "off": 0,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.286942048431459,
+     "rel5_max": 4.546510828257824,
+     "ate_cm": 1.29,
+     "ate_sim3_cm": 1.28,
+     "scale": 0.9935,
+     "matched": 3472,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.3435631860295343,
+     "rel5_max": 4.820225999683263,
+     "ate_cm": 1.34,
+     "ate_sim3_cm": 1.27,
+     "scale": 0.9681,
+     "matched": 3472,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 5.565
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 2.283335051512582,
+     "rel5_max": 20.251067838521504,
+     "ate_cm": 2.28,
+     "ate_sim3_cm": 2.23,
+     "scale": 0.9637,
+     "matched": 3510,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 2.3287096354924683,
+     "rel5_max": 20.312974190977666,
+     "ate_cm": 2.33,
+     "ate_sim3_cm": 2.17,
+     "scale": 0.9392,
+     "matched": 3510,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 4.935
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.824224034725488,
+     "rel5_max": 10.280980899252269,
+     "ate_cm": 1.82,
+     "ate_sim3_cm": 1.77,
+     "scale": 0.967,
+     "matched": 3471,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.9026846576974357,
+     "rel5_max": 10.781483350122851,
+     "ate_cm": 1.9,
+     "ate_sim3_cm": 1.73,
+     "scale": 0.9423,
+     "matched": 3471,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 5.582
+    }
+   }
+  },
+  "134550_o1": {
+   "rec": "hs_20261022_134550",
+   "key": "134550_o1",
+   "off": 1,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.1323346007709132,
+     "rel5_max": 4.536798511162934,
+     "ate_cm": 1.13,
+     "ate_sim3_cm": 1.13,
+     "scale": 0.9954,
+     "matched": 3472,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.190360369670715,
+     "rel5_max": 4.769028753513013,
+     "ate_cm": 1.19,
+     "ate_sim3_cm": 1.12,
+     "scale": 0.97,
+     "matched": 3472,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 4.564
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.8417807706356643,
+     "rel5_max": 4.819372088689842,
+     "ate_cm": 0.84,
+     "ate_sim3_cm": 0.78,
+     "scale": 1.0237,
+     "matched": 3511,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.7642883693143119,
+     "rel5_max": 5.483048520911073,
+     "ate_cm": 0.76,
+     "ate_sim3_cm": 0.76,
+     "scale": 0.9977,
+     "matched": 3511,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 3.917
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.6876124691525392,
+     "rel5_max": 10.16806166930468,
+     "ate_cm": 1.69,
+     "ate_sim3_cm": 1.63,
+     "scale": 0.9689,
+     "matched": 3471,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.7734997583564622,
+     "rel5_max": 10.68134025128841,
+     "ate_cm": 1.77,
+     "ate_sim3_cm": 1.6,
+     "scale": 0.9442,
+     "matched": 3471,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 4.581
+    }
+   }
+  },
+  "134550_o2": {
+   "rec": "hs_20261022_134550",
+   "key": "134550_o2",
+   "off": 2,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.1816651757078924,
+     "rel5_max": 4.394781280248116,
+     "ate_cm": 1.18,
+     "ate_sim3_cm": 1.17,
+     "scale": 0.9872,
+     "matched": 3472,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.2660090612455408,
+     "rel5_max": 4.68667040127801,
+     "ate_cm": 1.27,
+     "ate_sim3_cm": 1.16,
+     "scale": 0.962,
+     "matched": 3472,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 3.55
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": true,
+     "ate_w": 18.19754566746993,
+     "rel5_max": 54.68723346047612,
+     "ate_cm": 18.2,
+     "ate_sim3_cm": 5.27,
+     "scale": 0.4161,
+     "matched": 3511,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 18.45013812183118,
+     "rel5_max": 55.169253637199276,
+     "ate_cm": 18.45,
+     "ate_sim3_cm": 5.12,
+     "scale": 0.4058,
+     "matched": 3511,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 2.904
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.861811648291074,
+     "rel5_max": 10.399314927400875,
+     "ate_cm": 1.86,
+     "ate_sim3_cm": 1.79,
+     "scale": 0.9629,
+     "matched": 3471,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.9466879349688528,
+     "rel5_max": 10.928009633309998,
+     "ate_cm": 1.95,
+     "ate_sim3_cm": 1.75,
+     "scale": 0.9384,
+     "matched": 3471,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 3.567
+    }
+   }
+  },
+  "134204_o0": {
+   "rec": "hs_20261022_134204",
+   "key": "134204_o0",
+   "off": 0,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.2117711719841984,
+     "rel5_max": 5.874249644054502,
+     "ate_cm": 1.21,
+     "ate_sim3_cm": 0.79,
+     "scale": 0.9471,
+     "matched": 3534,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.4627323173930569,
+     "rel5_max": 6.651851029257699,
+     "ate_cm": 1.46,
+     "ate_sim3_cm": 0.81,
+     "scale": 0.9296,
+     "matched": 3533,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 7.601
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.11571916511523,
+     "rel5_max": 6.482636411017246,
+     "ate_cm": 1.12,
+     "ate_sim3_cm": 0.84,
+     "scale": 0.9574,
+     "matched": 3545,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.3151739145411152,
+     "rel5_max": 7.167686975653634,
+     "ate_cm": 1.32,
+     "ate_sim3_cm": 0.81,
+     "scale": 0.9398,
+     "matched": 3544,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 7.417
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 2.232811882684911,
+     "rel5_max": 12.94615031381501,
+     "ate_cm": 2.23,
+     "ate_sim3_cm": 1.58,
+     "scale": 0.912,
+     "matched": 3534,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 2.454473196918871,
+     "rel5_max": 13.7029073596325,
+     "ate_cm": 2.45,
+     "ate_sim3_cm": 1.58,
+     "scale": 0.8951,
+     "matched": 3533,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 7.601
+    }
+   }
+  },
+  "134204_o1": {
+   "rec": "hs_20261022_134204",
+   "key": "134204_o1",
+   "off": 1,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 2.5366293382355223,
+     "rel5_max": 10.456611363238133,
+     "ate_cm": 2.54,
+     "ate_sim3_cm": 1.73,
+     "scale": 0.898,
+     "matched": 3534,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 2.78794311683175,
+     "rel5_max": 11.357545149818375,
+     "ate_cm": 2.79,
+     "ate_sim3_cm": 1.76,
+     "scale": 0.8811,
+     "matched": 3533,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 6.6
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.0095705518125648,
+     "rel5_max": 6.673767976451216,
+     "ate_cm": 1.01,
+     "ate_sim3_cm": 0.78,
+     "scale": 0.9623,
+     "matched": 3546,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.1907406130025306,
+     "rel5_max": 7.38017258446067,
+     "ate_cm": 1.19,
+     "ate_sim3_cm": 0.72,
+     "scale": 0.9447,
+     "matched": 3545,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 6.399
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.8677520117253186,
+     "rel5_max": 11.393917210330267,
+     "ate_cm": 1.87,
+     "ate_sim3_cm": 1.38,
+     "scale": 0.9287,
+     "matched": 3534,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 2.074403863860518,
+     "rel5_max": 12.126551523167496,
+     "ate_cm": 2.07,
+     "ate_sim3_cm": 1.37,
+     "scale": 0.9115,
+     "matched": 3533,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 6.6
+    }
+   }
+  },
+  "134204_o2": {
+   "rec": "hs_20261022_134204",
+   "key": "134204_o2",
+   "off": 2,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.8003735313531422,
+     "rel5_max": 1.9833049644891858,
+     "ate_cm": 0.8,
+     "ate_sim3_cm": 0.67,
+     "scale": 0.9744,
+     "matched": 3534,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.0193125362663278,
+     "rel5_max": 2.917370779353591,
+     "ate_cm": 1.02,
+     "ate_sim3_cm": 0.71,
+     "scale": 0.9563,
+     "matched": 3533,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 5.586
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.8969260734088337,
+     "rel5_max": 6.052860355230091,
+     "ate_cm": 0.9,
+     "ate_sim3_cm": 0.75,
+     "scale": 0.9711,
+     "matched": 3544,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.0570205521757599,
+     "rel5_max": 6.721943514843905,
+     "ate_cm": 1.06,
+     "ate_sim3_cm": 0.7,
+     "scale": 0.9533,
+     "matched": 3543,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 5.419
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.223685697912999,
+     "rel5_max": 9.27543101271196,
+     "ate_cm": 1.22,
+     "ate_sim3_cm": 0.96,
+     "scale": 0.9561,
+     "matched": 3534,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.4128510928313263,
+     "rel5_max": 9.908313379002763,
+     "ate_cm": 1.41,
+     "ate_sim3_cm": 0.94,
+     "scale": 0.9385,
+     "matched": 3533,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 5.586
+    }
+   }
+  },
+  "214550_o0": {
+   "rec": "hs_20261021_214550",
+   "key": "214550_o0",
+   "off": 0,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.4827809034947398,
+     "rel5_max": 1.7913185433315109,
+     "ate_cm": 0.48,
+     "ate_sim3_cm": 0.47,
+     "scale": 0.99,
+     "matched": 7458,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.6525536452297244,
+     "rel5_max": 1.9674857241628794,
+     "ate_cm": 0.65,
+     "ate_sim3_cm": 0.47,
+     "scale": 0.9631,
+     "matched": 7457,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 9.699
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": true,
+     "ate_w": 22.03120588121855,
+     "rel5_max": 150.94015967365632,
+     "ate_cm": 22.03,
+     "ate_sim3_cm": 10.55,
+     "scale": 0.2404,
+     "matched": 7995,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 22.049027962097284,
+     "rel5_max": 151.09986846631585,
+     "ate_cm": 22.05,
+     "ate_sim3_cm": 10.27,
+     "scale": 0.2336,
+     "matched": 7994,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 0.617
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.7245136542425911,
+     "rel5_max": 4.100705581076937,
+     "ate_cm": 0.72,
+     "ate_sim3_cm": 0.67,
+     "scale": 1.0232,
+     "matched": 7458,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.6533844548413116,
+     "rel5_max": 4.747365654066785,
+     "ate_cm": 0.65,
+     "ate_sim3_cm": 0.65,
+     "scale": 0.9955,
+     "matched": 7457,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 9.699
+    }
+   }
+  },
+  "214550_o1": {
+   "rec": "hs_20261021_214550",
+   "key": "214550_o1",
+   "off": 1,
+   "final": {
+    "newK": {
+     "div": true,
+     "ate_w": 889.300883191276,
+     "rel5_max": 2422.2529477603503,
+     "ate_cm": 889.3,
+     "ate_sim3_cm": 9.66,
+     "scale": 0.0009,
+     "matched": 804,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 889.3314172099647,
+     "rel5_max": 2422.127421567295,
+     "ate_cm": 889.33,
+     "ate_sim3_cm": 9.37,
+     "scale": 0.0009,
+     "matched": 804,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 8.698
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": true,
+     "ate_w": 18.298015440956952,
+     "rel5_max": 154.10020330940736,
+     "ate_cm": 18.3,
+     "ate_sim3_cm": 10.25,
+     "scale": 0.3044,
+     "matched": 7933,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 18.287606524409412,
+     "rel5_max": 153.80101651573636,
+     "ate_cm": 18.29,
+     "ate_sim3_cm": 9.97,
+     "scale": 0.2963,
+     "matched": 7932,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 0.651
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.7575733247735263,
+     "rel5_max": 4.835940900020794,
+     "ate_cm": 0.76,
+     "ate_sim3_cm": 0.75,
+     "scale": 1.0109,
+     "matched": 7458,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.757846532832849,
+     "rel5_max": 5.392223154683777,
+     "ate_cm": 0.76,
+     "ate_sim3_cm": 0.73,
+     "scale": 0.9835,
+     "matched": 7457,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 8.698
+    }
+   }
+  },
+  "214550_o2": {
+   "rec": "hs_20261021_214550",
+   "key": "214550_o2",
+   "off": 2,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.6872049230854163,
+     "rel5_max": 3.5577147030845966,
+     "ate_cm": 0.69,
+     "ate_sim3_cm": 0.63,
+     "scale": 0.9785,
+     "matched": 7458,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.8623128401357165,
+     "rel5_max": 3.675545470065815,
+     "ate_cm": 0.86,
+     "ate_sim3_cm": 0.62,
+     "scale": 0.9519,
+     "matched": 7457,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 7.684
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": true,
+     "ate_w": 20.717641131734226,
+     "rel5_max": 180.96202319172107,
+     "ate_cm": 20.72,
+     "ate_sim3_cm": 10.75,
+     "scale": 0.2468,
+     "matched": 7873,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 20.701998549600027,
+     "rel5_max": 180.90872586694377,
+     "ate_cm": 20.7,
+     "ate_sim3_cm": 10.46,
+     "scale": 0.2401,
+     "matched": 7872,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 0.634
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.6852469202823117,
+     "rel5_max": 4.270560382183627,
+     "ate_cm": 0.69,
+     "ate_sim3_cm": 0.65,
+     "scale": 1.0173,
+     "matched": 7458,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.6542019978303522,
+     "rel5_max": 4.846620526195919,
+     "ate_cm": 0.65,
+     "ate_sim3_cm": 0.64,
+     "scale": 0.9897,
+     "matched": 7457,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 7.684
+    }
+   }
+  },
+  "213341_o0": {
+   "rec": "hs_20261021_213341",
+   "key": "213341_o0",
+   "off": 0,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.463064232198521,
+     "rel5_max": 1.1245151546937673,
+     "ate_cm": 0.46,
+     "ate_sim3_cm": 0.45,
+     "scale": 1.0085,
+     "matched": 7683,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.5287287352057499,
+     "rel5_max": 1.5148249159475302,
+     "ate_cm": 0.53,
+     "ate_sim3_cm": 0.45,
+     "scale": 0.9796,
+     "matched": 7674,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 11.385
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.0813737708154165,
+     "rel5_max": 5.221989107657609,
+     "ate_cm": 1.08,
+     "ate_sim3_cm": 1.08,
+     "scale": 0.9946,
+     "matched": 8054,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.1699518343525128,
+     "rel5_max": 5.751679029528817,
+     "ate_cm": 1.17,
+     "ate_sim3_cm": 1.07,
+     "scale": 0.9656,
+     "matched": 8045,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 4.618
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.49180798481115817,
+     "rel5_max": 4.303587688885611,
+     "ate_cm": 0.49,
+     "ate_sim3_cm": 0.34,
+     "scale": 1.0268,
+     "matched": 7683,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.333251496156497,
+     "rel5_max": 4.857362654620992,
+     "ate_cm": 0.33,
+     "ate_sim3_cm": 0.33,
+     "scale": 0.9975,
+     "matched": 7674,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 11.385
+    }
+   }
+  },
+  "213341_o1": {
+   "rec": "hs_20261021_213341",
+   "key": "213341_o1",
+   "off": 1,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.25457015081329043,
+     "rel5_max": 1.7904969016945802,
+     "ate_cm": 0.25,
+     "ate_sim3_cm": 0.24,
+     "scale": 1.0071,
+     "matched": 7683,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.39027534212345,
+     "rel5_max": 2.195886012325734,
+     "ate_cm": 0.39,
+     "ate_sim3_cm": 0.26,
+     "scale": 0.9783,
+     "matched": 7674,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 10.383
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.5750345159716774,
+     "rel5_max": 4.736944061115031,
+     "ate_cm": 0.58,
+     "ate_sim3_cm": 0.5,
+     "scale": 1.0208,
+     "matched": 7723,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.5109212022512143,
+     "rel5_max": 5.503848630376593,
+     "ate_cm": 0.51,
+     "ate_sim3_cm": 0.5,
+     "scale": 0.9915,
+     "matched": 7714,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 9.666
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.5070410382846615,
+     "rel5_max": 4.034345177645827,
+     "ate_cm": 0.51,
+     "ate_sim3_cm": 0.38,
+     "scale": 1.0252,
+     "matched": 7683,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.37850261373649485,
+     "rel5_max": 4.617119359578753,
+     "ate_cm": 0.38,
+     "ate_sim3_cm": 0.37,
+     "scale": 0.9959,
+     "matched": 7674,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 10.383
+    }
+   }
+  },
+  "213341_o2": {
+   "rec": "hs_20261021_213341",
+   "key": "213341_o2",
+   "off": 2,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.29018163982572315,
+     "rel5_max": 1.1603274298860011,
+     "ate_cm": 0.29,
+     "ate_sim3_cm": 0.28,
+     "scale": 1.0052,
+     "matched": 7683,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.43595039946606634,
+     "rel5_max": 1.5653354512015483,
+     "ate_cm": 0.44,
+     "ate_sim3_cm": 0.3,
+     "scale": 0.9765,
+     "matched": 7674,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 9.37
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.7081162841003341,
+     "rel5_max": 4.643784716617007,
+     "ate_cm": 0.71,
+     "ate_sim3_cm": 0.7,
+     "scale": 1.0081,
+     "matched": 7813,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.7529116228600607,
+     "rel5_max": 5.530505480887705,
+     "ate_cm": 0.75,
+     "ate_sim3_cm": 0.7,
+     "scale": 0.9791,
+     "matched": 7804,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 7.05
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.5117546492616023,
+     "rel5_max": 4.242285849871226,
+     "ate_cm": 0.51,
+     "ate_sim3_cm": 0.35,
+     "scale": 1.0287,
+     "matched": 7683,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.3372363366815779,
+     "rel5_max": 4.747500788997165,
+     "ate_cm": 0.34,
+     "ate_sim3_cm": 0.34,
+     "scale": 0.9993,
+     "matched": 7674,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 9.37
+    }
+   }
+  },
+  "213955_o0": {
+   "rec": "hs_20261021_213955",
+   "key": "213955_o0",
+   "off": 0,
+   "final": {
+    "newK": {
+     "div": true,
+     "ate_w": 1147.0578092911828,
+     "rel5_max": 2839.814504539047,
+     "ate_cm": 1147.06,
+     "ate_sim3_cm": 7.0,
+     "scale": 0.0032,
+     "matched": 594,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 1147.1430320921534,
+     "rel5_max": 2840.037988840488,
+     "ate_cm": 1147.14,
+     "ate_sim3_cm": 6.82,
+     "scale": 0.0031,
+     "matched": 594,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 11.552
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": true,
+     "ate_w": 40.28403982819558,
+     "rel5_max": 321.4992556536096,
+     "ate_cm": 40.28,
+     "ate_sim3_cm": 11.44,
+     "scale": 0.0719,
+     "matched": 7278,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 40.27783255068778,
+     "rel5_max": 321.40998170561056,
+     "ate_cm": 40.28,
+     "ate_sim3_cm": 11.11,
+     "scale": 0.0698,
+     "matched": 7277,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 10.517
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": true,
+     "ate_w": 496.44522193855386,
+     "rel5_max": 1207.4085963168707,
+     "ate_cm": 496.45,
+     "ate_sim3_cm": 6.86,
+     "scale": 0.0136,
+     "matched": 111,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 496.6253714692177,
+     "rel5_max": 1208.0459018994227,
+     "ate_cm": 496.63,
+     "ate_sim3_cm": 6.73,
+     "scale": 0.0133,
+     "matched": 111,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 11.552
+    }
+   }
+  },
+  "213955_o1": {
+   "rec": "hs_20261021_213955",
+   "key": "213955_o1",
+   "off": 1,
+   "final": {
+    "newK": {
+     "div": true,
+     "ate_w": 1365.1733318632178,
+     "rel5_max": 2991.4142417870453,
+     "ate_cm": 1365.17,
+     "ate_sim3_cm": 6.57,
+     "scale": 0.0026,
+     "matched": 710,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 1365.2566822377187,
+     "rel5_max": 2991.417539612112,
+     "ate_cm": 1365.26,
+     "ate_sim3_cm": 6.4,
+     "scale": 0.0026,
+     "matched": 710,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 10.55
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": true,
+     "ate_w": 12.275965286550997,
+     "rel5_max": 161.20366453625863,
+     "ate_cm": 12.28,
+     "ate_sim3_cm": 8.84,
+     "scale": 0.4797,
+     "matched": 7278,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 12.254193199726968,
+     "rel5_max": 160.59637063703443,
+     "ate_cm": 12.25,
+     "ate_sim3_cm": 8.58,
+     "scale": 0.466,
+     "matched": 7277,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 9.516
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": true,
+     "ate_w": 815.3350901167977,
+     "rel5_max": 2475.1627329822945,
+     "ate_cm": 815.34,
+     "ate_sim3_cm": 8.58,
+     "scale": 0.001,
+     "matched": 365,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 815.3593632343122,
+     "rel5_max": 2475.200257149146,
+     "ate_cm": 815.36,
+     "ate_sim3_cm": 8.36,
+     "scale": 0.001,
+     "matched": 365,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 10.55
+    }
+   }
+  },
+  "213955_o2": {
+   "rec": "hs_20261021_213955",
+   "key": "213955_o2",
+   "off": 2,
+   "final": {
+    "newK": {
+     "div": true,
+     "ate_w": 2.722744278024285,
+     "rel5_max": 65.96360245629931,
+     "ate_cm": 2.72,
+     "ate_sim3_cm": 2.64,
+     "scale": 0.9454,
+     "matched": 7223,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 2.757936651179436,
+     "rel5_max": 65.21079693453466,
+     "ate_cm": 2.76,
+     "ate_sim3_cm": 2.57,
+     "scale": 0.9182,
+     "matched": 7222,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 9.537
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": true,
+     "ate_w": 4154.5680010609585,
+     "rel5_max": 3517.968290831487,
+     "ate_cm": 4154.57,
+     "ate_sim3_cm": 10.71,
+     "scale": 0.0006,
+     "matched": 4186,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 4154.652324412965,
+     "rel5_max": 3517.9163757614615,
+     "ate_cm": 4154.65,
+     "ate_sim3_cm": 10.38,
+     "scale": 0.0005,
+     "matched": 4186,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 8.502
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": true,
+     "ate_w": null,
+     "rel5_max": null
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": null,
+     "rel5_max": null
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 9.537
+    }
+   }
+  },
+  "215348_o0": {
+   "rec": "hs_20261021_215348",
+   "key": "215348_o0",
+   "off": 0,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.37238720227687017,
+     "rel5_max": 1.6413650900097225,
+     "ate_cm": 0.37,
+     "ate_sim3_cm": 0.37,
+     "scale": 1.0029,
+     "matched": 7370,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.4642688443956026,
+     "rel5_max": 1.804925794639372,
+     "ate_cm": 0.46,
+     "ate_sim3_cm": 0.37,
+     "scale": 0.9753,
+     "matched": 7370,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 10.534
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.5973385731706095,
+     "rel5_max": 4.278018937896514,
+     "ate_cm": 0.6,
+     "ate_sim3_cm": 0.58,
+     "scale": 1.0141,
+     "matched": 7387,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.5674045587827533,
+     "rel5_max": 5.004812948129175,
+     "ate_cm": 0.57,
+     "ate_sim3_cm": 0.55,
+     "scale": 0.9863,
+     "matched": 7387,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 10.183
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.5372636369111026,
+     "rel5_max": 3.8954146103361404,
+     "ate_cm": 0.54,
+     "ate_sim3_cm": 0.41,
+     "scale": 1.0308,
+     "matched": 7370,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.3740301522209976,
+     "rel5_max": 4.470436701914469,
+     "ate_cm": 0.37,
+     "ate_sim3_cm": 0.37,
+     "scale": 1.0026,
+     "matched": 7370,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 10.534
+    }
+   }
+  },
+  "215348_o1": {
+   "rec": "hs_20261021_215348",
+   "key": "215348_o1",
+   "off": 1,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.3071640869690458,
+     "rel5_max": 1.6144397440977256,
+     "ate_cm": 0.31,
+     "ate_sim3_cm": 0.3,
+     "scale": 1.0048,
+     "matched": 7370,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.4101059023278089,
+     "rel5_max": 1.8478814020113254,
+     "ate_cm": 0.41,
+     "ate_sim3_cm": 0.32,
+     "scale": 0.9772,
+     "matched": 7370,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 9.532
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.5792191992024963,
+     "rel5_max": 4.489650083361427,
+     "ate_cm": 0.58,
+     "ate_sim3_cm": 0.55,
+     "scale": 1.0168,
+     "matched": 7387,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.5599268558278466,
+     "rel5_max": 5.1964738897406395,
+     "ate_cm": 0.56,
+     "ate_sim3_cm": 0.55,
+     "scale": 0.9888,
+     "matched": 7387,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 9.182
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.4429283962719703,
+     "rel5_max": 4.747047157487033,
+     "ate_cm": 0.44,
+     "ate_sim3_cm": 0.41,
+     "scale": 1.0154,
+     "matched": 7370,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.40651636471126285,
+     "rel5_max": 5.4128851812610925,
+     "ate_cm": 0.41,
+     "ate_sim3_cm": 0.38,
+     "scale": 0.9876,
+     "matched": 7370,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 9.532
+    }
+   }
+  },
+  "215348_o2": {
+   "rec": "hs_20261021_215348",
+   "key": "215348_o2",
+   "off": 2,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.388552013030656,
+     "rel5_max": 1.6856448251629943,
+     "ate_cm": 0.39,
+     "ate_sim3_cm": 0.39,
+     "scale": 1.0032,
+     "matched": 7370,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.4835632723514593,
+     "rel5_max": 1.9309591512518025,
+     "ate_cm": 0.48,
+     "ate_sim3_cm": 0.39,
+     "scale": 0.9756,
+     "matched": 7370,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 8.519
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.5076445554971841,
+     "rel5_max": 4.219291444480863,
+     "ate_cm": 0.51,
+     "ate_sim3_cm": 0.49,
+     "scale": 1.0121,
+     "matched": 7387,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.5049185111944571,
+     "rel5_max": 4.950613918014217,
+     "ate_cm": 0.5,
+     "ate_sim3_cm": 0.47,
+     "scale": 0.9843,
+     "matched": 7387,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 8.168
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.5198948234698331,
+     "rel5_max": 4.624148038376343,
+     "ate_cm": 0.52,
+     "ate_sim3_cm": 0.48,
+     "scale": 1.0169,
+     "matched": 7370,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.4514103199581667,
+     "rel5_max": 5.292924056660507,
+     "ate_cm": 0.45,
+     "ate_sim3_cm": 0.43,
+     "scale": 0.9891,
+     "matched": 7370,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 8.519
+    }
+   }
+  },
+  "214138_o0": {
+   "rec": "hs_20261020_214138",
+   "key": "214138_o0",
+   "off": 0,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.7237494626257555,
+     "rel5_max": 2.6448833668483434,
+     "ate_cm": 0.72,
+     "ate_sim3_cm": 0.72,
+     "scale": 1.0016,
+     "matched": 11868,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.8252498571228362,
+     "rel5_max": 2.323551861488935,
+     "ate_cm": 0.83,
+     "ate_sim3_cm": 0.75,
+     "scale": 0.9794,
+     "matched": 10706,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 19.065
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.9995247188566191,
+     "rel5_max": 5.175241107238817,
+     "ate_cm": 1.0,
+     "ate_sim3_cm": 0.96,
+     "scale": 1.0147,
+     "matched": 11883,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.8915662628081864,
+     "rel5_max": 5.314399504566917,
+     "ate_cm": 0.89,
+     "ate_sim3_cm": 0.87,
+     "scale": 0.9891,
+     "matched": 10721,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 18.819
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.1827627247750965,
+     "rel5_max": 4.553489114146246,
+     "ate_cm": 1.18,
+     "ate_sim3_cm": 1.18,
+     "scale": 1.004,
+     "matched": 11868,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.2542079287946204,
+     "rel5_max": 4.920669849291793,
+     "ate_cm": 1.25,
+     "ate_sim3_cm": 1.2,
+     "scale": 0.9786,
+     "matched": 10706,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 19.065
+    }
+   }
+  },
+  "214138_o1": {
+   "rec": "hs_20261020_214138",
+   "key": "214138_o1",
+   "off": 1,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.0738855095518076,
+     "rel5_max": 2.650018338992608,
+     "ate_cm": 1.07,
+     "ate_sim3_cm": 1.05,
+     "scale": 0.987,
+     "matched": 11868,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.2467792904637003,
+     "rel5_max": 2.418424508605127,
+     "ate_cm": 1.25,
+     "ate_sim3_cm": 1.1,
+     "scale": 0.965,
+     "matched": 10706,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 18.064
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.3316456192651285,
+     "rel5_max": 7.115275042073363,
+     "ate_cm": 1.33,
+     "ate_sim3_cm": 1.33,
+     "scale": 1.0038,
+     "matched": 11883,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.374630491124673,
+     "rel5_max": 6.8159388072511415,
+     "ate_cm": 1.37,
+     "ate_sim3_cm": 1.3,
+     "scale": 0.974,
+     "matched": 10721,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 17.818
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.7942692481251583,
+     "rel5_max": 4.050164764756837,
+     "ate_cm": 0.79,
+     "ate_sim3_cm": 0.78,
+     "scale": 1.0071,
+     "matched": 11868,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.8116558768633332,
+     "rel5_max": 4.514501435104345,
+     "ate_cm": 0.81,
+     "ate_sim3_cm": 0.75,
+     "scale": 0.9821,
+     "matched": 10706,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 18.064
+    }
+   }
+  },
+  "214138_o2": {
+   "rec": "hs_20261020_214138",
+   "key": "214138_o2",
+   "off": 2,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.876807344379106,
+     "rel5_max": 2.58235709026519,
+     "ate_cm": 0.88,
+     "ate_sim3_cm": 0.85,
+     "scale": 0.9895,
+     "matched": 11868,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.0641138804435966,
+     "rel5_max": 2.095881623230147,
+     "ate_cm": 1.06,
+     "ate_sim3_cm": 0.9,
+     "scale": 0.9668,
+     "matched": 10706,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 17.05
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.0949014164879467,
+     "rel5_max": 4.285937927731404,
+     "ate_cm": 1.09,
+     "ate_sim3_cm": 1.08,
+     "scale": 1.0106,
+     "matched": 11883,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.0873300658927934,
+     "rel5_max": 4.779751227853153,
+     "ate_cm": 1.09,
+     "ate_sim3_cm": 1.05,
+     "scale": 0.9827,
+     "matched": 10721,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 16.804
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.7779756025862034,
+     "rel5_max": 4.592356836757558,
+     "ate_cm": 0.78,
+     "ate_sim3_cm": 0.77,
+     "scale": 1.0072,
+     "matched": 11868,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.8001934791139251,
+     "rel5_max": 5.04123462535329,
+     "ate_cm": 0.8,
+     "ate_sim3_cm": 0.75,
+     "scale": 0.9832,
+     "matched": 10706,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 17.05
+    }
+   }
+  },
+  "221052_o0": {
+   "rec": "hs_20261020_221052",
+   "key": "221052_o0",
+   "off": 0,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.565477353572417,
+     "rel5_max": 1.1531172756610446,
+     "ate_cm": 0.57,
+     "ate_sim3_cm": 0.55,
+     "scale": 0.9823,
+     "matched": 3442,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.5770498713136172,
+     "rel5_max": 1.8646665523290629,
+     "ate_cm": 0.58,
+     "ate_sim3_cm": 0.51,
+     "scale": 0.9642,
+     "matched": 3399,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 18.831
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.581270013515751,
+     "rel5_max": 8.787169091551084,
+     "ate_cm": 1.58,
+     "ate_sim3_cm": 1.21,
+     "scale": 1.1396,
+     "matched": 3522,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.4282468759899707,
+     "rel5_max": 8.076538899352883,
+     "ate_cm": 1.43,
+     "ate_sim3_cm": 1.16,
+     "scale": 1.1163,
+     "matched": 3475,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 15.965
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.9759121438709153,
+     "rel5_max": 4.760183677915006,
+     "ate_cm": 0.98,
+     "ate_sim3_cm": 0.93,
+     "scale": 0.963,
+     "matched": 3442,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.9547065810553544,
+     "rel5_max": 5.3067802905215515,
+     "ate_cm": 0.95,
+     "ate_sim3_cm": 0.86,
+     "scale": 0.9457,
+     "matched": 3399,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 18.831
+    }
+   }
+  },
+  "221052_o1": {
+   "rec": "hs_20261020_221052",
+   "key": "221052_o1",
+   "off": 1,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.7287295359916144,
+     "rel5_max": 1.3155305493578435,
+     "ate_cm": 0.73,
+     "ate_sim3_cm": 0.71,
+     "scale": 0.979,
+     "matched": 3442,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.7228418458326916,
+     "rel5_max": 2.041484029291371,
+     "ate_cm": 0.72,
+     "ate_sim3_cm": 0.66,
+     "scale": 0.9611,
+     "matched": 3399,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 17.83
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.3658491589842998,
+     "rel5_max": 4.668586672689396,
+     "ate_cm": 1.37,
+     "ate_sim3_cm": 1.14,
+     "scale": 0.9165,
+     "matched": 3523,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.3829452828553332,
+     "rel5_max": 5.460915336916916,
+     "ate_cm": 1.38,
+     "ate_sim3_cm": 1.04,
+     "scale": 0.8985,
+     "matched": 3476,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 14.931
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.809630129866042,
+     "rel5_max": 3.490774926889158,
+     "ate_cm": 0.81,
+     "ate_sim3_cm": 0.81,
+     "scale": 0.9928,
+     "matched": 3442,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.7516110559200676,
+     "rel5_max": 4.165136684881226,
+     "ate_cm": 0.75,
+     "ate_sim3_cm": 0.73,
+     "scale": 0.974,
+     "matched": 3399,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 17.83
+    }
+   }
+  },
+  "221052_o2": {
+   "rec": "hs_20261020_221052",
+   "key": "221052_o2",
+   "off": 2,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.6248657695679043,
+     "rel5_max": 1.2250741251267796,
+     "ate_cm": 0.62,
+     "ate_sim3_cm": 0.61,
+     "scale": 0.9809,
+     "matched": 3442,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.6198620837198211,
+     "rel5_max": 1.4421969015847516,
+     "ate_cm": 0.62,
+     "ate_sim3_cm": 0.55,
+     "scale": 0.9628,
+     "matched": 3399,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 16.816
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.7389141612921428,
+     "rel5_max": 5.519472700016256,
+     "ate_cm": 1.74,
+     "ate_sim3_cm": 1.41,
+     "scale": 0.8905,
+     "matched": 3520,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.7586360965867613,
+     "rel5_max": 5.838446098648118,
+     "ate_cm": 1.76,
+     "ate_sim3_cm": 1.32,
+     "scale": 0.8719,
+     "matched": 3473,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 13.984
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.658323745420224,
+     "rel5_max": 4.089044036048635,
+     "ate_cm": 0.66,
+     "ate_sim3_cm": 0.65,
+     "scale": 1.0141,
+     "matched": 3442,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.6352725852743493,
+     "rel5_max": 4.765851374830306,
+     "ate_cm": 0.64,
+     "ate_sim3_cm": 0.63,
+     "scale": 0.9969,
+     "matched": 3399,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 16.816
+    }
+   }
+  },
+  "221925_o0": {
+   "rec": "hs_20261020_221925",
+   "key": "221925_o0",
+   "off": 0,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.6723764256022323,
+     "rel5_max": 5.89925796209422,
+     "ate_cm": 0.67,
+     "ate_sim3_cm": 0.67,
+     "scale": 1.0017,
+     "matched": 8871,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.8655999690520997,
+     "rel5_max": 5.620815743780697,
+     "ate_cm": 0.87,
+     "ate_sim3_cm": 0.75,
+     "scale": 0.9738,
+     "matched": 8819,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 1.452
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.4781897231866772,
+     "rel5_max": 14.360102173917463,
+     "ate_cm": 1.48,
+     "ate_sim3_cm": 1.48,
+     "scale": 0.9959,
+     "matched": 8898,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.5369768756841296,
+     "rel5_max": 14.550631287979032,
+     "ate_cm": 1.54,
+     "ate_sim3_cm": 1.44,
+     "scale": 0.9683,
+     "matched": 8846,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 1.001
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.7358029873076104,
+     "rel5_max": 4.700727980012518,
+     "ate_cm": 0.74,
+     "ate_sim3_cm": 0.74,
+     "scale": 1.0017,
+     "matched": 8871,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.8449332853884254,
+     "rel5_max": 4.718825606808539,
+     "ate_cm": 0.84,
+     "ate_sim3_cm": 0.72,
+     "scale": 0.974,
+     "matched": 8819,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 1.452
+    }
+   }
+  },
+  "221925_o1": {
+   "rec": "hs_20261020_221925",
+   "key": "221925_o1",
+   "off": 1,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.6383420737021328,
+     "rel5_max": 3.146595869997667,
+     "ate_cm": 0.64,
+     "ate_sim3_cm": 0.63,
+     "scale": 0.9938,
+     "matched": 8861,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.8586733974842751,
+     "rel5_max": 3.018824363750101,
+     "ate_cm": 0.86,
+     "ate_sim3_cm": 0.64,
+     "scale": 0.9662,
+     "matched": 8809,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 0.617
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": true,
+     "ate_w": null,
+     "rel5_max": null
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": null,
+     "rel5_max": null
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": null
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 1.0232363155691238,
+     "rel5_max": 8.198341129870746,
+     "ate_cm": 1.02,
+     "ate_sim3_cm": 1.02,
+     "scale": 1.0072,
+     "matched": 8861,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.0670986604250512,
+     "rel5_max": 8.03035981947528,
+     "ate_cm": 1.07,
+     "ate_sim3_cm": 1.01,
+     "scale": 0.9795,
+     "matched": 8809,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 0.617
+    }
+   }
+  },
+  "221925_o2": {
+   "rec": "hs_20261020_221925",
+   "key": "221925_o2",
+   "off": 2,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.5947077071645571,
+     "rel5_max": 3.1101352284277444,
+     "ate_cm": 0.59,
+     "ate_sim3_cm": 0.59,
+     "scale": 0.9969,
+     "matched": 8460,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.8159268871683485,
+     "rel5_max": 2.8547907603477607,
+     "ate_cm": 0.82,
+     "ate_sim3_cm": 0.62,
+     "scale": 0.9691,
+     "matched": 8408,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 7.0
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": true,
+     "ate_w": null,
+     "rel5_max": null
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": null,
+     "rel5_max": null
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": null
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.9587443304885692,
+     "rel5_max": 5.17129782048391,
+     "ate_cm": 0.96,
+     "ate_sim3_cm": 0.95,
+     "scale": 1.009,
+     "matched": 8460,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 1.0071086230905637,
+     "rel5_max": 5.287320526543807,
+     "ate_cm": 1.01,
+     "ate_sim3_cm": 0.95,
+     "scale": 0.981,
+     "matched": 8408,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 7.0
+    }
+   }
+  },
+  "222747_o0": {
+   "rec": "hs_20261020_222747",
+   "key": "222747_o0",
+   "off": 0,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.5696549854282498,
+     "rel5_max": 4.995713195088603,
+     "ate_cm": 0.57,
+     "ate_sim3_cm": 0.57,
+     "scale": 1.0002,
+     "matched": 11546,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.7286226124910039,
+     "rel5_max": 4.9881157525990565,
+     "ate_cm": 0.73,
+     "ate_sim3_cm": 0.62,
+     "scale": 0.9731,
+     "matched": 11459,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 11.919
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": true,
+     "ate_w": 158.41708000995834,
+     "rel5_max": 463.5832289746648,
+     "ate_cm": 158.42,
+     "ate_sim3_cm": 14.35,
+     "scale": 0.0172,
+     "matched": 11574,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 155.78200703856322,
+     "rel5_max": 462.0239739511716,
+     "ate_cm": 155.78,
+     "ate_sim3_cm": 13.85,
+     "scale": 0.0154,
+     "matched": 11482,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 11.251
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.7178070856982428,
+     "rel5_max": 5.7292162098244255,
+     "ate_cm": 0.72,
+     "ate_sim3_cm": 0.68,
+     "scale": 1.0152,
+     "matched": 11546,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.6414670061663915,
+     "rel5_max": 6.335739710100448,
+     "ate_cm": 0.64,
+     "ate_sim3_cm": 0.62,
+     "scale": 0.9879,
+     "matched": 11459,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 11.919
+    }
+   }
+  },
+  "222747_o1": {
+   "rec": "hs_20261020_222747",
+   "key": "222747_o1",
+   "off": 1,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.48472592122822417,
+     "rel5_max": 4.96781369577938,
+     "ate_cm": 0.48,
+     "ate_sim3_cm": 0.48,
+     "scale": 0.9997,
+     "matched": 11546,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.6699023287014072,
+     "rel5_max": 5.0519389022906145,
+     "ate_cm": 0.67,
+     "ate_sim3_cm": 0.54,
+     "scale": 0.9726,
+     "matched": 11459,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 10.917
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": true,
+     "ate_w": 122.82311538201327,
+     "rel5_max": 312.2211087705193,
+     "ate_cm": 122.82,
+     "ate_sim3_cm": 14.36,
+     "scale": 0.022,
+     "matched": 11574,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 120.7316467935296,
+     "rel5_max": 310.7505631844073,
+     "ate_cm": 120.73,
+     "ate_sim3_cm": 13.85,
+     "scale": 0.0199,
+     "matched": 11482,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 10.25
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.6226238575727128,
+     "rel5_max": 7.271393383018375,
+     "ate_cm": 0.62,
+     "ate_sim3_cm": 0.62,
+     "scale": 1.0063,
+     "matched": 11546,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.6500816116847843,
+     "rel5_max": 7.969387479385722,
+     "ate_cm": 0.65,
+     "ate_sim3_cm": 0.58,
+     "scale": 0.9791,
+     "matched": 11459,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 10.917
+    }
+   }
+  },
+  "222747_o2": {
+   "rec": "hs_20261020_222747",
+   "key": "222747_o2",
+   "off": 2,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.5128701813011841,
+     "rel5_max": 4.9945682184383635,
+     "ate_cm": 0.51,
+     "ate_sim3_cm": 0.51,
+     "scale": 1.0039,
+     "matched": 11546,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.6364895866495717,
+     "rel5_max": 5.03000895773446,
+     "ate_cm": 0.64,
+     "ate_sim3_cm": 0.54,
+     "scale": 0.9768,
+     "matched": 11459,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 9.904
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": true,
+     "ate_w": 6823.979661048765,
+     "rel5_max": 4583.631302861065,
+     "ate_cm": 6823.98,
+     "ate_sim3_cm": 11.87,
+     "scale": 0.0004,
+     "matched": 5755,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 6842.285540950876,
+     "rel5_max": 4582.771035855579,
+     "ate_cm": 6842.29,
+     "ate_sim3_cm": 11.47,
+     "scale": 0.0004,
+     "matched": 5720,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 9.236
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.824398358180679,
+     "rel5_max": 4.95590476930129,
+     "ate_cm": 0.82,
+     "ate_sim3_cm": 0.8,
+     "scale": 1.0146,
+     "matched": 11546,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.7203440341381508,
+     "rel5_max": 5.585248043394634,
+     "ate_cm": 0.72,
+     "ate_sim3_cm": 0.7,
+     "scale": 0.9873,
+     "matched": 11459,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 9.904
+    }
+   }
+  },
+  "223815_o0": {
+   "rec": "hs_20261020_223815",
+   "key": "223815_o0",
+   "off": 0,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.4287382567006396,
+     "rel5_max": 4.376195046812265,
+     "ate_cm": 0.43,
+     "ate_sim3_cm": 0.42,
+     "scale": 1.006,
+     "matched": 6956,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.44150085973945824,
+     "rel5_max": 2.178078656656189,
+     "ate_cm": 0.44,
+     "ate_sim3_cm": 0.36,
+     "scale": 0.9803,
+     "matched": 6582,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 11.134
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.5355117442293462,
+     "rel5_max": 4.306209285242405,
+     "ate_cm": 0.54,
+     "ate_sim3_cm": 0.45,
+     "scale": 1.0212,
+     "matched": 6964,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.42425761896615216,
+     "rel5_max": 5.2107426902367475,
+     "ate_cm": 0.42,
+     "ate_sim3_cm": 0.41,
+     "scale": 0.992,
+     "matched": 6584,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 10.951
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.9617022018249672,
+     "rel5_max": 9.202787496433546,
+     "ate_cm": 0.96,
+     "ate_sim3_cm": 0.94,
+     "scale": 1.0128,
+     "matched": 6956,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.7398503538938289,
+     "rel5_max": 7.359913612522238,
+     "ate_cm": 0.74,
+     "ate_sim3_cm": 0.7,
+     "scale": 0.9825,
+     "matched": 6582,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 11.134
+    }
+   }
+  },
+  "223815_o1": {
+   "rec": "hs_20261020_223815",
+   "key": "223815_o1",
+   "off": 1,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.4547560271557661,
+     "rel5_max": 4.6381781366848385,
+     "ate_cm": 0.45,
+     "ate_sim3_cm": 0.45,
+     "scale": 1.005,
+     "matched": 6956,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.47476137309644134,
+     "rel5_max": 2.108901440503841,
+     "ate_cm": 0.47,
+     "ate_sim3_cm": 0.37,
+     "scale": 0.9774,
+     "matched": 6582,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 10.133
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.5556127260185892,
+     "rel5_max": 4.603434428064549,
+     "ate_cm": 0.56,
+     "ate_sim3_cm": 0.48,
+     "scale": 1.0202,
+     "matched": 6963,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.42128805758227095,
+     "rel5_max": 5.4548138731406794,
+     "ate_cm": 0.42,
+     "ate_sim3_cm": 0.4,
+     "scale": 0.9892,
+     "matched": 6584,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 9.966
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.5920632398472472,
+     "rel5_max": 4.515054607073711,
+     "ate_cm": 0.59,
+     "ate_sim3_cm": 0.5,
+     "scale": 1.0224,
+     "matched": 6956,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.38645095013874553,
+     "rel5_max": 5.287897157005157,
+     "ate_cm": 0.39,
+     "ate_sim3_cm": 0.36,
+     "scale": 0.989,
+     "matched": 6582,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 10.133
+    }
+   }
+  },
+  "223815_o2": {
+   "rec": "hs_20261020_223815",
+   "key": "223815_o2",
+   "off": 2,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.40972692489700274,
+     "rel5_max": 4.10277075997861,
+     "ate_cm": 0.41,
+     "ate_sim3_cm": 0.41,
+     "scale": 1.0005,
+     "matched": 6956,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.47933534257772764,
+     "rel5_max": 1.997023056003095,
+     "ate_cm": 0.48,
+     "ate_sim3_cm": 0.35,
+     "scale": 0.9751,
+     "matched": 6582,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 9.119
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.5333034794248152,
+     "rel5_max": 4.799452402647562,
+     "ate_cm": 0.53,
+     "ate_sim3_cm": 0.47,
+     "scale": 1.0178,
+     "matched": 6964,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.4452324700852578,
+     "rel5_max": 5.709360982267406,
+     "ate_cm": 0.45,
+     "ate_sim3_cm": 0.42,
+     "scale": 0.9879,
+     "matched": 6584,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 8.936
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.6883703498852547,
+     "rel5_max": 5.161477372642438,
+     "ate_cm": 0.69,
+     "ate_sim3_cm": 0.66,
+     "scale": 1.0132,
+     "matched": 6956,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.6490043952587196,
+     "rel5_max": 5.937067355268686,
+     "ate_cm": 0.65,
+     "ate_sim3_cm": 0.61,
+     "scale": 0.9838,
+     "matched": 6582,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 9.119
+    }
+   }
+  },
+  "224323_o0": {
+   "rec": "hs_20261020_224323",
+   "key": "224323_o0",
+   "off": 0,
+   "final": {
+    "newK": {
+     "div": true,
+     "ate_w": 121.85730262653165,
+     "rel5_max": 356.758520100053,
+     "ate_cm": 121.86,
+     "ate_sim3_cm": 15.3,
+     "scale": 0.0464,
+     "matched": 6798,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 104.09728008971872,
+     "rel5_max": 348.07594621000203,
+     "ate_cm": 104.1,
+     "ate_sim3_cm": 14.63,
+     "scale": 0.0418,
+     "matched": 6146,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 10.934
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": true,
+     "ate_w": 2.5173968392065063,
+     "rel5_max": 43.210430818406245,
+     "ate_cm": 2.52,
+     "ate_sim3_cm": 2.5,
+     "scale": 1.0156,
+     "matched": 6820,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 2.5501211723279114,
+     "rel5_max": 41.87740635927018,
+     "ate_cm": 2.55,
+     "ate_sim3_cm": 2.53,
+     "scale": 0.9812,
+     "matched": 6147,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 10.517
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": true,
+     "ate_w": 325.8814323333223,
+     "rel5_max": 965.8995994255839,
+     "ate_cm": 325.88,
+     "ate_sim3_cm": 15.48,
+     "scale": 0.0163,
+     "matched": 6798,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 277.7227451271628,
+     "rel5_max": 918.8538692980832,
+     "ate_cm": 277.72,
+     "ate_sim3_cm": 14.85,
+     "scale": 0.0132,
+     "matched": 6146,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 10.934
+    }
+   }
+  },
+  "224323_o1": {
+   "rec": "hs_20261020_224323",
+   "key": "224323_o1",
+   "off": 1,
+   "final": {
+    "newK": {
+     "div": true,
+     "ate_w": 523.4279853127629,
+     "rel5_max": 3125.152019225597,
+     "ate_cm": 523.43,
+     "ate_sim3_cm": 15.73,
+     "scale": 0.0087,
+     "matched": 6798,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 510.169286034068,
+     "rel5_max": 3125.2249023983286,
+     "ate_cm": 510.17,
+     "ate_sim3_cm": 14.91,
+     "scale": 0.0067,
+     "matched": 6146,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 9.933
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": true,
+     "ate_w": 4.819933380247273,
+     "rel5_max": 77.81993988132987,
+     "ate_cm": 4.82,
+     "ate_sim3_cm": 4.74,
+     "scale": 0.9472,
+     "matched": 6820,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 5.030514238485955,
+     "rel5_max": 78.08388457903733,
+     "ate_cm": 5.03,
+     "ate_sim3_cm": 4.79,
+     "scale": 0.9048,
+     "matched": 6147,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 9.516
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": true,
+     "ate_w": 507.4146905572565,
+     "rel5_max": 3124.9635381648836,
+     "ate_cm": 507.41,
+     "ate_sim3_cm": 15.75,
+     "scale": 0.0088,
+     "matched": 6798,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 497.9465086742928,
+     "rel5_max": 3125.017708053007,
+     "ate_cm": 497.95,
+     "ate_sim3_cm": 14.91,
+     "scale": 0.0069,
+     "matched": 6146,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 9.933
+    }
+   }
+  },
+  "224323_o2": {
+   "rec": "hs_20261020_224323",
+   "key": "224323_o2",
+   "off": 2,
+   "final": {
+    "newK": {
+     "div": true,
+     "ate_w": 288.8253913024338,
+     "rel5_max": 939.9795709722548,
+     "ate_cm": 288.83,
+     "ate_sim3_cm": 15.42,
+     "scale": 0.0189,
+     "matched": 6798,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 246.73441765654056,
+     "rel5_max": 940.0952331833571,
+     "ate_cm": 246.73,
+     "ate_sim3_cm": 14.84,
+     "scale": 0.015,
+     "matched": 6146,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 8.919
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": true,
+     "ate_w": 5.1206513062708225,
+     "rel5_max": 83.42969820141573,
+     "ate_cm": 5.12,
+     "ate_sim3_cm": 4.89,
+     "scale": 0.9108,
+     "matched": 6820,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 5.414332640679687,
+     "rel5_max": 82.47342763593613,
+     "ate_cm": 5.41,
+     "ate_sim3_cm": 4.93,
+     "scale": 0.8658,
+     "matched": 6147,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 8.502
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": true,
+     "ate_w": 285.3227671336244,
+     "rel5_max": 1132.066490609793,
+     "ate_cm": 285.32,
+     "ate_sim3_cm": 15.46,
+     "scale": 0.0187,
+     "matched": 6798,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 251.1707449233271,
+     "rel5_max": 1132.1817202514862,
+     "ate_cm": 251.17,
+     "ate_sim3_cm": 14.85,
+     "scale": 0.0146,
+     "matched": 6146,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 8.919
+    }
+   }
+  },
+  "131326_o0": {
+   "rec": "hs_20261019_131326",
+   "key": "131326_o0",
+   "off": 0,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.7199464078335868,
+     "rel5_max": 2.7382643598625314,
+     "ate_cm": 0.72,
+     "ate_sim3_cm": 0.71,
+     "scale": 1.0137,
+     "matched": 4698,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.7286442656840014,
+     "rel5_max": 2.942269554296878,
+     "ate_cm": 0.73,
+     "ate_sim3_cm": 0.7,
+     "scale": 1.0281,
+     "matched": 4698,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 13.55
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 4.246259605406353,
+     "rel5_max": 12.443752581491712,
+     "ate_cm": 4.25,
+     "ate_sim3_cm": 4.1,
+     "scale": 0.8337,
+     "matched": 4506,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 4.220999321033891,
+     "rel5_max": 12.475029047599442,
+     "ate_cm": 4.22,
+     "ate_sim3_cm": 4.1,
+     "scale": 0.8512,
+     "matched": 4506,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 16.75
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": true,
+     "ate_w": 249.86077004701315,
+     "rel5_max": null,
+     "ate_cm": 249.86,
+     "ate_sim3_cm": 4.32,
+     "scale": 0.0024,
+     "matched": 222,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 249.85015446628864,
+     "rel5_max": null,
+     "ate_cm": 249.85,
+     "ate_sim3_cm": 4.45,
+     "scale": 0.0025,
+     "matched": 222,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 8.948
+    }
+   }
+  },
+  "131326_o1": {
+   "rec": "hs_20261019_131326",
+   "key": "131326_o1",
+   "off": 1,
+   "final": {
+    "newK": {
+     "div": true,
+     "ate_w": 291.7711236608715,
+     "rel5_max": null,
+     "ate_cm": 291.77,
+     "ate_sim3_cm": 4.04,
+     "scale": 0.0036,
+     "matched": 254,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 291.78778933723993,
+     "rel5_max": null,
+     "ate_cm": 291.79,
+     "ate_sim3_cm": 4.16,
+     "scale": 0.0035,
+     "matched": 254,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 7.947
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 2.0266449153953188,
+     "rel5_max": 8.226342449525086,
+     "ate_cm": 2.03,
+     "ate_sim3_cm": 1.54,
+     "scale": 1.2407,
+     "matched": 4711,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 2.0956585046210527,
+     "rel5_max": 8.473878465298755,
+     "ate_cm": 2.1,
+     "ate_sim3_cm": 1.55,
+     "scale": 1.2586,
+     "matched": 4711,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 12.332
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": true,
+     "ate_w": 311.092014854118,
+     "rel5_max": null,
+     "ate_cm": 311.09,
+     "ate_sim3_cm": 3.95,
+     "scale": 0.0034,
+     "matched": 269,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 311.1115772659785,
+     "rel5_max": null,
+     "ate_cm": 311.11,
+     "ate_sim3_cm": 4.06,
+     "scale": 0.0034,
+     "matched": 269,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 7.947
+    }
+   }
+  },
+  "131326_o2": {
+   "rec": "hs_20261019_131326",
+   "key": "131326_o2",
+   "off": 2,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 0.6750275435410968,
+     "rel5_max": 2.8760236293241115,
+     "ate_cm": 0.68,
+     "ate_sim3_cm": 0.67,
+     "scale": 1.0123,
+     "matched": 4698,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 0.6803083237525362,
+     "rel5_max": 3.139561364392316,
+     "ate_cm": 0.68,
+     "ate_sim3_cm": 0.66,
+     "scale": 1.0268,
+     "matched": 4698,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 11.535
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 3.605302253493107,
+     "rel5_max": 17.59404721996514,
+     "ate_cm": 3.61,
+     "ate_sim3_cm": 3.53,
+     "scale": 0.8872,
+     "matched": 4508,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 3.579855507039204,
+     "rel5_max": 17.64446873905749,
+     "ate_cm": 3.58,
+     "ate_sim3_cm": 3.52,
+     "scale": 0.9041,
+     "matched": 4508,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 14.701
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": true,
+     "ate_w": 260.89888659045613,
+     "rel5_max": null,
+     "ate_cm": 260.9,
+     "ate_sim3_cm": 4.19,
+     "scale": 0.0034,
+     "matched": 236,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 260.9034054735264,
+     "rel5_max": null,
+     "ate_cm": 260.9,
+     "ate_sim3_cm": 4.31,
+     "scale": 0.0034,
+     "matched": 236,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 6.933
+    }
+   }
+  },
+  "154320_o0": {
+   "rec": "hs_20261019_154320",
+   "key": "154320_o0",
+   "off": 0,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 2.0354198170197004,
+     "rel5_max": 4.313721397658731,
+     "ate_cm": 2.04,
+     "ate_sim3_cm": 2.03,
+     "scale": 0.9943,
+     "matched": 23214,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 2.080743668515004,
+     "rel5_max": 5.8950975744190375,
+     "ate_cm": 2.08,
+     "ate_sim3_cm": 2.06,
+     "scale": 0.9818,
+     "matched": 23230,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 4.501
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": true,
+     "ate_w": 11.109942520972195,
+     "rel5_max": 212.44405921754912,
+     "ate_cm": 11.11,
+     "ate_sim3_cm": 9.37,
+     "scale": 0.708,
+     "matched": 23214,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": true,
+     "ate_w": 11.08714365425544,
+     "rel5_max": 212.42281926527133,
+     "ate_cm": 11.09,
+     "ate_sim3_cm": 9.24,
+     "scale": 0.7005,
+     "matched": 23230,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 0.617
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 2.0674206864246494,
+     "rel5_max": 3.556488521194475,
+     "ate_cm": 2.07,
+     "ate_sim3_cm": 2.06,
+     "scale": 0.9903,
+     "matched": 23214,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 2.0548047457826404,
+     "rel5_max": 4.743941018405161,
+     "ate_cm": 2.05,
+     "ate_sim3_cm": 2.02,
+     "scale": 0.9782,
+     "matched": 23230,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 4.485
+    }
+   }
+  },
+  "154320_o1": {
+   "rec": "hs_20261019_154320",
+   "key": "154320_o1",
+   "off": 1,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 2.3345862609239862,
+     "rel5_max": 3.3400114094393176,
+     "ate_cm": 2.33,
+     "ate_sim3_cm": 2.33,
+     "scale": 0.9984,
+     "matched": 23214,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 2.4081594294964423,
+     "rel5_max": 4.664566359505285,
+     "ate_cm": 2.41,
+     "ate_sim3_cm": 2.4,
+     "scale": 0.9854,
+     "matched": 23230,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 3.5
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 3.014092166322293,
+     "rel5_max": 8.99480496711608,
+     "ate_cm": 3.01,
+     "ate_sim3_cm": 3.0,
+     "scale": 0.9842,
+     "matched": 23214,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 2.997462314590491,
+     "rel5_max": 9.092792189314268,
+     "ate_cm": 3.0,
+     "ate_sim3_cm": 2.96,
+     "scale": 0.9723,
+     "matched": 23230,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 0.684
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 2.410947660853103,
+     "rel5_max": 4.081075103304984,
+     "ate_cm": 2.41,
+     "ate_sim3_cm": 2.38,
+     "scale": 0.9788,
+     "matched": 23214,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 2.380611961645363,
+     "rel5_max": 3.7882235719475355,
+     "ate_cm": 2.38,
+     "ate_sim3_cm": 2.31,
+     "scale": 0.9671,
+     "matched": 23230,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 3.5
+    }
+   }
+  },
+  "154320_o2": {
+   "rec": "hs_20261019_154320",
+   "key": "154320_o2",
+   "off": 2,
+   "final": {
+    "newK": {
+     "div": false,
+     "ate_w": 2.229920770224,
+     "rel5_max": 4.086365702090606,
+     "ate_cm": 2.23,
+     "ate_sim3_cm": 2.23,
+     "scale": 1.0022,
+     "matched": 23214,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 2.2875888103955595,
+     "rel5_max": 5.623320937064231,
+     "ate_cm": 2.29,
+     "ate_sim3_cm": 2.28,
+     "scale": 0.9894,
+     "matched": 23230,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22_cal20261022.json",
+     "lens_source": "shared",
+     "lens_sha256": "22af64d1fcc682d34d6dca54b4c5837e902a48ffca69935aedaf5f2b359d52f4",
+     "lever": "config/imu_cam_lever.json",
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 2.486
+    }
+   },
+   "morning": {
+    "newK": {
+     "div": false,
+     "ate_w": 2.6860605411996983,
+     "rel5_max": 9.28220490546445,
+     "ate_cm": 2.69,
+     "ate_sim3_cm": 2.67,
+     "scale": 0.9808,
+     "matched": 23214,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 2.7085576860388567,
+     "rel5_max": 9.386145425009287,
+     "ate_cm": 2.71,
+     "ate_sim3_cm": 2.65,
+     "scale": 0.9686,
+     "matched": 23230,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 0.834
+    }
+   },
+   "V4": {
+    "newK": {
+     "div": false,
+     "ate_w": 2.769349390055269,
+     "rel5_max": 4.144784768862866,
+     "ate_cm": 2.77,
+     "ate_sim3_cm": 2.71,
+     "scale": 0.9688,
+     "matched": 23214,
+     "gt": "imu_gt_spl_cal1022"
+    },
+    "oldK": {
+     "div": false,
+     "ate_w": 2.7298742985406075,
+     "rel5_max": 4.4020099280907266,
+     "ate_cm": 2.73,
+     "ate_sim3_cm": 2.62,
+     "scale": 0.9574,
+     "matched": 23230,
+     "gt": "imu_gt_spl"
+    },
+    "meta": {
+     "lens_file": "config/lens/hs_1920x1080_f2.22.json",
+     "lens_source": null,
+     "lens_sha256": null,
+     "lever": null,
+     "cfg_over": "num_opencv_threads=2,try_zupt=false",
+     "gyro_rebias": false,
+     "imu_calib": false,
+     "t_init_clip_s": 2.47
+    }
+   }
+  }
+ }
+}
