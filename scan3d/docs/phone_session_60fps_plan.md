@@ -27,3 +27,7 @@ Phone care: cool below 36 °C between takes (recording stops above 40 °C SKIN).
 - Every VIO recording begins with **at least 5 s completely still, phone resting on a surface** (not handheld), like a drone on the ground before takeoff. Only then does motion start.
 - Reason: 131326 initialized while slowly rotating and diverged (docs/collapse_nozupt_20261023.md). In flight, the start is always on the ground.
 - Evaluation: VIO initializes in that opening still. Recordings without one are not used for VIO verdicts.
+
+## Ruler check of GT scale (user, 2026-10-23; no rail available)
+Tape two marks on the desk 30 cm apart, measured with a ruler. Rest the phone at the first mark for 5 s with the board in view, move it by hand to the second mark, and rest there for 5 s. Compare the GT displacement between the two stills with 30 cm; the target is about 0.5 %.
+This is a third independent scale reference, next to gravity (IMU) and the ruler-measured board. Takes about 1 min.
