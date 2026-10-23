@@ -1,0 +1,62 @@
+diff -ru open_vins/ov_init/src/init/InertialInitializerOptions.h open_vins_initgyro/ov_init/src/init/InertialInitializerOptions.h
+--- open_vins/ov_init/src/init/InertialInitializerOptions.h	2026-10-16 09:08:28.098302786 +0900
++++ open_vins_initgyro/ov_init/src/init/InertialInitializerOptions.h	2026-10-23 13:53:55.100696913 +0900
+@@ -69,6 +69,9 @@
+   /// Max disparity we will consider the unit to be stationary
+   double init_max_disparity = 1.0;
+ 
++  /// (open_vins_initgyro) static init: max over 0.1 s sub-windows of |mean gyro| in the bias window (rad/s). 0 = off
++  double init_max_gyro = 0.0;
++
+   /// Number of features we should try to track
+   int init_max_features = 50;
+ 
+@@ -127,6 +130,7 @@
+       parser->parse_config("init_window_time", init_window_time);
+       parser->parse_config("init_imu_thresh", init_imu_thresh);
+       parser->parse_config("init_max_disparity", init_max_disparity);
++      parser->parse_config("init_max_gyro", init_max_gyro, false);
+       parser->parse_config("init_max_features", init_max_features);
+       parser->parse_config("init_dyn_use", init_dyn_use);
+       parser->parse_config("init_dyn_mle_opt_calib", init_dyn_mle_opt_calib);
+@@ -150,6 +154,7 @@
+     PRINT_DEBUG("  - init_window_time: %.2f\n", init_window_time);
+     PRINT_DEBUG("  - init_imu_thresh: %.2f\n", init_imu_thresh);
+     PRINT_DEBUG("  - init_max_disparity: %.2f\n", init_max_disparity);
++    PRINT_DEBUG("  - init_max_gyro: %.4f\n", init_max_gyro);
+     PRINT_DEBUG("  - init_max_features: %.2f\n", init_max_features);
+     if (init_max_features < 15) {
+       PRINT_ERROR(RED "number of requested feature tracks to init not enough!!\n" RESET);
+diff -ru open_vins/ov_init/src/static/StaticInitializer.cpp open_vins_initgyro/ov_init/src/static/StaticInitializer.cpp
+--- open_vins/ov_init/src/static/StaticInitializer.cpp	2026-10-16 09:08:28.098302786 +0900
++++ open_vins_initgyro/ov_init/src/static/StaticInitializer.cpp	2026-10-23 13:53:55.100696913 +0900
+@@ -118,6 +118,29 @@
+     return false;
+   }
+ 
++  // (open_vins_initgyro) gyro stillness of the bias window: max over 0.1 s sub-windows of |mean gyro|
++  if (params.init_max_gyro > 0.0) {
++    double t_lo = newesttime - 1.0 * params.init_window_time;
++    int nbin = std::max(1, (int)std::ceil(0.5 * params.init_window_time / 0.1 - 1e-9));
++    std::vector<Eigen::Vector3d> wsum(nbin, Eigen::Vector3d::Zero());
++    std::vector<int> wcnt(nbin, 0);
++    for (const ImuData &data : window_2to1) {
++      int b = std::min(nbin - 1, std::max(0, (int)std::floor((data.timestamp - t_lo) / 0.1)));
++      wsum.at(b) += data.wm;
++      wcnt.at(b)++;
++    }
++    double g_max = 0.0;
++    for (int b = 0; b < nbin; b++) {
++      if (wcnt.at(b) > 0)
++        g_max = std::max(g_max, (wsum.at(b) / wcnt.at(b)).norm());
++    }
++    if (g_max > params.init_max_gyro) {
++      PRINT_INFO(YELLOW "[init-s]: gyro not still in bias window, %.4f > %.4f rad/s\n" RESET, g_max, params.init_max_gyro);
++      return false;
++    }
++    PRINT_INFO(GREEN "[init-s]: gyro still in bias window, %.4f <= %.4f rad/s\n" RESET, g_max, params.init_max_gyro);
++  }
++
+   // Get rotation with z axis aligned with -g (z_in_G=0,0,1)
+   Eigen::Vector3d z_axis = a_avg_2to1 / a_avg_2to1.norm();
+   Eigen::Matrix3d Ro;
