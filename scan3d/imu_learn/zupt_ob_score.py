@@ -30,13 +30,24 @@ EXCLUDE_REC = "hs_20261021_213955"   # phone drop (input-event detector)
 MARGIN_FILE = OUT / "aa_drift.json"
 
 
-def run_metrics(pre, rec):
+def run_metrics(pre, rec, pos="cam"):
+    """pos='cam' (default since 2026-10-23, docs/imucal_result.md): VIO position = camera centre (T_world_cam0 translation),
+    the same point the GT p_bc describes. pos='imu' = the old ruler ('p' = p_IinG, the IMU position): it is offset from the
+    camera by the online camera-IMU lever (several cm, rotating with the phone) and inflated window ATE (base o0 median
+    2.16 vs 0.90 cm). Score files made before 2026-10-23 used 'imu'."""
+    if pos not in ("cam", "imu"):
+        raise ValueError(pos)
     j = json.load(open(str(pre) + ".json"))
     if j.get("ate_cm") is None:
         return dict(result=False, divergent=True, why="no result")
     P = [json.loads(x) for x in gzip.open(str(pre) + ".poses.jsonl.gz", "rt") if x.strip()]
-    T = [p for p in P if p.get("status") == "tracking" and p.get("p")]
-    t = np.array([p["t"] for p in T]); p = np.array([p["p"] for p in T])
+    if pos == "cam":
+        T = [p for p in P if p.get("status") == "tracking" and p.get("T_world_cam0")]
+        p = np.array([np.asarray(m["T_world_cam0"], float).reshape(4, 4)[:3, 3] for m in T]).reshape(-1, 3)
+    else:
+        T = [p for p in P if p.get("status") == "tracking" and p.get("p")]
+        p = np.array([p["p"] for p in T])
+    t = np.array([m["t"] for m in T])
     g = np.load(an.SCAN3D / "recordings" / rec / "imu_gt_spl" / "gt.npz", allow_pickle=True)
     ok = g["ok"].astype(bool) & (np.linalg.norm(g["p_bc"], axis=1) < 1.2)
     off = P[0]["t_ns"] - P[0]["t"] * 1e9 + j["align_dt_ms"] * 1e6

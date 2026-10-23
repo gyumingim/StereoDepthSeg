@@ -482,6 +482,12 @@ def run(a):
         g_i = g_i @ np.asarray(cal["G"]).T + np.asarray(cal["bg"])
         a_i = a_i @ np.asarray(cal["A"]).T + np.asarray(cal["ba"])
         p_CinI = np.asarray(cal.get("r", [0, 0, 0]))
+    lever = getattr(a, "lever", None)                         # None / missing = off (runners built before 2026-10-23)
+    if lever:                                                  # camera-IMU lever arm (docs/imucal_result.md, adopted 2026-10-23)
+        if a.imu_calib and "r" in json.load(open(a.imu_calib))["calib"]:
+            sys.exit("--lever and an --imu-calib JSON with 'r' both set p_CinI")
+        r_cm = np.asarray(json.load(open(lever))["r_cm"], float)   # IMU position in the camera frame (p_IinC), cm
+        p_CinI = -R_ci.T @ (r_cm / 100.0)                       # -> camera position in the IMU frame, m
     t_imu = gyr[:, 0].astype(np.int64)
     drop = []
     for s in (a.dropout.split(",") if a.dropout else []):
@@ -697,7 +703,7 @@ def evaluate(rec, a, poses, n_fed, drop, dt_ns, wall, noise, Knew, frames):
     tr = [m for m in poses if m.get("status") == "tracking" and m.get("T_world_cam0")]
     ms = np.array([m["ms"] for m in poses if "ms" in m])
     res = dict(rec=rec.name, fps=a.fps, size=a.size, npts=a.npts, clones=a.clones, noise=a.noise,
-               imu_calib=bool(a.imu_calib), dropout=a.dropout, frames_fed=n_fed, poses=len(poses),
+               imu_calib=bool(a.imu_calib), lever=getattr(a, "lever", None) or None, dropout=a.dropout, frames_fed=n_fed, poses=len(poses),
                tracked=len(tr), tracked_frac=round(len(tr) / max(1, n_fed), 3),
                ms_med=round(float(np.median(ms)), 2) if len(ms) else None,
                ms_p90=round(float(np.percentile(ms, 90)), 2) if len(ms) else None, wall_s=round(wall, 1),
@@ -801,8 +807,14 @@ def main():
     ap.add_argument("--frame-cache", action="store_true",
                     help="read the fed frames from recordings/<rec>/cache/ (imu_learn/frame_cache.py) when complete, else "
                          "decode as usual and add the missing frames; bit-identical images; not with --focus-comp (off)")
+    ap.add_argument("--lever", default="config/imu_cam_lever.json",
+                    help="camera-IMU lever arm file (r_cm = IMU position in the camera frame); p_CinI = -R_ci^T r. "
+                         "Default ON (adopted 2026-10-23, docs/imucal_result.md); run(a) callers without a.lever = off")
+    ap.add_argument("--no-lever", action="store_true", help="p_CinI = 0 (runs before 2026-10-23)")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
+    if a.no_lever:
+        a.lever = None
     if a.gyro_rebias and a.no_gyro_rebias:
         sys.exit("--gyro-rebias and --no-gyro-rebias")
     a.gyro_rebias = True if a.gyro_rebias else (False if a.no_gyro_rebias else None)   # None = default (ON with --imu-raw)

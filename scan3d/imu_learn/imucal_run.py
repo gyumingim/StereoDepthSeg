@@ -40,7 +40,8 @@ PAR = int(os.environ.get("PAR", 12))
 SIXFACE = Path("config/imu_accel_6face_20261022.json")
 LEVER = Path("config/imu_cam_lever.json")
 # cond -> (calib json kind or None, gyro_rebias)
-CONDS = {"C1": ("C1", False), "C2": (None, True), "C3": ("C1", True), "C4": ("C4", False), "id": ("id", False)}
+CONDS = {"C1": ("C1", False), "C2": (None, True), "C3": ("C1", True), "C4": ("C4", False), "id": ("id", False),
+         "L": (None, False)}   # L = bench --lever option (added after the comparison) -> must equal C4 (levercheck)
 
 
 def calib_files():
@@ -80,7 +81,8 @@ def replay(rec, off, cond):
                            dropout="", max_secs=0.0, imu_raw=raw,
                            gt="auto", out=None, init_cfg="strict", start_off=float(off), decode_threads=2,
                            imu_lead=2.0, init_window=1.0, init_disp=15.0, frame_cache=True, gyro_rebias=rb,
-                           cfg_over="num_opencv_threads=2,try_zupt=false", still_hold=None)
+                           cfg_over="num_opencv_threads=2,try_zupt=false", still_hold=None,
+                           lever=str(LEVER) if cond == "L" else None)
     saved = {}
     orig_ev = vb.evaluate
 
@@ -115,6 +117,18 @@ def bitcheck(key="134550_o0"):
     if not same:
         res["first_diff"] = next((i for i, (x, y) in enumerate(zip(strip(P), strip(V))) if x != y), None)
     json.dump(res, open(OUT / "bitcheck.json", "w"), indent=1)
+    print(json.dumps(res, indent=1))
+
+
+def levercheck(key="134550_o0"):
+    """bench --lever (new option) must reproduce the C4 JSON run exactly; no lever must still equal stored V4."""
+    rec = next(r for r in RAW + OLD if r.endswith(key.split("_")[0]))
+    res = dict(made=time.strftime("%F %T"), key=key)
+    for cond, ref in (("L", OUT / f"{key}_C4"), ("id", REF_DIR / f"{key}_V4")):
+        r, P = replay(f"recordings/{rec}", int(key.split("_o")[1]), cond)
+        V = load_poses(ref)
+        res[cond] = dict(ref=str(ref), n=[len(P), len(V)], identical=strip(P) == strip(V), ate=r.get("ate_cm"))
+    json.dump(res, open(OUT / "levercheck.json", "w"), indent=1)
     print(json.dumps(res, indent=1))
 
 
@@ -169,7 +183,8 @@ def run_sched():
 
 def cam_metrics(pre, rec, zs):
     """zupt_ob_score.run_metrics on the CAMERA position (T_world_cam0 translation) instead of 'p' (= p_IinG, IMU).
-    Needed for C4 (IMU != camera once p_CinI != 0); applied to base and every variant alike (plan)."""
+    Needed for C4 (IMU != camera once p_CinI != 0); applied to base and every variant alike (plan).
+    Kept as the file-rewrite used for the committed score; zupt_ob_score.run_metrics(pos='cam') is now the same (checked in score)."""
     tmp = OUT / "campos"
     tmp.mkdir(exist_ok=True)
     dst = tmp / Path(str(pre)).name
@@ -201,7 +216,9 @@ def score():
                 row[c] = dict(missing=True, div=True)
                 continue
             mc = cam_metrics(pre, r, zs)
-            mi = zs.run_metrics(pre, r)
+            mi = zs.run_metrics(pre, r, pos="imu")
+            m2 = zs.run_metrics(pre, r)                      # new default (pos='cam') must equal cam_metrics
+            assert (m2.get("ate_w"), m2.get("divergent")) == (mc.get("ate_w"), mc.get("divergent")), (pre, m2, mc)
             row[c] = dict(src=str(pre), div=bool(mc.get("divergent")), ate_w=mc.get("ate_w"), rel5_max=mc.get("rel5_max"),
                           div_imu=bool(mi.get("divergent")), ate_w_imu=mi.get("ate_w"),
                           ate_cm=d.get("ate_cm"), scale=d.get("scale"), t_init=d.get("t_init_clip_s"),
@@ -242,6 +259,8 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     if cmd == "job":
         return job(sys.argv[2])
+    if cmd == "levercheck":
+        return levercheck(*sys.argv[2:3])
     if cmd == "bitcheck":
         return bitcheck(*sys.argv[2:3])
     {"run": run_sched, "score": score, "calib": calib_files}[cmd]()
