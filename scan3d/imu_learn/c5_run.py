@@ -70,6 +70,8 @@ def main():
     ap.add_argument("--gyro-rebias", action="store_true", help="per-still gyro re-bias (imu_learn/gyro_rebias.py)")
     ap.add_argument("--no-gyro-rebias", action="store_true",
                     help="raw gyro as is; neither flag = bench default (ON with --imu-raw since 2026-10-22)")
+    ap.add_argument("--frame-cache", action="store_true",
+                    help="bench --frame-cache: fed frames from recordings/<rec>/cache/ (bit-identical, speed only)")
     ap.add_argument("--out", required=True, help="output prefix (no extension)")
     o = ap.parse_args()
     if o.gyro_rebias and o.no_gyro_rebias:
@@ -80,7 +82,7 @@ def main():
                            noise_scale=o.noise_scale, imu_calib=o.imu_calib, dropout="", max_secs=o.max_secs,
                            imu_raw=o.imu_raw, gt="auto", out=None, init_cfg=o.init_cfg, start_off=o.start_off,
                            decode_threads=o.decode_threads, imu_lead=o.imu_lead,
-                           init_window=o.init_window, init_disp=o.init_disp,
+                           init_window=o.init_window, init_disp=o.init_disp, frame_cache=o.frame_cache,
                            gyro_rebias=True if o.gyro_rebias else (False if o.no_gyro_rebias else None))
     load0 = open("/proc/loadavg").read().split()[:3]
     errlog = open(str(out) + ".stderr.log", "w")

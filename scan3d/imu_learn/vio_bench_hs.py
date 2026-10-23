@@ -46,6 +46,9 @@ Variants (same backend, only one thing changes at a time — the 2026 'same-back
                           docs/gyro_rebias_apply.md). ON by default with --imu-raw since 2026-10-22 (user decision), also
                           for run(a) callers whose Namespace has no gyro_rebias (or None); --no-gyro-rebias /
                           a.gyro_rebias = False reproduces older runs (all runners written before then pass it).
+  --frame-cache           (2026-10-23, off by default) read the fed images from recordings/<rec>/cache/ (imu_learn/
+                          frame_cache.py: decoded once, after gray + undistort/resize = bit-identical bridge input);
+                          a run missing any frame decodes as usual and adds them. Ignored with --focus-comp.
   --gt auto|spl|base|rs   scoring GT: auto = imu_gt_spl if present else imu_gt (both camera-only); rs = imu_gt_rs
                           (rolling shutter undone with the gyro -> partly self-scoring, comparison only)
 Time: frames are sent on the IMU clock (t_mid - dt from align.json) and OpenVINS timeshift_cam_imu = 0, so the offset is
@@ -410,29 +413,46 @@ def pick_gt(rec, mode):
     return d
 
 
+def undistort_maps(rec, meta, size):
+    """The default undistort maps (lens file, fed size): m1, m2 (CV_16SC2), Knew, (W, H). Also used by frame_cache.py."""
+    K, dist = lens_for(rec, meta)
+    Wf, Hf = int(meta["width"]), int(meta["height"])
+    W, H = (int(v) for v in size.split("x"))
+    Knew, _ = cv2.getOptimalNewCameraMatrix(K, dist, (Wf, Hf), 0, (W, H))
+    m1, m2 = cv2.initUndistortRectifyMap(K, dist, None, Knew, (W, H), cv2.CV_16SC2)
+    return m1, m2, Knew, (W, H)
+
+
+def fed_selection(rec, meta, rows, fps, start_off, max_secs):
+    """Clip window and fed frame indices (by time, pick_by_time). Also used by frame_cache.py (same selection)."""
+    t_frames = np.array([int(r["t_mid_ns"]) for r in rows])
+    t_start = t_frames[0]
+    trim = rec / "imu_gt" / "trim.json"
+    if trim.exists():
+        t_start = max(t_start, json.load(open(trim))["start_ns"])
+    t_start = t_start + int(start_off * 1e9)                 # IMU feed still starts 2 s before the (later) first frame
+    if max_secs:
+        t_end = t_start + int(max_secs * 1e9)
+    else:
+        t_end = t_frames[-1]
+    t_end = min(t_end, t_frames[-1])
+    period = 1e9 / float(meta.get("save_fps") or 240)
+    sel = pick_by_time(t_frames, t_start, t_end, fps, period)
+    return dict(t_frames=t_frames, t_start=t_start, t_end=t_end, period=period, sel=sel)
+
+
 def run(a):
     rec = Path(a.rec)
     meta = json.load(open(rec / "meta.json"))
     K, dist = lens_for(rec, meta)
     Wf, Hf = int(meta["width"]), int(meta["height"])
-    W, H = (int(v) for v in a.size.split("x"))
-    Knew, _ = cv2.getOptimalNewCameraMatrix(K, dist, (Wf, Hf), 0, (W, H))
-    m1, m2 = cv2.initUndistortRectifyMap(K, dist, None, Knew, (W, H), cv2.CV_16SC2)
+    m1, m2, Knew, (W, H) = undistort_maps(rec, meta, a.size)
     rows = list(csv.DictReader(open(rec / "frames_cam5.csv")))
-    t_frames = np.array([int(r["t_mid_ns"]) for r in rows])
     al = json.load(open(rec / "imu_gt" / "align.json"))
     dt_ns, R_ci = int(al["dt_ns"]), np.asarray(al["R_ci"])
-    t_start = t_frames[0]
-    trim = rec / "imu_gt" / "trim.json"
-    if trim.exists():
-        t_start = max(t_start, json.load(open(trim))["start_ns"])
     start_off = float(getattr(a, "start_off", 0.0) or 0.0)
-    t_start = t_start + int(start_off * 1e9)                 # IMU feed still starts 2 s before the (later) first frame
-    if a.max_secs:
-        t_end = t_start + int(a.max_secs * 1e9)
-    else:
-        t_end = t_frames[-1]
-    t_end = min(t_end, t_frames[-1])
+    fs = fed_selection(rec, meta, rows, a.fps, start_off, a.max_secs)
+    t_frames, t_start, t_end, period, sel = fs["t_frames"], fs["t_start"], fs["t_end"], fs["period"], fs["sel"]
     try:
         acc, gyr = read_imu(rec / "imu.csv", raw=a.imu_raw)
     except ValueError as e:
@@ -467,8 +487,6 @@ def run(a):
     for s in (a.dropout.split(",") if a.dropout else []):
         t0, d = (float(v) for v in s.split(":"))
         drop.append((t_start + int(t0 * 1e9), t_start + int((t0 + d) * 1e9)))
-    period = 1e9 / float(meta.get("save_fps") or 240)
-    sel = pick_by_time(t_frames, t_start, t_end, a.fps, period)
     k = max(1, int(round(float(meta.get("save_fps") or 240) / a.fps)))
     old_idx = np.nonzero((t_frames >= t_start) & (t_frames <= t_end) & (np.arange(len(t_frames)) % k == 0))[0]
     frames = dict(rec_all=gap_stats(t_frames, period),
@@ -533,8 +551,22 @@ def run(a):
     th = threading.Thread(target=reader, daemon=True)
     th.start()
     nthr = int(getattr(a, "decode_threads", 0) or 0)            # 0 = OpenCV default (all cores); frames identical
-    cap = (cv2.VideoCapture(str(rec / "cam5.mp4"), cv2.CAP_FFMPEG, [cv2.CAP_PROP_N_THREADS, nthr]) if nthr
-           else cv2.VideoCapture(str(rec / "cam5.mp4")))
+    fcache, fwriter, cache_hit = None, None, False               # --frame-cache (2026-10-23, off by default)
+    if getattr(a, "frame_cache", False):
+        if fc is not None and fc.comp:
+            print("frame cache: not used with --focus-comp (per-frame maps)", file=sys.stderr)
+        else:
+            from frame_cache import FrameCache
+            fcache = FrameCache(rec, (W, H), m1, m2)
+            need = [fi for fi in sel if not any(d0 <= t_frames[fi] < d1 for d0, d1 in drop)
+                    and not (fc is not None and fc.drop and fc.moving(fi))]   # = the frames the loop retrieves
+            cache_hit = fcache.has_all(need)
+            if not cache_hit:
+                fwriter = fcache.writer()
+            print(f"frame cache: {'hit' if cache_hit else 'miss'} {fcache.info()}", file=sys.stderr)
+    cap = None if cache_hit else (
+        cv2.VideoCapture(str(rec / "cam5.mp4"), cv2.CAP_FFMPEG, [cv2.CAP_PROP_N_THREADS, nthr]) if nthr
+        else cv2.VideoCapture(str(rec / "cam5.mp4")))
     imu_lead = float(getattr(a, "imu_lead", 2.0))               # s of IMU before the first frame (default 2, unchanged)
     ii = int(np.searchsorted(t_imu, t_start - dt_ns - int(imu_lead * 1e9)))
     n_fed = 0
@@ -543,8 +575,12 @@ def run(a):
     crashed = None
     try:
         for fi in range(len(rows)):
-            ok_r = cap.grab()
-            if not ok_r:
+            if cache_hit:                                        # same stop as the decoder's failed grab()
+                if fcache.eof is not None and fi >= fcache.eof:
+                    break
+            elif not cap.grab():
+                if fwriter is not None:
+                    fwriter.eof(fi)
                 break
             tc = t_frames[fi]
             if tc > t_end:                                       # (before 2026-10-20 checked after 'selected' -> decoded
@@ -560,9 +596,14 @@ def run(a):
             if fc is not None and fc.drop and fc.moving(fi):
                 fc.n_dropped += 1
                 continue
-            _, f = cap.retrieve()
-            mp = fc.map_for(fi) if fc is not None and fc.comp else None
-            g = cv2.remap(cv2.cvtColor(f, cv2.COLOR_BGR2GRAY), *(mp or (m1, m2)), cv2.INTER_LINEAR)
+            if cache_hit:
+                g = fcache.get(fi)
+            else:
+                _, f = cap.retrieve()
+                mp = fc.map_for(fi) if fc is not None and fc.comp else None
+                g = cv2.remap(cv2.cvtColor(f, cv2.COLOR_BGR2GRAY), *(mp or (m1, m2)), cv2.INTER_LINEAR)
+                if fwriter is not None:                          # only without --focus-comp (mp is None)
+                    fwriter.add(fi, g)
             if hold_ok is not None and hold_ok.needs_init() and last_fed_t is not None:
                 tw = time.time()                                 # iD: wait for the bridge's pose of the previous frame
                 while bst["last_t"] < last_fed_t and bst["init_t"] is None and time.time() - tw < 5.0:
@@ -596,6 +637,8 @@ def run(a):
     except BrokenPipeError:                                      # ov_bridge died (e.g. diverged) -> score what we got
         crashed = f"ov_bridge exited (rc {p.poll()}) after {n_fed} frames"
         print(crashed, file=sys.stderr)
+    finally:
+        n_cached_new = fwriter.close() if fwriter is not None else 0
     p.wait(timeout=120)
     th.join(timeout=10)
     wall = time.time() - t_wall
@@ -605,6 +648,9 @@ def run(a):
         res["cfg_over"] = a.cfg_over
     if fc is not None:
         res.update(fc.summary())
+    if fcache is not None:                                       # key only with --frame-cache (default result unchanged)
+        res["frame_cache"] = dict(hit=cache_hit, key=fcache.key, dir=str(fcache.dir),
+                                  frames_written=n_cached_new)
     res["gyro_rebias"] = rebias_log is not None
     if rebias_log is not None:
         res.update(gyro_rebias_events=[[round((t - int(gyr[0, 0])) / 1e9, 2), ev, round(L, 1),
@@ -752,6 +798,9 @@ def main():
     ap.add_argument("--gyro-rebias", action="store_true",
                     help="subtract a causal per-still gyro bias (imu_learn/gyro_rebias.py); default ON with --imu-raw")
     ap.add_argument("--no-gyro-rebias", action="store_true", help="raw gyro as is (runs before 2026-10-22)")
+    ap.add_argument("--frame-cache", action="store_true",
+                    help="read the fed frames from recordings/<rec>/cache/ (imu_learn/frame_cache.py) when complete, else "
+                         "decode as usual and add the missing frames; bit-identical images; not with --focus-comp (off)")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
     if a.gyro_rebias and a.no_gyro_rebias:
