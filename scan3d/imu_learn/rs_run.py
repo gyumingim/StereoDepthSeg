@@ -11,7 +11,7 @@ The estimator config is the bench's (vio_bench_hs.write_config) + these two line
 
   ../venv_ffs/bin/python imu_learn/rs_run.py bitcheck [REC] [SECS]   # RS bridge rs=0 vs stock bridge: poses identical?
   ../venv_ffs/bin/python imu_learn/rs_run.py sanity [REC] [SECS]     # off / 2.94 / 2.205 / -2.94 ms: [RS] + [CHI2] stats
-  ../venv_ffs/bin/python imu_learn/rs_run.py job NAME | run | score  # full comparison (NOT run yet; plan doc first)
+  [RS_SUITE=zob|nozupt] ../venv_ffs/bin/python imu_learn/rs_run.py v2check | job NAME | run | score
 """
 import argparse
 import gzip
@@ -29,7 +29,14 @@ os.chdir(SCAN3D)
 sys.path.insert(0, str(HERE))
 
 PY = "../venv_ffs/bin/python"
-OUT = Path("runs/rs_corr")
+# RS_SUITE (env, inherited by job subprocesses): which base config the RS conditions sit on.
+#   zob    (default) base = config/base_zob,    reused base runs = runs/phone60/<key>_V2, out runs/rs_corr
+#   nozupt           base = config/base_nozupt, reused base runs = runs/phone60/<key>_V4, out runs/rs_corr_nozupt
+SUITES = {"zob": dict(tdir="config/base_zob", fallback="zupt_only_at_beginning=true", ref="V2", out="runs/rs_corr"),
+          "nozupt": dict(tdir="config/base_nozupt", fallback="try_zupt=false", ref="V4", out="runs/rs_corr_nozupt")}
+SUITE = os.environ.get("RS_SUITE", "zob")
+SU = SUITES[SUITE]
+OUT = Path(SU["out"])
 PAR = int(os.environ.get("PAR", 2))
 STOCK_BRIDGE = SCAN3D / "ov_bridge" / "build" / "ov_bridge"
 RS_BRIDGE = SCAN3D / "tools" / "ov_bridge_rs" / "build" / "ov_bridge"
@@ -37,7 +44,7 @@ SKEW_REPORTED = 2.94e-3                                       # SENSOR_ROLLING_S
 CONDS = {"base": 0.0, "rs294": SKEW_REPORTED, "rs221": SKEW_REPORTED * 0.75}
 # base template: config/base_zob (= config/mono + zupt_only_at_beginning: true, user decision 2026-10-23). Until that dir
 # exists the same thing is made from config/mono + cfg_over (same file content except that one line).
-BASE_TDIR = "config/base_zob"
+BASE_TDIR = SU["tdir"]
 RAW = ["hs_20261022_133820", "hs_20261022_134550", "hs_20261022_134204",
        "hs_20261021_214550", "hs_20261021_213341", "hs_20261021_213955", "hs_20261021_215348",
        "hs_20261020_214138", "hs_20261020_221052", "hs_20261020_221925", "hs_20261020_222747", "hs_20261020_223815",
@@ -49,7 +56,7 @@ DROP = "hs_20261021_213955"
 def template():
     if (SCAN3D / BASE_TDIR / "estimator_config.yaml").exists():
         return BASE_TDIR, ""
-    return "config/mono", "zupt_only_at_beginning=true"
+    return "config/mono", SU["fallback"]
 
 
 def row_scale(rec, size="640x360"):
@@ -157,34 +164,35 @@ def sanity(rec="recordings/hs_20261022_133820", secs=30.0):
         json.dump(res, open(OUT / "sanity.json", "w"), indent=1)
 
 
-V2_DIR = Path("runs/phone60")                               # phone60 ablation V2 = config/mono + zupt_only_at_beginning
+V2_DIR = Path("runs/phone60")                               # phone60 ablation runs (V2 = zob, V4 = ZUPT off)
+REF = SU["ref"]
+CHECK = OUT / f"{REF.lower()}check.json"                    # v2check.json (zob) / v4check.json (nozupt)
 
 
 def reuse_v2():
-    """Base runs are taken from runs/phone60/<key>_V2 only if v2check found pose-level identity (2026-10-23 amendment)."""
-    p = OUT / "v2check.json"
-    return p.exists() and json.load(open(p)).get("identical") is True
+    """Base runs are taken from runs/phone60/<key>_<REF> only if the check found pose-level identity (2026-10-23)."""
+    return CHECK.exists() and json.load(open(CHECK)).get("identical") is True
 
 
 def base_pre(name):
     key = name.rsplit("_", 1)[0]
-    return V2_DIR / f"{key}_V2" if reuse_v2() else OUT / name
+    return V2_DIR / f"{key}_{REF}" if reuse_v2() else OUT / name
 
 
 def v2check(key="133820_o0"):
-    """Full-length run of one cell: RS bridge rs=0 (base) vs the stored V2 poses of the same cell."""
+    """Full-length run of one cell: RS bridge rs=0 (base) vs the stored REF (V2/V4) poses of the same cell."""
     OUT.mkdir(parents=True, exist_ok=True)
     rec = next(r for r in RAW + OLD if r.endswith(key.split("_")[0]))
     r, P = replay(f"recordings/{rec}", int(key.split("_o")[1]), 0.0, RS_BRIDGE)
-    V = [json.loads(x) for x in gzip.open(str(V2_DIR / f"{key}_V2") + ".poses.jsonl.gz", "rt") if x.strip()]
+    V = [json.loads(x) for x in gzip.open(str(V2_DIR / f"{key}_{REF}") + ".poses.jsonl.gz", "rt") if x.strip()]
     strip = lambda Q: [{k: v for k, v in m.items() if k not in ("ms", "wall_ms")} for m in Q]
     same = strip(P) == strip(V)
-    res = dict(made=time.strftime("%F %T"), key=key, n_poses=[len(P), len(V)], identical=same,
-               ate=[r.get("ate_cm"), json.load(open(V2_DIR / f"{key}_V2.json")).get("ate_cm")],
+    res = dict(made=time.strftime("%F %T"), suite=SUITE, ref=REF, key=key, n_poses=[len(P), len(V)], identical=same,
+               ate=[r.get("ate_cm"), json.load(open(V2_DIR / f"{key}_{REF}.json")).get("ate_cm")],
                template=r.get("rs_template"), cfg_over=r.get("rs_cfg_over"), keys_ignored=["ms", "wall_ms"])
     if not same:
         res["first_diff"] = next((i for i, (x, y) in enumerate(zip(strip(P), strip(V))) if x != y), None)
-    json.dump(res, open(OUT / "v2check.json", "w"), indent=1)
+    json.dump(res, open(CHECK, "w"), indent=1)
     print(json.dumps(res, indent=1))
 
 
@@ -196,7 +204,7 @@ def job(name):
     j = next(x for x in jobs() if x["name"] == name)
     t0 = time.time()
     r, P = replay(f"recordings/{j['rec']}", j["off"], CONDS[j["cond"]], RS_BRIDGE)
-    r.update(rs_cond=j["cond"], rs_made=time.strftime("%F %T"), rs_job_s=round(time.time() - t0, 1))
+    r.update(rs_cond=j["cond"], rs_suite=SUITE, rs_made=time.strftime("%F %T"), rs_job_s=round(time.time() - t0, 1))
     with gzip.open(str(OUT / name) + ".poses.jsonl.gz", "wt") as f:
         for m in P:
             f.write(json.dumps(m) + "\n")
@@ -237,13 +245,17 @@ def score():
         m = zs.run_metrics(pre, j["rec"]) if d else dict(divergent=True, why="missing")
         runs[j["name"]] = dict(rec=j["rec"], key=j["name"].rsplit("_", 1)[0], cond=j["cond"], div=bool(m.get("divergent")),
                                ate_w=m.get("ate_w"), rel5_max=m.get("rel5_max"), dt_final_ms=d.get("dt_cam_imu_final_ms"))
-    res = dict(made=time.strftime("%F %T"), runs=runs, conds={}, criteria={},
-               base_source=str(V2_DIR / "<key>_V2") if reuse_v2() else str(OUT / "<key>_base"))
+    missing = sorted({r["key"] for r in runs.values() if r["ate_w"] is None and not r["div"]} |
+                     {j["name"].rsplit("_", 1)[0] for j in jobs()
+                      if not Path(str(base_pre(j["name"]) if j["cond"] == "base" else OUT / j["name"]) + ".json").exists()})
+    res = dict(made=time.strftime("%F %T"), suite=SUITE, runs=runs, conds={}, criteria={},
+               base_source=str(V2_DIR / f"<key>_{REF}") if reuse_v2() else str(OUT / "<key>_base"),
+               partial=bool(missing), cells_missing=missing)
     for c in CONDS:
-        R = [r for r in runs.values() if r["cond"] == c]
+        R = [r for r in runs.values() if r["cond"] == c and r["key"] not in missing]
         res["conds"][c] = dict(n_div_excl_drop=sum(r["div"] for r in R if r["rec"] != DROP),
                                n_div_drop=sum(r["div"] for r in R if r["rec"] == DROP))
-    keys = sorted({r["key"] for r in runs.values() if r["rec"] != DROP})
+    keys = sorted({r["key"] for r in runs.values() if r["rec"] != DROP and r["key"] not in missing})
     for c in ("rs294", "rs221"):
         normal = [k for k in keys if not runs[f"{k}_base"]["div"] and not runs[f"{k}_{c}"]["div"]]
         mb = float(np.median([runs[f"{k}_base"]["ate_w"] for k in normal]))
@@ -255,7 +267,8 @@ def score():
         res["criteria"][c] = dict(a_div=a, b_ate_not_worse=b, c_primary=p, n_normal=len(normal), med_base=round(mb, 2),
                                   med_rs=round(mc, 2), n_cells_better=better, adopt=a and b and p)
     json.dump(res, open(OUT / "score.json", "w"), indent=1, ensure_ascii=False)
-    print(json.dumps(dict(conds=res["conds"], criteria=res["criteria"]), indent=1))
+    print(json.dumps(dict(partial=res["partial"], n_missing=len(missing), conds=res["conds"], criteria=res["criteria"]),
+                     indent=1))
 
 
 def main():

@@ -114,3 +114,12 @@ GT 스플라인 속도 (±25 ms 중앙차분, 카메라 좌표) + 깊이 = 보�
   Li & Mourikis (IJRR 2014) / VINS-Mono `projection_td_factor` 와 같은 계열.
 - 그때는 회전도 업데이트 안으로 옮기거나 (권장, 중복 방지), 회전 사전 보정 + 병진만 업데이트로 나눈다.
 - 병진이 큰 녹화 (214550, 213341, 223815, 224323) 에서 따로 효과를 보는 것을 우선한다.
+
+## 추가 (2026-10-23 11:40, ZUPT-off base, 이 비교의 RS run 시작 전에 커밋)
+- 배경: ablation 결과 V4 (= config/mono + `try_zupt: false`) 가 가장 좋아 (발산 6 vs base_zob 13) 새 기준선이 됐다.
+  base_zob 위 RS 비교는 46/90 run (51 %) 에서 멈췄다 (코디네이터 지시: 70 % 미만이면 중단). 끝난 칸은 부분 정보로만 보고 (`runs/rs_corr/score.json`, partial).
+- **base = `config/base_nozupt/`** (= config/mono 에서 `try_zupt: false` 한 줄만 다름, kalibr_imu_chain 같음).
+  base run 은 `runs/phone60/<칸>_V4` 재사용. 확인: RS 다리 rs=0 + base_nozupt 로 133820 o0 전체 → V4 포즈와 같음 (3833 포즈, ATE 1.38 = 1.38,
+  `runs/rs_corr_nozupt/v4check.json`).
+- 조건·녹화·오프셋·기준 (a)(b)(c)·판정 규칙은 위와 **같다**: rs294 (2.94 ms), rs221 (2.205 ms), 15 녹화 × 0/1/2 s, 새 run 90 개, 동시 ≤ 12, `--frame-cache`.
+- 실행: `RS_SUITE=nozupt PAR=12 ../venv_ffs/bin/python imu_learn/rs_run.py run` → `RS_SUITE=nozupt ... score` → `runs/rs_corr_nozupt/score.json`.
