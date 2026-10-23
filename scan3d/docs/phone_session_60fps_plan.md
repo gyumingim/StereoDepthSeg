@@ -31,3 +31,11 @@ Phone care: cool below 36 °C between takes (recording stops above 40 °C SKIN).
 ## Ruler check of GT scale (user, 2026-10-23; no rail available)
 Tape two marks on the desk 30 cm apart, measured with a ruler. Rest the phone at the first mark for 5 s with the board in view, move it by hand to the second mark, and rest there for 5 s. Compare the GT displacement between the two stills with 30 cm; the target is about 0.5 %.
 This is a third independent scale reference, next to gravity (IMU) and the ruler-measured board. Takes about 1 min.
+
+## Lens calibration shot list (user, 2026-10-23): one pose per recording
+Each recording is a single tripod pose: 2 s settle, then 4 s still. The phone does not move during a recording, so there is no blur and no rolling shutter in the calibration.
+Poses, about 12 recordings:
+- Board in the centre, top-left, top-right, bottom-left, bottom-right, left edge, right edge (7), at about 2 m.
+- Centre and two opposite corners at about 1.5 m and 2.5 m (4).
+- Board tilted about 30°, left and right (2).
+The fit uses all recordings jointly. Repeatability check: fit two disjoint halves of the poses; require fx within ±0.3 % and the principal point within ±3 px.
