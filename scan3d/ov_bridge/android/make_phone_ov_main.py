@@ -58,7 +58,8 @@ LEVER = SCAN3D / "config" / "imu_cam_lever.json"
 FOCUS_CAL = SCAN3D / "config" / "lens" / "hs_1920x1080_focus_cal_20261022.json"
 RAW_SIZE = (1920, 1080)
 VIO_SIZE = (640, 360)
-# name: (fps, num_pts, max_clones[, VIO size, init_max_disparity px]); default size 640x360, disparity INIT_OVER
+# name: (fps, num_pts, max_clones[, VIO size, init_max_disparity px[, {other estimator_config key: value}]]); default size
+# 640x360, disparity INIT_OVER
 VARIANTS = {"base60": (60, 200, 11), "n150": (60, 150, 11), "n100": (60, 100, 11), "c8": (60, 200, 8),
             "n100c8": (60, 100, 8), "fps30": (30, 200, 11), "fps30n100c8": (30, 100, 8),
             # 2026-10-24 user decision: VIO at 30 fps; C4 first (best on room-scale data, docs/fps30_result.md), C2 fallback
@@ -68,7 +69,13 @@ VARIANTS = {"base60": (60, 200, 11), "n150": (60, 150, 11), "n100": (60, 100, 11
             # 2026-10-24: C2 (640) held 6 min without throttling but 1.8 % loop error vs C4 0.7 % -> spend its ~5 ms headroom
             "c5": (30, 200, 15), "c6": (30, 200, 13, (800, 450), 18.75),
             # 2026-10-24: C4 with 400 tracked points (num_pts 200 -> 400), everything else = c4
-            "c4n400": (30, 400, 15, (960, 540), 22.5)}
+            "c4n400": (30, 400, 15, (960, 540), 22.5),
+            # 2026-10-24 user: more SLAM features (max_slam 50 -> 100), more clones (15 -> 20), and both + 400 points;
+            # max_slam_in_update stays 25 (only the batch size of the sequential SLAM update in this OpenVINS: every SLAM
+            # feature is still updated each frame), max_msckf_in_update stays 40 (as c4)
+            "c4s100": (30, 200, 15, (960, 540), 22.5, {"max_slam": "100"}),
+            "c4c20": (30, 200, 20, (960, 540), 22.5),
+            "c4n400s100c20": (30, 400, 20, (960, 540), 22.5, {"max_slam": "100"})}
 # final_baseline_run.py: init_window=1.0, init_disp=15.0, cfg_over="num_opencv_threads=2,try_zupt=false", init_cfg strict
 INIT_OVER = {"init_window_time": "1.0", "init_max_disparity": "15.00", "num_opencv_threads": "2", "try_zupt": "false"}
 # feature-init limits = F1, adopted 2026-10-24 (docs/fi_limits_result.md; OpenVINS defaults 40 / 10000)
@@ -158,6 +165,8 @@ def main():
         over = {**INIT_OVER, **FI_OVER}
         if len(v) > 4:
             over["init_max_disparity"] = f"{v[4]:.2f}"
+        if len(v) > 5:
+            over.update(v[5])
         d = out / name
         d.mkdir(exist_ok=True)
         Kv = Knew
@@ -188,7 +197,7 @@ def main():
         cfg.write_text("\n".join(lines) + "\n")
         chk = {k: v for k, v in (ln.split("#")[0].split(":", 1) for ln in cfg.read_text().splitlines()
                                  if ":" in ln.split("#")[0] and not ln.startswith(" "))}
-        used[name].update({k: chk[k].strip() for k in ("track_frequency", "num_pts", "max_clones", "num_opencv_threads", "init_max_disparity",
+        used[name].update({k: chk[k].strip() for k in ("track_frequency", "num_pts", "max_clones", "max_slam", "max_slam_in_update", "max_msckf_in_update", "num_opencv_threads", "init_max_disparity",
                                                          "try_zupt", "record_timing_information", "use_stereo",
                                                          "calib_cam_intrinsics", "calib_cam_extrinsics", *FI_OVER)})
 
