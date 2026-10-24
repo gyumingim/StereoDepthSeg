@@ -62,7 +62,9 @@ VIO_SIZE = (640, 360)
 VARIANTS = {"base60": (60, 200, 11), "n150": (60, 150, 11), "n100": (60, 100, 11), "c8": (60, 200, 8),
             "n100c8": (60, 100, 8), "fps30": (30, 200, 11), "fps30n100c8": (30, 100, 8),
             # 2026-10-24 user decision: VIO at 30 fps; C4 first (best on room-scale data, docs/fps30_result.md), C2 fallback
-            "c2": (30, 200, 11), "c4": (30, 200, 15, (960, 540), 22.5)}
+            "c2": (30, 200, 11), "c4": (30, 200, 15, (960, 540), 22.5),
+            # 2026-10-24 user: overload test at 1280x720 (raw 1080 stream remapped on the phone, like c4)
+            "c7": (30, 200, 15, (1280, 720), 30.0)}
 # final_baseline_run.py: init_window=1.0, init_disp=15.0, cfg_over="num_opencv_threads=2,try_zupt=false", init_cfg strict
 INIT_OVER = {"init_window_time": "1.0", "init_max_disparity": "15.00", "num_opencv_threads": "2", "try_zupt": "false"}
 # feature-init limits = F1, adopted 2026-10-24 (docs/fi_limits_result.md; OpenVINS defaults 40 / 10000)

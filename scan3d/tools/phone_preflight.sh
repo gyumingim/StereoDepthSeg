@@ -21,11 +21,14 @@ phone_preflight() {
   local dev="$kill"' for p in '"$PREFLIGHT_HEAVY"'; do pid=$(pidof $p) && { '"$stop"' echo "'"$verb"' $p (pid $pid)"; }; done;
 echo "--"; grep -E "^(MemTotal|MemAvailable):" /proc/meminfo;
 dumpsys thermalservice > /data/local/tmp/pf_th.txt; grep -m1 "Thermal Status" /data/local/tmp/pf_th.txt;
-sed -n "/Current temperatures from HAL/,\$p" /data/local/tmp/pf_th.txt | grep "mName=SKIN" | tail -1; rm -f /data/local/tmp/pf_th.txt'
+sed -n "/Current temperatures from HAL/,\$p" /data/local/tmp/pf_th.txt | grep "mValue=.*mName=SKIN" | tail -1; rm -f /data/local/tmp/pf_th.txt'
   dev=${dev//$'\n'/ }            # one line for adb shell
   out=$(MSYS_NO_PATHCONV=1 "$A" -s "$S" shell "$dev" 2>&1 | tr -d '\r')
   t1=$(date +%s%3N)
-  skin=$(echo "$out" | grep "mName=SKIN" | sed -E 's/.*mValue=([0-9.]+).*/\1/' | tail -1)
+  # only Temperature{mValue=..} lines: the static TemperatureThreshold{.. mName=SKIN ..} line has no value
+  # (2026-10-24 bug: it let a 38.0 C phone pass); the value must be a number
+  skin=$(echo "$out" | grep -E "mValue=[0-9.]+,.*mName=SKIN" | sed -E 's/.*mValue=([0-9.]+).*/\1/' | tail -1)
+  [[ "$skin" =~ ^[0-9]+([.][0-9]+)?$ ]] || skin=""
   ts=$(echo "$out" | grep -m1 "Thermal Status" | grep -oE "[0-9]+" | head -1)
   echo "preflight $(date '+%Y-%m-%d %H:%M:%S') device $S ($((t1 - t0)) ms)"
   echo "kill-all: $([ -n "${PREFLIGHT_DRY:-}" ] && echo "skipped (DRY)" || echo done); heavy apps checked: $PREFLIGHT_HEAVY"
