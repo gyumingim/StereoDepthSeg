@@ -161,6 +161,14 @@ def main():
             Kv, _ = cv2.getOptimalNewCameraMatrix(K, dist, RAW_SIZE, 0, size)
             write_remap(d / "remap_1920x1080.bin", K, dist, RAW_SIZE, Kv, size)
             knew_other[name] = {"size": f"{size[0]}x{size[1]}", "Knew": Kv.tolist(), "remap": f"{name}/remap_1920x1080.bin"}
+            if size == (1280, 720):   # c7: the camera also offers 1280x720 YUV -> map for that stream (ISP scale 2/3 of
+                # the same 16:9 crop assumed, like remap_640x360.bin; unverified) - run with --es ov_size 1280x720
+                K2 = K.copy()
+                K2[0, 0] *= 2 / 3
+                K2[1, 1] *= 2 / 3
+                K2[0, 2] = (K[0, 2] + 0.5) * 2 / 3 - 0.5
+                K2[1, 2] = (K[1, 2] + 0.5) * 2 / 3 - 0.5
+                write_remap(d / "remap_1280x720.bin", K2, dist, size, Kv, size)
         used[name] = vb.write_config(d, Kv, size, fps, R_ci, p_CinI, timeshift, noise, npts, clones, "strict", over)
         cfg = d / "estimator_config.yaml"
         lines = []

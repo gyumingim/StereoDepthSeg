@@ -81,8 +81,10 @@ run)
     tf=$(awk -F: '/^track_frequency:/{gsub(/ /, "", $2); printf "%d", $2 + 0.5}' "$cdir/estimator_config.yaml")
     [ -n "$tf" ] && [ "$tf" -gt 0 ] && { set -- "$@" --ei fps "$tf"; echo "config $CFG: track_frequency $tf -> --ei fps $tf"; }
   fi
-  if [ -f "$cdir/remap_1920x1080.bin" ] && [[ "$ex" == *" ov_size "* ]] && [[ "$ex" != *" ov_size 1920x1080 "* ]]; then
-    echo "config $CFG has its own remap for the 1920x1080 stream only: drop the ov_size extra"; exit 2
+  # a config with its own remap needs a map for the stream size it runs on (c4: 1920x1080 only; c7: 1920x1080 or 1280x720)
+  osz=$(echo "$ex" | grep -oE " ov_size [0-9]+x[0-9]+ " | awk '{print $2}')
+  if [ -f "$cdir/remap_1920x1080.bin" ] && [ -n "$osz" ] && [ ! -f "$cdir/remap_$osz.bin" ]; then
+    echo "config $CFG has no remap for the $osz stream ($(cd "$cdir" && ls remap_*.bin | tr '\n' ' ')): change ov_size"; exit 2
   fi
   [ -f "$cdir/estimator_config.yaml" ] || echo "note: $cdir not found on the PC (fps / size not checked)"
   PF=$(mktemp)
