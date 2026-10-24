@@ -40,3 +40,6 @@
 - 본 녹화: 모니터 보드, 4~6 개 × 3~5 분, **시작과 끝에 5~10 s 폰 내려놓기** (녹화별 바이어스·녹화 중 변화 확인).
 - 녹화 뒤 물리 보정에 온도 항 넣어 ~~0.99 cm 가 줄어드는지~~ **VIO 결과(ATE·초기화 성공)가 좋아지는지** 비교.
   (정정 15:20: 토론 합의로 3 초 IMU 점수 0.99 cm 는 판단 기준에서 뺌 — docs/debate_super_easy.html, critic_debate_20261020.html)
+
+## 폰 VIO 메모
+- histogram_method NONE since 2026-10-24 (c4, c4n400, c4s100, c4c20, c4n400s100c20; make_phone_ov_main.py HIST_NONE); if tracking gets worse (dark scenes, fewer features), HISTOGRAM is the fallback candidate.
