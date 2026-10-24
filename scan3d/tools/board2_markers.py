@@ -1,9 +1,9 @@
 # Two big ArUco markers (laptop 1920x1200): detection + pose for the calibration pages (2026-10-24, user: "큰마커 2개").
-# Layout: DICT_6X6_250 ids 0 (left) and 1 (right), side 628 px, gap 80 px, top-left at (500,286) and (1208,286).
-# Physical: 628 px x 0.1570 mm/px (Lenovo 14" 1920x1200 panel, spec estimate) = 98.6 mm at 1:1 pixels.
+# Layout: DICT_6X6_250 ids 0 (left) and 1 (right), side 780 px, gap 120 px, top-left at (120,100) and (1020,100).
+# Physical: 780 px x 0.1570 mm/px (Lenovo 14" 1920x1200 panel, spec estimate) = 122.5 mm at 1:1 pixels.
 import cv2, numpy as np, math
 
-SIDE_PX, GAP_PX, X0, Y0 = 628, 80, 500, 286   # max size with ~1-module quiet zones; left 440 px = live view
+SIDE_PX, GAP_PX, X0, Y0 = 780, 120, 120, 100   # full width, top; bottom 220 px = live view + text
 MM_PER_PX = 0.1570
 D = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_250)
 
