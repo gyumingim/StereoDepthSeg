@@ -79,7 +79,8 @@ class OvRunner implements SensorEventListener {
     String preset = "live";                     // bridge args: "live" (scan3d live defaults) | "bench" (vio_bench_hs.py)
     boolean imuRaw = false;                     // uncalibrated gyro/accel (types 16/35, values 0..2)
     boolean ovTiming = true;                    // OpenVINS record_timing_information -> run dir/ov_timing.txt
-    int maxBatteryTenthC = 420;                 // stop at this battery temperature (backstop; the PC loop watches SKIN)
+    int maxBatteryTenthC = 460;                 // stop at this battery temperature (backstop; the PC loop watches SKIN); 0.6.8: 42 -> 46 C
+    int maxThermal = android.os.PowerManager.THERMAL_STATUS_CRITICAL;   // 0.6.8: was SEVERE (3)
     int poolSize = 4;                           // image buffers in flight (more frames waiting -> dropped, counted)
     Runnable onAutoStop;                        // called (UI side finishes the activity) when a stop rule fires
     volatile String stopReason = "user";
@@ -419,7 +420,7 @@ class OvRunner implements SensorEventListener {
             } catch (Exception ignored) { }
             String why = null;
             if (b >= maxBatteryTenthC) why = "battery " + b / 10.0 + " C";
-            else if (ts >= android.os.PowerManager.THERMAL_STATUS_SEVERE) why = "thermal status " + ts;
+            else if (ts >= maxThermal) why = "thermal status " + ts;
             if (why != null && onAutoStop != null) {
                 stopReason = why;
                 status.show("STOP: " + why);

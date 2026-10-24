@@ -94,6 +94,7 @@ public class MainActivity extends Activity {
                 hs.afMode = getIntent().getIntExtra("af_mode", -1);          // CONTROL_AF_MODE value instead of fixed focus
                 hs.focusSweep = getIntent().getStringExtra("focus_sweep");  // "0.37,3.33,1.0" dpt, each held 2 s (cycling)
                 hs.maxBatteryTenthC = getIntent().getIntExtra("max_temp_dc", 460);
+                hs.maxThermal = getIntent().getIntExtra("max_thermal", hs.maxThermal);
                 try {
                     if (getIntent().getIntExtra("preview", 1) != 0) {     // on-screen view + board detected / not detected
                         hs.choose();
@@ -136,7 +137,8 @@ public class MainActivity extends Activity {
                 String imu = getIntent().getStringExtra("imu");
                 ov.imuRaw = imu != null ? "raw".equals(imu) : main;
                 ov.ovTiming = getIntent().getIntExtra("ov_timing", 1) != 0;
-                ov.maxBatteryTenthC = getIntent().getIntExtra("max_temp_dc", 420);
+                ov.maxBatteryTenthC = getIntent().getIntExtra("max_temp_dc", 460);
+                ov.maxThermal = getIntent().getIntExtra("max_thermal", ov.maxThermal);
                 ov.poolSize = Math.max(2, getIntent().getIntExtra("pool", 4));
                 ov.onAutoStop = () -> runOnUiThread(this::finish);      // onPause stops the runner and writes meta.json
                 try {

@@ -83,7 +83,8 @@ class HsRecorder implements SensorEventListener {
     private Surface encSurface;
     Surface previewSurface;                      // optional 2nd output (HsPreview: on-screen view + board check)
     volatile String stopReason = "user";
-    int maxBatteryTenthC = 460;                  // stop when the battery reaches 46.0 C or Android reports SEVERE throttling
+    int maxBatteryTenthC = 460;                  // stop when the battery reaches 46.0 C or Android thermal status >= maxThermal
+    int maxThermal = android.os.PowerManager.THERMAL_STATUS_CRITICAL;   // 0.6.8: was SEVERE (3) -> CRITICAL (4), user 2026-10-24
     private File dir;
     private BufferedWriter imuW, frW, resW;     // resW: every capture result (offline check of the pts -> sensor ts match)
     private volatile boolean running;
@@ -766,7 +767,7 @@ class HsRecorder implements SensorEventListener {
             if (!running) return;
             int temp = batteryTenthC();
             int th = ((android.os.PowerManager) ctx.getSystemService(Context.POWER_SERVICE)).getCurrentThermalStatus();
-            if (temp >= maxBatteryTenthC || th >= android.os.PowerManager.THERMAL_STATUS_SEVERE) {
+            if (temp >= maxBatteryTenthC || th >= maxThermal) {
                 stopReason = String.format(Locale.US, "overheat (battery %.1f C, thermal status %d)", temp / 10.0, th);
                 android.util.Log.w("arlat", "HS stop: " + stopReason);
                 stop();
