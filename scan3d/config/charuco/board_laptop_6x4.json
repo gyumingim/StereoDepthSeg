@@ -3,12 +3,13 @@
  "squares_x": 6,
  "squares_y": 4,
  "marker_ratio": 0.5882352941176471,
- "square_mm": 47.1,
- "square_estimated": true,
- "square_mm_source": "spec-based: Lenovo IdeaPad Slim 3 14AHP10 panel 301.5 mm / 1920 px = 0.1570 mm/px x 300 px (only if shown at 1:1 device pixels; otherwise measure one square with a ruler). Irrelevant for lens intrinsics; matters only for GT scale.",
+ "square_mm": 47.27,
+ "square_estimated": false,
+ "square_mm_source": "ruler: 7 squares x 272 px = 30 cm on the laptop screen (user, 2026-10-21, board_laptop_6x6.json) -> 0.15756 mm/px (fullscreen, 1:1 px)",
  "image": "charuco_laptop_6x4.png 1920x1200, squares 300 px, board 1800x1200 centred (white 60 px side margins), 12 markers, 15 inner corners",
  "note": "bigger-square board for 1-2.5 m lens calibration on a laptop screen (2026-10-23, user asked for ~10-something markers instead of 21)",
  "made": "2026-10-23",
  "legacy_pattern": false,
- "legacy_pattern_note": "image generated with OpenCV 5 (new pattern); aruco_scale must not switch on the legacy pattern"
+ "legacy_pattern_note": "image generated with OpenCV 5 (new pattern); aruco_scale must not switch on the legacy pattern",
+ "square_mm_spec_old": 47.1
 }

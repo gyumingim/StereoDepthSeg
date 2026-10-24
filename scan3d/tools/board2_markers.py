@@ -4,7 +4,12 @@
 import cv2, numpy as np, math
 
 SIDE_PX, GAP_PX, X0, Y0 = 780, 120, 120, 100   # full width, top; bottom 220 px = live view + text
-MM_PER_PX = 0.1570
+MM_PER_PX = 0.15756   # ruler 7 x 272 px = 30 cm (user, 2026-10-21)
+try:      # set from the board page's card check (credit card 85.60 mm on the screen) -> board2_scale.json next to this file
+    import json as _j, os as _o
+    MM_PER_PX = float(_j.load(open(_o.path.join(_o.path.dirname(_o.path.abspath(__file__)), "board2_scale.json")))["mm_per_px"])
+except Exception:
+    pass
 D = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_250)
 
 
@@ -23,6 +28,13 @@ def obj_points():
         x0, y0 = x * MM_PER_PX / 1000.0, Y0 * MM_PER_PX / 1000.0
         out[i] = np.array([[x0, y0, 0], [x0 + s, y0, 0], [x0 + s, y0 + s, 0], [x0, y0 + s, 0]], np.float64)
     return out
+
+
+def set_scale(mm_per_px):
+    """Change the physical scale at runtime (the page's card check)."""
+    global MM_PER_PX, OBJ, CENTRE
+    MM_PER_PX = float(mm_per_px); OBJ = obj_points()
+    CENTRE = np.array([(X0 + (2 * SIDE_PX + GAP_PX) / 2) * MM_PER_PX / 1000.0, (Y0 + SIDE_PX / 2) * MM_PER_PX / 1000.0, 0.0])
 
 
 _P = cv2.aruco.DetectorParameters()
