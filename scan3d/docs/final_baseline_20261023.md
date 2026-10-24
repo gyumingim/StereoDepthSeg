@@ -1,5 +1,9 @@
 # 최종 기준선 확인 (2026-10-23)
 
+> **갱신 2026-10-24:** 최종 기준선 = **base_nozupt + lever + 새 렌즈 + F1** (`fi_max_cond_number 1e6`, `fi_max_baseline 200`).
+> config/mono · config/base_nozupt · config/phone_ov_main 의 기본값이 F1 로 바뀜. 근거 `docs/fi_limits_result.md`
+> (42 칸 발산 5 → 1, 짝 창 ATE 차이 중앙값 −0.05 cm). 아래 표·수치는 F1 이전 (40 / 10000) 기준.
+
 사용자 결정: **기준선 = base_nozupt + 카메라–IMU lever + 새 렌즈** (6 면 가속도 보정 없음, 자이로 rebias 없음).
 러너 `imu_learn/final_baseline_run.py`, 결과 `runs/final_baseline/score.json` (VIO 45 run 의 json·로그도 같은 폴더).
 
