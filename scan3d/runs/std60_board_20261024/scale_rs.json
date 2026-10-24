@@ -1,0 +1,68 @@
+[
+ {
+  "rec": "hs_20261024_165506_std60",
+  "gt_dir": "imu_gt_rs",
+  "win_s": 1.0,
+  "windows": 24,
+  "imu": "raw35",
+  "s": 0.9702,
+  "s_ci95": [
+   0.9355,
+   1.0167
+  ],
+  "s_boot_std": 0.0211,
+  "g_norm": 9.751,
+  "res_cm": 0.277,
+  "acc_dyn_rms_med": 0.744,
+  "gt_square_mm": 60.3,
+  "start_s": 0.0,
+  "end_s": 0.0,
+  "square_mm_raw": 58.5,
+  "s_lever": 0.987,
+  "s_lever_ci95": [
+   0.9455,
+   1.0238
+  ],
+  "s_lever_boot_std": 0.0205,
+  "lever_fit_cm": [
+   2.6,
+   6.83,
+   -0.01
+  ],
+  "res_lever_cm": 0.262,
+  "s_fixedlever": 0.9751,
+  "s_fixedlever_ci95": [
+   0.9403,
+   1.016
+  ],
+  "s_fixedlever_boot_std": 0.0194,
+  "lever_fixed_cm": [
+   0.49,
+   4.6,
+   -1.11
+  ],
+  "lever_fixed_source": "config/imu_cam_lever.json",
+  "res_fixedlever_cm": 0.266,
+  "g_norm_fixedlever": 9.754,
+  "check_uses": "s_fixedlever",
+  "check_tol": 0.15,
+  "check": "OK",
+  "square_mm_raw_fixedlever": 58.8,
+  "provenance": {
+   "made": "2026-10-24 17:03:12",
+   "git_head": "e41e34e",
+   "git_dirty": [
+    "scan3d/config/charuco/board_laptop_2markers.json",
+    "scan3d/imu_learn/board_rotation_power.py",
+    "scan3d/imu_learn/focus_scale.py",
+    "scan3d/imu_learn/std60_board_run.py",
+    "scan3d/imu_learn/zupt_fixA2b_dev.py"
+   ],
+   "code_sha256": {
+    "imu_gt.py": "67cbb43f9fe68826",
+    "aruco_scale.py": "2060d118835793ce",
+    "scale_ls.py": "b23c89985ef5cd81"
+   }
+  }
+ }
+]
