@@ -106,6 +106,17 @@ if __name__ == "__main__":
                         source="scan3d/runs/lens_calib_f050_20261023 (calib.py --tag all1024b, split_test.py, aspect_scan.py, run_lt55.sh, write_lens.py --1024b)",
                         model_choice="kept k12_notan (coordinator: unless evidence says otherwise). pp-repeatable models are tied: holdout k12_notan 0.154/0.115, k1_prior 0.150/0.116, k123_notan 0.157/0.115; LOPO 0.130/0.131/0.129. k1_prior passes most half-splits (40 %) but borrows k2 p1 p2 k3 from the 2.22 HS node. rational/k1k2p_k3: pp not repeatable (halves |dcx| p90 17 px)",
                         tilt_split_fx=json.load(open(HERE / "results" / "split_test.json"))["groups"]))
+    elif "--1024d" in sys.argv:
+        G = json.load(open(HERE / "results" / "far_groups.json"))
+        write_1024(("farC",), "std_1920x1080_f0.50_cal20261024d.json", 80, "lopo_pass_halves_fail",
+                   "All 80 poses (59 ChArUco + 21 FAR two-marker, 1.7-2.4 m). Leave-one-pose-out passes (fx -0.09/+0.06 %, pp within 0.7 px). "
+                   "Disjoint pose halves (62 splits): median |dfx| 0.23 %, |dcx| 1.4, |dcy| 2.4 px; fx <= 0.3 % in 60 %, pp <= 3 px in 55 %, both in 32 % -> FAIL. "
+                   "FAR set alone is too weak (8 points/pose, markers 36-118 px, coverage 19 %; halves median |dfx| 1.35 %). docs/lens_calib_f050_20261023.md section 13.",
+                   dict(uncertainty="fx about +-0.3 % (estimate), principal point about +-2 px",
+                        supersedes="_cal20261024b/_cal20261024/_cal20261023 (all kept)",
+                        source="scan3d/runs/lens_calib_f050_20261023 (collect.py edge-line corners for the two-marker board, calib.py --tag farA/farB/farC, far_diag.py, far_groups.py, write_lens.py --1024d)",
+                        model_choice="kept k12_notan; in set C k123_notan / k12_notan / k1_prior are tied (halves both-pass 35/32/26 %, LOPO 0.155-0.156 px); rational has lower holdout (0.132/0.117) but pp halves |dcx| median 2.3 / both-pass 16 % and wild coefficients",
+                        far_tilt_groups=G["groups"], far_sets_note="A far only, B far + frontal (<25 deg) ChArUco, C all; see results/calib_farA/B/C.json"))
     elif "--1024" in sys.argv:
         write_1024()
     else:

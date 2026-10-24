@@ -114,7 +114,11 @@ def build(exclude=()):
         n_each = max(2, int(round(N_PER_CLUSTER / len(ps))))
         for p in ps:
             if p["board"] not in boards:
-                boards[p["board"]] = aruco_scale.Board(aruco_scale.load_board_spec(str(S3D / "config" / "charuco" / p["board"])))
+                if "2markers" in p["board"]:
+                    import collect
+                    boards[p["board"]] = collect.TwoMarkers(v2=p["board"].endswith("_v2"))
+                else:
+                    boards[p["board"]] = aruco_scale.Board(aruco_scale.load_board_spec(str(S3D / "config" / "charuco" / p["board"])))
             b = boards[p["board"]]
             vs = p["views"]
             sel = [vs[int(round(x))] for x in np.linspace(0, len(vs) - 1, min(n_each, len(vs)))]
@@ -172,9 +176,12 @@ def tilt_dist(rv, tv):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--exclude", nargs="*", default=[])
+    ap.add_argument("--exclude-file", default=None, help="file with recording names to exclude (whitespace separated)")
     ap.add_argument("--tag", default="all")
     ap.add_argument("--models", nargs="*", default=["k1k2p", "k1k2p_k3", "rational", "k1_prior", "f_prior"])
     a = ap.parse_args()
+    if a.exclude_file:
+        a.exclude = list(a.exclude) + open(a.exclude_file).read().split()
     views, clusters, members = build(a.exclude)
     # tilt of each cluster from a quick k1_prior fit (used for stratified halves)
     r0 = fit(views, "k1_prior")
