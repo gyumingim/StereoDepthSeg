@@ -66,7 +66,9 @@ VARIANTS = {"base60": (60, 200, 11), "n150": (60, 150, 11), "n100": (60, 100, 11
             # 2026-10-24 user: overload test at 1280x720 (raw 1080 stream remapped on the phone, like c4)
             "c7": (30, 200, 15, (1280, 720), 30.0),
             # 2026-10-24: C2 (640) held 6 min without throttling but 1.8 % loop error vs C4 0.7 % -> spend its ~5 ms headroom
-            "c5": (30, 200, 15), "c6": (30, 200, 13, (800, 450), 18.75)}
+            "c5": (30, 200, 15), "c6": (30, 200, 13, (800, 450), 18.75),
+            # 2026-10-24: C4 with 400 tracked points (num_pts 200 -> 400), everything else = c4
+            "c4n400": (30, 400, 15, (960, 540), 22.5)}
 # final_baseline_run.py: init_window=1.0, init_disp=15.0, cfg_over="num_opencv_threads=2,try_zupt=false", init_cfg strict
 INIT_OVER = {"init_window_time": "1.0", "init_max_disparity": "15.00", "num_opencv_threads": "2", "try_zupt": "false"}
 # feature-init limits = F1, adopted 2026-10-24 (docs/fi_limits_result.md; OpenVINS defaults 40 / 10000)
