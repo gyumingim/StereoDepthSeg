@@ -1,0 +1,10 @@
+Setting printing level to: WARNING
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+idle tbbwarm | period 33.3 ms | warm 33.3 ms | main_cpu -1 | helper_cpu -1 | OV_KLT_OVERLAP=0
+OpenCV 4.10.0 | Parallel framework:            TBB (ver 2021.11 interface 12110) | cpus 10 | frames 200 960x540
+npts 400
+T      remap   eqhist  pyramid fast+sub       lk   ransac      sum |  klt_p50  klt_p95 klt_mean  hash
+1      0.000    0.000    0.000    0.000    0.000    0.000    0.000 |    8.838   12.920    9.947  0d2c2f2bb3fcc944  (getNumThreads 1, remap hash 0000000000000000)
+  T1 idle=tbbwarm klt_p50 8.838 p95 12.920 mean 9.947 | freq MHz mean pol0 456 pol4 821 pol7 672 pol9 1824 (67 samples) | main cpu hist c9:66
+  cpuidle delta (usage/time_ms per state) L0-3[ s0:12325/15475 s1:1666/4458 ] M4-6[ s0:595/1558 s1:980/15961 ] M7-8[ s0:0/0 s1:86/13346 ] X9[ s0:0/0 s1:0/0 ] 
+start 00:05:15 SKIN_before 35.9 SKIN_after 35.9 args: --threads 1 --npts 400 --period-ms 33.3 --idle tbbwarm --warm-ms 33.3

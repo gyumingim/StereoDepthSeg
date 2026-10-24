@@ -14,10 +14,37 @@
 // For each thread count T (cv::setNumThreads(T)): per-stage median / p95 ms over the frames, then the real ov_core::TrackKLT
 // run over all frames (ms per feed_new_camera) with a hash of its outputs (ids + float bits of every tracked point) =
 // determinism check across T. Prints cv::getBuildInformation's parallel framework line and cv::getNumThreads.
+//
+// Idle-gap experiment (2026-10-24 late, S24: paced 33.3 ms made TrackKLT 4.4 -> 18 ms p50 for every T):
+//   --idle MODE        what the paced loop does between frames (needs --period-ms):
+//       sleep          sleep_until next period (default = the live bridge's behaviour)
+//       spin           busy-wait until next period (main thread never idles)
+//       prespin        sleep until (next - warm-ms), then busy-wait the rest
+//       helper         main sleeps; one nice-19 helper thread spins for the whole loop (--helper-cpu N pins it)
+//       tbbwarm        sleep until (next - warm-ms), then a cv::parallel_for_ over T stripes that each spin until the
+//                      period starts (wakes the TBB workers + their cores right before the frame)
+//   --warm-ms W        prespin / tbbwarm lead time (default 3)
+//   --main-cpu N       pin only the main thread (after TBB pool exists) to cpu N
+//   --uclamp-min V     sched_setattr util_min V (0..1024) on the main thread only (scheduler/governor hint, no spinning)
+//   --npts N           TrackKLT num_features (default 200 = live C4)
+//   --helper-cpu N     pin the helper thread to cpu N
+//   --overlap 0|1      sets OV_KLT_OVERLAP before the first TrackKLT (0 = upstream path = live default)
+//   --klt-only         skip the per-stage section (only the real TrackKLT loop runs; less heat)
+//   --freq-log FILE    sampler thread: every 100 ms t_ms + scaling_cur_freq of policy0/4/7/9 + main thread's cpu
+//   --frame-log FILE   per frame: T idx ms cpu_before cpu_after
+//   Summary line per run adds mean kHz of each policy over the TrackKLT loop, main-thread cpu histogram and cpuidle
+//   deltas (usage count / time of each idle state summed per cluster).
 #include <sched.h>
+#include <sys/resource.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 
+#include <atomic>
+#include <opencv2/core/utility.hpp>
+
 #include <algorithm>
+#include <array>
+#include <cerrno>
 #include <chrono>
 #include <cstdio>
 #include <cstring>
@@ -77,10 +104,61 @@ static uint64_t fnv(uint64_t h, const void *p, size_t n) {
   return h;
 }
 
+static long read_long(const std::string &path) {
+  std::ifstream f(path);
+  long v = -1;
+  if (f) f >> v;
+  return v;
+}
+static const int kPol[4] = {0, 4, 7, 9};  // S24 (Exynos 2400) cpufreq policies: 0-3 little, 4-6, 7-8, 9 = X4
+static void pin_self(int cpu) {
+  cpu_set_t set;
+  CPU_ZERO(&set);
+  CPU_SET(cpu, &set);
+  if (sched_setaffinity((pid_t)syscall(SYS_gettid), sizeof(set), &set) != 0) std::perror("pin");
+}
+// cpuidle totals per cluster: [cluster][state] usage, time(us)
+struct Idle {
+  long usage[4][4] = {}, time[4][4] = {};
+};
+static int cluster_of(int c) { return c < 4 ? 0 : c < 7 ? 1 : c < 9 ? 2 : 3; }
+static Idle read_idle() {
+  Idle r;
+  for (int c = 0; c < 10; c++)
+    for (int s = 0; s < 4; s++) {
+      std::string b = "/sys/devices/system/cpu/cpu" + std::to_string(c) + "/cpuidle/state" + std::to_string(s) + "/";
+      long u = read_long(b + "usage"), t = read_long(b + "time");
+      if (u >= 0) r.usage[cluster_of(c)][s] += u, r.time[cluster_of(c)][s] += t;
+    }
+  return r;
+}
+// util clamp min on the calling thread (v < 0 = reset to default); keeps policy / params
+static int set_uclamp_min(int v) {
+  struct {
+    uint32_t size, sched_policy;
+    uint64_t sched_flags;
+    int32_t sched_nice;
+    uint32_t sched_priority;
+    uint64_t sched_runtime, sched_deadline, sched_period;
+    uint32_t sched_util_min, sched_util_max;
+  } a;
+  std::memset(&a, 0, sizeof(a));
+  a.size = sizeof(a);
+  a.sched_flags = 0x08 | 0x10 | 0x20;  // SCHED_FLAG_KEEP_POLICY | KEEP_PARAMS | UTIL_CLAMP_MIN
+  a.sched_util_min = v < 0 ? (uint32_t)-1 : (uint32_t)v;
+  return (int)syscall(SYS_sched_setattr, (pid_t)syscall(SYS_gettid), &a, 0);
+}
+static inline void spin_until(Clock::time_point t) {
+  while (Clock::now() < t) {
+  }
+}
+
 int main(int argc, char **argv) {
   if (argc < 5) {
     std::fprintf(stderr, "usage: klt_bench FRAMES.u8 W H N [--threads 1,2,4,6] [--raw RAW.y --remap MAP.bin] [--cpus LIST] "
-                         "[--reps R] [--fx FX,FY,CX,CY] [--period-ms P]\n");
+                         "[--reps R] [--fx FX,FY,CX,CY] [--period-ms P] [--idle sleep|spin|prespin|helper|tbbwarm] "
+                         "[--warm-ms W] [--main-cpu N] [--helper-cpu N] [--overlap 0|1] [--klt-only] [--npts N] [--uclamp-min V] "
+                         "[--freq-log FILE] [--frame-log FILE]\n");
     return 2;
   }
   std::string fpath = argv[1];
@@ -89,6 +167,11 @@ int main(int argc, char **argv) {
   std::string raw, mapf, cpus;
   int reps = 1;
   double period_ms = 0;  // --period-ms P: TrackKLT loop paced to one feed per P ms (30 fps = 33.3; idle gaps like live)
+  std::string idle = "sleep", freq_log, frame_log;
+  double warm_ms = 3;
+  int main_cpu = -1, helper_cpu = -1, overlap = -1, uclamp_min = -1;
+  bool klt_only = false;
+  int npts = 200;  // --npts N: TrackKLT num_features (live C4 = 200)
   double fx = 652.100131, fy = 652.078817, cx = 485.001645, cy = 275.872626;  // config/phone_ov_main/c4
   for (int i = 5; i < argc; i++) {
     std::string s = argv[i];
@@ -99,6 +182,16 @@ int main(int argc, char **argv) {
     else if (s == "--cpus") cpus = v, i++;
     else if (s == "--reps") reps = std::stoi(v), i++;
     else if (s == "--period-ms") period_ms = std::stod(v), i++;
+    else if (s == "--idle") idle = v, i++;
+    else if (s == "--warm-ms") warm_ms = std::stod(v), i++;
+    else if (s == "--main-cpu") main_cpu = std::stoi(v), i++;
+    else if (s == "--helper-cpu") helper_cpu = std::stoi(v), i++;
+    else if (s == "--overlap") overlap = std::stoi(v), i++;
+    else if (s == "--klt-only") klt_only = true;
+    else if (s == "--npts") npts = std::stoi(v), i++;
+    else if (s == "--uclamp-min") uclamp_min = std::stoi(v), i++;
+    else if (s == "--freq-log") freq_log = v, i++;
+    else if (s == "--frame-log") frame_log = v, i++;
     else if (s == "--fx") std::sscanf(v.c_str(), "%lf,%lf,%lf,%lf", &fx, &fy, &cx, &cy), i++;
     else {
       std::fprintf(stderr, "bad arg %s\n", s.c_str());
@@ -112,6 +205,17 @@ int main(int argc, char **argv) {
     if (sched_setaffinity(0, sizeof(set), &set) != 0) std::perror("sched_setaffinity");
   }
   ov_core::Printer::setPrintLevel("WARNING");
+  if (overlap >= 0) ::setenv("OV_KLT_OVERLAP", overlap ? "1" : "0", 1);
+  if (idle != "sleep" && idle != "spin" && idle != "prespin" && idle != "helper" && idle != "tbbwarm") {
+    std::fprintf(stderr, "bad --idle %s\n", idle.c_str());
+    return 2;
+  }
+  std::printf("idle %s | period %.1f ms | warm %.1f ms | main_cpu %d | helper_cpu %d | OV_KLT_OVERLAP=%s\n", idle.c_str(),
+              period_ms, warm_ms, main_cpu, helper_cpu, std::getenv("OV_KLT_OVERLAP") ? std::getenv("OV_KLT_OVERLAP") : "unset");
+  FILE *ffreq = freq_log.empty() ? nullptr : std::fopen(freq_log.c_str(), "w");
+  FILE *fframe = frame_log.empty() ? nullptr : std::fopen(frame_log.c_str(), "w");
+  if (ffreq) std::fprintf(ffreq, "# T rep t_ms f0 f4 f7 f9 main_cpu (kHz; policy0=cpu0-3, 4=cpu4-6, 7=cpu7-8, 9=cpu9)\n");
+  if (fframe) std::fprintf(fframe, "# T rep idx ms cpu_before cpu_after\n");
 
   // frames
   std::vector<cv::Mat> frames;
@@ -147,7 +251,8 @@ int main(int argc, char **argv) {
               pos == std::string::npos ? "?" : bi.substr(pos, bi.find('\n', pos) - pos).c_str(), cv::getNumberOfCPUs(), N, W, H);
 
   const cv::Size win(15, 15);
-  const int levels = 5, fast_th = 15, gx = 5, gy = 5, npts = 200;
+  const int levels = 5, fast_th = 15, gx = 5, gy = 5;
+  std::printf("npts %d\n", npts);
   std::printf("%-3s %8s %8s %8s %8s %8s %8s %8s | %8s %8s %8s  %s\n", "T", "remap", "eqhist", "pyramid", "fast+sub", "lk",
               "ransac", "sum", "klt_p50", "klt_p95", "klt_mean", "hash");
   for (int T : threads) {
@@ -157,7 +262,7 @@ int main(int argc, char **argv) {
       uint64_t rh = 0;  // hash of the remap output (first frame): must not depend on T
       std::vector<cv::Mat> pyr_prev;
       std::vector<cv::Point2f> pts_prev;
-      for (int i = 0; i < N; i++) {
+      for (int i = 0; i < (klt_only ? 0 : N); i++) {
         double r = 0;
         if (!rawm.empty()) {
           auto t0 = Clock::now();
@@ -225,12 +330,65 @@ int main(int argc, char **argv) {
       Stat s_klt;
       uint64_t h = 1469598103934665603ull;
       cv::Mat nomask = cv::Mat::zeros(H, W, CV_8UC1);
+      // idle-gap instrumentation (see header)
+      if (main_cpu >= 0) {
+        cv::parallel_for_(cv::Range(0, T), [](const cv::Range &) {});  // create the pool before pinning main
+        pin_self(main_cpu);
+      }
+      if (uclamp_min >= 0) {
+        int rc = set_uclamp_min(uclamp_min);
+        std::printf("  uclamp_min %d on main thread: %s\n", uclamp_min, rc == 0 ? "ok" : std::strerror(errno));
+      }
+      std::atomic<bool> run_aux{true};
+      std::atomic<int> cur_cpu{-1};
+      std::vector<std::array<long, 4>> fsum;  // freq samples during the loop
+      int cpu_hist[10] = {};
+      std::thread sampler, helper;
+      auto tstart = Clock::now();
+      sampler = std::thread([&] {
+        auto tn = Clock::now();
+        while (run_aux.load()) {
+          std::array<long, 4> f;
+          for (int k = 0; k < 4; k++)
+            f[k] = read_long("/sys/devices/system/cpu/cpufreq/policy" + std::to_string(kPol[k]) + "/scaling_cur_freq");
+          int c = cur_cpu.load();
+          fsum.push_back(f);
+          if (c >= 0 && c < 10) cpu_hist[c]++;
+          if (ffreq)
+            std::fprintf(ffreq, "%d %d %.1f %ld %ld %ld %ld %d\n", T, rep, ms_since(tstart), f[0], f[1], f[2], f[3], c);
+          tn += std::chrono::milliseconds(100);
+          std::this_thread::sleep_until(tn);
+        }
+      });
+      if (idle == "helper" && period_ms > 0)
+        helper = std::thread([&] {
+          setpriority(PRIO_PROCESS, (id_t)syscall(SYS_gettid), 19);
+          if (helper_cpu >= 0) pin_self(helper_cpu);
+          volatile unsigned long x = 0;
+          while (run_aux.load(std::memory_order_relaxed)) x = x + 1;
+        });
+      Idle idle0 = read_idle();
+      const auto warm = std::chrono::microseconds((long long)(warm_ms * 1000));
       auto tpace = Clock::now();
       for (int i = 0; i < N; i++) {
         if (period_ms > 0) {
           tpace += std::chrono::microseconds((long long)(period_ms * 1000));
-          std::this_thread::sleep_until(tpace);
+          if (idle == "spin") {
+            spin_until(tpace);
+          } else if (idle == "prespin") {
+            std::this_thread::sleep_until(tpace - warm);
+            spin_until(tpace);
+          } else if (idle == "tbbwarm") {
+            std::this_thread::sleep_until(tpace - warm);
+            const auto tp = tpace;
+            cv::parallel_for_(cv::Range(0, T), [tp](const cv::Range &) { spin_until(tp); }, T);
+            spin_until(tpace);
+          } else {
+            std::this_thread::sleep_until(tpace);
+          }
         }
+        int cb = sched_getcpu();
+        cur_cpu.store(cb);
         ov_core::CameraData m;
         m.timestamp = i / 30.0;
         m.sensor_ids.push_back(0);
@@ -238,7 +396,9 @@ int main(int argc, char **argv) {
         m.masks.push_back(nomask);
         auto t0 = Clock::now();
         trk.feed_new_camera(m);
-        s_klt.add(ms_since(t0));
+        double kms = ms_since(t0);
+        s_klt.add(kms);
+        if (fframe) std::fprintf(fframe, "%d %d %d %.3f %d %d\n", T, rep, i, kms, cb, sched_getcpu());
         trk.get_feature_database()->cleanup_measurements(m.timestamp - 0.5);
         auto obs = trk.get_last_obs()[0];
         auto ids = trk.get_last_ids()[0];
@@ -252,7 +412,39 @@ int main(int argc, char **argv) {
                   s_remap.q(0.5), s_eq.q(0.5), s_pyr.q(0.5), s_fast.q(0.5), s_lk.q(0.5), s_rs.q(0.5), s_sum.q(0.5),
                   s_klt.q(0.5), s_klt.q(0.95), s_klt.mean(), (unsigned long long)h, cv::getNumThreads(),
                   (unsigned long long)rh);
+      Idle idle1 = read_idle();
+      run_aux.store(false);
+      sampler.join();
+      if (helper.joinable()) helper.join();
+      if (uclamp_min >= 0) set_uclamp_min(-1);  // reset for the next T
+      if (main_cpu >= 0) {  // unpin for the next T
+        cpu_set_t set;
+        CPU_ZERO(&set);
+        for (int c = 0; c < 10; c++) CPU_SET(c, &set);
+        sched_setaffinity((pid_t)syscall(SYS_gettid), sizeof(set), &set);
+      }
+      double fm[4] = {};
+      for (auto &f : fsum)
+        for (int k = 0; k < 4; k++) fm[k] += f[k];
+      for (int k = 0; k < 4; k++) fm[k] = fsum.empty() ? 0 : fm[k] / fsum.size() / 1000.0;
+      std::printf("  T%d idle=%s klt_p50 %.3f p95 %.3f mean %.3f | freq MHz mean pol0 %.0f pol4 %.0f pol7 %.0f pol9 %.0f "
+                  "(%zu samples) | main cpu hist", T, idle.c_str(), s_klt.q(0.5), s_klt.q(0.95), s_klt.mean(), fm[0], fm[1], fm[2],
+                  fm[3], fsum.size());
+      for (int c = 0; c < 10; c++)
+        if (cpu_hist[c]) std::printf(" c%d:%d", c, cpu_hist[c]);
+      std::printf("\n  cpuidle delta (usage/time_ms per state) ");
+      const char *cn[4] = {"L0-3", "M4-6", "M7-8", "X9"};
+      for (int k = 0; k < 4; k++) {
+        std::printf("%s[", cn[k]);
+        for (int s = 0; s < 4; s++)
+          if (idle1.usage[k][s] || idle0.usage[k][s])
+            std::printf(" s%d:%ld/%ld", s, idle1.usage[k][s] - idle0.usage[k][s], (idle1.time[k][s] - idle0.time[k][s]) / 1000);
+        std::printf(" ] ");
+      }
+      std::printf("\n");
       std::fflush(stdout);
+      if (ffreq) std::fflush(ffreq);
+      if (fframe) std::fflush(fframe);
     }
   }
   return 0;

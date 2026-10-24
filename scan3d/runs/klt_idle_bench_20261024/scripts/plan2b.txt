@@ -1,0 +1,49 @@
+sleep_T1_r3|--threads 1 --period-ms 33.3 --idle sleep
+spin_T1_r3|--threads 1 --period-ms 33.3 --idle spin
+sleep_T2_r3|--threads 2 --period-ms 33.3 --idle sleep
+spin_T2_r3|--threads 2 --period-ms 33.3 --idle spin
+sleep_T4_r3|--threads 4 --period-ms 33.3 --idle sleep
+spin_T4_r3|--threads 4 --period-ms 33.3 --idle spin
+helperpin9_T1_r1|--threads 1 --period-ms 33.3 --idle helper --main-cpu 9 --helper-cpu 9
+prespin8_T1_r1|--threads 1 --period-ms 33.3 --idle prespin --warm-ms 8
+prespin15_T1_r1|--threads 1 --period-ms 33.3 --idle prespin --warm-ms 15
+spinpin9_T2_r1|--threads 2 --period-ms 33.3 --idle spin --main-cpu 9
+tbbspin_T2_r1|--threads 2 --period-ms 33.3 --idle tbbwarm --warm-ms 33.3
+spinpin9_T4_r1|--threads 4 --period-ms 33.3 --idle spin --main-cpu 9
+tbbspin_T4_r1|--threads 4 --period-ms 33.3 --idle tbbwarm --warm-ms 33.3
+tbbspin_T1_r1|--threads 1 --period-ms 33.3 --idle tbbwarm --warm-ms 33.3
+uclamp1024_T1_r1|--threads 1 --period-ms 33.3 --idle sleep --uclamp-min 1024
+n400_b2b_T1_r1|--threads 1 --npts 400
+n400_sleep_T1_r1|--threads 1 --npts 400 --period-ms 33.3 --idle sleep
+n400_spin_T1_r1|--threads 1 --npts 400 --period-ms 33.3 --idle spin
+n400_tbbspin_T1_r1|--threads 1 --npts 400 --period-ms 33.3 --idle tbbwarm --warm-ms 33.3
+n400_b2b_T2_r1|--threads 2 --npts 400
+n400_sleep_T2_r1|--threads 2 --npts 400 --period-ms 33.3 --idle sleep
+n400_spin_T2_r1|--threads 2 --npts 400 --period-ms 33.3 --idle spin
+n400_tbbspin_T2_r1|--threads 2 --npts 400 --period-ms 33.3 --idle tbbwarm --warm-ms 33.3
+n400_b2b_T4_r1|--threads 4 --npts 400
+n400_sleep_T4_r1|--threads 4 --npts 400 --period-ms 33.3 --idle sleep
+n400_spin_T4_r1|--threads 4 --npts 400 --period-ms 33.3 --idle spin
+n400_tbbspin_T4_r1|--threads 4 --npts 400 --period-ms 33.3 --idle tbbwarm --warm-ms 33.3
+helperpin9_T1_r2|--threads 1 --period-ms 33.3 --idle helper --main-cpu 9 --helper-cpu 9
+helperpin9_T1_r3|--threads 1 --period-ms 33.3 --idle helper --main-cpu 9 --helper-cpu 9
+prespin8_T1_r2|--threads 1 --period-ms 33.3 --idle prespin --warm-ms 8
+prespin15_T1_r2|--threads 1 --period-ms 33.3 --idle prespin --warm-ms 15
+spinpin9_T2_r2|--threads 2 --period-ms 33.3 --idle spin --main-cpu 9
+tbbspin_T2_r2|--threads 2 --period-ms 33.3 --idle tbbwarm --warm-ms 33.3
+spinpin9_T4_r2|--threads 4 --period-ms 33.3 --idle spin --main-cpu 9
+tbbspin_T4_r2|--threads 4 --period-ms 33.3 --idle tbbwarm --warm-ms 33.3
+tbbspin_T1_r2|--threads 1 --period-ms 33.3 --idle tbbwarm --warm-ms 33.3
+uclamp1024_T1_r2|--threads 1 --period-ms 33.3 --idle sleep --uclamp-min 1024
+n400_b2b_T1_r2|--threads 1 --npts 400
+n400_sleep_T1_r2|--threads 1 --npts 400 --period-ms 33.3 --idle sleep
+n400_spin_T1_r2|--threads 1 --npts 400 --period-ms 33.3 --idle spin
+n400_tbbspin_T1_r2|--threads 1 --npts 400 --period-ms 33.3 --idle tbbwarm --warm-ms 33.3
+n400_b2b_T2_r2|--threads 2 --npts 400
+n400_sleep_T2_r2|--threads 2 --npts 400 --period-ms 33.3 --idle sleep
+n400_spin_T2_r2|--threads 2 --npts 400 --period-ms 33.3 --idle spin
+n400_tbbspin_T2_r2|--threads 2 --npts 400 --period-ms 33.3 --idle tbbwarm --warm-ms 33.3
+n400_b2b_T4_r2|--threads 4 --npts 400
+n400_sleep_T4_r2|--threads 4 --npts 400 --period-ms 33.3 --idle sleep
+n400_spin_T4_r2|--threads 4 --npts 400 --period-ms 33.3 --idle spin
+n400_tbbspin_T4_r2|--threads 4 --npts 400 --period-ms 33.3 --idle tbbwarm --warm-ms 33.3

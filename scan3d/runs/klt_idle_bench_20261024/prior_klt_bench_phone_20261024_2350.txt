@@ -1,0 +1,24 @@
+Sat Oct 24 23:45:59 KST 2026
+== back-to-back
+Setting printing level to: WARNING
+[ovpatch] TrackKLT overlap on (OV_KLT_OVERLAP=unset)
+OpenCV 4.10.0 | Parallel framework:            TBB (ver 2021.11 interface 12110) | cpus 10 | frames 200 960x540
+T      remap   eqhist  pyramid fast+sub       lk   ransac      sum |  klt_p50  klt_p95 klt_mean  hash
+1      0.000    0.587    1.388    9.952    1.832    0.035   13.707 |    4.409    6.653    4.971  08c6a9769bf93044  (getNumThreads 1)
+1      0.000    0.586    1.371    9.951    1.796    0.032   13.685 |    4.417    6.602    4.961  08c6a9769bf93044  (getNumThreads 1)
+2      0.000    0.496    1.546    7.365    1.650    0.031   10.804 |    4.403    7.441    5.037  08c6a9769bf93044  (getNumThreads 2)
+2      0.000    0.458    1.397    6.846    1.500    0.038   10.086 |    4.404    7.369    5.042  08c6a9769bf93044  (getNumThreads 2)
+4      0.000    0.592    1.864    7.194    1.391    0.030   10.997 |    4.769   13.776    6.508  08c6a9769bf93044  (getNumThreads 4)
+4      0.000    0.605    1.934    7.332    1.620    0.033   11.469 |    4.734   14.852    6.724  08c6a9769bf93044  (getNumThreads 4)
+6      0.000    0.907    2.878    6.783    1.575    0.035   12.224 |    6.006   18.744    7.455  08c6a9769bf93044  (getNumThreads 6)
+6      0.000    0.866    2.771    6.710    1.566    0.034   11.918 |    6.190   19.805    7.875  08c6a9769bf93044  (getNumThreads 6)
+== paced 33.3 ms
+Setting printing level to: WARNING
+[ovpatch] TrackKLT overlap on (OV_KLT_OVERLAP=unset)
+OpenCV 4.10.0 | Parallel framework:            TBB (ver 2021.11 interface 12110) | cpus 10 | frames 200 960x540
+T      remap   eqhist  pyramid fast+sub       lk   ransac      sum |  klt_p50  klt_p95 klt_mean  hash
+1      0.000    0.645    1.500   11.048    1.991    0.035   15.158 |   18.084   21.487   18.018  08c6a9769bf93044  (getNumThreads 1)
+2      0.000    0.480    1.548    7.338    1.493    0.032   10.720 |   18.178   31.544   19.454  08c6a9769bf93044  (getNumThreads 2)
+4      0.000    0.571    1.826    6.898    1.516    0.034   10.687 |   18.643   32.897   20.208  08c6a9769bf93044  (getNumThreads 4)
+6      0.000    0.825    2.753    6.377    1.515    0.039   11.331 |   18.194   32.092   19.890  08c6a9769bf93044  (getNumThreads 6)
+	Temperature{mValue=35.9, mType=3, mName=SKIN, mStatus=0}

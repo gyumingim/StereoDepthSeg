@@ -1,0 +1,5 @@
+heat_sleep_T1|--threads 1 --period-ms 33.3 --idle sleep --reps 9
+heat_spin_T1|--threads 1 --period-ms 33.3 --idle spin --reps 9
+heat_sleep_T2|--threads 2 --period-ms 33.3 --idle sleep --reps 9
+heat_tbbspin_T2|--threads 2 --period-ms 33.3 --idle tbbwarm --warm-ms 33.3 --reps 9
+heat_helperpin9_T1|--threads 1 --period-ms 33.3 --idle helper --main-cpu 9 --helper-cpu 9 --reps 9
