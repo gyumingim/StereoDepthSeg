@@ -24,7 +24,12 @@ OUT_DIR (default scan3d/config/phone_ov_main; *.bin not committed, regenerate) g
   remap_640x360.bin     ISP-scaled 640x360 Y -> the same 640x360 undistorted image (K/3 with the half-pixel shift;
                         assumes the 640x360 YUV stream = the 1080p frame scaled by 1/3, NOT verified -> fallback only)
   <variant>/estimator_config.yaml + kalibr_imu_chain.yaml + kalibr_imucam_chain.yaml for
-      base60 (60 fps, 200 pts, 11 clones = baseline), n150, n100, c8, n100c8, fps30, fps30n100c8
+      base60 (60 fps, 200 pts, 11 clones = baseline), n150, n100, c8, n100c8, fps30, fps30n100c8,
+      c2 (= fps30_run C2: 30 fps, 11 clones, 640x360), c4 (= fps30_run C4: 30 fps, 15 clones, 960x540, init disparity
+      15 x 1.5 = 22.5 px); everything else = the final baseline (F1 fi limits, num_opencv_threads 2 - fps30_run used 1)
+  <variant>/remap_1920x1080.bin  only for a variant whose VIO size is not 640x360 (c4: raw 1920x1080 -> 960x540, the
+                        bench maps for that size). The app reads files/ov/<cfg>/remap_<WxH>.bin before files/ov/, so
+                        c4 must run with ov_size 1920x1080 (the camera offers no 960x540 YUV; no 640x360 map for c4).
   variants.json         every value used, inputs, sha256 of the lens file, creation time.
 Remap files use the v2 format (int32 w, h, float32 mapx, mapy, int32 src_w, src_h) -> ov_bridge built 2026-10-23+.
 Push: adb push OUT_DIR/. /sdcard/Android/data/com.scan3d.arlat/files/ov/  (docs/phone_session_60fps_plan.md).
@@ -53,9 +58,11 @@ LEVER = SCAN3D / "config" / "imu_cam_lever.json"
 FOCUS_CAL = SCAN3D / "config" / "lens" / "hs_1920x1080_focus_cal_20261022.json"
 RAW_SIZE = (1920, 1080)
 VIO_SIZE = (640, 360)
-# name: (fps, num_pts, max_clones)
+# name: (fps, num_pts, max_clones[, VIO size, init_max_disparity px]); default size 640x360, disparity INIT_OVER
 VARIANTS = {"base60": (60, 200, 11), "n150": (60, 150, 11), "n100": (60, 100, 11), "c8": (60, 200, 8),
-            "n100c8": (60, 100, 8), "fps30": (30, 200, 11), "fps30n100c8": (30, 100, 8)}
+            "n100c8": (60, 100, 8), "fps30": (30, 200, 11), "fps30n100c8": (30, 100, 8),
+            # 2026-10-24 user decision: VIO at 30 fps; C4 first (best on room-scale data, docs/fps30_result.md), C2 fallback
+            "c2": (30, 200, 11), "c4": (30, 200, 15, (960, 540), 22.5)}
 # final_baseline_run.py: init_window=1.0, init_disp=15.0, cfg_over="num_opencv_threads=2,try_zupt=false", init_cfg strict
 INIT_OVER = {"init_window_time": "1.0", "init_max_disparity": "15.00", "num_opencv_threads": "2", "try_zupt": "false"}
 # feature-init limits = F1, adopted 2026-10-24 (docs/fi_limits_result.md; OpenVINS defaults 40 / 10000)
@@ -69,19 +76,19 @@ def mean_rotation(Rs):
     return R, ang
 
 
-def write_remap(path, K_src, dist, src_size, Knew):
+def write_remap(path, K_src, dist, src_size, Knew, vio_size=VIO_SIZE):
     # The bench's fixed-point maps (CV_16SC2 + 1/32 px table index) written back as exact float32 multiples of 1/32, so
     # the bridge's cv::convertMaps(float -> CV_16SC2) restores them bit for bit. Float maps made directly differ in
     # 0.2 % of the entries -> 0.02 % of the pixels by 1-2 levels, which already changes an OpenVINS run (checked
     # 2026-10-23 on 133820 o0: window ATE 1.43 -> 2.17 cm).
-    m1, m2 = cv2.initUndistortRectifyMap(K_src, dist, None, Knew, VIO_SIZE, cv2.CV_16SC2)
+    m1, m2 = cv2.initUndistortRectifyMap(K_src, dist, None, Knew, vio_size, cv2.CV_16SC2)
     mx = m1[..., 0].astype(np.float32) + (m2 & 31).astype(np.float32) / 32
     my = m1[..., 1].astype(np.float32) + (m2 >> 5).astype(np.float32) / 32
     c1, c2 = cv2.convertMaps(mx, my, cv2.CV_16SC2)
     if not (np.array_equal(c1, m1) and np.array_equal(c2, m2)):
         sys.exit(f"{path}: float maps do not round-trip to the bench's fixed-point maps")
     with open(path, "wb") as f:
-        f.write(np.array(VIO_SIZE, np.int32).tobytes())
+        f.write(np.array(vio_size, np.int32).tobytes())
         f.write(np.ascontiguousarray(mx, np.float32).tobytes())
         f.write(np.ascontiguousarray(my, np.float32).tobytes())
         f.write(np.array(src_size, np.int32).tobytes())
@@ -138,10 +145,21 @@ def main():
     vb.TEMPLATE = SCAN3D / "config" / "mono" / "estimator_config.yaml"
     noise = dict(make_ov_config.IMU_NOISE)
     used = {}
-    for name, (fps, npts, clones) in VARIANTS.items():
+    knew_other = {}
+    for name, v in VARIANTS.items():
+        fps, npts, clones = v[:3]
+        size = tuple(v[3]) if len(v) > 3 else VIO_SIZE
+        over = {**INIT_OVER, **FI_OVER}
+        if len(v) > 4:
+            over["init_max_disparity"] = f"{v[4]:.2f}"
         d = out / name
         d.mkdir(exist_ok=True)
-        used[name] = vb.write_config(d, Knew, VIO_SIZE, fps, R_ci, p_CinI, timeshift, noise, npts, clones, "strict", {**INIT_OVER, **FI_OVER})
+        Kv = Knew
+        if size != VIO_SIZE:          # same as vio_bench_hs.undistort_maps for that size
+            Kv, _ = cv2.getOptimalNewCameraMatrix(K, dist, RAW_SIZE, 0, size)
+            write_remap(d / "remap_1920x1080.bin", K, dist, RAW_SIZE, Kv, size)
+            knew_other[name] = {"size": f"{size[0]}x{size[1]}", "Knew": Kv.tolist(), "remap": f"{name}/remap_1920x1080.bin"}
+        used[name] = vb.write_config(d, Kv, size, fps, R_ci, p_CinI, timeshift, noise, npts, clones, "strict", over)
         cfg = d / "estimator_config.yaml"
         lines = []
         for line in cfg.read_text().splitlines():
@@ -156,7 +174,7 @@ def main():
         cfg.write_text("\n".join(lines) + "\n")
         chk = {k: v for k, v in (ln.split("#")[0].split(":", 1) for ln in cfg.read_text().splitlines()
                                  if ":" in ln.split("#")[0] and not ln.startswith(" "))}
-        used[name].update({k: chk[k].strip() for k in ("track_frequency", "num_pts", "max_clones", "num_opencv_threads",
+        used[name].update({k: chk[k].strip() for k in ("track_frequency", "num_pts", "max_clones", "num_opencv_threads", "init_max_disparity",
                                                          "try_zupt", "record_timing_information", "use_stereo",
                                                          "calib_cam_intrinsics", "calib_cam_extrinsics", *FI_OVER)})
 
@@ -164,7 +182,7 @@ def main():
                 lens_file=str(Path(a.lens_file).resolve()), lens_sha256=hashlib.sha256(Path(a.lens_file).read_bytes()).hexdigest(),
                 lens_focus_dpt=d_ref, run_focus_dpt=a.focus_dpt, focus_scale=s, focus_k=a.focus_k,
                 K_raw_used=K.tolist(), fx_focus_table_interp=fx_interp, dist=dist.tolist(), Knew_640x360=Knew.tolist(),
-                K_640x360_isp_assumed=K3.tolist(), R_ci=R_ci.tolist(), R_ci_spread_deg=spread, recordings=recs,
+                K_640x360_isp_assumed=K3.tolist(), variant_sizes=knew_other, R_ci=R_ci.tolist(), R_ci_spread_deg=spread, recordings=recs,
                 lever_r_cm=r_cm.tolist(), p_CinI_m=p_CinI.tolist(), dt_ns=dts, timeshift_cam_imu_s=timeshift,
                 imu_noise=noise, template=str(vb.TEMPLATE), init_over=INIT_OVER, fi_over=FI_OVER, variants=VARIANTS, cfg_used=used,
                 remaps={"remap_1920x1080.bin": "src 1920x1080 -> 640x360", "remap_640x360.bin": "src 640x360 (ISP) -> 640x360"})

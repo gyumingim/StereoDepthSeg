@@ -129,7 +129,7 @@ def report(run, a):
                only_initialised=not a.all_frames,
                meta={k: meta.get(k) for k in ("app_version", "cam", "size", "fps", "cfg", "preset", "imu", "exp_us", "iso",
                                                "focus_dpt", "yuv_min_frame_duration_ns", "first_result", "stop_reason",
-                                               "secs", "bridge_exit", "device")},
+                                               "secs", "bridge_exit", "device", "perf")},
                frames_fed=int(len(bt)), frames_initialised=int(init.sum()),
                t_init_s=round(float(t_rel[init][0]), 2) if init.any() else None)
     segs = {}
@@ -184,6 +184,10 @@ def show(res):
     m = res["meta"]
     print(f"   {m.get('app_version')} cam {m.get('cam')} {m.get('size')}@{m.get('fps')} cfg {m.get('cfg')} preset {m.get('preset')} "
           f"imu {m.get('imu')} stop {m.get('stop_reason')}")
+    if m.get("perf"):          # app 0.6.13+: thread priorities / hint session / sustained mode
+        pf = m["perf"]
+        print(f"   perf: on {pf.get('perf_on')} sustained supported {pf.get('sustained_mode_supported')} set {pf.get('sustained_mode_set')}; "
+              f"hint {pf.get('hint')} reports {pf.get('hint_reports')}; bridge prio {pf.get('bridge_prio')}")
     print(f"   fed {res['frames_fed']} frames, initialised {res['frames_initialised']} (init at {res['t_init_s']} s)")
     if "camera" in res:
         c = res["camera"]

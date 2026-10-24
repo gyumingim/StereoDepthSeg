@@ -4,6 +4,13 @@
 #   bash scan3d/tools/ov_phone_run.sh push <ip:port>                       # config sets -> files/ov/ (once per new config)
 #   bash scan3d/tools/ov_phone_run.sh run  <ip:port> <cfg> <secs> [am extras, e.g. --ei fps 30 | --es ov_size 640x360]
 #   bash scan3d/tools/ov_phone_run.sh clean <ip:port>                      # stop the app + show camera clients / bridge
+# run (2026-10-24): pre-run cleanup first (tools/phone_preflight.sh: force-stop our app, am kill-all, force-stop running
+# heavy apps, MemAvailable, thermal status, SKIN; refuses when SKIN >= 36 C or unreadable), log -> <run>/preflight.txt
+# (refused: $OUT/preflight_refused_<time>.txt). The camera fps follows the config: when the extras give no fps,
+# --ei fps <track_frequency of config/phone_ov_main/<cfg>> is added (c2 / c4 / fps30*: 30). A config with its own
+# remap (c4: 1920x1080 -> 960x540) needs the 1920x1080 stream: any other ov_size is refused.
+#   30 fps VIO (user decision 2026-10-24): C4 = cfg c4 (30 fps, 15 clones, 960x540), fallback C2 = cfg c2 (30 fps, 11, 640x360):
+#   bash scan3d/tools/ov_phone_run.sh push <ip:port>; SEG=still0:0:8,hand:8:68,still:68:128 bash scan3d/tools/ov_phone_run.sh run <ip:port> c4 130
 # run: refuses to start when SKIN >= 36 C; polls SKIN + thermal status every 5 s; stops (HOME -> onPause writes meta.json,
 # then force-stop) at SKIN >= MAXSKIN (40), thermal status >= 2 (moderate), app finished (meta.json), or secs + 30 s;
 # always prints the active camera clients and any ov_bridge process (both must be empty); pulls the run dir to
@@ -48,6 +55,7 @@ check_clean() {
 }
 skin() { sh_ "dumpsys thermalservice" | sed -n '/Current temperatures from HAL/,$p' | grep -E "mName=SKIN" | tail -1 | sed -E 's/.*mValue=([0-9.]+).*/\1/'; }
 tstatus() { sh_ "dumpsys thermalservice" | grep -m1 "Thermal Status" | grep -oE "[0-9]+" | head -1; }
+. "$SCAN3D/tools/phone_preflight.sh"
 ge() { awk -v x="$1" -v y="$2" 'BEGIN{exit !(x != "" && x + 0 >= y + 0)}'; }
 
 case $cmd in
@@ -66,9 +74,23 @@ clean)
 run)
   CFG=${1:?<cfg>}; SECS=${2:?<secs>}; shift 2
   trap 'echo "interrupted -> stopping the app"; stop_app; check_clean; exit 1' INT TERM
-  s0=$(skin); st0=$(tstatus); echo "SKIN before: ${s0:-?} C, thermal status ${st0:-?}"
-  if [ -z "$s0" ]; then echo "cannot read SKIN from dumpsys thermalservice: the SKIN stop rule would not work, not starting"; exit 2; fi
-  if ge "$s0" 36.0; then echo "phone too warm (SKIN >= 36 C): cool it first"; exit 2; fi
+  # camera fps / stream size must match the config (track_frequency, remap size)
+  cdir=${CFGSRC:-$SCAN3D/config/phone_ov_main}/$CFG
+  ex=" $* "
+  if [[ "$ex" != *" fps "* ]] && [ -f "$cdir/estimator_config.yaml" ]; then
+    tf=$(awk -F: '/^track_frequency:/{gsub(/ /, "", $2); printf "%d", $2 + 0.5}' "$cdir/estimator_config.yaml")
+    [ -n "$tf" ] && [ "$tf" -gt 0 ] && { set -- "$@" --ei fps "$tf"; echo "config $CFG: track_frequency $tf -> --ei fps $tf"; }
+  fi
+  if [ -f "$cdir/remap_1920x1080.bin" ] && [[ "$ex" == *" ov_size "* ]] && [[ "$ex" != *" ov_size 1920x1080 "* ]]; then
+    echo "config $CFG has its own remap for the 1920x1080 stream only: drop the ov_size extra"; exit 2
+  fi
+  [ -f "$cdir/estimator_config.yaml" ] || echo "note: $cdir not found on the PC (fps / size not checked)"
+  PF=$(mktemp)
+  a shell am force-stop $PKG     # no stale instance of our app (the run starts it fresh)
+  phone_preflight "$ADB" "$S" 36.0 | tee "$PF"; pfrc=${PIPESTATUS[0]}
+  if [ "$pfrc" != 0 ]; then
+    mkdir -p "$OUT"; cp "$PF" "$OUT/preflight_refused_$(date +%Y%m%d_%H%M%S).txt"; exit 2
+  fi
   before=$(sh_ "ls -d $OVD/run_* 2>/dev/null" | tail -1)
   a shell input keyevent KEYCODE_WAKEUP
   G=$GUIDE; [ -z "$G" ] && [ -n "$SEG" ] && G=$(seg_guide "$SEG")
@@ -102,6 +124,7 @@ run)
   a pull "$run" "$(wslpath -w "$STAGE")" > /dev/null
   cp -r "$STAGE/$name" "$OUT/"
   { cat "$LOG"; echo "stop_pc: $reason"; } > "$OUT/$name/thermal_pc.txt"
+  { cat "$PF"; echo "am extras: $*"; } > "$OUT/$name/preflight.txt"
   echo "pulled -> $OUT/$name"
   py=$SCAN3D/../venv_ffs/bin/python
   [ -x "$py" ] || py=python3

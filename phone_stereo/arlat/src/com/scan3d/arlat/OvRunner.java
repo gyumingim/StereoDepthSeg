@@ -63,11 +63,19 @@ import java.util.concurrent.LinkedBlockingQueue;
  * the run dir), ov_timing.txt (OpenVINS record_timing_information), bridge_timing.csv (ov_bridge --timing-log),
  * frames.csv (every image: fate sent / dropped), poses.csv (every pose line), temps.csv (battery + thermal status, 2 s),
  * events.jsonl (bridge resets / errors), bridge_stderr.log, meta.json (settings, stream offer, counts, stop reason).
+ *
+ * 0.6.13 (intent perf, default 1; perf 0 = off for A/B timing): app threads cam / imu / ov-writer / ov-reader at
+ * THREAD_PRIORITY_URGENT_DISPLAY; at the 30th pose the ov_bridge child (same uid) threads get the same priority
+ * (setpriority on another process's tids: works only if the kernel allows it -> read back and logged) and a
+ * PerformanceHintManager session (API 31+) is created for app + bridge tids (Android 14+ accepts tids of other
+ * processes of the same uid; on failure app tids only) with target = 1/fps; every pose reports the bridge "ms"
+ * (OpenVINS time of that frame) as the actual duration. At the 300th pose new bridge threads are added (setThreads,
+ * API 34+). MainActivity sets Window.setSustainedPerformanceMode(true) when supported. All -> meta.json "perf".
  */
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261024-guide";
+    static final String VERSION = "ov-20261024-perf";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";
@@ -125,6 +133,111 @@ class OvRunner implements SensorEventListener {
     private CaptureRequest.Key<Integer> ldcKey;
     private int accType;
 
+    // ---- 0.6.13 performance hints (class doc) -> meta.json "perf"
+    boolean perfOn = true;                      // intent perf (default 1)
+    static final int PRIO = android.os.Process.THREAD_PRIORITY_URGENT_DISPLAY;   // -8
+    private final JSONObject perf = new JSONObject();
+    private int bridgePid = -1;
+    private volatile Object hint;               // android.os.PerformanceHintManager.Session (API 31+)
+    private boolean hintHasBridge;
+    private int perfPoses, hintReports, hintErrors;
+    private final java.util.Set<Integer> appTids = java.util.Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
+    private final java.util.Set<Integer> bridgeTids = new java.util.HashSet<>();
+
+    void notePerf(String k, Object v) { synchronized (perf) { try { perf.put(k, v); } catch (Exception ignored) { } } }
+
+    /** Raise the calling thread's priority (perfOn) and log the value read back. */
+    private void boostSelf(String name) {
+        int tid = android.os.Process.myTid();
+        if (!perfOn) { notePerf("prio_" + name, "tid " + tid + " off -> " + android.os.Process.getThreadPriority(tid)); return; }
+        String r;
+        try { android.os.Process.setThreadPriority(PRIO); r = "ok"; } catch (Throwable e) { r = e.toString(); }
+        notePerf("prio_" + name, "tid " + tid + " set " + PRIO + " " + r + " -> " + android.os.Process.getThreadPriority(tid));
+        appTids.add(tid);
+    }
+
+    private static int pidOf(Process p) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("pid=(\\d+)").matcher(String.valueOf(p));   // Android: Process[pid=N, ...]
+        if (m.find()) return Integer.parseInt(m.group(1));
+        try { java.lang.reflect.Field f = p.getClass().getDeclaredField("pid"); f.setAccessible(true); return f.getInt(p); }
+        catch (Throwable e) { return -1; }
+    }
+
+    private static List<Integer> tidsOf(int pid) {
+        List<Integer> l = new ArrayList<>();
+        String[] ts = pid > 0 ? new File("/proc/" + pid + "/task").list() : null;
+        if (ts != null) for (String t : ts) try { l.add(Integer.parseInt(t)); } catch (Exception ignored) { }
+        return l;
+    }
+
+    private static int[] toArray(java.util.Collection<Integer> a, java.util.Collection<Integer> b) {
+        List<Integer> l = new ArrayList<>(a);
+        if (b != null) l.addAll(b);
+        int[] r = new int[l.size()];
+        for (int i = 0; i < r.length; i++) r[i] = l.get(i);
+        return r;
+    }
+
+    /** reader thread, every pose: hint setup at pose 30 (refresh at 300), report the bridge's per-frame time. */
+    private void perfOnPose(double ms) {
+        if (!perfOn) return;
+        perfPoses++;
+        if (perfPoses == 30 || perfPoses == 300) setupBridgePerf(perfPoses == 300);
+        Object h = hint;
+        if (h != null && ms > 0 && android.os.Build.VERSION.SDK_INT >= 31) {
+            try { ((android.os.PerformanceHintManager.Session) h).reportActualWorkDuration((long) (ms * 1e6)); hintReports++; }
+            catch (Throwable e) { if (hintErrors++ == 0) notePerf("hint_report_error", e.toString()); }
+        }
+    }
+
+    private void setupBridgePerf(boolean refresh) {
+        List<Integer> bt = tidsOf(bridgePid);
+        int ok = 0, fail = 0, added = 0;
+        String err = null;
+        StringBuilder pr = new StringBuilder();
+        for (int t : bt) {
+            if (bridgeTids.contains(t)) continue;
+            added++;
+            try { android.os.Process.setThreadPriority(t, PRIO); ok++; } catch (Throwable e) { fail++; if (err == null) err = e.toString(); }
+            try { pr.append(t).append(':').append(android.os.Process.getThreadPriority(t)).append(' '); } catch (Throwable ignored) { }
+            bridgeTids.add(t);
+        }
+        notePerf(refresh ? "bridge_prio_refresh" : "bridge_prio", "pid " + bridgePid + " threads " + bt.size() + " new " + added
+                + " set ok " + ok + " fail " + fail + (err == null ? "" : " (" + err + ")") + " read back " + pr.toString().trim());
+        if (android.os.Build.VERSION.SDK_INT < 31) { notePerf("hint", "API " + android.os.Build.VERSION.SDK_INT + " < 31"); return; }
+        try {
+            if (!refresh) {
+                android.os.PerformanceHintManager pm = ctx.getSystemService(android.os.PerformanceHintManager.class);
+                if (pm == null) { notePerf("hint", "no PerformanceHintManager"); return; }
+                notePerf("hint_preferred_rate_ns", pm.getPreferredUpdateRateNanos());
+                long target = 1_000_000_000L / fps;
+                int[] all = toArray(appTids, bridgeTids);
+                Object s = null;
+                String how;
+                try {
+                    s = pm.createHintSession(all, target);
+                    how = s == null ? "app+bridge: null (not supported)" : "app+bridge " + all.length + " tids";
+                    hintHasBridge = s != null;
+                } catch (Throwable e) { how = "app+bridge failed: " + e; }
+                if (s == null) {
+                    int[] app = toArray(appTids, null);
+                    try { s = pm.createHintSession(app, target); how += s == null ? "; app only: null" : "; app only " + app.length + " tids"; }
+                    catch (Throwable e) { how += "; app only failed: " + e; }
+                }
+                hint = s;
+                notePerf("hint", how);
+                notePerf("hint_target_ns", target);
+                notePerf("hint_tids", java.util.Arrays.toString(all) + " (app " + appTids + ")");
+            } else if (hint != null && hintHasBridge && added > 0) {
+                if (android.os.Build.VERSION.SDK_INT >= 34) {
+                    int[] all = toArray(appTids, bridgeTids);
+                    ((android.os.PerformanceHintManager.Session) hint).setThreads(all);
+                    notePerf("hint_refresh", "setThreads " + all.length + " tids");
+                } else notePerf("hint_refresh", added + " new bridge threads not added (setThreads needs API 34)");
+            }
+        } catch (Throwable e) { notePerf(refresh ? "hint_refresh" : "hint", "error " + e); }
+    }
+
     OvRunner(Context ctx, Status status, Streamer out) { this.ctx = ctx; this.status = status; this.out = out; }
 
     boolean isMain() { return "main".equals(cam); }
@@ -173,6 +286,10 @@ class OvRunner implements SensorEventListener {
                 .put("device", android.os.Build.MODEL);
 
         proc = pb.start();
+        bridgePid = pidOf(proc);
+        notePerf("perf_on", perfOn);
+        notePerf("bridge_pid", bridgePid);
+        notePerf("sdk", android.os.Build.VERSION.SDK_INT);
         writerT = new Thread(this::writer, "ov-writer");
         readerT = new Thread(this::readerLoop, "ov-reader");
         writerT.start();
@@ -182,6 +299,7 @@ class OvRunner implements SensorEventListener {
         imuThread.start();
         SensorManager sm = (SensorManager) ctx.getSystemService(Context.SENSOR_SERVICE);
         Handler ih = new Handler(imuThread.getLooper());
+        ih.post(() -> boostSelf("imu"));
         Sensor acc = null, gyr = null;
         if (imuRaw) {
             acc = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER_UNCALIBRATED);
@@ -199,6 +317,7 @@ class OvRunner implements SensorEventListener {
         camThread.start();
         final Handler h = new Handler(camThread.getLooper());
         camH = h;
+        h.post(() -> boostSelf("cam"));
         pool = new ArrayBlockingQueue<>(poolSize);
         for (int i = 0; i < poolSize; i++) pool.add(new byte[12 + 20 + W * H]);
         CameraManager cm = (CameraManager) ctx.getSystemService(Context.CAMERA_SERVICE);
@@ -494,6 +613,11 @@ class OvRunner implements SensorEventListener {
             try { meta.put("bridge_exit", proc.isAlive() ? "killed" : String.valueOf(proc.exitValue())); } catch (Exception ignored) { }
             proc = null;
         }
+        Object hs = hint; hint = null;
+        if (hs != null && android.os.Build.VERSION.SDK_INT >= 31) try { ((android.os.PerformanceHintManager.Session) hs).close(); } catch (Throwable ignored) { }
+        notePerf("hint_reports", hintReports);
+        notePerf("hint_report_errors", hintErrors);
+        synchronized (perf) { try { meta.put("perf", new JSONObject(perf.toString())); } catch (Exception ignored) { } }
         try { if (readerT != null) readerT.join(500); } catch (InterruptedException ignored) { }
         synchronized (framesLock) { closeQuiet(framesW); framesW = null; }
         synchronized (posesLock) { closeQuiet(posesW); posesW = null; closeQuiet(eventsW); eventsW = null; }
@@ -624,6 +748,7 @@ class OvRunner implements SensorEventListener {
     private void writer() {
         OutputStream dump = null;
         long dumpEnd = 0;
+        boostSelf("writer");
         try {
             if (dumpSecs > 0) {
                 dump = new java.io.BufferedOutputStream(new FileOutputStream(new File(dir, "live_stream.bin")), 1 << 20);
@@ -648,6 +773,7 @@ class OvRunner implements SensorEventListener {
     }
 
     private void readerLoop() {
+        boostSelf("reader");
         try {
             InputStream in = proc.getInputStream();
             BufferedReader br = new BufferedReader(new InputStreamReader(in));
@@ -681,6 +807,7 @@ class OvRunner implements SensorEventListener {
                             + camDropped + "," + nCam + "," + nImu + "," + j.optDouble("dt_cam_imu", 0) + "\n");
                 }
                 lastStatus = j.optString("status");
+                perfOnPose(j.optDouble("ms", 0));
                 if (++nPose % 15 == 0) {
                     status.show(String.format(Locale.US, "OpenVINS %s (%s %dx%d@%d %s)\ncam %d imu %d pose %d drop %d/%d\nlatency %.0f ms  ov %.1f ms\nbattery %.1f C\n%s",
                             lastStatus, cam, W, H, fps, cfgName, nCam, nImu, nPose, poolDropped, camDropped,

@@ -29,7 +29,8 @@ import java.util.Locale;
  * Intent extras: mode = arcore (default) | ov (live OpenVINS, OvRunner) | cam2 (camera2 delivery only, Cam2Probe);
  * secs = run length (0 = until the activity is stopped).
  * ov (0.6.7): ov_cam lens2 (default) | main (std60 camera, baseline timing), ov_size, fps, exp_us, iso, focus_dpt,
- * ov_cfg (config subdir of files/ov), ov_preset bench | live, imu raw | cal, ov_timing 0/1, max_temp_dc, pool;
+ * ov_cfg (config subdir of files/ov), ov_preset bench | live, imu raw | cal, ov_timing 0/1, max_temp_dc, pool,
+ * perf 0/1 (0.6.13, default 1: thread priorities + PerformanceHintManager + sustained mode, OvRunner doc);
  * results in files/ov/run_<time>_.../ (OvRunner).
  * arcore: a GL thread loops Session.update() and per new frame logs/streams
  *   {"src":"arcore","t_sensor":android camera ts,"t_frame":ARCore ts,"t_call":..,"t_out":update() return,"status":..,"p":[..],"q":[..]}
@@ -42,6 +43,7 @@ public class MainActivity extends Activity {
     private TextView status;
     private Cam2Probe cam2;
     private OvRunner ov;
+    private boolean sustainedOn;                   // 0.6.13 ov: Window sustained performance mode set
     private HsRecorder hs;
     private PeekRunner peek;                       // mode peek: 1 fps framing stills (0.6.9)
     private HsPreview hsPrev;
@@ -166,6 +168,14 @@ public class MainActivity extends Activity {
                 ov.maxBatteryTenthC = getIntent().getIntExtra("max_temp_dc", 460);
                 ov.maxThermal = getIntent().getIntExtra("max_thermal", ov.maxThermal);
                 ov.poolSize = Math.max(2, getIntent().getIntExtra("pool", 4));
+                ov.perfOn = getIntent().getIntExtra("perf", 1) != 0;      // 0.6.13: priorities + hint session + sustained mode
+                sustainedOn = false;
+                try {
+                    boolean sup = ((android.os.PowerManager) getSystemService(POWER_SERVICE)).isSustainedPerformanceModeSupported();
+                    ov.notePerf("sustained_mode_supported", sup);
+                    if (sup && ov.perfOn) { getWindow().setSustainedPerformanceMode(true); sustainedOn = true; }
+                    ov.notePerf("sustained_mode_set", sustainedOn);
+                } catch (Throwable e) { ov.notePerf("sustained_mode", e.toString()); }
                 ov.onAutoStop = () -> runOnUiThread(this::finish);      // onPause stops the runner and writes meta.json
                 // 0.6.12: step guide like hs/std (extras guide "label:secs;...", guide_secs): big countdown from the first fed
                 // frame (after auto ISO); at the end finish() -> onPause stops the runner and writes meta.json. With a guide the
@@ -245,6 +255,7 @@ public class MainActivity extends Activity {
         running = false;
         if (cam2 != null) { cam2.stop(); cam2 = null; }
         if (ov != null) { ov.stop(); ov = null; }
+        if (sustainedOn) { try { getWindow().setSustainedPerformanceMode(false); } catch (Throwable ignored) { } sustainedOn = false; }
         if (hs != null) { hs.stop(); hs = null; }
         if (peek != null) { peek.stop(); peek = null; }
         if (hsPrev != null) { hsPrev.stop(); hsPrev = null; }
