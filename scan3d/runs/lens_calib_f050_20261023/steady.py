@@ -19,6 +19,7 @@ THR = 0.1
 N_PER_POSE = 5
 WIN = 60
 MIN_CORNERS = 6
+EXCLUDE = {"hs_20261024_094619_std60", "hs_20261024_094655_std60"}   # NO BOARD (user); only 23 / 8 stray frames detected
 
 
 def motion(frames):
@@ -36,7 +37,7 @@ def motion(frames):
 
 
 def main():
-    recs = [r.strip() for r in open(HERE / "recs.txt") if r.strip()]
+    recs = [r.strip() for r in open(HERE / "recs.txt") if r.strip() and r.strip() not in EXCLUDE]
     out, poses = {}, []
     for rec in recs:
         d = pickle.load(open(HERE / "views" / f"{rec}.pkl", "rb"))

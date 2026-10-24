@@ -34,6 +34,9 @@ FLAGS["k1_prior"] = (cv2.CALIB_USE_INTRINSIC_GUESS | cv2.CALIB_FIX_K2 | cv2.CALI
 FLAGS["f_prior"] = (cv2.CALIB_USE_INTRINSIC_GUESS | cv2.CALIB_FIX_PRINCIPAL_POINT | cv2.CALIB_FIX_ASPECT_RATIO
                     | cv2.CALIB_FIX_K1 | cv2.CALIB_FIX_K2 | cv2.CALIB_FIX_K3 | cv2.CALIB_FIX_TANGENT_DIST)
 PRIOR = ("k1_prior", "f_prior")
+# free radial k1 k2 k3, tangential fixed at 0 (2026-10-24: free p1 p2 trade with cx; check if that is the pp scatter)
+FLAGS["k123_notan"] = cv2.CALIB_FIX_TANGENT_DIST
+FLAGS["k12_notan"] = cv2.CALIB_FIX_TANGENT_DIST | cv2.CALIB_FIX_K3     # OpenVINS radtan-compatible (k1 k2, p = 0)
 W, H = 1920, 1080
 EXPECT_FX = None
 
