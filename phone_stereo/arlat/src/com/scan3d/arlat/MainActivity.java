@@ -88,6 +88,10 @@ public class MainActivity extends Activity {
                 peek.iso = getIntent().getIntExtra("iso", 500);
                 peek.periodMs = getIntent().getIntExtra("period_ms", 1000);
                 peek.secs = secs > 0 ? secs : 300;
+                peek.okView = t -> runOnUiThread(() -> {      // full-screen green + text when the PC says the pose fits
+                    if (t.isEmpty()) { status.setBackgroundColor(0xFF000000); status.setTextColor(0xFFFFFFFF); status.setTextSize(18); status.setText("위치 맞추기 (1 fps)"); }
+                    else { status.setBackgroundColor(0xFF16A34A); status.setTextColor(0xFFFFFFFF); status.setTextSize(34); status.setText("✔ " + t + "\n\n노트북에서 촬영"); }
+                });
                 try { peek.start(); status.setText("위치 맞추기 (1 fps)"); }
                 catch (Exception e) { status.setText("peek error: " + e); peek = null; }
             }

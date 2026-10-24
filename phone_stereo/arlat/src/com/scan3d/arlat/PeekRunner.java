@@ -29,6 +29,7 @@ import java.util.function.Consumer;
 class PeekRunner {
     final Context ctx;
     final Consumer<String> status;
+    Consumer<String> okView;      // 0.6.10: called once per still with the text of files/peek_ok.txt ("" = none); the PC writes it
     float focusDpt = 0.5f;
     int expUs = 2000, iso = 500, periodMs = 1000, secs = 300;
     private HandlerThread th;
@@ -82,6 +83,13 @@ class PeekRunner {
 
     private void shot() {
         if (!on || ses == null) return;
+        if (okView != null) {          // the PC writes peek_ok.txt when the framing matches a still-missing pose
+            String t = "";
+            try { File f = new File(ctx.getExternalFilesDir(null), "peek_ok.txt");
+                  if (f.exists()) t = new String(java.nio.file.Files.readAllBytes(f.toPath()), "UTF-8").trim(); }
+            catch (Exception ignored) { }
+            okView.accept(t);
+        }
         if (System.currentTimeMillis() - t0 > secs * 1000L) { status.accept("peek: time limit"); stop(); return; }
         try {
             CaptureRequest.Builder rb = dev.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
