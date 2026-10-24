@@ -33,12 +33,21 @@ LENS_DIR = HERE.parent / "config" / "lens"
 # 공용 렌즈 기본값: 표에 있으면 그 파일, 없으면 hs_<W>x<H>_f<초점>.json (2026-10-23 사용자 결정, docs/lens_switch_20261023.md).
 # 2.22 dpt: 새 2.22 노드 (fx 1303.9, 반복 ±0.2 %). 옛 hs_1920x1080_f2.22.json (fx 1267.1, 10-19 녹화 하나) 은
 # hs_1920x1080_f2.22_cal20261019_old.json 으로 이름만 바꿔 보관.
-DEFAULT_LENS = {"hs_1920x1080_f2.22": "hs_1920x1080_f2.22_cal20261022.json"}
+# 2026-10-24 (main session): std60 (regular 60 fps session) 0.5 dpt = PROVISIONAL cal20261024d (fx 1286.2, fx +-0.3 %,
+# pp +-2 px; half-split repeatability not met) until a larger-board far calibration. docs/lens_calib_f050_20261023.md.
+DEFAULT_LENS = {"hs_1920x1080_f2.22": "hs_1920x1080_f2.22_cal20261022.json",
+                "std_1920x1080_f0.50": "std_1920x1080_f0.50_cal20261024d.json"}
 
 
-def shared_lens_path(width, height, focus_dpt):
-    """초점 고정 녹화의 공용 렌즈 파일 (vio_bench_hs, imu_gt, gt_experiment 가 같이 씀)."""
+def shared_lens_path(width, height, focus_dpt, session=None):
+    """초점 고정 녹화의 공용 렌즈 파일 (vio_bench_hs, imu_gt, gt_experiment 가 같이 씀).
+    session = meta["session"]: "std" (일반 60 fps 세션) 이면 std_ 표, 아니면 (고속 240, 옛 녹화엔 없음) hs_ 표."""
     fd = focus_dpt or -1
+    if session == "std":
+        stem = f"std_{int(width)}x{int(height)}_f{fd:.2f}"
+        if stem in DEFAULT_LENS or (LENS_DIR / (stem + ".json")).exists():
+            return LENS_DIR / DEFAULT_LENS.get(stem, stem + ".json")
+        # no std60 lens for this focus → old behaviour (HS table; e.g. std60 at 2.22 dpt → hs 2.22 node)
     stem = f"hs_{int(width)}x{int(height)}_f{fd:.2f}"
     return LENS_DIR / DEFAULT_LENS.get(stem, stem + ".json")
 

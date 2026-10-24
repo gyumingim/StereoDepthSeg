@@ -103,7 +103,8 @@ def lens_path(rec, meta):
     if LENS_OVERRIDE is not None:
         return LENS_OVERRIDE
     own = rec / "imu_gt" / "lens.json"
-    return own if own.exists() else lens_calib.shared_lens_path(meta["width"], meta["height"], meta.get("focus_dpt_request"))
+    return own if own.exists() else lens_calib.shared_lens_path(meta["width"], meta["height"], meta.get("focus_dpt_request"),
+                                                                        meta.get("session"))
 
 
 def lens_source(rec):

@@ -31,9 +31,9 @@
  "n_views": 355,
  "n_poses": 80,
  "n_pose_clusters": 72,
- "status": "lopo_pass_halves_fail",
- "status_note": "All 80 poses (59 ChArUco + 21 FAR two-marker, 1.7-2.4 m). Leave-one-pose-out passes (fx -0.09/+0.06 %, pp within 0.7 px). Disjoint pose halves (62 splits): median |dfx| 0.23 %, |dcx| 1.4, |dcy| 2.4 px; fx <= 0.3 % in 60 %, pp <= 3 px in 55 %, both in 32 % -> FAIL. FAR set alone is too weak (8 points/pose, markers 36-118 px, coverage 19 %; halves median |dfx| 1.35 %). docs/lens_calib_f050_20261023.md section 13.",
- "uncertainty": "fx about +-0.3 % (estimate), principal point about +-2 px",
+ "status": "provisional",
+ "status_note": "PROVISIONAL DEFAULT for std60 1920x1080 0.5 dpt (lens_calib.DEFAULT_LENS, main session decision 2026-10-24). To be replaced after a larger-board (monitor / A3+) far calibration. Fit: All 80 poses (59 ChArUco + 21 FAR two-marker, 1.7-2.4 m). Leave-one-pose-out passes (fx -0.09/+0.06 %, pp within 0.7 px). Disjoint pose halves (62 splits): median |dfx| 0.23 %, |dcx| 1.4, |dcy| 2.4 px; fx <= 0.3 % in 60 %, pp <= 3 px in 55 %, both in 32 % -> FAIL. FAR set alone is too weak (8 points/pose, markers 36-118 px, coverage 19 %; halves median |dfx| 1.35 %). docs/lens_calib_f050_20261023.md section 13.",
+ "uncertainty": "fx +-0.3 %, principal point +-2 px (provisional)",
  "expected_fx": {
   "focus_law_hs": 1285.95,
   "focus_law_std60": 1280.94
@@ -475,7 +475,7 @@
  "board": "board_laptop_6x4.json (4 night recordings) + board_laptop_5x3.json; legacy pattern off",
  "source": "scan3d/runs/lens_calib_f050_20261023 (collect.py edge-line corners for the two-marker board, calib.py --tag farA/farB/farC, far_diag.py, far_groups.py, write_lens.py --1024d)",
  "supersedes": "_cal20261024b/_cal20261024/_cal20261023 (all kept)",
- "note": "Not in lens_calib.DEFAULT_LENS yet.",
+ "note": "Registered in lens_calib.DEFAULT_LENS as std_1920x1080_f0.50 (2026-10-24).",
  "made": "2026-10-24 13:30:52",
  "far_tilt_groups": {
   "30-37": {

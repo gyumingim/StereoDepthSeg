@@ -442,7 +442,7 @@ def main():
         # 고속 녹화 (16:9, 센서를 잘라 씀): 공장 렌즈 값을 못 쓰므로 보드로 구한 값. 초점 고정 녹화는 같은 값을 같이 씀.
         import lens_calib
         fd = meta.get("focus_dpt_request") or -1
-        shared = lens_calib.shared_lens_path(size[0], size[1], fd)   # 2026-10-23: 2.22 dpt → cal20261022 (전엔 fx 1267 파일)
+        shared = lens_calib.shared_lens_path(size[0], size[1], fd, meta.get("session"))   # 2026-10-23: 2.22 dpt → cal20261022 (전엔 fx 1267 파일)
         cand = [Path(a.lens)] if a.lens else [out / "lens.json", rec / "imu_gt" / "lens.json", shared]
         lp = next((p for p in cand if p.exists()), None)
         if lp is None:
