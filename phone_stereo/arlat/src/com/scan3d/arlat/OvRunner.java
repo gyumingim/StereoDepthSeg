@@ -67,13 +67,16 @@ import java.util.concurrent.LinkedBlockingQueue;
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261023-timing";
+    static final String VERSION = "ov-20261024-autoiso";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";
     int W = 640, H = 480;
     int fps = 30;
     int expUs = 0, iso = 0;                     // main: either > 0 -> AE off, manual exposure
+    boolean autoIso = true;                     // 0.6.11 intent auto_iso (main): ISO from AE once at start, then locked (AutoIso)
+    double isoScale = 1.0;                      // intent iso_target_scale: brightness bias for the auto ISO
+    private AutoIso autoRes;                    // AE metering result (null = not used)
     float focusDpt = -1f;                       // main: >= 0 fixed focus (AF off)
     String cfgName = "";                        // config subdir of files/ov ("" = files/ov itself)
     String preset = "live";                     // bridge args: "live" (scan3d live defaults) | "bench" (vio_bench_hs.py)
@@ -205,6 +208,39 @@ class OvRunner implements SensorEventListener {
             @Override public void onOpened(CameraDevice d) {
                 if (!running) { d.close(); return; }      // stopped before the camera opened
                 dev = d;
+                if (autoIsoActive()) {      // 0.6.11: AE metering in a throw-away session; no AE-phase frame reaches the bridge
+                    status.show("OV main auto ISO: AE metering...");
+                    AutoIso a = new AutoIso();
+                    a.size = new Size(W, H); a.fps = new Range<>(fps, fps); a.focusDpt = focusDpt; a.expNs = mainExpNs(ch); a.scale = isoScale;
+                    autoRes = a;
+                    a.run(d, ch, h, x -> {
+                        try { meta.put("auto_iso", x.json()); } catch (Exception ignored) { }
+                        if (running) openSession(d, ch, h);
+                    });
+                } else {
+                    try { meta.put("auto_iso", new JSONObject().put("auto_iso", false).put("why", !isMain() ? "lens2" : !autoIso ? "auto_iso=0"
+                            : iso > 0 ? "explicit iso" : "exp_us=0 (AE)")); } catch (Exception ignored) { }
+                    openSession(d, ch, h);
+                }
+            }
+            @Override public void onDisconnected(CameraDevice d) { d.close(); }
+            @Override public void onError(CameraDevice d, int e) { status.show("camera error " + e); d.close(); }
+        }, h);
+    }
+
+    /** main + auto_iso (default on) + exp_us > 0 + no explicit iso: ISO from the camera AE once at start (AutoIso). */
+    boolean autoIsoActive() { return isMain() && autoIso && iso <= 0 && expUs > 0; }
+
+    /** main manual exposure in ns: exp_us capped at the frame duration, clamped to the sensor range. */
+    private long mainExpNs(CameraCharacteristics ch) {
+        long frameDur = 1_000_000_000L / fps;
+        long e = expUs > 0 ? Math.min(expUs * 1000L, frameDur) : frameDur / 2;
+        Range<Long> er = ch.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
+        return er != null ? er.clamp(e) : e;
+    }
+
+    /** The real session (YUV reader -> bridge) and its repeating request; after AutoIso when that is active. */
+    private void openSession(final CameraDevice d, final CameraCharacteristics ch, final Handler h) {
                 try {
                     OutputConfiguration oc = new OutputConfiguration(reader.getSurface());
                     if (!isMain()) oc.setPhysicalCameraId("2");
@@ -263,10 +299,6 @@ class OvRunner implements SensorEventListener {
                                 @Override public void onConfigureFailed(CameraCaptureSession s) { status.show("configure failed"); }
                             }));
                 } catch (Exception e) { status.show("session: " + e); }
-            }
-            @Override public void onDisconnected(CameraDevice d) { d.close(); }
-            @Override public void onError(CameraDevice d, int e) { status.show("camera error " + e); d.close(); }
-        }, h);
     }
 
     /** Copy files/ov/<cfg>/estimator_config.yaml (+ its kalibr chains) into the run dir with the OpenVINS output paths
@@ -313,11 +345,9 @@ class OvRunner implements SensorEventListener {
         }
         if (expUs > 0 || iso > 0) {
             long frameDur = 1_000_000_000L / fps;
-            long e = expUs > 0 ? Math.min(expUs * 1000L, frameDur) : frameDur / 2;
-            int s = iso > 0 ? iso : 400;
-            Range<Long> er = ch.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
+            long e = mainExpNs(ch);
+            int s = iso > 0 ? iso : (autoRes != null ? autoRes.iso : 400);   // 0.6.11: auto ISO (chosen once, locked)
             Range<Integer> sr = ch.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE);
-            if (er != null) e = er.clamp(e);
             if (sr != null) s = sr.clamp(s);
             rb.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
             rb.set(CaptureRequest.SENSOR_EXPOSURE_TIME, e);

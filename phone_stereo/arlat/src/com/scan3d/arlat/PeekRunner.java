@@ -24,6 +24,7 @@ import java.util.function.Consumer;
  * mode peek (0.6.9, 2026-10-24): low-load framing view for the lens-calibration board page.
  * One JPEG still about every periodMs (default 1000 = 1 fps) from the main camera "0" with the recording settings
  * (manual focus focusDpt, manual exposure expUs / iso) -> files/peek.jpg (written as peek.tmp then renamed).
+ * 0.6.11: iso <= 0 and auto_iso (default) -> ISO chosen once at start from the camera AE (AutoIso), logged to files/peek_meta.json.
  * No repeating request: the sensor only streams when a still is requested. Stops after secs (default 300) or on onPause.
  */
 class PeekRunner {
@@ -32,6 +33,8 @@ class PeekRunner {
     Consumer<String> okView;      // 0.6.10: called once per still with the text of files/peek_ok.txt ("" = none); the PC writes it
     float focusDpt = 0.5f;
     int expUs = 2000, iso = 500, periodMs = 1000, secs = 300;
+    boolean autoIso = true;       // 0.6.11 intent auto_iso: iso <= 0 -> ISO from AE once at start (AutoIso), then locked
+    double isoScale = 1.0;        // intent iso_target_scale
     private HandlerThread th;
     private Handler h;
     private CameraDevice dev;
@@ -45,7 +48,8 @@ class PeekRunner {
 
     void start() throws Exception {
         CameraManager cm = (CameraManager) ctx.getSystemService(Context.CAMERA_SERVICE);
-        StreamConfigurationMap map = cm.getCameraCharacteristics("0").get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+        final CameraCharacteristics ch = cm.getCameraCharacteristics("0");
+        StreamConfigurationMap map = ch.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         Size best = null;
         for (Size s : map.getOutputSizes(ImageFormat.JPEG)) {     // smallest 16:9 size >= 960 wide (keeps the transfer small)
             if (s.getWidth() * 9 == s.getHeight() * 16 && s.getWidth() >= 960 && (best == null || s.getWidth() < best.getWidth())) best = s;
@@ -69,16 +73,38 @@ class PeekRunner {
         cm.openCamera("0", new CameraDevice.StateCallback() {
             @Override public void onOpened(CameraDevice d) {
                 dev = d;
+                if (autoIso && iso <= 0 && expUs > 0) {     // AE metering in a throw-away 1080p YUV session, then the JPEG session
+                    status.accept("peek auto ISO: AE metering...");
+                    AutoIso a = new AutoIso();
+                    a.size = new Size(1920, 1080); a.fps = new android.util.Range<>(60, 60); a.focusDpt = focusDpt;
+                    a.expNs = expUs * 1000L; a.scale = isoScale;
+                    a.run(d, ch, h, x -> {
+                        iso = x.iso;
+                        try (java.io.FileWriter w = new java.io.FileWriter(new File(dir, "peek_meta.json"))) { w.write(x.json().toString(1)); }
+                        catch (Exception ignored) { }
+                        status.accept("peek ISO " + iso + " (auto, AE " + x.isoAe + " @ " + x.eAeNs / 1000 + " us)");
+                        if (on) openSession(d);
+                    });
+                } else {
+                    if (iso <= 0) iso = 500;
+                    try (java.io.FileWriter w = new java.io.FileWriter(new File(dir, "peek_meta.json"))) {
+                        w.write("{\"auto_iso\": false, \"iso\": " + iso + ", \"exposure_ns\": " + expUs * 1000L + "}");
+                    } catch (Exception ignored) { }
+                    openSession(d);
+                }
+            }
+            @Override public void onDisconnected(CameraDevice d) { d.close(); }
+            @Override public void onError(CameraDevice d, int e) { status.accept("peek camera error " + e); d.close(); }
+        }, h);
+    }
+
+    private void openSession(final CameraDevice d) {
                 try {
                     d.createCaptureSession(Collections.singletonList(reader.getSurface()), new CameraCaptureSession.StateCallback() {
                         @Override public void onConfigured(CameraCaptureSession s) { ses = s; h.post(PeekRunner.this::shot); }
                         @Override public void onConfigureFailed(CameraCaptureSession s) { status.accept("peek: configure failed"); }
                     }, h);
                 } catch (Exception e) { status.accept("peek session error " + e); }
-            }
-            @Override public void onDisconnected(CameraDevice d) { d.close(); }
-            @Override public void onError(CameraDevice d, int e) { status.accept("peek camera error " + e); d.close(); }
-        }, h);
     }
 
     private void shot() {

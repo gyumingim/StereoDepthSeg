@@ -57,7 +57,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 class HsRecorder implements SensorEventListener {
     interface Status { void show(String s); }
-    static final String VERSION = "hs-20261022-std";        // written to meta.json app_version + status line (nroff: NR/edge OFF requested; ae: AE/ISO/AWB/colour logged)
+    static final String VERSION = "hs-20261024-autoiso";        // written to meta.json app_version + status line (nroff: NR/edge OFF requested; ae: AE/ISO/AWB/colour logged)
 
     static boolean has(int[] modes, int m) {
         if (modes == null) return false;
@@ -74,6 +74,9 @@ class HsRecorder implements SensorEventListener {
     private CameraCaptureSession sess;           // CameraConstrainedHighSpeedCaptureSession for session "hs"
     String session = "hs";                       // intent session: "hs" (constrained high speed, default) | "std" (regular session)
     int expUs = 0, iso = 0;                      // std only (intent exp_us / iso): either > 0 -> AE off, manual exposure
+    boolean autoIso = true;                      // 0.6.11 intent auto_iso (std): ISO from AE once at start, then locked (AutoIso)
+    double isoScale = 1.0;                       // intent iso_target_scale: brightness bias for the auto ISO
+    private AutoIso autoRes;                     // AE metering result (null = auto ISO not used)
     private long expNsUsed, frameDurNsUsed;      // std manual exposure actually requested (0 = AE)
     private int isoUsed;
     private final JSONObject streamCfg = new JSONObject();
@@ -202,17 +205,24 @@ class HsRecorder implements SensorEventListener {
     private void manualExposure(CaptureRequest.Builder rb) {
         if (!isStd() || (expUs <= 0 && iso <= 0)) return;
         frameDurNsUsed = 1_000_000_000L / wantFps;
-        expNsUsed = expUs > 0 ? Math.min(expUs * 1000L, frameDurNsUsed) : frameDurNsUsed / 2;
-        isoUsed = iso > 0 ? iso : 400;
+        expNsUsed = manualExpNs();
+        isoUsed = iso > 0 ? iso : (autoRes != null ? autoRes.iso : 400);   // 0.6.11: auto ISO (chosen once, locked)
         android.util.Range<Long> er = chars.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
         Range<Integer> sr = chars.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE);
-        if (er != null) expNsUsed = er.clamp(expNsUsed);
         if (sr != null) isoUsed = sr.clamp(isoUsed);
         rb.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
         rb.set(CaptureRequest.SENSOR_EXPOSURE_TIME, expNsUsed);
         rb.set(CaptureRequest.SENSOR_SENSITIVITY, isoUsed);
         rb.set(CaptureRequest.SENSOR_FRAME_DURATION, frameDurNsUsed);   // AE off: the fps range no longer sets the rate
         try { capInfo.put("exposure_range_ns", String.valueOf(er)).put("sensitivity_range", String.valueOf(sr)); } catch (Exception ignored) { }
+    }
+
+    /** std manual exposure in ns: exp_us capped at the frame duration (exp_us 0 -> half a frame), clamped to the sensor range. */
+    private long manualExpNs() {
+        long fd = 1_000_000_000L / wantFps;
+        long e = expUs > 0 ? Math.min(expUs * 1000L, fd) : fd / 2;
+        android.util.Range<Long> er = chars.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
+        return er != null ? er.clamp(e) : e;
     }
 
     /** SCALER_CROP_REGION of a result as "left top width height" (null if not reported). */
@@ -313,6 +323,24 @@ class HsRecorder implements SensorEventListener {
         cm.openCamera("0", new CameraDevice.StateCallback() {
             @Override public void onOpened(CameraDevice d) {
                 dev = d;
+                if (autoIsoActive()) {      // 0.6.11: AE metering in a throw-away session BEFORE the recording session
+                    status.show("STD auto ISO: AE metering...");
+                    AutoIso a = new AutoIso();
+                    a.size = size; a.fps = range; a.focusDpt = focusDpt; a.evComp = evComp; a.expNs = manualExpNs(); a.scale = isoScale;
+                    autoRes = a;
+                    a.run(d, chars, h, x -> { if (running) openSession(d); });
+                } else openSession(d);
+            }
+            @Override public void onDisconnected(CameraDevice d) { d.close(); }
+            @Override public void onError(CameraDevice d, int e) { status.show("camera error " + e); d.close(); }
+        }, h);
+    }
+
+    /** std + auto_iso (default on) + exp_us > 0 + no explicit iso: ISO from the camera's AE once at start (AutoIso). */
+    boolean autoIsoActive() { return isStd() && autoIso && iso <= 0 && expUs > 0; }
+
+    /** The recording session (encoder [+ preview]) and its repeating request; after AutoIso when that is active. */
+    private void openSession(final CameraDevice d) {
                 try {
                     List<Surface> outs = previewSurface == null ? Arrays.asList(encSurface) : Arrays.asList(encSurface, previewSurface);
                     try { streamCfg.put("outputs", previewSurface == null ? "encoder" : "encoder+preview"); } catch (Exception ignored) { }
@@ -390,10 +418,6 @@ class HsRecorder implements SensorEventListener {
                     if (isStd()) d.createCaptureSession(outs, scb, h);     // regular session (60 fps is not a high-speed mode)
                     else d.createConstrainedHighSpeedCaptureSession(outs, scb, h);
                 } catch (Exception e) { status.show("hs session: " + e); }
-            }
-            @Override public void onDisconnected(CameraDevice d) { d.close(); }
-            @Override public void onError(CameraDevice d, int e) { status.show("camera error " + e); d.close(); }
-        }, h);
     }
 
     /** Ask for no distortion correction: AOSP DISTORTION_CORRECTION_MODE OFF (if offered) and the Samsung vendor tag = 0.
@@ -846,7 +870,9 @@ class HsRecorder implements SensorEventListener {
                     .put("pre_correction_active_array", String.valueOf(chars.get(CameraCharacteristics.SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE)))
                     .put("exp_us_request", expUs).put("iso_request", iso)
                     .put("ae", expNsUsed > 0 ? "off (manual)" : "auto").put("exposure_ns_set", expNsUsed)
-                    .put("iso_set", isoUsed).put("frame_duration_ns_set", frameDurNsUsed);
+                    .put("iso_set", isoUsed).put("frame_duration_ns_set", frameDurNsUsed)
+                    .put("auto_iso", autoRes != null ? autoRes.json() : new JSONObject().put("auto_iso", false)
+                            .put("why", !isStd() ? "hs session" : !autoIso ? "auto_iso=0" : iso > 0 ? "explicit iso" : "exp_us=0 (AE)"));
             try (FileWriter w = new FileWriter(new File(dir, "meta.json"))) { w.write(m.toString(1)); }
         } catch (Exception ignored) { }
         status.show((stopReason.startsWith("overheat") ? "과열로 녹화 멈춤 — 지금까지 저장됨\n" : "") + (isStd() ? "STD" : "HS") + " done: " + nFrames + " frames, imu " + nImu + " -> " + dir.getName());

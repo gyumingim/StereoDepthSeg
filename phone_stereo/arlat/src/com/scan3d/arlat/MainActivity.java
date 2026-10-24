@@ -85,7 +85,9 @@ public class MainActivity extends Activity {
                 peek = new PeekRunner(this, this::show);
                 peek.focusDpt = getIntent().getFloatExtra("focus_dpt", 0.5f);
                 peek.expUs = getIntent().getIntExtra("exp_us", 2000);
-                peek.iso = getIntent().getIntExtra("iso", 500);
+                peek.iso = getIntent().getIntExtra("iso", 0);                 // 0.6.11: > 0 = fixed ISO (old); else auto ISO once at start
+                peek.autoIso = getIntent().getIntExtra("auto_iso", 1) != 0;
+                peek.isoScale = getIntent().getFloatExtra("iso_target_scale", 1f);
                 peek.periodMs = getIntent().getIntExtra("period_ms", 1000);
                 peek.secs = secs > 0 ? secs : 300;
                 peek.okView = t -> runOnUiThread(() -> {      // full-screen green + text when the PC says the pose fits
@@ -103,7 +105,11 @@ public class MainActivity extends Activity {
                 String sess = getIntent().getStringExtra("session");       // "hs" (default) | "std" (regular session, 1080p60)
                 hs.session = "std".equals(sess) ? "std" : "hs";
                 hs.wantFps = getIntent().getIntExtra("fps", hs.isStd() ? 60 : 120);
-                hs.expUs = getIntent().getIntExtra("exp_us", 0);              // std: manual exposure (AE off) in microseconds
+                // 0.6.11 (user 2026-10-24): std = exposure fixed (exp_us, default 2000) + ISO chosen ONCE at start from AE, then
+                // locked (auto_iso 1, default). iso > 0 = that ISO (no auto); auto_iso 0 = old behaviour (AE unless exp_us/iso given).
+                hs.autoIso = getIntent().getIntExtra("auto_iso", 1) != 0;
+                hs.isoScale = getIntent().getFloatExtra("iso_target_scale", 1f);
+                hs.expUs = getIntent().getIntExtra("exp_us", hs.isStd() && hs.autoIso ? 2000 : 0);   // std: manual exposure (AE off) in microseconds
                 hs.iso = getIntent().getIntExtra("iso", 0);                    // std: manual ISO (AE off)
                 hs.evComp = getIntent().getIntExtra("ev", 0);
                 hs.wantKbps = getIntent().getIntExtra("kbps", 160_000);
@@ -146,7 +152,9 @@ public class MainActivity extends Activity {
                 ov.H = Integer.parseInt(sz.split("x")[1]);
                 ov.fps = getIntent().getIntExtra("fps", main ? 60 : 30);
                 ov.expUs = getIntent().getIntExtra("exp_us", main ? 2000 : 0);
-                ov.iso = getIntent().getIntExtra("iso", main ? 500 : 0);
+                ov.autoIso = getIntent().getIntExtra("auto_iso", 1) != 0;     // 0.6.11 main: ISO from AE once at start, then locked
+                ov.isoScale = getIntent().getFloatExtra("iso_target_scale", 1f);
+                ov.iso = getIntent().getIntExtra("iso", main && !ov.autoIso ? 500 : 0);   // > 0 = that ISO (no auto)
                 ov.focusDpt = getIntent().getFloatExtra("focus_dpt", main ? 0.5f : -1f);
                 String cfg = getIntent().getStringExtra("ov_cfg");
                 ov.cfgName = cfg == null ? "" : cfg;
