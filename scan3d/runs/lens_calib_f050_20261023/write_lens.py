@@ -41,13 +41,14 @@ def write_1023():
     print("->", p)
 
 
-def write_1024():
+def write_1024(tags=("all1024", "notan1024", "k12notan1024"), out_name="std_1920x1080_f0.50_cal20261024.json",
+               n_poses=53, status=None, status_note=None, extra=None):
     """2026-10-24: night + morning retakes (53 poses). Model k12_notan (k1 k2 free, p1 p2 k3 = 0)."""
     import numpy as np
     res = {}
-    for tag in ("all1024", "notan1024", "k12notan1024"):
+    for tag in tags:
         res.update(json.load(open(HERE / "results" / f"calib_{tag}.json"))["models"])
-    R0 = json.load(open(HERE / "results" / "calib_all1024.json"))
+    R0 = json.load(open(HERE / "results" / f"calib_{tags[0]}.json"))
 
     def passfrac(M):
         H = M["halves"]
@@ -68,7 +69,7 @@ def write_1024():
     d = list(v["dist"]) + [0.0] * (5 - len(v["dist"]))
     out = dict(K=v["K"], dist=d[:5], focus_dpt=0.5, model="k1k2p", fit=main,
                fit_note="k1 k2 free, p1 p2 k3 fixed 0 (OpenVINS radtan compatible). Free tangential terms trade with cx (pp scatter 8-17 px between halves); without them pp repeats to ~1-2 px.",
-               rms_px=round(v["rms_px"], 4), n_views=v["n_views"], n_poses=53, n_pose_clusters=len(R0["clusters"]),
+               rms_px=round(v["rms_px"], 4), n_views=v["n_views"], n_poses=n_poses, n_pose_clusters=len(R0["clusters"]),
                status="repeatable_lopo_halves_borderline",
                status_note="Leave-one-pose-out: fx within -0.13/+0.07 %, pp within 1.1 px -> pass. Disjoint pose halves (62 splits): median |dfx| 0.20 %, |dcx| 1.2, |dcy| 2.3 px; "
                            "fx <= 0.3 % in 68 % of splits, pp <= 3 px in 56 %, both in 35 %; even/odd split passes (-0.25 %, 0.5, 0.1 px). See docs/lens_calib_f050_20261023.md section 9.",
@@ -82,7 +83,11 @@ def write_1024():
                source="scan3d/runs/lens_calib_f050_20261023 (collect.py, steady.py, calib.py --tag all1024/notan1024/k12notan1024, write_lens.py --1024)",
                supersedes="config/lens/std_1920x1080_f0.50_cal20261023.json (night only, not repeatable; kept)",
                note="Not in lens_calib.DEFAULT_LENS yet.", made=time.strftime("%Y-%m-%d %H:%M:%S"))
-    p = S3D / "config" / "lens" / "std_1920x1080_f0.50_cal20261024.json"
+    if status:
+        out["status"], out["status_note"] = status, status_note
+    if extra:
+        out.update(extra)
+    p = S3D / "config" / "lens" / out_name
     json.dump(out, open(p, "w"), indent=1, ensure_ascii=False)
     print("->", p)
 
@@ -90,4 +95,18 @@ def write_1024():
 
 if __name__ == "__main__":
     import sys
-    write_1024() if "--1024" in sys.argv else write_1023()
+    if "--1024b" in sys.argv:
+        write_1024(("all1024b",), "std_1920x1080_f0.50_cal20261024b.json", 59, "lopo_pass_halves_fail",
+                   "Leave-one-pose-out passes (fx -0.10/+0.07 %, pp within 0.8 px). Disjoint pose halves (62 splits): median |dfx| 0.29 %, "
+                   "|dcx| 1.6, |dcy| 2.0 px; fx <= 0.3 % in 52 %, pp <= 3 px in 56 %, both in 24 % -> FAIL. Cause: fx depends on board tilt "
+                   "(frontal + 25-45 deg poses: fx 1287.5; frontal + >=45 deg: 1279.1, -0.65 %), a systematic error, so more poses of the same kind do not fix it. "
+                   "docs/lens_calib_f050_20261023.md section 10.",
+                   dict(uncertainty="fx about +-0.35 % (tilt-dependent systematic, estimate), principal point about +-2 px",
+                        supersedes="std_1920x1080_f0.50_cal20261024.json and _cal20261023.json (both kept)",
+                        source="scan3d/runs/lens_calib_f050_20261023 (calib.py --tag all1024b, split_test.py, aspect_scan.py, run_lt55.sh, write_lens.py --1024b)",
+                        model_choice="kept k12_notan (coordinator: unless evidence says otherwise). pp-repeatable models are tied: holdout k12_notan 0.154/0.115, k1_prior 0.150/0.116, k123_notan 0.157/0.115; LOPO 0.130/0.131/0.129. k1_prior passes most half-splits (40 %) but borrows k2 p1 p2 k3 from the 2.22 HS node. rational/k1k2p_k3: pp not repeatable (halves |dcx| p90 17 px)",
+                        tilt_split_fx=json.load(open(HERE / "results" / "split_test.json"))["groups"]))
+    elif "--1024" in sys.argv:
+        write_1024()
+    else:
+        write_1023()
