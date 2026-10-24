@@ -1,0 +1,122 @@
+{
+ "rec": "hs_20261024_151646_std60",
+ "fps": 60.0,
+ "size": "640x360",
+ "gt": "none",
+ "frames_fed": 1821,
+ "poses": 1821,
+ "tracked": 0,
+ "tracked_frac": 0.0,
+ "wall_s": 68.2,
+ "frames": {
+  "rec_all": {
+   "n": 1821,
+   "secs": 30.33,
+   "fps": 60.0,
+   "nominal_fps": 60.0,
+   "gaps": 0,
+   "missing_est": 0,
+   "max_gap_ms": 16.85,
+   "p99_ms": 16.69
+  },
+  "rec_window": {
+   "n": 1821,
+   "secs": 30.33,
+   "fps": 60.0,
+   "nominal_fps": 60.0,
+   "gaps": 0,
+   "missing_est": 0,
+   "max_gap_ms": 16.85,
+   "p99_ms": 16.69
+  },
+  "fed": {
+   "n": 1821,
+   "secs": 30.33,
+   "fps": 60.0,
+   "nominal_fps": 60.0,
+   "gaps": 0,
+   "missing_est": 0,
+   "max_gap_ms": 16.85,
+   "p99_ms": 16.69
+  },
+  "index_every_k_would_be": {
+   "n": 1821,
+   "secs": 30.33,
+   "fps": 60.0,
+   "nominal_fps": 60.0,
+   "gaps": 0,
+   "missing_est": 0,
+   "max_gap_ms": 16.85,
+   "p99_ms": 16.69
+  }
+ },
+ "align_dt_ms": -2.1716,
+ "traj": [],
+ "first_tracking_t": null,
+ "status_counts": {
+  "init": 1821
+ },
+ "last_msgs": [
+  "{'type': 'pose', 't_ns': 26408566062017, 't': 32.315076, 'mono': True, 't_state': -1, 'status': 'init', 'init': False, 'T_world_cam0': None, 'dt_cam_imu': 0, 'n_slam': 0, 'n_msckf': 0, 'ms': 1.135466,",
+  "{'type': 'pose', 't_ns': 26408582727056, 't': 32.3317411, 'mono': True, 't_state': -1, 'status': 'init', 'init': False, 'T_world_cam0': None, 'dt_cam_imu': 0, 'n_slam': 0, 'n_msckf': 0, 'ms': 1.145782"
+ ],
+ "init_cfg": "strict",
+ "config_used": {
+  "max_clones": "11",
+  "try_zupt": "false",
+  "zupt_chi2_multipler": "0",
+  "zupt_max_velocity": "0.1",
+  "zupt_noise_multiplier": "10",
+  "zupt_max_disparity": "0.5",
+  "zupt_only_at_beginning": "false",
+  "init_window_time": "1.0",
+  "init_imu_thresh": "0.3",
+  "init_max_disparity": "15.00",
+  "init_max_features": "50",
+  "init_dyn_use": "false",
+  "init_dyn_mle_opt_calib": "false",
+  "init_dyn_mle_max_iter": "50",
+  "init_dyn_mle_max_time": "0.05",
+  "init_dyn_mle_max_threads": "4",
+  "init_dyn_num_pose": "6",
+  "init_dyn_min_deg": "10.0",
+  "init_dyn_inflation_ori": "10",
+  "init_dyn_inflation_vel": "100",
+  "init_dyn_inflation_bg": "10",
+  "init_dyn_inflation_ba": "100",
+  "init_dyn_min_rec_cond": "1e-12",
+  "init_dyn_bias_g": "[ 0.0, 0.0, 0.0 ]",
+  "init_dyn_bias_a": "[ 0.0, 0.0, 0.0 ]"
+ },
+ "start_off": 0.0,
+ "imu_lead_s": 2.0,
+ "git_head": "6675b3a",
+ "bench_blob": "b7369faae12b29cbc6eb46b985bc4a1cf74094e8",
+ "imu_gt_blob": "839bc1f0a7844b962e33a44ceed00500009c9e1c",
+ "make_ov_config_blob": "1e94a7ea13711327281f8d39997737a907d16215",
+ "template_blobs": {
+  "estimator_config.yaml": "667bf3fcdd3cf8680d2f307a86f9ba17dd2e3d6e",
+  "kalibr_imu_chain.yaml": "2a13bdaa51b448c9bb5ed27993affaedf4550903"
+ },
+ "bench_dirty": false,
+ "cfg_over": "num_opencv_threads=1,try_zupt=false,fi_max_cond_number=1e8,fi_max_baseline=1000",
+ "frame_cache": {
+  "hit": false,
+  "key": "304e81e1fca908bd",
+  "dir": "recordings/hs_20261024_151646_std60/cache/frames_640x360_304e81e1fca908bd",
+  "frames_written": 1821
+ },
+ "gyro_rebias": false,
+ "lens_file": "config/lens/std_1920x1080_f0.50_cal20261024d.json",
+ "lens_blob": "2d98e96f363e4f8d2d9435f215fe676bb6403c4b",
+ "lens_sha256": "eefc0970393c9cd27472ce861cbc3ef1e10bb7d55a479d3bda6d809e6e2777e7",
+ "lens_source": "shared",
+ "clip_s": 30.334,
+ "t_init_clip_s": null,
+ "covered_frac": 0.0,
+ "fi_made": "2026-10-24 16:39:41",
+ "fi_job_s": 68.8,
+ "fi_runner": "imu_learn/fi_limits_run.py",
+ "fi_cond": "F2",
+ "fi_threads": "1"
+}
