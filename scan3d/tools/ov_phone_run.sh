@@ -19,6 +19,8 @@
 # (still0 -> 모서리에 세워 두고 손 떼기, hand -> 들고 방 안 움직이기, still -> 다시 세워 두기, other names as is; step length
 # = t1 - previous end) with guide_secs = last t1; GUIDE="label:secs;..." overrides it (guide_secs = GUIDE_SECS or the sum).
 # The phone counts down from the first frame fed to OpenVINS (after auto ISO) and stops itself at the end (meta.json).
+# Live path page (2026-10-24): LIVE=1 bash scan3d/tools/ov_phone_run.sh run <ip:port> c4 130  -> http://100.92.214.97:8798
+# (tools/ov_live_view.py; starts it if needed, sets adb reverse tcp:8798 tcp:8794, copies the lines to <run>/ov_live.jsonl).
 set -uo pipefail
 cmd=${1:?push|run|clean}; S=${2:?<ip:port>}; shift 2
 ADB=${ADB:-/mnt/c/Users/a3162/platform-tools/adb.exe}
@@ -53,7 +55,37 @@ check_clean() {
   echo "-- ov_bridge processes (must be empty):"
   sh_ "ps -A | grep -i ov_bridge || echo none"
 }
-skin() { sh_ "dumpsys thermalservice" | sed -n '/Current temperatures from HAL/,$p' | grep -E "mName=SKIN" | tail -1 | sed -E 's/.*mValue=([0-9.]+).*/\1/'; }
+# only Temperature{mValue=..., mName=SKIN ..} lines: the TemperatureThreshold{.. mName=SKIN ..} line has no value (same fix as phone_preflight.sh)
+skin() { sh_ "dumpsys thermalservice" | sed -n '/Current temperatures from HAL/,$p' | grep -E "mValue=[0-9.]+,.*mName=SKIN" | tail -1 | sed -E 's/.*mValue=([0-9.]+).*/\1/'; }
+# LIVE=1: PC live path page (tools/ov_live_view.py, Windows Python) at http://$LIVE_HOST:$LIVE_PORT. Started if not
+# answering; phone 127.0.0.1:8798 (Streamer) -> adb reverse -> PC 127.0.0.1:$LIVE_STREAM (8798 on the PC is
+# vio_bench_server's); a new session per run (tag = cfg); after the pull the received lines -> <run>/ov_live.jsonl.
+LIVE=${LIVE:-}
+LIVE_HOST=${LIVE_HOST:-100.92.214.97}
+LIVE_PORT=${LIVE_PORT:-8798}
+LIVE_STREAM=${LIVE_STREAM:-8794}
+# python.org install, not the Store alias (Store Python redirects AppData writes into its package folder)
+LIVE_PY=${LIVE_PY:-'C:\Users\a3162\AppData\Local\Programs\Python\Python312\pythonw.exe'}
+CURL=${CURL:-/mnt/c/Windows/System32/curl.exe}
+PSH=${PSH:-/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe}
+live_get() { "$CURL" -s -m 3 "http://$LIVE_HOST:$LIVE_PORT$1" | tr -d '\r'; }
+live_up() {   # $1 = session tag; never fails the run (the run works without the page)
+  if ! live_get /api/ping | grep -q ov_live_view; then
+    local wp; wp=$(wslpath -w "$SCAN3D/tools/ov_live_view.py")
+    echo "live view: starting $wp"
+    "$PSH" -NoProfile -Command "Start-Process -WindowStyle Hidden -FilePath '$LIVE_PY' -ArgumentList '\"$wp\"','--host','$LIVE_HOST','--port','$LIVE_PORT','--stream-port','$LIVE_STREAM','--serial','$S'"
+    for _ in 1 2 3 4 5 6 7 8 9 10; do sleep 1; live_get /api/ping | grep -q ov_live_view && break; done
+  fi
+  live_get /api/ping | grep -q ov_live_view || { echo "live view: not answering at http://$LIVE_HOST:$LIVE_PORT (run continues)"; return 0; }
+  a reverse tcp:8798 tcp:"$LIVE_STREAM" > /dev/null && echo "live view: adb reverse tcp:8798 tcp:$LIVE_STREAM"
+  live_get "/api/new?tag=$1" > /dev/null
+  echo "live view: http://$LIVE_HOST:$LIVE_PORT"
+}
+live_save() {   # $1 = local run folder
+  local f; f=$(live_get /api/session | python3 -c 'import json,sys; print(json.load(sys.stdin).get("file") or "")' 2>/dev/null)
+  if [ -n "$f" ] && [ -f "$(wslpath -u "$f")" ]; then cp "$(wslpath -u "$f")" "$1/ov_live.jsonl" && echo "live view lines -> $1/ov_live.jsonl ($(wc -l < "$1/ov_live.jsonl") lines, from $f)"
+  else echo "live view: no saved lines (file: ${f:-none})"; fi
+}
 tstatus() { sh_ "dumpsys thermalservice" | grep -m1 "Thermal Status" | grep -oE "[0-9]+" | head -1; }
 . "$SCAN3D/tools/phone_preflight.sh"
 ge() { awk -v x="$1" -v y="$2" 'BEGIN{exit !(x != "" && x + 0 >= y + 0)}'; }
@@ -94,6 +126,7 @@ run)
     mkdir -p "$OUT"; cp "$PF" "$OUT/preflight_refused_$(date +%Y%m%d_%H%M%S).txt"; exit 2
   fi
   before=$(sh_ "ls -d $OVD/run_* 2>/dev/null" | tail -1)
+  [ -n "$LIVE" ] && live_up "$CFG"
   a shell input keyevent KEYCODE_WAKEUP
   G=$GUIDE; [ -z "$G" ] && [ -n "$SEG" ] && G=$(seg_guide "$SEG")
   gx=()
@@ -128,6 +161,7 @@ run)
   { cat "$LOG"; echo "stop_pc: $reason"; } > "$OUT/$name/thermal_pc.txt"
   { cat "$PF"; echo "am extras: $*"; } > "$OUT/$name/preflight.txt"
   echo "pulled -> $OUT/$name"
+  [ -n "$LIVE" ] && live_save "$OUT/$name"
   py=$SCAN3D/../venv_ffs/bin/python
   [ -x "$py" ] || py=python3
   "$py" "$SCAN3D/tools/ov_phone_timing.py" "$OUT/$name" ${SEG:+--seg "$SEG"}
