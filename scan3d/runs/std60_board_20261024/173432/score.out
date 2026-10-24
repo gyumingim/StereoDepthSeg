@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "/home/system/scanner/StereoDepthSeg/scan3d/imu_learn/std60_board_run.py", line 139, in <module>
+    main()
+  File "/home/system/scanner/StereoDepthSeg/scan3d/imu_learn/std60_board_run.py", line 135, in main
+    {"run": run_sched, "score": score}[cmd]()
+  File "/home/system/scanner/StereoDepthSeg/scan3d/imu_learn/std60_board_run.py", line 124, in score
+    print(j["name"], {k: rows[j["name"]][k] for k in ("div", "ate_w", "ate_cm", "ate_sim3_cm", "scale", "tracked_frac",
+                         ~~~~~~~~~~~~~~~^^^
+KeyError: 'ate_cm'

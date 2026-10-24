@@ -8,7 +8,7 @@ VIO: final baseline = config/mono (F1 in template) + try_zupt=false, lever, benc
      'aud' = same but init window 1.5 / disparity 2.30 (the setting that initialised in the audit).
 Score: camera-position ruler on imu_gt_spl (lens_switch_gtscore.cam_metrics / bench_eval), plus n_slam in motion.
 
-  ../venv_ffs/bin/python imu_learn/std60_board_run.py run      # o0/o1/o2 x base/aud, parallel
+  STD60_REC=hs_..._std60 ../venv_ffs/bin/python imu_learn/std60_board_run.py run      # o0/o1/o2 x base/aud, parallel
   ../venv_ffs/bin/python imu_learn/std60_board_run.py score    # -> runs/std60_board_20261024/score.json
 """
 import argparse
@@ -29,23 +29,43 @@ os.chdir(SCAN3D)
 sys.path.insert(0, str(HERE))
 
 PY = "../venv_ffs/bin/python"
-OUT = Path("runs/std60_board_20261024")
-REC = "hs_20261024_165506_std60"
+REC = os.environ.get("STD60_REC", "hs_20261024_165506_std60")
+# v1 (square 60.3 mm, 165506 only) = files directly in runs/std60_board_20261024; v2 (60.40 mm) = per-recording folder
+OUT = Path("runs/std60_board_20261024") / (REC.split("_")[2] if os.environ.get("STD60_V", "2") == "2" else "")
 LEVER = "config/imu_cam_lever.json"
 OFFS = (0, 1, 2)
 INIT = {"base": (1.0, 15.0), "aud": (1.5, 2.30)}
+# *A conditions: same init, but R_ci / dt = the ASSUMED std60 values of the no-board loop tests
+# (config/phone_ov_main/variants.json: HS chordal mean R_ci, median dt -2.17 ms) instead of this recording's align.json.
+# Their scores use the run-time evaluation (stored json, same GT, consistent dt), not bench_eval (which reads align.json).
+CONDS = {"base": "base", "aud": "aud", "baseA": "base", "audA": "aud"}
+CONDS_RUN = [c for c in CONDS if c in os.environ.get("STD60_CONDS", "base,aud").split(",")]
 GT = "imu_gt_spl"
 
 
 def jobs():
-    return [dict(off=o, cond=c, name=f"o{o}_{c}") for c in INIT for o in OFFS]
+    return [dict(off=o, cond=c, name=f"o{o}_{c}") for c in CONDS_RUN for o in OFFS]
+
+
+def assumed_align():
+    v = json.load(open("config/phone_ov_main/variants.json"))
+    return dict(dt_ns=int(np.median(v["dt_ns"])), R_ci=v["R_ci"], source="config/phone_ov_main/variants.json (assumed)")
 
 
 def job(name):
     import vio_bench_hs as vb
     j = next(x for x in jobs() if x["name"] == name)
     vb.TEMPLATE = SCAN3D / "config" / "mono" / "estimator_config.yaml"
-    iw, idp = INIT[j["cond"]]
+    iw, idp = INIT[CONDS[j["cond"]]]
+    if j["cond"].endswith("A"):                     # swap the align.json contents read by vb.run (this process only)
+        _load, sub = vb.json.load, assumed_align()
+
+        def load(f, *k, **kw):
+            d = _load(f, *k, **kw)
+            if str(getattr(f, "name", "")).endswith("imu_gt/align.json"):
+                d = dict(d, dt_ns=sub["dt_ns"], R_ci=sub["R_ci"])
+            return d
+        vb.json.load = load
     a = argparse.Namespace(rec=f"recordings/{REC}", fps=60.0, size="640x360", npts=200, clones=11, noise="cfg",
                            noise_scale=1.0, imu_calib=None, lever=LEVER, lens_file=None, dropout="", max_secs=0.0,
                            imu_raw=True, gt="auto", out=None, init_cfg="strict", start_off=float(j["off"]),
@@ -64,7 +84,8 @@ def job(name):
     finally:
         vb.evaluate = orig
     r.update(sb_made=time.strftime("%F %T"), sb_job_s=round(time.time() - t0, 1), sb_runner="imu_learn/std60_board_run.py",
-             sb_cond=j["cond"], sb_init=[iw, idp])
+             sb_cond=j["cond"], sb_init=[iw, idp],
+             sb_align=assumed_align() if j["cond"].endswith("A") else f"recordings/{REC}/imu_gt/align.json")
     with gzip.open(str(OUT / name) + ".poses.jsonl.gz", "wt") as f:
         for m in saved.get("poses", []):
             f.write(json.dumps(m) + "\n")
@@ -107,7 +128,8 @@ def score():
             continue
         st = json.load(open(str(pre) + ".json"))
         mc = gs.cam_metrics(pre, REC, GT)
-        be = gs.bench_eval(pre, REC, GT)
+        be = (gs.bench_eval(pre, REC, GT) if not j["cond"].endswith("A") else
+              ({k: st.get(k) for k in ("ate_cm", "ate_sim3_cm", "scale", "matched", "gt")} if st.get("ate_cm") is not None else {}))
         P = gs.load_poses(pre)
         tr = [m for m in P if m.get("status") == "tracking"]
         ns = np.array([m.get("n_slam", np.nan) for m in tr if t0m <= m["t_ns"] <= t1m], float) if tr and "t_ns" in tr[0] else np.array([])
@@ -120,7 +142,7 @@ def score():
                                n_slam_motion_med=float(np.median(ns)) if len(ns) else None,
                                n_slam_motion_frac0=round(float(np.mean(ns == 0)), 3) if len(ns) else None,
                                lens_file=st.get("lens_file"), cfg_over=st.get("cfg_over"))
-        print(j["name"], {k: rows[j["name"]][k] for k in ("div", "ate_w", "ate_cm", "ate_sim3_cm", "scale", "tracked_frac",
+        print(j["name"], {k: rows[j["name"]].get(k) for k in ("div", "ate_w", "ate_cm", "ate_sim3_cm", "scale", "tracked_frac",
                                                         "t_init_clip_s", "n_slam_motion_med", "n_slam_motion_frac0")}, flush=True)
     res = dict(made=time.strftime("%F %T"), rec=REC, gt=GT, motion_ns=[t0m, t1m], init=INIT, rows=rows)
     json.dump(res, open(OUT / "score.json", "w"), indent=1, ensure_ascii=False)
