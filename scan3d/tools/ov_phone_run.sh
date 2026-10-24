@@ -23,6 +23,8 @@
 # (tools/ov_live_view.py; starts it if needed, sets adb reverse tcp:8798 tcp:8794, copies the lines to <run>/ov_live.jsonl).
 # Perf A/B knobs (arlat 0.6.14, default off): --ei hint_ms 15 (hint session target 15 ms instead of 1000/fps),
 # --es cpus 7,8,9 (ov_bridge --cpus: all bridge threads pinned). The report prints "perf knobs" + "[ov_bridge] affinity" lines.
+# arlat 0.6.15: --ei ov_threads N (ov_bridge --threads N = OpenCV thread pool, default = config num_opencv_threads 2),
+# --ei klt_overlap 1 (patched TrackKLT overlap, default off). The report prints a "threads:" line (bridge cv_threads).
 set -uo pipefail
 cmd=${1:?push|run|clean}; S=${2:?<ip:port>}; shift 2
 ADB=${ADB:-/mnt/c/Users/a3162/platform-tools/adb.exe}

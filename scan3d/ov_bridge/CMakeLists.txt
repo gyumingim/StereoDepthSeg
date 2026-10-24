@@ -25,12 +25,16 @@ find_package(Threads REQUIRED)
 find_library(OV_MSCKF_LIB NAMES ov_msckf_lib PATHS "${OV_BUILD}" NO_DEFAULT_PATH REQUIRED)
 message(STATUS "ov_msckf_lib: ${OV_MSCKF_LIB} | OpenCV ${OpenCV_VERSION} | Ceres ${Ceres_VERSION}")
 
-add_executable(ov_bridge main.cpp)
+# ovpatch/TrackKLT.cpp (2026-10-24, arlat 0.6.15): patched TrackKLT (KLT overlap, identical output) compiled into the
+# executable; it overrides the copy in libov_msckf_lib.so (ENABLE_EXPORTS: the library's TrackKLT vtable binds to ours).
+add_executable(ov_bridge main.cpp ovpatch/TrackKLT.cpp)
+set_target_properties(ov_bridge PROPERTIES ENABLE_EXPORTS ON)
 # 라이브러리 빌드와 같은 매크로여야 헤더(옵션 구조체)가 일치한다 (ovbuild: ROS 끔, ARUCO 켬)
 target_compile_definitions(ov_bridge PRIVATE ROS_AVAILABLE=0 ENABLE_ARUCO_TAGS=1)
 target_include_directories(ov_bridge PRIVATE
   "${OV_SRC}/ov_msckf/src"
   "${OV_SRC}/ov_core/src"
+  "${OV_SRC}/ov_core/src/track"
   "${OV_SRC}/ov_init/src"
   ${EIGEN3_INCLUDE_DIR}
   ${OpenCV_INCLUDE_DIRS}
@@ -43,3 +47,11 @@ target_compile_options(ov_bridge PRIVATE -O2 -Wall)
 set_target_properties(ov_bridge PROPERTIES
   BUILD_RPATH "${OV_BUILD};${OV_LOCAL}/lib"
   INSTALL_RPATH "${OV_BUILD};${OV_LOCAL}/lib")
+
+# klt_bench (2026-10-24): TrackKLT / remap timing vs OpenCV thread count (CPU only)
+add_executable(klt_bench klt_bench.cpp ovpatch/TrackKLT.cpp)
+target_compile_definitions(klt_bench PRIVATE ROS_AVAILABLE=0 ENABLE_ARUCO_TAGS=1)
+target_include_directories(klt_bench PRIVATE "${OV_SRC}/ov_core/src" "${OV_SRC}/ov_core/src/track" ${EIGEN3_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+target_link_libraries(klt_bench PRIVATE ${OV_MSCKF_LIB} ${OpenCV_LIBRARIES} ${Boost_LIBRARIES} Threads::Threads)
+target_compile_options(klt_bench PRIVATE -O2)
+set_target_properties(klt_bench PROPERTIES BUILD_RPATH "${OV_BUILD};${OV_LOCAL}/lib")

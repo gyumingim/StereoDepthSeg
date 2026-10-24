@@ -4,7 +4,17 @@
 //   ov_bridge <estimator_config.yaml> [--stdio | --tcp HOST:PORT] [--max-cam-queue N]
 //             [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]
 //             [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S] [--remap FILE]
-//             [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST]
+//             [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST] [--threads N] [--klt-overlap 0|1]
+//
+// --threads N (2026-10-24, arlat 0.6.15 intent ov_threads): OpenCV thread pool size (cv::setNumThreads) = overrides the
+//   config num_opencv_threads (N > 0; 0 / absent = config value). This pool runs every parallel part of a frame: the
+//   --remap (cv::remap splits the output rows into bands over the pool; bit-identical for any N), the KLT pyramid
+//   (pyrDown rows), LK (points), the FAST grid cells (OpenVINS Grider_GRID) and the KLT overlap below.
+//   The phone OpenCV (Android SDK 4.10.0, static) is built with TBB, so N threads are real (checked with klt_bench).
+//   stderr "[ov_bridge] opencv threads ..." + ready line "cv_threads" / "cv_parallel" / "klt_overlap".
+// --klt-overlap 0|1 (2026-10-24, default 0): sets OV_KLT_OVERLAP for the patched TrackKLT (ovpatch/TrackKLT.cpp: FAST
+//   top-off on the last frame runs in parallel with the current frame's histogram + pyramid; identical output).
+//   0 = upstream TrackKLT code path (default: on the S24 the overlap was not faster, klt_bench 2026-10-24).
 //
 // --cpus LIST (2026-10-24, arlat 0.6.14 intent cpus): e.g. 7,8,9 or 7-9. sched_setaffinity at the very start of main (before
 //   OpenVINS / OpenCV create any thread, so all later threads inherit it) and again for every /proc/self/task thread;
@@ -115,6 +125,8 @@ struct Args {
   std::string remap;
   std::string timing_log;   // --timing-log FILE (per-frame CSV)
   std::string cpus;         // --cpus LIST ("" = no pinning)
+  int threads = 0;          // --threads N (0 = config num_opencv_threads)
+  int klt_overlap = 0;      // --klt-overlap 0|1 (OV_KLT_OVERLAP for ovpatch/TrackKLT.cpp)
 };
 
 // ---- --cpus (CPU affinity) ----
@@ -278,6 +290,19 @@ public:
     ov_core::Printer::setPrintLevel(verbosity);
     params_.print_and_load(parser_);
     params_.use_multi_threading_subs = false;  // 순서대로 처리 (카메라 feed 는 이 스레드에서만)
+    int cfg_threads = params_.num_opencv_threads;
+    if (a.threads > 0) params_.num_opencv_threads = a.threads;  // --threads: VioManager ctor calls cv::setNumThreads(this)
+    {
+      std::string bi = cv::getBuildInformation();
+      auto pos = bi.find("Parallel framework:");
+      if (pos != std::string::npos) {
+        pos = bi.find_first_not_of(' ', pos + 19);
+        cv_parallel_ = bi.substr(pos, bi.find('\n', pos) - pos);
+      }
+    }
+    std::fprintf(stderr, "[ov_bridge] opencv threads: config %d, --threads %d -> %d | %s | cpus %d | klt overlap %d\n",
+                 cfg_threads, a.threads, params_.num_opencv_threads, cv_parallel_.c_str(), cv::getNumberOfCPUs(),
+                 a.klt_overlap);
     if (!a.remap.empty()) load_remap(a.remap);
     if (!a.timing_log.empty()) {
       tlog_ = std::fopen(a.timing_log.c_str(), "w");
@@ -359,7 +384,8 @@ public:
     std::ostringstream o;
     o << "{\"type\":\"ready\",\"num_cameras\":" << params_.state_options.num_cameras
       << ",\"use_stereo\":" << (params_.use_stereo ? "true" : "false") << ",\"imu_hold_s\":" << args_.imu_hold_s
-      << "}\n";
+      << ",\"cv_threads\":" << cv::getNumThreads() << ",\"cv_parallel\":" << jstr(cv_parallel_)
+      << ",\"klt_overlap\":" << args_.klt_overlap << "}\n";
     return o.str();
   }
 
@@ -789,6 +815,7 @@ private:
   }
 
   Args args_;
+  std::string cv_parallel_ = "?";  // cv::getBuildInformation "Parallel framework:" value
   cv::Mat map_x_, map_y_;  // --remap (CV_16SC2 + CV_16UC1 고정소수 맵, 빠름)
 
   void load_remap(const std::string &path) {
@@ -893,7 +920,8 @@ void usage() {
                "usage: ov_bridge <estimator_config.yaml> [--stdio | --tcp HOST:PORT] [--max-cam-queue N]\n"
                "                 [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]\n"
                "                 [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S] [--remap FILE]\n"
-               "                 [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST]\n");
+               "                 [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST] [--threads N]\n"
+               "                 [--klt-overlap 0|1]\n");
 }
 
 }  // namespace
@@ -936,6 +964,8 @@ int main(int argc, char **argv) {
     else if (s == "--remap") a.remap = next();
     else if (s == "--timing-log") a.timing_log = next();
     else if (s == "--cpus") a.cpus = next();
+    else if (s == "--threads") a.threads = std::max(0, std::stoi(next()));
+    else if (s == "--klt-overlap") a.klt_overlap = std::stoi(next()) != 0 ? 1 : 0;
     else if (s == "--reinit-max-gap") a.reinit_max_gap = std::stod(next());
     else if (s == "--reinit-sigma") {  // ori_deg,pos_m,vel_m_s
       std::string v = next();
@@ -954,6 +984,9 @@ int main(int argc, char **argv) {
       return 2;
     }
   }
+
+  // --klt-overlap: read once by ovpatch/TrackKLT.cpp at the first camera frame
+  ::setenv("OV_KLT_OVERLAP", a.klt_overlap ? "1" : "0", 1);
 
   // --cpus: pin before any thread exists (Bridge / OpenVINS / OpenCV threads inherit it)
   if (!a.cpus.empty()) {

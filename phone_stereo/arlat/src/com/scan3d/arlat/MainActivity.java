@@ -172,6 +172,8 @@ public class MainActivity extends Activity {
                 ov.hintMs = Math.max(0, getIntent().getIntExtra("hint_ms", 0));   // 0.6.14: hint target ms (0 = 1000/fps)
                 String cpus = getIntent().getStringExtra("cpus");               // 0.6.14: ov_bridge --cpus (e.g. 7,8,9)
                 ov.cpus = cpus == null ? "" : cpus.trim();
+                ov.ovThreads = Math.max(0, getIntent().getIntExtra("ov_threads", 0));   // 0.6.15: ov_bridge --threads (0 = config)
+                ov.kltOverlap = getIntent().getIntExtra("klt_overlap", 0) != 0;        // 0.6.15: ov_bridge --klt-overlap 1
                 sustainedOn = false;
                 try {
                     boolean sup = ((android.os.PowerManager) getSystemService(POWER_SERVICE)).isSustainedPerformanceModeSupported();

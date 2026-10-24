@@ -76,11 +76,17 @@ import java.util.concurrent.LinkedBlockingQueue;
  * 1000/fps (a target below the reported "ms" asks the governor for more speed); intent cpus "7,8,9" / "7-9" = ov_bridge
  * --cpus (sched_setaffinity of all bridge threads, logged in bridge_stderr.log "[ov_bridge] affinity ..."). At the 30th
  * pose perf "bridge_affinity" / "app_affinity" = Cpus_allowed_list of every bridge / app perf thread (/proc/<pid>/task).
+ *
+ * 0.6.15 knobs (default = 0.6.14 behaviour): intent ov_threads N (> 0) = ov_bridge --threads N = OpenCV thread pool size
+ * (overrides the config num_opencv_threads, 2 in the phone configs; remap / KLT pyramid / LK / FAST grid run on it);
+ * intent klt_overlap 1 = ov_bridge --klt-overlap 1 (patched TrackKLT: detection overlapped with the pyramid; same output).
+ * meta.json "ov_threads" / "klt_overlap" (requested) and perf "bridge_cv_threads" / "bridge_cv_parallel" /
+ * "bridge_klt_overlap" (what the bridge reports in its ready line: cv::getNumThreads and the OpenCV parallel framework).
  */
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261024-perf2";
+    static final String VERSION = "ov-20261024-threads";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";
@@ -142,6 +148,8 @@ class OvRunner implements SensorEventListener {
     boolean perfOn = true;                      // intent perf (default 1)
     int hintMs = 0;                             // 0.6.14 intent hint_ms: hint target in ms (0 = 1000/fps)
     String cpus = "";                           // 0.6.14 intent cpus: ov_bridge --cpus list ("" = no pinning)
+    int ovThreads = 0;                          // 0.6.15 intent ov_threads: ov_bridge --threads (0 = config num_opencv_threads)
+    boolean kltOverlap = false;                 // 0.6.15 intent klt_overlap: ov_bridge --klt-overlap 1
     static final int PRIO = android.os.Process.THREAD_PRIORITY_URGENT_DISPLAY;   // -8
     private final JSONObject perf = new JSONObject();
     private int bridgePid = -1;
@@ -298,6 +306,8 @@ class OvRunner implements SensorEventListener {
             if (!cpus.matches("[0-9]+(-[0-9]+)?(,[0-9]+(-[0-9]+)?)*")) throw new IllegalArgumentException("bad cpus " + cpus);
             Collections.addAll(cmd, "--cpus", cpus);
         }
+        if (ovThreads > 0) Collections.addAll(cmd, "--threads", Integer.toString(ovThreads));
+        if (kltOverlap) Collections.addAll(cmd, "--klt-overlap", "1");
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.environment().put("LD_LIBRARY_PATH", lib);
         pb.redirectError(new File(runDir, "bridge_stderr.log"));
@@ -314,13 +324,15 @@ class OvRunner implements SensorEventListener {
                 .put("remap", remap.getAbsolutePath()).put("bridge_cmd", String.join(" ", cmd)).put("ov_timing", ovTiming)
                 .put("pool", poolSize).put("start_elapsed_ns", t0Elapsed).put("start_wall", stamp)
                 .put("battery_c_start", batteryTenthC() / 10.0).put("thermal_status_start", thermalStatus())
-                .put("device", android.os.Build.MODEL);
+                .put("device", android.os.Build.MODEL).put("ov_threads", ovThreads).put("klt_overlap", kltOverlap ? 1 : 0);
 
         proc = pb.start();
         bridgePid = pidOf(proc);
         notePerf("perf_on", perfOn);
         notePerf("hint_ms", hintMs);
         notePerf("cpus", cpus.isEmpty() ? "off" : cpus);
+        notePerf("ov_threads", ovThreads > 0 ? Integer.toString(ovThreads) : "config");
+        notePerf("klt_overlap", kltOverlap ? 1 : 0);
         notePerf("bridge_pid", bridgePid);
         notePerf("sdk", android.os.Build.VERSION.SDK_INT);
         writerT = new Thread(this::writer, "ov-writer");
@@ -816,6 +828,11 @@ class OvRunner implements SensorEventListener {
                 if (!l.startsWith("{")) continue;
                 JSONObject j = new JSONObject(l);
                 String type = j.optString("type");
+                if ("ready".equals(type)) {   // 0.6.15: what the bridge actually uses (cv::getNumThreads, OpenCV parallel framework)
+                    notePerf("bridge_cv_threads", j.optInt("cv_threads", -1));
+                    notePerf("bridge_cv_parallel", j.optString("cv_parallel", "?"));
+                    notePerf("bridge_klt_overlap", j.optInt("klt_overlap", -1));
+                }
                 if (!"pose".equals(type)) {
                     JSONObject ev = new JSONObject().put("src", "ov").put("event", j);
                     out.send(ev.toString());

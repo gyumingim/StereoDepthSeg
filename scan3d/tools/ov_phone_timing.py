@@ -193,6 +193,9 @@ def show(res):
         print(f"   perf: on {pf.get('perf_on')} sustained supported {pf.get('sustained_mode_supported')} set {pf.get('sustained_mode_set')}; "
               f"hint {pf.get('hint')} reports {pf.get('hint_reports')}; bridge prio {pf.get('bridge_prio')}")
         print(f"   perf knobs: hint_ms {pf.get('hint_ms', '-')} (target_ns {pf.get('hint_target_ns')}) cpus {pf.get('cpus', '-')}")
+        if "ov_threads" in pf or "bridge_cv_threads" in pf:   # arlat 0.6.15: OpenCV thread pool of the bridge
+            print(f"   threads: ov_threads {pf.get('ov_threads', '-')} -> bridge cv_threads {pf.get('bridge_cv_threads', '-')}"
+                  f" ({pf.get('bridge_cv_parallel', '?')}), klt_overlap {pf.get('bridge_klt_overlap', pf.get('klt_overlap', '-'))}")
         if pf.get("bridge_affinity"):
             print(f"   bridge affinity (pose 30): {pf.get('bridge_affinity')}")
             print(f"   app affinity (pose 30): {pf.get('app_affinity')}")
