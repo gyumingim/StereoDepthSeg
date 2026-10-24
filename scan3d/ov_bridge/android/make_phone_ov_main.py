@@ -58,8 +58,8 @@ VARIANTS = {"base60": (60, 200, 11), "n150": (60, 150, 11), "n100": (60, 100, 11
             "n100c8": (60, 100, 8), "fps30": (30, 200, 11), "fps30n100c8": (30, 100, 8)}
 # final_baseline_run.py: init_window=1.0, init_disp=15.0, cfg_over="num_opencv_threads=2,try_zupt=false", init_cfg strict
 INIT_OVER = {"init_window_time": "1.0", "init_max_disparity": "15.00", "num_opencv_threads": "2", "try_zupt": "false"}
-# feature-init limits, kept at the OpenVINS defaults for now (2026-10-24, docs/fi_limits_plan.md tests relaxing them)
-FI_OVER = {"fi_max_baseline": "40.0", "fi_max_cond_number": "10000.0"}
+# feature-init limits = F1, adopted 2026-10-24 (docs/fi_limits_result.md; OpenVINS defaults 40 / 10000)
+FI_OVER = {"fi_max_baseline": "200.0", "fi_max_cond_number": "1000000.0"}
 
 
 def mean_rotation(Rs):

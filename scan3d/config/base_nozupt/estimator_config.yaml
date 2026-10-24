@@ -97,10 +97,10 @@ up_slam_chi2_multipler: 1
 up_aruco_sigma_px: 1
 up_aruco_chi2_multipler: 1
 
-# feature initializer limits (= OpenVINS FeatureInitializerOptions defaults). Added 2026-10-24 so the bench --cfg-over
-# can set them (docs/fi_limits_plan.md); same values as when absent.
-fi_max_baseline: 40.0
-fi_max_cond_number: 10000.0
+# feature initializer limits. OpenVINS defaults are 40 / 10000; relaxed to F1 (2026-10-24, docs/fi_limits_result.md:
+# divergences 5 -> 1, paired window ATE -0.05 cm on the HS set, std60 room loops 17 -> 5 / 40 -> 17 cm).
+fi_max_baseline: 200.0
+fi_max_cond_number: 1000000.0
 
 use_mask: false
 
