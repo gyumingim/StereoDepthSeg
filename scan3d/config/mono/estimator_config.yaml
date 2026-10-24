@@ -96,6 +96,11 @@ up_slam_chi2_multipler: 1
 up_aruco_sigma_px: 1
 up_aruco_chi2_multipler: 1
 
+# feature initializer limits (= OpenVINS FeatureInitializerOptions defaults). Added 2026-10-24 so the bench --cfg-over
+# can set them (docs/fi_limits_plan.md); same values as when absent.
+fi_max_baseline: 40.0
+fi_max_cond_number: 10000.0
+
 use_mask: false
 
 relative_config_imu: "kalibr_imu_chain.yaml"

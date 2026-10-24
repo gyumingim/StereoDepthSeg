@@ -717,6 +717,15 @@ def code_version():
 
 
 def evaluate(rec, a, poses, n_fed, drop, dt_ns, wall, noise, Knew, frames):
+    if a.gt == "none":     # 2026-10-24: recordings without board GT (e.g. loop-closure tests) -> keep the tracked trajectory only
+        tr = [m for m in poses if m.get("status") == "tracking" and m.get("T_world_cam0")]
+        return dict(rec=rec.name, fps=a.fps, size=a.size, gt="none", frames_fed=n_fed, poses=len(poses), tracked=len(tr),
+                    tracked_frac=round(len(tr) / max(1, n_fed), 3), wall_s=round(wall, 1), frames=frames, align_dt_ms=round(dt_ns / 1e6, 4),
+                    traj=[[int(m["t_ns"])] + [float(v) for v in np.asarray(m["T_world_cam0"]).reshape(4, 4)[:3, 3]]
+                          + [int(m.get("n_slam") or 0), int(m.get("n_msckf") or 0)] for m in tr],
+                    first_tracking_t=int(tr[0]["t_ns"]) if tr else None,
+                    status_counts={k: sum(1 for m in poses if m.get("status") == k) for k in {m.get("status") for m in poses}},
+                    last_msgs=[str(m)[:200] for m in poses[-2:]])
     gt_dir = pick_gt(rec, a.gt)
     print(f"scoring GT: {gt_dir.name} (mode {a.gt})", file=sys.stderr)
     g = dict(np.load(gt_dir / "gt.npz", allow_pickle=True))

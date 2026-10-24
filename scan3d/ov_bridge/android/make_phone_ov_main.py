@@ -58,6 +58,8 @@ VARIANTS = {"base60": (60, 200, 11), "n150": (60, 150, 11), "n100": (60, 100, 11
             "n100c8": (60, 100, 8), "fps30": (30, 200, 11), "fps30n100c8": (30, 100, 8)}
 # final_baseline_run.py: init_window=1.0, init_disp=15.0, cfg_over="num_opencv_threads=2,try_zupt=false", init_cfg strict
 INIT_OVER = {"init_window_time": "1.0", "init_max_disparity": "15.00", "num_opencv_threads": "2", "try_zupt": "false"}
+# feature-init limits, kept at the OpenVINS defaults for now (2026-10-24, docs/fi_limits_plan.md tests relaxing them)
+FI_OVER = {"fi_max_baseline": "40.0", "fi_max_cond_number": "10000.0"}
 
 
 def mean_rotation(Rs):
@@ -139,7 +141,7 @@ def main():
     for name, (fps, npts, clones) in VARIANTS.items():
         d = out / name
         d.mkdir(exist_ok=True)
-        used[name] = vb.write_config(d, Knew, VIO_SIZE, fps, R_ci, p_CinI, timeshift, noise, npts, clones, "strict", dict(INIT_OVER))
+        used[name] = vb.write_config(d, Knew, VIO_SIZE, fps, R_ci, p_CinI, timeshift, noise, npts, clones, "strict", {**INIT_OVER, **FI_OVER})
         cfg = d / "estimator_config.yaml"
         lines = []
         for line in cfg.read_text().splitlines():
@@ -156,7 +158,7 @@ def main():
                                  if ":" in ln.split("#")[0] and not ln.startswith(" "))}
         used[name].update({k: chk[k].strip() for k in ("track_frequency", "num_pts", "max_clones", "num_opencv_threads",
                                                          "try_zupt", "record_timing_information", "use_stereo",
-                                                         "calib_cam_intrinsics", "calib_cam_extrinsics")})
+                                                         "calib_cam_intrinsics", "calib_cam_extrinsics", *FI_OVER)})
 
     info = dict(made=time.strftime("%Y-%m-%d %H:%M:%S"), script="scan3d/ov_bridge/android/make_phone_ov_main.py",
                 lens_file=str(Path(a.lens_file).resolve()), lens_sha256=hashlib.sha256(Path(a.lens_file).read_bytes()).hexdigest(),
@@ -164,7 +166,7 @@ def main():
                 K_raw_used=K.tolist(), fx_focus_table_interp=fx_interp, dist=dist.tolist(), Knew_640x360=Knew.tolist(),
                 K_640x360_isp_assumed=K3.tolist(), R_ci=R_ci.tolist(), R_ci_spread_deg=spread, recordings=recs,
                 lever_r_cm=r_cm.tolist(), p_CinI_m=p_CinI.tolist(), dt_ns=dts, timeshift_cam_imu_s=timeshift,
-                imu_noise=noise, template=str(vb.TEMPLATE), init_over=INIT_OVER, variants=VARIANTS, cfg_used=used,
+                imu_noise=noise, template=str(vb.TEMPLATE), init_over=INIT_OVER, fi_over=FI_OVER, variants=VARIANTS, cfg_used=used,
                 remaps={"remap_1920x1080.bin": "src 1920x1080 -> 640x360", "remap_640x360.bin": "src 640x360 (ISP) -> 640x360"})
     (out / "variants.json").write_text(json.dumps(info, indent=1))
     print(f"lens {a.lens_file} D_ref {d_ref} -> run {a.focus_dpt} dpt, scale {s:.5f}: fx {K[0, 0]:.2f} "
