@@ -25,6 +25,8 @@
 # --es cpus 7,8,9 (ov_bridge --cpus: all bridge threads pinned). The report prints "perf knobs" + "[ov_bridge] affinity" lines.
 # arlat 0.6.15: --ei ov_threads N (ov_bridge --threads N = OpenCV thread pool, default = config num_opencv_threads 2),
 # --ei klt_overlap 1 (patched TrackKLT overlap, default off). The report prints a "threads:" line (bridge cv_threads).
+# arlat 0.6.16: --ei idle_spin 0|1|2 (ov_bridge --idle-spin: 1 = main thread busy-waits for input, 2 = + OpenCV pool spins;
+# default 0). Shown on the "threads:" line; bridge_stderr.log "[ov_bridge] idle spin end: ... exit_us ...".
 set -uo pipefail
 cmd=${1:?push|run|clean}; S=${2:?<ip:port>}; shift 2
 ADB=${ADB:-/mnt/c/Users/a3162/platform-tools/adb.exe}

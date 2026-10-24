@@ -1,0 +1,28 @@
+cfg dir runs/vio_v3w4kbl8 (2026-10-25 00:40:53.266259170 +0900)
+== fast-feed identity (bench_wrap, threads 2 ref; S0_cfg = config threads)
+ref /tmp/idlespin/pose_ab/S0_t2.jsonl poses 845 tracking 704
+compared keys ['R_ItoC0', 'T_world_cam0', 'ba', 'bg', 'cam_dropped', 'cam_rejected', 'dt_cam_imu', 'exceptions', 'imu_dropped', 'imu_held', 'init', 'intr0', 'mono', 'n_msckf', 'n_reinit_state', 'n_slam', 'p', 'p_IinC0', 'q', 'q_GtoI_jpl', 'status', 't', 't_ns', 't_state', 'type', 'v']
+/tmp/idlespin/pose_ab/S1_t2.jsonl: poses 845 identical_lines 845/845 identical_state(p,q,v,bg,ba,T) 845/845
+/tmp/idlespin/pose_ab/S2_t2.jsonl: poses 845 identical_lines 845/845 identical_state(p,q,v,bg,ba,T) 845/845
+/tmp/idlespin/pose_ab/S2_t4.jsonl: poses 845 identical_lines 845/845 identical_state(p,q,v,bg,ba,T) 845/845
+/tmp/idlespin/pose_ab/S0_cfg.jsonl: poses 845 identical_lines 845/845 identical_state(p,q,v,bg,ba,T) 845/845
+/tmp/kb0615/pose_ab/A_stock.jsonl: poses 845 identical_lines 845/845 identical_state(p,q,v,bg,ba,T) 845/845
+== paced mode 0 00:42:20
+records 15921 span_s 30.17874039 wall_s 30.191353964037262
+[ov_bridge] idle spin: mode 0 (off) stripes 2 max 200 ms
+  frames 845 feed_ms p50 8.141 p95 16.477 max 43.273 | spin_wait_us(>0) n 0 - | exit_us n 0 -
+== paced mode 1 00:42:52
+records 15921 span_s 30.17874039 wall_s 30.191494319937192
+[ov_bridge] idle spin end: mode 1 (main) stripes 2 | waits 15921 spun 12905 timeouts 1 spin 22.90 s | exit_us n 0 p50 -1.0 p95 -1.0 p99 -1.0 max -1.0
+  frames 845 feed_ms p50 7.917 p95 16.442 max 41.939 | spin_wait_us(>0) n 843 p50 25.700 p95 38.280 max 642.500 | exit_us n 0 -
+== paced mode 2 00:43:24
+records 15921 span_s 30.17874039 wall_s 30.191937400959432
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 15921 spun 12816 timeouts 1 spin 22.76 s | exit_us n 12815 p50 1.9 p95 4.5 p99 28.7 max 395.8
+  frames 845 feed_ms p50 8.179 p95 16.641 max 44.840 | spin_wait_us(>0) n 833 p50 28.700 p95 48.980 max 438.100 | exit_us n 833 p50 0.900 p95 1.440 max 49.300
+== paced identity vs fast-feed S0_t2
+ref /tmp/idlespin/pose_ab/S0_t2.jsonl poses 845 tracking 704
+compared keys ['R_ItoC0', 'T_world_cam0', 'ba', 'bg', 'cam_dropped', 'cam_rejected', 'dt_cam_imu', 'exceptions', 'imu_dropped', 'imu_held', 'init', 'intr0', 'mono', 'n_msckf', 'n_reinit_state', 'n_slam', 'p', 'p_IinC0', 'q', 'q_GtoI_jpl', 'status', 't', 't_ns', 't_state', 'type', 'v']
+/tmp/idlespin/pose_ab/P0.jsonl: poses 845 identical_lines 845/845 identical_state(p,q,v,bg,ba,T) 845/845
+/tmp/idlespin/pose_ab/P1.jsonl: poses 845 identical_lines 845/845 identical_state(p,q,v,bg,ba,T) 845/845
+/tmp/idlespin/pose_ab/P2.jsonl: poses 845 identical_lines 845/845 identical_state(p,q,v,bg,ba,T) 845/845
+DONE 00:43:56

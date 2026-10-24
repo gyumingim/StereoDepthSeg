@@ -174,6 +174,7 @@ public class MainActivity extends Activity {
                 ov.cpus = cpus == null ? "" : cpus.trim();
                 ov.ovThreads = Math.max(0, getIntent().getIntExtra("ov_threads", 0));   // 0.6.15: ov_bridge --threads (0 = config)
                 ov.kltOverlap = getIntent().getIntExtra("klt_overlap", 0) != 0;        // 0.6.15: ov_bridge --klt-overlap 1
+                ov.idleSpin = Math.max(0, Math.min(2, getIntent().getIntExtra("idle_spin", 0)));   // 0.6.16: ov_bridge --idle-spin 0|1|2
                 sustainedOn = false;
                 try {
                     boolean sup = ((android.os.PowerManager) getSystemService(POWER_SERVICE)).isSustainedPerformanceModeSupported();

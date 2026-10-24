@@ -82,11 +82,21 @@ import java.util.concurrent.LinkedBlockingQueue;
  * intent klt_overlap 1 = ov_bridge --klt-overlap 1 (patched TrackKLT: detection overlapped with the pyramid; same output).
  * meta.json "ov_threads" / "klt_overlap" (requested) and perf "bridge_cv_threads" / "bridge_cv_parallel" /
  * "bridge_klt_overlap" (what the bridge reports in its ready line: cv::getNumThreads and the OpenCV parallel framework).
+ *
+ * 0.6.16 (default = 0.6.15 behaviour): intent idle_spin 0|1|2 = ov_bridge --idle-spin (0 = block in read, 1 = bridge main
+ * thread busy-polls its stdin between records, 2 = 1 + the whole OpenCV/TBB pool spins; keeps the cores clocked up between
+ * frames, see scan3d/ov_bridge/main.cpp). meta.json "ov_idle_spin", perf "ov_idle_spin" (requested) / "bridge_idle_spin" /
+ * "bridge_idle_spin_stripes" (ready line). Latency logging (timing only, same clock elapsedRealtimeNanos = CLOCK_BOOTTIME):
+ * frames.csv + copy_done_ns (Y plane copied into the record) / enq_ns (record queued for the writer, 0 = dropped);
+ * writes.csv (ov-writer, image records) t_send_ns,deq_ns,write_done_ns (taken from the queue / written into the pipe);
+ * bridge_timing.csv rx_hdr_boot_ns / rx_boot_ns (bridge read the record). NOTE frames.csv / writes.csv "t_send_ns" is the
+ * frame time sent to the bridge = SENSOR_TIMESTAMP + midOffsetNs (mid exposure, sensor clock), NOT a send time (name kept
+ * for the tools).
  */
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261024-threads";
+    static final String VERSION = "ov-20261025-idlespin";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";
@@ -136,6 +146,7 @@ class OvRunner implements SensorEventListener {
     private String lastStatus = "-";
     private File dir, runDir;
     private BufferedWriter framesW, posesW, tempsW, eventsW;
+    private BufferedWriter writesW;             // 0.6.16 writes.csv: written and closed by the ov-writer thread only
     private final Object framesLock = new Object(), posesLock = new Object();
     private final JSONObject meta = new JSONObject();
     private long t0Elapsed;
@@ -150,6 +161,7 @@ class OvRunner implements SensorEventListener {
     String cpus = "";                           // 0.6.14 intent cpus: ov_bridge --cpus list ("" = no pinning)
     int ovThreads = 0;                          // 0.6.15 intent ov_threads: ov_bridge --threads (0 = config num_opencv_threads)
     boolean kltOverlap = false;                 // 0.6.15 intent klt_overlap: ov_bridge --klt-overlap 1
+    int idleSpin = 0;                           // 0.6.16 intent idle_spin: ov_bridge --idle-spin 0|1|2 (0 = off)
     static final int PRIO = android.os.Process.THREAD_PRIORITY_URGENT_DISPLAY;   // -8
     private final JSONObject perf = new JSONObject();
     private int bridgePid = -1;
@@ -308,12 +320,17 @@ class OvRunner implements SensorEventListener {
         }
         if (ovThreads > 0) Collections.addAll(cmd, "--threads", Integer.toString(ovThreads));
         if (kltOverlap) Collections.addAll(cmd, "--klt-overlap", "1");
+        if (idleSpin > 0) Collections.addAll(cmd, "--idle-spin", Integer.toString(idleSpin));
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.environment().put("LD_LIBRARY_PATH", lib);
         pb.redirectError(new File(runDir, "bridge_stderr.log"));
 
         framesW = new BufferedWriter(new FileWriter(new File(runDir, "frames.csv")), 1 << 16);
-        framesW.write("idx,t_sensor_ns,t_arrive_ns,t_send_ns,copy_us,fate,exp_ns,focus_dpt\n");   // fate 0 sent, 1 pool empty, 2 queue full
+        // fate 0 sent, 1 pool empty, 2 queue full. t_send_ns = frame time sent to the bridge (SENSOR_TIMESTAMP + midOffsetNs =
+        // mid exposure on the sensor clock), not a send time (misnamed, kept for the tools). 0.6.16: + copy_done_ns, enq_ns.
+        framesW.write("idx,t_sensor_ns,t_arrive_ns,t_send_ns,copy_us,fate,exp_ns,focus_dpt,copy_done_ns,enq_ns\n");
+        writesW = new BufferedWriter(new FileWriter(new File(runDir, "writes.csv")), 1 << 16);   // 0.6.16, ov-writer only
+        writesW.write("t_send_ns,deq_ns,write_done_ns\n");
         posesW = new BufferedWriter(new FileWriter(new File(runDir, "poses.csv")), 1 << 16);
         posesW.write("t_ns,t_sensor_ns,t_arrive_ns,t_out_ns,status,ms,remap_ms,n_slam,n_msckf,cam_dropped_bridge,pool_dropped,queue_dropped,n_cam,n_imu,dt_cam_imu\n");
         tempsW = new BufferedWriter(new FileWriter(new File(runDir, "temps.csv")));
@@ -324,7 +341,8 @@ class OvRunner implements SensorEventListener {
                 .put("remap", remap.getAbsolutePath()).put("bridge_cmd", String.join(" ", cmd)).put("ov_timing", ovTiming)
                 .put("pool", poolSize).put("start_elapsed_ns", t0Elapsed).put("start_wall", stamp)
                 .put("battery_c_start", batteryTenthC() / 10.0).put("thermal_status_start", thermalStatus())
-                .put("device", android.os.Build.MODEL).put("ov_threads", ovThreads).put("klt_overlap", kltOverlap ? 1 : 0);
+                .put("device", android.os.Build.MODEL).put("ov_threads", ovThreads).put("klt_overlap", kltOverlap ? 1 : 0)
+                .put("ov_idle_spin", idleSpin);
 
         proc = pb.start();
         bridgePid = pidOf(proc);
@@ -333,6 +351,7 @@ class OvRunner implements SensorEventListener {
         notePerf("cpus", cpus.isEmpty() ? "off" : cpus);
         notePerf("ov_threads", ovThreads > 0 ? Integer.toString(ovThreads) : "config");
         notePerf("klt_overlap", kltOverlap ? 1 : 0);
+        notePerf("ov_idle_spin", idleSpin);
         notePerf("bridge_pid", bridgePid);
         notePerf("sdk", android.os.Build.VERSION.SDK_INT);
         writerT = new Thread(this::writer, "ov-writer");
@@ -688,7 +707,7 @@ class OvRunner implements SensorEventListener {
         long ts = im.getTimestamp();
         long tSend = ts + midOffsetNs;
         int fate = 0;
-        long copyUs = 0;
+        long copyUs = 0, copyDone = 0, enq = 0;
         byte[] buf = pool == null ? null : pool.poll();
         if (buf == null) {
             fate = 1; poolDropped++;
@@ -703,6 +722,7 @@ class OvRunner implements SensorEventListener {
             if (rs == W) { b.position(0); b.get(buf, 32, W * H); }
             else for (int i = 0; i < H; i++) { b.position(i * rs); b.get(buf, 32 + i * W, W); }
             copyUs = (System.nanoTime() - c0) / 1000;
+            copyDone = SystemClock.elapsedRealtimeNanos();
             if (!isMain() && manualSet && fixIso > 0) autoBrightness(buf, 32);
             if (nCam % 150 == 0 && (!isMain() || nCam <= 600)) {      // raw Y snapshot (main: 4 only, a 2 MB write stalls the cam thread) for checking field of view / blur on the PC (<WxH> 8-bit)
                 File snapDir = isMain() ? runDir : dir;
@@ -713,7 +733,8 @@ class OvRunner implements SensorEventListener {
             sent.put(tSend, new long[]{ts, now});
             if (sent.size() > 300) { final long old = tSend - 2_000_000_000L; sent.keySet().removeIf(k -> k < old); }
             if (!toBridge.offer(buf)) { fate = 2; camDropped++; pool.offer(buf); }
-            else if (!fed) {
+            else enq = SystemClock.elapsedRealtimeNanos();
+            if (fate == 0 && !fed) {
                 fed = true;
                 try { meta.put("first_fed_elapsed_ns", now).put("first_fed_t_sensor_ns", ts); } catch (Exception ignored) { }
                 if (onFeedStart != null) onFeedStart.run();
@@ -722,7 +743,7 @@ class OvRunner implements SensorEventListener {
         im.close();
         synchronized (framesLock) {
             try {
-                if (framesW != null) framesW.write(nCam + "," + ts + "," + now + "," + tSend + "," + copyUs + "," + fate + "," + expNs + "," + lastFocus + "\n");
+                if (framesW != null) framesW.write(nCam + "," + ts + "," + now + "," + tSend + "," + copyUs + "," + fate + "," + expNs + "," + lastFocus + "," + copyDone + "," + enq + "\n");
             } catch (Exception ignored) { }
         }
         nCam++;
@@ -803,7 +824,13 @@ class OvRunner implements SensorEventListener {
             while (running) {
                 byte[] r = toBridge.poll(100, java.util.concurrent.TimeUnit.MILLISECONDS);
                 if (r == null) continue;
+                long deq = SystemClock.elapsedRealtimeNanos();
                 o.write(r);
+                if (r.length > 68 && writesW != null) {   // image record: t_send_ns (bytes 12..19, LE) -> deq / write done
+                    long tw = SystemClock.elapsedRealtimeNanos();
+                    long ts = ByteBuffer.wrap(r, 12, 8).order(ByteOrder.LITTLE_ENDIAN).getLong();
+                    writesW.write(ts + "," + deq + "," + tw + "\n");
+                }
                 if (dump != null) {
                     dump.write(r);
                     if (SystemClock.elapsedRealtime() > dumpEnd) { dump.close(); dump = null; status.show("dump done"); }
@@ -814,6 +841,9 @@ class OvRunner implements SensorEventListener {
             if (dump != null) dump.close();
         } catch (Exception e) {
             if (running) status.show("writer: " + e);
+        } finally {
+            closeQuiet(writesW);
+            writesW = null;
         }
     }
 
@@ -832,6 +862,8 @@ class OvRunner implements SensorEventListener {
                     notePerf("bridge_cv_threads", j.optInt("cv_threads", -1));
                     notePerf("bridge_cv_parallel", j.optString("cv_parallel", "?"));
                     notePerf("bridge_klt_overlap", j.optInt("klt_overlap", -1));
+                    notePerf("bridge_idle_spin", j.optInt("idle_spin", -1));            // 0.6.16
+                    notePerf("bridge_idle_spin_stripes", j.optInt("idle_spin_stripes", -1));
                 }
                 if (!"pose".equals(type)) {
                     JSONObject ev = new JSONObject().put("src", "ov").put("event", j);

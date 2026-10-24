@@ -5,6 +5,25 @@
 //             [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]
 //             [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S] [--remap FILE]
 //             [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST] [--threads N] [--klt-overlap 0|1]
+//             [--idle-spin 0|1|2]
+//
+// --idle-spin MODE (2026-10-25, arlat 0.6.16 intent idle_spin): what the bridge does while it waits for the next input
+//   record (between frames / IMU samples). klt_bench 2026-10-24 (S24, scan3d/runs/klt_idle_bench_20261024): with a 29 ms
+//   sleep between frames the cores clock down and KLT takes 18-24 ms instead of ~4 ms back-to-back.
+//   0 = block in read() (default, unchanged behaviour).
+//   1 = "main spin": the main thread busy-polls the input fd (poll(fd, 0) loop) instead of blocking (= bench "spin").
+//   2 = "pool spin": mode 1 + the whole OpenCV/TBB pool spins: cv::parallel_for_ over T = cv::getNumThreads() stripes,
+//       every stripe polls the fd and all leave as soon as one sees input (= bench "tbbwarm" with the whole gap).
+//   Both spin at most kIdleSpinMaxMs (200 ms) per wait, then fall back to a blocking poll (no burning while the app
+//   pauses the feed, e.g. before the camera starts). Only the waiting changes: records, order and all VIO results are
+//   identical to mode 0. stderr "[ov_bridge] idle spin ..." (start, cam300, end: waits / spun / timeouts / exit
+//   latency), ready line "idle_spin" / "idle_spin_stripes". Exit latency (mode 2) = first stripe saw input ->
+//   parallel_for_ returned on the main thread (= extra delay before the record is read), --timing-log spin_exit_us.
+//   Costs heat (bench: +1.5 C SKIN / +7 C AP after 1 min).
+// --timing-log extra columns (0.6.16, appended): rx_hdr_boot_ns / rx_boot_ns = clock_gettime(CLOCK_BOOTTIME) when this
+//   camera record's header / whole payload was read (same clock as the app's elapsedRealtimeNanos t_arrive),
+//   spin_wait_us = time spent spinning before the header (0 = data was already there, -1 = mode 0),
+//   spin_exit_us = mode 2 exit latency of that wait (-1 = none).
 //
 // --threads N (2026-10-24, arlat 0.6.15 intent ov_threads): OpenCV thread pool size (cv::setNumThreads) = overrides the
 //   config num_opencv_threads (N > 0; 0 / absent = config value). This pool runs every parallel part of a frame: the
@@ -53,6 +72,8 @@
 
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <poll.h>
+#include <time.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <dirent.h>
@@ -61,6 +82,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <algorithm>
+#include <atomic>
 #include <cerrno>
 #include <chrono>
 #include <cmath>
@@ -127,7 +150,117 @@ struct Args {
   std::string cpus;         // --cpus LIST ("" = no pinning)
   int threads = 0;          // --threads N (0 = config num_opencv_threads)
   int klt_overlap = 0;      // --klt-overlap 0|1 (OV_KLT_OVERLAP for ovpatch/TrackKLT.cpp)
+  int idle_spin = 0;        // --idle-spin 0|1|2 (header)
 };
+
+// ---- --idle-spin (header) ----
+constexpr double kIdleSpinMaxMs = 200.0;  // spin at most this long per wait, then block
+const char *idle_spin_name(int m) { return m == 1 ? "main" : m == 2 ? "pool" : "off"; }
+inline int64_t boot_ns() {
+  timespec ts;
+  ::clock_gettime(CLOCK_BOOTTIME, &ts);
+  return static_cast<int64_t>(ts.tv_sec) * 1000000000LL + ts.tv_nsec;
+}
+inline int64_t mono_ns() {
+  timespec ts;
+  ::clock_gettime(CLOCK_MONOTONIC, &ts);
+  return static_cast<int64_t>(ts.tv_sec) * 1000000000LL + ts.tv_nsec;
+}
+inline void cpu_relax() {
+#if defined(__aarch64__)
+  asm volatile("yield" ::: "memory");
+#elif defined(__x86_64__) || defined(__i386__)
+  __builtin_ia32_pause();
+#endif
+}
+// non-blocking: input readable (data, EOF/HUP or error -> the following read() reports it)
+inline bool fd_ready(int fd) {
+  pollfd p{fd, POLLIN, 0};
+  int r = ::poll(&p, 1, 0);
+  if (r < 0) return errno != EINTR;
+  return r > 0;
+}
+struct IdleSpin {
+  int mode = 0, stripes = 1;
+  uint64_t waits = 0, spun = 0, timeouts = 0;  // waits = calls, spun = input was not there yet
+  double spin_s = 0.0;                          // total time spent spinning
+  std::vector<float> exit_us;                   // mode 2 exit latencies (every spun wait)
+  double last_wait_us = -1.0, last_exit_us = -1.0;  // the wait before the latest record
+
+  // returns when fd has input (or EOF / error)
+  void wait(int fd) {
+    if (mode == 0) return;
+    waits++;
+    last_exit_us = -1.0;
+    if (fd_ready(fd)) {
+      last_wait_us = 0.0;
+      return;
+    }
+    spun++;
+    const int64_t t0 = mono_ns(), tmax = t0 + static_cast<int64_t>(kIdleSpinMaxMs * 1e6);
+    bool timed_out = false;
+    if (mode == 1) {
+      while (!fd_ready(fd)) {
+        cpu_relax();
+        if (mono_ns() > tmax) {
+          timed_out = true;
+          break;
+        }
+      }
+    } else {
+      std::atomic<bool> go{false};
+      std::atomic<int64_t> t_seen{0};
+      std::atomic<bool> to{false};
+      cv::parallel_for_(
+          cv::Range(0, stripes),
+          [&](const cv::Range &) {
+            int k = 0;
+            while (!go.load(std::memory_order_relaxed)) {
+              if (fd_ready(fd)) {
+                int64_t z = 0;
+                t_seen.compare_exchange_strong(z, mono_ns());
+                go.store(true);
+                break;
+              }
+              cpu_relax();
+              if ((++k & 63) == 0 && mono_ns() > tmax) {
+                to.store(true);
+                go.store(true);
+                break;
+              }
+            }
+          },
+          stripes);
+      const int64_t t_ret = mono_ns();
+      timed_out = to.load() && t_seen.load() == 0;
+      if (t_seen.load() > 0) {
+        last_exit_us = (t_ret - t_seen.load()) / 1e3;
+        if (exit_us.size() < 2000000) exit_us.push_back(static_cast<float>(last_exit_us));
+      }
+    }
+    const int64_t t1 = mono_ns();
+    spin_s += (t1 - t0) / 1e9;
+    last_wait_us = (t1 - t0) / 1e3;
+    if (timed_out) {  // nothing for kIdleSpinMaxMs: block until input
+      timeouts++;
+      pollfd p{fd, POLLIN, 0};
+      while (::poll(&p, 1, -1) < 0 && errno == EINTR) {
+      }
+    }
+  }
+  void log(const char *tag) const {
+    std::vector<float> e = exit_us;
+    std::sort(e.begin(), e.end());
+    auto q = [&](double f) { return e.empty() ? -1.0 : static_cast<double>(e[std::min(e.size() - 1, size_t(f * e.size()))]); };
+    std::fprintf(stderr,
+                 "[ov_bridge] idle spin %s: mode %d (%s) stripes %d | waits %llu spun %llu timeouts %llu spin %.2f s | "
+                 "exit_us n %zu p50 %.1f p95 %.1f p99 %.1f max %.1f\n",
+                 tag, mode, idle_spin_name(mode), stripes, static_cast<unsigned long long>(waits),
+                 static_cast<unsigned long long>(spun), static_cast<unsigned long long>(timeouts), spin_s, e.size(), q(0.5),
+                 q(0.95), q(0.99), e.empty() ? -1.0 : static_cast<double>(e.back()));
+  }
+};
+IdleSpin g_idle;
 
 // ---- --cpus (CPU affinity) ----
 bool parse_cpus(const std::string &v, cpu_set_t &set) {
@@ -279,6 +412,8 @@ struct CamMsg {
   ov_core::CameraData data;
   double remap_ms = 0.0;
   std::chrono::steady_clock::time_point t_recv;
+  int64_t rx_hdr_boot_ns = 0, rx_boot_ns = 0;     // --timing-log: record header / payload read (CLOCK_BOOTTIME)
+  double spin_wait_us = -1.0, spin_exit_us = -1.0;  // --idle-spin wait before this record (IdleSpin)
 };
 
 class Bridge {
@@ -306,7 +441,9 @@ public:
     if (!a.remap.empty()) load_remap(a.remap);
     if (!a.timing_log.empty()) {
       tlog_ = std::fopen(a.timing_log.c_str(), "w");
-      if (tlog_) std::fprintf(tlog_, "t_ns,t,wait_ms,remap_ms,feed_ms,init,n_slam,n_msckf,cam_dropped,cam_queue\n");
+      if (tlog_)
+        std::fprintf(tlog_, "t_ns,t,wait_ms,remap_ms,feed_ms,init,n_slam,n_msckf,cam_dropped,cam_queue,"
+                            "rx_hdr_boot_ns,rx_boot_ns,spin_wait_us,spin_exit_us\n");
       else std::fprintf(stderr, "[ov_bridge] timing log: cannot open %s\n", a.timing_log.c_str());
     }
     if (a.gate_mean > 0.0 && a.gate_disp_deg > 0.0 && params_.camera_intrinsics.count(0)) {
@@ -350,6 +487,14 @@ public:
     lost_ = false;
   }
 
+  // --timing-log receive info of the record handle() gets next (serve; timing only, never used by the VIO)
+  void set_rx(int64_t hdr_boot_ns, int64_t boot_ns, double spin_wait_us, double spin_exit_us) {
+    rx_hdr_boot_ns_ = hdr_boot_ns;
+    rx_boot_ns_ = boot_ns;
+    rx_spin_wait_us_ = spin_wait_us;
+    rx_spin_exit_us_ = spin_exit_us;
+  }
+
   // 입력 하나 처리. 출력 JSON 줄들을 out 에 덧붙인다. false = QUIT.
   bool handle(uint32_t type, const std::vector<uint8_t> &buf, std::string &out) {
     switch (type) {
@@ -385,7 +530,8 @@ public:
     o << "{\"type\":\"ready\",\"num_cameras\":" << params_.state_options.num_cameras
       << ",\"use_stereo\":" << (params_.use_stereo ? "true" : "false") << ",\"imu_hold_s\":" << args_.imu_hold_s
       << ",\"cv_threads\":" << cv::getNumThreads() << ",\"cv_parallel\":" << jstr(cv_parallel_)
-      << ",\"klt_overlap\":" << args_.klt_overlap << "}\n";
+      << ",\"klt_overlap\":" << args_.klt_overlap << ",\"idle_spin\":" << g_idle.mode
+      << ",\"idle_spin_stripes\":" << g_idle.stripes << "}\n";
     return o.str();
   }
 
@@ -470,6 +616,10 @@ private:
       return;
     }
     CamMsg c;
+    c.rx_hdr_boot_ns = rx_hdr_boot_ns_;
+    c.rx_boot_ns = rx_boot_ns_;
+    c.spin_wait_us = rx_spin_wait_us_;
+    c.spin_exit_us = rx_spin_exit_us_;
     c.t_ns = t_ns;
     c.t = to_sec(t_ns);
     c.data.timestamp = c.t;
@@ -592,8 +742,10 @@ private:
       double wait_ms = std::chrono::duration<double, std::milli>(t0 - c.t_recv).count();
       bool init = sys_->initialized();
       size_t ns = init ? sys_->get_features_SLAM().size() : 0, nm = init ? sys_->get_good_features_MSCKF().size() : 0;
-      std::fprintf(tlog_, "%lld,%.6f,%.3f,%.3f,%.3f,%d,%zu,%zu,%llu,%zu\n", static_cast<long long>(c.t_ns), c.t, wait_ms,
-                   c.remap_ms, ms, init ? 1 : 0, ns, nm, static_cast<unsigned long long>(n_cam_dropped_), cams_.size());
+      std::fprintf(tlog_, "%lld,%.6f,%.3f,%.3f,%.3f,%d,%zu,%zu,%llu,%zu,%lld,%lld,%.1f,%.1f\n", static_cast<long long>(c.t_ns),
+                   c.t, wait_ms, c.remap_ms, ms, init ? 1 : 0, ns, nm, static_cast<unsigned long long>(n_cam_dropped_),
+                   cams_.size(), static_cast<long long>(c.rx_hdr_boot_ns), static_cast<long long>(c.rx_boot_ns),
+                   c.spin_wait_us, c.spin_exit_us);
       std::fflush(tlog_);  // every row: the app may have to kill the bridge (no SIGTERM handler)
       ++tlog_rows_;
     }
@@ -845,6 +997,8 @@ private:
   }
   int remap_src_w_ = 0, remap_src_h_ = 0;  // v2 remap file: frames of this size are remapped (0 = map size)
   FILE *tlog_ = nullptr;                   // --timing-log
+  int64_t rx_hdr_boot_ns_ = 0, rx_boot_ns_ = 0;     // set_rx
+  double rx_spin_wait_us_ = -1.0, rx_spin_exit_us_ = -1.0;
   uint64_t tlog_rows_ = 0;
 
 public:
@@ -888,21 +1042,32 @@ private:
 
 // 한 연결(또는 stdin) 을 끝까지 처리. 반환 false = QUIT 받음.
 bool serve(Bridge &b, int in_fd, int out_fd, bool is_socket) {
-  if (!write_full(out_fd, b.ready_line(), is_socket)) return true;
   std::vector<uint8_t> buf;
   std::string out;
   uint32_t hdr[3];
   uint64_t n_cam_rec = 0;
-  while (read_full(in_fd, hdr, sizeof(hdr))) {
+  // --idle-spin 2: stripes = OpenCV pool size (VioManager ctor already called cv::setNumThreads)
+  g_idle.stripes = std::max(1, cv::getNumThreads());
+  std::fprintf(stderr, "[ov_bridge] idle spin: mode %d (%s) stripes %d max %.0f ms\n", g_idle.mode,
+               idle_spin_name(g_idle.mode), g_idle.stripes, kIdleSpinMaxMs);
+  if (!write_full(out_fd, b.ready_line(), is_socket)) return true;
+  while (true) {
+    g_idle.wait(in_fd);  // --idle-spin: busy-wait for input (mode 0: no-op, read() blocks)
+    if (!read_full(in_fd, hdr, sizeof(hdr))) break;
+    const int64_t t_hdr = boot_ns();
     if (hdr[0] != kMagic || hdr[2] > kMaxPayload) {
       write_full(out_fd, "{\"type\":\"error\",\"msg\":\"bad header, closing\"}\n", is_socket);
       return true;
     }
     buf.resize(hdr[2]);
     if (hdr[2] && !read_full(in_fd, buf.data(), hdr[2])) break;
+    b.set_rx(t_hdr, boot_ns(), g_idle.mode ? g_idle.last_wait_us : -1.0, g_idle.last_exit_us);
     out.clear();
     bool cont = true;
-    if (hdr[1] == kStereo && ++n_cam_rec == 300) apply_affinity(g_pinned ? &g_pin : nullptr, "cam300");
+    if (hdr[1] == kStereo && ++n_cam_rec == 300) {
+      apply_affinity(g_pinned ? &g_pin : nullptr, "cam300");
+      if (g_idle.mode) g_idle.log("cam300");
+    }
     try {
       cont = b.handle(hdr[1], buf, out);
     } catch (const std::exception &e) {  // 마지막 방어선: 어떤 예외로도 프로세스가 죽지 않게
@@ -921,7 +1086,7 @@ void usage() {
                "                 [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]\n"
                "                 [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S] [--remap FILE]\n"
                "                 [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST] [--threads N]\n"
-               "                 [--klt-overlap 0|1]\n");
+               "                 [--klt-overlap 0|1] [--idle-spin 0|1|2]\n");
 }
 
 }  // namespace
@@ -966,6 +1131,13 @@ int main(int argc, char **argv) {
     else if (s == "--cpus") a.cpus = next();
     else if (s == "--threads") a.threads = std::max(0, std::stoi(next()));
     else if (s == "--klt-overlap") a.klt_overlap = std::stoi(next()) != 0 ? 1 : 0;
+    else if (s == "--idle-spin") {
+      a.idle_spin = std::stoi(next());
+      if (a.idle_spin < 0 || a.idle_spin > 2) {
+        std::fprintf(stderr, "[ov_bridge] --idle-spin must be 0, 1 or 2\n");
+        return 2;
+      }
+    }
     else if (s == "--reinit-max-gap") a.reinit_max_gap = std::stod(next());
     else if (s == "--reinit-sigma") {  // ori_deg,pos_m,vel_m_s
       std::string v = next();
@@ -984,6 +1156,8 @@ int main(int argc, char **argv) {
       return 2;
     }
   }
+
+  g_idle.mode = a.idle_spin;
 
   // --klt-overlap: read once by ovpatch/TrackKLT.cpp at the first camera frame
   ::setenv("OV_KLT_OVERLAP", a.klt_overlap ? "1" : "0", 1);
@@ -1012,6 +1186,7 @@ int main(int argc, char **argv) {
   if (!a.tcp) {
     serve(b, STDIN_FILENO, out_fd, false);
     apply_affinity(g_pinned ? &g_pin : nullptr, "end");
+    if (g_idle.mode) g_idle.log("end");
     return 0;
   }
 

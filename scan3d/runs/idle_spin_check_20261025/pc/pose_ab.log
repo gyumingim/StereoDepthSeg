@@ -1,0 +1,24 @@
+Sun Oct 25 00:40:19 KST 2026
+#!/bin/bash
+tee /tmp/idlespin/pose_ab/stream.bin | "/home/system/scanner/StereoDepthSeg/scan3d/ov_bridge/build_par/ov_bridge" "$@" --threads 2 --timing-log "/tmp/idlespin/pose_ab/S0_t2.tlog" 2>"/tmp/idlespin/pose_ab/S0_t2.err" | tee "/tmp/idlespin/pose_ab/S0_t2.jsonl"
+#!/bin/bash
+"/home/system/scanner/StereoDepthSeg/scan3d/ov_bridge/build_par/ov_bridge" "$@" --threads 2 --idle-spin 2 --timing-log "/tmp/idlespin/pose_ab/S2_t2.tlog" 2>"/tmp/idlespin/pose_ab/S2_t2.err" | tee "/tmp/idlespin/pose_ab/S2_t2.jsonl"
+== S0_t2 00:40:19
+rc 0 poses 845
+[ov_bridge] idle spin: mode 0 (off) stripes 2 max 200 ms
+== S1_t2 00:40:30
+rc 0 poses 845
+[ov_bridge] idle spin cam300: mode 1 (main) stripes 2 | waits 6280 spun 10 timeouts 0 spin 0.00 s | exit_us n 0 p50 -1.0 p95 -1.0 p99 -1.0 max -1.0
+[ov_bridge] idle spin end: mode 1 (main) stripes 2 | waits 15921 spun 47 timeouts 0 spin 0.00 s | exit_us n 0 p50 -1.0 p95 -1.0 p99 -1.0 max -1.0
+== S2_t2 00:40:38
+rc 0 poses 845
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 6280 spun 7 timeouts 0 spin 0.00 s | exit_us n 7 p50 1.4 p95 1.9 p99 1.9 max 1.9
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 15921 spun 49 timeouts 0 spin 0.00 s | exit_us n 49 p50 1.4 p95 1.7 p99 2.4 max 2.4
+== S2_t4 00:40:45
+rc 0 poses 845
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 4 | waits 6280 spun 2 timeouts 0 spin 0.00 s | exit_us n 2 p50 1.6 p95 1.6 p99 1.6 max 1.6
+[ov_bridge] idle spin end: mode 2 (pool) stripes 4 | waits 15921 spun 12 timeouts 0 spin 0.00 s | exit_us n 12 p50 1.7 p95 3.9 p99 3.9 max 3.9
+== S0_cfg 00:40:52
+rc 0 poses 845
+[ov_bridge] idle spin: mode 0 (off) stripes 4 max 200 ms
+DONE 00:41:00
