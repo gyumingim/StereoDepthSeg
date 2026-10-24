@@ -67,7 +67,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261024-autoiso";
+    static final String VERSION = "ov-20261024-guide";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";
@@ -86,6 +86,8 @@ class OvRunner implements SensorEventListener {
     int maxThermal = android.os.PowerManager.THERMAL_STATUS_CRITICAL;   // 0.6.8: was SEVERE (3)
     int poolSize = 4;                           // image buffers in flight (more frames waiting -> dropped, counted)
     Runnable onAutoStop;                        // called (UI side finishes the activity) when a stop rule fires
+    Runnable onFeedStart;                       // 0.6.12: called once (cam thread) when the first frame goes to the bridge (after auto ISO)
+    private volatile boolean fed;
     volatile String stopReason = "user";
 
     private final Context ctx;
@@ -229,6 +231,11 @@ class OvRunner implements SensorEventListener {
     }
 
     /** main + auto_iso (default on) + exp_us > 0 + no explicit iso: ISO from the camera AE once at start (AutoIso). */
+    /** 0.6.12: on-screen guide (MainActivity / OvGuide) -> meta.json; its countdown starts at first_fed_elapsed_ns. */
+    void noteGuide(String spec, int secs) {
+        try { meta.put("guide", spec).put("guide_secs", secs).put("guide_t0", "first_fed_elapsed_ns"); } catch (Exception ignored) { }
+    }
+
     boolean autoIsoActive() { return isMain() && autoIso && iso <= 0 && expUs > 0; }
 
     /** main manual exposure in ns: exp_us capped at the frame duration, clamped to the sensor range. */
@@ -537,6 +544,11 @@ class OvRunner implements SensorEventListener {
             sent.put(tSend, new long[]{ts, now});
             if (sent.size() > 300) { final long old = tSend - 2_000_000_000L; sent.keySet().removeIf(k -> k < old); }
             if (!toBridge.offer(buf)) { fate = 2; camDropped++; pool.offer(buf); }
+            else if (!fed) {
+                fed = true;
+                try { meta.put("first_fed_elapsed_ns", now).put("first_fed_t_sensor_ns", ts); } catch (Exception ignored) { }
+                if (onFeedStart != null) onFeedStart.run();
+            }
         }
         im.close();
         synchronized (framesLock) {

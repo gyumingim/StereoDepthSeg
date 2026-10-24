@@ -167,10 +167,30 @@ public class MainActivity extends Activity {
                 ov.maxThermal = getIntent().getIntExtra("max_thermal", ov.maxThermal);
                 ov.poolSize = Math.max(2, getIntent().getIntExtra("pool", 4));
                 ov.onAutoStop = () -> runOnUiThread(this::finish);      // onPause stops the runner and writes meta.json
+                // 0.6.12: step guide like hs/std (extras guide "label:secs;...", guide_secs): big countdown from the first fed
+                // frame (after auto ISO); at the end finish() -> onPause stops the runner and writes meta.json. With a guide the
+                // secs timer is not used (the guide end stops the run).
+                final OvGuide g = OvGuide.make(this, getIntent().getStringExtra("guide"), getIntent().getIntExtra("guide_secs", 0));
+                if (g != null) {
+                    if (status.getParent() != null) ((android.view.ViewGroup) status.getParent()).removeView(status);
+                    g.root.addView(status);
+                    status.setTextSize(14); status.setTextColor(0xFFBBBBBB); status.setPadding(0, 60, 0, 0);
+                    setContentView(g.root);
+                    g.waiting(ov.autoIsoActive());
+                    ov.noteGuide(g.spec, g.totalS);
+                    final OvRunner mineG = ov;
+                    ov.onFeedStart = () -> runOnUiThread(() -> {
+                        if (ov != mineG) return;
+                        g.start(this, () -> {
+                            if (ov == mineG) ov.stopReason = "user (guide end " + g.totalS + " s)";
+                            finish();
+                        });
+                    });
+                }
                 try {
                     ov.start(); status.setText("OpenVINS starting...");
                     final OvRunner mine = ov;
-                    if (secs > 0) status.postDelayed(() -> {
+                    if (secs > 0 && g == null) status.postDelayed(() -> {
                         if (ov != mine) return;       // an older run's timer must not stop a newer run
                         ov.stopReason = "secs " + secs;
                         finish();

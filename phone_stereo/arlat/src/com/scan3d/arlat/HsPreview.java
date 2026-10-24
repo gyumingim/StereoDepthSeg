@@ -128,6 +128,7 @@ class HsPreview {
                 int s = (int) (t / 1000);
                 if (s >= guideEnd) {
                     still.setTextSize(48); still.setTextColor(Color.WHITE); still.setText("끝 — 자동으로 멈춤");
+                    still.setBackgroundColor(OvGuide.BG_WAIT); root.setBackgroundColor(OvGuide.BG_WAIT);
                     buzz(act, 600);
                     onEnd.run();
                     return;
@@ -138,7 +139,11 @@ class HsPreview {
                 int left = (Integer) guide[ph][0] - s;
                 String next = ph + 1 < guide.length ? "다음: " + guide[ph + 1][1] : "다음: 자동 멈춤";
                 still.setVisibility(View.VISIBLE);
-                still.setTextSize(40); still.setTextColor((Integer) guide[ph][2]);
+                // 0.6.12: same look as the ov guide: white text on an opaque band + screen below the preview in the step
+                // colour by step order (OvGuide.stepBg), so each step is clearly different from 1-2 m
+                still.setTextSize(40); still.setTextColor(Color.WHITE); still.setShadowLayer(0, 0, 0, 0);
+                still.setBackgroundColor(OvGuide.stepBg(ph)); root.setBackgroundColor(OvGuide.stepBg(ph));
+                still.setPadding(24, 32, 24, 32);
                 still.setText(guide[ph][1] + "\n" + left + "\n" + next
                         + String.format(Locale.US, "\n녹화 %d:%02d / %d:%02d", s / 60, s % 60, guideEnd / 60, guideEnd % 60));
                 still.postDelayed(this, 200);

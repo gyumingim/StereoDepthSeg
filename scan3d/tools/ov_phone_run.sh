@@ -8,6 +8,10 @@
 # then force-stop) at SKIN >= MAXSKIN (40), thermal status >= 2 (moderate), app finished (meta.json), or secs + 30 s;
 # always prints the active camera clients and any ov_bridge process (both must be empty); pulls the run dir to
 # scan3d/runs/phone_ov_timing/<run>/ (+ thermal_pc.txt) and prints the timing report (tools/ov_phone_timing.py).
+# On-screen guide (arlat 0.6.12): SEG=still0:0:8,hand:8:68,still:68:128 also sends a Korean step guide built from it
+# (still0 -> 모서리에 세워 두고 손 떼기, hand -> 들고 방 안 움직이기, still -> 다시 세워 두기, other names as is; step length
+# = t1 - previous end) with guide_secs = last t1; GUIDE="label:secs;..." overrides it (guide_secs = GUIDE_SECS or the sum).
+# The phone counts down from the first frame fed to OpenVINS (after auto ISO) and stops itself at the end (meta.json).
 set -uo pipefail
 cmd=${1:?push|run|clean}; S=${2:?<ip:port>}; shift 2
 ADB=${ADB:-/mnt/c/Users/a3162/platform-tools/adb.exe}
@@ -18,6 +22,16 @@ SCAN3D=$(cd "$(dirname "$0")/.." && pwd)
 OUT=${OUT:-$SCAN3D/runs/phone_ov_timing}
 STAGE=${STAGE:-/mnt/c/Users/a3162/scan3d_stage}
 SEG=${SEG:-}
+GUIDE=${GUIDE:-}
+GUIDE_SECS=${GUIDE_SECS:-}
+seg_guide() {   # SEG "name:t0:t1,..." -> "label:secs;..." (Korean labels for the known names)
+  awk -v s="$1" 'BEGIN{ n = split(s, a, ","); e = 0; out = ""
+    for (i = 1; i <= n; i++) { split(a[i], f, ":"); nm = f[1]; d = f[3] - e; e = f[3]; if (d < 1) continue
+      lb = nm; if (nm == "still0") lb = "모서리에 세워 두고 손 떼기"; else if (nm == "hand") lb = "들고 방 안 움직이기"; else if (nm == "still") lb = "다시 세워 두기"
+      out = out (out == "" ? "" : ";") lb ":" d }
+    print out }'
+}
+guide_sum() { awk -v s="$1" 'BEGIN{ n = split(s, a, ";"); t = 0; for (i = 1; i <= n; i++) { m = split(a[i], f, ":"); t += f[m] } print t }'; }
 a() { "$ADB" -s "$S" "$@"; }
 sh_() { a shell "$@" | tr -d '\r'; }
 stop_app() {   # HOME -> onPause closes the files and writes meta.json last; wait for it (<= 12 s), then force-stop
@@ -57,7 +71,16 @@ run)
   if ge "$s0" 36.0; then echo "phone too warm (SKIN >= 36 C): cool it first"; exit 2; fi
   before=$(sh_ "ls -d $OVD/run_* 2>/dev/null" | tail -1)
   a shell input keyevent KEYCODE_WAKEUP
-  a shell am start -n $PKG/.MainActivity --es mode ov --es ov_cam main --es ov_cfg "$CFG" --ei secs "$SECS" "$@"
+  G=$GUIDE; [ -z "$G" ] && [ -n "$SEG" ] && G=$(seg_guide "$SEG")
+  gx=()
+  if [ -n "$G" ]; then
+    GS=${GUIDE_SECS:-$(guide_sum "$G")}
+    echo "guide ($GS s from the first fed frame): $G"
+    [ "$GS" -gt "$SECS" ] && echo "note: guide $GS s > secs $SECS (PC timeout = secs + 30 s): give secs >= guide"
+    # adb shell joins the args into one device shell command line: single-quote the label string (spaces)
+    gx=(--es guide "'${G//\'/}'" --ei guide_secs "$GS")
+  fi
+  a shell am start -n $PKG/.MainActivity --es mode ov --es ov_cam main --es ov_cfg "$CFG" --ei secs "$SECS" "${gx[@]}" "$@"
   LOG=$(mktemp); t0=$(date +%s); reason=""
   while :; do
     sleep 5
