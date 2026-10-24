@@ -43,6 +43,7 @@ public class MainActivity extends Activity {
     private Cam2Probe cam2;
     private OvRunner ov;
     private HsRecorder hs;
+    private PeekRunner peek;                       // mode peek: 1 fps framing stills (0.6.9)
     private HsPreview hsPrev;
     private Streamer streamer;
 
@@ -76,6 +77,19 @@ public class MainActivity extends Activity {
                 String phys = getIntent().getStringExtra("phys");
                 try { cam2.start(secs > 0 ? secs : 30, phys == null ? "2" : phys); }
                 catch (Exception e) { status.setText("cam2 error: " + e); }
+            }
+            return;
+        }
+        if ("peek".equals(mode)) {          // 0.6.9: 1 fps JPEG stills -> files/peek.jpg for the board page's framing view
+            if (peek == null) {
+                peek = new PeekRunner(this, this::show);
+                peek.focusDpt = getIntent().getFloatExtra("focus_dpt", 0.5f);
+                peek.expUs = getIntent().getIntExtra("exp_us", 2000);
+                peek.iso = getIntent().getIntExtra("iso", 500);
+                peek.periodMs = getIntent().getIntExtra("period_ms", 1000);
+                peek.secs = secs > 0 ? secs : 300;
+                try { peek.start(); status.setText("위치 맞추기 (1 fps)"); }
+                catch (Exception e) { status.setText("peek error: " + e); peek = null; }
             }
             return;
         }
@@ -200,6 +214,7 @@ public class MainActivity extends Activity {
         if (cam2 != null) { cam2.stop(); cam2 = null; }
         if (ov != null) { ov.stop(); ov = null; }
         if (hs != null) { hs.stop(); hs = null; }
+        if (peek != null) { peek.stop(); peek = null; }
         if (hsPrev != null) { hsPrev.stop(); hsPrev = null; }
         if (worker != null) {
             try { worker.join(2000); } catch (InterruptedException ignored) { }
