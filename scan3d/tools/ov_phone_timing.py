@@ -132,6 +132,10 @@ def report(run, a):
                                                "secs", "bridge_exit", "device", "perf")},
                frames_fed=int(len(bt)), frames_initialised=int(init.sum()),
                t_init_s=round(float(t_rel[init][0]), 2) if init.any() else None)
+    # arlat 0.6.14: ov_bridge "[ov_bridge] affinity <tag>: ..." lines (--cpus pinning, per-thread sched_getaffinity)
+    se = run / "bridge_stderr.log"
+    res["bridge_affinity"] = [l.strip() for l in open(se, errors="replace") if l.startswith("[ov_bridge] affinity")] \
+        if se.exists() else []
     segs = {}
     t_end = float(t_rel[-1])
     for name, s0, s1 in segments(a.seg, t_end):
@@ -188,6 +192,12 @@ def show(res):
         pf = m["perf"]
         print(f"   perf: on {pf.get('perf_on')} sustained supported {pf.get('sustained_mode_supported')} set {pf.get('sustained_mode_set')}; "
               f"hint {pf.get('hint')} reports {pf.get('hint_reports')}; bridge prio {pf.get('bridge_prio')}")
+        print(f"   perf knobs: hint_ms {pf.get('hint_ms', '-')} (target_ns {pf.get('hint_target_ns')}) cpus {pf.get('cpus', '-')}")
+        if pf.get("bridge_affinity"):
+            print(f"   bridge affinity (pose 30): {pf.get('bridge_affinity')}")
+            print(f"   app affinity (pose 30): {pf.get('app_affinity')}")
+    for l in res.get("bridge_affinity", []):
+        print(f"   {l if len(l) <= 400 else l[:400] + ' ...'}")
     print(f"   fed {res['frames_fed']} frames, initialised {res['frames_initialised']} (init at {res['t_init_s']} s)")
     if "camera" in res:
         c = res["camera"]

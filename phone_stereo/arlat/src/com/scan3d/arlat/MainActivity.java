@@ -169,6 +169,9 @@ public class MainActivity extends Activity {
                 ov.maxThermal = getIntent().getIntExtra("max_thermal", ov.maxThermal);
                 ov.poolSize = Math.max(2, getIntent().getIntExtra("pool", 4));
                 ov.perfOn = getIntent().getIntExtra("perf", 1) != 0;      // 0.6.13: priorities + hint session + sustained mode
+                ov.hintMs = Math.max(0, getIntent().getIntExtra("hint_ms", 0));   // 0.6.14: hint target ms (0 = 1000/fps)
+                String cpus = getIntent().getStringExtra("cpus");               // 0.6.14: ov_bridge --cpus (e.g. 7,8,9)
+                ov.cpus = cpus == null ? "" : cpus.trim();
                 sustainedOn = false;
                 try {
                     boolean sup = ((android.os.PowerManager) getSystemService(POWER_SERVICE)).isSustainedPerformanceModeSupported();

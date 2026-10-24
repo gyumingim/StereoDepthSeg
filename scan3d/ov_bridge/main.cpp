@@ -4,7 +4,12 @@
 //   ov_bridge <estimator_config.yaml> [--stdio | --tcp HOST:PORT] [--max-cam-queue N]
 //             [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]
 //             [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S] [--remap FILE]
-//             [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE]
+//             [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST]
+//
+// --cpus LIST (2026-10-24, arlat 0.6.14 intent cpus): e.g. 7,8,9 or 7-9. sched_setaffinity at the very start of main (before
+//   OpenVINS / OpenCV create any thread, so all later threads inherit it) and again for every /proc/self/task thread;
+//   re-applied + logged at the 300th camera record and at the end (Android cpuset changes can reset it).
+//   stderr: "[ov_bridge] affinity <tag>: ..." with sched_getaffinity per thread (tid comm cpus). No --cpus = unchanged.
 //
 // --timing-log FILE (2026-10-23, on-phone timing): one CSV row per camera frame fed to OpenVINS:
 //   t_ns,t,wait_ms,remap_ms,feed_ms,init,n_slam,n_msckf,cam_dropped,cam_queue
@@ -40,10 +45,13 @@
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <dirent.h>
+#include <sched.h>
 #include <signal.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <cerrno>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -106,7 +114,77 @@ struct Args {
   // 파일 = int32 w, h + float32 mapx[w*h] + float32 mapy[w*h] (scan3d/ov_bridge/android/make_phone_ov.py). 크기가 다른 영상은 그대로.
   std::string remap;
   std::string timing_log;   // --timing-log FILE (per-frame CSV)
+  std::string cpus;         // --cpus LIST ("" = no pinning)
 };
+
+// ---- --cpus (CPU affinity) ----
+bool parse_cpus(const std::string &v, cpu_set_t &set) {
+  CPU_ZERO(&set);
+  int n = 0;
+  std::stringstream ss(v);
+  std::string tok;
+  while (std::getline(ss, tok, ',')) {
+    if (tok.empty()) continue;
+    int a = -1, b = -1;
+    if (std::sscanf(tok.c_str(), "%d-%d", &a, &b) == 2) {
+    } else if (std::sscanf(tok.c_str(), "%d", &a) == 1) b = a;
+    else return false;
+    if (a < 0 || b < a || b >= CPU_SETSIZE) return false;
+    for (int c = a; c <= b; c++) { CPU_SET(c, &set); n++; }
+  }
+  return n > 0;
+}
+
+std::string cpus_str(const cpu_set_t &set) {
+  std::string r;
+  for (int c = 0; c < 64; c++)
+    if (CPU_ISSET(c, &set)) r += (r.empty() ? "" : ",") + std::to_string(c);
+  return r;
+}
+
+std::vector<int> self_tids() {
+  std::vector<int> t;
+  if (DIR *d = ::opendir("/proc/self/task")) {
+    while (dirent *e = ::readdir(d))
+      if (e->d_name[0] >= '0' && e->d_name[0] <= '9') t.push_back(std::atoi(e->d_name));
+    ::closedir(d);
+  }
+  return t;
+}
+
+std::string thread_comm(int tid) {
+  char path[64], buf[64] = {0};
+  std::snprintf(path, sizeof(path), "/proc/self/task/%d/comm", tid);
+  if (FILE *f = std::fopen(path, "r")) {
+    if (std::fgets(buf, sizeof(buf), f)) buf[std::strcspn(buf, "\n")] = 0;
+    std::fclose(f);
+  }
+  return buf[0] ? buf : "?";
+}
+
+// set (if pin) and log the affinity of every thread of this process
+void apply_affinity(const cpu_set_t *pin, const char *tag) {
+  std::string line;
+  int ok = 0, fail = 0, err = 0;
+  for (int tid : self_tids()) {
+    if (pin) {
+      if (::sched_setaffinity(tid, sizeof(cpu_set_t), pin) == 0) ok++;
+      else { fail++; err = errno; }
+    }
+    cpu_set_t got;
+    CPU_ZERO(&got);
+    std::string g = ::sched_getaffinity(tid, sizeof(got), &got) == 0 ? cpus_str(got) : "err";
+    line += " " + std::to_string(tid) + ":" + thread_comm(tid) + "=" + g;
+  }
+  if (pin)
+    std::fprintf(stderr, "[ov_bridge] affinity %s: set %s ok %d fail %d%s%s; threads%s\n", tag, cpus_str(*pin).c_str(), ok,
+                 fail, fail ? " errno " : "", fail ? std::strerror(err) : "", line.c_str());
+  else
+    std::fprintf(stderr, "[ov_bridge] affinity %s: (not pinned) threads%s\n", tag, line.c_str());
+}
+
+cpu_set_t g_pin;
+bool g_pinned = false;
 
 // JSON 문자열 이스케이프 (예외 메시지에 따옴표·줄바꿈이 들어 있음)
 std::string jstr(const std::string &s) {
@@ -787,6 +865,7 @@ bool serve(Bridge &b, int in_fd, int out_fd, bool is_socket) {
   std::vector<uint8_t> buf;
   std::string out;
   uint32_t hdr[3];
+  uint64_t n_cam_rec = 0;
   while (read_full(in_fd, hdr, sizeof(hdr))) {
     if (hdr[0] != kMagic || hdr[2] > kMaxPayload) {
       write_full(out_fd, "{\"type\":\"error\",\"msg\":\"bad header, closing\"}\n", is_socket);
@@ -796,6 +875,7 @@ bool serve(Bridge &b, int in_fd, int out_fd, bool is_socket) {
     if (hdr[2] && !read_full(in_fd, buf.data(), hdr[2])) break;
     out.clear();
     bool cont = true;
+    if (hdr[1] == kStereo && ++n_cam_rec == 300) apply_affinity(g_pinned ? &g_pin : nullptr, "cam300");
     try {
       cont = b.handle(hdr[1], buf, out);
     } catch (const std::exception &e) {  // 마지막 방어선: 어떤 예외로도 프로세스가 죽지 않게
@@ -813,7 +893,7 @@ void usage() {
                "usage: ov_bridge <estimator_config.yaml> [--stdio | --tcp HOST:PORT] [--max-cam-queue N]\n"
                "                 [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]\n"
                "                 [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S] [--remap FILE]\n"
-               "                 [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE]\n");
+               "                 [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST]\n");
 }
 
 }  // namespace
@@ -855,6 +935,7 @@ int main(int argc, char **argv) {
     else if (s == "--reinit-state") a.reinit_state = true;
     else if (s == "--remap") a.remap = next();
     else if (s == "--timing-log") a.timing_log = next();
+    else if (s == "--cpus") a.cpus = next();
     else if (s == "--reinit-max-gap") a.reinit_max_gap = std::stod(next());
     else if (s == "--reinit-sigma") {  // ori_deg,pos_m,vel_m_s
       std::string v = next();
@@ -874,6 +955,18 @@ int main(int argc, char **argv) {
     }
   }
 
+  // --cpus: pin before any thread exists (Bridge / OpenVINS / OpenCV threads inherit it)
+  if (!a.cpus.empty()) {
+    if (!parse_cpus(a.cpus, g_pin)) {
+      std::fprintf(stderr, "[ov_bridge] bad --cpus %s\n", a.cpus.c_str());
+      return 2;
+    }
+    g_pinned = true;
+    if (::sched_setaffinity(0, sizeof(g_pin), &g_pin) != 0)
+      std::fprintf(stderr, "[ov_bridge] affinity: sched_setaffinity(0, %s) failed: %s\n", a.cpus.c_str(), std::strerror(errno));
+  }
+  apply_affinity(g_pinned ? &g_pin : nullptr, "start");
+
   // OpenVINS 는 printf 로 stdout 에 로그를 쓴다 -> 결과 채널과 섞이지 않게 fd1 을 stderr 로.
   int out_fd = ::dup(STDOUT_FILENO);
   std::fflush(stdout);
@@ -882,8 +975,10 @@ int main(int argc, char **argv) {
   Bridge b(a);
   if (!b.ok()) return 1;
 
+  apply_affinity(g_pinned ? &g_pin : nullptr, "ready");
   if (!a.tcp) {
     serve(b, STDIN_FILENO, out_fd, false);
+    apply_affinity(g_pinned ? &g_pin : nullptr, "end");
     return 0;
   }
 

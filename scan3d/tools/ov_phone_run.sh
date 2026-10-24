@@ -21,6 +21,8 @@
 # The phone counts down from the first frame fed to OpenVINS (after auto ISO) and stops itself at the end (meta.json).
 # Live path page (2026-10-24): LIVE=1 bash scan3d/tools/ov_phone_run.sh run <ip:port> c4 130  -> http://100.92.214.97:8798
 # (tools/ov_live_view.py; starts it if needed, sets adb reverse tcp:8798 tcp:8794, copies the lines to <run>/ov_live.jsonl).
+# Perf A/B knobs (arlat 0.6.14, default off): --ei hint_ms 15 (hint session target 15 ms instead of 1000/fps),
+# --es cpus 7,8,9 (ov_bridge --cpus: all bridge threads pinned). The report prints "perf knobs" + "[ov_bridge] affinity" lines.
 set -uo pipefail
 cmd=${1:?push|run|clean}; S=${2:?<ip:port>}; shift 2
 ADB=${ADB:-/mnt/c/Users/a3162/platform-tools/adb.exe}

@@ -71,11 +71,16 @@ import java.util.concurrent.LinkedBlockingQueue;
  * processes of the same uid; on failure app tids only) with target = 1/fps; every pose reports the bridge "ms"
  * (OpenVINS time of that frame) as the actual duration. At the 300th pose new bridge threads are added (setThreads,
  * API 34+). MainActivity sets Window.setSustainedPerformanceMode(true) when supported. All -> meta.json "perf".
+ *
+ * 0.6.14 A/B knobs (both default off = 0.6.13 behaviour): intent hint_ms N (> 0) = hint session target N ms instead of
+ * 1000/fps (a target below the reported "ms" asks the governor for more speed); intent cpus "7,8,9" / "7-9" = ov_bridge
+ * --cpus (sched_setaffinity of all bridge threads, logged in bridge_stderr.log "[ov_bridge] affinity ..."). At the 30th
+ * pose perf "bridge_affinity" / "app_affinity" = Cpus_allowed_list of every bridge / app perf thread (/proc/<pid>/task).
  */
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261024-perf";
+    static final String VERSION = "ov-20261024-perf2";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";
@@ -135,6 +140,8 @@ class OvRunner implements SensorEventListener {
 
     // ---- 0.6.13 performance hints (class doc) -> meta.json "perf"
     boolean perfOn = true;                      // intent perf (default 1)
+    int hintMs = 0;                             // 0.6.14 intent hint_ms: hint target in ms (0 = 1000/fps)
+    String cpus = "";                           // 0.6.14 intent cpus: ov_bridge --cpus list ("" = no pinning)
     static final int PRIO = android.os.Process.THREAD_PRIORITY_URGENT_DISPLAY;   // -8
     private final JSONObject perf = new JSONObject();
     private int bridgePid = -1;
@@ -168,6 +175,22 @@ class OvRunner implements SensorEventListener {
         String[] ts = pid > 0 ? new File("/proc/" + pid + "/task").list() : null;
         if (ts != null) for (String t : ts) try { l.add(Integer.parseInt(t)); } catch (Exception ignored) { }
         return l;
+    }
+
+    /** "tid:comm=cpus ..." from /proc/<pid>/task/<tid>/status (Name, Cpus_allowed_list). */
+    private static String affinityOf(int pid, java.util.Collection<Integer> tids) {
+        StringBuilder sb = new StringBuilder();
+        for (int t : tids) {
+            String name = "?", cpu = "?";
+            try (BufferedReader r = new BufferedReader(new java.io.FileReader("/proc/" + pid + "/task/" + t + "/status"))) {
+                for (String l; (l = r.readLine()) != null; ) {
+                    if (l.startsWith("Name:")) name = l.substring(5).trim();
+                    else if (l.startsWith("Cpus_allowed_list:")) { cpu = l.substring(18).trim(); break; }
+                }
+            } catch (Exception e) { cpu = "err"; }
+            sb.append(t).append(':').append(name).append('=').append(cpu).append(' ');
+        }
+        return sb.toString().trim();
     }
 
     private static int[] toArray(java.util.Collection<Integer> a, java.util.Collection<Integer> b) {
@@ -204,13 +227,17 @@ class OvRunner implements SensorEventListener {
         }
         notePerf(refresh ? "bridge_prio_refresh" : "bridge_prio", "pid " + bridgePid + " threads " + bt.size() + " new " + added
                 + " set ok " + ok + " fail " + fail + (err == null ? "" : " (" + err + ")") + " read back " + pr.toString().trim());
+        if (!refresh) {   // 0.6.14: allowed cpus per thread (bridge --cpus check; app threads are not pinned)
+            notePerf("bridge_affinity", affinityOf(bridgePid, bt));
+            notePerf("app_affinity", affinityOf(android.os.Process.myPid(), appTids));
+        }
         if (android.os.Build.VERSION.SDK_INT < 31) { notePerf("hint", "API " + android.os.Build.VERSION.SDK_INT + " < 31"); return; }
         try {
             if (!refresh) {
                 android.os.PerformanceHintManager pm = ctx.getSystemService(android.os.PerformanceHintManager.class);
                 if (pm == null) { notePerf("hint", "no PerformanceHintManager"); return; }
                 notePerf("hint_preferred_rate_ns", pm.getPreferredUpdateRateNanos());
-                long target = 1_000_000_000L / fps;
+                long target = hintMs > 0 ? hintMs * 1_000_000L : 1_000_000_000L / fps;
                 int[] all = toArray(appTids, bridgeTids);
                 Object s = null;
                 String how;
@@ -267,6 +294,10 @@ class OvRunner implements SensorEventListener {
             Collections.addAll(cmd, "--auto-reset", "--reinit-state", "--init-gate", "0.006,0.15,0.8", "--max-cam-queue", "2");
         }
         Collections.addAll(cmd, "--remap", remap.getAbsolutePath(), "--timing-log", new File(runDir, "bridge_timing.csv").getAbsolutePath());
+        if (!cpus.isEmpty()) {
+            if (!cpus.matches("[0-9]+(-[0-9]+)?(,[0-9]+(-[0-9]+)?)*")) throw new IllegalArgumentException("bad cpus " + cpus);
+            Collections.addAll(cmd, "--cpus", cpus);
+        }
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.environment().put("LD_LIBRARY_PATH", lib);
         pb.redirectError(new File(runDir, "bridge_stderr.log"));
@@ -288,6 +319,8 @@ class OvRunner implements SensorEventListener {
         proc = pb.start();
         bridgePid = pidOf(proc);
         notePerf("perf_on", perfOn);
+        notePerf("hint_ms", hintMs);
+        notePerf("cpus", cpus.isEmpty() ? "off" : cpus);
         notePerf("bridge_pid", bridgePid);
         notePerf("sdk", android.os.Build.VERSION.SDK_INT);
         writerT = new Thread(this::writer, "ov-writer");
