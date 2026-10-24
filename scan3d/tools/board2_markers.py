@@ -4,7 +4,7 @@
 import cv2, numpy as np, math
 
 SIDE_PX, GAP_PX, X0, Y0 = 780, 120, 120, 100   # full width, top; bottom 220 px = live view + text
-MM_PER_PX = 0.15756   # ruler 7 x 272 px = 30 cm (user, 2026-10-21)
+MM_PER_PX = 0.15743   # mean of ruler (0.15756) and EDID 302 mm / 1920 px (0.15729), 2026-10-24
 try:      # set from the board page's card check (credit card 85.60 mm on the screen) -> board2_scale.json next to this file
     import json as _j, os as _o
     MM_PER_PX = float(_j.load(open(_o.path.join(_o.path.dirname(_o.path.abspath(__file__)), "board2_scale.json")))["mm_per_px"])
