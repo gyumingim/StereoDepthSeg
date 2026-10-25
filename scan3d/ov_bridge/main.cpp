@@ -5,7 +5,28 @@
 //             [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]
 //             [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S] [--remap FILE]
 //             [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST] [--threads N] [--klt-overlap 0|1]
-//             [--idle-spin 0|1|2] [--predict 0|1|2] [--predict-hz HZ]
+//             [--idle-spin 0|1|2|3] [--idle-spin-ms W] [--predict 0|1|2] [--predict-hz HZ] [--ovopt LIST]
+//             [--prof-log FILE]
+//
+// --idle-spin 3 / --idle-spin-ms W (2026-10-25, ovopt, heat; both default off = unchanged): 3 = like 2 (whole pool
+//   waits busy) but between the input polls every stripe waits for an event (aarch64 LDAXR + WFE on the shared "go"
+//   word: woken by the stripe that sees input, by interrupts or by the ~100 us timer event stream) instead of a yield
+//   loop -> the threads never sleep (scheduler sees them busy, keeps the clocks; guess) while the cores idle clock-gated.
+//   On x86 3 == 2. W > 0 (modes 1-3): spin only within W ms before the next camera record is expected (header time of
+//   the last camera record + EMA of the camera header gaps); earlier the wait blocks in poll() (IMU records still wake
+//   it). Prior bench (klt_idle_bench_20261024): a 3-15 ms warm-up gave T1 KLT 16 / 12 / 6.4 ms vs 4 ms full spin, so
+//   W must be large; the heat/time trade is a phone measurement. stderr idle spin line + "window .. blocked ..".
+// --ovopt LIST (2026-10-25, branch ovopt-20261025): speed options of the patched OpenVINS copies (ovpatch/ovopt.h) and
+//   of this bridge, comma separated, all off by default (= output and code path unchanged). Exact (pose lines
+//   bit-identical on the PC identity runs; phone replay check pending): skip_retri, par_tri, par_jac, par_ma, cov_move,
+//   frame_nocopy, givens_rm; "all_exact" = all of them. Near-exact (other rounding, same math): ekf_gemm, qr_compress
+//   (qr_compress replaces givens_rm). "name=0" turns one off.
+//   frame_nocopy (bridge): a frame that is remapped is read straight from the received record buffer (no 2 MB copy
+//   first). Needs a build with the OpenVINS sources compiled in (phone build, PC -DOV_FULL_SOURCE=ON); the PC build
+//   that links libov_msckf_lib.so rejects --ovopt (except frame_nocopy / prof). stderr "[ov_bridge] ovopt ...",
+//   ready line "ovopt".
+// --prof-log FILE (2026-10-25): per fed frame one CSV row of OpenVINS stage times (ms) + counters from the ovpatch
+//   timers (ovopt prof): t_ns,t,feed_ms,init,n_slam,n_msckf,<stages...>,<counters...> (header = names). Timing only.
 //
 // --predict MODE (2026-10-25, arlat 0.6.17 intent predict): IMU forward-predicted "now" pose. The camera frame reaches
 //   the bridge ~40 ms after its exposure (HAL/ISP) and takes ~20 ms to process, while the IMU (~500 Hz) keeps arriving.
@@ -117,6 +138,8 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include "ovopt.h"  // ovpatch/: --ovopt flags + profiler (2026-10-25)
+
 #include "core/VioManager.h"
 #include "core/VioManagerOptions.h"
 #include "state/State.h"
@@ -170,11 +193,14 @@ struct Args {
   int idle_spin = 0;        // --idle-spin 0|1|2 (header)
   int predict = 0;          // --predict 0|1|2 (header)
   double predict_hz = 100.0;  // --predict-hz (mode 2)
+  std::string ovopt;        // --ovopt LIST (header, ovpatch/ovopt.h)
+  std::string prof_log;     // --prof-log FILE (header)
+  double idle_spin_ms = 0.0;  // --idle-spin-ms W (header; 0 = spin the whole gap)
 };
 
 // ---- --idle-spin (header) ----
 constexpr double kIdleSpinMaxMs = 200.0;  // spin at most this long per wait, then block
-const char *idle_spin_name(int m) { return m == 1 ? "main" : m == 2 ? "pool" : "off"; }
+const char *idle_spin_name(int m) { return m == 1 ? "main" : m == 2 ? "pool" : m == 3 ? "pool_wfe" : "off"; }
 inline int64_t boot_ns() {
   timespec ts;
   ::clock_gettime(CLOCK_BOOTTIME, &ts);
@@ -192,6 +218,21 @@ inline void cpu_relax() {
   __builtin_ia32_pause();
 #endif
 }
+// --idle-spin 3 (2026-10-25, ovopt): wait for an event instead of spinning. aarch64: arm the exclusive monitor on the
+// flag word (ldaxr) and WFE: the core idles clock-gated in the instruction until another core stores to the flag, an
+// interrupt arrives or the generic-timer event stream fires (Linux "evtstrm", ~100 us) - the thread never sleeps, so
+// for the scheduler it stays 100 % busy (keeps the clocks, guess: unless the governor's frequency-invariance counts
+// stalled cycles), but the core draws less power than a yield loop. Other CPUs: same as cpu_relax.
+inline void wait_event_on(const std::atomic<int> &flag) {
+#if defined(__aarch64__)
+  int v;
+  asm volatile("ldaxr %w0, [%1]" : "=&r"(v) : "r"(&flag) : "memory");
+  if (v == 0) asm volatile("wfe" ::: "memory");
+#else
+  (void)flag;
+  cpu_relax();
+#endif
+}
 // non-blocking: input readable (data, EOF/HUP or error -> the following read() reports it)
 inline bool fd_ready(int fd) {
   pollfd p{fd, POLLIN, 0};
@@ -205,6 +246,22 @@ struct IdleSpin {
   double spin_s = 0.0;                          // total time spent spinning
   std::vector<float> exit_us;                   // mode 2 exit latencies (every spun wait)
   double last_wait_us = -1.0, last_exit_us = -1.0;  // the wait before the latest record
+  // --idle-spin-ms W (2026-10-25, ovopt; 0 = off = spin the whole gap, unchanged): spin only within W ms before the
+  // next camera record is expected (last camera record header + frame period, EMA of the header gaps); earlier the
+  // wait blocks in poll() (IMU records still wake it and are handled at once). Timing only, like --idle-spin.
+  double win_ms = 0.0;
+  int64_t last_frame_ns = 0;
+  double period_ns = 0.0;
+  uint64_t blocked = 0;     // waits that ended (input arrived) while still blocking before the window
+  double blocked_s = 0.0;   // time spent blocking before the window
+
+  void note_frame(int64_t t) {  // a camera record header was read at t (CLOCK_MONOTONIC)
+    if (last_frame_ns > 0) {
+      const double dt = static_cast<double>(t - last_frame_ns);
+      if (dt > 5e6 && dt < 200e6) period_ns = period_ns > 0.0 ? 0.9 * period_ns + 0.1 * dt : dt;
+    }
+    last_frame_ns = t;
+  }
 
   // returns when fd has input (or EOF / error)
   void wait(int fd) {
@@ -214,6 +271,27 @@ struct IdleSpin {
     if (fd_ready(fd)) {
       last_wait_us = 0.0;
       return;
+    }
+    if (win_ms > 0.0) {  // --idle-spin-ms: block until the spin window opens (or input arrives)
+      const int64_t tb = mono_ns();
+      const int64_t open_at = (period_ns > 0.0 && last_frame_ns > 0)
+                                  ? last_frame_ns + static_cast<int64_t>(period_ns - win_ms * 1e6)
+                                  : tb + static_cast<int64_t>(kIdleSpinMaxMs * 1e6);  // no frame rhythm yet: block
+      if (tb < open_at) {
+        pollfd p{fd, POLLIN, 0};
+        int r;
+        do {
+          const int64_t left = open_at - mono_ns();
+          r = left > 0 ? ::poll(&p, 1, static_cast<int>((left + 999999) / 1000000)) : 0;
+        } while (r < 0 && errno == EINTR);
+        const int64_t te = mono_ns();
+        blocked_s += (te - tb) / 1e9;
+        if (r != 0) {  // input (or EOF / error) before the window
+          blocked++;
+          last_wait_us = (te - tb) / 1e3;
+          return;
+        }
+      }
     }
     spun++;
     const int64_t t0 = mono_ns(), tmax = t0 + static_cast<int64_t>(kIdleSpinMaxMs * 1e6);
@@ -225,6 +303,36 @@ struct IdleSpin {
           timed_out = true;
           break;
         }
+      }
+    } else if (mode == 3) {  // --idle-spin 3: mode 2 with an event wait between the polls (see wait_event_on)
+      std::atomic<int> go{0};
+      std::atomic<int64_t> t_seen{0};
+      std::atomic<bool> to{false};
+      cv::parallel_for_(
+          cv::Range(0, stripes),
+          [&](const cv::Range &) {
+            int k = 0;
+            while (!go.load(std::memory_order_acquire)) {
+              if (fd_ready(fd)) {
+                int64_t z = 0;
+                t_seen.compare_exchange_strong(z, mono_ns());
+                go.store(1, std::memory_order_release);  // the store wakes the other stripes out of WFE
+                break;
+              }
+              wait_event_on(go);
+              if ((++k & 7) == 0 && mono_ns() > tmax) {
+                to.store(true);
+                go.store(1, std::memory_order_release);
+                break;
+              }
+            }
+          },
+          stripes);
+      const int64_t t_ret = mono_ns();
+      timed_out = to.load() && t_seen.load() == 0;
+      if (t_seen.load() > 0) {
+        last_exit_us = (t_ret - t_seen.load()) / 1e3;
+        if (exit_us.size() < 2000000) exit_us.push_back(static_cast<float>(last_exit_us));
       }
     } else {
       std::atomic<bool> go{false};
@@ -273,10 +381,14 @@ struct IdleSpin {
     auto q = [&](double f) { return e.empty() ? -1.0 : static_cast<double>(e[std::min(e.size() - 1, size_t(f * e.size()))]); };
     std::fprintf(stderr,
                  "[ov_bridge] idle spin %s: mode %d (%s) stripes %d | waits %llu spun %llu timeouts %llu spin %.2f s | "
-                 "exit_us n %zu p50 %.1f p95 %.1f p99 %.1f max %.1f\n",
+                 "exit_us n %zu p50 %.1f p95 %.1f p99 %.1f max %.1f",
                  tag, mode, idle_spin_name(mode), stripes, static_cast<unsigned long long>(waits),
                  static_cast<unsigned long long>(spun), static_cast<unsigned long long>(timeouts), spin_s, e.size(), q(0.5),
                  q(0.95), q(0.99), e.empty() ? -1.0 : static_cast<double>(e.back()));
+    if (win_ms > 0.0)  // --idle-spin-ms (2026-10-25)
+      std::fprintf(stderr, " | window %.1f ms period %.2f ms blocked %llu (%.2f s)", win_ms, period_ns / 1e6,
+                   static_cast<unsigned long long>(blocked), blocked_s);
+    std::fprintf(stderr, "\n");
   }
 };
 IdleSpin g_idle;
@@ -465,6 +577,15 @@ public:
                             "rx_hdr_boot_ns,rx_boot_ns,spin_wait_us,spin_exit_us\n");
       else std::fprintf(stderr, "[ov_bridge] timing log: cannot open %s\n", a.timing_log.c_str());
     }
+    if (!a.prof_log.empty()) {  // --prof-log (2026-10-25): ovpatch stage timers, one row per fed frame
+      plog_ = std::fopen(a.prof_log.c_str(), "w");
+      if (plog_) {
+        std::fprintf(plog_, "t_ns,t,feed_ms,init,n_slam,n_msckf");
+        for (int s = 0; s < ovopt::N_SLOTS; s++) std::fprintf(plog_, ",%s", ovopt::slot_name(s));
+        for (int k = 0; k < ovopt::N_COUNTS; k++) std::fprintf(plog_, ",%s", ovopt::count_name(k));
+        std::fprintf(plog_, "\n");
+      } else std::fprintf(stderr, "[ov_bridge] prof log: cannot open %s\n", a.prof_log.c_str());
+    }
     if (a.gate_mean > 0.0 && a.gate_disp_deg > 0.0 && params_.camera_intrinsics.count(0)) {
       double fx = params_.camera_intrinsics.at(0)->get_value()(0);
       double px = fx * std::tan(a.gate_disp_deg * M_PI / 180.0);
@@ -552,7 +673,10 @@ public:
       << ",\"cv_threads\":" << cv::getNumThreads() << ",\"cv_parallel\":" << jstr(cv_parallel_)
       << ",\"klt_overlap\":" << args_.klt_overlap << ",\"idle_spin\":" << g_idle.mode
       << ",\"idle_spin_stripes\":" << g_idle.stripes << ",\"predict\":" << args_.predict
-      << ",\"predict_hz\":" << args_.predict_hz << "}\n";
+      << ",\"predict_hz\":" << args_.predict_hz;
+    if (!args_.ovopt.empty() || !args_.prof_log.empty()) o << ",\"ovopt\":" << jstr(ovopt::describe());  // 2026-10-25
+    if (args_.idle_spin_ms > 0.0) o << ",\"idle_spin_ms\":" << args_.idle_spin_ms;                       // 2026-10-25
+    o << "}\n";
     return o.str();
   }
 
@@ -754,12 +878,19 @@ private:
     c.t = to_sec(t_ns);
     c.data.timestamp = c.t;
     for (int i = 0; i < n; i++) {
-      cv::Mat g(static_cast<int>(h), static_cast<int>(w), CV_8UC1);
-      std::memcpy(g.data, p + 20 + i * img, img);
       // legacy map (no source size): map size == frame size; v2 map: frame size == recorded source size
       bool do_remap = i == 0 && !map_x_.empty() &&
                       (remap_src_w_ > 0 ? (remap_src_w_ == static_cast<int>(w) && remap_src_h_ == static_cast<int>(h))
                                         : (map_x_.cols == static_cast<int>(w) && map_x_.rows == static_cast<int>(h)));
+      cv::Mat g;
+      if (do_remap && ovopt::g.frame_nocopy) {
+        // --ovopt frame_nocopy: remap straight from the record buffer (valid during this call; the remap output owns
+        // its pixels, so nothing keeps pointing into buf after this loop iteration)
+        g = cv::Mat(static_cast<int>(h), static_cast<int>(w), CV_8UC1, const_cast<uint8_t *>(p + 20 + i * img));
+      } else {
+        g.create(static_cast<int>(h), static_cast<int>(w), CV_8UC1);
+        std::memcpy(g.data, p + 20 + i * img, img);
+      }
       if (do_remap) {
         auto r0 = std::chrono::steady_clock::now();
         cv::Mat u;
@@ -860,6 +991,7 @@ private:
   }
 
   void feed_camera(const CamMsg &c, std::string &out) {
+    if (plog_) ovopt::prof_reset();  // --prof-log: stage timers of this frame only
     auto t0 = std::chrono::steady_clock::now();
     try {
       sys_->feed_measurement_camera(c.data);
@@ -868,6 +1000,15 @@ private:
       return;
     }
     double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+    if (plog_) {  // --prof-log row (timing only)
+      bool init = sys_->initialized();
+      size_t ns = init ? sys_->get_features_SLAM().size() : 0, nm = init ? sys_->get_good_features_MSCKF().size() : 0;
+      std::fprintf(plog_, "%lld,%.6f,%.3f,%d,%zu,%zu", static_cast<long long>(c.t_ns), c.t, ms, init ? 1 : 0, ns, nm);
+      for (int s = 0; s < ovopt::N_SLOTS; s++) std::fprintf(plog_, ",%.4f", ovopt::prof_ms[s]);
+      for (int k = 0; k < ovopt::N_COUNTS; k++) std::fprintf(plog_, ",%ld", ovopt::prof_cnt[k]);
+      std::fprintf(plog_, "\n");
+      if (++plog_rows_ % 30 == 0) std::fflush(plog_);
+    }
     if (tlog_) {  // --timing-log: one row per fed frame
       double wait_ms = std::chrono::duration<double, std::milli>(t0 - c.t_recv).count();
       bool init = sys_->initialized();
@@ -1131,6 +1272,8 @@ private:
   }
   int remap_src_w_ = 0, remap_src_h_ = 0;  // v2 remap file: frames of this size are remapped (0 = map size)
   FILE *tlog_ = nullptr;                   // --timing-log
+  FILE *plog_ = nullptr;                   // --prof-log (2026-10-25)
+  uint64_t plog_rows_ = 0;
   int64_t rx_hdr_boot_ns_ = 0, rx_boot_ns_ = 0;     // set_rx
   double rx_spin_wait_us_ = -1.0, rx_spin_exit_us_ = -1.0;
   uint64_t tlog_rows_ = 0;
@@ -1143,6 +1286,7 @@ private:
 public:
   ~Bridge() {
     if (tlog_) std::fclose(tlog_);
+    if (plog_) std::fclose(plog_);
   }
 
 private:
@@ -1187,13 +1331,16 @@ bool serve(Bridge &b, int in_fd, int out_fd, bool is_socket) {
   uint64_t n_cam_rec = 0;
   // --idle-spin 2: stripes = OpenCV pool size (VioManager ctor already called cv::setNumThreads)
   g_idle.stripes = std::max(1, cv::getNumThreads());
-  std::fprintf(stderr, "[ov_bridge] idle spin: mode %d (%s) stripes %d max %.0f ms\n", g_idle.mode,
+  std::fprintf(stderr, "[ov_bridge] idle spin: mode %d (%s) stripes %d max %.0f ms", g_idle.mode,
                idle_spin_name(g_idle.mode), g_idle.stripes, kIdleSpinMaxMs);
+  if (g_idle.win_ms > 0.0) std::fprintf(stderr, " window %.1f ms", g_idle.win_ms);  // --idle-spin-ms (2026-10-25)
+  std::fprintf(stderr, "\n");
   if (!write_full(out_fd, b.ready_line(), is_socket)) return true;
   while (true) {
     g_idle.wait(in_fd);  // --idle-spin: busy-wait for input (mode 0: no-op, read() blocks)
     if (!read_full(in_fd, hdr, sizeof(hdr))) break;
     const int64_t t_hdr = boot_ns();
+    if (hdr[1] == kStereo && g_idle.win_ms > 0.0) g_idle.note_frame(mono_ns());  // --idle-spin-ms frame rhythm
     if (hdr[0] != kMagic || hdr[2] > kMaxPayload) {
       write_full(out_fd, "{\"type\":\"error\",\"msg\":\"bad header, closing\"}\n", is_socket);
       return true;
@@ -1235,7 +1382,8 @@ void usage() {
                "                 [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]\n"
                "                 [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S] [--remap FILE]\n"
                "                 [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST] [--threads N]\n"
-               "                 [--klt-overlap 0|1] [--idle-spin 0|1|2] [--predict 0|1|2] [--predict-hz HZ]\n");
+               "                 [--klt-overlap 0|1] [--idle-spin 0|1|2|3] [--idle-spin-ms W] [--predict 0|1|2] [--predict-hz HZ]\n"
+               "                 [--ovopt LIST] [--prof-log FILE]\n");
 }
 
 }  // namespace
@@ -1282,8 +1430,15 @@ int main(int argc, char **argv) {
     else if (s == "--klt-overlap") a.klt_overlap = std::stoi(next()) != 0 ? 1 : 0;
     else if (s == "--idle-spin") {
       a.idle_spin = std::stoi(next());
-      if (a.idle_spin < 0 || a.idle_spin > 2) {
-        std::fprintf(stderr, "[ov_bridge] --idle-spin must be 0, 1 or 2\n");
+      if (a.idle_spin < 0 || a.idle_spin > 3) {
+        std::fprintf(stderr, "[ov_bridge] --idle-spin must be 0, 1, 2 or 3\n");
+        return 2;
+      }
+    }
+    else if (s == "--idle-spin-ms") {
+      a.idle_spin_ms = std::stod(next());
+      if (!(a.idle_spin_ms >= 0.0 && a.idle_spin_ms <= 1000.0)) {
+        std::fprintf(stderr, "[ov_bridge] --idle-spin-ms must be in [0, 1000]\n");
         return 2;
       }
     }
@@ -1300,6 +1455,8 @@ int main(int argc, char **argv) {
         return 2;
       }
     }
+    else if (s == "--ovopt") a.ovopt = next();
+    else if (s == "--prof-log") a.prof_log = next();
     else if (s == "--reinit-max-gap") a.reinit_max_gap = std::stod(next());
     else if (s == "--reinit-sigma") {  // ori_deg,pos_m,vel_m_s
       std::string v = next();
@@ -1320,6 +1477,32 @@ int main(int argc, char **argv) {
   }
 
   g_idle.mode = a.idle_spin;
+  g_idle.win_ms = a.idle_spin_ms;
+
+  // --ovopt / --prof-log (2026-10-25): set the ovpatch flags before any VioManager exists
+  if (!a.ovopt.empty()) {
+    std::string err;
+    if (!ovopt::parse(a.ovopt, err)) {
+      std::fprintf(stderr, "[ov_bridge] %s\n", err.c_str());
+      return 2;
+    }
+  }
+  if (!a.prof_log.empty()) ovopt::g.prof = 1;
+#ifndef OVOPT_FULL
+  {  // PC build linking libov_msckf_lib.so: only the bridge-side options work, the OpenVINS ones would silently do nothing
+    ovopt::Flags f = ovopt::g;
+    f.frame_nocopy = 0;
+    f.prof = 0;
+    if (f.skip_retri || f.par_tri || f.par_jac || f.par_ma || f.cov_move || f.givens_rm || f.ekf_gemm || f.qr_compress) {
+      std::fprintf(stderr, "[ov_bridge] --ovopt %s needs a build with the OpenVINS sources (OV_FULL_SOURCE / phone build)\n",
+                   a.ovopt.c_str());
+      return 2;
+    }
+  }
+#endif
+  if (!a.ovopt.empty() || ovopt::g.prof)
+    std::fprintf(stderr, "[ov_bridge] ovopt: %s (--ovopt '%s', prof log %s)\n", ovopt::describe().c_str(), a.ovopt.c_str(),
+                 a.prof_log.empty() ? "-" : a.prof_log.c_str());
 
   // --klt-overlap: read once by ovpatch/TrackKLT.cpp at the first camera frame
   ::setenv("OV_KLT_OVERLAP", a.klt_overlap ? "1" : "0", 1);

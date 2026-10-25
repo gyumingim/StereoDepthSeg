@@ -101,11 +101,18 @@ import java.util.concurrent.LinkedBlockingQueue;
  * read (elapsedRealtimeNanos) -> latency of the predicted pose = t_out_ns - t_pred_ns, horizon = h_ms. Intent
  * predict_stream 1 also sends them to the Streamer ({"src":"ov_pred",...}; default 0 = stream unchanged).
  * meta.json "ov_predict" / "ov_predict_hz" / "predict_lines", perf "ov_predict" / "bridge_predict" (ready line).
+ *
+ * 0.6.18 (branch ovopt-20261025; every default = 0.6.17 behaviour): intent ov_opt "LIST" = ov_bridge --ovopt LIST (speed
+ * options of the patched OpenVINS, e.g. "all_exact" = skip_retri,par_tri,par_jac,par_ma,cov_move,frame_nocopy,givens_rm:
+ * poses bit-identical; see scan3d/ov_bridge/main.cpp); intent ov_prof 1 = ov_bridge --prof-log <run>/ov_prof.csv (per-frame
+ * OpenVINS stage times); intent idle_spin_ms W = ov_bridge --idle-spin-ms W (with idle_spin > 0: spin only W ms before
+ * the expected next frame); intent spin_wfe 1 = with idle_spin 2 pass --idle-spin 3 (pool waits with WFE between input
+ * polls instead of a yield loop). meta.json + perf "ov_opt" / "ov_prof" / "idle_spin_ms" / "spin_wfe".
  */
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261025-predict";
+    static final String VERSION = "ov-20261025-ovopt";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";
@@ -174,6 +181,10 @@ class OvRunner implements SensorEventListener {
     int predict = 0;                            // 0.6.17 intent predict: ov_bridge --predict 0|1|2 (0 = off)
     int predictHz = 100;                        // 0.6.17 intent predict_hz: ov_bridge --predict-hz (mode 2)
     boolean predictStream = false;              // 0.6.17 intent predict_stream: also send "pred" lines to the Streamer
+    String ovOpt = "";                          // 0.6.18 intent ov_opt: ov_bridge --ovopt LIST ("" = off)
+    boolean ovProf = false;                     // 0.6.18 intent ov_prof 1: ov_bridge --prof-log <run>/ov_prof.csv
+    int idleSpinMs = 0;                         // 0.6.18 intent idle_spin_ms: ov_bridge --idle-spin-ms W (0 = whole gap)
+    boolean spinWfe = false;                    // 0.6.18 intent spin_wfe 1: idle_spin 2 -> ov_bridge --idle-spin 3
     private BufferedWriter predW;               // poses_pred.csv (predict > 0)
     private long nPred;
     private long lastPoseTns = -1, lastPoseSensor = -1, lastPoseArrive = -1;   // frame of the latest pose line (reader)
@@ -335,8 +346,14 @@ class OvRunner implements SensorEventListener {
         }
         if (ovThreads > 0) Collections.addAll(cmd, "--threads", Integer.toString(ovThreads));
         if (kltOverlap) Collections.addAll(cmd, "--klt-overlap", "1");
-        if (idleSpin > 0) Collections.addAll(cmd, "--idle-spin", Integer.toString(idleSpin));
+        if (idleSpin > 0) Collections.addAll(cmd, "--idle-spin", Integer.toString(idleSpin == 2 && spinWfe ? 3 : idleSpin));
+        if (idleSpin > 0 && idleSpinMs > 0) Collections.addAll(cmd, "--idle-spin-ms", Integer.toString(idleSpinMs));   // 0.6.18
         if (predict > 0) Collections.addAll(cmd, "--predict", Integer.toString(predict), "--predict-hz", Integer.toString(predictHz));
+        if (!ovOpt.isEmpty()) {                                                                                        // 0.6.18
+            if (!ovOpt.matches("[a-z_]+(=[0-9]+)?(,[a-z_]+(=[0-9]+)?)*")) throw new IllegalArgumentException("bad ov_opt " + ovOpt);
+            Collections.addAll(cmd, "--ovopt", ovOpt);
+        }
+        if (ovProf) Collections.addAll(cmd, "--prof-log", new File(runDir, "ov_prof.csv").getAbsolutePath());          // 0.6.18
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.environment().put("LD_LIBRARY_PATH", lib);
         pb.redirectError(new File(runDir, "bridge_stderr.log"));
@@ -363,7 +380,8 @@ class OvRunner implements SensorEventListener {
                 .put("battery_c_start", batteryTenthC() / 10.0).put("thermal_status_start", thermalStatus())
                 .put("device", android.os.Build.MODEL).put("ov_threads", ovThreads).put("klt_overlap", kltOverlap ? 1 : 0)
                 .put("ov_idle_spin", idleSpin).put("ov_predict", predict).put("ov_predict_hz", predictHz)
-                .put("ov_predict_stream", predictStream ? 1 : 0);
+                .put("ov_predict_stream", predictStream ? 1 : 0)
+                .put("ov_opt", ovOpt).put("ov_prof", ovProf ? 1 : 0).put("idle_spin_ms", idleSpinMs).put("spin_wfe", spinWfe ? 1 : 0);
 
         proc = pb.start();
         bridgePid = pidOf(proc);
@@ -375,6 +393,10 @@ class OvRunner implements SensorEventListener {
         notePerf("ov_idle_spin", idleSpin);
         notePerf("ov_predict", predict);
         notePerf("ov_predict_hz", predictHz);
+        notePerf("ov_opt", ovOpt);                 // 0.6.18
+        notePerf("ov_prof", ovProf ? 1 : 0);
+        notePerf("idle_spin_ms", idleSpinMs);
+        notePerf("spin_wfe", spinWfe ? 1 : 0);
         notePerf("bridge_pid", bridgePid);
         notePerf("sdk", android.os.Build.VERSION.SDK_INT);
         writerT = new Thread(this::writer, "ov-writer");

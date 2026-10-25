@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 # Build OpenVINS ov_bridge for the S24 (arm64-v8a, Android 34) with the NDK. Deps go to ~/scanner/android.
 #   bash scan3d/ov_bridge/android/build_android.sh [deps|bridge|all]   (default all)
+# 2026-10-25 (ovopt): BUILD_DIR (default <this dir>/build, unchanged) = bridge build directory, OVOPT_FLAGS (default
+# empty, unchanged) = extra compile/link flags for ov_bridge (CMake OVOPT_FLAGS), e.g. "-march=armv8.2-a+fp16+dotprod".
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 NDK=${NDK:-$HOME/android-ndk-r27c}
 DEPS=$HOME/scanner/android
+BUILD_DIR=${BUILD_DIR:-$HERE/build}
+OVOPT_FLAGS=${OVOPT_FLAGS:-}
 TC=(-DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-34
     -DANDROID_STL=c++_shared -DCMAKE_BUILD_TYPE=Release)
 J=${J:-8}
@@ -21,7 +25,8 @@ if [[ $what == deps || $what == all ]]; then
   fi
 fi
 if [[ $what == bridge || $what == all ]]; then
-  cmake -S "$HERE" -B "$HERE/build" "${TC[@]}" -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH -DEigen3_DIR=/usr/share/eigen3/cmake
-  cmake --build "$HERE/build" -j$J
-  ls -la "$HERE/build/ov_bridge"
+  cmake -S "$HERE" -B "$BUILD_DIR" "${TC[@]}" -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH -DEigen3_DIR=/usr/share/eigen3/cmake \
+    "-DOVOPT_FLAGS=$OVOPT_FLAGS"
+  cmake --build "$BUILD_DIR" -j$J
+  ls -la "$BUILD_DIR/ov_bridge"
 fi

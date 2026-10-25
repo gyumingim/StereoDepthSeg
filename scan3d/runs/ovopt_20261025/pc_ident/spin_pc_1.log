@@ -1,0 +1,24 @@
+Sun Oct 25 11:33:23 KST 2026
+== S2 11:33:23 (--idle-spin 2)
+records 15921 span_s 30.17874039 wall_s 30.191644181031734
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 15921 spun 12937 timeouts 1 spin 22.96 s | exit_us n 12936 p50 1.9 p95 4.1 p99 22.7 max 760.1
+== S3 11:33:54 (--idle-spin 3)
+records 15921 span_s 30.17874039 wall_s 30.191892247996293
+[ov_bridge] idle spin end: mode 3 (pool_wfe) stripes 2 | waits 15921 spun 12960 timeouts 1 spin 23.01 s | exit_us n 12959 p50 1.7 p95 4.0 p99 15.8 max 825.0
+== S2W15 11:34:26 (--idle-spin 2 --idle-spin-ms 15)
+records 15921 span_s 30.17874039 wall_s 30.19172499096021
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 15921 spun 7216 timeouts 1 spin 12.04 s | exit_us n 7215 p50 1.7 p95 3.8 p99 16.7 max 144.9 | window 15.0 ms period 33.42 ms blocked 5734 (11.16 s)
+== S3W15 11:34:57 (--idle-spin 3 --idle-spin-ms 15)
+records 15921 span_s 30.17874039 wall_s 30.19178853696212
+[ov_bridge] idle spin end: mode 3 (pool_wfe) stripes 2 | waits 15921 spun 7223 timeouts 1 spin 12.05 s | exit_us n 7222 p50 1.8 p95 4.0 p99 21.5 max 301.8 | window 15.0 ms period 33.42 ms blocked 5692 (11.07 s)
+== S1W10 11:35:29 (--idle-spin 1 --idle-spin-ms 10)
+records 15921 span_s 30.17874039 wall_s 30.191315075964667
+[ov_bridge] idle spin end: mode 1 (main) stripes 2 | waits 15921 spun 4772 timeouts 1 spin 8.02 s | exit_us n 0 p50 -1.0 p95 -1.0 p99 -1.0 max -1.0 | window 10.0 ms period 33.42 ms blocked 8108 (15.05 s)
+== identity vs 0.6.16 paced P0
+ref /tmp/idlespin/pose_ab/P0.jsonl: poses 845 tracking 704 hash d7958f8247fbc180
+/tmp/ovopt/spin/S1W10.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash d7958f8247fbc180 first_diff None IDENTICAL
+/tmp/ovopt/spin/S2.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash d7958f8247fbc180 first_diff None IDENTICAL
+/tmp/ovopt/spin/S2W15.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash d7958f8247fbc180 first_diff None IDENTICAL
+/tmp/ovopt/spin/S3.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash d7958f8247fbc180 first_diff None IDENTICAL
+/tmp/ovopt/spin/S3W15.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash d7958f8247fbc180 first_diff None IDENTICAL
+Sun Oct 25 11:36:01 KST 2026

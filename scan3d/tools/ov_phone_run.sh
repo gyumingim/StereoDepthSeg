@@ -30,6 +30,10 @@
 # arlat 0.6.17: --ei predict 0|1|2 (ov_bridge --predict: IMU forward-predicted "now" pose after every frame update, 2 = also
 # between frames at --ei predict_hz (default 100)) -> <run>/poses_pred.csv; the report prints a "predicted pose" line
 # (latency arrival - t_pred, horizon t_pred - t_cam). Default 0 = off.
+# arlat 0.6.18 (branch ovopt-20261025, all default off): --es ov_opt all_exact (ov_bridge --ovopt: patched OpenVINS speed
+# options, poses bit-identical on the PC checks; near-exact extras e.g. all_exact,ekf_gemm,qr_compress), --ei ov_prof 1
+# (<run>/ov_prof.csv = per-frame OpenVINS stage times, analyse with runs/ovopt_20261025/prof_an.py), --ei idle_spin_ms W
+# (with idle_spin > 0: spin only W ms before the expected frame), --ei spin_wfe 1 (with idle_spin 2: pool waits with WFE).
 set -uo pipefail
 cmd=${1:?push|run|clean}; S=${2:?<ip:port>}; shift 2
 ADB=${ADB:-/mnt/c/Users/a3162/platform-tools/adb.exe}

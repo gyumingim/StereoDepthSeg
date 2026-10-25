@@ -178,6 +178,11 @@ public class MainActivity extends Activity {
                 ov.predict = Math.max(0, Math.min(2, getIntent().getIntExtra("predict", 0)));       // 0.6.17: ov_bridge --predict 0|1|2
                 ov.predictHz = Math.max(1, Math.min(500, getIntent().getIntExtra("predict_hz", 100)));   // 0.6.17: --predict-hz (mode 2)
                 ov.predictStream = getIntent().getIntExtra("predict_stream", 0) != 0;   // 0.6.17: pred lines also to the PC stream
+                String oo = getIntent().getStringExtra("ov_opt");                       // 0.6.18: ov_bridge --ovopt LIST
+                ov.ovOpt = oo == null ? "" : oo.trim();
+                ov.ovProf = getIntent().getIntExtra("ov_prof", 0) != 0;                 // 0.6.18: --prof-log <run>/ov_prof.csv
+                ov.idleSpinMs = Math.max(0, Math.min(1000, getIntent().getIntExtra("idle_spin_ms", 0)));   // 0.6.18: --idle-spin-ms
+                ov.spinWfe = getIntent().getIntExtra("spin_wfe", 0) != 0;               // 0.6.18: idle_spin 2 -> --idle-spin 3
                 sustainedOn = false;
                 try {
                     boolean sup = ((android.os.PowerManager) getSystemService(POWER_SERVICE)).isSustainedPerformanceModeSupported();
