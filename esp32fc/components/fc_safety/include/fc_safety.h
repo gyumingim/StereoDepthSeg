@@ -14,7 +14,7 @@
  *   ARMED_IDLE -> FLYING (collective > thr_takeoff)            | DISARMED (DISARM cmd, idle timeout, land trigger on
  *                                                                the ground)               | KILLED
  *   FLYING     -> ARMED_IDLE (normal touchdown detected)       | EMERG_LAND (any land trigger) | KILLED
- *   EMERG_LAND -> DISARMED (touchdown / land timeout)          | KILLED       (never back to FLYING: no auto-resume)
+ *   EMERG_LAND -> DISARMED (touchdown / impact / open-loop timeout) | KILLED  (never back to FLYING: no auto-resume)
  *   KILLED     -> DISARMED (CLEAR_KILL cmd, only on the ground, level, switch released, >= kill_clear_min_ms)
  *
  * EMERGENCY LAND tiers (chosen at the trigger, re-evaluated every cycle, can only step DOWN):
@@ -133,6 +133,7 @@ typedef struct {
   float batt_land_v_cell;       /* below this (debounced) -> land */
   float batt_arm_min_v_cell;    /* arm refused below this */
   uint32_t batt_debounce_ms;
+  bool require_batt_to_arm;     /* battery voltage must be known (valid, finite) to arm */
   int32_t overrun_add, overrun_land_level; /* leaky bucket: +add per overrun, -1 per good cycle */
   /* arming */
   float arm_tilt_max_deg;
@@ -154,7 +155,7 @@ typedef struct {
   float land_kp, land_ki;       /* vz -> collective */
   float hover_thr_default;      /* collective used before a hover estimate exists */
   float land_thr_max_frac;      /* collective clamp, * hover */
-  uint32_t land_max_ms;         /* EMERG_LAND (tiers VIO/IMU) longer than this -> motors off */
+  uint32_t land_max_ms;         /* EMERG_LAND in tier VIO/IMU longer than this -> step down to OPENLOOP */
   /* tier 3 open loop */
   float openloop_start_frac;    /* first command = frac * recorded hover (per motor) */
   float openloop_ramp_per_s;    /* frac decreases this much per second */
@@ -166,6 +167,7 @@ typedef struct {
   uint32_t rec_min_ms;          /* record valid after this much stable data */
   uint32_t rec_window_ms;       /* record frozen after this much stable data */
   float rec_tilt_max_deg, rec_rate_max_dps, rec_acc_dev_max, rec_vz_max;
+  float rec_climb_vz;            /* vz (up) that proves lift-off; recording starts rec_skip_ms after it */
 } fs_config_t;
 
 /* one decoded phone pose (from viop_pose_t, see fs_viop.h) */
@@ -257,6 +259,9 @@ typedef struct {
   float rec_ms;
   bool rec_frozen;
   bool rc_seen;                  /* a pose reset_counter has been seen */
+  bool takeoff_enabled;          /* ARMED_IDLE: collective request has been low since entering */
+  bool airborne;                 /* FLYING: climb seen (hover recorder / hover estimate only after this) */
+  uint32_t t_airborne_ms;
   fs_hover_rec_t rec, prev;
   /* pending requests (from other contexts via the control task queue) */
   uint32_t pend_land;
@@ -273,7 +278,7 @@ void fs_init(fs_t *fs, const fs_config_t *cfg, uint32_t now_ms);
 void fs_on_pose(fs_t *fs, uint32_t now_ms, const fs_pose_info_t *p);
 /* seq = VIOP frame seq; vio_state / app_flags = viop_heartbeat_t.state / .flags */
 void fs_on_heartbeat(fs_t *fs, uint32_t now_ms, uint16_t seq, uint8_t vio_state, uint8_t app_flags);
-void fs_on_phone_connection(fs_t *fs, uint32_t now_ms, bool connected); /* USB CDC mount / unmount */
+void fs_on_phone_connection(fs_t *fs, uint32_t now_ms, bool connected); /* USB CDC port closed (DTR 1->0) / reopened */
 void fs_on_link(fs_t *fs, uint32_t now_ms);                             /* valid PC frame (heartbeat / cmd) */
 /* commands: returns true if accepted (rejections are logged as events) */
 bool fs_command(fs_t *fs, uint32_t now_ms, fs_cmd_t cmd);

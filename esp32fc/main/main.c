@@ -16,6 +16,7 @@ TaskHandle_t g_ctrl_task, g_pos_task;
 volatile uint32_t g_ctrl_alive;
 volatile bool g_kill_switch_isr;
 volatile float g_batt_v;
+volatile uint32_t g_kill_req;
 static volatile uint32_t s_inbox_drops;
 
 static portMUX_TYPE s_mux = portMUX_INITIALIZER_UNLOCKED;

@@ -95,7 +95,8 @@ static void sim_tick(sim_t *s) {
 
   /* normal controller (what the position loop would request) */
   float thr_cmd = 0;
-  if (s->fs.state == FS_ARMED_IDLE && s->want_fly) thr_cmd = 0.5f;
+  /* like pos_task: 0 in IDLE until a takeoff setpoint is processed (a few ms after arming) */
+  if (s->fs.state == FS_ARMED_IDLE && s->want_fly && t - s->fs.t_state_ms > 10) thr_cmd = 0.5f;
   else if (s->fs.state == FS_FLYING || s->fs.state == FS_EMERG_LAND) {
     float h = 0.42f; /* the controller's own integrator converges on the true hover */
     thr_cmd = h * (1.0f + 0.6f * (s->z_target - s->z) - 0.6f * s->vz);
@@ -738,6 +739,145 @@ static void t_land_cmd_ground(void) {
   CHECK(!find_ev(&s, FS_EV_TRANSITION, FS_EMERG_LAND));
 }
 
+/* ---------------- regression tests for the independent review (2026-10-25) ---------------- */
+static void t_review_regressions(void) {
+  g_test = "future_timestamp_no_false_land";
+  sim_t s;
+  sim_init(&s, NULL);
+  fly_to_hover(&s, 500);
+  { /* messages stamped 1 ms after the loop's now (link task raced the control loop) */
+    fs_pose_info_t p = {.seq = (uint16_t)(s.pose_seq + 100), .flags = VIOP_F_VALID | VIOP_F_TRACKING, .quality = 90,
+                        .reset_counter = s.reset_counter, .pos_std_max_m = 0.02f, .send_delay_us = 3000};
+    s.pose_seq = (uint16_t)(p.seq + 1);
+    fs_on_pose(&s.fs, s.t + 1, &p);
+    fs_on_heartbeat(&s.fs, s.t + 1, s.hb_seq++, VIOP_HB_TRACKING, 0);
+    fs_on_link(&s.fs, s.t + 1);
+  }
+  run_ms(&s, 20);
+  CHECK(s.fs.state == FS_FLYING);
+
+  g_test = "clear_kill_cmd_time_before_kill";
+  fs_request_kill(&s.fs, s.t, FS_R_CMD);
+  CHECK(!fs_command(&s.fs, s.t - 5, FS_CMD_CLEAR_KILL)); /* earlier time must not bypass kill_clear_min_ms */
+  drain(&s);
+
+  g_test = "ground_spinup_not_recorded";
+  sim_init(&s, NULL);
+  s.hover_true = 0.42f;
+  run_ms(&s, 600);
+  CHECK(cmd(&s, FS_CMD_ARM));
+  s.hover_true = 10.0f; /* motors cannot lift: sits on the ground at thr 0.5 (FLYING state, no climb) */
+  s.want_fly = true;
+  run_ms(&s, 2000);
+  fs_hover_rec_t r;
+  fs_get_hover_record(&s.fs, &r);
+  CHECK(!r.valid && !s.fs.airborne);
+
+  g_test = "nan_vz_during_land_no_kill";
+  sim_init(&s, NULL);
+  fly_to_hover(&s, 1000);
+  CHECK(cmd(&s, FS_CMD_LAND));
+  run_ms(&s, 100);
+  s.in.vz_vio = NAN; /* inject directly: one NaN sample */
+  {
+    fs_input_t in = s.in;
+    in.now_ms = ++s.t;
+    in.vz_vio = NAN;
+    in.vz_imu = NAN;
+    fs_step(&s.fs, &in, &s.out);
+    drain(&s);
+  }
+  CHECK(s.fs.state == FS_EMERG_LAND && s.out.thr == s.out.thr && s.fs.land_i == s.fs.land_i);
+  CHECK(run_until(&s, FS_DISARMED, 20000) > 0);
+
+  g_test = "no_retakeoff_after_touchdown";
+  sim_init(&s, NULL);
+  fly_to_hover(&s, 1000);
+  s.z_target = -0.5f;
+  CHECK(run_until(&s, FS_ARMED_IDLE, 10000) > 0);
+  /* controller still asks 0.2 (stale setpoint): must NOT go FLYING again */
+  for (int i = 0; i < 50; i++) {
+    fs_input_t in = s.in;
+    in.now_ms = ++s.t;
+    in.thr_cmd = 0.2f;
+    fs_step(&s.fs, &in, &s.out);
+  }
+  drain(&s);
+  CHECK(s.fs.state == FS_ARMED_IDLE);
+
+  g_test = "arm_needs_known_battery";
+  sim_init(&s, NULL);
+  run_ms(&s, 600);
+  {
+    fs_input_t in = s.in;
+    in.now_ms = ++s.t;
+    in.batt_valid = false;
+    fs_step(&s.fs, &in, &s.out);
+  }
+  s.nev = 0;
+  CHECK(!cmd(&s, FS_CMD_ARM));
+  CHECK(find_ev(&s, FS_EV_ARM_REJECT, -1)->reason & FS_B_BATT);
+  {
+    fs_input_t in = s.in;
+    in.now_ms = ++s.t;
+    in.batt_v = NAN;
+    fs_step(&s.fs, &in, &s.out);
+  }
+  CHECK(!cmd(&s, FS_CMD_ARM));
+
+  g_test = "frozen_seq_blocks_arm";
+  sim_init(&s, NULL);
+  s.hb_freeze_seq = true;
+  run_ms(&s, 600);
+  s.nev = 0;
+  CHECK(!cmd(&s, FS_CMD_ARM));
+  CHECK(find_ev(&s, FS_EV_ARM_REJECT, -1)->reason & FS_B_HB);
+
+  g_test = "nan_inputs_block_arm";
+  sim_init(&s, NULL);
+  run_ms(&s, 600);
+  {
+    fs_input_t in = s.in;
+    in.now_ms = ++s.t;
+    in.thr_cmd = NAN;
+    fs_step(&s.fs, &in, &s.out);
+  }
+  CHECK(!cmd(&s, FS_CMD_ARM));
+  {
+    fs_input_t in = s.in;
+    in.now_ms = ++s.t;
+    in.gyro_norm_rps = NAN;
+    fs_step(&s.fs, &in, &s.out);
+  }
+  CHECK(!cmd(&s, FS_CMD_ARM));
+
+  g_test = "clear_kill_refused_in_free_fall";
+  sim_init(&s, NULL);
+  run_ms(&s, 600);
+  CHECK(cmd(&s, FS_CMD_KILL));
+  for (int i = 0; i < 1500; i++) {
+    fs_input_t in = s.in;
+    in.now_ms = ++s.t;
+    in.acc_norm = 0.05f; /* falling */
+    fs_step(&s.fs, &in, &s.out);
+  }
+  drain(&s);
+  CHECK(!cmd(&s, FS_CMD_CLEAR_KILL));
+
+  g_test = "land_timeout_steps_down_to_openloop";
+  fs_config_t c;
+  fs_config_default(&c);
+  c.land_max_ms = 1000;
+  sim_init(&s, &c);
+  fly_to_hover(&s, 3000); /* 1 m at 0.3 m/s needs ~3.5 s > land_max_ms 1 s */
+  CHECK(cmd(&s, FS_CMD_LAND));
+  run_ms(&s, 1010);
+  CHECK(s.fs.state == FS_EMERG_LAND && s.fs.tier == FS_TIER_OPENLOOP);
+  const fs_event_t *e = find_ev(&s, FS_EV_TIER, FS_TIER_OPENLOOP);
+  CHECK(e && (e->reason & FS_R_LAND_TIMEOUT));
+  CHECK(run_until(&s, FS_DISARMED, 8000) >= 0);
+}
+
 /* ---------------- fc_core sanity ("known answer" tests) ---------------- */
 static void t_core(void) {
   g_test = "att_est_static_tilt";
@@ -819,6 +959,7 @@ int main(void) {
   t_imu_tier_no_vz();
   t_normal_landing();
   t_land_cmd_ground();
+  t_review_regressions();
   t_core();
   g_test = "no_illegal_transitions";
   CHECK(g_illegal == 0);

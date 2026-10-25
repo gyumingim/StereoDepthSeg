@@ -77,9 +77,14 @@ static void usb_rx_cb(int itf, cdcacm_event_t *event) {
 
 static void usb_line_cb(int itf, cdcacm_event_t *event) {
   (void)itf;
-  /* the phone app opens the port with DTR set; DTR drop / port close = phone link gone (faster than the timeout) */
+  /* DTR 1 -> 0 after it had been 1 = the phone app closed the port (faster than the heartbeat timeout). If the app never
+     sets DTR nothing is reported and the heartbeat timeout covers it. A pulled cable may give no callback at all. */
+  static bool s_dtr_seen;
+  bool dtr = event->line_state_changed_data.dtr;
+  if (dtr) s_dtr_seen = true;
+  else if (!s_dtr_seen) return;
   fc_msg_t m = {.type = FC_MSG_PHONE_CONN, .t_ms = fc_ms()};
-  m.u.connected = event->line_state_changed_data.dtr;
+  m.u.connected = dtr;
   fc_post(&m);
 }
 

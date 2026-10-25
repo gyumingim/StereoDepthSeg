@@ -78,6 +78,7 @@ extern TaskHandle_t g_ctrl_task, g_pos_task;
 extern volatile uint32_t g_ctrl_alive;      /* +1 per control cycle (supervisor watches it) */
 extern volatile bool g_kill_switch_isr;     /* set by the kill-switch GPIO ISR */
 extern volatile float g_batt_v;             /* battery volts (supervisor, 50 Hz), 0 = unknown */
+extern volatile uint32_t g_kill_req;        /* supervisor -> control task kill reasons (FS_R_*), 0 = none */
 
 void shared_put_pose(const fc_pose_local_t *p);
 void shared_get_pose(fc_pose_local_t *p);

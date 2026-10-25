@@ -130,7 +130,10 @@ bool imu_read(imu_sample_t *s) {
   /* NOTE (assumption to verify on the bench): the default FC_IMU_ROT = diag(1,-1,-1) assumes chip x forward, chip z
      up (component side up). Check: level at rest -> acc = (0, 0, -9.8); nose down -> pitch negative; roll right -> roll
      positive. Fix FC_IMU_ROT until those three static checks pass BEFORE any flight. */
-  for (int i = 0; i < 3; i++)
-    if (fabsf(s->acc[i]) > 15.9f * G0 || fabsf(s->gyro[i]) > 34.8f) return false; /* saturated: not trustworthy */
+  s->acc_ok = s->gyro_ok = true;
+  for (int i = 0; i < 3; i++) { /* saturated: not trustworthy */
+    if (!(fabsf(s->acc[i]) <= 15.9f * G0)) s->acc_ok = false;
+    if (!(fabsf(s->gyro[i]) <= 34.8f)) s->gyro_ok = false;
+  }
   return true;
 }

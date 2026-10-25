@@ -60,7 +60,7 @@ void ctrl_task(void *arg) {
   int64_t t_prev = esp_timer_get_time();
   float m_prev[FS_MAX_MOTORS] = {0};
   float yaw_hold = 0;
-  uint32_t pose_seq_seen = 0, n = 0, imu_fail_run = 0, overruns = 0;
+  uint32_t pose_seq_seen = 0, n = 0, imu_fail_run = 0, acc_fail_run = 0, overruns = 0, ev_drops = 0;
   uint16_t loop_max_us = 0;
   bool overrun = false;
   imu_sample_t im = {0};
@@ -78,8 +78,10 @@ void ctrl_task(void *arg) {
     /* 1) IMU (a single bad read reuses the last sample; 3 in a row = IMU failure) */
     imu_sample_t s;
     bool rd = imu_present && woke && imu_read(&s);
-    if (rd) { im = s; imu_fail_run = 0; } else imu_fail_run++;
+    if (rd && s.acc_ok && s.gyro_ok) { im = s; imu_fail_run = 0; } else imu_fail_run++;
+    if (rd && s.acc_ok) { memcpy(im.acc, s.acc, sizeof(im.acc)); acc_fail_run = 0; } else acc_fail_run++;
     bool imu_ok = imu_present && imu_fail_run < 3;
+    bool acc_ok = imu_present && acc_fail_run < 3;
     float R[9], roll = 0, pitch = 0, yaw = 0;
     if (imu_ok) {
       att_est_update(&att, im.gyro, im.acc, dt);
@@ -103,14 +105,16 @@ void ctrl_task(void *arg) {
 
     /* 3) messages from the other tasks (pose / heartbeat / link / commands / requests) */
     fc_msg_t msg;
-    while (xQueueReceive(g_fs_inbox, &msg, 0) == pdTRUE) dispatch(&msg);
+    while (xQueueReceive(g_fs_inbox, &msg, 0) == pdTRUE) { msg.t_ms = now; dispatch(&msg); }
+    uint32_t kreq = g_kill_req; /* supervisor kill request (flag: cannot be lost like a full queue) */
+    if (kreq) { g_kill_req = 0; fs_request_kill(&s_fs, now, kreq); }
 
     /* 4) safety */
     fc_att_sp_t sp;
     shared_get_att_sp(&sp);
     bool sp_fresh = sp.valid && (uint32_t)(now - sp.t_ms) < 50;
     fs_input_t in = {
-        .now_ms = now, .dt_s = dt, .imu_ok = imu_ok, .acc_ok = imu_present && imu_fail_run < 3,
+        .now_ms = now, .dt_s = dt, .imu_ok = imu_ok, .acc_ok = acc_ok,
         .roll_rad = roll, .pitch_rad = pitch, .gyro_norm_rps = gyro_n, .acc_norm = acc_n,
         .thr_cmd = sp_fresh ? sp.thr : 0.0f,
         .vz_vio_valid = vio_fresh, .vz_vio = -pl.v[2],
@@ -168,13 +172,14 @@ void ctrl_task(void *arg) {
       memset(m, 0, sizeof(m));
     }
     if (s_fs.state == FS_DISARMED && motor_out_estopped() && !in.kill_switch) motor_out_clear_estop();
-    if (s_fs.state == FS_DISARMED) g_kill_switch_isr = false; /* latch consumed (fs is KILLED -> cleared by command) */
+    /* ISR latch only catches short pulses; once fs is latched KILLED (or DISARMED) and the pin is released, drop it */
+    if ((s_fs.state == FS_KILLED || s_fs.state == FS_DISARMED) && !board_kill_switch()) g_kill_switch_isr = false;
     memcpy(m_prev, m, sizeof(m_prev));
 
     /* 7) events to the link task; hover record to RTC RAM when it becomes valid and at every disarm */
     fs_event_t ev;
     while (fs_pop_event(&s_fs, &ev)) {
-      xQueueSend(g_ev_queue, &ev, 0);
+      if (xQueueSend(g_ev_queue, &ev, 0) != pdTRUE) ev_drops++; /* reported in status (TODO field) */
       if (ev.code == FS_EV_HOVER_REC || (ev.code == FS_EV_TRANSITION && ev.to == FS_DISARMED)) {
         fs_hover_rec_t r;
         fs_get_hover_record(&s_fs, &r);
@@ -209,5 +214,6 @@ void ctrl_task(void *arg) {
     g_ctrl_alive++;
     if ((++n & 63) == 0) esp_task_wdt_reset();
     (void)prev_state;
+    (void)ev_drops;
   }
 }

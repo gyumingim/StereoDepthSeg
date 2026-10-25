@@ -27,7 +27,8 @@ static const uint8_t k_allowed[FS_NUM_STATES][FS_NUM_STATES] = {
     /* KILLED     */ {1, 0, 0, 0, 0},
 };
 
-static inline uint32_t elapsed(uint32_t now, uint32_t t) { return (uint32_t)(now - t); }
+/* time since t; a t slightly in the FUTURE (message stamped after the loop's now) counts as 0, never as ~49 days */
+static inline uint32_t elapsed(uint32_t now, uint32_t t) { return (int32_t)(now - t) < 0 ? 0u : (uint32_t)(now - t); }
 static inline float clampf(float x, float lo, float hi) { return x < lo ? lo : (x > hi ? hi : x); }
 static inline bool is_armed(fs_state_t s) { return s == FS_ARMED_IDLE || s == FS_FLYING || s == FS_EMERG_LAND; }
 static inline float tilt_rad(const fs_input_t *in) {
@@ -56,6 +57,7 @@ void fs_config_default(fs_config_t *c) {
   c->batt_land_v_cell = 3.45f;
   c->batt_arm_min_v_cell = 3.70f;
   c->batt_debounce_ms = 2000;
+  c->require_batt_to_arm = true;
   c->overrun_add = 10;
   c->overrun_land_level = 500;
   c->arm_tilt_max_deg = 10.0f;
@@ -91,6 +93,7 @@ void fs_config_default(fs_config_t *c) {
   c->rec_rate_max_dps = 30.0f;
   c->rec_acc_dev_max = 0.4f;
   c->rec_vz_max = 1.0f;
+  c->rec_climb_vz = 0.10f;
 }
 
 static void push_ev(fs_t *fs, uint8_t code, uint8_t from, uint8_t to, uint8_t aux, uint32_t reason) {
@@ -158,9 +161,11 @@ static bool go(fs_t *fs, fs_state_t to, uint32_t reason) {
     case FS_FLYING:
       fs->t_takeoff_ms = fs->now_ms;
       fs->touch_timing = false;
+      fs->airborne = false;
       break;
     case FS_ARMED_IDLE:
       fs->touch_timing = false;
+      fs->takeoff_enabled = false; /* re-enabled when the collective request is seen low (no instant re-takeoff) */
       break;
     default:
       break;
@@ -195,8 +200,10 @@ static bool link_fresh(const fs_t *fs) { return fs->link_seen && elapsed(fs->now
 
 void fs_on_pose(fs_t *fs, uint32_t now_ms, const fs_pose_info_t *p) {
   fs->now_ms = now_ms;
-  if (fs->pose_seq_seen && (int16_t)(uint16_t)(p->seq - fs->pose_seq) <= 0 && fs->state != FS_DISARMED)
-    return; /* repeated / old frame: never refreshes the pose timer (resync allowed only when disarmed) */
+  if (fs->pose_seq_seen) {
+    int16_t d = (int16_t)(uint16_t)(p->seq - fs->pose_seq);
+    if (d == 0 || (d < 0 && fs->state != FS_DISARMED)) return; /* repeated / old frame: never refreshes the pose timer */
+  }
   fs->pose_seq = p->seq;
   fs->pose_seq_seen = true;
   if (fs->rc_seen && p->reset_counter != fs->pose_reset_counter && is_armed(fs->state)) fs->pose_reset_flag = true;
@@ -214,9 +221,12 @@ void fs_on_pose(fs_t *fs, uint32_t now_ms, const fs_pose_info_t *p) {
 
 void fs_on_heartbeat(fs_t *fs, uint32_t now_ms, uint16_t seq, uint8_t vio_state, uint8_t app_flags) {
   fs->now_ms = now_ms;
-  if (fs->hb_seen && (int16_t)(uint16_t)(seq - fs->hb_seq) <= 0 && fs->state != FS_DISARMED) {
-    fs->hb_seq_stalled = true; /* seq not increasing: frozen sender; does not refresh */
-    return;
+  if (fs->hb_seen) {
+    int16_t d = (int16_t)(uint16_t)(seq - fs->hb_seq);
+    if (d == 0 || (d < 0 && fs->state != FS_DISARMED)) { /* seq not increasing: frozen sender; does not refresh */
+      fs->hb_seq_stalled = true;
+      return;
+    }
   }
   fs->hb_seen = true;
   fs->hb_seq = seq;
@@ -246,11 +256,13 @@ static uint32_t ground_blocks(const fs_t *fs) {
   if (in->kill_switch) b |= FS_B_SWITCH;
   if (!in->imu_ok) b |= FS_B_IMU;
   else {
-    if (tilt_rad(in) > fs->cfg.arm_tilt_max_deg * DEG2RAD) b |= FS_B_TILT;
-    if (in->gyro_norm_rps > 0.2f) b |= FS_B_MOVING;
+    if (!(tilt_rad(in) <= fs->cfg.arm_tilt_max_deg * DEG2RAD)) b |= FS_B_TILT;
+    if (!(in->gyro_norm_rps <= 0.2f)) b |= FS_B_MOVING;
   }
-  if (in->acc_ok && fs->acc_var > fs->cfg.touch_acc_var) b |= FS_B_MOVING;
-  if (in->thr_cmd > fs->cfg.thr_arm_max) b |= FS_B_THR;
+  /* resting on the ground: quiet accelerometer AND ~1 g (rules out free fall / being carried) */
+  if (!in->acc_ok || !(fs->acc_var <= fs->cfg.touch_acc_var) || !(fabsf(fs->acc_mean - G0) <= fs->cfg.touch_acc_dev))
+    b |= FS_B_MOVING;
+  if (!(in->thr_cmd <= fs->cfg.thr_arm_max)) b |= FS_B_THR; /* NaN blocks too */
   return b;
 }
 
@@ -260,9 +272,12 @@ static uint32_t arm_blocks(const fs_t *fs) {
   if (fs->cfg.require_hb_to_arm && !hb_fresh(fs)) b |= FS_B_HB;
   if (fs->phone_disconnected) b |= FS_B_PHONE_DISC;
   if (fs->cfg.require_link_to_arm && !link_fresh(fs)) b |= FS_B_LINK;
-  if (fs->have_input && fs->last.batt_valid && fs->cfg.batt_cells > 0 &&
-      fs->last.batt_v / (float)fs->cfg.batt_cells < fs->cfg.batt_arm_min_v_cell)
-    b |= FS_B_BATT;
+  if (fs->cfg.batt_cells > 0) {
+    bool known = fs->have_input && fs->last.batt_valid;
+    if ((fs->cfg.require_batt_to_arm && !known) ||
+        (known && !(fs->last.batt_v / (float)fs->cfg.batt_cells >= fs->cfg.batt_arm_min_v_cell)))
+      b |= FS_B_BATT;
+  }
   if (fs->overrun_bucket > fs->cfg.overrun_land_level / 2) b |= FS_B_OVERRUN;
   return b;
 }
@@ -352,10 +367,17 @@ void fs_set_prev_hover(fs_t *fs, const fs_hover_rec_t *prev) {
     if (!(fs->prev.m[i] > 0.02f && fs->prev.m[i] < 0.98f)) fs->prev.valid = false; /* also rejects NaN */
 }
 
+static void update_airborne(fs_t *fs, const fs_input_t *in) {
+  if (fs->airborne) return;
+  /* lift-off evidence: climbing (VIO vz, else the IMU vz estimate). Spinning up on the ground never sets it. */
+  bool climb = (in->vz_vio_valid && in->vz_vio > fs->cfg.rec_climb_vz) || (!in->vz_vio_valid && in->vz_imu_valid && in->vz_imu > fs->cfg.rec_climb_vz);
+  if (climb) { fs->airborne = true; fs->t_airborne_ms = in->now_ms; }
+}
+
 static void record_hover(fs_t *fs, const fs_input_t *in) {
-  if (fs->rec_frozen) return;
+  if (fs->rec_frozen || !fs->airborne) return;
   const fs_config_t *c = &fs->cfg;
-  if (elapsed(in->now_ms, fs->t_takeoff_ms) < c->rec_skip_ms) return;
+  if (elapsed(in->now_ms, fs->t_airborne_ms) < c->rec_skip_ms) return;
   if (!in->imu_ok || !in->acc_ok) return;
   if (tilt_rad(in) > c->rec_tilt_max_deg * DEG2RAD) return;
   if (in->gyro_norm_rps > c->rec_rate_max_dps * DEG2RAD) return;
@@ -479,7 +501,9 @@ static void land_step(fs_t *fs, const fs_input_t *in, fs_output_t *out) {
       if (elapsed(in->now_ms, fs->t_touch_ms) >= c->touch_hold_ms) { go(fs, FS_DISARMED, FS_R_TOUCHDOWN); return; }
     } else fs->touch_timing = false;
   }
-  if (elapsed(in->now_ms, fs->t_state_ms) >= c->land_max_ms) go(fs, FS_DISARMED, FS_R_LAND_TIMEOUT);
+  /* VIO / IMU land taking too long (stuck, estimator wrong): step down to the open-loop ramp, which ends with a cut */
+  if (fs->state == FS_EMERG_LAND && fs->tier != FS_TIER_OPENLOOP && elapsed(in->now_ms, fs->t_state_ms) >= c->land_max_ms)
+    set_tier(fs, FS_TIER_OPENLOOP, FS_R_LAND_TIMEOUT);
 }
 
 /* ---------------- main step ---------------- */
@@ -504,15 +528,27 @@ static uint32_t land_triggers(fs_t *fs, const fs_input_t *in) {
   return r;
 }
 
-void fs_step(fs_t *fs, const fs_input_t *in, fs_output_t *out) {
+static void sanitize(fs_input_t *s) {
+  if (!isfinite(s->roll_rad) || !isfinite(s->pitch_rad) || !isfinite(s->gyro_norm_rps)) s->imu_ok = false;
+  if (!isfinite(s->acc_norm)) { s->acc_ok = false; s->imu_ok = false; }
+  if (!isfinite(s->vz_vio)) s->vz_vio_valid = false;
+  if (!isfinite(s->vz_imu)) s->vz_imu_valid = false;
+  if (!isfinite(s->batt_v) || s->batt_v <= 0.0f) s->batt_valid = false;
+  /* thr_cmd NaN: comparisons below are written so that NaN blocks arming and never triggers takeoff */
+}
+
+void fs_step(fs_t *fs, const fs_input_t *in_raw, fs_output_t *out) {
   const fs_config_t *c = &fs->cfg;
+  fs_input_t in_s = *in_raw;
+  sanitize(&in_s);
+  const fs_input_t *in = &in_s;
   fs->now_ms = in->now_ms;
   float dt = in->dt_s;
   if (!(dt > 0.0f)) dt = 0.0f;
   if (dt > 0.1f) dt = 0.1f;
 
   /* accelerometer statistics (touchdown / impact) */
-  if (in->acc_ok && in->acc_norm == in->acc_norm) {
+  if (in->acc_ok) {
     float a = dt / (c->acc_var_tau_s + dt);
     float d = in->acc_norm - fs->acc_mean;
     fs->acc_mean += a * d;
@@ -523,7 +559,7 @@ void fs_step(fs_t *fs, const fs_input_t *in, fs_output_t *out) {
   if (in->loop_overrun) { fs->overrun_bucket += c->overrun_add; fs->overruns++; }
   else if (fs->overrun_bucket > 0) fs->overrun_bucket--;
   /* battery (debounced, latched until disarm) */
-  if (in->batt_valid && c->batt_cells > 0 && in->batt_v / (float)c->batt_cells < c->batt_land_v_cell) {
+  if (in->batt_valid && c->batt_cells > 0 && in->batt_v / (float)c->batt_cells < c->batt_land_v_cell) { /* sanitised */
     if (!fs->batt_low_timing) { fs->batt_low_timing = true; fs->t_batt_low_ms = in->now_ms; }
     if (elapsed(in->now_ms, fs->t_batt_low_ms) >= c->batt_debounce_ms && is_armed(fs->state)) fs->batt_low_active = true;
   } else fs->batt_low_timing = false;
@@ -539,7 +575,7 @@ void fs_step(fs_t *fs, const fs_input_t *in, fs_output_t *out) {
     if (is_armed(fs->state)) {
       if (in->imu_ok) {
         float lim = (fs->state == FS_EMERG_LAND ? c->land_tilt_kill_deg : c->tilt_kill_deg) * DEG2RAD;
-        if (tilt_rad(in) > lim || in->roll_rad != in->roll_rad || in->pitch_rad != in->pitch_rad) k |= FS_R_TILT;
+        if (!(tilt_rad(in) <= lim)) k |= FS_R_TILT;
         if (in->gyro_norm_rps > c->rate_kill_dps * DEG2RAD) k |= FS_R_RATE;
       } else if (c->imu_fail_kill) k |= FS_R_IMU;
     }
@@ -562,12 +598,14 @@ void fs_step(fs_t *fs, const fs_input_t *in, fs_output_t *out) {
   memset(out, 0, sizeof(*out));
   switch (fs->state) {
     case FS_ARMED_IDLE:
-      if (in->thr_cmd > c->thr_takeoff) go(fs, FS_FLYING, FS_R_TAKEOFF);
+      if (in->thr_cmd <= c->thr_arm_max) fs->takeoff_enabled = true;
+      if (fs->takeoff_enabled && in->thr_cmd > c->thr_takeoff && in->thr_cmd <= 1.0f) go(fs, FS_FLYING, FS_R_TAKEOFF);
       else if (elapsed(in->now_ms, fs->t_state_ms) >= c->idle_disarm_ms) go(fs, FS_DISARMED, FS_R_IDLE);
       break;
     case FS_FLYING: {
+      update_airborne(fs, in);
       record_hover(fs, in);
-      bool stable = in->imu_ok && tilt_rad(in) < c->rec_tilt_max_deg * DEG2RAD && (!in->vz_vio_valid || fabsf(in->vz_vio) < 0.3f);
+      bool stable = fs->airborne && in->imu_ok && tilt_rad(in) < c->rec_tilt_max_deg * DEG2RAD && (!in->vz_vio_valid || fabsf(in->vz_vio) < 0.3f);
       if (stable && in->thr_cmd > 0.05f && in->thr_cmd < 0.95f) fs->hover_ema += dt / (2.0f + dt) * (in->thr_cmd - fs->hover_ema);
       /* normal (commanded) landing: low collective + quiet accelerometer, not right after takeoff */
       if (elapsed(in->now_ms, fs->t_takeoff_ms) > 2000 && in->thr_cmd <= c->touch_thr_frac * hover_collective(fs) &&
