@@ -41,6 +41,8 @@ struct Flags {
                        // only (per H variable: P(:,var) * H(rows,var)^T) and S = H (P_small H^T) + R reuses the M rows of
                        // the H variables (no P_small, no H P_small H^T). Dense H (MSCKF after compression, delayed init)
                        // falls back to the other options. Value = max fill ratio x100 for the sparse path (1 = 50).
+  int init_gemm = 0;   // near-exact. StateHelper::initialize_invertible (new SLAM landmark): M = P(:,H vars) H_R^T as one GEMM
+                       // on gathered columns (not per state variable x H variable), H_R P_small H_R^T = H_R * (rows of M)
   int sym_inplace = 0; // exact. StateHelper::EKFUpdate: P = selfadjoint(P) as an in-place copy of the upper triangle
                        // into the lower one (same values, no N x N temporary)
   // --- changes results (2026-10-25, branch ovdrone-20261025) ---

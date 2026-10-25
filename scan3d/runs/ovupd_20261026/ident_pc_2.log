@@ -1,0 +1,19 @@
+Sun Oct 25 22:36:21 KST 2026
+32cf9bb2f73e7cb4995499ef3cd647862d7ae8237ccb95fca3f417396db06b67  /home/system/scanner/StereoDepthSeg-integ/scan3d/ov_bridge/build_integ_full/ov_bridge
+3c75c1b70e6b7601663e79922b0a94f73af4f682cbdd23fc2fd4bf33de525a1d  /home/system/scanner/StereoDepthSeg-ovupd/scan3d/ov_bridge/build_ovupd_full/ov_bridge
+== h_def2 rc 0 poses 845 | 
+== r_w3sym2 rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace
+== r_w3spi rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse,init_gemm
+== s100_w3sp_p rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse --prof-log /tmp/ovupd/ident/s100_w3sp_p.prof.csv
+== s100_w3spi rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse,init_gemm --prof-log /tmp/ovupd/ident/s100_w3spi.prof.csv
+== r_def2 rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin
+ref /tmp/ovupd/ident/h_ref.jsonl: poses 845 tracking 815 hash 08688db0b4efe77d pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/ovupd/ident/h_def2.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 0 first_diff None [] IDENTICAL
+ref /tmp/ovupd/ident/r_ref.jsonl: poses 2327 tracking 2003 hash 1e58bb28d8b3b8ca pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/ovupd/ident/r_def2.jsonl: poses 2327 identical 2327/2327 hash 1e58bb28d8b3b8ca pred 0 first_diff None [] IDENTICAL
+ref /tmp/ovupd/ident/r_w3_ref.jsonl: poses 2327 tracking 2003 hash c5f0887c72811b73 pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/ovupd/ident/r_w3sym2.jsonl: poses 2327 identical 2327/2327 hash c5f0887c72811b73 pred 0 first_diff None [] IDENTICAL
+r_w3spi.jsonl: common 2003 (ref 2003, other 2003), identical 16, first diff idx 16, |dp| cm median 0.0000 p95 0.0000 max 0.0000 last 0.0000; path ref 1531.3 cm
+s100_w3spi.jsonl: common 2003 (ref 2003, other 2003), identical 16, first diff idx 16, |dp| cm median 0.0000 p95 0.0000 max 0.0000 last 0.0000; path ref 1531.6 cm
+s100_w3spi.jsonl: common 2003 (ref 2003, other 2003), identical 9, first diff idx 9, |dp| cm median 0.0000 p95 0.0000 max 0.0000 last 0.0000; path ref 1531.6 cm
+Sun Oct 25 22:37:18 KST 2026

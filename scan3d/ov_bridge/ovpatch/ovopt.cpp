@@ -31,7 +31,8 @@ const Field kFields[] = {
     {"par_cov", &Flags::par_cov, false},      {"prof", &Flags::prof, false},
     {"rs_derot", &Flags::rs_derot, false},    {"rs_row_ppm", &Flags::rs_row_ppm, false},
     {"rs_postinit", &Flags::rs_postinit, false},
-    {"ekf_sparse", &Flags::ekf_sparse, false}, {"sym_inplace", &Flags::sym_inplace, false},  // 2026-10-26 ovupd
+    {"ekf_sparse", &Flags::ekf_sparse, false}, {"sym_inplace", &Flags::sym_inplace, false},
+    {"init_gemm", &Flags::init_gemm, false},  // 2026-10-26 ovupd
 };
 } // namespace
 

@@ -43,12 +43,24 @@ job() {
     s75_w3sp) run $1 $MINE $(C c4s75) $R80 $RM --ovopt $W3,sym_inplace,ekf_sparse ;;
     s100_w3) run $1 $MINE $(C c4s100) $R80 $RM --ovopt $W3 ;;
     s100_w3sp) run $1 $MINE $(C c4s100) $R80 $RM --ovopt $W3,sym_inplace,ekf_sparse ;;
+    r_w3spi) run $1 $MINE $(C c4) $R80 $RM --ovopt $W3,sym_inplace,ekf_sparse,init_gemm ;;
+    s100_w3spi) run $1 $MINE $(C c4s100) $R80 $RM --ovopt $W3,sym_inplace,ekf_sparse,init_gemm --prof-log $OUT/s100_w3spi.prof.csv ;;
+    s100_w3sp_p) run $1 $MINE $(C c4s100) $R80 $RM --ovopt $W3,sym_inplace,ekf_sparse --prof-log $OUT/s100_w3sp_p.prof.csv ;;
+    h_def2) run $1 $MINE $HC $HS ;;
+    r_def2) run $1 $MINE $(C c4) $R80 $RM ;;
+    r_w3sym2) run $1 $MINE $(C c4) $R80 $RM --ovopt $W3,sym_inplace ;;
   esac
 }
 JOBS=${@:-h_ref h_def h_sym h_w3_ref h_w3 h_w3sym h_w3sp r_ref r_def r_sym r_w3_ref r_w3 r_w3sym r_w3sp r_sp_only s75_w3 s75_w3sp s100_w3 s100_w3sp}
 P=${P:-5}; n=0
 for j in $JOBS; do job $j & n=$((n+1)); if [ $((n % P)) -eq 0 ]; then wait; fi; done; wait
 CMP="python3 $H/runs/integ_20261025/cmp2.py"
+if [ -n "${ONLY2:-}" ]; then  # 2nd build (init_gemm added): exactness of default/sym again + init_gemm near check
+  CMP="python3 $H/runs/integ_20261025/cmp2.py"
+  $CMP $OUT/h_ref.jsonl $OUT/h_def2.jsonl; $CMP $OUT/r_ref.jsonl $OUT/r_def2.jsonl; $CMP $OUT/r_w3_ref.jsonl $OUT/r_w3sym2.jsonl
+  python3 $RD/near.py $OUT/r_w3sp.jsonl $OUT/r_w3spi.jsonl; python3 $RD/near.py $OUT/s100_w3sp.jsonl $OUT/s100_w3spi.jsonl
+  python3 $RD/near.py $OUT/s100_w3.jsonl $OUT/s100_w3spi.jsonl; date; exit 0
+fi
 echo "== exact: default / sym_inplace vs integ base"
 $CMP $OUT/h_ref.jsonl $OUT/h_def.jsonl $OUT/h_sym.jsonl
 $CMP $OUT/h_w3_ref.jsonl $OUT/h_w3.jsonl $OUT/h_w3sym.jsonl

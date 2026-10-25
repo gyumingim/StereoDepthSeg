@@ -730,6 +730,19 @@ void StateHelper::initialize_invertible(std::shared_ptr<State> state, std::share
     current_it += meas_var->size();
   }
 
+  Eigen::MatrixXd M(H_R.rows(), H_R.rows());
+  if (ovopt::g.init_gemm) {
+    // scan3d init_gemm (near-exact, 2026-10-26 ovupd): M_a = P(:, H vars) H_R^T as one GEMM; H_R P_small H_R^T from M_a rows
+    Eigen::MatrixXd P_c(state->_Cov.rows(), H_R.cols());
+    for (size_t i = 0; i < H_order.size(); i++)
+      P_c.middleCols(H_id[i], H_order[i]->size()) = state->_Cov.middleCols(H_order[i]->id(), H_order[i]->size());
+    M_a.noalias() = P_c * H_R.transpose();
+    Eigen::MatrixXd Mv(H_R.cols(), H_R.rows());
+    for (size_t i = 0; i < H_order.size(); i++)
+      Mv.middleRows(H_id[i], H_order[i]->size()) = M_a.middleRows(H_order[i]->id(), H_order[i]->size());
+    M.noalias() = H_R * Mv;
+    M.triangularView<Eigen::Upper>() += R;
+  } else {
   //==========================================================
   //==========================================================
   // For each active variable find its M = P*H^T
@@ -750,9 +763,9 @@ void StateHelper::initialize_invertible(std::shared_ptr<State> state, std::share
   Eigen::MatrixXd P_small = StateHelper::get_marginal_covariance(state, H_order);
 
   // M = H_R*Cov*H_R' + R
-  Eigen::MatrixXd M(H_R.rows(), H_R.rows());
   M.triangularView<Eigen::Upper>() = H_R * P_small * H_R.transpose();
   M.triangularView<Eigen::Upper>() += R;
+  }  // scan3d init_gemm
 
   // Covariance of the variable/landmark that will be initialized
   assert(H_L.rows() == H_L.cols());
