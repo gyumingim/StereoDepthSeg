@@ -882,6 +882,89 @@ static void t_review_regressions(void) {
 }
 
 /* ---------------- phone IMU = only IMU (user decision 2026-10-25) ---------------- */
+/* esp32fix 2026-10-26: open-loop cut (phone IMU + VIO lost) over heights x hover-record thrust error.
+ * Fly to z0, record hover, then change the true hover so that the recorded commands give m x weight thrust. */
+typedef struct { int t_ground, t_cut, ms_hi; float vimp, z_cut; uint32_t reason; } ol_res_t;
+static ol_res_t ol_case(const fs_config_t *c, float z0, float m, bool keep_pose) {
+  sim_t s;
+  sim_init(&s, c);
+  s.z_target = z0;
+  run_ms(&s, 600);
+  CHECK(cmd(&s, FS_CMD_ARM));
+  s.want_fly = true;
+  run_ms(&s, 5000);
+  CHECK(s.fs.state == FS_FLYING && fabsf(s.z - z0) < 0.1f && s.fs.rec.valid);
+  /* sim thrust = (col / hover_true)^2: hover_true / sqrt(m) scales the thrust of every command by m */
+  s.hover_true = 0.42f / sqrtf(m);
+  s.nev = 0;
+  s.imu_ok = s.acc_ok = false;
+  if (!keep_pose) s.pose_on = s.hb_on = false;
+  ol_res_t r = {-1, -1, 0, 0.0f, -1.0f, 0};
+  for (int i = 0; i < 9000; i++) {
+    float vz_before = s.vz;
+    sim_tick(&s);
+    if (r.t_ground < 0 && s.z <= 0.0f) { r.t_ground = i; r.vimp = -vz_before; }
+    if (r.t_ground >= 0 && s.out.motors_enabled) {
+      float tr = (s.applied / s.hover_true) * (s.applied / s.hover_true);
+      if (tr > 0.85f) r.ms_hi++;
+    }
+    if (s.fs.state == FS_DISARMED) { r.t_cut = i; r.z_cut = s.z; r.reason = s.ev[s.nev - 1].reason; break; }
+  }
+  if (r.t_ground < 0 && r.z_cut > 0) r.vimp = sqrtf(s.vz * s.vz + 2.0f * FC_G * r.z_cut); /* falls after the cut */
+  CHECK(g_illegal == 0);
+  return r;
+}
+
+static void t_openloop_cut(void) {
+  static const float hs[] = {0.3f, 1.0f, 2.0f};
+  static const float ms[] = {0.97f, 1.0f, 1.03f};
+  for (int legacy = 1; legacy >= 0; legacy--) {
+    fs_config_t c;
+    fs_config_default(&c);
+    if (legacy) { c.openloop_cut_mode = 0; c.openloop_vz_down = 0.4f; c.openloop_cruise_ratio = 0.99f; }
+    float w_v = 0, w_zcut = 0;
+    int w_hi = 0, w_spin = 0;
+    for (int a = 0; a < 3; a++)
+      for (int b = 0; b < 3; b++) {
+        g_test = legacy ? "openloop_cut_legacy_sweep" : "openloop_cut_mode1_sweep";
+        ol_res_t r = ol_case(&c, hs[a], ms[b], false);
+        int spin = r.t_ground >= 0 ? r.t_cut - r.t_ground : 0;
+        printf("  %s h %.1f m thrust x%.2f: ground %d ms, cut %d ms (%s), on-ground spin %d ms (>85%% hover %d ms), "
+               "impact %.2f m/s%s\n", legacy ? "legacy" : "mode1 ", (double)hs[a], (double)ms[b], r.t_ground, r.t_cut,
+               (r.reason & FS_R_TOUCHDOWN) ? "touch" : "timer", spin, r.ms_hi, (double)r.vimp,
+               r.z_cut > 0.01f ? " CUT IN THE AIR" : "");
+        CHECK(r.t_cut > 0);
+        if (r.vimp > w_v) w_v = r.vimp;
+        if (r.z_cut > w_zcut) w_zcut = r.z_cut;
+        if (r.ms_hi > w_hi) w_hi = r.ms_hi;
+        if (spin > w_spin) w_spin = spin;
+        if (!legacy) {
+          CHECK(r.t_ground >= 0 && r.z_cut < 0.01f); /* never cut in the air within +-3 % record error */
+          CHECK(r.ms_hi <= 250);                     /* <= 0.25 s on the ground above 85 % hover thrust */
+          CHECK(spin <= 1500);
+          CHECK(r.vimp < 3.0f);
+        }
+      }
+    printf("  %s worst: impact %.2f m/s, cut height %.2f m, on-ground spin %d ms, >85%% hover on ground %d ms\n",
+           legacy ? "legacy" : "mode1 ", (double)w_v, (double)w_zcut, w_spin, w_hi);
+    if (legacy) CHECK(w_zcut > 0.5f && w_hi > 1500); /* documents the legacy failure modes */
+  }
+
+  g_test = "openloop_vio_touchdown";
+  fs_config_t c;
+  fs_config_default(&c);
+  ol_res_t r = ol_case(&c, 1.0f, 1.0f, true); /* IMU frames stop, poses + heartbeat continue */
+  printf("  mode1 + VIO: ground %d ms, cut %d ms (%s), impact %.2f m/s\n", r.t_ground, r.t_cut,
+         (r.reason & FS_R_TOUCHDOWN) ? "touch" : "timer", (double)r.vimp);
+  CHECK(r.t_ground > 0 && (r.reason & FS_R_TOUCHDOWN) && r.t_cut - r.t_ground >= 150 && r.t_cut - r.t_ground <= 300);
+  c.openloop_vio_touch = false;
+  r = ol_case(&c, 1.0f, 1.0f, true);
+  CHECK(r.t_ground > 0 && (r.reason & FS_R_LAND_TIMEOUT) && !(r.reason & FS_R_TOUCHDOWN));
+}
+
+static bool elapsed_ms_lt(const sim_t *s, uint32_t ms) { return s->t - s->fs.t_tier_ms < ms; }
+static bool elapsed_ms_ge(const sim_t *s, uint32_t ms) { return s->t - s->fs.t_tier_ms >= ms; }
+
 static void t_phone_imu(void) {
   g_test = "phone_imu_stall_openloop_backcalc";
   sim_t s;
@@ -891,14 +974,16 @@ static void t_phone_imu(void) {
   fs_get_hover_record(&s.fs, &r);
   CHECK(r.valid && fabsf(r.batt_v - 16.4f) < 0.01f);
   s.nev = 0;
-  s.imu_ok = false; /* phone IMU stream lost (USB / phone): no gyro, no accel */
+  s.imu_ok = false; /* phone IMU stream lost (USB / phone): no gyro, no accel, and (USB) no pose / heartbeat either */
   s.acc_ok = false;
+  s.pose_on = s.hb_on = false; /* esp32fix: whole phone link gone (with poses on, mode 1 would cut on VIO touchdown) */
   sim_tick(&s);
   CHECK(s.fs.state == FS_EMERG_LAND && s.fs.tier == FS_TIER_OPENLOOP);
   const fs_event_t *e = find_ev(&s, FS_EV_TIER, FS_TIER_OPENLOOP);
   CHECK(e && e->from == FS_TIER_NONE && e->aux == FS_HOVER_THIS_FLIGHT);
-  /* cut time from the last VIO height (~1 m): (0.4 + (1 - 0.08) / 0.4) * 1.2 + 0.3 = 3.54 s */
-  CHECK(s.fs.ol_cut_ms > 3300 && s.fs.ol_cut_ms < 3800);
+  /* mode 1 (default): cut at the slow (+3 % thrust) touchdown time from the last VIO height (~1 m) + 0.2 s */
+  CHECK(s.fs.ol_ramp && s.fs.ol_fast_ms > 1000 && s.fs.ol_fast_ms < s.fs.ol_slow_ms);
+  CHECK(s.fs.ol_cut_ms == s.fs.ol_slow_ms + 200 && s.fs.ol_cut_ms < 3000);
   int ms = -1, t_ground = -1;
   float vz_min = 0;
   for (int i = 0; i < 8000; i++) {
@@ -909,6 +994,7 @@ static void t_phone_imu(void) {
   }
   CHECK(ms > 0 && (s.ev[s.nev - 1].reason & FS_R_LAND_TIMEOUT)); /* no accelerometer: no impact detection */
   CHECK(s.z < 0.01f && t_ground > 0 && t_ground < ms);
+  CHECK(ms - t_ground < 1000); /* esp32fix: legacy spun ~1670 ms on the ground at ~98 % hover thrust */
   printf("  phone-IMU loss (1 m): ground contact after %d ms at up to %.2f m/s, motors cut after %d ms (cut time %u ms)\n",
          t_ground, (double)-vz_min, ms, s.fs.ol_cut_ms);
 
@@ -923,8 +1009,13 @@ static void t_phone_imu(void) {
   float vc = 16.4f / 15.0f;
   CHECK(fabsf(s.fs.ol_vcomp - vc) < 0.01f);
   CHECK(fabsf(s.out.motor[0] - r.m[0] * sqrtf(1.0f - 1.0f / FC_G) * vc) < 0.002f);
-  run_ms(&s, 500); /* after vz_down / acc_down = 0.4 s: cruise just under hover */
-  if (s.fs.state == FS_EMERG_LAND) CHECK(fabsf(s.out.motor[0] - r.m[0] * sqrtf(0.99f) * vc) < 0.002f);
+  /* after vz_down / acc_down (0.6 s with the esp32fix defaults): cruise just under hover, before the end ramp (t_fast) */
+  run_ms(&s, (uint32_t)(1000.0f * s.fs.cfg.openloop_vz_down / s.fs.cfg.openloop_acc_down) + 100);
+  CHECK(s.fs.state == FS_EMERG_LAND && s.fs.ol_ramp && elapsed_ms_lt(&s, s.fs.ol_fast_ms));
+  if (s.fs.state == FS_EMERG_LAND) CHECK(fabsf(s.out.motor[0] - r.m[0] * sqrtf(s.fs.cfg.openloop_cruise_ratio) * vc) < 0.002f);
+  /* after the end ramp: openloop_end_ratio */
+  while (s.fs.state == FS_EMERG_LAND && !elapsed_ms_ge(&s, s.fs.ol_fast_ms + 400 + 10)) sim_tick(&s);
+  if (s.fs.state == FS_EMERG_LAND) CHECK(fabsf(s.out.motor[0] - r.m[0] * sqrtf(s.fs.cfg.openloop_end_ratio) * vc) < 0.002f);
 
   g_test = "imu_fail_kill_option_still_works";
   fs_config_t c;
@@ -1092,6 +1183,7 @@ int main(void) {
   t_land_cmd_ground();
   t_review_regressions();
   t_phone_imu();
+  t_openloop_cut();
   t_core();
   g_test = "no_illegal_transitions";
   CHECK(g_illegal == 0);

@@ -1,0 +1,10 @@
+cc -std=c99 -O1 -g -Wall -Wextra -Werror -Wshadow -fsanitize=address,undefined -fno-sanitize-recover=all -I../components/fc_safety/include -I../components/fc_core/include -I../components/viop/include test_safety.c ../components/fc_safety/fc_safety.c ../components/fc_core/fc_core.c -o test_safety -lm
+./test_safety
+  pose stall: land triggered, IMU tier, touchdown after 3516 ms
+  hb stall: VIO tier, touchdown after 3786 ms (descent 1 m at 0.30 m/s)
+  hover record: m = 0.4086 0.4211 0.4273 0.4107 (true 0.4116 0.4242 0.4305 0.4137), 3000 samples, frozen=1
+  open-loop: motors cut after 1859 ms by impact, z=0.00
+  IMU tier w/o vz: touchdown after 3700 ms (reason 0x20000)
+  phone-IMU loss (1 m): ground contact after 1858 ms at up to 0.80 m/s, motors cut after 3526 ms (cut time 3526 ms)
+  att_est: roll 20.06 deg (20), pitch -10.03 deg (-10), bias 0.0094 -0.0194
+ALL PASS: 389 checks, 0 failed

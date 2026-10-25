@@ -27,8 +27,18 @@
  *                    takeoff hover record: thrust ~ cmd^k (k = openloop_thrust_exp) =>
  *                      cmd_i = hover_i * ratio^(1/k) * (V_record / V_now)
  *                    with ratio = 1 - acc_down/g for vz_down/acc_down s (start descending), then cruise_ratio (just
- *                    under hover). Cut at the estimated touchdown time from the last known height * margin
- *                    (or openloop_max_ms), or at an impact if the accelerometer still works.
+ *                    under hover).
+ *                    openloop_cut_mode 1 (default, esp32fix 2026-10-26): at the tier start the profile is simulated
+ *                    from the last known height with the thrust off by -/+ openloop_thr_err (record error) ->
+ *                    earliest / latest touchdown t_fast / t_slow. From t_fast the ratio ramps down to
+ *                    openloop_end_ratio over openloop_end_ramp_s (any remaining height is descended faster, and the
+ *                    vehicle sits on the ground at a reduced thrust); motors cut at t_slow + openloop_hold_s.
+ *                    In addition, if VIO is still usable (pose + heartbeat ok, e.g. only the IMU frames stopped),
+ *                    height < openloop_vio_touch_h and |vz| < touch_vz_max for openloop_vio_touch_ms -> cut.
+ *                    openloop_cut_mode 0 (legacy, esp32fc): cut at the estimated touchdown time (constant vz_down)
+ *                    * margin + 0.3 s; sim: motors spin ~1.7 s on the ground at 98 % hover from 1 m, and with a
+ *                    record 1.5-3 % too HIGH the vehicle stops descending and is cut in the air.
+ *                    Both modes: cut at openloop_max_ms at the latest, or at an impact if the accelerometer works.
  *                    Last resort; the vehicle may tip and drift. Hover source: this flight's record > previous
  *                    flight's record (set with fs_set_prev_hover) > cfg.openloop_default_thr.
  * KILL overrides every state and tier.
@@ -173,6 +183,14 @@ typedef struct {
   float openloop_cruise_ratio;  /* thrust / weight after the first phase (< 1: keeps descending slowly) */
   float openloop_cut_margin;    /* cut time = estimated touchdown time * margin (+0.3 s) */
   bool openloop_volt_comp;      /* scale commands by V_record / V_now (PWM ESCs: thrust depends on voltage) */
+  uint8_t openloop_cut_mode;    /* 1 (default): t_fast/t_slow band + end ramp + VIO touchdown; 0: legacy esp32fc cut */
+  float openloop_thr_err;       /* assumed max relative thrust error of the hover record (band for t_fast / t_slow) */
+  float openloop_end_ratio;     /* thrust / weight after the end ramp (on the ground: motors still spin, < 1 g lift) */
+  float openloop_end_ramp_s;    /* ramp duration from the cruise ratio to openloop_end_ratio, starts at t_fast */
+  float openloop_hold_s;        /* cut at t_slow + this */
+  bool openloop_vio_touch;      /* mode 1: touchdown from VIO height / vz while VIO is still usable */
+  float openloop_vio_touch_h;   /* m above the takeoff point */
+  uint32_t openloop_vio_touch_ms;
   /* takeoff hover recorder (this flight) */
   uint32_t rec_skip_ms;         /* ignore the first part after takeoff (spin-up, ground effect) */
   uint32_t rec_min_ms;          /* record valid after this much stable data */
@@ -267,6 +285,10 @@ typedef struct {
   float ol_base[FS_MAX_MOTORS];
   float ol_vcomp;
   uint32_t ol_cut_ms;
+  uint32_t ol_fast_ms, ol_slow_ms; /* mode 1: predicted earliest / latest touchdown (ms after the tier start) */
+  bool ol_ramp;                    /* mode 1: end ramp active (t_fast known) */
+  bool ol_touch_timing;            /* mode 1: VIO touchdown condition timing */
+  uint32_t t_ol_touch_ms;
   float last_height;
   bool last_height_valid;
   float rec_batt_sum;
