@@ -21,20 +21,21 @@
   | L: NL30 → **GL30** | 4 → **3** (131326_o0/o1/o2; 새 발산 0) | 0.5597 → 0.5342 | 38칸 0.5597 → 0.5392 | −0.013 cm (27/38, 녹화 9/13) | 1.13 → 1.58 |
 
   구제된 칸: P = 214550 o0/o1/o2 (0.35/0.43/0.42 cm), 154320 o1/o2 (2.37/2.83) = ovgyro PG5 와 같은 5칸; L = 214550_o0 (0.50).
-  정상 칸 정확도 차이는 잡음 범위 (ovgyro 와 같은 결론). 222747 은 P·L 모두 악화 (재현되는 알려진 악화).
+  정상 칸 정확도 차이는 잡음 범위 (ovgyro 와 같은 결론). 222747_o0 은 P·L 모두 악화 (ovgyro 에서 본 악화 재현); 222747 o1/o2 는 P 좋아짐 (1.14→1.01, 1.26→0.92), L 나빠짐 (0.86→1.13, 1.31→1.70).
 - rec60 + gyro (처음 시험, std60 board 165506 × 시작 3, 라이브식 histogram NONE, 60 fps): **초기화·추적 정상** — 3/3 발산 없음, 초기화 시각 같음
   (4.93/3.93/2.93 s), ATE_w 1.58/1.57/1.59 (gyro 없음 NL60) → 1.50/1.55/1.70 cm (GL60). 173432 은 gyro 유무·옛 ov60eval L60 모두 초기화 안 됨 (기존 문제, gyro 무관).
 - 앱 0.6.27: aapt vc 33 / 0.6.27-integ2-20261026, apksigner 같은 개발 인증서, APK 안 .so·classes.dex 에 새 ovopt 문자열 확인 (`gyro/build_apk_gyro.log`).
-  **설치 못 함**: 08:26 폰이 adb 에 없음 (ping 실패), 08:47 ping 은 되지만 5555 연결 거부 = 폰 무선 디버깅 꺼짐/포트 바뀜 (규칙대로 안 건드림).
-  설치 대기 APK = `scratchpad\integ2\apk\arlat_0.6.27.apk` (sha d90f7ce2), 되돌리기 APK = `scratchpad\integ2\apk\arlat_0.6.26_rollback.apk` (sha 3330e758, vc 32).
+  **설치함 08:51:53** (`adb install -r` Success, dumpsys: vc 33 / 0.6.27-integ2-20261026; 카메라 `[]`, 브리지·앱 프로세스 없음, 실행 안 함).
+  (처음 08:26·08:47 시도는 폰 adb 연결 안 됨 → 코디네이터가 다시 연결해 준 뒤 설치.) calcap 은 코드 변경 없음, 설치 뒤 시험은 안 함.
+  APK = `scratchpad\integ2\apk\arlat_0.6.27.apk` (sha d90f7ce2), 되돌리기 APK = `scratchpad\integ2\apk\arlat_0.6.26_rollback.apk` (sha 3330e758, vc 32).
 - 확인 안 된 것: 폰 ARM 동일성, 라이브 카메라·빠른 손동작, 폰 시간 비용 (ovgyro: 모드 3 에서 1 ms 미만 차이는 못 봄).
 - 되돌리기: intent `ov_opt "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse"` (브리지 `--ovopt` 같은 값) = 0.6.26 프로필과 PC 비트 동일, 또는 0.6.26 APK `adb install -r -d`.
 
 ## 지금 프로필 (`--profile rec20261025` / `rec60`, 앱 intent `profile` 도 같음)
-`--ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse` `--idle-spin 2` `--idle-spin-ms 20` (rec60: 0) `--drop-late 50` (= **mode 1** 기본: cap 3, 창 3 s, pred-stale 500 ms 자동) `--health 1` `--predict 2 --predict-hz 200 --pred-thread 1`. 앱은 + `imu_prio 1`, rec60 = 60 fps + c4f60.
+`--ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse,gyro_klt=5` (gyro_klt=5 는 0.6.27 부터) `--idle-spin 2` `--idle-spin-ms 20` (rec60: 0) `--drop-late 50` (= **mode 1** 기본: cap 3, 창 3 s, pred-stale 500 ms 자동) `--health 1` `--predict 2 --predict-hz 200 --pred-thread 1`. 앱은 + `imu_prio 1`, rec60 = 60 fps + c4f60.
 - **0.6.27 부터 ovopt 끝에 `,gyro_klt=5` 추가** (위 절). 넣지 않음: `par_cov` (폰에서 더 느림), `init_gemm`.
 - 옛 프로필 (integ-20261025) = 같은 프로필 + `--ovopt all_exact,ekf_gemm,qr_compress,ekf_chol` 를 직접 줌 (앱: intent `ov_opt` 같은 값). 옛 drop-late 규칙 = `--drop-late-mode 0`.
-- 선택 옵션만 (기본 꺼짐): `--ovopt gyro_klt=5` (앱 `ov_opt` 에 추가), `--viop-hb-src 1` (앱 intent `viop_hb_src 1`), ESP32 펌웨어 `openloop_cut_mode 1` (기본 0).
+- 선택 옵션만 (기본 꺼짐): `--viop-hb-src 1` (앱 intent `viop_hb_src 1`), ESP32 펌웨어 `openloop_cut_mode 1` (기본 0).
 
 ## 증거 (입력, 반복)
 | 항목 | 입력 / 방법 | 결과 | 반복 |
