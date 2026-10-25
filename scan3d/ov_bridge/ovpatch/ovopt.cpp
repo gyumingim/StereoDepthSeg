@@ -31,6 +31,7 @@ const Field kFields[] = {
     {"par_cov", &Flags::par_cov, false},      {"prof", &Flags::prof, false},
     {"rs_derot", &Flags::rs_derot, false},    {"rs_row_ppm", &Flags::rs_row_ppm, false},
     {"rs_postinit", &Flags::rs_postinit, false},
+    {"ekf_sparse", &Flags::ekf_sparse, false}, {"sym_inplace", &Flags::sym_inplace, false},  // 2026-10-26 ovupd
 };
 } // namespace
 
@@ -87,7 +88,7 @@ const char *slot_name(int s) {
   return (s >= 0 && s < N_SLOTS) ? n[s] : "?";
 }
 const char *count_name(int c) {
-  static const char *n[N_COUNTS] = {"ekf_calls", "ekf_rows", "cov_n", "msckf_feats", "msckf_rows", "msckf_cols", "slam_up", "slam_delay"};
+  static const char *n[N_COUNTS] = {"ekf_calls", "ekf_rows", "cov_n", "msckf_feats", "msckf_rows", "msckf_cols", "slam_up", "slam_delay", "sparse_try", "sparse_used"};
   return (c >= 0 && c < N_COUNTS) ? n[c] : "?";
 }
 void prof_reset() {

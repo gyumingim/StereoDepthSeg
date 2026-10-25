@@ -1,0 +1,42 @@
+Sun Oct 25 22:14:30 KST 2026
+32cf9bb2f73e7cb4995499ef3cd647862d7ae8237ccb95fca3f417396db06b67  /home/system/scanner/StereoDepthSeg-integ/scan3d/ov_bridge/build_integ_full/ov_bridge
+2868aae565e43ae573acbdddf8668b63a5afbd815fae7d3754a54cb43a43d976  /home/system/scanner/StereoDepthSeg-ovupd/scan3d/ov_bridge/build_ovupd_full/ov_bridge
+== h_w3 rc 0 poses 845 | --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol
+== h_w3_ref rc 0 poses 845 | --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol
+== h_def rc 0 poses 845 | 
+== h_ref rc 0 poses 845 | 
+== h_sym rc 0 poses 845 | --ovopt sym_inplace
+== h_w3sp rc 0 poses 845 | --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse
+== h_w3sym rc 0 poses 845 | --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace
+== r_sym rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --ovopt sym_inplace
+== r_def rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin
+== r_ref rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin
+== r_w3sp rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse
+== r_w3sym rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace
+== r_w3_ref rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol
+== r_w3 rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol
+== r_sp_only rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --ovopt ekf_sparse
+== s75_w3sp rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse
+== s75_w3 rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol
+== s100_w3sp rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse
+== s100_w3 rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol
+== exact: default / sym_inplace vs integ base
+ref /tmp/ovupd/ident/h_ref.jsonl: poses 845 tracking 815 hash 08688db0b4efe77d pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/ovupd/ident/h_def.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 0 first_diff None [] IDENTICAL
+/tmp/ovupd/ident/h_sym.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 0 first_diff None [] IDENTICAL
+ref /tmp/ovupd/ident/h_w3_ref.jsonl: poses 845 tracking 815 hash 82c77c4d51045335 pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/ovupd/ident/h_w3.jsonl: poses 845 identical 845/845 hash 82c77c4d51045335 pred 0 first_diff None [] IDENTICAL
+/tmp/ovupd/ident/h_w3sym.jsonl: poses 845 identical 845/845 hash 82c77c4d51045335 pred 0 first_diff None [] IDENTICAL
+ref /tmp/ovupd/ident/r_ref.jsonl: poses 2327 tracking 2003 hash 1e58bb28d8b3b8ca pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/ovupd/ident/r_def.jsonl: poses 2327 identical 2327/2327 hash 1e58bb28d8b3b8ca pred 0 first_diff None [] IDENTICAL
+/tmp/ovupd/ident/r_sym.jsonl: poses 2327 identical 2327/2327 hash 1e58bb28d8b3b8ca pred 0 first_diff None [] IDENTICAL
+ref /tmp/ovupd/ident/r_w3_ref.jsonl: poses 2327 tracking 2003 hash c5f0887c72811b73 pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/ovupd/ident/r_w3.jsonl: poses 2327 identical 2327/2327 hash c5f0887c72811b73 pred 0 first_diff None [] IDENTICAL
+/tmp/ovupd/ident/r_w3sym.jsonl: poses 2327 identical 2327/2327 hash c5f0887c72811b73 pred 0 first_diff None [] IDENTICAL
+== near-exact: ekf_sparse vs W3 (pose differences)
+h_w3sp.jsonl: common 815 (ref 815, other 815), identical 81, first diff idx 48, |dp| cm median 0.0000 p95 0.0000 max 0.0000 last 0.0000; path ref 444.8 cm
+r_w3sp.jsonl: common 2003 (ref 2003, other 2003), identical 9, first diff idx 9, |dp| cm median 0.0000 p95 0.0000 max 0.0000 last 0.0000; path ref 1531.3 cm
+r_sp_only.jsonl: common 2003 (ref 2003, other 2003), identical 9, first diff idx 9, |dp| cm median 0.0000 p95 0.0000 max 0.0000 last 0.0000; path ref 1531.3 cm
+s75_w3sp.jsonl: common 2003 (ref 2003, other 2003), identical 9, first diff idx 9, |dp| cm median 0.0000 p95 0.0000 max 0.0000 last 0.0000; path ref 1531.3 cm
+s100_w3sp.jsonl: common 2003 (ref 2003, other 2003), identical 9, first diff idx 9, |dp| cm median 0.0000 p95 0.0000 max 0.0000 last 0.0000; path ref 1531.6 cm
+Sun Oct 25 22:17:26 KST 2026

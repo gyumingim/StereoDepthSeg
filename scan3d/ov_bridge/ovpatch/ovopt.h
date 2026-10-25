@@ -35,6 +35,14 @@ struct Flags {
   int qr_compress = 0; // UpdaterMSCKF: measurement compression with Householder QR instead of Givens rotations
   int ekf_chol = 0;    // StateHelper::EKFUpdate: W = M U^-1 (S = U^T U), P -= W W^T, dx = W U^-T r (no S^-1, no K)
   int par_cov = 0;     // StateHelper::EKFUpdate: covariance update split in 2 balanced parts on the OpenCV pool
+  // --- 2026-10-26 ovupd (NOT in all_exact; default off = code path above unchanged) ---
+  int ekf_sparse = 0;  // near-exact. StateHelper::EKFUpdate: when H is block-sparse (SLAM chunks: each feature row touches
+                       // only its own landmark + 1-2 clones + calibration), M = P H^T is built from the non-zero H blocks
+                       // only (per H variable: P(:,var) * H(rows,var)^T) and S = H (P_small H^T) + R reuses the M rows of
+                       // the H variables (no P_small, no H P_small H^T). Dense H (MSCKF after compression, delayed init)
+                       // falls back to the other options. Value = max fill ratio x100 for the sparse path (1 = 50).
+  int sym_inplace = 0; // exact. StateHelper::EKFUpdate: P = selfadjoint(P) as an in-place copy of the upper triangle
+                       // into the lower one (same values, no N x N temporary)
   // --- changes results (2026-10-25, branch ovdrone-20261025) ---
   int rs_derot = 0;    // VioManager: gyro rolling-shutter de-rotation of each new feature measurement to the frame-centre
                        // row time. Value = sensor readout time first->last row in microseconds (signed, > 0 = top row of
@@ -139,6 +147,8 @@ enum Count : int {
   C_MSCKF_COLS,     // stacked state columns
   C_SLAM_UP,        // SLAM features into UpdaterSLAM::update (all chunks)
   C_SLAM_DELAY,     // features into delayed_init
+  C_SPARSE_TRY,     // ekf_sparse: EKFUpdate calls checked (2026-10-26 ovupd)
+  C_SPARSE_USED,    //   calls that took the sparse path
   N_COUNTS
 };
 extern double prof_ms[N_SLOTS];

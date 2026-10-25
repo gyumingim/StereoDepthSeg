@@ -1,0 +1,9 @@
+# ovupd U1: A = W3 (live ovopt set) vs B = W3 + sym_inplace + ekf_sparse; max_slam 100 and 75; ABBA; idle_spin 2 + 15 ms, threads 2, raw80 real time
+s100_A_r1 ov_bridge_ovupd c4s100 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --prof-log out/s100_A_r1/prof.csv
+s100_B_r1 ov_bridge_ovupd c4s100 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse --idle-spin-ms 15 --prof-log out/s100_B_r1/prof.csv
+s100_B_r2 ov_bridge_ovupd c4s100 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse --idle-spin-ms 15 --prof-log out/s100_B_r2/prof.csv
+s100_A_r2 ov_bridge_ovupd c4s100 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --prof-log out/s100_A_r2/prof.csv
+s75_A_r1 ov_bridge_ovupd c4s75 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --prof-log out/s75_A_r1/prof.csv
+s75_B_r1 ov_bridge_ovupd c4s75 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse --idle-spin-ms 15 --prof-log out/s75_B_r1/prof.csv
+s75_B_r2 ov_bridge_ovupd c4s75 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse --idle-spin-ms 15 --prof-log out/s75_B_r2/prof.csv
+s75_A_r2 ov_bridge_ovupd c4s75 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --prof-log out/s75_A_r2/prof.csv
