@@ -75,6 +75,12 @@ static int scan3d_klt_pyr() {
 }
 
 void TrackKLT::feed_new_camera(const CameraData &message) {
+  // scan3d ovpipe: a worker precompute for a tracker that is no longer the pipe target (VioManager replaced meanwhile)
+  // does nothing (its result is discarded anyway; never run the upstream path = no writes into the old tracker)
+  if (ovpipe::tl_worker && ovpipe::P.target.load() != static_cast<const void *>(this)) {
+    ovpipe::tl_out.reset();
+    return;
+  }
   // scan3d ovpipe patch (2026-10-26, ov_bridge --pipe 1; off = this block is skipped): see ovpatch/ovpipe.h
   if (ovpipe::P.on.load(std::memory_order_relaxed) && ovpipe::P.target.load() == static_cast<const void *>(this) &&
       message.images.size() == 1 && message.masks.size() == 1 && message.sensor_ids.size() == 1 && !use_stereo &&
@@ -112,6 +118,9 @@ void TrackKLT::feed_new_camera(const CameraData &message) {
       r->id = P.next_id.fetch_add(1);
       r->base = in.id;
       if (scan3d_klt_pyr() > 0) pyr_levels = scan3d_klt_pyr();
+      // num_features is a plain int that try_to_initialize changes once (set_num_features) on the main thread while a
+      // worker compute may read it (formally a data race, word-sized): the value used is recorded and a change during the
+      // compute gives nf = -1 (never committed), so a committed result always used the num_features of its commit.
       const int nf0 = num_features;
       currid = in.st.currid;
       cv::Mat img;

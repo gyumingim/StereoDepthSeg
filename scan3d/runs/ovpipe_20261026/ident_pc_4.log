@@ -1,0 +1,68 @@
+Mon Oct 26 02:15:37 KST 2026
+32cf9bb2f73e7cb4995499ef3cd647862d7ae8237ccb95fca3f417396db06b67  /home/system/scanner/StereoDepthSeg-integ/scan3d/ov_bridge/build_integ_full/ov_bridge
+b8d5741e8f103c0f5f03e2cf6a9ff3267700f5d670fc1de89e3ca4eb87a1dd5b  /home/system/scanner/StereoDepthSeg-ovpipe/scan3d/ov_bridge/build_ovpipe_full/ov_bridge
+== h_pipe_pt rc 0 poses 845 | --pipe 1 --predict 2 --predict-hz 200 --pred-thread 1
+== h_pipe rc 0 poses 845 | --pipe 1
+== h_ref rc 0 poses 845 | 
+== h_def rc 0 poses 845 | 
+== h_pipe_log rc 0 poses 845 | --pipe 1 --predict 2 --predict-hz 200 --pred-thread 1 --pipe-log /tmp/ovpipe/ident/h_pipe_log.pipelog.csv --pipe-cpus 0-15
+== r_pipe rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --pipe 1
+== r_def rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin
+== r_ref rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin
+== r60_pipe rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec60 --drop-late 0 --pipe 1
+== x_pipe rc 0 poses 2389 | inject --pipe 1
+== r60_ref rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec60 --drop-late 0
+== x_def rc 0 poses 2389 | inject 
+== x_pipe_w3 rc 0 poses 2389 | inject --pipe 1 --profile rec60 --drop-late 0
+== x_w3 rc 0 poses 2389 | inject --profile rec60 --drop-late 0
+== s_pipe rc 0 poses 2327 | inject --pipe 1
+== s_def rc 0 poses 2327 | inject 
+ident_pc.sh: line 48: syntax error near unexpected token `do'
+ident_pc.sh: line 48: `j in $JOBS; do job $j & n=$((n+1)); if [ $((n % P)) -eq 0 ]; then wait; fi; done; wait'
+Traceback (most recent call last):
+  File "/tmp/ovpipe/ident/h_ref.jsonl", line 1, in <module>
+    {"type":"ready","num_cameras":1,"use_stereo":false,"imu_hold_s":0.25,"cv_threads":2,"cv_parallel":"TBB (ver 2020.3 interface 11103)","klt_overlap":0,"idle_s
+NameError: name 'false' is not defined. Did you mean: 'False'?
+Traceback (most recent call last):
+  File "/tmp/ovpipe/ident/r_ref.jsonl", line 1, in <module>
+    {"type":"ready","num_cameras":1,"use_stereo":false,"imu_hold_s":0.25,"cv_threads":2,"cv_parallel":"TBB (ver 2020.3 interface 11103)","klt_overlap":0,"idle_s
+NameError: name 'false' is not defined. Did you mean: 'False'?
+unknown option --ex
+usage: python3 [option] ... [-c cmd | -m mod | file | -] [arg] ...
+Try `python -h' for more information.
+Traceback (most recent call last):
+  File "/tmp/ovpipe/ident/x_def.jsonl", line 1, in <module>
+    {"type":"ready","num_cameras":1,"use_stereo":false,"imu_hold_s":0.25,"cv_threads":2,"cv_parallel":"TBB (ver 2020.3 interface 11103)","klt_overlap":0,"idle_s
+NameError: name 'false' is not defined. Did you mean: 'False'?
+unknown option --ex
+usage: python3 [option] ... [-c cmd | -m mod | file | -] [arg] ...
+Try `python -h' for more information.
+Traceback (most recent call last):
+  File "/tmp/ovpipe/ident/s_def.jsonl", line 1, in <module>
+    {"type":"ready","num_cameras":1,"use_stereo":false,"imu_hold_s":0.25,"cv_threads":2,"cv_parallel":"TBB (ver 2020.3 interface 11103)","klt_overlap":0,"idle_s
+NameError: name 'false' is not defined. Did you mean: 'False'?
+== compare (run separately 02:3x: the script was edited while running, its compare part did not run)
+ref h_ref.jsonl: poses 845 tracking 815 hash 08688db0b4efe77d pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+h_def.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 0 first_diff None [] IDENTICAL
+h_pipe.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 0 first_diff None [] IDENTICAL
+h_pipe_pt.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 2399 first_diff None [] IDENTICAL
+h_pipe_log.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 2411 first_diff None [] IDENTICAL
+ref r_ref.jsonl: poses 2327 tracking 2003 hash 1e58bb28d8b3b8ca pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+r_def.jsonl: poses 2327 identical 2327/2327 hash 1e58bb28d8b3b8ca pred 0 first_diff None [] IDENTICAL
+r_pipe.jsonl: poses 2327 identical 2327/2327 hash 1e58bb28d8b3b8ca pred 0 first_diff None [] IDENTICAL
+ref r60_ref.jsonl: poses 2327 tracking 2003 hash c5f0887c72811b73 pred 6060 (excluded ['h', 'ms', 'remap_ms', 'wait_ms'])
+r60_pipe.jsonl: poses 2327 identical 2327/2327 hash c5f0887c72811b73 pred 6057 first_diff None [] IDENTICAL
+ref x_def.jsonl: poses 2389 tracking 1201 hash da39112f45c117b3 pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+x_pipe.jsonl: poses 2389 identical 2389/2389 hash da39112f45c117b3 pred 0 first_diff None [] IDENTICAL
+ref x_w3.jsonl: poses 2389 tracking 1201 hash 69366db912e95ded pred 3515 (excluded ['h', 'ms', 'remap_ms', 'wait_ms'])
+x_pipe_w3.jsonl: poses 2389 identical 2389/2389 hash 69366db912e95ded pred 3699 first_diff None [] IDENTICAL
+ref s_def.jsonl: poses 2327 tracking 1169 hash 35f9f26a9f914e4d pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+s_pipe.jsonl: poses 2327 identical 2327/2327 hash 35f9f26a9f914e4d pred 0 first_diff None [] IDENTICAL
+h_pipe.err:[ov_bridge] pipe: submitted 845 | fed frames: precomputed 844, synchronous 1 (miss base 0 nf 1 gen 0, no job 0, no result 0) | drops 0 rechains 2 | worker tracks 845 (3.36 ms avg) wasted 0 exc 0, remaps 0.00 ms avg | claim waited 351 (avg 2.51 max 9
+h_pipe_log.err:[ov_bridge] pipe: submitted 845 | fed frames: precomputed 844, synchronous 1 (miss base 0 nf 1 gen 0, no job 0, no result 0) | drops 0 rechains 2 | worker tracks 845 (3.20 ms avg) wasted 0 exc 0, remaps 0.00 ms avg | claim waited 354 (avg 2.25 m
+h_pipe_pt.err:[ov_bridge] pipe: submitted 845 | fed frames: precomputed 844, synchronous 1 (miss base 0 nf 1 gen 0, no job 0, no result 0) | drops 0 rechains 2 | worker tracks 845 (3.36 ms avg) wasted 0 exc 0, remaps 0.00 ms avg | claim waited 352 (avg 2.51 ma
+r60_pipe.err:[ov_bridge] pipe: submitted 2327 | fed frames: precomputed 2326, synchronous 1 (miss base 0 nf 1 gen 0, no job 0, no result 0) | drops 0 rechains 2 | worker tracks 2327 (3.28 ms avg) wasted 0 exc 0, remaps 1.44 ms avg | claim waited 800 (avg 1.80 
+r_pipe.err:[ov_bridge] pipe: submitted 2327 | fed frames: precomputed 2327, synchronous 0 (miss base 0 nf 0 gen 0, no job 0, no result 0) | drops 0 rechains 1 | worker tracks 2327 (3.95 ms avg) wasted 0 exc 0, remaps 1.76 ms avg | claim waited 408 (avg 3.43 ma
+s_pipe.err:[ov_bridge] pipe: submitted 2389 | fed frames: precomputed 2327, synchronous 0 (miss base 0 nf 0 gen 0, no job 0, no result 0) | drops 62 rechains 47 | worker tracks 2360 (3.29 ms avg) wasted 14 exc 45, remaps 1.72 ms avg | claim waited 1203 (avg 2.
+x_pipe.err:[ov_bridge] pipe: submitted 2389 | fed frames: precomputed 2389, synchronous 0 (miss base 0 nf 0 gen 0, no job 0, no result 0) | drops 0 rechains 2 | worker tracks 2391 (2.32 ms avg) wasted 0 exc 0, remaps 1.31 ms avg | claim waited 1221 (avg 1.15 m
+x_pipe_w3.err:[ov_bridge] pipe: submitted 2389 | fed frames: precomputed 2389, synchronous 0 (miss base 0 nf 0 gen 0, no job 0, no result 0) | drops 0 rechains 2 | worker tracks 2389 (3.12 ms avg) wasted 0 exc 0, remaps 1.30 ms avg | claim waited 1668 (avg 2.0

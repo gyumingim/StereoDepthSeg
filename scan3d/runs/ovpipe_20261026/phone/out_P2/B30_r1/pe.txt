@@ -1,0 +1,60 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 rs_postinit=0 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol', prof log -)
+[ov_bridge] profile rec20261025: ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol' idle_spin 2 idle_spin_ms 20 drop_late 50 health 1 predict 2 hz 200 pred_thread 1 (after explicit flags)
+[ov_bridge] affinity start: (not pinned) threads 32102:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 2 -> 2 | TBB (ver 2021.11 interface 12110) | cpus 10 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /data/local/tmp/replay/remap_1920x1080.bin
+[ov_bridge] ovrobust: init_still 0 | health 1 log - | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 0 (max gap 3.0 s, min feats 20) | test blank 0 windows
+[ov_bridge] affinity ready: (not pinned) threads 32102:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] pipe: on (worker thread: remap + KLT tracking of the next frame while the main thread updates)
+[ov_bridge] idle spin: mode 2 (pool) stripes 2 max 200 ms window 20.0 ms | pred thread (input reader thread on)
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] affinity cam300: (not pinned) threads 32102:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9 32105:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9 32106:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9 32107:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9 32108:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 6434 spun 1355 timeouts 1 spin 3.58 s | exit_us n 1352 p50 2.5 p95 14.7 p99 143.5 max 10044.6 | window 20.0 ms period 36.51 ms blocked 893 (2.20 s) | pipe main-only spins 2
+[ov_bridge] health t=13.466 INIT -> OK (tracked 130 used 10 since_upd 0.00 pos_std 0.087)
+[ov_bridge] drop-late: frame t=19.365 573.8 ms late (> 50.0) -> skipped (#1)
+[ov_bridge] drop-late: frame t=19.398 549.2 ms late (> 50.0) -> skipped (#2)
+[ov_bridge] drop-late: frame t=19.432 521.0 ms late (> 50.0) -> skipped (#3)
+[ov_bridge] drop-late: frame t=19.499 462.2 ms late (> 50.0) -> skipped (#4)
+[ov_bridge] drop-late: frame t=19.532 433.2 ms late (> 50.0) -> skipped (#5)
+[ov_bridge] drop-late: frame t=19.599 370.8 ms late (> 50.0) -> skipped (#6)
+[ov_bridge] drop-late: frame t=19.632 339.1 ms late (> 50.0) -> skipped (#7)
+[ov_bridge] drop-late: frame t=19.699 274.6 ms late (> 50.0) -> skipped (#8)
+[ov_bridge] drop-late: frame t=19.766 241.3 ms late (> 50.0) -> skipped (#9)
+[ov_bridge] drop-late: frame t=19.799 243.5 ms late (> 50.0) -> skipped (#10)
+[ov_bridge] drop-late: frame t=19.866 241.6 ms late (> 50.0) -> skipped (#11)
+[ov_bridge] drop-late: frame t=19.899 367.1 ms late (> 50.0) -> skipped (#12)
+[ov_bridge] drop-late: frame t=19.932 336.3 ms late (> 50.0) -> skipped (#13)
+[ov_bridge] drop-late: frame t=19.966 305.0 ms late (> 50.0) -> skipped (#14)
+[ov_bridge] drop-late: frame t=19.999 277.0 ms late (> 50.0) -> skipped (#15)
+[ov_bridge] drop-late: frame t=20.033 250.6 ms late (> 50.0) -> skipped (#16)
+[ov_bridge] drop-late: frame t=20.066 244.7 ms late (> 50.0) -> skipped (#17)
+[ov_bridge] drop-late: frame t=20.099 246.3 ms late (> 50.0) -> skipped (#18)
+[ov_bridge] drop-late: frame t=20.133 243.4 ms late (> 50.0) -> skipped (#19)
+[ov_bridge] drop-late: frame t=20.166 248.8 ms late (> 50.0) -> skipped (#20)
+[ov_bridge] drop-late: frame t=22.832 6051.1 ms late (> 50.0) -> skipped (#100)
+[ov_bridge] drop-late: frame t=26.165 5854.4 ms late (> 50.0) -> skipped (#200)
+[ov_bridge] drop-late: frame t=29.498 6632.1 ms late (> 50.0) -> skipped (#300)
+[ov_bridge] drop-late: frame t=32.831 7553.9 ms late (> 50.0) -> skipped (#400)
+[ov_bridge] drop-late: frame t=36.165 8474.7 ms late (> 50.0) -> skipped (#500)
+[ov_bridge] drop-late: frame t=39.498 8483.1 ms late (> 50.0) -> skipped (#600)
+[ov_bridge] drop-late: frame t=42.831 9267.4 ms late (> 50.0) -> skipped (#700)
+[ov_bridge] drop-late: frame t=46.164 10364.1 ms late (> 50.0) -> skipped (#800)
+[ov_bridge] drop-late: frame t=49.498 10728.6 ms late (> 50.0) -> skipped (#900)
+[ov_bridge] drop-late: frame t=52.831 10726.2 ms late (> 50.0) -> skipped (#1000)
+[ov_bridge] drop-late: frame t=56.164 11542.7 ms late (> 50.0) -> skipped (#1100)
+[ov_bridge] drop-late: frame t=59.564 11466.3 ms late (> 50.0) -> skipped (#1200)
+[ov_bridge] drop-late: frame t=63.164 11366.9 ms late (> 50.0) -> skipped (#1300)
+[ov_bridge] drop-late: frame t=66.602 11360.1 ms late (> 50.0) -> skipped (#1400)
+[ov_bridge] drop-late: frame t=70.594 11441.0 ms late (> 50.0) -> skipped (#1500)
+[ov_bridge] drop-late: frame t=73.998 11785.2 ms late (> 50.0) -> skipped (#1600)
+[ov_bridge] drop-late: frame t=77.398 11778.5 ms late (> 50.0) -> skipped (#1700)
+[ov_bridge] drop-late: frame t=80.731 15087.6 ms late (> 50.0) -> skipped (#1800)
+[ov_bridge] pred thread reader: image space waits 40
+[ov_bridge] pred thread: mode 2 hz 200 | lines 11152 (frame 166 rate 10986) snapshots 166 | compute us p50 161.7 p95 338.5 max 363854.1 | horizon ms p50 29904.2 p95 59880.0 max 63041.4 | thread cpu 4.958 s (pred) 10.053 s (reader)
+[ov_bridge] affinity end: (not pinned) threads 32102:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9 32105:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9 32108:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9 384:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 43309 spun 17566 timeouts 27 spin 54.76 s | exit_us n 8371 p50 2.1 p95 8.1 p99 41.7 max 190312.7 | window 20.0 ms period 33.35 ms blocked 2746 (6.78 s) | pipe main-only spins 9179
+[ov_bridge] predict: mode 2 hz 200 | lines 0 | horizon ms p50 -1.0 p95 -1.0 max -1.0
+[ov_bridge] drop-late: limit 50.0 ms | dropped 1837 frames | min lag 121143767.7 ms
+[ov_bridge] health: frames INIT 324 OK 166 DEGRADED 0 LOST 0 | transitions 2 | max LOST run 0 frames | recover state 0 full 0 | blanked 0 | init_ready frames 319
+[ov_bridge] pipe: submitted 2327 | fed frames: precomputed 490, synchronous 0 (miss base 0 nf 0 gen 0, no job 0, no result 0) | drops 1837 rechains 1021 | worker tracks 490 (14.30 ms avg) wasted 1020 exc 0, remaps 0.47 ms avg | claim waited 487 (avg 14.12 max 40.68 ms) | image waits 220 (811.73 ms) | trackers 1

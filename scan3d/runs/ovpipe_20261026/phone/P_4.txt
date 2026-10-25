@@ -1,0 +1,6 @@
+# ovpipe P_4 (2026-10-26 02:4x): P_2 showed --pipe + rec20261025 (spin window --idle-spin-ms 20) at 30 fps -> worker 14 ms/track,
+# drop-late cascade (1837 drops). Test 30 fps with full spin (--idle-spin-ms 0, like rec60): A vs B, ABBA. Binary v2.
+A30S_r1 ov_bridge_ovpipe2 c4 2 2 1.0 1 0 raw80 --profile rec20261025 --idle-spin-ms 0
+B30S_r1 ov_bridge_ovpipe2 c4 2 2 1.0 1 0 raw80 --profile rec20261025 --idle-spin-ms 0 --pipe 1 --pipe-log out/B30S_r1/pipe.csv
+B30S_r2 ov_bridge_ovpipe2 c4 2 2 1.0 1 0 raw80 --profile rec20261025 --idle-spin-ms 0 --pipe 1 --pipe-log out/B30S_r2/pipe.csv
+A30S_r2 ov_bridge_ovpipe2 c4 2 2 1.0 1 0 raw80 --profile rec20261025 --idle-spin-ms 0

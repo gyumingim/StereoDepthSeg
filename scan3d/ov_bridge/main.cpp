@@ -1138,8 +1138,10 @@ public:
                  cfg_threads, a.threads, params_.num_opencv_threads, cv_parallel_.c_str(), cv::getNumberOfCPUs(),
                  a.klt_overlap);
     if (!a.remap.empty()) load_remap(a.remap);
-    if (ovpipe::P.on.load() && (params_.state_options.num_cameras != 1 || params_.downsample_cameras || !params_.use_klt)) {
-      std::fprintf(stderr, "[ov_bridge] pipe: only mono KLT without downsample_cameras -> --pipe off\n");
+    // calib_cam_intrinsics: the update writes the camera model the worker uses for undistort -> not allowed (verifier 02:15)
+    if (ovpipe::P.on.load() && (params_.state_options.num_cameras != 1 || params_.downsample_cameras || !params_.use_klt ||
+                                params_.state_options.do_calib_camera_intrinsics)) {
+      std::fprintf(stderr, "[ov_bridge] pipe: only mono KLT, no downsample_cameras, no calib_cam_intrinsics -> --pipe off\n");
       ovpipe::P.on.store(false);
     }
     if (ovpipe::P.on.load()) {  // --pipe (2026-10-26): worker gets the same remap tables / mask as on_stereo

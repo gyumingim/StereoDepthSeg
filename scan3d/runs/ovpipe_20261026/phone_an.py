@@ -12,6 +12,7 @@ For every run folder OUTDIR/<tag>/ (runner ovpipe_run.sh): tl.csv (--timing-log)
          fields ms/remap_ms/wait_ms/h/late_dropped excluded.
 Writes OUTDIR/summary.json and prints a table.
 """
+import gzip
 import json
 import os
 import re
@@ -48,7 +49,8 @@ for tag in sorted(os.listdir(out)):
                 feed.append(float(p[ix['feed_ms']]))
             cdrop = int(p[ix['cam_dropped']])
     e2e, poses = [], []
-    with open(os.path.join(d, 'po.jsonl')) as f:
+    pp = os.path.join(d, 'po.jsonl')
+    with (open(pp) if os.path.exists(pp) else gzip.open(pp + '.gz', 'rt')) as f:
         for line in f:
             if '"pred"' in line and '"frame"' in line:
                 j = json.loads(line)

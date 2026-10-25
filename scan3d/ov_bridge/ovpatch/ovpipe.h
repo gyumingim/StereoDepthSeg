@@ -5,7 +5,8 @@
 // Idea: OpenVINS feed_measurement_camera(N) = TrackKLT (histogram, pyramid, FAST top-off on N-1, KLT N-1 -> N, RANSAC)
 // + propagate + MSCKF/SLAM update + marginalisation. The tracking result of a frame depends ONLY on the tracker's own
 // state after the previous frame (pts/ids/pyramid/mask of N-1, the id counter currid, num_features) and the new image;
-// it never reads the filter state or the feature database. Only the LAST step of TrackKLT writes shared data: the
+// it never reads the filter state or the feature database (it reads the camera intrinsics for undistort: they must be
+// fixed -> --pipe is refused with calib_cam_intrinsics). Only the LAST step of TrackKLT writes shared data: the
 // feature database (update_feature of every good track) and the tracker members (*_last).
 // So a worker thread computes "tracking of N+1" (pure, into a Res) while the main thread is still inside the update of
 // N, and the main thread later COMMITS that Res at exactly the place where the sequential code ran the tracker (start of

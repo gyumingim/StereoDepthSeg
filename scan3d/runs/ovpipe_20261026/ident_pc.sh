@@ -1,7 +1,7 @@
 # ovpipe-20261026 PC identity: this build (--pipe 0 / 1) vs the integ-20261025 build (14de3b8 full-source Release), 17 digits.
 # Inputs as integ ident_pc.sh: H = harness hs_20261024_165506_std60 (IMU lead 0.4 s, 845 frames, cfg_identity),
 # R = raw80 phone replay stream (hs_20261021_213341, 2327 frames, c4 + remap). X = R through inject.py (a copy of the
-# previous image after every 37th image + one RESET after image 1200) = drop / re-chain / tracker-reset paths.
+# previous image after every 37th image + one RESET after image 1200) = tracker-reset path (the copies were fed, not dropped: drops 0). s_* = swapped-size copies -> rejected = drop / re-chain path.
 #   bash ident_pc.sh [JOBS...]   outputs /tmp/ovpipe/ident/<job>.{jsonl,err}
 set -u
 H=~/scanner/StereoDepthSeg-ovpipe/scan3d
