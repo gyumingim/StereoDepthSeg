@@ -29,6 +29,7 @@ const Field kFields[] = {
     {"qr_compress", &Flags::qr_compress, false}, {"ekf_chol", &Flags::ekf_chol, false},
     {"par_cov", &Flags::par_cov, false},      {"prof", &Flags::prof, false},
     {"rs_derot", &Flags::rs_derot, false},    {"rs_row_ppm", &Flags::rs_row_ppm, false},
+    {"rs_postinit", &Flags::rs_postinit, false},
 };
 } // namespace
 

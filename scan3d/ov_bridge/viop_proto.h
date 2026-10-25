@@ -21,12 +21,27 @@
  *   8+len u16 crc  CRC-16/CCITT-FALSE (poly 0x1021, init 0xFFFF) over bytes [2, 8+len)  (sync bytes excluded)
  * Stream transports (USB CDC, UART, ESP-NOW concatenation): hunt for A5 5A, read len, check crc (viop_stream_feed).
  *
- * MESSAGE TYPES (payload layouts below; ids 0x02-0x0F telemetry, 0x20-0x2F commands are RESERVED for later, e.g.
- *   0x02 health / battery telemetry, 0x20 arm / disarm, 0x21 position setpoint, 0x22 mode):
+ * MESSAGE TYPES (payload layouts below; ids 0x03-0x0F telemetry, 0x20-0x2F commands are RESERVED for later, e.g.
+ *   0x03 health / battery telemetry, 0x20 arm / disarm, 0x21 position setpoint, 0x22 mode):
  *   0x01 VIOP_T_POSE      82 B  phone -> drone (-> PC relay): IMU-forward-predicted VIO pose      frame 92 B
+ *   0x02 VIOP_T_HEARTBEAT 18 B  phone -> drone: liveness + VIO health, 10-50 Hz (default 20)        frame 28 B
+ *        Sent from the bridge's MAIN input loop (on IMU records), NOT from a timer thread: when the app stops feeding,
+ *        the bridge hangs or is killed, heartbeats stop -> the drone ESP32 must treat a missing heartbeat (e.g. > 3
+ *        periods, timeout chosen by the firmware) as "phone dead" and land. On a clean stop the bridge sends 3
+ *        heartbeats with state VIOP_HB_STOPPING first.
  *   0x10 VIOP_T_TIME_REQ  16 B  any -> phone: u64 t_req (requester clock, echoed), u64 0               frame 26 B
  *   0x11 VIOP_T_TIME_RESP 16 B  phone -> requester: u64 t_req (echo), u64 t_phone_rx_ns (CLOCK_BOOTTIME at receipt)
  *        offset(phone - requester) = t_phone_rx - (t_req + t_resp_arrival) / 2, take the smallest round trips.
+ *
+ * HEARTBEAT PAYLOAD (18 B):
+ *   0  u64 t_phone_us       CLOCK_BOOTTIME at send, us
+ *   8  u8  state            VIOP_HB_* (0 starting / not initialised, 1 tracking, 2 lost = IMU-only, 3 stopping)
+ *   9  u8  flags            VIOP_HBF_* (bit0 app/bridge stopping, bit1 IMU stale > 100 ms, bit2 no pose sent > 200 ms)
+ *  10  u16 imu_age_ms       now - receipt of the newest IMU record (saturated)
+ *  12  u16 pose_age_ms      now - last POSE frame sent (65535 = none yet)
+ *  14  u16 hb_period_ms     configured heartbeat period
+ *  16  u8  reset_counter    as in POSE
+ *  17  u8  quality          last POSE quality (0 if none)
  *
  * POSE PAYLOAD (82 B):
  *   0  u64 t_pred_us        predicted instant, phone sensor clock = Android CLOCK_BOOTTIME (elapsedRealtimeNanos)/1000
@@ -68,12 +83,21 @@
 #define VIOP_MAX_FRAME (VIOP_HDR + VIOP_MAX_PAYLOAD + 2)
 
 #define VIOP_T_POSE 0x01
+#define VIOP_T_HEARTBEAT 0x02
 #define VIOP_T_TIME_REQ 0x10
 #define VIOP_T_TIME_RESP 0x11
 
 #define VIOP_SRC_PHONE 1
 #define VIOP_SRC_DRONE 2
 #define VIOP_SRC_PC 3
+
+#define VIOP_HB_STARTING 0
+#define VIOP_HB_TRACKING 1
+#define VIOP_HB_LOST 2
+#define VIOP_HB_STOPPING 3
+#define VIOP_HBF_STOPPING 0x01u
+#define VIOP_HBF_IMU_STALE 0x02u
+#define VIOP_HBF_POSE_STALE 0x04u
 
 #define VIOP_F_VALID 0x0001u      /* VIO initialised */
 #define VIOP_F_TRACKING 0x0002u   /* features tracked (not lost); lost = IMU-only drift */
@@ -104,6 +128,16 @@ typedef struct VIOP_PACKED {
   uint16_t n_feat;
 } viop_pose_t;
 typedef struct VIOP_PACKED {
+  uint64_t t_phone_us;
+  uint8_t state;
+  uint8_t flags;
+  uint16_t imu_age_ms;
+  uint16_t pose_age_ms;
+  uint16_t hb_period_ms;
+  uint8_t reset_counter;
+  uint8_t quality;
+} viop_heartbeat_t;
+typedef struct VIOP_PACKED {
   uint64_t t_req;
   uint64_t t_phone_rx_ns;
 } viop_time_t;
@@ -111,6 +145,7 @@ typedef struct VIOP_PACKED {
 #pragma pack(pop)
 #endif
 typedef char viop_pose_size_check[(sizeof(viop_pose_t) == 82) ? 1 : -1];
+typedef char viop_hb_size_check[(sizeof(viop_heartbeat_t) == 18) ? 1 : -1];
 typedef char viop_time_size_check[(sizeof(viop_time_t) == 16) ? 1 : -1];
 
 static inline uint16_t viop_crc16(const uint8_t *d, uint32_t n) {

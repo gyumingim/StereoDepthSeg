@@ -354,6 +354,36 @@ struct Out {
   }
 
   // VIOP v2 POSE frame (viop_proto.h): world z-up / phone IMU frame, no mount, no yaw alignment (the ESP32 does that)
+  // VIOP HEARTBEAT: called from the bridge main loop on every IMU record (never from a timer thread, so a stalled feed /
+  // hung bridge stops the heartbeat); sends when the period has elapsed. stopping = final heartbeats on a clean exit.
+  double hb_hz = 20.0;
+  int64_t hb_last = 0, pose_last = 0;
+  uint16_t hb_seq = 0;
+  uint8_t last_quality = 0;
+  uint64_t n_hb_viop = 0;
+  void hb_tick(bool initialized, bool lost, bool stopping = false) {
+    if (fd < 0 || proto != 1 || hb_hz <= 0.0) return;
+    const int64_t now = boot_ns();
+    if (!stopping && now - hb_last < static_cast<int64_t>(1e9 / hb_hz)) return;
+    hb_last = now;
+    viop_heartbeat_t hb;
+    std::memset(&hb, 0, sizeof(hb));
+    hb.t_phone_us = static_cast<uint64_t>(now / 1000);
+    hb.state = stopping ? VIOP_HB_STOPPING : !initialized ? VIOP_HB_STARTING : lost ? VIOP_HB_LOST : VIOP_HB_TRACKING;
+    const int64_t imu_age = imu_rx_boot ? (now - imu_rx_boot) / 1000000 : 65535;
+    const int64_t pose_age = pose_last ? (now - pose_last) / 1000000 : 65535;
+    hb.flags = static_cast<uint8_t>((stopping ? VIOP_HBF_STOPPING : 0) | (imu_age > 100 ? VIOP_HBF_IMU_STALE : 0) |
+                                    (pose_age > 200 ? VIOP_HBF_POSE_STALE : 0));
+    hb.imu_age_ms = static_cast<uint16_t>(std::min<int64_t>(65535, imu_age));
+    hb.pose_age_ms = static_cast<uint16_t>(std::min<int64_t>(65535, pose_age));
+    hb.hb_period_ms = static_cast<uint16_t>(std::min(65535.0, 1000.0 / hb_hz));
+    hb.reset_counter = reset_counter;
+    hb.quality = last_quality;
+    uint8_t fr[VIOP_MAX_FRAME];
+    const int fs = viop_build(fr, VIOP_T_HEARTBEAT, VIOP_SRC_PHONE, hb_seq++, &hb, sizeof(hb));
+    if (send_raw(fr, static_cast<size_t>(fs))) n_hb_viop++;
+  }
+
   bool viop_reset_pending = true;
   static uint16_t sat16(double v) { return static_cast<uint16_t>(std::max(0.0, std::min(65535.0, std::round(v)))); }
   void emit_viop(const void *sys_epoch, int64_t t_pred_ns, int64_t t_state_ns, const Eigen::Matrix3d &R_ItoG,
@@ -406,6 +436,8 @@ struct Out {
     const int fs = viop_build(fr, VIOP_T_POSE, VIOP_SRC_PHONE, static_cast<uint16_t>(viop_seq++ & 0xffff), &k, sizeof(k));
     const bool ok = send_raw(fr, static_cast<size_t>(fs));
     const int64_t now = boot_ns();
+    pose_last = now;
+    last_quality = static_cast<uint8_t>(quality);
     if (ok) n_sent++; else n_fail++;
     const double age = (t_send - t_pred) * 1e-6, im = imu_rx_boot ? (now - imu_rx_boot) * 1e-6 : -1.0;
     if (age_ms.size() < 2000000) { age_ms.push_back(static_cast<float>(age)); int_ms.push_back(static_cast<float>(im)); }
@@ -426,7 +458,7 @@ struct Out {
     std::fprintf(stderr, "[ov_bridge] %s: udp %s:%d msgs %d mount %s | sent %llu fail %llu heartbeat %llu timesync %llu | "
                  "age ms (send - predicted instant%s) p50 %.2f p95 %.2f max %.2f | send - newest IMU receive ms p50 %.2f "
                  "p95 %.2f max %.2f\n", proto == 1 ? "viop" : "mav", host.c_str(), port, msgs, mount_name.c_str(), static_cast<unsigned long long>(n_sent),
-                 static_cast<unsigned long long>(n_fail), static_cast<unsigned long long>(n_hb),
+                 static_cast<unsigned long long>(n_fail), static_cast<unsigned long long>(proto == 1 ? n_hb_viop : n_hb),
                  static_cast<unsigned long long>(n_ts), replay_time ? ", replay-timed" : "", q(age_ms, 0.5), q(age_ms, 0.95),
                  q(age_ms, 1.0), q(int_ms, 0.5), q(int_ms, 0.95), q(int_ms, 1.0));
   }

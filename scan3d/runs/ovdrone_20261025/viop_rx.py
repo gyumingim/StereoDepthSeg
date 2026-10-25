@@ -23,7 +23,7 @@ import time
 
 SYNC = b"\xA5\x5A"
 VER = 2
-T_POSE, T_TREQ, T_TRESP = 0x01, 0x10, 0x11
+T_POSE, T_HB, T_TREQ, T_TRESP = 0x01, 0x02, 0x10, 0x11
 POSE_FMT = "<QIHH3f3f4h3f3H3H3HBBH"
 assert struct.calcsize(POSE_FMT) == 82
 POSE_F = ["t_pred_us", "send_delay_us", "horizon_100us", "flags", "px", "py", "pz", "vx", "vy", "vz", "qw", "qx", "qy", "qz",
@@ -104,6 +104,8 @@ class Cap:
         self.fp.write("pc_ns,src,seq," + ",".join(POSE_F) + "\n")
         self.fq = open(os.path.join(out, "ping.csv"), "w")
         self.fq.write("pc_send_ns,pc_recv_ns,phone_rx_ns,rtt_ms\n")
+        self.fh = open(os.path.join(out, "hb.csv"), "w")
+        self.fh.write("pc_ns,seq,t_phone_us,state,flags,imu_age_ms,pose_age_ms,period_ms,reset_counter,quality\n")
         self.n = 0
         self.types = {}
 
@@ -114,6 +116,9 @@ class Cap:
             v = pose(pl)
             self.n += 1
             self.fp.write(f"{pc},{src},{seq}," + ",".join(repr(v[k]) for k in POSE_F) + "\n")
+        elif typ == T_HB and len(pl) == 18:
+            t, stt, fl, ia, pa, per, rc, q = struct.unpack("<QBBHHHBB", pl)
+            self.fh.write(f"{pc},{seq},{t},{stt},{fl},{ia},{pa},{per},{rc},{q}\n")
         elif typ == T_TRESP and len(pl) == 16:
             treq, tph = struct.unpack("<QQ", pl)
             if treq in pend:
@@ -121,7 +126,7 @@ class Cap:
                 self.fq.write(f"{treq},{pc},{tph},{(pc - treq) / 1e6:.3f}\n")
 
     def close(self, meta):
-        for f in (self.raw, self.fp, self.fq):
+        for f in (self.raw, self.fp, self.fq, self.fh):
             f.close()
         meta.update(made=time.strftime("%F %T"), pose_frames=self.n, types={hex(k): c for k, c in self.types.items()},
                     clock="time.perf_counter_ns", argv=sys.argv)
@@ -145,7 +150,7 @@ def listen(a):
             next_ping = time.perf_counter() + a.ping_period
         try:
             d, addr = s.recvfrom(2048)
-        except socket.timeout:
+        except (socket.timeout, ConnectionResetError):  # Windows: ICMP port unreachable after the sender exits
             continue
         pc = time.perf_counter_ns()
         cap.raw.write(struct.pack("<qH", pc, len(d)) + d)
@@ -284,6 +289,20 @@ def check(a):
         att_std_deg_p50=[round(math.degrees(pct([r[k] for r in v], .5) * 1e-4), 3) for k in ("sa_x", "sa_y", "sa_z")],
         quality_min_p50=[int(min(r["quality"] for r in v)), int(pct([r["quality"] for r in v], .5))],
         n_feat_p50=int(pct([r["n_feat"] for r in v], .5)), flags=flags, reset_counters=sorted(set(int(r["reset_counter"]) for r in v)))
+    hp = os.path.join(D, "hb.csv")
+    if os.path.exists(hp):
+        hb = read_csv(hp)
+        if len(hb) > 2:
+            g = [(hb[i + 1]["pc_ns"] - hb[i]["pc_ns"]) / 1e6 for i in range(len(hb) - 1)]
+            st = {}
+            for r in hb:
+                st[int(r["state"])] = st.get(int(r["state"]), 0) + 1
+            hs = [int(r["seq"]) for r in hb]
+            rep["heartbeat"] = dict(n=len(hb), per_s=round((len(hb) - 1) / ((hb[-1]["pc_ns"] - hb[0]["pc_ns"]) / 1e9), 2),
+                                    gap_ms_p50=round(pct(g, .5), 2), gap_ms_p95=round(pct(g, .95), 2), gap_ms_max=round(max(g), 2),
+                                    lost_by_seq=sum((hs[i + 1] - hs[i] - 1) % 65536 for i in range(len(hs) - 1)),
+                                    states={k: c for k, c in sorted(st.items())}, last_state=int(hb[-1]["state"]),
+                                    last_flags=int(hb[-1]["flags"]), imu_age_ms_p95=pct([r["imu_age_ms"] for r in hb], .95))
     # gravity check needs the specific force: not in the packet; use the bridge's --viop-log (f_I in IMU frame)
     if a.bridge_log and os.path.exists(a.bridge_log):
         bl = read_csv(a.bridge_log)

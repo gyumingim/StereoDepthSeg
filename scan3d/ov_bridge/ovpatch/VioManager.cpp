@@ -411,7 +411,7 @@ void VioManager::track_image_and_update(const ov_core::CameraData &message_const
   }
 
   // scan3d rs_derot: rolling-shutter de-rotation of this frame's new measurements (off = not called)
-  if (ovopt::g.rs_derot != 0) {
+  if (ovopt::g.rs_derot != 0 && (!ovopt::g.rs_postinit || is_initialized_vio)) {
     rs_correct(this, message, state, trackFEATS, is_initialized_vio);
   }
   rT2 = boost::posix_time::microsec_clock::local_time();

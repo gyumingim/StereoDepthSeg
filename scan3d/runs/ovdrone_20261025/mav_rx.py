@@ -113,7 +113,7 @@ def listen(a):
             next_ts = now + a.ts_period
         try:
             d, addr = s.recvfrom(2048)
-        except socket.timeout:
+        except (socket.timeout, ConnectionResetError):  # Windows: ICMP port unreachable after the sender exits
             continue
         pc = time.perf_counter_ns()
         raw.write(struct.pack("<qH", pc, len(d)) + d)

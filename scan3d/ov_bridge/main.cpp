@@ -16,6 +16,10 @@
 //   cam_down or 9 numbers R_body<-imu), covariance, time base: mav_out.h header and runs/ovdrone_20261025/README.md.
 //   --mav-log FILE = one CSV row per sent prediction (incl. send age and the body-frame accelerometer for the gravity
 //   check). stderr "[ov_bridge] mav: ..." (frame alignment per (re)init, end summary with send-age percentiles).
+// --viop-udp HOST:PORT (2026-10-25, ovdrone; default off): instead of MAVLink, the custom VIOP v2 link of viop_proto.h for
+//   the ESP32-S3 flight firmware: one POSE frame (92 B) per prediction + HEARTBEAT frames (--viop-hb-hz, default 20, sent
+//   from the main input loop on IMU records, so they stop when the feed stops / the bridge hangs; 3 "stopping"
+//   heartbeats on a clean exit) + TIME_RESP replies. --viop-log FILE, --viop-replay-time 0|1 as for MAVLink.
 //
 // --idle-spin 3 / --idle-spin-ms W (2026-10-25, ovopt, heat; both default off = unchanged): 3 = like 2 (whole pool
 //   waits busy) but between the input polls every stripe waits for an event (aarch64 LDAXR + WFE on the shared "go"
@@ -221,6 +225,7 @@ struct Args {
   double drop_late_ms = 0.0;  // --drop-late MS (header; 0 = off)
   std::string mav_udp;        // --mav-udp HOST:PORT (header; "" = off)
   std::string viop_udp;       // --viop-udp HOST:PORT (header; "" = off)
+  double viop_hb_hz = 20.0;   // --viop-hb-hz (VIOP heartbeat rate; 0 = none)
   std::string mav_msg = "odom", mav_mount = "imu", mav_log;
   int mav_yaw_align = 1, mav_replay_time = 0, mav_sysid = 1;
 };
@@ -674,7 +679,10 @@ public:
         return true;
       }
       on_imu(buf.data(), out);
-      if (g_mav && have_t0_) g_mav->note_imu(t0_ns_ + static_cast<int64_t>(std::llround(newest_imu_t_ * 1e9)));
+      if (g_mav && have_t0_) {
+        g_mav->note_imu(t0_ns_ + static_cast<int64_t>(std::llround(newest_imu_t_ * 1e9)));
+        g_mav->hb_tick(sys_ && sys_->initialized(), lost_);  // VIOP heartbeat from the main loop (stops if the feed stops)
+      }
       return true;
     case kStereo:
       on_stereo(buf, out);
@@ -1554,6 +1562,7 @@ int main(int argc, char **argv) {
     else if (s == "--viop-udp") a.viop_udp = next();
     else if (s == "--viop-replay-time") a.mav_replay_time = std::stoi(next());
     else if (s == "--viop-log") a.mav_log = next();
+    else if (s == "--viop-hb-hz") a.viop_hb_hz = std::stod(next());
     else if (s == "--mav-msg") a.mav_msg = next();
     else if (s == "--mav-mount") a.mav_mount = next();
     else if (s == "--mav-yaw-align") a.mav_yaw_align = std::stoi(next());
@@ -1632,6 +1641,8 @@ int main(int argc, char **argv) {
       if (!mo->msgs) err = "--mav-msg must be odom, vpe or both";
     }
     mo->yaw_align = a.mav_yaw_align != 0;
+    mo->hb_hz = a.viop_hb_hz;
+    if (viop && (a.viop_hb_hz < 0.0 || a.viop_hb_hz > 200.0)) err = "--viop-hb-hz must be in [0, 200]";
     mo->replay_time = a.mav_replay_time != 0;
     mo->sysid = a.mav_sysid;
     if (err.empty() && !a.mav_log.empty() && !(mo->log = std::fopen(a.mav_log.c_str(), "w"))) err = "cannot open --mav-log";
@@ -1677,6 +1688,7 @@ int main(int argc, char **argv) {
     b.log_drop();
     b.log_rs();
     if (g_mav) {
+      for (int i = 0; i < 3; i++) g_mav->hb_tick(false, false, true);  // VIOP: "stopping" heartbeats on a clean exit
       g_mav->report();
       g_mav->close();
     }

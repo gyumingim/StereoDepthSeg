@@ -40,6 +40,7 @@ struct Flags {
                        // row time. Value = sensor readout time first->last row in microseconds (signed, > 0 = top row of
                        // the fed image first); 1 = the live default 6540 us (S24 main lens 1920x1080 @30, meta first_result
                        // skew_ns 6539...). 0 = off (upstream code path).
+  int rs_postinit = 0; // rs_derot only after the VIO is initialised (the initialiser sees raw measurements); 0 = always
   int rs_row_ppm = 0;  // rs_derot without a bridge row map (no --remap): fed-row fraction -> sensor-row fraction multiplier
                        // x 1e6 (undistort crop: fy_raw*H_fed/(fy_fed*H_raw)); 0 = 1.0. Ignored when the bridge set rs_map.
   // --- profiling ---

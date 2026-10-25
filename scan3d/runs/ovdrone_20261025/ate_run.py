@@ -52,6 +52,7 @@ CONDS = {
     "R294": dict(ovopt="rs_derot=2940,rs_row_ppm=985322"),     # RS de-rotation, HS skew 2.94 ms
     "R294F": dict(ovopt="rs_derot=-2940,rs_row_ppm=985322"),   # control: wrong sign (bottom row first)
     "R221": dict(ovopt="rs_derot=2205,rs_row_ppm=985322"),     # 0.75 x skew (N/H rule, docs/rs_correction_plan.md)
+    "R294P": dict(ovopt="rs_derot=2940,rs_row_ppm=985322,rs_postinit"),  # RS only after initialisation (not run yet)
 }
 
 
