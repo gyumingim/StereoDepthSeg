@@ -1,9 +1,9 @@
-/* fs_viop.h — glue between VIOP frames (viop_proto.h + viop_fc_ext.h) and fc_safety. Header-only, pure C. */
+/* fs_viop.h — glue between VIOP frames (viop_proto.h) and fc_safety. Header-only, pure C. */
 #ifndef FS_VIOP_H
 #define FS_VIOP_H
 
 #include "fc_safety.h"
-#include "viop_fc_ext.h"
+#include "viop_proto.h"
 
 /* fc_safety.c hard-codes these values (to stay independent of the protocol header): keep them in sync */
 typedef char fs_viop_chk1[(VIOP_F_VALID == 0x0001u && VIOP_F_TRACKING == 0x0002u) ? 1 : -1];

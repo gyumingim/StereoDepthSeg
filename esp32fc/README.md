@@ -84,7 +84,7 @@ esp32fc/
     fc_safety/       PURE C safety state machine (unit-tested on PC)
     fc_core/         PURE C Mahony, vertical-speed estimator, PID, attitude/position control, quad-X mixer,
                      phone IMU stream (jitter/gap), PWM pulse/duty helpers
-    viop/            viop_proto.h (copy from ovdrone) + viop_fc_ext.h (proposed FC + IMU message types)
+    viop/            viop_proto.h (copy of scan3d/ov_bridge/viop_proto.h; FC + IMU message types merged in, integ-20261025)
   test/              `make run` (unit tests), `make syntax` (firmware -fsyntax-only, 6 build variants, IDF stubs)
 ```
 
@@ -219,7 +219,7 @@ Results printed by the tests (sim, 1 run each):
 ## 7. Protocol / integration notes
 
 - `viop_proto.h` is a copy of ovdrone's header (bc65b93 + their uncommitted HEARTBEAT 0x02). **Merge point:** replace it with ovdrone's committed version.
-- **New proposed type `VIOP_T_IMU` 0x06** (in `viop_fc_ext.h`):
+- **New proposed type `VIOP_T_IMU` 0x06** (now in `viop_proto.h`; viop_fc_ext.h merged and deleted by integ-20261025):
   - Layout: u64 t0_us, u8 n (1..5), u8 flags (bias-corrected / uncalibrated), u16 sample_seq0, then n × {u16 dt_us, i16 gyro[3] at 1e-3 rad/s, i16 acc[3] at 5e-3 m/s²}.
   - Axes are phone IMU axes (Android). n = 1 gives a 36 B frame; at 500 Hz that is 18 kB/s, far below USB full speed. **n = 1 is recommended**, because batching adds 2 ms per extra sample.
 - **The phone-side IMU sender is NOT implemented** (ovdrone / integration). It should:
