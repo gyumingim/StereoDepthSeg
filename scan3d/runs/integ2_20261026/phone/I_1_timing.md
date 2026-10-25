@@ -1,3 +1,5 @@
+> **INVALID for timing (integ2 + verifier 2026-10-26):** the t_* runs were hit by phone suspend (BOOTTIME rx lag +1.5..11.7 s) and --drop-late 50 dropped 79-1600 frames (t_O_r1: 2 tracking poses), so the N/O rows compare different frame sets. Use I_2_timing.md (drop-late 0). d_m0/d_m1 here are the drop-late shift A/B (timing columns not meaningful).
+
 # phone replay out_I_1 (made 2026-10-26 06:02, input out_I_1)
 
 feed_ms = VIO processing per frame (tl.csv, frames with init=1); parts = p50 on frames with n_slam>0 (prof.csv).
