@@ -22,7 +22,7 @@ Window >= 20 ms is as fast as full spin with fewer busy cores (1.55 vs 1.88).
 | D_off_r1 | off | AC charging | 28.8/51.5 | 3744/4141 | - | 1632 | launcher |
 | D_off_r2 | off | battery | 22.1/37.4 | 927/9241 | - | 2208 | screen dozing |
 | D_50_r1 | 50 | battery | 19.6/30.1 | 34.6/106 | 4 | 1632 | notification shade (user active in Brave just before/after) |
-| D_100_r1 | 100 | battery | 23.9/41.7 | 125/171 | 81 | 1824 | screen dozing |
+| D_100_r1 | 100 | battery | 23.9/41.7 | 125/171 | 80 (po.jsonl; stderr says 81) | 1824 | screen dozing |
 Without drop-late the backlog never recovers (lag seconds); drop-late 50 keeps lag ~35 ms with 4 dropped frames.
 D_50_r1 ran 18:18-18:20 from an orphan runner WITHOUT the team phone lock (previous instance killed); no other phone
 job was logged then (unverified). D_100_r1 / D_off_r2 ran under the lock (18:27-18:30). Clock caps differ between runs
