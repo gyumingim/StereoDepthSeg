@@ -300,6 +300,19 @@ struct InQueue {
   std::atomic<int> n{0};
   int pending_img = 0;
   uint64_t space_waits = 0;
+  std::vector<std::vector<uint8_t>> freeb;  // big record buffers handed back by the main thread (reused by the reader)
+  std::vector<uint8_t> take_buf() {
+    std::lock_guard<std::mutex> lk(m);
+    if (freeb.empty()) return {};
+    std::vector<uint8_t> b = std::move(freeb.back());
+    freeb.pop_back();
+    return b;
+  }
+  void give_buf(std::vector<uint8_t> &&b) {
+    if (b.capacity() < (1u << 20)) return;
+    std::lock_guard<std::mutex> lk(m);
+    if (freeb.size() < 4) freeb.push_back(std::move(b));
+  }
   void push(InRec &&r) {
     {
       std::lock_guard<std::mutex> lk(m);
@@ -709,6 +722,12 @@ public:
     snap_.valid = false;
     frame_due_ = false;
   }
+  void reset_imu() {  // RESET record (the bridge restarts its IMU time check too)
+    std::lock_guard<std::mutex> lk(m_);
+    imu_.clear();
+    newest_ = INT64_MIN;
+    next_due_ = 0;
+  }
   void log() const {
     std::vector<float> e = us_, h = h_;
     std::sort(e.begin(), e.end());
@@ -723,6 +742,9 @@ public:
                  static_cast<unsigned long long>(n_rate_), static_cast<unsigned long long>(n_snap_), q(e, 0.5), q(e, 0.95),
                  e.empty() ? -1.0 : static_cast<double>(e.back()), q(h, 0.5), q(h, 0.95),
                  h.empty() ? -1.0 : static_cast<double>(h.back()), cpu_s_, reader_cpu_s);
+    if (check_)
+      std::fprintf(stderr, "[ov_bridge] pred thread check (OVB_PRED_CHECK): incremental vs from scratch %llu compared, %llu differ\n",
+                   static_cast<unsigned long long>(n_check_), static_cast<unsigned long long>(n_check_bad_));
   }
   double reader_cpu_s = 0.0;  // set by the reader thread at its end
 
@@ -739,6 +761,7 @@ private:
       if (stop_) break;
       const bool frame = frame_due_;
       frame_due_ = false;
+      const uint64_t gen = n_snap_;
       const int64_t t1n = newest_;
       if (mode_ == 2 && t1n >= next_due_)  // rate grid on IMU time: mean rate = hz (restart after a gap)
         next_due_ = (next_due_ <= 0 || t1n >= next_due_ + period_ns_) ? t1n + period_ns_ : next_due_ + period_ns_;
@@ -746,38 +769,70 @@ private:
       // IMU samples after the state time (+ the one before it, for the interpolated first sample), up to t1n
       const double time0 = s.t_state + s.t_off, time1 = (t1n - s.t0_ns) * 1e-9;
       d.clear();
-      bool have_before = false;
-      ov_core::ImuData before;
-      size_t i0 = imu_.size();
-      while (i0 > 0 && (imu_[i0 - 1].t_ns - s.t0_ns) * 1e-9 > time0) i0--;
-      if (i0 > 0) {
-        const auto &b = imu_[i0 - 1];
-        before.timestamp = (b.t_ns - s.t0_ns) * 1e-9;
-        before.wm = b.wm;
-        before.am = b.am;
-        have_before = true;
-      }
-      for (size_t i = i0; i < imu_.size(); i++) {
-        ov_core::ImuData m;
-        m.timestamp = (imu_[i].t_ns - s.t0_ns) * 1e-9;
-        m.wm = imu_[i].wm;
-        m.am = imu_[i].am;
-        if (m.timestamp > time1) break;
-        if (d.empty()) {
-          ov_core::ImuData f = m;
-          if (have_before && m.timestamp > before.timestamp) {
-            double w = (time0 - before.timestamp) / (m.timestamp - before.timestamp);
-            f.wm = (1 - w) * before.wm + w * m.wm;
-            f.am = (1 - w) * before.am + w * m.am;
-          }
-          f.timestamp = time0;
-          d.push_back(f);
+      const bool cont = have_cache_ && cache_gen_ == gen && cache_last_.timestamp <= time1;
+      if (cont) {  // only the samples after the last integrated one
+        d.push_back(cache_last_);
+        size_t j = imu_.size();
+        while (j > 0 && (imu_[j - 1].t_ns - s.t0_ns) * 1e-9 > cache_last_.timestamp) j--;
+        for (; j < imu_.size(); j++) {
+          ov_core::ImuData m;
+          m.timestamp = (imu_[j].t_ns - s.t0_ns) * 1e-9;
+          if (m.timestamp > time1) break;
+          m.wm = imu_[j].wm;
+          m.am = imu_[j].am;
+          d.push_back(m);
         }
-        d.push_back(m);
       }
+      auto full_gather = [&](std::vector<ov_core::ImuData> &out) {  // samples from the snapshot time (interpolated start)
+        bool have_before = false;
+        ov_core::ImuData before;
+        size_t i0 = imu_.size();
+        while (i0 > 0 && (imu_[i0 - 1].t_ns - s.t0_ns) * 1e-9 > time0) i0--;
+        if (i0 > 0) {
+          const auto &bb = imu_[i0 - 1];
+          before.timestamp = (bb.t_ns - s.t0_ns) * 1e-9;
+          before.wm = bb.wm;
+          before.am = bb.am;
+          have_before = true;
+        }
+        for (size_t i = i0; i < imu_.size(); i++) {
+          ov_core::ImuData m;
+          m.timestamp = (imu_[i].t_ns - s.t0_ns) * 1e-9;
+          m.wm = imu_[i].wm;
+          m.am = imu_[i].am;
+          if (m.timestamp > time1) break;
+          if (out.empty()) {
+            ov_core::ImuData f = m;
+            if (have_before && m.timestamp > before.timestamp) {
+              double w = (time0 - before.timestamp) / (m.timestamp - before.timestamp);
+              f.wm = (1 - w) * before.wm + w * m.wm;
+              f.am = (1 - w) * before.am + w * m.am;
+            }
+            f.timestamp = time0;
+            out.push_back(f);
+          }
+          out.push_back(m);
+        }
+      };
+      if (!cont) full_gather(d);
+      std::vector<ov_core::ImuData> dfull;
+      if (check_ && cont) full_gather(dfull);  // OVB_PRED_CHECK=1: incremental vs from-scratch
       lk.unlock();
       const auto c0 = std::chrono::steady_clock::now();
-      std::string line = compute(s, d, frame ? "frame" : "rate");
+      std::string line = compute(s, d, frame ? "frame" : "rate", cont);
+      cache_gen_ = gen;
+      if (check_ && cont) {  // the incremental result must equal the from-scratch one bit for bit
+        const Eigen::Matrix<double, 16, 1> xi = cache_x_;
+        const auto keep_last = cache_last_;
+        const int keep_n = cache_n_;
+        compute(s, dfull, "check", false);
+        n_check_++;
+        if (!(cache_x_.array() == xi.array()).all()) n_check_bad_++;
+        cache_x_ = xi;
+        cache_last_ = keep_last;
+        cache_n_ = keep_n;
+        have_cache_ = true;
+      }
       const float us = std::chrono::duration<float, std::micro>(std::chrono::steady_clock::now() - c0).count();
       {
         std::lock_guard<std::mutex> lo(g_out_m);
@@ -793,8 +848,9 @@ private:
     cpu_s_ = ts.tv_sec + ts.tv_nsec * 1e-9;
   }
   // = Bridge::predict (same mean equations as Propagator::fast_state_propagate), from a snapshot
-  std::string compute(const PredSnap &s, const std::vector<ov_core::ImuData> &d, const char *src) {
-    Eigen::Matrix<double, 16, 1> x = s.x;
+  std::string compute(const PredSnap &s, const std::vector<ov_core::ImuData> &d, const char *src, bool cont) {
+    Eigen::Matrix<double, 16, 1> x = cont ? cache_x_ : s.x;
+    const int n_prev = cont ? cache_n_ : 0;
     const Eigen::Vector3d bg = x.block(10, 0, 3, 1), ba = x.block(13, 0, 3, 1);
     const Eigen::Vector3d grav(0.0, 0.0, s.grav);
     for (size_t i = 0; i + 1 < d.size(); i++) {
@@ -812,7 +868,14 @@ private:
       x.block(7, 0, 3, 1) = v + R.transpose() * a * dt - grav * dt;
     }
     const double time0 = s.t_state + s.t_off;
-    const double h = d.size() >= 2 ? d.back().timestamp - time0 : 0.0;
+    if (!d.empty()) {  // cache for the next prediction from the same snapshot
+      cache_x_ = x;
+      cache_last_ = d.back();
+      cache_n_ = n_prev + static_cast<int>(d.size()) - 1;
+      have_cache_ = true;
+    } else
+      have_cache_ = false;
+    const double h = cont ? (d.empty() ? 0.0 : d.back().timestamp - time0) : (d.size() >= 2 ? d.back().timestamp - time0 : 0.0);
     last_h_ = h;
     Eigen::Vector4d q_GtoI = x.block(0, 0, 4, 1);
     Eigen::Matrix3d R_ItoG = ov_core::quat_2_Rot(q_GtoI).transpose();
@@ -831,8 +894,8 @@ private:
     jnum(o, s.t_state);
     o << ",\"h\":";
     jnum(o, h);
-    o << ",\"n_imu\":" << (d.empty() ? 0 : d.size() - 1) << ",\"src\":\"" << src << "\",\"status\":\""
-      << (s.lost ? "lost" : "tracking") << "\",\"p\":";
+    o << ",\"n_imu\":" << (cont ? cache_n_ : (d.empty() ? 0 : static_cast<int>(d.size()) - 1)) << ",\"src\":\"" << src
+      << "\",\"status\":\"" << (s.lost ? "lost" : "tracking") << "\",\"p\":";
     jarr(o, p_IinG);
     o << ",\"q\":[";
     jnum(o, qh.x()); o << ","; jnum(o, qh.y()); o << ","; jnum(o, qh.z()); o << ","; jnum(o, qh.w());
@@ -861,6 +924,14 @@ private:
   uint64_t n_frame_ = 0, n_rate_ = 0, n_snap_ = 0;
   std::vector<float> us_, h_;
   double last_h_ = 0.0, cpu_s_ = 0.0;
+  // incremental prediction cache (prediction thread only)
+  bool check_ = std::getenv("OVB_PRED_CHECK") != nullptr;
+  uint64_t n_check_ = 0, n_check_bad_ = 0;
+  bool have_cache_ = false;
+  uint64_t cache_gen_ = ~0ull;
+  Eigen::Matrix<double, 16, 1> cache_x_;
+  ov_core::ImuData cache_last_;
+  int cache_n_ = 0;
 };
 
 class Bridge {
@@ -1803,8 +1874,8 @@ void reader_main(int fd, InQueue *q, Predictor *pred) {
     if (chunk) {
       if (!ca_active) {
         ca_active = true;
+        ca = q->take_buf();  // reuse (capacity kept, no new pages)
         ca.clear();
-        ca.reserve(4u << 20);
         ca_hb = tb;
         ca_hm = tm;
       }
@@ -1828,6 +1899,7 @@ void reader_main(int fd, InQueue *q, Predictor *pred) {
     }
     InRec r;
     r.type = hdr[1];
+    if (hdr[2] >= (1u << 20)) r.buf = q->take_buf();  // unchunked image: reuse a buffer
     r.buf.resize(hdr[2]);
     if (hdr[2] && !read_full(fd, r.buf.data(), hdr[2])) break;
     r.t_hdr_boot = tb;
@@ -1872,6 +1944,7 @@ bool serve_q(Bridge &b, int in_fd, int out_fd, Predictor *pred) {
       break;
     }
     if (r.type == kStereo && g_idle.win_ms > 0.0) g_idle.note_frame(r.t_hdr_mono);
+    if (r.type == kReset && pred) pred->reset_imu();  // (IMU read after the RESET may already be in: dropped once, rare)
     b.set_rx(r.t_hdr_boot, r.t_rx_boot, g_idle.mode ? g_idle.last_wait_us : -1.0, g_idle.last_exit_us);
     out.clear();
     bool cont = true;
@@ -1885,6 +1958,7 @@ bool serve_q(Bridge &b, int in_fd, int out_fd, Predictor *pred) {
       std::fprintf(stderr, "[ov_bridge] unhandled exception: %s\n", e.what());
       out += "{\"type\":\"error\",\"msg\":" + jstr(std::string("exception: ") + e.what()) + "}\n";
     }
+    q->give_buf(std::move(r.buf));  // handle() keeps no pointer into the record (frame_nocopy: remap output owns pixels)
     if (!out.empty()) {
       std::lock_guard<std::mutex> lo(g_out_m);
       if (!write_full(out_fd, out, false)) {
@@ -2081,13 +2155,16 @@ int main(int argc, char **argv) {
   apply_affinity(g_pinned ? &g_pin : nullptr, "ready");
   if (!a.tcp) {
     if (a.pred_thread) {  // --pred-thread (2026-10-25)
-      Predictor pr(a.predict, a.predict_hz, a.pose_precision, out_fd, false);
-      serve_q(b, STDIN_FILENO, out_fd, &pr);
-      pr.log();
-    } else
+      // heap, never freed: after an output write failure the reader thread is detached and may still use it
+      auto *pr = new Predictor(a.predict, a.predict_hz, a.pose_precision, out_fd, false);
+      serve_q(b, STDIN_FILENO, out_fd, pr);
+      pr->log();
+      if (g_imu_log) std::fflush(g_imu_log);  // not closed: same reason (closed by process exit)
+    } else {
       serve(b, STDIN_FILENO, out_fd, false);
-    if (g_imu_log) std::fclose(g_imu_log);
-    g_imu_log = nullptr;
+      if (g_imu_log) std::fclose(g_imu_log);
+      g_imu_log = nullptr;
+    }
     apply_affinity(g_pinned ? &g_pin : nullptr, "end");
     if (g_idle.mode) g_idle.log("end");
     b.log_predict();

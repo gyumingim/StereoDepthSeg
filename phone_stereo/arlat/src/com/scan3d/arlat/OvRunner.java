@@ -115,9 +115,11 @@ import java.util.concurrent.LinkedBlockingQueue;
  * 0.6.19 (branch ovopt-20261025; every default = 0.6.18 behaviour): intent imu_prio 1 = IMU records never wait behind an
  * image write: IMU go to their own queue, the writer sends all waiting IMU first, then the image as 64 KB chunk records
  * (types 5/6, scan3d/ov_bridge/main.cpp header) with the IMU that arrived meanwhile written between the chunks, flushing
- * after every IMU batch. An IMU sample is sent ahead of a pending image only if t_imu <= t_image + 200 ms (the bridge holds
- * IMU <= 250 ms waiting for a camera, so the bridge feeds OpenVINS the identical sequence; PC check with reordered
- * streams). intent pred_thread (default 1, used with predict 2) = ov_bridge --pred-thread 1 (input reader + prediction
+ * after every IMU batch. An IMU sample is sent ahead of an image already queued in the app only if t_imu <= t_image +
+ * 200 ms (the bridge holds IMU <= 250 ms waiting for a camera, so the bridge feeds OpenVINS the identical sequence; PC
+ * check with reordered streams). Not covered (same as 0.6.18): an image that reaches onImage > ~250 ms after exposure.
+ * Benefit needs a bridge that reads while it processes a frame (pred_thread with predict 2); the bridge reader stops
+ * reading (IMU too) while 2 images are unprocessed (backlog). intent pred_thread (default 1, used with predict 2) = ov_bridge --pred-thread 1 (input reader + prediction
  * thread: predicted poses also while a frame is processed); pred_thread 0 = the 0.6.18 predict 2. intent imu_log 1
  * (timing only): imu_samples.csv (every sensor event: type, event.timestamp, elapsedRealtimeNanos in onSensorChanged; ring
  * of the last 2^19), imu_enq.csv (IMU record t_ns, queued), imu_writes.csv (t_ns, writer dequeued, write/flush call that
@@ -842,7 +844,7 @@ class OvRunner implements SensorEventListener {
             sent.put(tSend, new long[]{ts, now});
             if (sent.size() > 300) { final long old = tSend - 2_000_000_000L; sent.keySet().removeIf(k -> k < old); }
             if (!toBridge.offer(buf)) { fate = 2; camDropped++; pool.offer(buf); }
-            else { enq = SystemClock.elapsedRealtimeNanos(); wake.release(); }   // 0.6.19: wake the imu_prio writer
+            else { enq = SystemClock.elapsedRealtimeNanos(); if (imuPrio > 0) wake.release(); }   // 0.6.19: wake the imu_prio writer
             if (fate == 0 && !fed) {
                 fed = true;
                 try { meta.put("first_fed_elapsed_ns", now).put("first_fed_t_sensor_ns", ts); } catch (Exception ignored) { }
