@@ -1,0 +1,5 @@
+# timing0626 W2 (block 2): N = new rec20261025 profile (+sym_inplace,ekf_sparse), O = old ovopt; drop-late 0; ABBA
+w_N_r3 ov_bridge_integ2 c4 2 f4 --profile rec20261025 --drop-late 0 --prof-log @O@/prof.csv
+w_O_r3 ov_bridge_integ2 c4 2 f4 --profile rec20261025 --drop-late 0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --prof-log @O@/prof.csv
+w_O_r4 ov_bridge_integ2 c4 2 f4 --profile rec20261025 --drop-late 0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --prof-log @O@/prof.csv
+w_N_r4 ov_bridge_integ2 c4 2 f4 --profile rec20261025 --drop-late 0 --prof-log @O@/prof.csv
