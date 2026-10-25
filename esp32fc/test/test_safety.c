@@ -38,6 +38,7 @@ typedef struct {
   bool hb_freeze_seq;
   uint16_t pose_seq, hb_seq;
   float tilt_deg;             /* forced roll */
+  float h_ofs;                /* VIO height error (reported height = z + h_ofs) */
   float batt_v;
   bool kill_switch, overrun, nan_out;
   uint32_t rng;
@@ -159,7 +160,7 @@ static void sim_tick(sim_t *s) {
   in->vz_imu_valid = s->imu_vz_on;
   in->vz_imu = s->vz + 0.03f; /* small estimator error */
   in->height_valid = s->pose_on;
-  in->height_m = s->z;
+  in->height_m = s->z + s->h_ofs;
   in->batt_valid = true;
   in->batt_v = s->batt_v;
   in->kill_switch = s->kill_switch;
@@ -960,6 +961,22 @@ static void t_openloop_cut(void) {
   c.openloop_vio_touch = false;
   r = ol_case(&c, 1.0f, 1.0f, true);
   CHECK(r.t_ground > 0 && (r.reason & FS_R_LAND_TIMEOUT) && !(r.reason & FS_R_TOUCHDOWN));
+
+  /* verifier 2026-10-26 regression: hovering 1 m up while VIO says 0.05 m (took off from a higher surface / VIO height
+   * error): at the tier start vz ~ 0 -> the VIO touchdown must NOT fire before a descent was seen (was: cut at 150 ms) */
+  g_test = "openloop_vio_touch_needs_descent";
+  {
+    sim_t s;
+    fs_config_default(&c);
+    sim_init(&s, &c);
+    fly_to_hover(&s, 2000);
+    s.h_ofs = -0.95f;
+    s.nev = 0;
+    s.imu_ok = s.acc_ok = false;
+    run_ms(&s, 250);
+    CHECK(s.fs.state == FS_EMERG_LAND && s.fs.tier == FS_TIER_OPENLOOP && s.z > 0.9f);
+    CHECK(count_ev(&s, FS_EV_TRANSITION, FS_DISARMED) == 0);
+  }
 }
 
 static bool elapsed_ms_lt(const sim_t *s, uint32_t ms) { return s->t - s->fs.t_tier_ms < ms; }

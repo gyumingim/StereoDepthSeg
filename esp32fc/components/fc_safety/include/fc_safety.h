@@ -34,6 +34,7 @@
  *                    openloop_end_ratio over openloop_end_ramp_s (any remaining height is descended faster, and the
  *                    vehicle sits on the ground at a reduced thrust); motors cut at t_slow + openloop_hold_s.
  *                    In addition, if VIO is still usable (pose + heartbeat ok, e.g. only the IMU frames stopped),
+ *                    after a VIO descent (vz < -openloop_vio_desc_vz) was seen in this tier,
  *                    height < openloop_vio_touch_h and |vz| < touch_vz_max for openloop_vio_touch_ms -> cut.
  *                    openloop_cut_mode 0 (legacy, esp32fc): cut at the estimated touchdown time (constant vz_down)
  *                    * margin + 0.3 s; sim: motors spin ~1.7 s on the ground at 98 % hover from 1 m, and with a
@@ -191,6 +192,7 @@ typedef struct {
   bool openloop_vio_touch;      /* mode 1: touchdown from VIO height / vz while VIO is still usable */
   float openloop_vio_touch_h;   /* m above the takeoff point */
   uint32_t openloop_vio_touch_ms;
+  float openloop_vio_desc_vz;   /* VIO touchdown armed only after VIO vz < -this was seen in the open-loop tier */
   /* takeoff hover recorder (this flight) */
   uint32_t rec_skip_ms;         /* ignore the first part after takeoff (spin-up, ground effect) */
   uint32_t rec_min_ms;          /* record valid after this much stable data */
@@ -288,6 +290,7 @@ typedef struct {
   uint32_t ol_fast_ms, ol_slow_ms; /* mode 1: predicted earliest / latest touchdown (ms after the tier start) */
   bool ol_ramp;                    /* mode 1: end ramp active (t_fast known) */
   bool ol_touch_timing;            /* mode 1: VIO touchdown condition timing */
+  bool ol_desc_seen;               /* mode 1: VIO descent seen in this tier (arms the VIO touchdown) */
   uint32_t t_ol_touch_ms;
   float last_height;
   bool last_height_valid;

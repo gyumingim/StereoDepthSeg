@@ -4,8 +4,8 @@
 
 ## 결론
 1. **폰 IMU 끊김 → OPENLOOP 착륙에서 착지 뒤 모터가 ~1.7 s 도는 문제 고침** (기본값 변경 = 안전 버그 수정).
-   - 예전: 1 m 에서 착지 1.86 s, 모터 끔 3.53 s → 땅에서 hover 98 % 추력으로 1.67 s. 또 기록값이 3 % 높으면 하강이 멈춰 **공중에서 모터가 꺼짐**(1 m → 0.97 m 높이, 2 m → 1.62 m, 낙하 5.6 m/s).
-   - 지금 (`openloop_cut_mode = 1`): 마지막 VIO 높이에서 추력 −3 % / +3 % 두 경우를 미리 계산해 가장 이른/늦은 착지 시각 t_fast / t_slow. t_fast 부터 0.4 s 동안 추력을 hover 의 70 % 로 내리고, t_slow + 0.2 s 에 끔. 폰 pose 가 아직 오면 높이 < 0.10 m · |vz| < 0.2 m/s 가 0.15 s 이면 바로 끔.
+   - 예전: 1 m 에서 착지 1.86 s, 모터 끔 3.53 s → 땅에서 hover 98 % 추력으로 1.67 s. 또 기록값이 3 % 높으면 하강이 멈춰 **공중에서 모터가 꺼짐**(C 시뮬레이션: 1 m → 0.09 m 높이, 2 m → 1.62 m 높이에서 꺼져 5.6 m/s 낙하).
+   - 지금 (`openloop_cut_mode = 1`): 마지막 VIO 높이에서 추력 −3 % / +3 % 두 경우를 미리 계산해 가장 이른/늦은 착지 시각 t_fast / t_slow. t_fast 부터 0.4 s 동안 추력을 hover 의 70 % 로 내리고, t_slow + 0.2 s 에 끔. 폰 pose 가 아직 오면, VIO 로 하강(vz < −0.3 m/s)을 본 뒤에 높이 < 0.10 m · |vz| < 0.2 m/s 가 0.15 s 이면 바로 끔.
    - 하강 속도 0.4 → 0.6 m/s, 순항 추력 0.99 → 0.95 (예전 값으로 되돌리기: `openloop_cut_mode = 0`, `openloop_vz_down = 0.4`, `openloop_cruise_ratio = 0.99`).
 2. **VIOP heartbeat 를 고정 20 Hz 스레드로** (`ov_bridge --viop-hb-src 1`, 앱 intent `viop_hb_src 1`). **기본값 0 = 예전 그대로**(메인 루프).
    - 살아있음 검사 유지: IMU 수신이 100 ms 넘게 없거나 메인 루프가 200 ms 넘게 IMU 를 처리 못 하면 그 박자는 안 보냄 → ESP32 250 ms 제한이 그대로 동작.
@@ -13,8 +13,8 @@
 ## 근거 (PC, 1회씩, 결정적 시뮬레이션은 반복 불필요)
 | 항목 | 예전 | 지금 | 파일 |
 |---|---|---|---|
-| PC 단위시험 | 389 통과 | **510 통과** (ASan/UBSan) | `test_m1b.log` (`test_base.log` = 시작 시점 389) |
-| 펌웨어 문법 검사 6 조합 | 통과 | 통과 | `syntax_m1b.log` |
+| PC 단위시험 | 389 통과 | **516 통과** (ASan/UBSan) | `test_fix2.log` (스윕 수치는 `test_m1b.log` 와 같음) (`test_base.log` = 시작 시점 389) |
+| 펌웨어 문법 검사 6 조합 | 통과 | 통과 | `syntax_fix2.log` |
 | 1 m, 폰 IMU+링크 끊김: 땅에서 도는 시간 | 1667 ms (98 % hover) | 603 ms (85 % 넘는 시간 29 ms) | `test_m1b.log` |
 | 높이 0.3/1/2 m × 추력오차 −3/0/+3 %: 공중에서 꺼짐 | 2/9 (최대 1.62 m) | **0/9** | `test_m1b.log` (`t_openloop_cut`) |
 | 같은 9 경우: 땅에서 85 % hover 넘게 도는 최대 시간 | 3693 ms | 181 ms | 〃 |
@@ -45,6 +45,15 @@ integ 14de3b8 빌드 vs esp32fix 빌드, 시간 키(ms, remap_ms, wait_ms) 뺀 p
 - `esp32fc/README.md`: OPENLOOP 설명·수치.
 - `scan3d/ov_bridge/{mav_out.h, main.cpp}`: `--viop-hb-src 0|1`.
 - `phone_stereo/arlat/.../{MainActivity,OvRunner}.java`: intent `viop_hb_src` (0 이면 명령줄 그대로; meta.json 에 `viop_hb_src` 키 추가).
+
+## 독립 검증 (읽기 전용 에이전트, 22:45)
+- 고친 것 (확인된 버그): VIO 착지 판정이 하강 확인 없이 걸려, 이륙 지점보다 높은 곳 위 호버 또는 VIO 높이 오차 때 공중(1.03 m)에서 150 ms 만에 끌 수 있었음 → 이 비행 단계에서 VIO 하강을 본 뒤에만 판정 (`openloop_vio_desc_vz` 0.3), 회귀 시험 `openloop_vio_touch_needs_descent` 추가. 숫자 불일치 2개(README 0.97 m, 코드 주석 2.98/0.12 s = Python 값) 고침.
+- 남은 위험 (안 고침):
+  - IMU 단계 착륙 중에 OPENLOOP 으로 넘어오면 높이가 낡았고 이미 내려가는 중 → t_fast 전에 닿아 0.95 추력으로 땅에서 돌 수 있음 (예전 코드도 같은 낡은 높이 사용).
+  - 시험의 기체 모델과 예측 모델이 같은 식(추력 ∝ 명령², 공기저항 없음) → 실제 착지는 더 늦을 수 있음.
+  - 띠 계산 비용(ESP32 제어 루프 안 2×1200 반복)은 추정 수백 µs–1 ms, 측정 안 함 (최악 루프 초과 1회).
+  - heartbeat src 1: 메인 루프가 멈추면 ESP32 가 알아채는 데 약 450 ms (src 0 은 약 250 ms, 추정). IMU_STALE 기준이 수신 스레드 시각.
+  - 종료 때 reader 스레드가 g_mav 를 볼 수 있는 경쟁 (출력 쓰기 실패 뒤 프로세스 종료 시에만, 낮음).
 
 ## 확인 안 된 것
 - 실제 기체·ESP32 보드·IDF 빌드 없음 (스텁 문법 검사만). 착지 판정 수치(±3 %, 70 %, 0.6 m/s)는 시뮬레이션 근거만 — 실제 기록 오차 크기 모름.

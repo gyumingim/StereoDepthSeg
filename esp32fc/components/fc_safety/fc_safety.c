@@ -89,7 +89,8 @@ void fs_config_default(fs_config_t *c) {
   c->openloop_thrust_exp = 2.0f;
   c->openloop_acc_down = 1.0f;
   /* esp32fix 2026-10-26: 0.4 -> 0.6 m/s and 0.99 -> 0.95 with cut mode 1 (sim sweep h 0.2-3 m x record error +-3 %:
-   * worst impact 2.98 m/s, no cut in the air, <= 0.12 s on the ground above 85 % hover thrust). Legacy: mode 0, 0.4, 0.99 */
+   * C sim test t_openloop_cut 0.3/1/2 m x +-3 %: worst impact 2.19 m/s, no cut in the air, <= 0.18 s on the ground
+   * above 85 % hover thrust; Python model 0.2-3 m: worst impact 2.98 m/s). Legacy: mode 0, 0.4, 0.99 */
   c->openloop_vz_down = 0.6f;
   c->openloop_cruise_ratio = 0.95f;
   c->openloop_cut_margin = 1.2f;
@@ -102,6 +103,7 @@ void fs_config_default(fs_config_t *c) {
   c->openloop_vio_touch = true;
   c->openloop_vio_touch_h = 0.10f;
   c->openloop_vio_touch_ms = 150;
+  c->openloop_vio_desc_vz = 0.3f;
   c->rec_skip_ms = 300;
   c->rec_min_ms = 500;
   c->rec_window_ms = 3000;
@@ -152,6 +154,7 @@ static void reset_land(fs_t *fs) {
   fs->impact_seen = false;
   fs->ol_ramp = false;
   fs->ol_touch_timing = false;
+  fs->ol_desc_seen = false;
   fs->ol_fast_ms = fs->ol_slow_ms = 0;
 }
 
@@ -494,6 +497,7 @@ static void set_tier(fs_t *fs, fs_tier_t t, uint32_t why) {
     fs->ol_cut_ms = c->openloop_max_ms;
     fs->ol_ramp = false;
     fs->ol_touch_timing = false;
+    fs->ol_desc_seen = false;
     fs->ol_fast_ms = fs->ol_slow_ms = 0;
     if (c->openloop_cut_mode == 1) {
       /* band of touchdown times for a record that is off by -/+ thr_err. No height known: no end ramp, cut at
@@ -560,8 +564,12 @@ static void land_step(fs_t *fs, const fs_input_t *in, fs_output_t *out) {
     fs->land_thr = hover * frac;
     bool impact = in->acc_ok && fs->impact_seen && (int32_t)(fs->t_impact_ms - fs->t_tier_ms) >= 0;
     if (impact) { go(fs, FS_DISARMED, FS_R_IMPACT | FS_R_TOUCHDOWN); return; }
-    /* mode 1: VIO still usable (only the IMU frames stopped): on the ground near the takeoff height, not moving */
-    if (c->openloop_cut_mode == 1 && c->openloop_vio_touch && vio_usable(fs, in) && in->height_valid &&
+    /* mode 1: VIO still usable (only the IMU frames stopped): on the ground near the takeoff height, not moving --
+     * only after a descent was seen on VIO in this tier (verifier 2026-10-26: at the tier start the vehicle hovers with
+     * vz ~ 0, so a hover just above the takeoff height, or a low VIO height, would otherwise cut in the air) */
+    const bool vio_ok = vio_usable(fs, in);
+    if (vio_ok && in->vz_vio < -c->openloop_vio_desc_vz) fs->ol_desc_seen = true;
+    if (c->openloop_cut_mode == 1 && c->openloop_vio_touch && vio_ok && fs->ol_desc_seen && in->height_valid &&
         in->height_m < c->openloop_vio_touch_h && fabsf(in->vz_vio) < c->touch_vz_max) {
       if (!fs->ol_touch_timing) { fs->ol_touch_timing = true; fs->t_ol_touch_ms = in->now_ms; }
       if (elapsed(in->now_ms, fs->t_ol_touch_ms) >= c->openloop_vio_touch_ms) { go(fs, FS_DISARMED, FS_R_TOUCHDOWN); return; }
