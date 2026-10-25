@@ -315,6 +315,8 @@ struct Args {
   int recover_full = 0;       // --recover-full 0|1 (full reset when the state is bad / the gap too long; default off)
   std::string test_blank;     // --test-blank T0:D,...
   int pipe = 0;               // --pipe 0|1 (2026-10-26, ovpipe; header)
+  std::string pipe_log;       // --pipe-log FILE (2026-10-26, ovpipe; timing only)
+  std::string pipe_cpus;      // --pipe-cpus LIST (2026-10-26, ovpipe; worker thread affinity, "" = not pinned)
 };
 
 // --health rules (header); --health-cfg upd_deg=0.2,... overrides
@@ -2671,6 +2673,8 @@ int main(int argc, char **argv) {
     else if (s == "--threads") a.threads = std::max(0, std::stoi(next()));
     else if (s == "--klt-overlap") a.klt_overlap = std::stoi(next()) != 0 ? 1 : 0;
     else if (s == "--pipe") a.pipe = std::stoi(next()) != 0 ? 1 : 0;  // 2026-10-26 ovpipe
+    else if (s == "--pipe-log") a.pipe_log = next();                   // 2026-10-26 ovpipe
+    else if (s == "--pipe-cpus") a.pipe_cpus = next();                 // 2026-10-26 ovpipe
     else if (s == "--profile") next();  // integ-20261025 (applied above)
     else if (s == "--klt-pyr") a.klt_pyr = std::max(0, std::min(8, std::stoi(next())));  // 2026-10-25 ovheat
     else if (s == "--idle-spin") {
@@ -2802,6 +2806,21 @@ int main(int argc, char **argv) {
       return 2;
     }
     ovpipe::P.on.store(true);
+    if (!a.pipe_cpus.empty()) {
+      cpu_set_t pc;
+      if (!parse_cpus(a.pipe_cpus, pc)) {
+        std::fprintf(stderr, "[ov_bridge] bad --pipe-cpus %s\n", a.pipe_cpus.c_str());
+        return 2;
+      }
+      for (int c = 0; c < CPU_SETSIZE; c++)
+        if (CPU_ISSET(c, &pc)) ovpipe::P.cpus.push_back(c);
+    }
+    if (!a.pipe_log.empty()) {
+      ovpipe::P.log = std::fopen(a.pipe_log.c_str(), "w");
+      if (ovpipe::P.log)
+        std::fprintf(ovpipe::P.log, "seq,st_at_claim,claim_wait_ms,submit_to_claim_ms,remap_by,remap_start_ms,remap_ms,"
+                                    "track_start_ms,track_ms,tracks,hit\n");
+    }
   }
   if (!a.ovopt.empty() || ovopt::g.prof)
     std::fprintf(stderr, "[ov_bridge] ovopt: %s (--ovopt '%s', prof log %s)\n", ovopt::describe().c_str(), a.ovopt.c_str(),
@@ -2910,6 +2929,7 @@ int main(int argc, char **argv) {
     b.log_health();
     b.log_pipe();  // --pipe (2026-10-26)
     if (ovpipe::P.on.load()) ovpipe::P.stop();
+    if (ovpipe::P.log) std::fclose(ovpipe::P.log);
     return 0;
   }
 

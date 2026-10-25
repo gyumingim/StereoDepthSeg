@@ -108,6 +108,8 @@ void prof_reset() {
 
 #include <opencv2/imgproc.hpp>
 
+#include <sched.h>
+
 namespace ovpipe {
 
 Pipe P;
@@ -119,6 +121,9 @@ thread_local uint64_t tl_gen = 0;
 std::shared_ptr<ov_core::TrackBase> last_tracker;
 
 namespace {
+int64_t mono_ns_now() {
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
 double ms_since(std::chrono::steady_clock::time_point t0) {
   return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
 }
@@ -171,6 +176,7 @@ void Pipe::submit(uint64_t seq, const uint8_t *src, size_t len) {
   j->seq = seq;
   j->src = src;
   j->len = len;
+  j->t_sub = mono_ns_now();
   std::lock_guard<std::mutex> lk(m_);
   jobs_.push_back(std::move(j));
   s_.submitted++;
@@ -222,9 +228,12 @@ bool Pipe::get_image(uint64_t seq, cv::Mat &img, double &remap_ms) {
   if (!j->img_ok && !j->img_bad && !j->remapping && j->src) {
     // not started yet: the main thread does it now itself (the worker may be busy tracking)
     j->remapping = true;
+    j->remap_by = 2;
+    j->t_rs = mono_ns_now();
     lk.unlock();
     remap_job(*j);
     lk.lock();
+    j->t_re = mono_ns_now();
     j->remapping = false;
     j->img_ok = !j->img.empty();
     j->img_bad = !j->img_ok;
@@ -301,6 +310,8 @@ std::shared_ptr<Res> Pipe::claim(uint64_t seq, int nf) {
     return nullptr;
   }
   std::shared_ptr<Job> j = jobs_.front();
+  const int64_t tc0 = mono_ns_now();
+  const int st0 = j->st;
   if (j->st == J_PENDING || j->st == J_RUNNING) {
     auto t0 = std::chrono::steady_clock::now();
     while (j->st == J_PENDING || j->st == J_RUNNING) {
@@ -321,6 +332,15 @@ std::shared_ptr<Res> Pipe::claim(uint64_t seq, int nf) {
   jobs_.pop_front();
   std::shared_ptr<Res> r = j->res;
   const uint64_t cid = com_ ? com_->id : 0;
+  if (log) {  // --pipe-log: seq,state at claim,claim wait ms,submit->claim ms,remap_by,remap start/len ms (from submit),
+              // track start/len ms (from submit),tracks,hit
+    const int64_t tc1 = mono_ns_now();
+    auto rel = [&](int64_t t) { return t ? (t - j->t_sub) / 1e6 : -1.0; };
+    std::fprintf(log, "%llu,%d,%.3f,%.3f,%d,%.3f,%.3f,%.3f,%.3f,%d,%d\n", (unsigned long long)seq, st0, (tc1 - tc0) / 1e6,
+                 rel(tc0), j->remap_by, rel(j->t_rs), j->t_re ? (j->t_re - j->t_rs) / 1e6 : -1.0, rel(j->t_ts),
+                 j->t_te ? (j->t_te - j->t_ts) / 1e6 : -1.0, j->tracks,
+                 (r && r->gen == gen_ && r->base == cid && r->nf == nf) ? 1 : 0);
+  }
   // the commit follows right away: from now on the worker chains on r (hit) or waits for the synchronous result (miss)
   com_wait_ = true;
   if (!r) {
@@ -355,6 +375,14 @@ void Pipe::committed(const std::shared_ptr<Res> &r, bool fresh) {
 }
 
 void Pipe::run() {
+  if (!cpus.empty()) {  // --pipe-cpus
+    cpu_set_t set;
+    CPU_ZERO(&set);
+    for (int c : cpus)
+      CPU_SET(c, &set);
+    const int rc = sched_setaffinity(0, sizeof(set), &set);
+    std::fprintf(stderr, "[ov_bridge] pipe: worker affinity %zu cpus rc %d\n", cpus.size(), rc);
+  }
   while (true) {
     std::shared_ptr<Job> j;
     bool do_remap = false;
@@ -375,6 +403,8 @@ void Pipe::run() {
           }
         if (j) {
           j->remapping = true;
+          j->remap_by = 1;
+          j->t_rs = mono_ns_now();
           break;
         }
         if (track_) {  // 2) tracking of the first pending frame, chained on the last done one (or the committed state)
@@ -403,6 +433,8 @@ void Pipe::run() {
           if (j) {
             base = prev ? prev : com_;
             j->st = J_RUNNING;
+            j->t_ts = mono_ns_now();
+            j->tracks++;
             g = gen_;
             fn = track_;
             keep = trk_;
@@ -417,6 +449,7 @@ void Pipe::run() {
       remap_job(*j);
       {
         std::lock_guard<std::mutex> lk(m_);
+        j->t_re = mono_ns_now();
         j->remapping = false;
         j->img_ok = !j->img.empty();
         j->img_bad = !j->img_ok;
@@ -445,6 +478,7 @@ void Pipe::run() {
     tl_out.reset();
     {
       std::lock_guard<std::mutex> lk(m_);
+      j->t_te = mono_ns_now();
       if (j->st == J_RUNNING && g == gen_) {
         j->res = out;
         if (out)

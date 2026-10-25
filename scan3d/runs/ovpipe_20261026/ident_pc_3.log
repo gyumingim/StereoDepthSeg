@@ -1,0 +1,88 @@
+Mon Oct 26 01:00:34 KST 2026
+32cf9bb2f73e7cb4995499ef3cd647862d7ae8237ccb95fca3f417396db06b67  /home/system/scanner/StereoDepthSeg-integ/scan3d/ov_bridge/build_integ_full/ov_bridge
+e046d79b6b01a1a2aae5aaabff340834b9c8854d553af5e32b45fbd879344ffa  /home/system/scanner/StereoDepthSeg-ovpipe/scan3d/ov_bridge/build_ovpipe_full/ov_bridge
+== h_pipe_log rc 0 poses 845 | --pipe 1 --predict 2 --predict-hz 200 --pred-thread 1 --pipe-log /tmp/ovpipe/ident/h_pipe_log.pipelog.csv --pipe-cpus 0-15
+== h_pipe rc 0 poses 845 | --pipe 1
+== h_def rc 0 poses 845 | 
+== harness
+ref /tmp/ovpipe/ident/h_ref.jsonl: poses 845 tracking 815 hash 08688db0b4efe77d pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/ovpipe/ident/h_def.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 0 first_diff None [] IDENTICAL
+/tmp/ovpipe/ident/h_pipe.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 0 first_diff None [] IDENTICAL
+/tmp/ovpipe/ident/h_pipe_pt.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 2085 first_diff None [] IDENTICAL
+/tmp/ovpipe/ident/h_pipe_log.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 2063 first_diff None [] IDENTICAL
+== raw80
+ref /tmp/ovpipe/ident/r_ref.jsonl: poses 2327 tracking 2003 hash 1e58bb28d8b3b8ca pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/ovpipe/ident/r_def.jsonl: poses 2327 identical 2327/2327 hash 1e58bb28d8b3b8ca pred 0 first_diff None [] IDENTICAL
+/tmp/ovpipe/ident/r_pipe.jsonl: poses 2327 identical 2327/2327 hash 1e58bb28d8b3b8ca pred 0 first_diff None [] IDENTICAL
+== raw80 rec60 profile
+ref /tmp/ovpipe/ident/r60_ref.jsonl: poses 2327 tracking 2003 hash c5f0887c72811b73 pred 9399 (excluded ['h', 'ms', 'remap_ms', 'wait_ms'])
+/tmp/ovpipe/ident/r60_pipe.jsonl: poses 2327 identical 2327/2327 hash c5f0887c72811b73 pred 8533 first_diff None [] IDENTICAL
+== injected (drops + reset)
+ref /tmp/ovpipe/ident/x_def.jsonl: poses 2389 tracking 1201 hash da39112f45c117b3 pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/ovpipe/ident/x_pipe.jsonl: poses 2389 identical 2389/2389 hash da39112f45c117b3 pred 0 first_diff None [] IDENTICAL
+ref /tmp/ovpipe/ident/x_w3.jsonl: poses 2389 tracking 1201 hash 69366db912e95ded pred 4962 (excluded ['h', 'ms', 'remap_ms', 'wait_ms'])
+/tmp/ovpipe/ident/x_pipe_w3.jsonl: poses 2389 identical 2389/2389 hash 69366db912e95ded pred 4964 first_diff None [] IDENTICAL
+== injected swapped-size copies (rejected -> drop) + reset
+ref /tmp/ovpipe/ident/s_def.jsonl: poses 2327 tracking 1169 hash 35f9f26a9f914e4d pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/ovpipe/ident/s_pipe.jsonl: poses 2327 identical 2327/2327 hash 35f9f26a9f914e4d pred 0 first_diff None [] IDENTICAL
+/tmp/ovpipe/ident/h_pipe.err:[ov_bridge] pipe: on (worker thread: remap + KLT tracking of the next frame while the main thread updates)
+/tmp/ovpipe/ident/h_pipe.err:[ov_bridge] pipe: submitted 845 | fed frames: precomputed 844, synchronous 1 (miss base 0 nf 1 gen 0, no job 0, no result 0) | drops 0 rechains 2 | worker tracks 845 (4.42 ms avg) wasted 0 exc 0, remaps 0.00 ms avg | claim waited 352 (avg 2.82 max 10.47 ms) | image waits 1 (0.48 ms) | trackers 1
+/tmp/ovpipe/ident/h_pipe_log.err:[ov_bridge] pipe: on (worker thread: remap + KLT tracking of the next frame while the main thread updates)
+/tmp/ovpipe/ident/h_pipe_log.err:[ov_bridge] pipe: worker affinity 16 cpus rc 0
+/tmp/ovpipe/ident/h_pipe_log.err:[ov_bridge] pipe: submitted 845 | fed frames: precomputed 844, synchronous 1 (miss base 0 nf 1 gen 0, no job 0, no result 0) | drops 0 rechains 2 | worker tracks 845 (4.44 ms avg) wasted 0 exc 0, remaps 0.00 ms avg | claim waited 353 (avg 2.91 max 11.98 ms) | image waits 1 (0.86 ms) | trackers 1
+/tmp/ovpipe/ident/h_pipe_pt.err:[ov_bridge] pipe: on (worker thread: remap + KLT tracking of the next frame while the main thread updates)
+/tmp/ovpipe/ident/h_pipe_pt.err:[ov_bridge] pipe: submitted 845 | fed frames: precomputed 844, synchronous 1 (miss base 0 nf 1 gen 0, no job 0, no result 0) | drops 0 rechains 2 | worker tracks 845 (4.35 ms avg) wasted 0 exc 0, remaps 0.00 ms avg | claim waited 348 (avg 3.11 max 9.88 ms) | image waits 0 (0.00 ms) | trackers 1
+/tmp/ovpipe/ident/r60_pipe.err:[ov_bridge] pipe: on (worker thread: remap + KLT tracking of the next frame while the main thread updates)
+/tmp/ovpipe/ident/r60_pipe.err:[ov_bridge] pipe: submitted 2327 | fed frames: precomputed 2327, synchronous 0 (miss base 0 nf 0 gen 0, no job 0, no result 0) | drops 0 rechains 1 | worker tracks 2327 (11.58 ms avg) wasted 0 exc 0, remaps 4.07 ms avg | claim waited 1153 (avg 8.57 max 81.84 ms) | image waits 55 (215.23 ms) | trackers 1
+/tmp/ovpipe/ident/r_pipe.err:[ov_bridge] pipe: on (worker thread: remap + KLT tracking of the next frame while the main thread updates)
+/tmp/ovpipe/ident/r_pipe.err:[ov_bridge] pipe: submitted 2327 | fed frames: precomputed 2327, synchronous 0 (miss base 0 nf 0 gen 0, no job 0, no result 0) | drops 0 rechains 1 | worker tracks 2327 (7.67 ms avg) wasted 0 exc 0, remaps 3.02 ms avg | claim waited 357 (avg 6.47 max 35.03 ms) | image waits 47 (153.59 ms) | trackers 1
+/tmp/ovpipe/ident/s_def.err:inject: images 2327 every 37 reset_at 1200
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: on (worker thread: remap + KLT tracking of the next frame while the main thread updates)
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+/tmp/ovpipe/ident/s_pipe.err:[ov_bridge] pipe: worker exception OpenCV(4.5.4) ./modules/video/src/lkpyramid.cpp:1394: error: (-215:Assertion failed) prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size() in function 'calc'
+Mon Oct 26 01:00:48 KST 2026

@@ -28,6 +28,7 @@ job() {
     h_def) run $1 $MINE $HC $HS ;;
     h_pipe) run $1 $MINE $HC $HS --pipe 1 ;;
     h_pipe_pt) run $1 $MINE $HC $HS --pipe 1 $PT ;;
+    h_pipe_log) run $1 $MINE $HC $HS --pipe 1 $PT --pipe-log $OUT/h_pipe_log.pipelog.csv --pipe-cpus 0-15 ;;
     r_ref) run $1 $REF $C4 $R80 $RM ;;
     r_def) run $1 $MINE $C4 $R80 $RM ;;
     r_pipe) run $1 $MINE $C4 $R80 $RM --pipe 1 ;;
@@ -45,7 +46,7 @@ JOBS=${@:-h_ref h_def h_pipe h_pipe_pt r_ref r_def r_pipe r60_ref r60_pipe x_def
 P=${P:-4}; n=0
 for j in $JOBS; do job $j & n=$((n+1)); if [ $((n % P)) -eq 0 ]; then wait; fi; done; wait
 C=$RD/cmp2.py
-echo "== harness"; python3 $C $OUT/h_ref.jsonl $OUT/h_def.jsonl $OUT/h_pipe.jsonl $OUT/h_pipe_pt.jsonl
+echo "== harness"; python3 $C $OUT/h_ref.jsonl $OUT/h_def.jsonl $OUT/h_pipe.jsonl $OUT/h_pipe_pt.jsonl $( [ -f $OUT/h_pipe_log.jsonl ] && echo $OUT/h_pipe_log.jsonl )
 echo "== raw80"; python3 $C $OUT/r_ref.jsonl $OUT/r_def.jsonl $OUT/r_pipe.jsonl
 echo "== raw80 rec60 profile"; python3 $C --ex h $OUT/r60_ref.jsonl $OUT/r60_pipe.jsonl
 echo "== injected (drops + reset)"; python3 $C $OUT/x_def.jsonl $OUT/x_pipe.jsonl; python3 $C --ex h $OUT/x_w3.jsonl $OUT/x_pipe_w3.jsonl

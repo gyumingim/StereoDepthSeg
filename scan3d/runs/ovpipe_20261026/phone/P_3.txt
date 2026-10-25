@@ -1,0 +1,6 @@
+# ovpipe P_3 (2026-10-26 01:xx): why B60_r2 had 200-400 ms stalls. ov_bridge_ovpipe2 (+ --pipe-log, --pipe-cpus). raw80 at 2.0 (60 fps proxy).
+B60L_r1 ov_bridge_ovpipe2 c4 2 2 2.0 1 0 raw80 --profile rec60 --pipe 1 --pipe-log out/B60L_r1/pipe.csv
+B60C_r1 ov_bridge_ovpipe2 c4 2 2 2.0 1 0 raw80 --profile rec60 --pipe 1 --pipe-cpus 4-9 --pipe-log out/B60C_r1/pipe.csv
+A60_r3 ov_bridge_ovpipe2 c4 2 2 2.0 1 0 raw80 --profile rec60
+B60L_r2 ov_bridge_ovpipe2 c4 2 2 2.0 1 0 raw80 --profile rec60 --pipe 1 --pipe-log out/B60L_r2/pipe.csv
+B60C_r2 ov_bridge_ovpipe2 c4 2 2 2.0 1 0 raw80 --profile rec60 --pipe 1 --pipe-cpus 4-9 --pipe-log out/B60C_r2/pipe.csv

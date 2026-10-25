@@ -21,6 +21,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstdint>
+#include <cstdio>
 #include <deque>
 #include <functional>
 #include <memory>
@@ -63,6 +64,10 @@ struct Job {
   bool remapping = false, img_ok = false, img_bad = false;
   cv::Mat img;
   double remap_ms = 0.0, track_ms = 0.0;
+  // --pipe-log timestamps (steady clock ns; 0 = not happened): submit, remap start/end, last track start/end
+  int64_t t_sub = 0, t_rs = 0, t_re = 0, t_ts = 0, t_te = 0;
+  int remap_by = 0;  // 1 = worker, 2 = main thread (get_image)
+  int tracks = 0;    // worker computes of this job (re-chains)
   int st = J_PENDING;
   std::shared_ptr<Res> res;
 };
@@ -88,6 +93,7 @@ public:
   bool frame_nocopy = false;  // remap straight from the record (else copy first, as the bridge does)
   cv::Mat mask;               // cam0 mask the bridge gives every frame (zeros or the config mask)
   int ncam = 1;
+  std::vector<int> cpus;      // --pipe-cpus: worker thread affinity (empty = not pinned)
 
   void start();
   void stop();
@@ -124,6 +130,7 @@ public:
   const void *init_trk = nullptr;    // guarded by compute_m: tracker + generation the initial state belongs to
   uint64_t init_gen = 0;             // guarded by compute_m
 
+  FILE *log = nullptr;  // --pipe-log FILE (main thread writes one row per claim)
   Stats stats() {
     std::lock_guard<std::mutex> lk(m_);
     return s_;
