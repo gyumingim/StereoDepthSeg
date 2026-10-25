@@ -285,7 +285,7 @@ def draw(gray, scale, pose, corners, target_slot, board, matched, steady_n):
     cv2.rectangle(img, (m, m), (w - m, h - m), (90, 90, 90), 1)
     if matched:
         cv2.rectangle(img, (0, 0), (w - 1, h - 1), (0, 200, 0), max(4, int(12 * scale)))
-        cv2.rectangle(img, (0, h - 14), (int(w * min(1.0, steady_n / 4.0)), h - 1), (0, 200, 0), -1)
+        cv2.rectangle(img, (0, h - 14), (int(w * min(1.0, steady_n / 5.0)), h - 1), (0, 200, 0), -1)
     return img
 
 
@@ -521,8 +521,8 @@ def run_loop(ph):
         hist.append((now, p, match["id"] if match else None))
         # 10-25 fix: the preview arrives at only ~3-5 Hz, so "3 frames inside 0.45 s" never happened (stuck at 2/4).
         # Now: same slot continuously for >= HOLD_S (time based, >= 2 frames), small motion.
-        HOLD_S = 0.4
-        hist = [h for h in hist if now - h[0] <= 1.0]
+        HOLD_N = 5                                     # user 10-25: just "5 consecutive matching frames"
+        hist = hist[-HOLD_N:]
         run = []
         for h in reversed(hist):                       # newest run of frames matching this slot
             if match and h[2] == match["id"] and h[1] is not None:
@@ -530,14 +530,13 @@ def run_loop(ph):
             else:
                 break
         run.reverse()
-        hold = (now - run[0][0]) if len(run) >= 2 else 0.0
         steady = False
-        if match and len(run) >= 2 and hold >= HOLD_S:
+        if match and len(run) >= HOLD_N:
             cx = [h[1]["cx"] for h in run]; cy = [h[1]["cy"] for h in run]; tl = [h[1]["tilt"] for h in run]
             steady = max(np.ptp(cx), np.ptp(cy)) <= 20 and np.ptp(tl) <= 4.0
         target = match or SL.nearest_missing(missing, p)
         hint = "모든 칸 완료!" if target is None else ("그대로 멈추기…" if match else SL.hint(target, p))
-        n_same = min(4, int(4 * hold / HOLD_S)) if match else 0     # 0..4 progress for the bar / "n/4" text
+        n_same = len(run) if match else 0               # 0..5 consecutive matching frames
         img = draw(gray, scale, p, corners, target, board, match is not None, n_same)
         ok_, enc = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 70])
         latest_prev.update(jpg=enc.tobytes(), t=now)
@@ -556,7 +555,7 @@ def run_loop(ph):
         if p is not None:
             msg += f"\\n거리 {p['dist']:.2f} m · 기울기 {p['tilt']:.0f}°"
         if match and not steady:     # user 10-25: show the hold progress while green
-            msg = f"초록: 그대로 멈추기 {min(n_same, 4)}/4\\n" + msg
+            msg = f"초록: 그대로 멈추기 {min(n_same, HOLD_N)}/{HOLD_N}\\n" + msg
         if (color, msg) != last_msg and now >= blue_until:   # keep the blue "captured" screen visible for a moment
             ph.cmd(f"MSG {color} {msg}")
             last_msg = (color, msg)
