@@ -1,0 +1,213 @@
+start 10:30:19 list 
+ALL DONE 10:30:19 
+no bridge/feeder left
+10:35:13 note: the 10:30:19 empty-list entry was an accidental syntax-test invocation (no run); real runs start after unpack
+start 10:35:38 list list1.txt
+10:35:38 R1_c4 run cfg c4 spin 2 thr 2 SKIN 32.1 AP 37.4 waited 0 s
+10:37:10 R1_c4 done SKIN 35.8 max 35.8 aborted 0 frames 2328 feeder2: 43308 records, 2327 frames, 82.37 s, late_max 10.88 ms, late_cam_max 6.21 ms, cam late>5ms 2
+10:37:10 R1_c4n400s100c20 run cfg c4n400s100c20 spin 2 thr 2 SKIN 35.8 AP 44.8 waited 0 s
+10:39:12 R1_c4n400s100c20 done SKIN 36.1 max 36.3 aborted 0 frames 2328 feeder2: 43308 records, 2327 frames, 118.44 s, late_max 36466.51 ms, late_cam_max 36404.15 ms, cam late>5ms 1976
+10:39:12 R1_c4n400 wait SKIN 36.1
+10:39:23 R1_c4n400 run cfg c4n400 spin 2 thr 2 SKIN 35.8 AP 38.2 waited 11 s
+10:40:54 R1_c4n400 done SKIN 35.9 max 36.5 aborted 0 frames 2328 feeder2: 43308 records, 2327 frames, 89.96 s, late_max 7986.54 ms, late_cam_max 7953.48 ms, cam late>5ms 1939
+10:40:55 R1_c4s100 run cfg c4s100 spin 2 thr 2 SKIN 35.9 AP 40.7 waited 1 s
+10:42:36 R1_c4s100 done SKIN 35.9 max 35.9 aborted 0 frames 2328 feeder2: 43308 records, 2327 frames, 95.15 s, late_max 13179.13 ms, late_cam_max 13138.55 ms, cam late>5ms 1974
+ALL DONE 10:42:36 list1.txt
+no bridge/feeder left
+start 10:42:36 list list2.txt
+10:42:37 R2_c4s100 run cfg c4s100 spin 2 thr 2 SKIN 35.9 AP 42.0 waited 1 s
+10:44:18 R2_c4s100 done SKIN 36.0 max 36.1 aborted 0 frames 2328 feeder2: 43308 records, 2327 frames, 95.58 s, late_max 13605.53 ms, late_cam_max 13540.75 ms, cam late>5ms 1973
+10:44:19 R2_c4n400 wait SKIN 36.0
+10:44:29 R2_c4n400 run cfg c4n400 spin 2 thr 2 SKIN 35.8 AP 39.2 waited 11 s
+10:46:00 R2_c4n400 done SKIN 36.1 max 36.2 aborted 0 frames 2328 feeder2: 43308 records, 2327 frames, 86.23 s, late_max 5270.61 ms, late_cam_max 5238.56 ms, cam late>5ms 1926
+10:46:01 R2_c4n400s100c20 wait SKIN 36.1
+10:46:11 R2_c4n400s100c20 run cfg c4n400s100c20 spin 2 thr 2 SKIN 35.9 AP 39.4 waited 10 s
+10:48:13 R2_c4n400s100c20 done SKIN 36.1 max 36.2 aborted 0 frames 2328 feeder2: 43308 records, 2327 frames, 115.26 s, late_max 33289.42 ms, late_cam_max 33253.93 ms, cam late>5ms 1976
+10:48:13 R2_c4 wait SKIN 36.1
+10:48:24 R2_c4 run cfg c4 spin 2 thr 2 SKIN 35.7 AP 38.3 waited 11 s
+10:49:55 R2_c4 done SKIN 36.0 max 36.2 aborted 0 frames 2328 feeder2: 43308 records, 2327 frames, 82.37 s, late_max 192.75 ms, late_cam_max 156.15 ms, cam late>5ms 223
+10:49:55 X_c4n400s70c20 wait SKIN 36.0
+10:50:06 X_c4n400s70c20 run cfg c4n400s70c20 spin 2 thr 2 SKIN 35.7 AP 38.3 waited 11 s
+10:51:57 X_c4n400s70c20 done SKIN 35.9 max 36.1 aborted 0 frames 2328 feeder2: 43308 records, 2327 frames, 103.58 s, late_max 21605.94 ms, late_cam_max 21544.38 ms, cam late>5ms 1978
+10:51:58 X_c4c20 run cfg c4c20 spin 2 thr 2 SKIN 35.9 AP 40.9 waited 0 s
+10:53:29 X_c4c20 done SKIN 36.1 max 36.1 aborted 0 frames 2328 feeder2: 43308 records, 2327 frames, 83.02 s, late_max 2614.71 ms, late_cam_max 2582.74 ms, cam late>5ms 1655
+10:53:30 X_c4_sp0 wait SKIN 36.1
+10:53:40 X_c4_sp0 run cfg c4 spin 0 thr 2 SKIN 35.7 AP 38.6 waited 10 s
+10:55:12 X_c4_sp0 done SKIN 35.3 max 35.7 aborted 0 frames 2328 feeder2: 43308 records, 2327 frames, 82.37 s, late_max 154.87 ms, late_cam_max 122.79 ms, cam late>5ms 360
+10:55:12 X_c4n400s100c20_sp0 run cfg c4n400s100c20 spin 0 thr 2 SKIN 35.3 AP 38.0 waited 0 s
+10:57:04 X_c4n400s100c20_sp0 done SKIN 36.1 max 36.3 aborted 0 frames 2328 feeder2: 43308 records, 2327 frames, 110.29 s, late_max 28321.01 ms, late_cam_max 28251.33 ms, cam late>5ms 1984
+10:57:04 X_c4n400_t4 wait SKIN 36.1
+10:57:14 X_c4n400_t4 run cfg c4n400 spin 2 thr 4 SKIN 35.8 AP 38.8 waited 10 s
+10:58:46 X_c4n400_t4 done SKIN 36.0 max 36.4 aborted 0 frames 2328 feeder2: 43308 records, 2327 frames, 83.82 s, late_max 4612.92 ms, late_cam_max 4580.89 ms, cam late>5ms 1926
+ALL DONE 10:58:46 list2.txt
+no bridge/feeder left
+start 10:58:49 list list3.txt
+10:58:49 D_c4s100_half wait SKIN 36.0
+10:58:59 D_c4s100_half run cfg c4s100 spin 2 thr 2 speed 0.5 SKIN 35.6 AP 38.0 waited 10 s
+11:01:48 D_c4s100_half done SKIN 36.0 max 36.2 aborted 0 frames 2328 feeder3 speed 0.50: 43308 records, 2327 frames, 164.74 s, late_max 8.09 ms, late_cam_max 6.37 ms, cam late>5ms 2
+11:01:48 D_c4n400s100c20_half wait SKIN 36.0
+11:01:58 D_c4n400s100c20_half run cfg c4n400s100c20 spin 2 thr 2 speed 0.5 SKIN 35.8 AP 39.2 waited 10 s
+11:04:46 D_c4n400s100c20_half done SKIN 36.0 max 36.1 aborted 0 frames 2328 feeder3 speed 0.50: 43308 records, 2327 frames, 164.74 s, late_max 34.21 ms, late_cam_max 4.38 ms, cam late>5ms 0
+11:04:47 D_c4_1x wait SKIN 36.0
+11:04:57 D_c4_1x run cfg c4 spin 2 thr 2 speed 1.0 SKIN 35.7 AP 38.7 waited 11 s
+11:06:21 D_c4_1x done SKIN 36.2 max 36.2 aborted 0 frames 2328 feeder3 speed 1.00: 43308 records, 2327 frames, 82.37 s, late_max 185.39 ms, late_cam_max 153.34 ms, cam late>5ms 141
+ALL DONE 11:06:21 list3.txt
+no bridge/feeder left
+start 11:06:23 list list4.txt
+11:06:23 H_c4_half wait SKIN 36.1
+11:06:33 H_c4_half run cfg c4 spin 2 thr 2 speed 0.5 SKIN 35.7 AP 38.3 waited 10 s
+11:09:22 H_c4_half done SKIN 36.3 max 36.4 aborted 0 frames 2328 feeder3 speed 0.50: 43308 records, 2327 frames, 164.74 s, late_max 10.35 ms, late_cam_max 3.53 ms, cam late>5ms 0
+11:09:22 H_c4n400_half wait SKIN 36.3
+11:09:32 H_c4n400_half wait SKIN 36.0
+11:09:43 H_c4n400_half wait SKIN 36.4
+11:09:53 H_c4n400_half wait SKIN 37.8
+11:10:03 H_c4n400_half wait SKIN 37.7
+11:10:13 H_c4n400_half wait SKIN 37.8
+11:10:23 H_c4n400_half wait SKIN 37.5
+11:10:33 H_c4n400_half wait SKIN 37.2
+11:10:44 H_c4n400_half wait SKIN 36.9
+11:10:54 H_c4n400_half wait SKIN 36.6
+11:11:04 H_c4n400_half wait SKIN 36.4
+11:11:14 H_c4n400_half wait SKIN 36.3
+11:11:24 H_c4n400_half wait SKIN 36.0
+11:11:35 H_c4n400_half run cfg c4n400 spin 2 thr 2 speed 0.5 SKIN 35.9 AP 37.5 waited 133 s
+11:14:24 H_c4n400_half done SKIN 36.9 max 36.9 aborted 0 frames 2328 feeder3 speed 0.50: 43308 records, 2327 frames, 164.74 s, late_max 8.01 ms, late_cam_max 4.36 ms, cam late>5ms 0
+11:14:24 H_c4n400s70c20_half wait SKIN 36.9
+11:14:34 H_c4n400s70c20_half wait SKIN 36.7
+11:14:44 H_c4n400s70c20_half wait SKIN 36.6
+11:14:55 H_c4n400s70c20_half wait SKIN 36.3
+11:15:05 H_c4n400s70c20_half wait SKIN 36.2
+11:15:15 H_c4n400s70c20_half wait SKIN 36.1
+11:15:25 H_c4n400s70c20_half run cfg c4n400s70c20 spin 2 thr 2 speed 0.5 SKIN 35.9 AP 37.5 waited 61 s
+11:18:30 H_c4n400s70c20_half done SKIN 36.0 max 36.8 aborted 0 frames 2328 feeder3 speed 0.50: 43308 records, 2327 frames, 166.18 s, late_max 11038.57 ms, late_cam_max 10974.54 ms, cam late>5ms 968
+11:18:30 H_c4c20_half wait SKIN 36.0
+11:18:41 H_c4c20_half run cfg c4c20 spin 2 thr 2 speed 0.5 SKIN 35.8 AP 38.1 waited 11 s
+11:20:03 H_c4c20_half ABORT SKIN 38.9
+11:20:05 H_c4c20_half done SKIN 38.9 max 38.9 aborted 1 frames 846 Terminated 
+ALL DONE 11:20:05 list4.txt
+no bridge/feeder left
+start 11:20:07 list list5.txt
+11:20:07 R3_c4 wait SKIN 39.3
+11:20:17 R3_c4 wait SKIN 39.1
+11:20:27 R3_c4 wait SKIN 39.1
+11:20:37 R3_c4 wait SKIN 39.5
+11:20:47 R3_c4 wait SKIN 39.1
+11:20:57 R3_c4 wait SKIN 39.8
+11:21:08 R3_c4 wait SKIN 40.0
+11:21:18 R3_c4 wait SKIN 39.7
+11:21:28 R3_c4 wait SKIN 39.7
+11:21:38 R3_c4 wait SKIN 39.4
+11:21:48 R3_c4 wait SKIN 39.2
+11:21:58 R3_c4 wait SKIN 39.5
+11:22:08 R3_c4 wait SKIN 39.3
+11:22:19 R3_c4 wait SKIN 39.0
+11:22:29 R3_c4 wait SKIN 38.8
+11:22:39 R3_c4 wait SKIN 38.3
+11:22:49 R3_c4 wait SKIN 38.3
+11:22:59 paused: user is using the phone (screen on 11:19:32, foreground apps); list5 runner stopped, H_c4c20_half aborted at SKIN 38.9
+start 11:24:00 list list7.txt
+11:24:00 R3_c4 wait SKIN 36.9 screen mWakefulness=Awake
+11:24:10 R3_c4 wait SKIN 36.7 screen mWakefulness=Awake
+11:24:21 R3_c4 wait SKIN 36.5 screen mWakefulness=Awake
+11:24:31 R3_c4 wait SKIN 36.4 screen mWakefulness=Awake
+11:24:41 R3_c4 wait SKIN 36.3 screen mWakefulness=Awake
+11:24:51 R3_c4 wait SKIN 36.2 screen mWakefulness=Awake
+11:25:02 R3_c4 wait SKIN 36.1 screen mWakefulness=Awake
+11:25:12 R3_c4 wait SKIN 36.0 screen mWakefulness=Awake
+11:25:22 R3_c4 wait SKIN 35.9 screen mWakefulness=Awake
+11:25:33 R3_c4 wait SKIN 35.9 screen mWakefulness=Awake
+11:25:43 R3_c4 wait SKIN 35.7 screen mWakefulness=Awake
+11:25:53 R3_c4 wait SKIN 35.7 screen mWakefulness=Awake
+11:26:03 R3_c4 wait SKIN 35.6 screen mWakefulness=Awake
+11:26:14 R3_c4 wait SKIN 35.5 screen mWakefulness=Awake
+11:26:24 R3_c4 wait SKIN 35.5 screen mWakefulness=Awake
+11:26:34 R3_c4 wait SKIN 35.4 screen mWakefulness=Awake
+11:26:44 R3_c4 wait SKIN 35.3 screen mWakefulness=Awake
+11:26:55 R3_c4 wait SKIN 35.3 screen mWakefulness=Awake
+11:27:05 R3_c4 wait SKIN 35.3 screen mWakefulness=Awake
+11:27:15 R3_c4 wait SKIN 35.2 screen mWakefulness=Awake
+11:27:25 R3_c4 wait SKIN 35.2 screen mWakefulness=Awake
+11:27:36 R3_c4 wait SKIN 35.2 screen mWakefulness=Awake
+11:27:46 R3_c4 wait SKIN 35.1 screen mWakefulness=Awake
+11:27:56 R3_c4 wait SKIN 35.1 screen mWakefulness=Awake
+11:28:07 R3_c4 wait SKIN 35.1 screen mWakefulness=Awake
+11:28:17 R3_c4 wait SKIN 34.9 screen mWakefulness=Awake
+11:28:27 R3_c4 wait SKIN 34.9 screen mWakefulness=Awake
+11:28:37 R3_c4 wait SKIN 34.9 screen mWakefulness=Awake
+11:28:48 R3_c4 wait SKIN 34.8 screen mWakefulness=Awake
+11:28:58 R3_c4 wait SKIN 34.8 screen mWakefulness=Awake
+11:29:08 R3_c4 wait SKIN 34.8 screen mWakefulness=Awake
+11:29:18 R3_c4 wait SKIN 34.8 screen mWakefulness=Awake
+11:29:29 R3_c4 wait SKIN 34.8 screen mWakefulness=Awake
+11:29:39 R3_c4 wait SKIN 34.7 screen mWakefulness=Awake
+11:29:49 R3_c4 wait SKIN 34.7 screen mWakefulness=Awake
+11:30:00 R3_c4 wait SKIN 34.7 screen mWakefulness=Awake
+11:30:10 R3_c4 wait SKIN 34.6 screen mWakefulness=Awake
+11:30:20 R3_c4 wait SKIN 34.6 screen mWakefulness=Awake
+11:30:30 R3_c4 wait SKIN 34.6 screen mWakefulness=Awake
+11:30:41 R3_c4 wait SKIN 34.6 screen mWakefulness=Awake
+11:30:51 R3_c4 wait SKIN 34.6 screen mWakefulness=Awake
+11:31:01 R3_c4 wait SKIN 34.5 screen mWakefulness=Awake
+11:31:12 R3_c4 wait SKIN 34.5 screen mWakefulness=Awake
+11:31:22 R3_c4 wait SKIN 34.5 screen mWakefulness=Awake
+11:31:32 R3_c4 wait SKIN 34.5 screen mWakefulness=Awake
+11:31:42 R3_c4 wait SKIN 34.4 screen mWakefulness=Awake
+11:31:53 R3_c4 wait SKIN 34.5 screen mWakefulness=Awake
+11:32:03 R3_c4 wait SKIN 34.4 screen mWakefulness=Awake
+11:32:13 R3_c4 wait SKIN 34.4 screen mWakefulness=Awake
+11:32:23 R3_c4 wait SKIN 34.3 screen mWakefulness=Awake
+11:32:34 R3_c4 wait SKIN 34.4 screen mWakefulness=Awake
+11:32:44 R3_c4 wait SKIN 34.3 screen mWakefulness=Awake
+11:32:54 R3_c4 wait SKIN 34.3 screen mWakefulness=Awake
+11:33:04 R3_c4 wait SKIN 34.3 screen mWakefulness=Awake
+11:33:15 R3_c4 wait SKIN 34.3 screen mWakefulness=Awake
+11:33:25 R3_c4 wait SKIN 34.3 screen mWakefulness=Awake
+11:33:35 R3_c4 wait SKIN 34.3 screen mWakefulness=Awake
+11:33:46 R3_c4 wait SKIN 34.3 screen mWakefulness=Awake
+11:33:56 R3_c4 wait SKIN 34.2 screen mWakefulness=Awake
+11:34:06 R3_c4 wait SKIN 34.2 screen mWakefulness=Awake
+11:34:16 R3_c4 wait SKIN 34.2 screen mWakefulness=Awake
+11:34:27 R3_c4 wait SKIN 34.2 screen mWakefulness=Awake
+11:34:37 R3_c4 wait SKIN 34.2 screen mWakefulness=Awake
+11:34:47 R3_c4 wait SKIN 34.1 screen mWakefulness=Awake
+11:34:57 R3_c4 wait SKIN 34.8 screen mWakefulness=Awake
+11:35:08 R3_c4 wait SKIN 35.0 screen mWakefulness=Awake
+11:35:18 R3_c4 wait SKIN 34.9 screen mWakefulness=Awake
+11:35:28 R3_c4 wait SKIN 35.0 screen mWakefulness=Awake
+11:35:38 R3_c4 wait SKIN 35.3 screen mWakefulness=Awake
+11:35:49 R3_c4 wait SKIN 35.2 screen mWakefulness=Awake
+11:35:59 R3_c4 wait SKIN 35.7 screen mWakefulness=Awake
+11:36:09 R3_c4 wait SKIN 35.6 screen mWakefulness=Awake
+11:36:19 R3_c4 wait SKIN 35.6 screen mWakefulness=Awake
+11:36:30 R3_c4 wait SKIN 35.5 screen mWakefulness=Awake
+11:36:40 R3_c4 wait SKIN 35.4 screen mWakefulness=Awake
+11:36:50 R3_c4 wait SKIN 35.6 screen mWakefulness=Awake
+11:37:00 R3_c4 wait SKIN 35.7 screen mWakefulness=Awake
+11:37:10 R3_c4 wait SKIN 35.6 screen mWakefulness=Awake
+11:37:21 R3_c4 wait SKIN 35.4 screen mWakefulness=Awake
+11:37:31 R3_c4 wait SKIN 35.4 screen mWakefulness=Awake
+11:37:41 R3_c4 wait SKIN 35.3 screen mWakefulness=Awake
+11:37:51 R3_c4 wait SKIN 35.4 screen mWakefulness=Awake
+11:38:02 R3_c4 wait SKIN 35.9 screen mWakefulness=Awake
+11:38:12 R3_c4 wait SKIN 35.8 screen mWakefulness=Awake
+11:38:22 R3_c4 wait SKIN 35.7 screen mWakefulness=Awake
+11:38:32 R3_c4 wait SKIN 35.8 screen mWakefulness=Awake
+11:38:43 R3_c4 wait SKIN 35.6 screen mWakefulness=Awake
+11:38:53 R3_c4 wait SKIN 35.6 screen mWakefulness=Awake
+11:39:03 R3_c4 wait SKIN 35.7 screen mWakefulness=Awake
+11:39:14 R3_c4 wait SKIN 35.7 screen mWakefulness=Awake
+11:39:24 R3_c4 wait SKIN 35.8 screen mWakefulness=Awake
+11:39:34 R3_c4 wait SKIN 35.8 screen mWakefulness=Awake
+11:39:44 R3_c4 wait SKIN 35.9 screen mWakefulness=Awake
+11:39:55 R3_c4 wait SKIN 35.9 screen mWakefulness=Awake
+11:40:05 R3_c4 wait SKIN 36.0 screen mWakefulness=Awake
+11:40:15 R3_c4 wait SKIN 36.1 screen mWakefulness=Awake
+11:40:26 R3_c4 wait SKIN 36.1 screen mWakefulness=Awake
+11:40:36 R3_c4 wait SKIN 36.1 screen mWakefulness=Awake
+11:40:46 R3_c4 wait SKIN 36.2 screen mWakefulness=Awake
+11:40:56 R3_c4 wait SKIN 36.2 screen mWakefulness=Awake
+11:41:07 R3_c4 wait SKIN 36.3 screen mWakefulness=Awake
+11:41:17 R3_c4 wait SKIN 36.3 screen mWakefulness=Awake
+11:41:27 R3_c4 wait SKIN 36.4 screen mWakefulness=Awake
+11:41:37 R3_c4 wait SKIN 36.5 screen mWakefulness=Awake
+11:41:57 stopped list7 runner (screen stayed on since 11:19, user using phone); list7 not run

@@ -1,0 +1,4 @@
+cd /home/system/scanner/StereoDepthSeg/scan3d
+../venv_ffs/bin/python -c "import numpy as np;g=np.load('recordings/hs_20261021_213341/imu_gt_spl_cal1022/gt.npz',allow_pickle=True);t=g['t_ns'];ok=g['ok'].astype(bool);print('gt',len(t),ok.sum(),(t[-1]-t[0])/1e9)"
+../venv_ffs/bin/python /mnt/c/Users/a3162/AppData/Local/Temp/claude/c--Users-a3162-Desktop----/27548596-eef5-4a58-bd39-e92ba44d822c/scratchpad/replay/make_raw_stream.py recordings/hs_20261021_213341 /mnt/c/Users/a3162/AppData/Local/Temp/claude/c--Users-a3162-Desktop----/27548596-eef5-4a58-bd39-e92ba44d822c/scratchpad/replay/raw80.bin --secs 80 > /mnt/c/Users/a3162/AppData/Local/Temp/claude/c--Users-a3162-Desktop----/27548596-eef5-4a58-bd39-e92ba44d822c/scratchpad/replay/build.log 2>&1
+echo rc $? >> /mnt/c/Users/a3162/AppData/Local/Temp/claude/c--Users-a3162-Desktop----/27548596-eef5-4a58-bd39-e92ba44d822c/scratchpad/replay/build.log

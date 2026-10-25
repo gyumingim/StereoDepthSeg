@@ -1,0 +1,168 @@
+{
+ "run": "run_20261025_100121_main30_c4",
+ "frames": 1206,
+ "frames_tracking": 894,
+ "t_init_s": 10.4,
+ "all": {
+  "proc_p50": 17.92,
+  "proc_p95": 22.9,
+  "proc_max": 33.2,
+  "over33_pct": 0.0,
+  "remap_p50": 3.13,
+  "feed_p50": 14.06,
+  "feed_p95": 19.57,
+  "wait_p50": 0.27,
+  "wait_p95": 0.76
+ },
+ "trk": {
+  "proc_p50": 18.39,
+  "proc_p95": 23.29,
+  "proc_max": 33.2,
+  "over33_pct": 0.0,
+  "remap_p50": 2.82,
+  "feed_p50": 15.63,
+  "feed_p95": 20.42,
+  "wait_p50": 0.24,
+  "wait_p95": 0.37
+ },
+ "n_slam_med": 18.0,
+ "n_slam_max": 50,
+ "n_msckf_med": 2.0,
+ "cam_dropped": 0,
+ "n_slam_5s": [
+  [
+   0,
+   8.0
+  ],
+  [
+   5,
+   6.0
+  ],
+  [
+   10,
+   6.0
+  ],
+  [
+   15,
+   16.0
+  ],
+  [
+   20,
+   18.0
+  ],
+  [
+   25,
+   18.0
+  ]
+ ],
+ "proc_p50_5s": [
+  [
+   0,
+   16.75
+  ],
+  [
+   5,
+   16.95
+  ],
+  [
+   10,
+   16.96
+  ],
+  [
+   15,
+   17.16
+  ],
+  [
+   20,
+   20.54
+  ],
+  [
+   25,
+   20.13
+  ]
+ ],
+ "ov_rows": 894,
+ "ov_stage_ms": {
+  "tracking": {
+   "p50": 8.0,
+   "p95": 12.09,
+   "mean": 8.31
+  },
+  "propagation": {
+   "p50": 0.32,
+   "p95": 0.49,
+   "mean": 0.33
+  },
+  "msckf update": {
+   "p50": 0.36,
+   "p95": 3.27,
+   "mean": 0.78
+  },
+  "slam update": {
+   "p50": 0.75,
+   "p95": 1.56,
+   "mean": 0.71
+  },
+  "slam delayed": {
+   "p50": 0.17,
+   "p95": 3.96,
+   "mean": 0.86
+  },
+  "re-tri & marg": {
+   "p50": 3.96,
+   "p95": 6.56,
+   "mean": 4.37
+  },
+  "total": {
+   "p50": 15.48,
+   "p95": 20.24,
+   "mean": 15.36
+  }
+ },
+ "ov_join_frac": 1.0,
+ "by_n_slam": [
+  {
+   "n_slam": "0-0",
+   "n": 138,
+   "proc_p50": 15.72,
+   "proc_p95": 22.97,
+   "over33_pct": 0.0,
+   "tracking": 8.25,
+   "propagation": 0.22,
+   "msckf update": 0.47,
+   "slam update": 0.0,
+   "slam delayed": 0.0,
+   "re-tri & marg": 3.53,
+   "total": 12.76
+  },
+  {
+   "n_slam": "1-25",
+   "n": 630,
+   "proc_p50": 18.91,
+   "proc_p95": 22.9,
+   "over33_pct": 0.0,
+   "tracking": 8.27,
+   "propagation": 0.33,
+   "msckf update": 0.18,
+   "slam update": 0.82,
+   "slam delayed": 0.2,
+   "re-tri & marg": 4.31,
+   "total": 15.7
+  },
+  {
+   "n_slam": "26-50",
+   "n": 126,
+   "proc_p50": 19.2,
+   "proc_p95": 25.56,
+   "over33_pct": 0.0,
+   "tracking": 6.79,
+   "propagation": 0.43,
+   "msckf update": 1.85,
+   "slam update": 1.33,
+   "slam delayed": 1.29,
+   "re-tri & marg": 3.15,
+   "total": 16.71
+  }
+ ],
+ "acc": {}
+}
