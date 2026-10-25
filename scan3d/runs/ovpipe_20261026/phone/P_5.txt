@@ -1,0 +1,7 @@
+# ovpipe P_5 (2026-10-26 03:2x): binary v3 = --pipe never pool-spins (main-only spin) + worker skips frames drop-late will drop.
+# raw80 speed 2.0 (60 fps proxy, rec60) and 1.0 (30 fps, rec20261025 = spin window 20). A refs from P_1/P_3/P_2.
+B60V_r1 ov_bridge_ovpipe3 c4 2 2 2.0 1 0 raw80 --profile rec60 --pipe 1 --pipe-log out/B60V_r1/pipe.csv
+B30V_r1 ov_bridge_ovpipe3 c4 2 2 1.0 1 0 raw80 --profile rec20261025 --pipe 1 --pipe-log out/B30V_r1/pipe.csv
+A30V_r1 ov_bridge_ovpipe3 c4 2 2 1.0 1 0 raw80 --profile rec20261025
+B30V_r2 ov_bridge_ovpipe3 c4 2 2 1.0 1 0 raw80 --profile rec20261025 --pipe 1 --pipe-log out/B30V_r2/pipe.csv
+B60V_r2 ov_bridge_ovpipe3 c4 2 2 2.0 1 0 raw80 --profile rec60 --pipe 1 --pipe-log out/B60V_r2/pipe.csv

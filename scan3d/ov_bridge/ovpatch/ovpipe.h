@@ -21,6 +21,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <climits>
 #include <cstdint>
 #include <cstdio>
 #include <deque>
@@ -67,6 +68,7 @@ struct Job {
   double remap_ms = 0.0, track_ms = 0.0;
   // --pipe-log timestamps (steady clock ns; 0 = not happened): submit, remap start/end, last track start/end
   int64_t t_sub = 0, t_rs = 0, t_re = 0, t_ts = 0, t_te = 0;
+  int64_t t_ns = 0;  // frame time from the record header (drop-late mirror)
   int remap_by = 0;  // 1 = worker, 2 = main thread (get_image)
   int tracks = 0;    // worker computes of this job (re-chains)
   int st = J_PENDING;
@@ -78,6 +80,7 @@ struct Stats {
   uint64_t rechains = 0, drops = 0, worker_tracks = 0, worker_wasted = 0, worker_exc = 0, img_waits = 0;
   double claim_wait_ms = 0.0, max_claim_wait_ms = 0.0, worker_track_ms = 0.0, worker_remap_ms = 0.0, img_wait_ms = 0.0;
   uint64_t claim_waited = 0;
+  uint64_t late_skips = 0;  // frames the worker did not track because the bridge will drop them as late
 };
 
 class Pipe {
@@ -95,6 +98,12 @@ public:
   cv::Mat mask;               // cam0 mask the bridge gives every frame (zeros or the config mask)
   int ncam = 1;
   std::vector<int> cpus;      // --pipe-cpus: worker thread affinity (empty = not pinned)
+  // --drop-late mirror (2026-10-26 03:00, after phone P_2/P_4 cascade): the worker does not track a frame the bridge will
+  // certainly drop: lag only grows and the minimum lag only shrinks, so "late now" (with the bridge's current minimum)
+  // implies "late when the bridge checks it" while the VIO stays initialised. A wrong guess only costs a recompute.
+  std::atomic<int64_t> drop_late_ns{0};             // 0 = off
+  std::atomic<int64_t> lag_min_ns{INT64_MAX};       // bridge: smallest feed lag seen (CLOCK_BOOTTIME - frame t_ns)
+  std::atomic<bool> sys_init{false};                // bridge: VIO initialised after the last fed frame
 
   void start();
   void stop();

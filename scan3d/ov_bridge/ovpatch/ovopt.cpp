@@ -189,6 +189,7 @@ void Pipe::remap_job(Job &j) {
   if (!p || j.len < 20)
     return;
   uint32_t w, h;
+  std::memcpy(&j.t_ns, p, 8);
   std::memcpy(&w, p + 8, 4);
   std::memcpy(&h, p + 12, 4);
   const uint8_t n = p[16];
@@ -422,6 +423,17 @@ void Pipe::run() {
               if (x->img_bad) {
                 x->st = J_DROPPED;  // no image: the bridge rejects / never feeds it
                 continue;
+              }
+              const int64_t dl = drop_late_ns.load();
+              if (dl > 0 && x->img_ok && x->t_ns && sys_init.load()) {  // the bridge will drop it as late: skip
+                timespec ts;
+                clock_gettime(CLOCK_BOOTTIME, &ts);
+                const int64_t lag = (int64_t)ts.tv_sec * 1000000000LL + ts.tv_nsec - x->t_ns;
+                if (lag - lag_min_ns.load() > dl) {
+                  x->st = J_DROPPED;
+                  s_.late_skips++;
+                  continue;
+                }
               }
               if (x->img_ok)
                 j = x;

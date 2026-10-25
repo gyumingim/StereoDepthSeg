@@ -549,7 +549,8 @@ struct IdleSpin {
     bool timed_out = false;
     // --pipe (2026-10-26): while the pipe worker computes, the OpenCV pool must stay free for its KLT -> modes 2/3 spin
     // on the main thread only (mode 1) for this wait. Without --pipe pipe_busy() is always false (unchanged).
-    const bool pipe_spin1 = mode >= 2 && pipe_busy();
+    // 03:00: with --pipe never pool-spin (P_2/P_4: the pool stripes made the worker's KLT run single-threaded, 12-14 ms)
+    const bool pipe_spin1 = mode >= 2 && ovpipe::P.on.load(std::memory_order_relaxed);
     if (pipe_spin1) pipe_spin1_waits++;
     if (mode == 1 || pipe_spin1) {
       while (!input_ready(fd)) {
@@ -1144,6 +1145,8 @@ public:
       std::fprintf(stderr, "[ov_bridge] pipe: only mono KLT, no downsample_cameras, no calib_cam_intrinsics -> --pipe off\n");
       ovpipe::P.on.store(false);
     }
+    if (ovpipe::P.on.load() && a.drop_late_ms > 0.0)  // --pipe: worker skips frames the bridge will drop as late
+      ovpipe::P.drop_late_ns.store(static_cast<int64_t>(a.drop_late_ms * 1e6));
     if (ovpipe::P.on.load()) {  // --pipe (2026-10-26): worker gets the same remap tables / mask as on_stereo
       ovpipe::P.map_x = map_x_;
       ovpipe::P.map_y = map_y_;
@@ -1255,7 +1258,7 @@ public:
                  "[ov_bridge] pipe: submitted %llu | fed frames: precomputed %llu, synchronous %llu (miss base %llu nf %llu "
                  "gen %llu, no job %llu, no result %llu) | drops %llu rechains %llu | worker tracks %llu (%.2f ms avg) wasted "
                  "%llu exc %llu, remaps %.2f ms avg | claim waited %llu (avg %.2f max %.2f ms) | image waits %llu (%.2f ms) | "
-                 "trackers %llu\n",
+                 "trackers %llu | late skips %llu\n",
                  (unsigned long long)st.submitted,
                  (unsigned long long)st.hits, (unsigned long long)st.sync,
                  (unsigned long long)st.miss_base, (unsigned long long)st.miss_nf, (unsigned long long)st.miss_gen,
@@ -1265,7 +1268,7 @@ public:
                  (unsigned long long)st.worker_exc, st.submitted ? st.worker_remap_ms / st.submitted : 0.0,
                  (unsigned long long)st.claim_waited, st.claim_waited ? st.claim_wait_ms / st.claim_waited : 0.0,
                  st.max_claim_wait_ms, (unsigned long long)st.img_waits, st.img_wait_ms,
-                 (unsigned long long)n_pipe_attach_);
+                 (unsigned long long)n_pipe_attach_, (unsigned long long)st.late_skips);
   }
 
   // --init-gate 그림자 VioManager (넓힌 시차 기준) 새로 만들기. refeed = 지금까지 넣은 최근 IMU 를 다시 넣음.
@@ -1740,7 +1743,10 @@ private:
   bool late_drop(const CamMsg &c) {
     if (args_.drop_late_ms <= 0.0) return false;
     const double lag_ms = static_cast<double>(boot_ns() - c.t_ns) / 1e6;
-    if (lag_ms < lag_min_ms_) lag_min_ms_ = lag_ms;
+    if (lag_ms < lag_min_ms_) {
+      lag_min_ms_ = lag_ms;
+      if (ovpipe::P.on.load()) ovpipe::P.lag_min_ns.store(static_cast<int64_t>(lag_ms * 1e6));
+    }
     if (!sys_->initialized() || lag_ms - lag_min_ms_ <= args_.drop_late_ms) return false;
     n_late_dropped_++;
     if (n_late_dropped_ <= 20 || n_late_dropped_ % 100 == 0)
@@ -1793,6 +1799,7 @@ private:
       return;
     }
     ovpipe::tl_seq = 0;
+    if (ovpipe::P.on.load()) ovpipe::P.sys_init.store(sys_->initialized());  // --pipe drop-late mirror
     double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
     if (plog_) {  // --prof-log row (timing only)
       bool init = sys_->initialized();
