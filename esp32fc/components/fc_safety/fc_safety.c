@@ -7,11 +7,13 @@
 #define G0 9.80665f
 #define DEG2RAD 0.017453292519943295f
 
-/* phone heartbeat vio_state / flags, must match VIOP_HB_* / VIOP_HBF_* in viop_fc_ext.h (checked in fs_viop.h) */
-#define HB_INIT 0
-#define HB_LOST 3
-#define HB_STOPPING 4
+/* phone heartbeat state / flags, must match VIOP_HB_* / VIOP_HBF_* in viop_proto.h (checked in fs_viop.h) */
+#define HB_STARTING 0
+#define HB_LOST 2
+#define HB_STOPPING 3
 #define HBF_STOPPING 0x01u
+#define HBF_IMU_STALE 0x02u
+#define HBF_POSE_STALE 0x04u
 /* pose flags, must match VIOP_F_* in viop_proto.h */
 #define PF_VALID 0x0001u
 #define PF_TRACKING 0x0002u
@@ -220,7 +222,8 @@ void fs_on_heartbeat(fs_t *fs, uint32_t now_ms, uint16_t seq, uint8_t vio_state,
   fs->hb_seq = seq;
   fs->hb_seq_stalled = false;
   fs->t_hb_ok_ms = now_ms;
-  fs->hb_lost_flag = vio_state == HB_INIT || vio_state == HB_LOST || vio_state == HB_STOPPING || (app_flags & HBF_STOPPING);
+  fs->hb_lost_flag = vio_state == HB_STARTING || vio_state == HB_LOST || vio_state == HB_STOPPING || vio_state > HB_STOPPING ||
+                     (app_flags & (HBF_STOPPING | HBF_IMU_STALE | HBF_POSE_STALE));
 }
 
 void fs_on_phone_connection(fs_t *fs, uint32_t now_ms, bool connected) {

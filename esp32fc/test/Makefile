@@ -17,3 +17,9 @@ clean:
 	rm -f test_safety
 
 .PHONY: all run clean
+
+# gcc -fsyntax-only of the firmware (main/*.c) against minimal IDF stand-ins (NOT an idf.py build)
+syntax:
+	bash host_syntax.sh
+
+.PHONY: syntax

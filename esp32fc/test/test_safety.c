@@ -64,7 +64,7 @@ static void sim_init(sim_t *s, const fs_config_t *cfg) {
   s->hover_true = 0.42f;
   s->z_target = 1.0f;
   s->pose_on = s->hb_on = s->link_on = s->imu_ok = s->vio_vz_on = s->imu_vz_on = true;
-  s->hb_state = VIOP_HB_OK;
+  s->hb_state = VIOP_HB_TRACKING;
   s->batt_v = 16.4f;
   s->rng = 1;
 }
@@ -234,12 +234,12 @@ static void t_arm_rules(void) {
   const fs_event_t *e = find_ev(&s, FS_EV_ARM_REJECT, -1);
   CHECK(e && (e->reason & FS_B_POSE) && (e->reason & FS_B_HB) && (e->reason & FS_B_LINK));
   s.pose_on = s.hb_on = s.link_on = true;
-  s.hb_state = VIOP_HB_INIT; /* VIO not initialised yet */
+  s.hb_state = VIOP_HB_STARTING; /* VIO not initialised yet */
   run_ms(&s, 300);
   s.nev = 0;
   CHECK(!cmd(&s, FS_CMD_ARM));
   CHECK(find_ev(&s, FS_EV_ARM_REJECT, -1)->reason == FS_B_HB);
-  s.hb_state = VIOP_HB_OK;
+  s.hb_state = VIOP_HB_TRACKING;
   s.tilt_deg = 15;
   run_ms(&s, 300);
   s.nev = 0;
@@ -384,6 +384,14 @@ static void t_hb_seq_stall_and_lost(void) {
   s.hb_flags = VIOP_HBF_STOPPING;
   CHECK(run_until(&s, FS_EMERG_LAND, 100) >= 0);
   CHECK(find_ev(&s, FS_EV_TRANSITION, FS_EMERG_LAND)->reason & FS_R_HB_LOST);
+
+  g_test = "hb_flag_imu_stale";
+  sim_init(&s, NULL);
+  fly_to_hover(&s, 500);
+  s.nev = 0;
+  s.hb_flags = VIOP_HBF_IMU_STALE; /* phone IMU feed stalled: predicted pose not updated */
+  CHECK(run_until(&s, FS_EMERG_LAND, 100) >= 0);
+  CHECK(find_ev(&s, FS_EV_TIER, FS_TIER_IMU));
 
   g_test = "phone_usb_disconnect";
   sim_init(&s, NULL);
@@ -786,9 +794,9 @@ static void t_core(void) {
   fs_pose_info_from_viop(&vp, 77, &pi);
   CHECK(pi.seq == 77 && fabsf(pi.pos_std_max_m - 0.25f) < 1e-6f && pi.send_delay_us == 1234);
   uint8_t fr[VIOP_MAX_FRAME];
-  viop_heartbeat_t hb = {.t_phone_us = 1, .last_pose_seq = 2, .vio_state = VIOP_HB_OK};
+  viop_heartbeat_t hb = {.t_phone_us = 1, .state = VIOP_HB_TRACKING, .hb_period_ms = 50};
   int n = viop_build(fr, VIOP_T_HEARTBEAT, VIOP_SRC_PHONE, 5, &hb, sizeof(hb));
-  CHECK(n == 26 && viop_check(fr, n) == 0);
+  CHECK(n == 28 && viop_check(fr, n) == 0);
 }
 
 int main(void) {

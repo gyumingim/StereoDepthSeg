@@ -271,6 +271,7 @@ void fs_init(fs_t *fs, const fs_config_t *cfg, uint32_t now_ms);
 
 /* inputs from the link task (via the control task queue) */
 void fs_on_pose(fs_t *fs, uint32_t now_ms, const fs_pose_info_t *p);
+/* seq = VIOP frame seq; vio_state / app_flags = viop_heartbeat_t.state / .flags */
 void fs_on_heartbeat(fs_t *fs, uint32_t now_ms, uint16_t seq, uint8_t vio_state, uint8_t app_flags);
 void fs_on_phone_connection(fs_t *fs, uint32_t now_ms, bool connected); /* USB CDC mount / unmount */
 void fs_on_link(fs_t *fs, uint32_t now_ms);                             /* valid PC frame (heartbeat / cmd) */
