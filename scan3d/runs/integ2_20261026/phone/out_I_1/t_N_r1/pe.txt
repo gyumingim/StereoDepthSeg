@@ -1,0 +1,64 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=1 rs_derot=0 rs_row_ppm=0 rs_postinit=0 ekf_sparse=1 sym_inplace=1 init_gemm=0 gyro_klt=0 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse', prof log out/t_N_r1/prof.csv)
+[ov_bridge] drop-late 50 ms mode 1 cap 3 win 3.00 s | pred-stale 500 ms
+[ov_bridge] profile rec20261025: ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse' idle_spin 2 idle_spin_ms 20 drop_late 50 health 1 predict 2 hz 200 pred_thread 1 (after explicit flags)
+[ov_bridge] affinity start: (not pinned) threads 12402:ov_bridge_integ=0,1,2,3,4,5,6,7,8,9
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 2 -> 2 | TBB (ver 2021.11 interface 12110) | cpus 10 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /data/local/tmp/replay/remap_1920x1080.bin
+[ov_bridge] ovrobust: init_still 0 | health 1 log - | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 0 (max gap 3.0 s, min feats 20) | test blank 0 windows
+[ov_bridge] affinity ready: (not pinned) threads 12402:ov_bridge_integ=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin: mode 2 (pool) stripes 2 max 200 ms window 20.0 ms | pred thread (input reader thread on)
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] affinity cam300: (not pinned) threads 12402:ov_bridge_integ=0,1,2,3,4,5,6,7,8,9 12405:ov_bridge_integ=0,1,2,3,4,5,6,7,8,9 12406:ov_bridge_integ=0,1,2,3,4,5,6,7,8,9 12407:ov_bridge_integ=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 6434 spun 3152 timeouts 1 spin 8.18 s | exit_us n 3151 p50 1.6 p95 2.5 p99 6.5 max 1376.1 | window 20.0 ms period 36.49 ms blocked 1301 (2.94 s)
+[ov_bridge] health t=13.466 INIT -> OK (tracked 130 used 10 since_upd 0.00 pos_std 0.087)
+[ov_bridge] drop-late: frame t=26.298 329.3 ms late (> 50.0) -> skipped (#1)
+[ov_bridge] drop-late: frame t=26.332 303.4 ms late (> 50.0) -> skipped (#2)
+[ov_bridge] drop-late: frame t=26.365 277.1 ms late (> 50.0) -> skipped (#3)
+[ov_bridge] drop-late: frame t=26.399 246.0 ms late (> 50.0) -> skipped (#4)
+[ov_bridge] drop-late: frame t=26.432 216.9 ms late (> 50.0) -> skipped (#5)
+[ov_bridge] drop-late: frame t=26.465 190.7 ms late (> 50.0) -> skipped (#6)
+[ov_bridge] drop-late: frame t=26.499 161.4 ms late (> 50.0) -> skipped (#7)
+[ov_bridge] drop-late: frame t=26.532 132.0 ms late (> 50.0) -> skipped (#8)
+[ov_bridge] drop-late: frame t=26.565 102.0 ms late (> 50.0) -> skipped (#9)
+[ov_bridge] drop-late: frame t=26.599 72.0 ms late (> 50.0) -> skipped (#10)
+[ov_bridge] drop-late: frame t=27.033 216.0 ms late (> 50.0) -> skipped (#11)
+[ov_bridge] drop-late: frame t=27.066 189.5 ms late (> 50.0) -> skipped (#12)
+[ov_bridge] drop-late: frame t=27.099 163.2 ms late (> 50.0) -> skipped (#13)
+[ov_bridge] drop-late: frame t=27.133 133.1 ms late (> 50.0) -> skipped (#14)
+[ov_bridge] drop-late: frame t=27.166 105.5 ms late (> 50.0) -> skipped (#15)
+[ov_bridge] drop-late: frame t=27.200 75.8 ms late (> 50.0) -> skipped (#16)
+[ov_bridge] drop-late: frame t=27.266 54.3 ms late (> 50.0) -> skipped (#17)
+[ov_bridge] drop-late: frame t=27.333 50.0 ms late (> 50.0) -> skipped (#18)
+[ov_bridge] drop-late: frame t=27.366 50.8 ms late (> 50.0) -> skipped (#19)
+[ov_bridge] drop-late: frame t=27.433 54.1 ms late (> 50.0) -> skipped (#20)
+[ov_bridge] drop-late: frame t=30.199 203.3 ms late (> 50.0) -> skipped (#100)
+[ov_bridge] drop-late: frame t=33.532 505.9 ms late (> 50.0) -> skipped (#200)
+[ov_bridge] drop-late: t=33.666 late for 6.00 s and lag still moving (window range 603.5 ms) -> late-lost (outputs marked lost until the lag is back or flat)
+[ov_bridge] drop-late: frame t=36.866 1172.8 ms late (> 50.0) -> skipped (#300)
+[ov_bridge] drop-late: frame t=40.199 2244.4 ms late (> 50.0) -> skipped (#400)
+[ov_bridge] drop-late: frame t=43.532 4316.1 ms late (> 50.0) -> skipped (#500)
+[ov_bridge] drop-late: frame t=46.865 5476.5 ms late (> 50.0) -> skipped (#600)
+[ov_bridge] drop-late: frame t=50.198 5973.8 ms late (> 50.0) -> skipped (#700)
+[ov_bridge] drop-late: frame t=53.532 6635.9 ms late (> 50.0) -> skipped (#800)
+[ov_bridge] drop-late: frame t=56.865 7596.3 ms late (> 50.0) -> skipped (#900)
+[ov_bridge] drop-late: frame t=60.298 8092.2 ms late (> 50.0) -> skipped (#1000)
+[ov_bridge] drop-late: frame t=63.898 9302.5 ms late (> 50.0) -> skipped (#1100)
+[ov_bridge] drop-late: re-anchor #1 at t=66.464 after 1152 late frames (38.80 s, window range 30.4 ms): reference 133966381.1 -> 133975667.1 ms (+9286.0)
+[ov_bridge] drop-late: t=66.464 late-lost cleared by the re-anchor
+[ov_bridge] health t=66.464 OK -> LOST (tracked 9 used 29 since_upd 0.00 pos_std 8.401)
+[ov_bridge] drop-late: frame t=68.066 642.6 ms late (> 50.0) -> skipped (#1200)
+[ov_bridge] drop-late: frame t=71.900 1480.1 ms late (> 50.0) -> skipped (#1300)
+[ov_bridge] drop-late: t=73.598 late for 6.03 s and lag still moving (window range 2660.1 ms) -> late-lost (outputs marked lost until the lag is back or flat)
+[ov_bridge] drop-late: frame t=75.300 3673.5 ms late (> 50.0) -> skipped (#1400)
+[ov_bridge] drop-late: frame t=78.633 5184.7 ms late (> 50.0) -> skipped (#1500)
+[ov_bridge] drop-late: frame t=81.966 6092.1 ms late (> 50.0) -> skipped (#1600)
+[ov_bridge] pred thread reader: image space waits 22
+[ov_bridge] pred thread: mode 2 hz 200 | lines 11048 (frame 403 rate 10645) snapshots 403 | compute us p50 166.0 p95 322.9 max 299421.1 | horizon ms p50 7950.4 p95 35949.7 max 38935.6 | thread cpu 4.386 s (pred) 10.217 s (reader)
+[ov_bridge] pred thread stale (--pred-stale-ms): 7857 lines marked lost
+[ov_bridge] affinity end: (not pinned) threads 12402:ov_bridge_integ=0,1,2,3,4,5,6,7,8,9 12407:ov_bridge_integ=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 43309 spun 18562 timeouts 29 spin 58.70 s | exit_us n 18533 p50 1.6 p95 4.2 p99 17.9 max 29830.9 | window 20.0 ms period 19.32 ms blocked 4102 (11.16 s)
+[ov_bridge] predict: mode 2 hz 200 | lines 0 | horizon ms p50 -1.0 p95 -1.0 max -1.0
+[ov_bridge] drop-late: limit 50.0 ms | dropped 1600 frames | min lag 133975667.1 ms
+[ov_bridge] drop-late mode 1: cap 3 win 3.00 s | forced 0 | re-anchors 1 | late-lost 2 | max late run 1152 frames | pred stale 500 ms (main-loop stale preds 0)
+[ov_bridge] health: frames INIT 324 OK 387 DEGRADED 0 LOST 16 | transitions 3 | max LOST run 16 frames | recover state 0 full 0 | blanked 0 | init_ready frames 319

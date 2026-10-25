@@ -1,0 +1,7 @@
+# integ2 phone list I_2 (2026-10-26 06:05): timing sanity rerun of I_1 t_* WITHOUT drop-late (--drop-late 0: every frame processed,
+# like ovupd V1/V2) because I_1's timing runs were hit by phone suspend (BOOTTIME rx lag grew 1.5-11.7 s -> 79-1600 frames dropped).
+# The PC polls adb every 2 s during the list (keepalive) to keep the phone out of suspend. N = new profile, O = old profile, ABBA.
+t2_N_r1 ov_bridge_integ2 c4 2 f4 --profile rec20261025 --drop-late 0 --prof-log @O@/prof.csv
+t2_O_r1 ov_bridge_integ2 c4 2 f4 --profile rec20261025 --drop-late 0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --prof-log @O@/prof.csv
+t2_O_r2 ov_bridge_integ2 c4 2 f4 --profile rec20261025 --drop-late 0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --prof-log @O@/prof.csv
+t2_N_r2 ov_bridge_integ2 c4 2 f4 --profile rec20261025 --drop-late 0 --prof-log @O@/prof.csv

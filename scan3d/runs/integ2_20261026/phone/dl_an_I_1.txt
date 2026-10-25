@@ -1,0 +1,12 @@
+d_m0: drop-late 50 ms mode 0 cap 3 win 3.00 s | pred-stale 0 ms
+   poses 654 (t>=25: 0, tracking 0) | dropped 600 | forced/re-anchors/late-lost/max-late-run - | health t>=25 {}
+   re-anchor lines: []
+   pred 6115 max h 20.032 s, lost(t>=25) 0, stale-marked -, last |v| 0.82 m/s
+   viop rows 6115 cols ['t_pred_ns', 'time_usec', 'send_boot_ns', 'age_ms', 'int_ms', 'src', 'status', 'x', 'y', 'z', 'qw', 'qx'] | status counts {'1': 6115}
+   last pose t 24.9635368 | feeder: feeder3v speed 1.00: 23599 records, 1254 frames, 45.00 s, late_max 21.90 ms, late_cam_max 6.52 ms, cam late>5ms 1
+d_m1: drop-late 50 ms mode 1 cap 3 win 3.00 s | pred-stale 500 ms
+   poses 1185 (t>=25: 531, tracking 531) | dropped 69 | forced/re-anchors/late-lost/max-late-run ('22', '1', '0', '92') | health t>=25 {'DEGRADED': 22, 'OK': 509}
+   re-anchor lines: ['re-anchor #1 at t=28.030 after 92 late frames (3.03 s, window range 13.6 ms): reference 133915283.3 -> 133915683.4 ms (+400.0)', 're-anchors 1 | late-lost 0 | max late run 92 frames | pred stale 500 ms (main-loop stale preds 0)']
+   pred 6654 max h 0.168 s, lost(t>=25) 0, stale-marked 0, last |v| 0.45 m/s
+   viop rows 6654 cols ['t_pred_ns', 'time_usec', 'send_boot_ns', 'age_ms', 'int_ms', 'src', 'status', 'x', 'y', 'z', 'qw', 'qx'] | status counts {'1': 6654}
+   last pose t 44.9628866 | feeder: feeder3v speed 1.00: 23599 records, 1254 frames, 45.00 s, late_max 29.41 ms, late_cam_max 21.47 ms, cam late>5ms 3
