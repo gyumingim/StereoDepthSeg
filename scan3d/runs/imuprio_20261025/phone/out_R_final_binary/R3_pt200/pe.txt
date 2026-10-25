@@ -1,0 +1,15 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=0 qr_compress=0 ekf_chol=0 par_cov=0 prof=0 (--ovopt 'all_exact', prof log -)
+[ov_bridge] affinity start: (not pinned) threads 29070:ov_bridge_imupr=0,1,2,3,4,5,6,7,8,9
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 2 -> 2 | TBB (ver 2021.11 interface 12110) | cpus 10 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /data/local/tmp/replay/remap_1920x1080.bin
+[ov_bridge] affinity ready: (not pinned) threads 29070:ov_bridge_imupr=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin: mode 2 (pool) stripes 2 max 200 ms | pred thread (input reader thread on)
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] affinity cam300: (not pinned) threads 29070:ov_bridge_imupr=0,1,2,3,4,5,6,7,8,9 29074:ov_bridge_imupr=0,1,2,3,4,5,6,7,8,9 29075:ov_bridge_imupr=0,1,2,3,4,5,6,7,8,9 29076:ov_bridge_imupr=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 6434 spun 4754 timeouts 2 spin 11.21 s | exit_us n 4752 p50 1.4 p95 1.9 p99 6.2 max 471.0
+[ov_bridge] pred thread reader: image space waits 0
+[ov_bridge] pred thread: mode 2 hz 200 | lines 14910 (frame 2003 rate 12907) snapshots 2003 | compute us p50 288.7 p95 504.9 max 7996.4 | horizon ms p50 36.6 p95 57.9 max 406.6 | thread cpu 7.749 s (pred) 11.735 s (reader)
+[ov_bridge] affinity end: (not pinned) threads 29070:ov_bridge_imupr=0,1,2,3,4,5,6,7,8,9 29076:ov_bridge_imupr=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 43309 spun 24988 timeouts 2 spin 60.15 s | exit_us n 24986 p50 1.5 p95 2.5 p99 6.4 max 1214.2
+[ov_bridge] predict: mode 2 hz 200 | lines 0 | horizon ms p50 -1.0 p95 -1.0 max -1.0

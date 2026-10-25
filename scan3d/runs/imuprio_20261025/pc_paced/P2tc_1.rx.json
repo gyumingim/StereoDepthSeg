@@ -1,0 +1,89 @@
+{
+ "stream": "/tmp/imuprio/d40c.bin",
+ "cmd": [
+  "/tmp/imuprio/ov_bridge_new_full",
+  "/home/system/scanner/StereoDepthSeg/scan3d/runs/vio_v3w4kbl8/estimator_config.yaml",
+  "--stdio",
+  "--max-speed",
+  "8",
+  "--lost-frames",
+  "1000000",
+  "--startup-lost-frames",
+  "1000000",
+  "--threads",
+  "2",
+  "--predict",
+  "2",
+  "--predict-hz",
+  "200",
+  "--pred-thread",
+  "1",
+  "--timing-log",
+  "/tmp/imuprio/acc2/P2tc_1.tlog"
+ ],
+ "made": "2026-10-25 16:07:42",
+ "n_lines": 6025,
+ "n_pred": 5179,
+ "imu_write_late_ms": {
+  "p50": 0.03367511089891195,
+  "p95": 2.8511838288977738,
+  "max": 26.410878053866327
+ },
+ "latency_ms_all": {
+  "n": 5179,
+  "p50": 1.074,
+  "p95": 5.167,
+  "p99": 10.129,
+  "max": 29.377,
+  "mean": 1.931
+ },
+ "latency_ms_frame": {
+  "n": 703,
+  "p50": 3.537,
+  "p95": 7.263,
+  "p99": 13.763,
+  "max": 28.627,
+  "mean": 3.981
+ },
+ "horizon_ms_frame": {
+  "n": 703,
+  "p50": 51.436,
+  "p95": 68.514,
+  "p99": 84.31,
+  "max": 104.549,
+  "mean": 51.236
+ },
+ "latency_ms_rate": {
+  "n": 4476,
+  "p50": 1.009,
+  "p95": 4.495,
+  "p99": 8.933,
+  "max": 29.377,
+  "mean": 1.61
+ },
+ "horizon_ms_rate": {
+  "n": 4476,
+  "p50": 68.233,
+  "p95": 93.259,
+  "p99": 106.865,
+  "max": 137.859,
+  "mean": 68.909
+ },
+ "age_at_consumer_ms_1khz": {
+  "n": 23434,
+  "p50": 4.017,
+  "p95": 9.515,
+  "p99": 15.045,
+  "max": 40.108,
+  "mean": 4.498
+ },
+ "gap_between_lines_ms": {
+  "n": 5178,
+  "p50": 4.129,
+  "p95": 8.195,
+  "p99": 13.892,
+  "max": 39.834,
+  "mean": 4.526
+ },
+ "rate_hz": 221.0
+}

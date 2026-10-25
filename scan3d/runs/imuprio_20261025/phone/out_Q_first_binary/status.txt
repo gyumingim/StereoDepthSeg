@@ -1,0 +1,13 @@
+start 16:11:16 list Q.txt skin_max_start 35.0
+Features	: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt
+16:11:46 Q1_exact17 run bin ov_bridge_imuprio cfg c4 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact --pose-precision 17' SKIN 32.5 AP 33.3 cpu9_cap 2784000 screen Awake fg com.sec.android.app.launcher/com.sec.android.app.launcher.activities.LauncherActivity
+16:13:14 Q1_exact17 done SKIN 36.2 max 36.2 aborted 0
+16:13:44 Q3_pt200 wait SKIN 35.3 AP 37.6
+16:14:00 Q3_pt200 run bin ov_bridge_imuprio cfg c4 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact --pose-precision 17 --predict 2 --predict-hz 200 --pred-thread 1' SKIN 34.6 AP 36.3 cpu9_cap 2784000 screen Awake fg com.sec.android.app.launcher/com.sec.android.app.launcher.activities.LauncherActivity
+16:15:28 Q3_pt200 done SKIN 36.3 max 36.5 aborted 0
+16:15:58 Q2_p1 wait SKIN 35.3 AP 37.1
+16:16:13 Q2_p1 wait SKIN 35.1 AP 36.7
+16:16:29 Q2_p1 run bin ov_bridge_imuprio cfg c4 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact --pose-precision 17 --predict 1' SKIN 34.5 AP 35.9 cpu9_cap 2784000 screen Awake fg com.sec.android.app.launcher/com.sec.android.app.launcher.activities.LauncherActivity
+16:17:57 Q2_p1 done SKIN 36.2 max 36.4 aborted 0
+ALL DONE 16:17:57 Q.txt
+no bridge/feeder left

@@ -1,0 +1,86 @@
+Sun Oct 25 16:05:32 KST 2026
+ 16:05:32 up 8 days,  3:40,  2 users,  load average: 14.32, 8.06, 3.75
+== P1_1 16:06:05 poses 845 pred 555 time 17.03 4.34 32.61 load 16.76
+== P2o_1 16:06:37 poses 845 pred 2133 time 16.69 5.10 32.05 load 16.44
+== P2t_1 16:07:09 poses 845 pred 5026 time 19.64 7.47 32.17 load 15.77
+== P2tc_1 16:07:42 poses 845 pred 5179 time 18.68 7.67 32.58 load 15.30
+== P1_2 16:08:14 poses 845 pred 608 time 17.45 4.38 32.17 load 13.18
+== P2o_2 16:08:46 poses 845 pred 1987 time 17.49 4.91 32.11 load 14.36
+== P2t_2 16:09:18 poses 845 pred 4844 time 20.23 7.39 32.23 load 18.64
+== P2tc_2 16:09:51 poses 845 pred 5226 time 20.26 8.31 33.15 load 19.21
+ref /tmp/imuprio/acc/P0_1.jsonl: poses 845 tracking 704 hash 9bf21707ad2b20b8 pred 0 (excluded ['imu_held', 'ms', 'remap_ms', 'wait_ms'])
+/tmp/imuprio/acc2/P1_1.jsonl: poses 845 identical 845/845 hash 9bf21707ad2b20b8 pred 555 first_diff None [] IDENTICAL
+/tmp/imuprio/acc2/P1_2.jsonl: poses 845 identical 845/845 hash 9bf21707ad2b20b8 pred 608 first_diff None [] IDENTICAL
+/tmp/imuprio/acc2/P2o_1.jsonl: poses 845 identical 845/845 hash 9bf21707ad2b20b8 pred 2133 first_diff None [] IDENTICAL
+/tmp/imuprio/acc2/P2o_2.jsonl: poses 845 identical 845/845 hash 9bf21707ad2b20b8 pred 1987 first_diff None [] IDENTICAL
+/tmp/imuprio/acc2/P2t_1.jsonl: poses 845 identical 845/845 hash 9bf21707ad2b20b8 pred 5026 first_diff None [] IDENTICAL
+/tmp/imuprio/acc2/P2t_2.jsonl: poses 845 identical 845/845 hash 9bf21707ad2b20b8 pred 4844 first_diff None [] IDENTICAL
+/tmp/imuprio/acc2/P2tc_1.jsonl: poses 845 identical 845/845 hash 9bf21707ad2b20b8 pred 5179 first_diff None [] IDENTICAL
+/tmp/imuprio/acc2/P2tc_2.jsonl: poses 845 identical 845/845 hash 9bf21707ad2b20b8 pred 5226 first_diff None [] IDENTICAL
+== /tmp/imuprio/acc2/P1_1.jsonl: pose(tracking) 704 pred 555
+  [frame] matched 553 | horizon ms n 553 p50 50.16 p95 63.67 max 67.87 | speed m/s n 553 p50 0.13 p95 0.58 max 0.78
+     predicted       pos err cm n 553 p50 0.04 p95 0.17 max 0.44 | ori err deg n 553 p50 0.04 p95 0.21 max 0.81
+     no-pred (last)  pos err cm n 553 p50 0.67 p95 3.20 max 4.75 | ori err deg n 553 p50 0.78 p95 3.14 max 7.40
+     const-velocity  pos err cm n 553 p50 0.12 p95 0.51 max 1.37
+== /tmp/imuprio/acc2/P2o_1.jsonl: pose(tracking) 704 pred 2133
+  [frame] matched 635 | horizon ms n 635 p50 49.94 p95 62.19 max 65.20 | speed m/s n 635 p50 0.14 p95 0.58 max 0.78
+     predicted       pos err cm n 635 p50 0.05 p95 0.17 max 0.41 | ori err deg n 635 p50 0.04 p95 0.20 max 1.40
+     no-pred (last)  pos err cm n 635 p50 0.79 p95 3.17 max 4.75 | ori err deg n 635 p50 0.79 p95 3.14 max 7.21
+     const-velocity  pos err cm n 635 p50 0.12 p95 0.45 max 1.44
+  [rate] matched 1493 | horizon ms n 1493 p50 58.34 p95 66.05 max 67.87 | speed m/s n 1493 p50 0.01 p95 0.51 max 0.78
+     predicted       pos err cm n 1493 p50 0.05 p95 0.18 max 0.63 | ori err deg n 1493 p50 0.02 p95 0.13 max 0.81
+     no-pred (last)  pos err cm n 1493 p50 0.00 p95 3.09 max 5.06 | ori err deg n 1493 p50 0.00 p95 2.68 max 7.80
+     const-velocity  pos err cm n 1493 p50 0.06 p95 0.53 max 1.85
+== /tmp/imuprio/acc2/P2t_1.jsonl: pose(tracking) 704 pred 5026
+  [frame] matched 702 | horizon ms n 702 p50 55.47 p95 120.85 max 166.03 | speed m/s n 702 p50 0.16 p95 0.58 max 0.78
+     predicted       pos err cm n 702 p50 0.05 p95 0.23 max 0.72 | ori err deg n 702 p50 0.04 p95 0.19 max 0.48
+     no-pred (last)  pos err cm n 702 p50 0.91 p95 5.53 max 9.78 | ori err deg n 702 p50 1.05 p95 4.58 max 9.81
+     const-velocity  pos err cm n 702 p50 0.16 p95 1.10 max 4.34
+  [rate] matched 4314 | horizon ms n 4314 p50 72.95 p95 131.23 max 166.86 | speed m/s n 4314 p50 0.15 p95 0.56 max 0.78
+     predicted       pos err cm n 4314 p50 0.07 p95 0.27 max 0.93 | ori err deg n 4314 p50 0.05 p95 0.20 max 1.29
+     no-pred (last)  pos err cm n 4314 p50 1.17 p95 6.10 max 12.20 | ori err deg n 4314 p50 1.27 p95 5.42 max 12.37
+     const-velocity  pos err cm n 4314 p50 0.23 p95 1.44 max 4.25
+== /tmp/imuprio/acc2/P2tc_1.jsonl: pose(tracking) 704 pred 5179
+  [frame] matched 702 | horizon ms n 702 p50 51.44 p95 68.53 max 104.55 | speed m/s n 702 p50 0.16 p95 0.57 max 0.78
+     predicted       pos err cm n 702 p50 0.05 p95 0.18 max 0.53 | ori err deg n 702 p50 0.04 p95 0.21 max 1.08
+     no-pred (last)  pos err cm n 702 p50 0.91 p95 3.18 max 5.51 | ori err deg n 702 p50 0.94 p95 3.50 max 8.37
+     const-velocity  pos err cm n 702 p50 0.14 p95 0.51 max 1.64
+  [rate] matched 4469 | horizon ms n 4469 p50 68.25 p95 93.28 max 137.86 | speed m/s n 4469 p50 0.16 p95 0.58 max 0.78
+     predicted       pos err cm n 4469 p50 0.06 p95 0.24 max 0.80 | ori err deg n 4469 p50 0.04 p95 0.19 max 1.41
+     no-pred (last)  pos err cm n 4469 p50 1.15 p95 4.32 max 7.77 | ori err deg n 4469 p50 1.21 p95 4.45 max 9.20
+     const-velocity  pos err cm n 4469 p50 0.21 p95 0.84 max 2.57
+== /tmp/imuprio/acc2/P2t_2.jsonl: pose(tracking) 704 pred 4844
+  [frame] matched 702 | horizon ms n 702 p50 60.13 p95 133.05 max 166.85 | speed m/s n 702 p50 0.16 p95 0.57 max 0.78
+     predicted       pos err cm n 702 p50 0.07 p95 0.23 max 0.58 | ori err deg n 702 p50 0.04 p95 0.19 max 1.04
+     no-pred (last)  pos err cm n 702 p50 1.00 p95 6.87 max 12.76 | ori err deg n 702 p50 1.19 p95 4.81 max 8.20
+     const-velocity  pos err cm n 702 p50 0.19 p95 1.71 max 3.75
+  [rate] matched 4132 | horizon ms n 4132 p50 75.90 p95 147.96 max 167.07 | speed m/s n 4132 p50 0.14 p95 0.54 max 0.78
+     predicted       pos err cm n 4132 p50 0.08 p95 0.28 max 0.85 | ori err deg n 4132 p50 0.05 p95 0.21 max 1.41
+     no-pred (last)  pos err cm n 4132 p50 1.11 p95 6.41 max 12.78 | ori err deg n 4132 p50 1.23 p95 5.33 max 10.42
+     const-velocity  pos err cm n 4132 p50 0.24 p95 1.58 max 5.48
+== /tmp/imuprio/acc2/P2tc_2.jsonl: pose(tracking) 704 pred 5226
+  [frame] matched 702 | horizon ms n 702 p50 58.21 p95 92.09 max 134.02 | speed m/s n 702 p50 0.16 p95 0.57 max 0.78
+     predicted       pos err cm n 702 p50 0.06 p95 0.22 max 0.61 | ori err deg n 702 p50 0.04 p95 0.20 max 1.08
+     no-pred (last)  pos err cm n 702 p50 1.03 p95 3.68 max 5.68 | ori err deg n 702 p50 1.08 p95 4.47 max 9.21
+     const-velocity  pos err cm n 702 p50 0.17 p95 0.80 max 2.08
+  [rate] matched 4514 | horizon ms n 4514 p50 74.15 p95 110.97 max 167.35 | speed m/s n 4514 p50 0.16 p95 0.58 max 0.78
+     predicted       pos err cm n 4514 p50 0.07 p95 0.27 max 0.87 | ori err deg n 4514 p50 0.05 p95 0.20 max 1.29
+     no-pred (last)  pos err cm n 4514 p50 1.31 p95 4.71 max 8.07 | ori err deg n 4514 p50 1.32 p95 5.25 max 12.37
+     const-velocity  pos err cm n 4514 p50 0.25 p95 1.15 max 3.03
+P1_1 rate 23.7 lat all 3.646/8.717/22.854 frame 3.646/8.717/22.854 rate None/None/None | age@1kHz p50/p95/max 25.53/156.41/421.792 mean 42.439 | gap 33.828/98.186/417.641 | imu late p95 5.5
+P2o_1 rate 91.0 lat all 0.974/4.841/29.637 frame 3.407/6.432/18.53 rate 0.886/2.879/29.637 | age@1kHz p50/p95/max 8.215/55.038/254.573 mean 16.482 | gap 6.037/31.079/254.582 | imu late p95 3.7
+P2t_1 rate 214.7 lat all 1.538/9.412/70.791 frame 4.053/15.152/70.791 rate 1.233/8.33/61.546 | age@1kHz p50/p95/max 4.6/16.204/77.075 mean 6.282 | gap 4.07/10.277/45.88 | imu late p95 6.1
+P2tc_1 rate 221.0 lat all 1.074/5.167/29.377 frame 3.537/7.263/28.627 rate 1.009/4.495/29.377 | age@1kHz p50/p95/max 4.017/9.515/40.108 mean 4.498 | gap 4.129/8.195/39.834 | imu late p95 2.9
+P1_2 rate 25.9 lat all 3.498/6.992/19.444 frame 3.498/6.992/19.444 rate None/None/None | age@1kHz p50/p95/max 23.257/119.482/972.028 mean 46.304 | gap 33.658/69.69/968.307 | imu late p95 6.4
+P2o_2 rate 84.8 lat all 1.102/5.061/23.638 frame 3.343/6.974/23.638 rate 0.919/3.164/15.415 | age@1kHz p50/p95/max 9.453/68.315/426.103 mean 20.653 | gap 6.067/32.439/423.718 | imu late p95 4.2
+P2t_2 rate 206.7 lat all 2.105/34.983/203.678 frame 4.604/116.522/203.678 rate 1.566/20.455/177.872 | age@1kHz p50/p95/max 5.209/106.498/203.769 mean 16.592 | gap 4.026/11.702/73.979 | imu late p95 82.6
+P2tc_2 rate 223.1 lat all 1.577/7.542/88.288 frame 4.128/11.789/88.288 rate 1.306/6.683/87.639 | age@1kHz p50/p95/max 4.446/11.057/90.989 mean 5.647 | gap 4.125/8.931/57.557 | imu late p95 3.8
+[ov_bridge] pred thread: mode 2 hz 200 | lines 5026 (frame 704 rate 4322) snapshots 704 | compute us p50 46.3 p95 83.4 max 11371.0 | horizon ms p50 70.9 p95 129.7 max 166.9 | thread cpu 0.591 s (pred) 0.933 s (reader)
+[ov_bridge] pred thread: mode 2 hz 200 | lines 4844 (frame 704 rate 4140) snapshots 704 | compute us p50 47.3 p95 83.9 max 6679.3 | horizon ms p50 74.2 p95 144.4 max 167.1 | thread cpu 0.544 s (pred) 0.753 s (reader)
+[ov_bridge] pred thread: mode 2 hz 200 | lines 5179 (frame 703 rate 4476) snapshots 704 | compute us p50 44.5 p95 70.8 max 4005.2 | horizon ms p50 65.9 p95 91.9 max 137.9 | thread cpu 0.587 s (pred) 1.201 s (reader)
+[ov_bridge] pred thread: mode 2 hz 200 | lines 5226 (frame 704 rate 4522) snapshots 704 | compute us p50 46.5 p95 83.3 max 7072.8 | horizon ms p50 72.0 p95 110.3 max 167.4 | thread cpu 0.581 s (pred) 0.823 s (reader)
+/tmp/imuprio/acc2/P1_1.tlog proc ms p50 18.9 p95 36.9
+/tmp/imuprio/acc2/P2o_1.tlog proc ms p50 17.5 p95 33.4
+/tmp/imuprio/acc2/P2t_1.tlog proc ms p50 20.1 p95 42.2
+/tmp/imuprio/acc2/P2tc_1.tlog proc ms p50 16.9 p95 32.0
+Sun Oct 25 16:09:55 KST 2026

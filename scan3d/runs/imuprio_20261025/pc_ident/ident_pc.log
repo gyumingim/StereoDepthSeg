@@ -1,0 +1,46 @@
+Sun Oct 25 16:01:33 KST 2026
+71bb15d95c1feb12db9d9c66dfe0cbf5bae9b407f911144087cfeab73f330a2a  /tmp/imuprio/ov_bridge_0618_full
+e79f3f5c1ae707dd69721514bf3bfb5c0639d9333ea451534951ae0808ca0360  /tmp/imuprio/ov_bridge_new_full
+/tmp/idlespin/pose_ab/stream.bin -> /tmp/imuprio/h_L0.4nc.bin: lead 0.4 s chunk 65536 imu/chunk 4 no_chunk True | {'imu': 15075, 'img': 845, 'chunks': 0, 'imu_inside': 0, 'other': 1}
+/tmp/idlespin/pose_ab/stream.bin -> /tmp/imuprio/h_L0.1.bin: lead 0.1 s chunk 65536 imu/chunk 4 no_chunk False | {'imu': 15075, 'img': 845, 'chunks': 6760, 'imu_inside': 843, 'other': 1}
+/tmp/idlespin/pose_ab/stream.bin -> /tmp/imuprio/h_L0.18.bin: lead 0.18 s chunk 65536 imu/chunk 4 no_chunk False | {'imu': 15075, 'img': 845, 'chunks': 6760, 'imu_inside': 841, 'other': 1}
+/tmp/idlespin/pose_ab/stream.bin -> /tmp/imuprio/h_L0.bin: lead 0.0 s chunk 65536 imu/chunk 4 no_chunk False | {'imu': 15075, 'img': 845, 'chunks': 6760, 'imu_inside': 845, 'other': 1}
+== pt200 rc 0 poses 845 pred 2092 time 12.39 0.96 9.99
+== old rc 0 poses 845 pred 0 time 12.07 0.89 10.00
+== pt1 rc 0 poses 845 pred 703 time 12.17 1.10 10.00
+== p2old rc 0 poses 845 pred 0 time 12.20 0.82 10.05
+== new rc 0 poses 845 pred 0 time 11.98 1.06 10.07
+== L0.18pt rc 0 poses 845 pred 2081 time 11.71 0.98 9.27
+== L0.18 rc 0 poses 845 pred 0 time 11.70 0.85 9.78
+== L0.1 rc 0 poses 845 pred 0 time 11.65 1.06 9.91
+== L0.4nc rc 0 poses 845 pred 0 time 11.92 0.88 10.02
+== L0 rc 0 poses 845 pred 0 time 11.77 1.05 10.03
+--- default new vs 0.6.18 binary (all fields)
+ref /tmp/imuprio/h/old.jsonl: poses 845 tracking 704 hash f42c104b1ac655c2 pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/imuprio/h/new.jsonl: poses 845 identical 845/845 hash f42c104b1ac655c2 pred 0 first_diff None [] IDENTICAL
+--- predict modes vs new default (all non-timing fields incl imu_held)
+ref /tmp/imuprio/h/new.jsonl: poses 845 tracking 704 hash f42c104b1ac655c2 pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/imuprio/h/p2old.jsonl: poses 845 identical 845/845 hash f42c104b1ac655c2 pred 0 first_diff None [] IDENTICAL
+/tmp/imuprio/h/pt200.jsonl: poses 845 identical 845/845 hash f42c104b1ac655c2 pred 2092 first_diff None [] IDENTICAL
+/tmp/imuprio/h/pt1.jsonl: poses 845 identical 845/845 hash f42c104b1ac655c2 pred 703 first_diff None [] IDENTICAL
+--- reordered/chunked vs new default (excluding imu_held)
+ref /tmp/imuprio/h/new.jsonl: poses 845 tracking 704 hash 3063f4a0d9c76f6e pred 0 (excluded ['imu_held', 'ms', 'remap_ms', 'wait_ms'])
+/tmp/imuprio/h/L0.jsonl: poses 845 identical 845/845 hash 3063f4a0d9c76f6e pred 0 first_diff None [] IDENTICAL
+/tmp/imuprio/h/L0.1.jsonl: poses 845 identical 845/845 hash 3063f4a0d9c76f6e pred 0 first_diff None [] IDENTICAL
+/tmp/imuprio/h/L0.18.jsonl: poses 845 identical 845/845 hash 3063f4a0d9c76f6e pred 0 first_diff None [] IDENTICAL
+/tmp/imuprio/h/L0.18pt.jsonl: poses 845 identical 845/845 hash 3063f4a0d9c76f6e pred 2081 first_diff None [] IDENTICAL
+/tmp/imuprio/h/L0.4nc.jsonl: poses 845 identical 29/845 hash 8cb47591cc231cb8 pred 0 first_diff 25 ['t_state'] DIFFERENT
+[ov_bridge] idle spin: mode 0 (off) stripes 2 max 200 ms | pred thread (input reader thread on)
+[ov_bridge] pred thread reader: image space waits 842
+[ov_bridge] pred thread: mode 2 hz 200 | lines 2081 (frame 703 rate 1378) snapshots 704 | compute us p50 87.6 p95 115.5 max 298.8 | horizon ms p50 287.9 p95 306.8 max 312.2 | thread cpu 0.243 s (pred) 0.439 s (reader)
+[ov_bridge] predict: mode 2 hz 200 | lines 0 | horizon ms p50 -1.0 p95 -1.0 max -1.0
+[ov_bridge] predict: mode 2 hz 200 | lines 0 | horizon ms p50 -1.0 p95 -1.0 max -1.0
+[ov_bridge] idle spin: mode 0 (off) stripes 2 max 200 ms | pred thread (input reader thread on)
+[ov_bridge] pred thread reader: image space waits 842
+[ov_bridge] pred thread: mode 1 hz 100 | lines 703 (frame 703 rate 0) snapshots 704 | compute us p50 52.6 p95 70.3 max 227.8 | horizon ms p50 97.7 p95 98.6 max 131.2 | thread cpu 0.086 s (pred) 0.188 s (reader)
+[ov_bridge] predict: mode 1 hz 100 | lines 0 | horizon ms p50 -1.0 p95 -1.0 max -1.0
+[ov_bridge] idle spin: mode 0 (off) stripes 2 max 200 ms | pred thread (input reader thread on)
+[ov_bridge] pred thread reader: image space waits 842
+[ov_bridge] pred thread: mode 2 hz 200 | lines 2092 (frame 703 rate 1389) snapshots 704 | compute us p50 51.6 p95 72.3 max 521.7 | horizon ms p50 108.9 p95 131.7 max 140.6 | thread cpu 0.165 s (pred) 0.251 s (reader)
+[ov_bridge] predict: mode 2 hz 200 | lines 0 | horizon ms p50 -1.0 p95 -1.0 max -1.0
+Sun Oct 25 16:01:57 KST 2026

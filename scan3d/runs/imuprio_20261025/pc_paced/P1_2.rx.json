@@ -1,0 +1,69 @@
+{
+ "stream": "/tmp/predict/delay40.bin",
+ "cmd": [
+  "/tmp/imuprio/ov_bridge_new_full",
+  "/home/system/scanner/StereoDepthSeg/scan3d/runs/vio_v3w4kbl8/estimator_config.yaml",
+  "--stdio",
+  "--max-speed",
+  "8",
+  "--lost-frames",
+  "1000000",
+  "--startup-lost-frames",
+  "1000000",
+  "--threads",
+  "2",
+  "--predict",
+  "1",
+  "--timing-log",
+  "/tmp/imuprio/acc2/P1_2.tlog"
+ ],
+ "made": "2026-10-25 16:08:14",
+ "n_lines": 1454,
+ "n_pred": 608,
+ "imu_write_late_ms": {
+  "p50": 0.03127905074506998,
+  "p95": 6.366102455649514,
+  "max": 106.49554501287639
+ },
+ "latency_ms_all": {
+  "n": 608,
+  "p50": 3.498,
+  "p95": 6.992,
+  "p99": 10.234,
+  "max": 19.444,
+  "mean": 3.839
+ },
+ "latency_ms_frame": {
+  "n": 608,
+  "p50": 3.498,
+  "p95": 6.992,
+  "p99": 10.234,
+  "max": 19.444,
+  "mean": 3.839
+ },
+ "horizon_ms_frame": {
+  "n": 608,
+  "p50": 50.639,
+  "p95": 62.984,
+  "p99": 64.741,
+  "max": 67.034,
+  "mean": 49.699
+ },
+ "age_at_consumer_ms_1khz": {
+  "n": 23432,
+  "p50": 23.257,
+  "p95": 119.482,
+  "p99": 737.718,
+  "max": 972.028,
+  "mean": 46.304
+ },
+ "gap_between_lines_ms": {
+  "n": 607,
+  "p50": 33.658,
+  "p95": 69.69,
+  "p99": 129.179,
+  "max": 968.307,
+  "mean": 38.602
+ },
+ "rate_hz": 25.9
+}
