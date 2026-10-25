@@ -317,6 +317,8 @@ struct Args {
   int pipe = 0;               // --pipe 0|1 (2026-10-26, ovpipe; header)
   std::string pipe_log;       // --pipe-log FILE (2026-10-26, ovpipe; timing only)
   std::string pipe_cpus;      // --pipe-cpus LIST (2026-10-26, ovpipe; worker thread affinity, "" = not pinned)
+  double pipe_spin_ms = 0.0;  // --pipe-spin MS (2026-10-26 03:30, ovpipe; worker busy-wait window, 0 = off)
+  int pipe_threads = 1;       // --pipe-threads N (2026-10-26 04:20, ovpipe): OpenCV pool size with --pipe (0 = keep config)
 };
 
 // --health rules (header); --health-cfg upd_deg=0.2,... overrides
@@ -1250,6 +1252,11 @@ public:
         },
         static_cast<const void *>(tp));
     n_pipe_attach_++;
+    // --pipe-threads (04:20): the VioManager constructor just set the OpenCV pool to num_opencv_threads. Two threads
+    // (main update + pipe worker) entering the one OpenCV/TBB pool concurrently hung a PC run for 40 min (ident_pc_6,
+    // TBB 2020) and is the suspected cause of the phone stalls -> default 1 = every OpenCV call runs on its caller thread.
+    // Results do not depend on the thread count (remap / KLT / ovopt par_* are exact for any split).
+    if (args_.pipe_threads > 0) cv::setNumThreads(args_.pipe_threads);
   }
   void log_pipe() const {
     if (!ovpipe::P.on.load()) return;
@@ -2684,6 +2691,8 @@ int main(int argc, char **argv) {
     else if (s == "--pipe") a.pipe = std::stoi(next()) != 0 ? 1 : 0;  // 2026-10-26 ovpipe
     else if (s == "--pipe-log") a.pipe_log = next();                   // 2026-10-26 ovpipe
     else if (s == "--pipe-cpus") a.pipe_cpus = next();                 // 2026-10-26 ovpipe
+    else if (s == "--pipe-spin") a.pipe_spin_ms = std::max(0.0, std::stod(next()));  // 2026-10-26 ovpipe
+    else if (s == "--pipe-threads") a.pipe_threads = std::max(0, std::stoi(next()));  // 2026-10-26 ovpipe
     else if (s == "--profile") next();  // integ-20261025 (applied above)
     else if (s == "--klt-pyr") a.klt_pyr = std::max(0, std::min(8, std::stoi(next())));  // 2026-10-25 ovheat
     else if (s == "--idle-spin") {
@@ -2815,6 +2824,7 @@ int main(int argc, char **argv) {
       return 2;
     }
     ovpipe::P.on.store(true);
+    ovpipe::P.spin_ms = std::min(a.pipe_spin_ms, 200.0);
     if (!a.pipe_cpus.empty()) {
       cpu_set_t pc;
       if (!parse_cpus(a.pipe_cpus, pc)) {

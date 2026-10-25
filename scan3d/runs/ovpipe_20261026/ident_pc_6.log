@@ -1,0 +1,19 @@
+Mon Oct 26 03:26:16 KST 2026
+32cf9bb2f73e7cb4995499ef3cd647862d7ae8237ccb95fca3f417396db06b67  /home/system/scanner/StereoDepthSeg-integ/scan3d/ov_bridge/build_integ_full/ov_bridge
+27b20fdd68560e5717f916a479d677b4b162477ef10013ee599261e33ac89210  /home/system/scanner/StereoDepthSeg-ovpipe/scan3d/ov_bridge/build_ovpipe_full/ov_bridge
+== h_pipe_pt rc 0 poses 845 | --pipe 1 --predict 2 --predict-hz 200 --pred-thread 1
+== h_pipe rc 0 poses 845 | --pipe 1
+== h_def rc 0 poses 845 | 
+== h_ref rc 0 poses 845 | 
+== r60_ref rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec60 --drop-late 0
+== r_pipe rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --pipe 1
+== r_ref rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin
+== r_def rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin
+== r60_pipe rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec60 --drop-late 0 --pipe 1
+== x_w3 rc 0 poses 2389 | inject --profile rec60 --drop-late 0
+== x_def rc 0 poses 2389 | inject 
+Terminated
+== x_pipe rc 143 poses 1232 | inject --pipe 1
+== rec20261025 + pipe-spin 30 vs integ rec60 ref (same W3 poses)
+ref /tmp/ovpipe/ident/r60_ref.jsonl: poses 2327 tracking 2003 hash c5f0887c72811b73 pred 6721 (excluded ['h', 'ms', 'remap_ms', 'wait_ms'])
+/tmp/ovpipe/ident/r20_spin.jsonl: poses 2327 identical 2327/2327 hash c5f0887c72811b73 pred 6062 first_diff None [] IDENTICAL

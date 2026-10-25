@@ -98,6 +98,7 @@ public:
   cv::Mat mask;               // cam0 mask the bridge gives every frame (zeros or the config mask)
   int ncam = 1;
   std::vector<int> cpus;      // --pipe-cpus: worker thread affinity (empty = not pinned)
+  double spin_ms = 0.0;       // --pipe-spin MS (03:30): worker busy-waits up to MS ms for new work before blocking (0 = off)
   // --drop-late mirror (2026-10-26 03:00, after phone P_2/P_4 cascade): the worker does not track a frame the bridge will
   // certainly drop: lag only grows and the minimum lag only shrinks, so "late now" (with the bridge's current minimum)
   // implies "late when the bridge checks it" while the VIO stays initialised. A wrong guess only costs a recompute.
@@ -154,6 +155,11 @@ private:
   void run();
   void rechain_after(size_t idx);  // m_ held: jobs after index idx (all if idx == SIZE_MAX) -> PENDING
   void remap_job(Job &j);           // worker, no lock
+  void notify_() {                  // every state change: wakes waiters and the --pipe-spin poll
+    ev_.fetch_add(1, std::memory_order_release);
+    cv_.notify_all();
+  }
+  std::atomic<uint64_t> ev_{0};
 
   std::mutex m_;
   std::condition_variable cv_;

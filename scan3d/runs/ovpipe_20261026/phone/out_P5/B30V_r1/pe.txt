@@ -1,0 +1,25 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 rs_postinit=0 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol', prof log -)
+[ov_bridge] profile rec20261025: ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol' idle_spin 2 idle_spin_ms 20 drop_late 50 health 1 predict 2 hz 200 pred_thread 1 (after explicit flags)
+[ov_bridge] affinity start: (not pinned) threads 20502:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 2 -> 2 | TBB (ver 2021.11 interface 12110) | cpus 10 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /data/local/tmp/replay/remap_1920x1080.bin
+[ov_bridge] ovrobust: init_still 0 | health 1 log - | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 0 (max gap 3.0 s, min feats 20) | test blank 0 windows
+[ov_bridge] affinity ready: (not pinned) threads 20502:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] pipe: on (worker thread: remap + KLT tracking of the next frame while the main thread updates)
+[ov_bridge] idle spin: mode 2 (pool) stripes 2 max 200 ms window 20.0 ms | pred thread (input reader thread on)
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] affinity cam300: (not pinned) threads 20502:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9 20506:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9 20507:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9 20508:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9 20520:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9 20687:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 6434 spun 1378 timeouts 1 spin 3.62 s | exit_us n 0 p50 -1.0 p95 -1.0 p99 -1.0 max -1.0 | window 20.0 ms period 36.50 ms blocked 914 (2.23 s) | pipe main-only spins 1378
+[ov_bridge] health t=13.466 INIT -> OK (tracked 130 used 10 since_upd 0.00 pos_std 0.087)
+[ov_bridge] drop-late: frame t=31.230 62.5 ms late (> 50.0) -> skipped (#1)
+[ov_bridge] drop-late: frame t=80.998 82.0 ms late (> 50.0) -> skipped (#2)
+[ov_bridge] drop-late: frame t=81.032 53.3 ms late (> 50.0) -> skipped (#3)
+[ov_bridge] pred thread reader: image space waits 1
+[ov_bridge] pred thread: mode 2 hz 200 | lines 14919 (frame 2000 rate 12919) snapshots 2000 | compute us p50 168.9 p95 372.9 max 4485.1 | horizon ms p50 56.2 p95 84.1 max 404.6 | thread cpu 6.692 s (pred) 11.178 s (reader)
+[ov_bridge] affinity end: (not pinned) threads 20502:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9 20506:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9 20520:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9 20687:ov_bridge_ovpip=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 43309 spun 6347 timeouts 1 spin 17.62 s | exit_us n 0 p50 -1.0 p95 -1.0 p99 -1.0 max -1.0 | window 20.0 ms period 33.41 ms blocked 917 (2.23 s) | pipe main-only spins 6347
+[ov_bridge] predict: mode 2 hz 200 | lines 0 | horizon ms p50 -1.0 p95 -1.0 max -1.0
+[ov_bridge] drop-late: limit 50.0 ms | dropped 3 frames | min lag 123267683.0 ms
+[ov_bridge] health: frames INIT 324 OK 2000 DEGRADED 0 LOST 0 | transitions 2 | max LOST run 0 frames | recover state 0 full 0 | blanked 0 | init_ready frames 319
+[ov_bridge] pipe: submitted 2327 | fed frames: precomputed 2323, synchronous 1 (miss base 0 nf 0 gen 0, no job 0, no result 1) | drops 3 rechains 3 | worker tracks 2326 (13.49 ms avg) wasted 1 exc 0, remaps 1.99 ms avg | claim waited 2303 (avg 13.19 max 39.46 ms) | image waits 419 (2003.94 ms) | trackers 1 | late skips 1

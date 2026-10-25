@@ -1,0 +1,8 @@
+# ovpipe P_7 (2026-10-26 04:3x): binary v5 = v3 + --pipe-threads 1 default (OpenCV pool 1: main and worker never share the
+# TBB pool; PC hang + phone stalls suspected from that). 60 fps proxy (rec60) and 30 fps (rec20261025), A vs B interleaved.
+B60T_r1 ov_bridge_ovpipe5 c4 2 2 2.0 1 0 raw80 --profile rec60 --pipe 1 --pipe-log out/B60T_r1/pipe.csv
+B30T_r1 ov_bridge_ovpipe5 c4 2 2 1.0 1 0 raw80 --profile rec20261025 --pipe 1 --pipe-log out/B30T_r1/pipe.csv
+A60_r4 ov_bridge_ovpipe5 c4 2 2 2.0 1 0 raw80 --profile rec60
+A30_r3 ov_bridge_ovpipe5 c4 2 2 1.0 1 0 raw80 --profile rec20261025
+B30T_r2 ov_bridge_ovpipe5 c4 2 2 1.0 1 0 raw80 --profile rec20261025 --pipe 1 --pipe-log out/B30T_r2/pipe.csv
+B60T_r2 ov_bridge_ovpipe5 c4 2 2 2.0 1 0 raw80 --profile rec60 --pipe 1 --pipe-log out/B60T_r2/pipe.csv

@@ -1,0 +1,6 @@
+# ovpipe P_6 (2026-10-26 03:4x): binary v4 = v3 + --pipe-spin MS (worker busy-waits for the next frame, keeps its core/clock).
+# 30 fps (rec20261025) was slower with pipe (worker track 13 ms). B + spin 30 vs A, ABBA-ish; then one 60 fps proxy with spin.
+A30W_r1 ov_bridge_ovpipe4 c4 2 2 1.0 1 0 raw80 --profile rec20261025
+B30W_r1 ov_bridge_ovpipe4 c4 2 2 1.0 1 0 raw80 --profile rec20261025 --pipe 1 --pipe-spin 30 --pipe-log out/B30W_r1/pipe.csv
+B30W_r2 ov_bridge_ovpipe4 c4 2 2 1.0 1 0 raw80 --profile rec20261025 --pipe 1 --pipe-spin 30 --pipe-log out/B30W_r2/pipe.csv
+B60W_r1 ov_bridge_ovpipe4 c4 2 2 2.0 1 0 raw80 --profile rec60 --pipe 1 --pipe-spin 30 --pipe-log out/B60W_r1/pipe.csv

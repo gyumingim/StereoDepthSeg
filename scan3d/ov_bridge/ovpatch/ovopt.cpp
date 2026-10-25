@@ -142,7 +142,7 @@ void Pipe::stop() {
     std::lock_guard<std::mutex> lk(m_);
     stop_ = true;
   }
-  cv_.notify_all();
+  notify_();
   if (th_.joinable())
     th_.join();
 }
@@ -168,7 +168,7 @@ void Pipe::rechain_after(size_t idx) {
       j.res.reset();
     }
   }
-  cv_.notify_all();
+  notify_();
 }
 
 void Pipe::submit(uint64_t seq, const uint8_t *src, size_t len) {
@@ -180,7 +180,7 @@ void Pipe::submit(uint64_t seq, const uint8_t *src, size_t len) {
   std::lock_guard<std::mutex> lk(m_);
   jobs_.push_back(std::move(j));
   s_.submitted++;
-  cv_.notify_all();
+  notify_();
 }
 
 void Pipe::remap_job(Job &j) {
@@ -238,7 +238,7 @@ bool Pipe::get_image(uint64_t seq, cv::Mat &img, double &remap_ms) {
     j->remapping = false;
     j->img_ok = !j->img.empty();
     j->img_bad = !j->img_ok;
-    cv_.notify_all();
+    notify_();
   } else if (j->remapping) {
     auto t0 = std::chrono::steady_clock::now();
     while (j->remapping)
@@ -267,7 +267,7 @@ void Pipe::drop(uint64_t seq) {
       if (was == J_DONE || was == J_RUNNING)
         rechain_after(i);
     }
-    cv_.notify_all();
+    notify_();
     return;
   }
 }
@@ -282,7 +282,7 @@ void Pipe::release(uint64_t seq) {
     x->src = nullptr;
     if (!x->img_ok)
       x->img_bad = true;
-    cv_.notify_all();
+    notify_();
     return;
   }
 }
@@ -372,7 +372,7 @@ void Pipe::committed(const std::shared_ptr<Res> &r, bool fresh) {
   com_wait_ = false;
   if (fresh)
     rechain_after(SIZE_MAX);  // results computed on another base than r
-  cv_.notify_all();
+  notify_();
 }
 
 void Pipe::run() {
@@ -453,6 +453,29 @@ void Pipe::run() {
             break;
           }
         }
+        if (spin_ms > 0.0) {  // --pipe-spin: stay on the core (clock, placement) for the next frame instead of sleeping
+          const uint64_t e0 = ev_.load(std::memory_order_acquire);
+          lk.unlock();
+          const auto tend = std::chrono::steady_clock::now() + std::chrono::microseconds((int64_t)(spin_ms * 1000.0));
+          bool changed = false;
+          while (std::chrono::steady_clock::now() < tend) {
+            if (ev_.load(std::memory_order_acquire) != e0) {
+              changed = true;
+              break;
+            }
+#if defined(__aarch64__)
+            asm volatile("yield");
+#elif defined(__x86_64__)
+            __builtin_ia32_pause();
+#endif
+          }
+          lk.lock();
+          if (changed || stop_)
+            continue;
+          // nothing new within the window: block (re-check the state first: an event may have come in between)
+          if (ev_.load(std::memory_order_acquire) != e0)
+            continue;
+        }
         cv_.wait(lk);
       }
     }
@@ -468,7 +491,7 @@ void Pipe::run() {
         s_.worker_remap_ms += j->remap_ms;
         busy.store(false);
       }
-      cv_.notify_all();
+      notify_();
       continue;
     }
     tl_worker = true;
@@ -506,7 +529,7 @@ void Pipe::run() {
         s_.worker_exc++;
       busy.store(false);
     }
-    cv_.notify_all();
+    notify_();
   }
 }
 
