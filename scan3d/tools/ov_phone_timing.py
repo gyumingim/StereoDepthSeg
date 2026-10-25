@@ -11,6 +11,10 @@ Per run (docs/phone_session_60fps_plan.md "On-phone OpenVINS timing"):
   OpenVINS split from ov_timing.txt (record_timing_information, seconds -> ms): tracking, propagation, msckf update,
     slam update, slam delayed, re-tri & marg, total
   wait_ms (record received -> fed: IMU wait + backlog), end-to-end latency t_out - t_sensor (poses.csv)
+  arlat 0.6.17 --ei predict 1|2 (poses_pred.csv, IMU forward-predicted poses): latency of the predicted pose
+    t_out - t_pred (t_pred = predicted instant = newest IMU sample, IMU/sensor clock; assumes IMU and camera timestamps
+    share elapsedRealtimeNanos) and the horizon t_pred - t_cam (t_cam = mid-exposure frame time it starts from), per src
+    (frame = once per frame update, rate = between frames, mode 2); tracking lines only
   drops: camera gaps in frames.csv (sensor timestamps > 1.5 periods apart -> frames the camera / ImageReader skipped),
     Java pool / queue drops (frames.csv fate 1 / 2), bridge queue drops (bridge_timing.csv cam_dropped), and fed frames
     per second vs the requested fps
@@ -123,6 +127,7 @@ def report(run, a):
     ov, ov_t = read_ov_timing(run / "ov_timing.txt")
     fr = read_csv(run / "frames.csv")
     po = read_csv(run / "poses.csv")
+    pp = read_csv(run / "poses_pred.csv")          # arlat 0.6.17 --ei predict
     tp = read_csv(run / "temps.csv")
     res = dict(run=str(run), made=time.strftime("%Y-%m-%d %H:%M:%S"), script="scan3d/tools/ov_phone_timing.py",
                inputs=[p.name for p in run.iterdir() if p.is_file()], budget_ms=a.budget_ms, fps=fps,
@@ -158,6 +163,18 @@ def report(run, a):
                 tt = (np.array([x[0] for x in tl]) - t_ns[0]) / 1e9
                 lat = np.array([x[1] for x in tl])
                 sg["latency_sensor_to_pose_ms"] = stats(lat[(tt >= s0) & (tt < s1)])
+        if pp:
+            for src in ("frame", "rate"):
+                rr = [r for r in pp if r["src"] == src and r["status"] == "tracking"]
+                if not rr:
+                    continue
+                tc = (np.array([int(r["t_cam_ns"]) for r in rr]) - t_ns[0]) / 1e9
+                mm = (tc >= s0) & (tc < s1)
+                tpred = np.array([int(r["t_pred_ns"]) for r in rr], np.int64)
+                lat = (np.array([int(r["t_out_ns"]) for r in rr], np.int64) - tpred) / 1e6
+                hor = (tpred - np.array([int(r["t_cam_ns"]) for r in rr], np.int64)) / 1e6
+                sg[f"pred_{src}"] = dict(latency_ms=stats(lat[mm]), horizon_ms=stats(hor[mm]),
+                                         n_imu=stats([float(r["n_imu"]) for r, k in zip(rr, mm) if k]))
         segs[name] = sg
     res["segments"] = segs
     if fr:
@@ -197,7 +214,8 @@ def show(res):
             print(f"   threads: ov_threads {pf.get('ov_threads', '-')} -> bridge cv_threads {pf.get('bridge_cv_threads', '-')}"
                   f" ({pf.get('bridge_cv_parallel', '?')}), klt_overlap {pf.get('bridge_klt_overlap', pf.get('klt_overlap', '-'))}"
                   f", idle_spin {pf.get('ov_idle_spin', '-')} -> bridge {pf.get('bridge_idle_spin', '-')}"
-                  f" (stripes {pf.get('bridge_idle_spin_stripes', '-')})")      # arlat 0.6.16
+                  f" (stripes {pf.get('bridge_idle_spin_stripes', '-')})"      # arlat 0.6.16
+                  f", predict {pf.get('ov_predict', '-')} -> bridge {pf.get('bridge_predict', '-')}")   # arlat 0.6.17
         if pf.get("bridge_affinity"):
             print(f"   bridge affinity (pose 30): {pf.get('bridge_affinity')}")
             print(f"   app affinity (pose 30): {pf.get('app_affinity')}")
@@ -223,6 +241,15 @@ def show(res):
         print(f"   {name:10s} {s['frames']:6d} {s['fed_fps'] or 0:6.1f} | {p['p50']:6.2f} / {p['p95']:6.2f} / {p['max']:7.2f} | "
               f"{100 * p['frac_over_budget']:5.1f} % | {100 * p['frac_over_33ms']:5.1f} % | {tr.get('p50', '-')}/{tr.get('p95', '-')} | "
               f"msckf/slam/delay p50 {upd} | {s['wait_ms'].get('p95')} | {lat.get('p50', '-')}/{lat.get('p95', '-')}")
+    for name, s in res["segments"].items():   # arlat 0.6.17 --ei predict: IMU forward-predicted poses
+        for src in ("frame", "rate"):
+            pr = s.get(f"pred_{src}")
+            if pr and pr["latency_ms"].get("n"):
+                la, ho = pr["latency_ms"], pr["horizon_ms"]
+                lp = s.get("latency_sensor_to_pose_ms", {})
+                print(f"   predicted pose [{src}] {name:8s} n {la['n']}: latency t_out - t_pred p50 {la['p50']} / p95 {la['p95']} / max {la['max']} ms"
+                      f" (pose: {lp.get('p50', '-')} / {lp.get('p95', '-')} / {lp.get('max', '-')}) | horizon t_pred - t_cam p50 {ho['p50']}"
+                      f" / p95 {ho['p95']} / max {ho['max']} ms")
     print(f"   -> {res.get('verdict')}")
 
 

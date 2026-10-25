@@ -175,6 +175,9 @@ public class MainActivity extends Activity {
                 ov.ovThreads = Math.max(0, getIntent().getIntExtra("ov_threads", 0));   // 0.6.15: ov_bridge --threads (0 = config)
                 ov.kltOverlap = getIntent().getIntExtra("klt_overlap", 0) != 0;        // 0.6.15: ov_bridge --klt-overlap 1
                 ov.idleSpin = Math.max(0, Math.min(2, getIntent().getIntExtra("idle_spin", 0)));   // 0.6.16: ov_bridge --idle-spin 0|1|2
+                ov.predict = Math.max(0, Math.min(2, getIntent().getIntExtra("predict", 0)));       // 0.6.17: ov_bridge --predict 0|1|2
+                ov.predictHz = Math.max(1, Math.min(500, getIntent().getIntExtra("predict_hz", 100)));   // 0.6.17: --predict-hz (mode 2)
+                ov.predictStream = getIntent().getIntExtra("predict_stream", 0) != 0;   // 0.6.17: pred lines also to the PC stream
                 sustainedOn = false;
                 try {
                     boolean sup = ((android.os.PowerManager) getSystemService(POWER_SERVICE)).isSustainedPerformanceModeSupported();

@@ -27,6 +27,9 @@
 # --ei klt_overlap 1 (patched TrackKLT overlap, default off). The report prints a "threads:" line (bridge cv_threads).
 # arlat 0.6.16: --ei idle_spin 0|1|2 (ov_bridge --idle-spin: 1 = main thread busy-waits for input, 2 = + OpenCV pool spins;
 # default 0). Shown on the "threads:" line; bridge_stderr.log "[ov_bridge] idle spin end: ... exit_us ...".
+# arlat 0.6.17: --ei predict 0|1|2 (ov_bridge --predict: IMU forward-predicted "now" pose after every frame update, 2 = also
+# between frames at --ei predict_hz (default 100)) -> <run>/poses_pred.csv; the report prints a "predicted pose" line
+# (latency arrival - t_pred, horizon t_pred - t_cam). Default 0 = off.
 set -uo pipefail
 cmd=${1:?push|run|clean}; S=${2:?<ip:port>}; shift 2
 ADB=${ADB:-/mnt/c/Users/a3162/platform-tools/adb.exe}

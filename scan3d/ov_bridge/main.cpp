@@ -5,7 +5,24 @@
 //             [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]
 //             [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S] [--remap FILE]
 //             [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST] [--threads N] [--klt-overlap 0|1]
-//             [--idle-spin 0|1|2]
+//             [--idle-spin 0|1|2] [--predict 0|1|2] [--predict-hz HZ]
+//
+// --predict MODE (2026-10-25, arlat 0.6.17 intent predict): IMU forward-predicted "now" pose. The camera frame reaches
+//   the bridge ~40 ms after its exposure (HAL/ISP) and takes ~20 ms to process, while the IMU (~500 Hz) keeps arriving.
+//   After a frame update the bridge integrates the latest filter IMU state (q, p, v, biases, IMU intrinsics, dt_cam_imu)
+//   with every IMU sample newer than the state time (fed + still held ones) up to the newest received IMU sample, the
+//   same mean equations as OpenVINS Propagator::fast_state_propagate (no covariance). It only READS the state (own copy
+//   of the numbers): the filter, the record order and the normal "pose" lines are identical to --predict 0.
+//   0 = off (default, output unchanged).
+//   1 = one {"type":"pred",...} line per frame update, emitted after the frame's pose line as soon as the input pipe has
+//       no more data waiting (= after the IMU records that queued up during the frame were read), so it uses all IMU
+//       that has arrived.
+//   2 = 1 + also between frames: whenever the input is idle and the newest IMU is >= 1/HZ s past the last prediction
+//       (--predict-hz, default 100), another "pred" line (src "rate").
+//   pred line: t_ns = predicted time on the IMU clock (sensor ns, = the newest IMU sample), t = the same instant on the
+//   pose-line time axis (s, t_state axis: t_imu - dt_cam_imu), t_cam_ns = t_ns of the last frame pose, t_state, h =
+//   horizon (s, IMU time - state time), n_imu, src "frame"|"rate", status, p, q (Hamilton xyzw world<-IMU), v,
+//   T_world_cam0, q_GtoI_jpl. Only while initialised. stderr "[ov_bridge] predict ..." at the end (count, horizon).
 //
 // --idle-spin MODE (2026-10-25, arlat 0.6.16 intent idle_spin): what the bridge does while it waits for the next input
 //   record (between frames / IMU samples). klt_bench 2026-10-24 (S24, scan3d/runs/klt_idle_bench_20261024): with a 29 ms
@@ -151,6 +168,8 @@ struct Args {
   int threads = 0;          // --threads N (0 = config num_opencv_threads)
   int klt_overlap = 0;      // --klt-overlap 0|1 (OV_KLT_OVERLAP for ovpatch/TrackKLT.cpp)
   int idle_spin = 0;        // --idle-spin 0|1|2 (header)
+  int predict = 0;          // --predict 0|1|2 (header)
+  double predict_hz = 100.0;  // --predict-hz (mode 2)
 };
 
 // ---- --idle-spin (header) ----
@@ -478,6 +497,7 @@ public:
   // VioManager 새로 만들기. 붙잡아 둔 IMU(imu_hold_) 는 새 시스템에 그대로 넣을 수 있으므로 남긴다.
   void make_system() {
     sys_ = std::make_shared<ov_msckf::VioManager>(params_);
+    pred_pending_ = false;
     make_shadow(false);
     init_checked_ = false;
     cams_.clear();
@@ -531,8 +551,118 @@ public:
       << ",\"use_stereo\":" << (params_.use_stereo ? "true" : "false") << ",\"imu_hold_s\":" << args_.imu_hold_s
       << ",\"cv_threads\":" << cv::getNumThreads() << ",\"cv_parallel\":" << jstr(cv_parallel_)
       << ",\"klt_overlap\":" << args_.klt_overlap << ",\"idle_spin\":" << g_idle.mode
-      << ",\"idle_spin_stripes\":" << g_idle.stripes << "}\n";
+      << ",\"idle_spin_stripes\":" << g_idle.stripes << ",\"predict\":" << args_.predict
+      << ",\"predict_hz\":" << args_.predict_hz << "}\n";
     return o.str();
+  }
+
+  // ---- --predict (header) ----
+  // a prediction is due: mode 1/2 after a frame update, mode 2 also every 1/predict_hz of IMU time
+  bool predict_due() const {
+    if (args_.predict <= 0 || !sys_ || !sys_->initialized()) return false;
+    if (pred_pending_) return true;
+    return args_.predict == 2 && newest_imu_t_ > last_pred_imu_t_ &&
+           newest_imu_t_ - last_pred_imu_t_ >= 1.0 / args_.predict_hz - 1e-6;
+  }
+
+  // propagate a copy of the current IMU state to the newest received IMU sample, append a "pred" line
+  void predict(std::string &out) {
+    const char *src = pred_pending_ ? "frame" : "rate";
+    pred_pending_ = false;
+    last_pred_imu_t_ = newest_imu_t_;
+    auto st = sys_->get_state();
+    if (st->_timestamp < 0.0) return;
+    const double t_off = st->_calib_dt_CAMtoIMU->value()(0);
+    const double time0 = st->_timestamp + t_off, time1 = newest_imu_t_;
+    // IMU samples after time0: fed (imu_recent_) then held (imu_hold_), both in time order and disjoint
+    std::vector<ov_core::ImuData> d;
+    const ov_core::ImuData *before = nullptr;
+    auto take = [&](const ov_core::ImuData &m) {
+      if (m.timestamp <= time0) {
+        before = &m;
+        return;
+      }
+      if (m.timestamp > time1) return;
+      if (d.empty()) {  // first sample after time0: start with the sample interpolated at time0
+        ov_core::ImuData s = m;
+        if (before && m.timestamp > before->timestamp) {
+          double f = (time0 - before->timestamp) / (m.timestamp - before->timestamp);
+          s.wm = (1 - f) * before->wm + f * m.wm;
+          s.am = (1 - f) * before->am + f * m.am;
+        }
+        s.timestamp = time0;
+        d.push_back(s);
+      }
+      d.push_back(m);
+    };
+    for (const auto &m : imu_recent_) take(m);
+    for (const auto &m : imu_hold_) take(m);
+
+    Eigen::Matrix<double, 16, 1> x = st->_imu->value();  // copy: [q_GtoI(4) p(3) v(3) bg(3) ba(3)]
+    const Eigen::Vector3d bg = x.block(10, 0, 3, 1), ba = x.block(13, 0, 3, 1);
+    const Eigen::Matrix3d Dw = ov_msckf::State::Dm(st->_options.imu_model, st->_calib_imu_dw->value());
+    const Eigen::Matrix3d Da = ov_msckf::State::Dm(st->_options.imu_model, st->_calib_imu_da->value());
+    const Eigen::Matrix3d Tg = ov_msckf::State::Tg(st->_calib_imu_tg->value());
+    const Eigen::Matrix3d R_A = st->_calib_imu_ACCtoIMU->Rot(), R_G = st->_calib_imu_GYROtoIMU->Rot();
+    const Eigen::Vector3d grav(0.0, 0.0, params_.gravity_mag);
+    for (size_t i = 0; i + 1 < d.size(); i++) {  // = Propagator::fast_state_propagate mean
+      const auto &m0 = d[i], &m1 = d[i + 1];
+      const double dt = m1.timestamp - m0.timestamp;
+      if (dt <= 0.0) continue;
+      Eigen::Vector3d a1 = R_A * Da * (m0.am - ba), a2 = R_A * Da * (m1.am - ba);
+      Eigen::Vector3d a = 0.5 * (a1 + a2);
+      Eigen::Vector3d w1 = R_G * Dw * (m0.wm - bg - Tg * a1), w2 = R_G * Dw * (m1.wm - bg - Tg * a2);
+      Eigen::Vector3d w = 0.5 * (w1 + w2);
+      Eigen::Matrix3d R = ov_core::quat_2_Rot(x.block(0, 0, 4, 1));
+      Eigen::Vector3d v = x.block(7, 0, 3, 1), p = x.block(4, 0, 3, 1);
+      x.block(0, 0, 4, 1) = ov_core::rot_2_quat(ov_core::exp_so3(-w * dt) * R);
+      x.block(4, 0, 3, 1) = p + v * dt + 0.5 * R.transpose() * a * dt * dt - 0.5 * grav * dt * dt;
+      x.block(7, 0, 3, 1) = v + R.transpose() * a * dt - grav * dt;
+    }
+    const double h = d.size() >= 2 ? d.back().timestamp - time0 : 0.0;
+    Eigen::Vector4d q_GtoI = x.block(0, 0, 4, 1);
+    Eigen::Matrix3d R_ItoG = ov_core::quat_2_Rot(q_GtoI).transpose();
+    Eigen::Vector3d p_IinG = x.block(4, 0, 3, 1), v = x.block(7, 0, 3, 1);
+    Eigen::Quaterniond qh(R_ItoG);
+    auto calib0 = st->_calib_IMUtoCAM.at(0);
+    Eigen::Matrix3d R_CtoG = R_ItoG * calib0->Rot().transpose();
+    Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
+    T.block<3, 3>(0, 0) = R_CtoG;
+    T.block<3, 1>(0, 3) = p_IinG - R_CtoG * calib0->pos();
+    const double t_pred = time0 + h;  // IMU clock (s from t0)
+    n_pred_++;
+    if (h_pred_.size() < 2000000) h_pred_.push_back(static_cast<float>(h * 1e3));
+    std::ostringstream o;
+    o.precision(9);
+    o << "{\"type\":\"pred\",\"t_ns\":" << (t0_ns_ + static_cast<int64_t>(std::llround(t_pred * 1e9))) << ",\"t\":";
+    jnum(o, t_pred - t_off);
+    o << ",\"t_cam_ns\":" << pred_cam_t_ns_ << ",\"t_state\":";
+    jnum(o, st->_timestamp);
+    o << ",\"h\":";
+    jnum(o, h);
+    o << ",\"n_imu\":" << (d.empty() ? 0 : d.size() - 1) << ",\"src\":\"" << src << "\",\"status\":\""
+      << (lost_ ? "lost" : "tracking") << "\",\"p\":";
+    jarr(o, p_IinG);
+    o << ",\"q\":[";
+    jnum(o, qh.x()); o << ","; jnum(o, qh.y()); o << ","; jnum(o, qh.z()); o << ","; jnum(o, qh.w());
+    o << "],\"v\":";
+    jarr(o, v);
+    o << ",\"T_world_cam0\":";
+    jarr(o, T);
+    o << ",\"q_GtoI_jpl\":";
+    jarr(o, q_GtoI);
+    o << "}\n";
+    out += o.str();
+  }
+
+  void log_predict() const {
+    if (args_.predict <= 0) return;
+    std::vector<float> e = h_pred_;
+    std::sort(e.begin(), e.end());
+    auto q = [&](double f) { return e.empty() ? -1.0 : static_cast<double>(e[std::min(e.size() - 1, size_t(f * e.size()))]); };
+    std::fprintf(stderr, "[ov_bridge] predict: mode %d hz %.0f | lines %llu | horizon ms p50 %.1f p95 %.1f max %.1f\n",
+                 args_.predict, args_.predict_hz, static_cast<unsigned long long>(n_pred_), q(0.5), q(0.95),
+                 e.empty() ? -1.0 : static_cast<double>(e.back()));
   }
 
 private:
@@ -759,6 +889,10 @@ private:
     } catch (const std::exception &e) {
       on_exception("pose_line", e.what(), out);
       return;
+    }
+    if (args_.predict > 0 && sys_->initialized()) {  // --predict: serve() emits it once the input is drained
+      pred_pending_ = true;
+      pred_cam_t_ns_ = c.t_ns;
     }
     if (lost_ && args_.auto_reset) {
       std::string extra;
@@ -1000,6 +1134,11 @@ private:
   int64_t rx_hdr_boot_ns_ = 0, rx_boot_ns_ = 0;     // set_rx
   double rx_spin_wait_us_ = -1.0, rx_spin_exit_us_ = -1.0;
   uint64_t tlog_rows_ = 0;
+  bool pred_pending_ = false;            // --predict: a frame update since the last prediction
+  double last_pred_imu_t_ = -1e300;      // newest_imu_t_ of the last prediction
+  int64_t pred_cam_t_ns_ = 0;            // t_ns of the last frame pose
+  uint64_t n_pred_ = 0;
+  std::vector<float> h_pred_;            // horizons (ms)
 
 public:
   ~Bridge() {
@@ -1076,6 +1215,16 @@ bool serve(Bridge &b, int in_fd, int out_fd, bool is_socket) {
     }
     if (!out.empty() && !write_full(out_fd, out, is_socket)) return true;
     if (!cont) return false;
+    // --predict: once nothing more is waiting on the input (the IMU that queued up during the frame has been read)
+    if (b.predict_due() && !fd_ready(in_fd)) {
+      out.clear();
+      try {
+        b.predict(out);
+      } catch (const std::exception &e) {
+        std::fprintf(stderr, "[ov_bridge] predict exception: %s\n", e.what());
+      }
+      if (!out.empty() && !write_full(out_fd, out, is_socket)) return true;
+    }
   }
   return true;
 }
@@ -1086,7 +1235,7 @@ void usage() {
                "                 [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]\n"
                "                 [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S] [--remap FILE]\n"
                "                 [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST] [--threads N]\n"
-               "                 [--klt-overlap 0|1] [--idle-spin 0|1|2]\n");
+               "                 [--klt-overlap 0|1] [--idle-spin 0|1|2] [--predict 0|1|2] [--predict-hz HZ]\n");
 }
 
 }  // namespace
@@ -1135,6 +1284,19 @@ int main(int argc, char **argv) {
       a.idle_spin = std::stoi(next());
       if (a.idle_spin < 0 || a.idle_spin > 2) {
         std::fprintf(stderr, "[ov_bridge] --idle-spin must be 0, 1 or 2\n");
+        return 2;
+      }
+    }
+    else if (s == "--predict") {
+      a.predict = std::stoi(next());
+      if (a.predict < 0 || a.predict > 2) {
+        std::fprintf(stderr, "[ov_bridge] --predict must be 0, 1 or 2\n");
+        return 2;
+      }
+    } else if (s == "--predict-hz") {
+      a.predict_hz = std::stod(next());
+      if (!(a.predict_hz > 0.0 && a.predict_hz <= 1000.0)) {
+        std::fprintf(stderr, "[ov_bridge] --predict-hz must be in (0, 1000]\n");
         return 2;
       }
     }
@@ -1187,6 +1349,7 @@ int main(int argc, char **argv) {
     serve(b, STDIN_FILENO, out_fd, false);
     apply_affinity(g_pinned ? &g_pin : nullptr, "end");
     if (g_idle.mode) g_idle.log("end");
+    b.log_predict();
     return 0;
   }
 

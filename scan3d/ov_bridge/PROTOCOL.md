@@ -67,6 +67,7 @@ lens0u** = 렌즈 2 를 왜곡만 편 핀홀 (f = K1, 넓은 화각, `calib_scal
 | `pose` | 카메라 레코드 하나 처리할 때마다 | 아래 |
 | `reset` | RESET 처리 또는 auto-reset | `auto` (auto-reset 일 때 true) |
 | `error` | 잘못된 레코드 | `msg` |
+| `pred` | `--predict 1\|2` 일 때만 (2026-10-25): 프레임 갱신 뒤 입력이 빈 순간 1줄, 모드 2 는 프레임 사이에도 `--predict-hz` 마다 | IMU 로 앞당긴 "지금" 위치. `t_ns` (예측 시각, IMU/센서 시계 ns = 가장 새 IMU), `t` (같은 순간을 pose 줄 시간축으로, s), `t_cam_ns`, `t_state`, `h` (앞당긴 시간 s), `n_imu`, `src` (`frame`/`rate`), `status`, `p`, `q`, `v`, `T_world_cam0`, `q_GtoI_jpl` (뜻은 pose 와 같음). 필터 상태는 읽기만 함 → pose 줄은 `--predict 0` 과 같음 |
 
 `pose` 필드:
 - `t_ns` (int, 입력 카메라 레코드의 t_ns 그대로 → 키프레임 매칭 키), `t` (s, t0 기준), `mono` (bool)

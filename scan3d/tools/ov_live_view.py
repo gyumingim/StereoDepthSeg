@@ -156,6 +156,8 @@ class Hub:
                 self.events.append([time.strftime("%H:%M:%S"), json.dumps(ev, ensure_ascii=False)[:200]])
                 self.events = self.events[-20:]
                 return
+            if j.get("src") == "ov_pred":  # arlat 0.6.17 predict_stream 1: predicted pose (kept in the file, not drawn)
+                return
             if not finite(t):
                 return
             if self.t_first is None:

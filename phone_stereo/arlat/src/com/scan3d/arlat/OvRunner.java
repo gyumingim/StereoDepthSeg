@@ -92,11 +92,20 @@ import java.util.concurrent.LinkedBlockingQueue;
  * bridge_timing.csv rx_hdr_boot_ns / rx_boot_ns (bridge read the record). NOTE frames.csv / writes.csv "t_send_ns" is the
  * frame time sent to the bridge = SENSOR_TIMESTAMP + midOffsetNs (mid exposure, sensor clock), NOT a send time (name kept
  * for the tools).
+ *
+ * 0.6.17 (default = 0.6.16 behaviour): intent predict 0|1|2 = ov_bridge --predict (IMU forward-predicted "now" pose:
+ * after every frame update the bridge integrates the newest IMU samples from the filter state to the newest IMU time;
+ * 2 = also between frames at intent predict_hz, default 100; the filter and the normal pose lines are unchanged).
+ * The bridge "pred" lines go to poses_pred.csv (NOT events.jsonl): t_pred_ns = predicted instant on the IMU / sensor
+ * clock, t_cam_ns / t_sensor_ns = the frame the prediction starts from (bridge t_ns / SENSOR_TIMESTAMP), t_out_ns = line
+ * read (elapsedRealtimeNanos) -> latency of the predicted pose = t_out_ns - t_pred_ns, horizon = h_ms. Intent
+ * predict_stream 1 also sends them to the Streamer ({"src":"ov_pred",...}; default 0 = stream unchanged).
+ * meta.json "ov_predict" / "ov_predict_hz" / "predict_lines", perf "ov_predict" / "bridge_predict" (ready line).
  */
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261025-idlespin";
+    static final String VERSION = "ov-20261025-predict";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";
@@ -162,6 +171,12 @@ class OvRunner implements SensorEventListener {
     int ovThreads = 0;                          // 0.6.15 intent ov_threads: ov_bridge --threads (0 = config num_opencv_threads)
     boolean kltOverlap = false;                 // 0.6.15 intent klt_overlap: ov_bridge --klt-overlap 1
     int idleSpin = 0;                           // 0.6.16 intent idle_spin: ov_bridge --idle-spin 0|1|2 (0 = off)
+    int predict = 0;                            // 0.6.17 intent predict: ov_bridge --predict 0|1|2 (0 = off)
+    int predictHz = 100;                        // 0.6.17 intent predict_hz: ov_bridge --predict-hz (mode 2)
+    boolean predictStream = false;              // 0.6.17 intent predict_stream: also send "pred" lines to the Streamer
+    private BufferedWriter predW;               // poses_pred.csv (predict > 0)
+    private long nPred;
+    private long lastPoseTns = -1, lastPoseSensor = -1, lastPoseArrive = -1;   // frame of the latest pose line (reader)
     static final int PRIO = android.os.Process.THREAD_PRIORITY_URGENT_DISPLAY;   // -8
     private final JSONObject perf = new JSONObject();
     private int bridgePid = -1;
@@ -321,6 +336,7 @@ class OvRunner implements SensorEventListener {
         if (ovThreads > 0) Collections.addAll(cmd, "--threads", Integer.toString(ovThreads));
         if (kltOverlap) Collections.addAll(cmd, "--klt-overlap", "1");
         if (idleSpin > 0) Collections.addAll(cmd, "--idle-spin", Integer.toString(idleSpin));
+        if (predict > 0) Collections.addAll(cmd, "--predict", Integer.toString(predict), "--predict-hz", Integer.toString(predictHz));
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.environment().put("LD_LIBRARY_PATH", lib);
         pb.redirectError(new File(runDir, "bridge_stderr.log"));
@@ -333,6 +349,10 @@ class OvRunner implements SensorEventListener {
         writesW.write("t_send_ns,deq_ns,write_done_ns\n");
         posesW = new BufferedWriter(new FileWriter(new File(runDir, "poses.csv")), 1 << 16);
         posesW.write("t_ns,t_sensor_ns,t_arrive_ns,t_out_ns,status,ms,remap_ms,n_slam,n_msckf,cam_dropped_bridge,pool_dropped,queue_dropped,n_cam,n_imu,dt_cam_imu\n");
+        if (predict > 0) {   // 0.6.17: bridge "pred" lines (class doc)
+            predW = new BufferedWriter(new FileWriter(new File(runDir, "poses_pred.csv")), 1 << 16);
+            predW.write("t_pred_ns,t_cam_ns,t_sensor_ns,t_arrive_ns,t_out_ns,src,status,h_ms,n_imu,px,py,pz,qx,qy,qz,qw,vx,vy,vz\n");
+        }
         tempsW = new BufferedWriter(new FileWriter(new File(runDir, "temps.csv")));
         tempsW.write("elapsed_ns,t_rel_s,battery_c,thermal_status,headroom_10s\n");
         eventsW = new BufferedWriter(new FileWriter(new File(runDir, "events.jsonl")));
@@ -342,7 +362,8 @@ class OvRunner implements SensorEventListener {
                 .put("pool", poolSize).put("start_elapsed_ns", t0Elapsed).put("start_wall", stamp)
                 .put("battery_c_start", batteryTenthC() / 10.0).put("thermal_status_start", thermalStatus())
                 .put("device", android.os.Build.MODEL).put("ov_threads", ovThreads).put("klt_overlap", kltOverlap ? 1 : 0)
-                .put("ov_idle_spin", idleSpin);
+                .put("ov_idle_spin", idleSpin).put("ov_predict", predict).put("ov_predict_hz", predictHz)
+                .put("ov_predict_stream", predictStream ? 1 : 0);
 
         proc = pb.start();
         bridgePid = pidOf(proc);
@@ -352,6 +373,8 @@ class OvRunner implements SensorEventListener {
         notePerf("ov_threads", ovThreads > 0 ? Integer.toString(ovThreads) : "config");
         notePerf("klt_overlap", kltOverlap ? 1 : 0);
         notePerf("ov_idle_spin", idleSpin);
+        notePerf("ov_predict", predict);
+        notePerf("ov_predict_hz", predictHz);
         notePerf("bridge_pid", bridgePid);
         notePerf("sdk", android.os.Build.VERSION.SDK_INT);
         writerT = new Thread(this::writer, "ov-writer");
@@ -684,13 +707,13 @@ class OvRunner implements SensorEventListener {
         synchronized (perf) { try { meta.put("perf", new JSONObject(perf.toString())); } catch (Exception ignored) { } }
         try { if (readerT != null) readerT.join(500); } catch (InterruptedException ignored) { }
         synchronized (framesLock) { closeQuiet(framesW); framesW = null; }
-        synchronized (posesLock) { closeQuiet(posesW); posesW = null; closeQuiet(eventsW); eventsW = null; }
+        synchronized (posesLock) { closeQuiet(posesW); posesW = null; closeQuiet(eventsW); eventsW = null; closeQuiet(predW); predW = null; }
         closeQuiet(tempsW);
         if (reader != null) { try { reader.close(); } catch (Exception ignored) { } reader = null; }
         try {
             meta.put("end_elapsed_ns", SystemClock.elapsedRealtimeNanos()).put("secs", (SystemClock.elapsedRealtimeNanos() - t0Elapsed) / 1e9)
                     .put("frames", nCam).put("poses", nPose).put("imu_records", nImu).put("acc_samples", nAcc)
-                    .put("capture_results", nResults).put("pool_dropped", poolDropped).put("queue_dropped", camDropped)
+                    .put("capture_results", nResults).put("predict_lines", nPred).put("pool_dropped", poolDropped).put("queue_dropped", camDropped)
                     .put("battery_c_end", batteryTenthC() / 10.0).put("thermal_status_end", thermalStatus())
                     .put("stop_reason", stopReason).put("streamer_dropped", out.dropped);
             if (runDir != null) java.nio.file.Files.write(new File(runDir, "meta.json").toPath(), meta.toString(1).getBytes(StandardCharsets.UTF_8));
@@ -864,6 +887,32 @@ class OvRunner implements SensorEventListener {
                     notePerf("bridge_klt_overlap", j.optInt("klt_overlap", -1));
                     notePerf("bridge_idle_spin", j.optInt("idle_spin", -1));            // 0.6.16
                     notePerf("bridge_idle_spin_stripes", j.optInt("idle_spin_stripes", -1));
+                    notePerf("bridge_predict", j.optInt("predict", -1));                // 0.6.17
+                    notePerf("bridge_predict_hz", j.optDouble("predict_hz", -1));
+                }
+                if ("pred".equals(type)) {    // 0.6.17: IMU forward-predicted pose (class doc) -> poses_pred.csv
+                    long tc = j.optLong("t_cam_ns");
+                    boolean same = tc == lastPoseTns;
+                    org.json.JSONArray p = j.optJSONArray("p"), q = j.optJSONArray("q"), v = j.optJSONArray("v");
+                    StringBuilder b = new StringBuilder();
+                    b.append(j.optLong("t_ns")).append(',').append(tc).append(',').append(same ? lastPoseSensor : -1).append(',')
+                            .append(same ? lastPoseArrive : -1).append(',').append(tOut).append(',').append(j.optString("src"))
+                            .append(',').append(j.optString("status")).append(',').append(j.optDouble("h", 0) * 1e3).append(',')
+                            .append(j.optInt("n_imu"));
+                    for (org.json.JSONArray a : new org.json.JSONArray[]{p, q, v})
+                        for (int k = 0; k < (a == null ? 0 : a.length()); k++) b.append(',').append(a.optDouble(k));
+                    b.append('\n');
+                    synchronized (posesLock) { if (predW != null) predW.write(b.toString()); }
+                    nPred++;
+                    if (predictStream) {
+                        JSONObject o = new JSONObject().put("src", "ov_pred").put("t_out", tOut).put("t_pred", j.optLong("t_ns"))
+                                .put("t_cam", tc).put("h_ms", j.optDouble("h", 0) * 1e3).put("status", j.optString("status"));
+                        if (same && lastPoseSensor > 0) o.put("t_sensor", lastPoseSensor);
+                        if (p != null) o.put("p", p);
+                        if (q != null) o.put("q", q);
+                        out.send(o.toString());
+                    }
+                    continue;
                 }
                 if (!"pose".equals(type)) {
                     JSONObject ev = new JSONObject().put("src", "ov").put("event", j);
@@ -873,6 +922,9 @@ class OvRunner implements SensorEventListener {
                 }
                 long tNs = j.optLong("t_ns");
                 long[] s = sent.remove(tNs);
+                lastPoseTns = tNs;                                  // 0.6.17: the "pred" line of this frame follows
+                lastPoseSensor = s == null ? -1 : s[0];
+                lastPoseArrive = s == null ? -1 : s[1];
                 JSONObject o = new JSONObject();
                 o.put("src", "ov").put("t_out", tOut).put("status", j.optString("status"));
                 if (s != null) o.put("t_sensor", s[0]).put("t_arrive", s[1]);

@@ -1,0 +1,72 @@
+Sun Oct 25 09:57:59 KST 2026
+== R0 09:57:59 (--predict 0)
+records 15921 span_s 30.17874039 wall_s 30.197079530917108
+pose 845 pred 0
+== R1 09:58:30 (--predict 1)
+records 15921 span_s 30.17874039 wall_s 30.193857352016494
+pose 845 pred 702
+[ov_bridge] predict: mode 1 hz 100 | lines 702 | horizon ms p50 10.0 p95 17.3 max 29.0
+== R2 09:59:02 (--predict 2)
+records 15921 span_s 30.17874039 wall_s 30.191602348000742
+pose 845 pred 2042
+[ov_bridge] predict: mode 2 hz 100 | lines 2042 | horizon ms p50 19.6 p95 32.6 max 33.3
+== D40_0 09:59:34 (--predict 0)
+records 15921 span_s 30.17874039 wall_s 30.19239160104189
+pose 845 pred 0
+== D40_1 10:00:05 (--predict 1)
+records 15921 span_s 30.17874039 wall_s 30.192400143947452
+pose 845 pred 703
+[ov_bridge] predict: mode 1 hz 100 | lines 703 | horizon ms p50 41.9 p95 49.4 max 59.3
+== D40_2 10:00:37 (--predict 2 --predict-hz 200)
+records 15921 span_s 30.17874039 wall_s 30.191551525960676
+pose 845 pred 3354
+[ov_bridge] predict: mode 2 hz 200 | lines 3354 | horizon ms p50 52.8 p95 65.4 max 73.2
+== D60_1 10:01:08 (--predict 1)
+records 15921 span_s 30.17874039 wall_s 30.19204666092992
+pose 844 pred 702
+[ov_bridge] predict: mode 1 hz 100 | lines 702 | horizon ms p50 62.8 p95 70.6 max 81.3
+== identity (ref = 0.6.16 paced P0 = --idle-spin 0 bridge before this change)
+ref /tmp/idlespin/pose_ab/P0.jsonl poses 845 tracking 704
+compared keys ['R_ItoC0', 'T_world_cam0', 'ba', 'bg', 'cam_dropped', 'cam_rejected', 'dt_cam_imu', 'exceptions', 'imu_dropped', 'imu_held', 'init', 'intr0', 'mono', 'n_msckf', 'n_reinit_state', 'n_slam', 'p', 'p_IinC0', 'q', 'q_GtoI_jpl', 'status', 't', 't_ns', 't_state', 'type', 'v']
+/tmp/predict/R0.jsonl: poses 845 identical_lines 845/845 identical_state(p,q,v,bg,ba,T) 845/845
+/tmp/predict/R1.jsonl: poses 845 identical_lines 845/845 identical_state(p,q,v,bg,ba,T) 845/845
+/tmp/predict/R2.jsonl: poses 845 identical_lines 845/845 identical_state(p,q,v,bg,ba,T) 845/845
+/tmp/predict/D40_0.jsonl: poses 845 identical_lines 0/845 identical_state(p,q,v,bg,ba,T) 845/845
+/tmp/predict/D40_1.jsonl: poses 845 identical_lines 0/845 identical_state(p,q,v,bg,ba,T) 845/845
+/tmp/predict/D40_2.jsonl: poses 845 identical_lines 0/845 identical_state(p,q,v,bg,ba,T) 845/845
+/tmp/predict/D60_1.jsonl: poses 844 identical_lines 0/845 identical_state(p,q,v,bg,ba,T) 844/845
+== accuracy
+== /tmp/predict/R1.jsonl: pose(tracking) 704 pred 702
+  [frame] matched 701 | horizon ms n 701 p50 9.98 p95 17.29 max 29.03 | speed m/s n 701 p50 0.16 p95 0.57 max 0.78
+     predicted       pos err cm n 701 p50 0.02 p95 0.06 max 0.20 | ori err deg n 701 p50 0.04 p95 0.20 max 1.39
+     no-pred (last)  pos err cm n 701 p50 0.17 p95 0.73 max 1.55 | ori err deg n 701 p50 0.18 p95 0.83 max 2.55
+     const-velocity  pos err cm n 701 p50 0.02 p95 0.09 max 0.26
+== /tmp/predict/R2.jsonl: pose(tracking) 704 pred 2042
+  [frame] matched 700 | horizon ms n 700 p50 9.89 p95 17.95 max 29.26 | speed m/s n 700 p50 0.16 p95 0.57 max 0.78
+     predicted       pos err cm n 700 p50 0.02 p95 0.06 max 0.20 | ori err deg n 700 p50 0.04 p95 0.20 max 1.39
+     no-pred (last)  pos err cm n 700 p50 0.17 p95 0.75 max 1.46 | ori err deg n 700 p50 0.18 p95 0.83 max 2.81
+     const-velocity  pos err cm n 700 p50 0.02 p95 0.09 max 0.26
+  [rate] matched 1338 | horizon ms n 1338 p50 23.48 p95 32.89 max 33.33 | speed m/s n 1338 p50 0.09 p95 0.54 max 0.78
+     predicted       pos err cm n 1338 p50 0.03 p95 0.09 max 0.57 | ori err deg n 1338 p50 0.02 p95 0.14 max 0.66
+     no-pred (last)  pos err cm n 1338 p50 0.21 p95 1.42 max 2.48 | ori err deg n 1338 p50 0.26 p95 1.46 max 5.63
+     const-velocity  pos err cm n 1338 p50 0.03 p95 0.15 max 0.78
+== /tmp/predict/D40_1.jsonl: pose(tracking) 704 pred 703
+  [frame] matched 701 | horizon ms n 701 p50 41.86 p95 49.43 max 59.30 | speed m/s n 701 p50 0.16 p95 0.57 max 0.78
+     predicted       pos err cm n 701 p50 0.04 p95 0.15 max 0.49 | ori err deg n 701 p50 0.04 p95 0.19 max 1.06
+     no-pred (last)  pos err cm n 701 p50 0.71 p95 2.53 max 3.83 | ori err deg n 701 p50 0.74 p95 2.67 max 7.02
+     const-velocity  pos err cm n 701 p50 0.10 p95 0.35 max 1.16
+== /tmp/predict/D40_2.jsonl: pose(tracking) 704 pred 3354
+  [frame] matched 699 | horizon ms n 699 p50 41.90 p95 49.60 max 61.30 | speed m/s n 699 p50 0.16 p95 0.57 max 0.78
+     predicted       pos err cm n 699 p50 0.04 p95 0.15 max 0.49 | ori err deg n 699 p50 0.04 p95 0.20 max 1.28
+     no-pred (last)  pos err cm n 699 p50 0.72 p95 2.53 max 3.83 | ori err deg n 699 p50 0.75 p95 2.68 max 7.08
+     const-velocity  pos err cm n 699 p50 0.10 p95 0.36 max 1.23
+  [rate] matched 2648 | horizon ms n 2648 p50 56.03 p95 65.53 max 73.16 | speed m/s n 2648 p50 0.11 p95 0.55 max 0.78
+     predicted       pos err cm n 2648 p50 0.05 p95 0.17 max 0.63 | ori err deg n 2648 p50 0.03 p95 0.17 max 1.26
+     no-pred (last)  pos err cm n 2648 p50 0.66 p95 3.16 max 5.19 | ori err deg n 2648 p50 0.70 p95 3.15 max 7.86
+     const-velocity  pos err cm n 2648 p50 0.11 p95 0.50 max 1.85
+== /tmp/predict/D60_1.jsonl: pose(tracking) 703 pred 702
+  [frame] matched 700 | horizon ms n 700 p50 62.78 p95 70.65 max 81.32 | speed m/s n 700 p50 0.16 p95 0.57 max 0.78
+     predicted       pos err cm n 700 p50 0.06 p95 0.20 max 0.61 | ori err deg n 700 p50 0.03 p95 0.13 max 0.51
+     no-pred (last)  pos err cm n 700 p50 1.05 p95 3.66 max 5.51 | ori err deg n 700 p50 1.13 p95 3.90 max 8.40
+     const-velocity  pos err cm n 700 p50 0.18 p95 0.61 max 1.85
+DONE 10:01:41
