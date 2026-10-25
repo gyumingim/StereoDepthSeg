@@ -22,8 +22,13 @@
  *                    land_rate_mps using the VIO vertical speed, touchdown -> DISARMED
  *   FS_TIER_IMU      no usable VIO, IMU ok: level attitude, vertical speed from the IMU estimator, horizontal drift
  *                    accepted, touchdown (low accel variance + low collective or impact spike) -> DISARMED
- *   FS_TIER_OPENLOOP no VIO and no usable IMU: NO ATTITUDE STABILISATION. Per-motor commands = this flight's takeoff
- *                    hover record * (openloop_start_frac ramping down), cut after openloop_max_ms or an impact.
+ *   FS_TIER_OPENLOOP no usable IMU (= phone IMU stream lost: with the phone as the only IMU, VIO and IMU tiers are then
+ *                    both impossible): NO ATTITUDE STABILISATION. Per-motor commands BACK-CALCULATED from this flight's
+ *                    takeoff hover record: thrust ~ cmd^k (k = openloop_thrust_exp) =>
+ *                      cmd_i = hover_i * ratio^(1/k) * (V_record / V_now)
+ *                    with ratio = 1 - acc_down/g for vz_down/acc_down s (start descending), then cruise_ratio (just
+ *                    under hover). Cut at the estimated touchdown time from the last known height * margin
+ *                    (or openloop_max_ms), or at an impact if the accelerometer still works.
  *                    Last resort; the vehicle may tip and drift. Hover source: this flight's record > previous
  *                    flight's record (set with fs_set_prev_hover) > cfg.openloop_default_thr.
  * KILL overrides every state and tier.
@@ -162,6 +167,12 @@ typedef struct {
   float openloop_min_frac;
   uint32_t openloop_max_ms;     /* then motors off */
   float openloop_default_thr;   /* per-motor command if no hover record at all (conservative) */
+  float openloop_thrust_exp;    /* thrust ~ cmd^k (props: ~2 for PWM throttle) */
+  float openloop_acc_down;      /* m/s^2 downward acceleration of the first phase */
+  float openloop_vz_down;       /* m/s descent speed reached by the first phase */
+  float openloop_cruise_ratio;  /* thrust / weight after the first phase (< 1: keeps descending slowly) */
+  float openloop_cut_margin;    /* cut time = estimated touchdown time * margin (+0.3 s) */
+  bool openloop_volt_comp;      /* scale commands by V_record / V_now (PWM ESCs: thrust depends on voltage) */
   /* takeoff hover recorder (this flight) */
   uint32_t rec_skip_ms;         /* ignore the first part after takeoff (spin-up, ground effect) */
   uint32_t rec_min_ms;          /* record valid after this much stable data */
@@ -184,7 +195,7 @@ typedef struct {
 typedef struct {
   uint32_t now_ms;
   float dt_s;
-  bool imu_ok;                  /* gyro + accel usable for attitude (data fresh, plausible, no SPI error) */
+  bool imu_ok;                  /* gyro + accel usable for attitude: PHONE IMU stream fresh (no gap > max), plausible */
   bool acc_ok;                  /* accelerometer alone usable (impact detection in tier 3) */
   float roll_rad, pitch_rad;
   float gyro_norm_rps;
@@ -193,6 +204,7 @@ typedef struct {
   bool vz_vio_valid; float vz_vio;  /* up positive, m/s, from fresh VIO */
   bool vz_imu_valid; float vz_imu;  /* up positive, from the IMU vertical-speed estimator */
   bool batt_valid; float batt_v;
+  bool height_valid; float height_m; /* height above the takeoff point (VIO), m, up */
   bool kill_switch;             /* physical switch active */
   bool loop_overrun;
   float motor_prev[FS_MAX_MOTORS]; /* motor commands written last cycle 0..1 (hover recorder) */
@@ -213,6 +225,7 @@ typedef struct {
   int n;
   float m[FS_MAX_MOTORS];
   float collective;             /* mean of m */
+  float batt_v;                 /* mean battery voltage while recording (0 = unknown) */
   uint32_t samples;
 } fs_hover_rec_t;
 
@@ -252,6 +265,12 @@ typedef struct {
   bool touch_timing;
   fs_hover_src_t ol_src;
   float ol_base[FS_MAX_MOTORS];
+  float ol_vcomp;
+  uint32_t ol_cut_ms;
+  float last_height;
+  bool last_height_valid;
+  float rec_batt_sum;
+  uint32_t rec_batt_n;
   /* takeoff hover recorder */
   uint32_t t_takeoff_ms;
   float rec_sum[FS_MAX_MOTORS];  /* float on purpose: ESP32-S3 FPU is single precision */

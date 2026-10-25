@@ -86,6 +86,12 @@ void fs_config_default(fs_config_t *c) {
   c->openloop_min_frac = 0.60f;
   c->openloop_max_ms = 6000;
   c->openloop_default_thr = 0.33f;
+  c->openloop_thrust_exp = 2.0f;
+  c->openloop_acc_down = 1.0f;
+  c->openloop_vz_down = 0.4f;
+  c->openloop_cruise_ratio = 0.99f;
+  c->openloop_cut_margin = 1.2f;
+  c->openloop_volt_comp = true;
   c->rec_skip_ms = 300;
   c->rec_min_ms = 500;
   c->rec_window_ms = 3000;
@@ -284,6 +290,9 @@ static uint32_t arm_blocks(const fs_t *fs) {
 
 static void reset_flight(fs_t *fs) {
   memset(fs->rec_sum, 0, sizeof(fs->rec_sum));
+  fs->rec_batt_sum = 0;
+  fs->rec_batt_n = 0;
+  fs->last_height_valid = false;
   fs->rec_n = 0;
   fs->rec_ms = 0;
   fs->rec_frozen = false;
@@ -387,6 +396,7 @@ static void record_hover(fs_t *fs, const fs_input_t *in) {
   for (int i = 0; i < c->n_motors; i++)
     if (!(in->motor_prev[i] > 0.02f && in->motor_prev[i] < 0.98f)) return; /* saturated / NaN */
   for (int i = 0; i < c->n_motors; i++) fs->rec_sum[i] += in->motor_prev[i];
+  if (in->batt_valid) { fs->rec_batt_sum += in->batt_v; fs->rec_batt_n++; }
   fs->rec_n++;
   fs->rec_ms += in->dt_s * 1000.0f;
   if (fs->rec_ms >= (float)c->rec_min_ms) {
@@ -398,6 +408,7 @@ static void record_hover(fs_t *fs, const fs_input_t *in) {
     fs->rec.n = c->n_motors;
     fs->rec.collective = col / (float)c->n_motors;
     fs->rec.samples = fs->rec_n;
+    fs->rec.batt_v = fs->rec_batt_n ? fs->rec_batt_sum / (float)fs->rec_batt_n : 0.0f;
     if (!fs->rec.valid) {
       fs->rec.valid = true;
       push_ev(fs, FS_EV_HOVER_REC, (uint8_t)fs->state, (uint8_t)fs->state, (uint8_t)(fs->rec_n / 100 > 255 ? 255 : fs->rec_n / 100), 0);
@@ -432,8 +443,22 @@ static void set_tier(fs_t *fs, fs_tier_t t, uint32_t why) {
     if (fs->rec.valid) { src = &fs->rec; fs->ol_src = FS_HOVER_THIS_FLIGHT; }
     else if (fs->prev.valid) { src = &fs->prev; fs->ol_src = FS_HOVER_PREV_FLIGHT; }
     else fs->ol_src = FS_HOVER_DEFAULT;
-    for (int i = 0; i < fs->cfg.n_motors; i++) fs->ol_base[i] = src ? src->m[i] : fs->cfg.openloop_default_thr;
+    const fs_config_t *c = &fs->cfg;
+    for (int i = 0; i < c->n_motors; i++) fs->ol_base[i] = src ? src->m[i] : c->openloop_default_thr;
     aux = (uint8_t)fs->ol_src;
+    /* battery sag since the record: the same thrust needs a larger command (thrust ~ (cmd * V)^k) */
+    fs->ol_vcomp = 1.0f;
+    if (c->openloop_volt_comp && src && src->batt_v > 1.0f && fs->have_input && fs->last.batt_valid && fs->last.batt_v > 1.0f)
+      fs->ol_vcomp = clampf(src->batt_v / fs->last.batt_v, 0.85f, 1.2f);
+    /* cut time from the last known height: phase 1 accelerates to vz_down, then ~constant descent */
+    float t1 = c->openloop_vz_down / c->openloop_acc_down;
+    fs->ol_cut_ms = c->openloop_max_ms;
+    if (fs->last_height_valid && fs->last_height > 0.0f) {
+      float d1 = 0.5f * c->openloop_acc_down * t1 * t1;
+      float t_est = t1 + (fs->last_height > d1 ? (fs->last_height - d1) / c->openloop_vz_down : 0.0f);
+      float ms = (t_est * c->openloop_cut_margin + 0.3f) * 1000.0f;
+      if (ms < (float)fs->ol_cut_ms) fs->ol_cut_ms = (uint32_t)ms;
+    }
   }
   fs->tier = t;
   fs->t_tier_ms = fs->now_ms;
@@ -475,13 +500,14 @@ static void land_step(fs_t *fs, const fs_input_t *in, fs_output_t *out) {
   float t_tier = (float)elapsed(in->now_ms, fs->t_tier_ms) * 1e-3f;
   out->vz_target = -c->land_rate_mps;
   if (fs->tier == FS_TIER_OPENLOOP) {
-    float frac = c->openloop_start_frac - c->openloop_ramp_per_s * t_tier;
-    if (frac < c->openloop_min_frac) frac = c->openloop_min_frac;
+    float t1 = c->openloop_vz_down / c->openloop_acc_down;
+    float ratio = t_tier < t1 ? 1.0f - c->openloop_acc_down / G0 : c->openloop_cruise_ratio;
+    float frac = powf(ratio, 1.0f / c->openloop_thrust_exp) * fs->ol_vcomp;
     for (int i = 0; i < c->n_motors; i++) out->motor[i] = clampf(fs->ol_base[i] * frac, 0.0f, 1.0f);
     fs->land_thr = hover * frac;
     bool impact = in->acc_ok && fs->impact_seen && (int32_t)(fs->t_impact_ms - fs->t_tier_ms) >= 0;
     if (impact) { go(fs, FS_DISARMED, FS_R_IMPACT | FS_R_TOUCHDOWN); return; }
-    if (elapsed(in->now_ms, fs->t_tier_ms) >= c->openloop_max_ms) { go(fs, FS_DISARMED, FS_R_LAND_TIMEOUT); return; }
+    if (elapsed(in->now_ms, fs->t_tier_ms) >= fs->ol_cut_ms) { go(fs, FS_DISARMED, FS_R_LAND_TIMEOUT); return; }
   } else {
     bool have_vz = (fs->tier == FS_TIER_VIO) ? in->vz_vio_valid : in->vz_imu_valid;
     float vz = (fs->tier == FS_TIER_VIO) ? in->vz_vio : in->vz_imu;
@@ -533,6 +559,7 @@ static void sanitize(fs_input_t *s) {
   if (!isfinite(s->acc_norm)) { s->acc_ok = false; s->imu_ok = false; }
   if (!isfinite(s->vz_vio)) s->vz_vio_valid = false;
   if (!isfinite(s->vz_imu)) s->vz_imu_valid = false;
+  if (!isfinite(s->height_m)) s->height_valid = false;
   if (!isfinite(s->batt_v) || s->batt_v <= 0.0f) s->batt_valid = false;
   /* thr_cmd NaN: comparisons below are written so that NaN blocks arming and never triggers takeoff */
 }
@@ -566,6 +593,11 @@ void fs_step(fs_t *fs, const fs_input_t *in_raw, fs_output_t *out) {
 
   fs->last = *in;
   fs->last.dt_s = dt;
+  /* last known height (for the open-loop cut time): while not landing, or while landing on VIO */
+  if (in->height_valid && in->vz_vio_valid && (fs->state != FS_EMERG_LAND || fs->tier == FS_TIER_VIO)) {
+    fs->last_height = in->height_m;
+    fs->last_height_valid = true;
+  }
   fs->have_input = true;
 
   /* 1) KILL checks: override everything */

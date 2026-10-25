@@ -1,5 +1,5 @@
-/* motor_out.h — motor output abstraction (DShot600/300 via RMT, or 400 Hz PWM via LEDC).
- * Values are 0..1 throttle. "Disarmed" = DShot value 0 (ESC: motor stop, stays armed-safe) / PWM 1000 us. */
+/* motor_out.h — motor output abstraction: standard PWM (default, LEDC), OneShot125 (LEDC) or DShot600/300 (RMT).
+ * Values are 0..1 throttle. "Disarmed" = PWM 1000 us / OneShot 125 us / DShot value 0 (ESC: motor stop). */
 #ifndef MOTOR_OUT_H
 #define MOTOR_OUT_H
 

@@ -35,6 +35,15 @@ typedef struct {
   } u;
 } fc_msg_t;
 
+/* one phone IMU sample, already rotated into the drone body frame (FRD) */
+typedef struct {
+  int64_t t_phone_us;    /* phone sensor time */
+  int64_t rx_us;         /* local arrival time (esp_timer) */
+  uint16_t seq;
+  float gyro[3];         /* rad/s */
+  float acc[3];          /* m/s^2 specific force */
+} fc_imu_msg_t;
+
 /* newest phone pose converted to the local NED frame (link task -> position / control task) */
 typedef struct {
   uint32_t seq;          /* +1 per update (0 = never) */
@@ -74,6 +83,7 @@ typedef struct {
 
 extern QueueHandle_t g_fs_inbox;  /* fc_msg_t, depth 64 */
 extern QueueHandle_t g_ev_queue;  /* fs_event_t, depth 64 */
+extern QueueHandle_t g_imu_queue; /* fc_imu_msg_t, depth 32 (phone IMU samples, body frame) */
 extern TaskHandle_t g_ctrl_task, g_pos_task;
 extern volatile uint32_t g_ctrl_alive;      /* +1 per control cycle (supervisor watches it) */
 extern volatile bool g_kill_switch_isr;     /* set by the kill-switch GPIO ISR */

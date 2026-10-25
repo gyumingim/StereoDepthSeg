@@ -1,4 +1,5 @@
-/* motor_out.c — DShot via the ESP32-S3 RMT peripheral (4 TX channels = 4 motors), PWM fallback via LEDC.
+/* motor_out.c — default: standard PWM (1000-2000 us, FC_PWM_HZ 50..490, LEDC) for ordinary ESCs; options:
+ * OneShot125 (LEDC) or DShot600/300 (RMT, 4 TX channels = 4 motors).
  * NOT COMPILED / NOT HARDWARE-TESTED (ESP-IDF not installed on the build PC). Written against ESP-IDF v5.2+ APIs. */
 #include "motor_out.h"
 
@@ -107,54 +108,66 @@ void motor_out_emergency_stop(void) {
   }
 }
 
-#else /* ---------------- PWM 400 Hz via LEDC ---------------- */
+#else /* ---------------- standard PWM (default) / OneShot125 via LEDC ---------------- */
 #include "driver/ledc.h"
+#include "fc_core.h"
 
-#define PWM_HZ 400
-#define PWM_RES LEDC_TIMER_14_BIT
-static inline uint32_t us_to_duty(float us) { return (uint32_t)(us * PWM_HZ * 16383.0f / 1e6f); }
+#if FC_ESC_PROTOCOL == FC_ESC_ONESHOT125
+#define OUT_HZ FC_ONESHOT_HZ
+#define OUT_MIN_US FC_ONESHOT_MIN_US
+#define OUT_MAX_US FC_ONESHOT_MAX_US
+#else
+#define OUT_HZ FC_PWM_HZ
+#define OUT_MIN_US FC_PWM_MIN_US
+#define OUT_MAX_US FC_PWM_MAX_US
+#endif
+#define PWM_BITS 14
 
 esp_err_t motor_out_init(void) {
   s_mtx = xSemaphoreCreateMutex();
-  ledc_timer_config_t tc = {.speed_mode = LEDC_LOW_SPEED_MODE, .duty_resolution = PWM_RES, .timer_num = LEDC_TIMER_0,
-                            .freq_hz = PWM_HZ, .clk_cfg = LEDC_AUTO_CLK};
+  if (!fc_pwm_config_ok((float)OUT_HZ, OUT_MAX_US)) return ESP_ERR_INVALID_ARG; /* pulse does not fit the period */
+  ledc_timer_config_t tc = {.speed_mode = LEDC_LOW_SPEED_MODE, .duty_resolution = LEDC_TIMER_14_BIT, .timer_num = LEDC_TIMER_0,
+                            .freq_hz = OUT_HZ, .clk_cfg = LEDC_AUTO_CLK};
   ESP_ERROR_CHECK(ledc_timer_config(&tc));
   for (int i = 0; i < FC_N_MOTORS; i++) {
     ledc_channel_config_t ch = {.gpio_num = k_pins[i], .speed_mode = LEDC_LOW_SPEED_MODE, .channel = (ledc_channel_t)i,
-                                .timer_sel = LEDC_TIMER_0, .duty = us_to_duty(1000), .hpoint = 0};
+                                .timer_sel = LEDC_TIMER_0, .duty = fc_pwm_duty(OUT_MIN_US, (float)OUT_HZ, PWM_BITS), .hpoint = 0};
     ESP_ERROR_CHECK(ledc_channel_config(&ch));
   }
   return ESP_OK;
 }
-static void set_us(const float *us) {
+static void set_pulses(const float *us) {
+  /* the new duty takes effect at the next PWM period: up to 1 / OUT_HZ (2.5 ms at 400 Hz) output latency */
   for (int i = 0; i < FC_N_MOTORS; i++) {
-    ledc_set_duty(LEDC_LOW_SPEED_MODE, (ledc_channel_t)i, us_to_duty(us[i]));
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, (ledc_channel_t)i, fc_pwm_duty(us[i], (float)OUT_HZ, PWM_BITS));
     ledc_update_duty(LEDC_LOW_SPEED_MODE, (ledc_channel_t)i);
   }
 }
 void motor_out_write(const float *thr) {
   if (s_estop) { motor_out_disarm(); return; }
   float us[FC_N_MOTORS];
-  for (int i = 0; i < FC_N_MOTORS; i++) {
-    float t = thr[i];
-    if (!(t >= 0.0f)) t = 0.0f;
-    if (t > 1.0f) t = 1.0f;
-    us[i] = 1000.0f + 1000.0f * t;
-  }
+  for (int i = 0; i < FC_N_MOTORS; i++) us[i] = fc_pwm_pulse_us(thr[i], OUT_MIN_US, OUT_MAX_US); /* NaN -> stop */
   if (xSemaphoreTake(s_mtx, 0) != pdTRUE) return;
-  set_us(us);
+  set_pulses(us);
   xSemaphoreGive(s_mtx);
 }
 void motor_out_disarm(void) {
   float us[FC_N_MOTORS];
-  for (int i = 0; i < FC_N_MOTORS; i++) us[i] = 1000.0f;
+  for (int i = 0; i < FC_N_MOTORS; i++) us[i] = OUT_MIN_US;
   if (xSemaphoreTake(s_mtx, pdMS_TO_TICKS(1)) != pdTRUE) return;
-  set_us(us);
+  set_pulses(us);
   xSemaphoreGive(s_mtx);
 }
 void motor_out_emergency_stop(void) {
   s_estop = true;
-  motor_out_disarm();
+  float us[FC_N_MOTORS];
+  for (int i = 0; i < FC_N_MOTORS; i++) us[i] = OUT_MIN_US;
+  if (xSemaphoreTake(s_mtx, pdMS_TO_TICKS(1)) == pdTRUE) {
+    set_pulses(us);
+    xSemaphoreGive(s_mtx);
+  } else { /* control task stuck while holding the outputs: write the stop pulse anyway (LEDC registers per channel) */
+    set_pulses(us);
+  }
 }
 #endif
 

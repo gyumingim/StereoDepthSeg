@@ -1,58 +1,69 @@
 # esp32fc — ESP32-S3 비행 제어 펌웨어 (모터 정지 · 비상착륙 포함)
 
-브랜치 `esp32fc-20261025` (ovopt-20261025 0fcf53a 에서 분기), 2026-10-25. **보드에 올려 보거나 IDF로 빌드해 본 적은 없습니다.**
+브랜치 `esp32fc-20261025` (ovopt-20261025 0fcf53a에서 분기), 2026-10-25. **보드에 올려 보거나 IDF로 빌드해 본 적은 없습니다.**
 
 ## 한국어 요약 (결론 먼저)
 
-- **언어: C (ESP-IDF + FreeRTOS).** 사용자가 이렇게 정했습니다. 이유: 타이밍을 정해진 대로 맞출 수 있고, RMT(DShot)·SPI·gptimer 같은 하드웨어를 바로 다룰 수 있으며, 코어를 지정할 수 있습니다.
-- **빠른 제어를 위한 설정**
-  - 240 MHz, FreeRTOS 1 kHz 틱으로 둡니다.
-  - 코어 1: 제어 루프(IMU → 자세 → 안전 → 모터)를 1 kHz로 돌립니다. 2–4 kHz도 가능합니다.
-  - 코어 0: Wi-Fi / ESP-NOW / USB / 감시 태스크가 돕니다.
-  - IMU data-ready 인터럽트가 제어 태스크를 바로 깨웁니다.
-  - 모터는 DShot600(RMT)으로 출력합니다.
-  - 루프 안에서는 malloc과 로그를 쓰지 않습니다.
+- **언어: C (ESP-IDF + FreeRTOS).** 사용자가 이렇게 정했습니다.
+- **사용자 결정 반영 (2026-10-25 오후)**
+  - ESP32에는 IMU가 없습니다. **폰 IMU(약 500 Hz)가 유일한 IMU**입니다. 폰이 USB로 IMU 샘플을 보내면, 샘플이 도착할 때마다 자세 루프가 돕니다.
+  - ESC는 **일반 PWM**입니다(기본 400 Hz, 50–490 Hz 설정 가능). OneShot125와 DShot은 선택 사항으로 남겼습니다.
+  - 프레임은 **쿼드 X 450 mm**입니다. 게인은 아직 임시값입니다.
+  - ToF 센서는 쓰지 않고, 높이는 VIO에서 얻습니다.
 - **모터 KILL (즉시 정지)**
   - 원인: PC 명령, 물리 스위치, 기울기 60° 초과(착륙 중에는 45°), 출력 NaN, 루프 멈춤.
-  - **같은 제어 주기 안에** DShot 0을 보내고, KILLED 상태로 고정됩니다.
-  - 해제하려면 땅 위에서 수평·정지 상태로 1 s 이상 지난 뒤 CLEAR_KILL 명령을 보내야 합니다.
-- **비상착륙**
-  - 원인: 폰 pose 끊김·불량, 폰 heartbeat 끊김(250 ms) / seq 멈춤 / LOST·STOPPING, PC 링크 끊김(500 ms), 저전압, 명령, 루프 과부하, IMU 고장.
-  - 3단계로 내립니다:
-    1. **LAND_VIO**: 시작 지점 x,y를 유지하며 0.3 m/s로 하강합니다.
-    2. **LAND_IMU**: 수평을 유지하고 IMU로 추정한 속도로 하강합니다.
-    3. **LAND_OPENLOOP**: 이번 비행 이륙 때 기록한 모터별 값 × 0.92에서 천천히 줄이고, 충돌을 감지하거나 6 s가 지나면 차단합니다. **자세 제어가 없는 최후 수단**입니다.
-  - 단계는 **내려가기만 하고 올라가지 않습니다.** heartbeat가 돌아와도 비행으로 돌아가지 않으며, 착지 → DISARMED → 다시 ARM만 가능합니다.
-- **PC 단위시험: 330개 검사 모두 통과** (gcc, ASan/UBSan). 기록은 `scan3d/runs/esp32fc_20261025/test_safety_run.log`에 있습니다.
-- **독립 검토**: 버그 14개 보고. 재현된 위험 항목은 고쳤고 회귀시험도 추가했습니다 (아래 "Review").
-- **ESP-IDF는 이 PC에 설치되어 있지 않습니다.** 그래서 `idf.py build`는 해 보지 못했습니다. 대신 IDF API 스텁으로 펌웨어 C 파일의 문법·타입만 검사했고 통과했습니다. 실제 API와 맞는지는 확인하지 못했습니다.
-- **사용자가 정할 것**: IMU 칩, ESC 프로토콜, 프레임/모터 배치, 배터리 셀 수, 핀, 폰 장착 방향, 하향 거리센서(ToF) 추가 여부(권장), PC 쪽 ESP32 MAC.
+  - **같은 제어 주기 안에** 정지 펄스(1000 µs)를 내고, KILLED 상태로 고정합니다.
+  - 해제는 땅 위에서 CLEAR_KILL 명령으로만 됩니다.
+- **비상착륙 원인**: 폰 pose 끊김, 폰 heartbeat 끊김(250 ms), PC 링크 끊김(500 ms), 저전압, 명령, 루프 과부하, **폰 IMU 끊김(10 ms)**.
+- **착륙 단계**
+  1. **LAND_VIO**: 제자리 x,y를 유지하며 0.3 m/s로 하강합니다.
+  2. **LAND_IMU**: 수평을 유지하고, 폰 IMU로 하강 속도를 추정합니다.
+  3. **LAND_OPENLOOP**: 자세 제어가 없습니다. 이번 비행 이륙 때 기록한 모터별 값에서 출력을 **역산**합니다. 추력 ∝ 명령² 모델을 쓰고 배터리 전압 차이를 보정합니다. 처음 0.4 s는 1 m/s²로 하강을 시작하고, 이후는 hover의 99 % 추력으로 내려갑니다. 마지막 VIO 높이로 예상 착지 시간을 계산해 그 1.2배 뒤에 모터를 끕니다.
+  - **폰 IMU가 끊기면 VIO·IMU 단계가 둘 다 불가능하므로 바로 OPENLOOP으로 갑니다.** `imu_fail_kill` 설정을 켜면 대신 KILL합니다.
+  - 단계는 내려가기만 하고, 착륙 중 비행으로 돌아가지 않습니다.
+- **PC 단위시험: 389개 검사 모두 통과** (gcc, ASan/UBSan, 시뮬레이션). 검사 대상: 폰 IMU 끊김 → OPENLOOP, IMU 지터 처리, PWM 출력 한계.
+- **ESP-IDF 미설치**: `idf.py build`는 해 보지 못했습니다. IDF 스텁으로 문법 검사만 했고, PWM/OneShot/DShot × 폰/로컬 IMU 6가지 조합 모두 통과했습니다.
+
+### ⚠ 안전 위험: 비행 제어기에 독립 IMU가 없음 (사용자에게)
+
+자세 제어가 **폰 + 앱 + USB 케이블**이 모두 정상일 때만 동작합니다.
+
+- 셋 중 하나라도 10 ms 넘게 끊기면 남는 수단은 **자세 제어 없는 OPENLOOP 착륙**뿐입니다. 기체가 기울거나 흘러갈 수 있습니다.
+- 끊김의 예: 앱 GC·스케줄링 지연, USB 순간 끊김, 앱 종료, 폰 과열 자체정지(40 °C).
+- 폰 IMU 샘플은 USB와 PWM을 거치며 **약 2–8 ms(추정)** 늦게 반영됩니다. ESP32에 IMU가 직접 붙은 경우는 0.1–0.5 ms입니다. 그래서 자세 루프 게인을 낮춰야 하고, 외란에 덜 버팁니다.
+- **먼저 할 일**: 실제 폰에서 IMU 샘플 간격(최대 gap) 분포를 재고, 10 ms 기준이 적절한지 정해야 합니다. 너무 빡빡하면 멀쩡한 비행 중에 OPENLOOP 착륙이 걸립니다.
+- **값싼 보완책 (이번에는 추가하지 않음)**:
+  - 3–5천 원짜리 IMU 모듈(예: ICM-42688 / MPU-6500 브레이크아웃)을 ESP32 SPI에 붙여 **비상용**으로만 쓰는 방법입니다.
+  - 그러면 폰이 끊겨도 LAND_IMU(수평 유지 착륙)가 가능합니다.
+  - 드라이버는 이미 선택 모듈(`FC_IMU_SOURCE=FC_IMU_LOCAL_ICM42688`)로 들어 있습니다. 다만 "평소엔 폰, 끊기면 로컬 IMU" 전환 로직은 아직 없습니다.
 
 ## 1. Language / framework (decision: C on ESP-IDF)
 
 | option | verdict | why |
 |---|---|---|
-| **C on ESP-IDF (FreeRTOS)** | **chosen** (user decision) | Timing is deterministic. Tasks are pinned to cores. You get direct RMT / SPI / gptimer drivers, ISRs in IRAM, `esp_timer`, and the task WDT. There is no hidden heap use, and it is the vendor-supported path. |
-| Arduino-ESP32 | no | Same chip, but the `loop()` and `delay()` model and the libraries allocate memory and log. Core and priority control is coarse, and tuning sdkconfig is awkward. |
-| Rust (esp-rs / esp-idf-hal) | no (for now) | Memory-safe and good long-term. But the drivers are less mature (RMT DShot, TinyUSB CDC), the team knows C, and the shared protocol header is C. |
-| MicroPython | no | It is interpreted and has a GC that pauses (ms). A 1 kHz control loop is not possible. |
+| **C on ESP-IDF (FreeRTOS)** | **chosen** (user decision) | Timing is deterministic and tasks are pinned to cores. Direct LEDC / RMT / USB (TinyUSB) drivers, ISRs in IRAM, `esp_timer`, task WDT. No hidden heap; vendor-supported. |
+| Arduino-ESP32 | no | The `loop()` / `delay()` model and libraries allocate memory and log. Core and priority control is coarse. |
+| Rust (esp-rs) | no (for now) | Drivers are less mature (TinyUSB CDC, LEDC/RMT), the team knows C, and the shared protocol header is C. |
+| MicroPython | no | It is interpreted and has GC pauses (ms). A deterministic 500 Hz loop is not possible. |
 
 How the firmware gets fast, deterministic control:
 
 - **Core split.**
-  - Core 1: `ctrl` task at priority 24 runs IMU → attitude → safety → rate PID → mixer → DShot. `pos` task at priority 22 runs the position loop.
-  - Core 0: Wi-Fi / ESP-NOW (IDF), TinyUSB, `link` (prio 10), `supervisor` (prio 24, above Wi-Fi 23).
-- **Loop clock.** The ICM-42688 data-ready pin (INT1) fires an IRAM ISR, which calls `vTaskNotifyGiveFromISR` to wake `ctrl`. `FC_CLOCK_IMU_DRDY=0` uses a gptimer hardware alarm instead. `esp_timer` callbacks are not used for the loop (dispatch jitter).
-- **IMU read.** One 15-byte polling SPI transaction at 20 MHz. For transfers this small, polling beats queued DMA. Use the FIFO later for 4–8 kHz.
-- **Motors.** DShot600 via RMT. The ESP32-S3 has exactly 4 RMT TX channels, which covers a quad. Each frame takes 26.7 µs and is sent asynchronously. PWM400 (LEDC) is the fallback.
-- **In the loop:** no `malloc`, no `ESP_LOG`, no blocking. Queues use timeout 0, shared structs are copied under a spinlock, and `fc_safety` has a single owner.
-- **sdkconfig.defaults:**
-  - 240 MHz, PM / DFS off, `-O2`, FreeRTOS 1 kHz.
-  - The Wi-Fi, esp_timer and TinyUSB tasks are pinned to core 0.
-  - SPI / RMT / GPTimer / GPIO ISRs are IRAM-safe.
-  - Task WDT 1 s with panic → reboot (no DShot frames, so the ESCs stop). Interrupt WDT is on.
-  - Log level is WARN.
-- **No flash writes in flight.** An NVS write stalls both cores' caches for ms. The hover record goes to RTC RAM in flight, and to NVS only after disarm.
+  - Core 1: `ctrl` task (priority 24) runs phone IMU samples → attitude → safety → rate PID → mixer → PWM. `pos` task (22) runs the position loop.
+  - Core 0: Wi-Fi / ESP-NOW, TinyUSB, `link` (10), `supervisor` (24, above Wi-Fi 23).
+- **Event-driven inner loop.** The USB CDC rx callback decodes `VIOP_T_IMU` frames, rotates each sample into the body frame, queues it, and wakes `ctrl` with `xTaskNotifyGive`.
+  - `ctrl` integrates every new sample in order, each with its own **phone-timestamp dt**, then runs safety and control once.
+  - It also wakes every 2 ms without samples, so the failsafe keeps running when the stream stops.
+- **Jitter / staleness** are handled in `imu_stream_t` (fc_core, unit-tested):
+  - duplicates and out-of-order samples are dropped;
+  - a burst of samples uses phone time, not arrival time;
+  - a long hole is never integrated in one step (dt clamped to 2× nominal);
+  - a phone-time gap > 10 ms, or no sample for > 10 ms of local time, means IMU failure → fc_safety;
+  - a phone/app restart resyncs and is flagged.
+- **Motors.** Standard PWM 1000–2000 µs via LEDC, 14 bit, 400 Hz default (50–490). A new value takes effect at the next period (≤ 2.5 ms at 400 Hz). OneShot125 (LEDC, 2 kHz) and DShot600/300 (RMT) are compile-time options.
+- **In the loops:** no `malloc`, no `ESP_LOG`, no blocking. Queues use timeout 0, shared structs are copied under a spinlock, and `fc_safety` has a single owner.
+- **sdkconfig.defaults:** 240 MHz, no DFS, `-O2`, FreeRTOS 1 kHz, radio / timer / USB tasks on core 0, IRAM-safe ISRs, task WDT 1 s → panic → reboot (outputs stop), interrupt WDT, log level WARN.
+- **No flash writes in flight.** The hover record goes to RTC RAM in flight, and to NVS after disarm.
 
 ## 2. Layout
 
@@ -60,219 +71,186 @@ How the firmware gets fast, deterministic control:
 esp32fc/
   CMakeLists.txt, sdkconfig.defaults
   main/            ESP-IDF app (NOT compiled with IDF yet)
-    fc_config.h      all hardware assumptions (pins, IMU, ESC, rates, cores, battery, phone mount)
-    main.c           init order (motors first = DShot 0), queues, task creation, gptimer option
-    ctrl_task.c      1 kHz loop: IMU -> Mahony -> drain inbox -> fs_step -> control per mode -> fs_check_outputs -> DShot
-    pos_task.c       position loop (woken per phone pose, <= 200 Hz), latency compensation p += v*age, land-in-place xy hold
-    link_task.c      USB CDC (TinyUSB; phone = USB host) VIOP parser + ESP-NOW (PC): events, 20 Hz status, commands, setpoints
-    supervisor_task.c fast SW watchdog (loop silent 20 ms -> motor_out_emergency_stop), 2nd kill-switch path, battery ADC 50 Hz
-    motor_out.c/.h   DShot600/300 (RMT bytes encoder) or PWM400 (LEDC); e-stop callable from any core
-    imu_icm42688.c   ICM-42688-P SPI driver (2000 dps / 16 g / ODR 1 kHz, DRDY INT1, stuck / saturation checks)
+    fc_config.h      all hardware assumptions / user decisions (IMU source, PWM, frame, pins, battery, phone mount)
+    main.c           init order (motors first = stop pulse), queues (fs inbox, events, phone IMU samples), tasks
+    ctrl_task.c      event-driven inner loop on phone IMU samples -> Mahony -> fs_step -> control per mode -> outputs
+    pos_task.c       position loop (woken per phone pose, <= 200 Hz), latency compensation, land-in-place xy hold
+    link_task.c      USB CDC (TinyUSB; phone = USB host): VIOP pose / heartbeat / IMU; ESP-NOW to the PC
+    supervisor_task.c fast SW watchdog (loop silent 20 ms -> stop pulses), 2nd kill-switch path, battery ADC 50 Hz
+    motor_out.c/.h   PWM (default) / OneShot125 via LEDC, DShot600/300 via RMT; e-stop callable from any core
+    imu_icm42688.c   OPTIONAL local IMU driver (FC_IMU_SOURCE = FC_IMU_LOCAL_ICM42688), not in the default build
     board.c/.h       battery ADC, kill switch ISR, LED, hover record in RTC no-init RAM + NVS
   components/
-    fc_safety/       PURE C safety state machine (unit-tested on PC)   <- the core of this task
-    fc_core/         PURE C Mahony attitude, IMU vertical-speed estimator, PID, attitude/position control, quad-X mixer
-    viop/            viop_proto.h (copy from ovdrone) + viop_fc_ext.h (proposed FC message types)
-  test/              PC tests: `make run` (unit tests), `make syntax` (firmware -fsyntax-only against IDF stubs)
+    fc_safety/       PURE C safety state machine (unit-tested on PC)
+    fc_core/         PURE C Mahony, vertical-speed estimator, PID, attitude/position control, quad-X mixer,
+                     phone IMU stream (jitter/gap), PWM pulse/duty helpers
+    viop/            viop_proto.h (copy from ovdrone) + viop_fc_ext.h (proposed FC + IMU message types)
+  test/              `make run` (unit tests), `make syntax` (firmware -fsyntax-only, 6 build variants, IDF stubs)
 ```
 
 ## 3. Safety state machine (components/fc_safety)
 
-States: `DISARMED, ARMED_IDLE, FLYING, EMERG_LAND, KILLED`. Allowed transitions (anything else is refused and logged as `FS_EV_ILLEGAL`; tests assert none happen):
+States: `DISARMED, ARMED_IDLE, FLYING, EMERG_LAND, KILLED`. Anything not in this table is refused and logged as `FS_EV_ILLEGAL`; the tests assert none happen.
 
 | from \ to | DISARMED | ARMED_IDLE | FLYING | EMERG_LAND | KILLED |
 |---|---|---|---|---|---|
 | DISARMED | | ARM cmd + all arm checks | | | kill cmd / switch |
 | ARMED_IDLE | DISARM cmd, idle 5 s, any land trigger on the ground | | collective > 0.15 (after it was seen low) | | any kill |
 | FLYING | | normal touchdown detected | | any land trigger | any kill |
-| EMERG_LAND | touchdown / impact / open-loop timeout | | **never (no auto-resume)** | | any kill |
+| EMERG_LAND | touchdown / impact / open-loop cut | | **never (no auto-resume)** | | any kill |
 | KILLED | CLEAR_KILL on ground (level, still, ~1 g, switch released, ≥ 1 s) | | | | |
 
-**KILL** happens immediately: `motors_enabled=false`, and the control task writes DShot 0 in the same cycle. It latches.
+**KILL** happens immediately: the stop pulse goes out in the same cycle, and the state latches.
 
 | trigger | default |
 |---|---|
-| PC `VIOP_CMD_KILL` | — |
-| physical switch | GPIO15 to GND, ISR latch + level read, plus a supervisor path |
-| tilt | > 60° (> 45° during EMERG_LAND) |
+| PC command | — |
+| physical switch | ISR latch + level read, plus a supervisor path |
+| tilt | > 60° (> 45° while landing) |
 | gyro rate | > 1500 °/s |
 | motor output NaN / out of range | — |
-| control loop stall | 20 ms (supervisor cuts the pins directly) |
-| IMU failure | only if `imu_fail_kill=true`; the default goes to LAND_OPENLOOP, per the user's tier spec |
+| control loop stall | 20 ms (supervisor) |
+| phone IMU loss | only with `imu_fail_kill=true` (the default lands open-loop) |
 
-**EMERGENCY LAND triggers (defaults):**
+**EMERGENCY LAND triggers:**
 
 | trigger | default |
 |---|---|
-| no GOOD pose | 200 ms (good = VALID+TRACKING, quality>0, std ≤ 0.15 m, send_delay ≤ 50 ms, seq increasing) |
-| pose lost flag (VALID=0 / quality 0) | immediate |
-| VIO reset_counter change in flight | immediate |
-| phone heartbeat missing | 250 ms (5 periods at 20 Hz) |
-| heartbeat seq not increasing | 250 ms, reason HB_SEQ |
-| heartbeat state STARTING / LOST / STOPPING or flags STOPPING / IMU_STALE / POSE_STALE | immediate |
+| no GOOD pose | 200 ms |
+| pose lost flag / VIO reset in flight | immediate |
+| phone heartbeat missing | 250 ms |
+| heartbeat seq frozen | 250 ms |
+| heartbeat STARTING / LOST / STOPPING / IMU_STALE / POSE_STALE | immediate |
 | USB port closed (DTR 1→0) | immediate |
-| PC ESP-NOW link silent | 500 ms |
-| battery < 3.45 V/cell | debounced 2 s, latched |
-| loop overruns | leaky bucket: +10 per overrun, −1 per good cycle, > 500 means e.g. 50 consecutive overruns |
-| position task dead | setpoint older than 50 ms |
+| PC link silent | 500 ms |
+| battery < 3.45 V/cell | debounced 2 s |
+| loop overruns | leaky bucket |
+| position task dead | — |
 | LAND command | — |
+| **phone IMU stream stale** | > 10 ms (only when `imu_fail_kill` is off) |
 
-**Tiers.** The tier is chosen at the trigger and re-evaluated every cycle. It can only step down, and every change is logged as `FS_EV_TIER` with a reason.
+**Tiers.** Only step down; every change is logged as `FS_EV_TIER`.
 
 | tier | condition | control | end |
 |---|---|---|---|
-| LAND_VIO | pose fresh + heartbeat not LOST + IMU ok | pos loop holds land-start x,y; collective PI on VIO vz → −0.30 m/s | touchdown (300 ms of: accel variance < 0.5, \|f\|≈g, collective ≤ 0.75·hover or impact, \|vz\| < 0.2) → DISARMED |
-| LAND_IMU | no usable VIO, IMU ok | level attitude, yaw hold; vz from IMU estimator (bias learnt during VIO, leak 5 s, valid 8 s), else a timed collective ramp | same touchdown test (impact spike also counts) |
-| LAND_OPENLOOP | IMU unusable, or land timeout 30 s in VIO/IMU | **no attitude control**: per-motor = hover record × (0.92 − 0.05/s, min 0.60) | impact (\|f\| > 2 g, accel alone) or 6 s → DISARMED |
+| LAND_VIO | pose fresh + heartbeat ok + phone IMU ok | pos loop holds land-start x,y; collective PI on VIO vz → −0.30 m/s | touchdown (accel quiet, \|f\|≈g, low collective or impact, \|vz\| small, 300 ms) |
+| LAND_IMU | no usable VIO, phone IMU ok | level, yaw hold; vz from the IMU estimator, else a timed collective ramp | same touchdown test |
+| LAND_OPENLOOP | **phone IMU lost** (→ VIO and IMU tiers impossible), or a VIO/IMU landing longer than 30 s | **no attitude control.** Per motor: `cmd_i = hover_i · r^(1/k) · V_rec/V_now`, with k = 2 (thrust ∝ cmd²). r = 1 − 1.0/g for 0.4 s (descend at ~0.4 m/s), then r = 0.99. | cut at (estimated touchdown time from the last VIO height) × 1.2 + 0.3 s, max 6 s; or impact, if an accelerometer is still available (not with phone IMU loss) |
 
-**Hover record for tier 3.** This is per flight and reset at every ARM.
+**This flight's takeoff record** (the source for "back-calculate from the vertical takeoff"):
 
-- Recording starts once lift-off is proven (vz > 0.10 m/s from VIO, else from the IMU estimate), plus 300 ms.
-- It averages per-motor commands while tilt < 10°, rate < 30 °/s, filtered \|f\| within 0.4 m/s² of g, \|vz\| < 1 m/s and nothing saturated. It becomes valid after 0.5 s and freezes after 3 s.
-- Sources, in order: this flight → previous flight (RTC RAM, else NVS, loaded at boot and range-checked) → `openloop_default_thr` 0.33.
-- The tier event's `aux` says which source was used.
-- In the sim, the record came out 1.4 % below true hover (the climb-to-hover deceleration enters the window).
+- Reset at every ARM. Starts when lift-off is proven (vz > 0.1 m/s), plus 300 ms.
+- Averages per-motor commands and battery voltage over the stable climb and first hover. Valid after 0.5 s, frozen after 3 s.
+- Fallbacks: previous flight (RTC RAM, else NVS) → `openloop_default_thr` 0.33.
+- The OPENLOOP numbers are **provisional and will be tested in sim / real later**: thrust exponent, 1 m/s², 0.4 m/s, 0.99, margin 1.2.
 
-**Arming.** All of these must hold (each failure is a bit in `FS_EV_ARM_REJECT`):
-
-- level ≤ 10°
-- still: gyro < 0.2 rad/s, accel variance low, \|f\|≈g
-- collective request ≤ 0.05
-- IMU ok
-- pose fresh, heartbeat fresh (not STARTING / LOST), USB not closed, PC link fresh (each configurable)
-- battery known and ≥ 3.70 V/cell
-- overrun bucket low
-- kill switch released
-
-Auto-disarm after 5 s idle on the ground. **Every transition, tier change and rejection is an event**: `fs_event_t` → `viop_fc_event_t` (VIOP type 0x04) → ESP-NOW → PC. A 20 Hz status frame (0x05) carries state, tier, reasons, battery, attitude, loop max µs and overruns.
+**Arming** requires all of: level, still on the ground (~1 g), collective low, phone IMU ok, pose fresh, heartbeat fresh, USB open, PC link, battery known ≥ 3.70 V/cell, overrun bucket low, switch released. Auto-disarm after 5 s idle. Every transition, tier change and rejection is an event sent to the PC (VIOP 0x04), plus a 20 Hz status frame (0x05).
 
 ## 4. PC unit tests (all pass)
 
-`make -C esp32fc/test` builds with gcc 11.4 in WSL, using `-Wall -Wextra -Werror -fsanitize=address,undefined`. Result: **330 checks, 0 failed**. The raw log is in `scan3d/runs/esp32fc_20261025/test_safety_run.log`.
+`make -C esp32fc/test` builds with gcc 11.4 in WSL, `-Wall -Wextra -Werror -fsanitize=address,undefined`. Result: **389 checks, 0 failed**. Raw log: `scan3d/runs/esp32fc_20261025/test_safety_run.log`.
 
-The tests run a 1 kHz closed-loop 1-D vertical simulation: thrust, gravity, ground contact with an impact spike, and per-motor trims. It generates phone pose (200 Hz), heartbeat (20 Hz) and PC heartbeat (10 Hz).
+The sim is a 1 kHz 1-D vertical model: thrust ∝ cmd² (matches the open-loop model), ground contact with an impact spike, per-motor trims. It feeds phone pose 200 Hz, heartbeat 20 Hz and PC heartbeat 10 Hz.
 
-Scenarios:
+New this round:
 
-- **Transitions and arming:** transition table; arm rules (no input / no phone / VIO STARTING / tilt / low or unknown battery / kill switch / throttle / NaN / frozen seq).
-- **Phone and link loss:**
-  - pose stall with heartbeat alive → IMU tier → touchdown
-  - heartbeat stall with pose alive → VIO tier → touchdown
-  - both stalled
-  - heartbeat returns during landing → stays in EMERG_LAND → DISARMED → re-ARM needed
-  - heartbeat seq frozen; heartbeat LOST / STOPPING / IMU_STALE; USB DTR drop
-  - link loss
-- **Battery and loop:** low battery (and a short sag that must not trigger); loop overrun (sustained vs 5 %).
-- **KILL:**
-  - tilt kill (same cycle, latched, clear rules)
-  - tilt > 45° during land → KILL
-  - KILL command mid-flight and during land; kill switch; NaN output; loop-stall request
-  - DISARM refused in flight
-- **VIO reset in flight.**
-- **Hover record:** values, freeze, reset at arm, previous-flight fallback, NaN-corrupted persisted value → default.
-- **Tiers:** IMU fail → OPENLOOP (this flight's values, cut by impact); `imu_fail_kill` option; downgrade VIO → IMU → OPENLOOP with no upgrade; IMU tier without vz (ramp); land timeout → OPENLOOP.
-- **Normal landing:** normal touchdown → idle disarm; no re-takeoff after touchdown; a land trigger on the ground disarms.
-- **Review regressions:** future-stamped messages; ground spin-up not recorded; NaN vz during land does not KILL; CLEAR_KILL refused in free fall.
-- **fc_core known-answer tests:** Mahony converges to a 20° / −10° static tilt, with gyro bias learnt in the observable plane; vz estimator learns accel bias and expires its horizon; mixer signs and saturation; VIOP glue.
+- **Phone IMU stall → OPENLOOP:** this flight's record is used; the cut time follows from the last VIO height; motors are cut by the timer because there is no accelerometer.
+- **Open-loop phases and voltage compensation.**
+- `imu_fail_kill` option.
+- **`imu_stream` jitter:** bursts, duplicates, out-of-order, 9.9 vs 10.1 ms silence, 12 ms phone gap, seq skip, restart resync, and stream → fs → OPENLOOP.
+- **VIOP_T_IMU** encode/decode (n = 3 and n = 5 = 92 B frame).
+- **PWM limits:** NaN/negative → 1000 µs, > 1 → 2000 µs, duty at 400 Hz 14 bit, 490 Hz ok / 500 Hz rejected, OneShot125.
+
+Earlier scenarios (all still pass): arm rules, pose / heartbeat / both stalls, heartbeat resume (no auto-resume), seq frozen, LOST / STOPPING / IMU_STALE flags, USB DTR, link loss, low battery, tilt / NaN / switch / command KILL, overruns, VIO reset, hover record and persistence, tier downgrade with no upgrade, land timeout, review regressions.
 
 Results printed by the tests (sim, 1 run each):
 
-| scenario | result |
-|---|---|
-| pose stall (IMU tier) | touchdown after 3.5 s |
-| heartbeat stall (VIO tier, 1 m at 0.3 m/s) | touchdown after 3.8 s |
-| open-loop | cut by impact after 1.3 s |
+- **Phone-IMU loss from 1 m:** ground contact after 1.86 s at up to 0.80 m/s. Motors are cut at 3.53 s, so they **spin on the ground for ~1.7 s at ~98 % of hover thrust**. That is a tip-over risk; tune `openloop_cut_margin` / `openloop_cruise_ratio` in tests.
+- **Takeoff record:** 0.7 % below the true hover.
 
-`make -C esp32fc/test syntax` compiles every `main/*.c` with `-fsyntax-only -Werror` against `test/host_stubs`, for DShot and PWM and for DRDY and gptimer. Result: OK. **The stubs are written from memory of the IDF v5.2 API (추정). This is not an IDF build.**
+`make -C esp32fc/test syntax`: all `main/*.c` compile `-fsyntax-only -Werror` for PWM / OneShot125 / DShot600 × phone / local IMU. **The stubs are written from memory of the IDF v5.2 API (추정); this is not an IDF build.**
 
-## 5. Timing (ESP32-S3 @ 240 MHz — all 추정, not measured)
+## 5. Timing and latency (ESP32-S3 @ 240 MHz — all 추정, not measured)
 
-Control loop per cycle:
+**Inner loop per IMU frame** (n = 1 sample):
 
 | step | estimate (µs) |
 |---|---|
-| ISR → task wake | 3–8 |
-| SPI 15 B @ 20 MHz polling | 15–25 |
-| Mahony + Euler + vz estimator (single-precision FPU) | 5–10 |
-| queue drain | 2–10 |
+| CDC rx + CRC + decode + rotate + queue (core 0) | 15–30 |
+| notify → ctrl wake | 5–10 |
+| Mahony + vz estimator per sample | 5–10 |
 | `fs_step` | 3–8 |
-| attitude PID + mixer | 2–4 |
-| spinlock copies | 1–3 |
-| 4× `rmt_transmit` | 20–40 |
-| **total** | **≈ 55–110 µs typical, ≈ 150 µs worst** (cache misses; flash writes are excluded by design) |
+| PID + mixer | 2–4 |
+| 4× LEDC duty update | 10–20 |
+| **total** | **≈ 40–80 µs per 2 ms sample**, i.e. 2–4 % of core 1 |
 
-- At 1 kHz that is about 6–11 % of core 1. 2 kHz is comfortable. 4 kHz (250 µs) fits but is tight: use the IMU FIFO there. DShot600 (26.7 µs frame) is fine at 4 kHz; DShot300 (53 µs) still fits but with less margin.
-- Overrun threshold = 80 % of the period.
-- pos task: about 20–40 µs per run at ≤ 200 Hz.
-- link: VIOP CRC + parse of a 92-byte frame is about 10–20 µs; an ESP-NOW send is about 50–100 µs, on core 0.
-
-Phone → ESP32 pose latency (USB CDC, full-speed 12 Mbit/s, 1 ms frames):
+**Added latency of the inner loop, phone IMU vs a local IMU:**
 
 | stage | estimate |
 |---|---|
-| bridge `write()` → Android usbfs bulk | 0.3–1 ms |
-| USB bulk scheduling (1 ms frames) | 0–1 ms |
-| TinyUSB task + parse + queue | 0.1–0.3 ms |
-| **USB hop total** | **≈ 1–2.5 ms typical, ≈ 5 ms bad case** |
+| phone sensor HAL → app callback | 1–3 ms (unknown; part of the team's 4.5 ms predicted-pose figure) |
+| app write → USB full-speed bulk (1 ms frames) | 0.5–2 ms |
+| TinyUSB → queue → ctrl | 0.1–0.3 ms |
+| control | ~0.1 ms |
+| PWM 400 Hz wait | 0–2.5 ms (avg 1.25) |
+| **gyro → motor command total** | **≈ 2–8 ms (typ ~4 ms)** |
 
-- The VIO predicted pose is already 4.5 ms p50 / 6.9 ms p95 old when sent (team measurement, includes IMU delivery). The pose is therefore about 6–9 ms old when the position loop uses it (추정).
-- For comparison, the raw VIO pose is 54–62 ms old.
-- `pos_task` compensates with p += v·age, where age = send_delay_us + local age. The USB transit (~1–2 ms) is not counted because there is no clock sync yet. At 1 m/s that leaves about 1–2 mm error.
-- The attitude loop uses only the ESP32's own IMU, so phone latency affects only the position loop (bandwidth ~1–2 Hz; 8 ms ≈ 6° phase at 2 Hz).
+- A local IMU with DShot would be ≈ 0.1–0.5 ms. ESC / motor response comes on top in both cases.
+- Phase lag of 4 ms is 14° at 10 Hz and 29° at 20 Hz. The rate loop therefore has to run at lower bandwidth (~8–12 Hz, 추정) with softer gains and weaker disturbance rejection. Probably acceptable indoors for a 450, but not proven.
+- **Jitter is the bigger risk.** Android scheduling stalls of 5–20 ms happen. With the 10 ms max gap, such a stall in flight triggers an OPENLOOP landing. **Measure the real gap distribution** (phone timestamps in the IMU frames make that easy) before flying, then set `FC_IMU_MAX_GAP_US`.
+
+**Pose path** (unchanged): the VIO predicted pose is 4.5 ms p50 / 6.9 ms p95 old (measured by the team) plus ~1–2.5 ms over USB, so about 6–9 ms old at the position loop. `pos_task` extrapolates with p += v·age.
 
 ## 6. Assumptions (fc_config.h) and what the user must decide
 
-| item | assumed default | decide |
+| item | default | status |
 |---|---|---|
-| IMU | TDK ICM-42688-P, SPI2 (SCLK 12, MOSI 11, MISO 13, CS 10, INT1 14), 2000 dps / 16 g, ODR 1 kHz, chip x fwd / z up | chip + mounting; verify the 3 static sign checks (imu_icm42688.c) before flight |
-| ESC | DShot600 via RMT, motors GPIO 4,5,6,7 | DShot600/300 or PWM; ESC firmware (BLHeli_32 / AM32 / BLHeli_S) |
-| frame | quad X, Betaflight order 1 RR(CW) 2 FR(CCW) 3 RL(CCW) 4 FL(CW), idle 0.05 | motor order / spin |
-| battery | 4S, ADC1 CH0 (GPIO1), divider 11:1, land 3.45 V/cell, arm ≥ 3.70 | cells, divider, thresholds |
-| kill switch | GPIO15 active low | wiring (NC loop recommended so that a broken wire = kill: TODO option) |
-| phone mount | `viop_mount_cam_fwd`, phone at CG (lever arm 0) | real mounting |
-| ESP-NOW | channel 1, PC MAC = broadcast (accept any) | **pair the PC-side ESP32 MAC and enable encryption before flying** (otherwise anyone can send ARM/KILL) |
-| gains | placeholder (450 class guess) | tuning on the vehicle |
-| sensors | no barometer / rangefinder | **a downward ToF (e.g. VL53L1X) is recommended**: LAND_IMU / LAND_OPENLOOP descend blind |
+| IMU | **phone IMU only**, ~500 Hz, max gap 10 ms | user decision; gap threshold to be measured |
+| ESC | **standard PWM 1000–2000 µs, 400 Hz** (50–490), GPIO 4,5,6,7; OneShot125 / DShot optional | user decision; ESC end-point calibration needed (1000 = stop) |
+| frame | **quad X 450 mm**, Betaflight order 1 RR(CW) 2 FR(CCW) 3 RL(CCW) 4 FL(CW) | user decision; check motor order / spin |
+| height | **VIO only, no ToF** | user decision |
+| battery | 4S, ADC1 CH0 (GPIO1), divider 11:1, land 3.45 V/cell, arm ≥ 3.70 | decide |
+| kill switch | GPIO15 active low | decide (normally-closed loop recommended) |
+| phone mount | `viop_mount_cam_fwd`, phone at CG | decide |
+| ESP-NOW | channel 1, accepts any MAC | **pair + encrypt before flying** |
+| gains | provisional (450 class) | tune on the vehicle (lower rate-loop bandwidth because of the phone IMU latency) |
+| open-loop landing | k = 2, 1 m/s², 0.4 m/s, 0.99, margin 1.2 | to be tested in sim / real (user) |
 
 ## 7. Protocol / integration notes
 
-- `components/viop/include/viop_proto.h` is a copy of ovdrone's `scan3d/ov_bridge/viop_proto.h`: commit bc65b93 plus **ovdrone's uncommitted working-tree change (~16:50) adding `VIOP_T_HEARTBEAT 0x02` (18 B)**. ovdrone owns that header and the phone-side heartbeat sender (`--viop-hb-hz`, default 20 Hz, sent from the bridge main loop). **Merge point:** when ovdrone commits, replace this copy with theirs and diff it.
-- `viop_fc_ext.h` holds the proposed FC types (to be moved into `viop_proto.h` by integration):
+- `viop_proto.h` is a copy of ovdrone's header (bc65b93 + their uncommitted HEARTBEAT 0x02). **Merge point:** replace it with ovdrone's committed version.
+- **New proposed type `VIOP_T_IMU` 0x06** (in `viop_fc_ext.h`):
+  - Layout: u64 t0_us, u8 n (1..5), u8 flags (bias-corrected / uncalibrated), u16 sample_seq0, then n × {u16 dt_us, i16 gyro[3] at 1e-3 rad/s, i16 acc[3] at 5e-3 m/s²}.
+  - Axes are phone IMU axes (Android). n = 1 gives a 36 B frame; at 500 Hz that is 18 kB/s, far below USB full speed. **n = 1 is recommended**, because batching adds 2 ms per extra sample.
+- **The phone-side IMU sender is NOT implemented** (ovdrone / integration). It should:
+  - send one frame per sensor event, written immediately from the sensor callback thread;
+  - use `SENSOR_DELAY_FASTEST` with `maxReportLatencyUs = 0` (no Android batching);
+  - use CLOCK_BOOTTIME timestamps, the same timebase as POSE;
+  - pair gyro and accel by timestamp;
+  - subtract the VIO biases if available.
+- The other proposed types are unchanged: 0x04 event, 0x05 status, 0x20 command, 0x21 setpoint, 0x2E PC heartbeat.
+- Not done yet: PC-side ESP32 relay firmware and PC tool; phone clock sync; IMU source fallback (phone → local backup IMU); event-drop counter in status.
 
-  | id | type | direction |
-  |---|---|---|
-  | 0x04 | FC_EVENT | drone → PC |
-  | 0x05 | FC_STATUS | drone → PC |
-  | 0x20 | CMD (ARM / DISARM / KILL / LAND / CLEAR_KILL with confirm word) | PC → drone |
-  | 0x21 | SETPOINT | PC → drone |
-  | 0x2E | PC_HB | PC → drone, 10 Hz |
+## 8. Review history
 
-  0x03 stays reserved for ovdrone's health / battery telemetry.
-- Phone side: the app must open the ESP32's USB CDC-ACM port (the ESP32 is the USB device; the phone is the host via OTG) and write the VIOP frames, pose and heartbeat. If the app sets DTR, closing the port lands the drone immediately; otherwise the heartbeat timeout covers it.
-- Not done yet: PC-side ESP32 relay firmware; a PC tool to send commands and show events; phone clock sync (TIME_REQ / RESP) for exact latency; NC kill-switch option; event-drop counter in status.
+An independent read-only reviewer found 14 issues. The reproduced ones are fixed, with regression tests in `t_review_regressions`:
 
-## 8. Review (independent read-only agent, 2026-10-25)
-
-The reviewer reproduced these bugs in its own tests in /tmp. All are fixed and have regression tests in `t_review_regressions`:
-
-1. A message stamped after the loop's `now` looked 49 days old, causing a false emergency land and a CLEAR_KILL bypass. Now `elapsed` saturates and the firmware stamps messages with the loop time.
-2. The hover record was polluted by spinning up on the ground. Recording now starts only after lift-off is proven.
-3. A NaN in vz during landing caused a KILL. Inputs are now sanitised.
-4. The drone re-took off right after touchdown. Takeoff now needs the collective request to be seen low first.
-5. In OPENLOOP, impact detection was dead because `acc_ok == imu_ok`. Accelerometer validity is now separate.
-6. Unknown or NaN battery allowed arming, and a stale battery value stayed "good". The battery must now be known to arm, and the supervisor resets it after 5 failed ADC reads.
-7. Land timeout cut the motors in mid-air in the VIO/IMU tiers. It now steps down to OPENLOOP, which ends with impact or a 6 s cut.
-8. The kill-switch ISR latch caused a deadlock with CLEAR_KILL. The latch is now dropped once fs is KILLED and the pin is released.
-9. A frozen seq still allowed arming. A repeated seq never refreshes now.
-10. Clear / arm were possible in free fall. The ground check now requires \|f\|≈g.
-11. A supervisor kill could be lost in a full queue. It now goes through a flag.
-
-The DTR handling (12) was changed. Accepted as is: one IMU dropout keeps tier 3 (that is the spec), and the RMT outputs are not restored after a pin takeover (fails safe; needs a reboot).
+1. future timestamps
+2. hover record polluted on the ground
+3. NaN vz → KILL
+4. re-takeoff after touchdown
+5. accel-only validity
+6. unknown battery allowed arming
+7. land timeout cut in mid-air (now steps down to OPENLOOP)
+8. kill-latch deadlock
+9. frozen seq allowed arming
+10. free-fall clear
+11. supervisor kill lost in a full queue
 
 ## Build
 
 - PC tests (works now): in WSL, `make -C esp32fc/test` and `make -C esp32fc/test syntax`.
-- Firmware (needs ESP-IDF ≥ 5.2, **not installed on this PC**):
+- Firmware (ESP-IDF ≥ 5.2, **not installed on this PC**):
 
   ```
   . $IDF_PATH/export.sh
@@ -282,11 +260,12 @@ The DTR handling (12) was changed. Accepted as is: one IMU dropout keeps tier 3 
   idf.py -p <port> flash
   ```
 
-  `esp_tinyusb` comes from the component manager. The USB OTG port is used by TinyUSB for the phone, so flash and use the console through UART0, or through download mode.
+  The USB OTG port is used by the phone link, so flash and use the console through UART0, or through download mode.
 - Before the first flight, **without props**:
-  1. Run the IMU sign checks.
-  2. Check motor order and direction with low DShot.
-  3. Kill switch → motors stop.
-  4. Unplug the phone → EMERG_LAND event on the PC.
-  5. Stop the PC heartbeat → EMERG_LAND.
-  6. Command KILL → stop.
+  1. Calibrate the ESC end points (1000 / 2000 µs).
+  2. Check motor order and spin.
+  3. Phone IMU axes: tilt the frame and watch roll / pitch in the PC status.
+  4. Kill switch → stop.
+  5. Unplug the phone → OPENLOOP event.
+  6. Stop the PC heartbeat → EMERG_LAND.
+  7. Measure the IMU gap distribution.

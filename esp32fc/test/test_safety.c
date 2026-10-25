@@ -33,7 +33,7 @@ typedef struct {
   float hover_true;           /* collective for 1 g */
   float z_target;
   bool want_fly;
-  bool pose_on, hb_on, link_on, imu_ok, vio_vz_on, imu_vz_on;
+  bool pose_on, hb_on, link_on, imu_ok, acc_ok, vio_vz_on, imu_vz_on;
   uint8_t hb_state, hb_flags, reset_counter;
   bool hb_freeze_seq;
   uint16_t pose_seq, hb_seq;
@@ -63,7 +63,7 @@ static void sim_init(sim_t *s, const fs_config_t *cfg) {
   fs_init(&s->fs, &c, s->t);
   s->hover_true = 0.42f;
   s->z_target = 1.0f;
-  s->pose_on = s->hb_on = s->link_on = s->imu_ok = s->vio_vz_on = s->imu_vz_on = true;
+  s->pose_on = s->hb_on = s->link_on = s->imu_ok = s->acc_ok = s->vio_vz_on = s->imu_vz_on = true;
   s->hb_state = VIOP_HB_TRACKING;
   s->batt_v = 16.4f;
   s->rng = 1;
@@ -122,7 +122,8 @@ static void sim_tick(sim_t *s) {
 
   /* physics, dt = 1 ms */
   const float dt = 0.001f;
-  float a = col / s->hover_true * FC_G - FC_G;
+  float tr = (col / s->hover_true) * (col / s->hover_true); /* thrust / weight, thrust ~ cmd^2 */
+  float a = tr * FC_G - FC_G;
   float acc_norm;
   bool impact = false;
   if (s->z <= 0 && a <= 0) {
@@ -134,7 +135,7 @@ static void sim_tick(sim_t *s) {
   } else {
     s->vz += a * dt;
     s->z += s->vz * dt;
-    acc_norm = col / s->hover_true * FC_G + 0.15f * frand(s);
+    acc_norm = tr * FC_G + 0.15f * frand(s);
     if (s->z < 0) { /* hit the ground this tick */
       if (s->vz < -0.1f) acc_norm = FC_G + fabsf(s->vz) * 60.0f;
       s->z = 0;
@@ -147,7 +148,7 @@ static void sim_tick(sim_t *s) {
   in->now_ms = t;
   in->dt_s = dt;
   in->imu_ok = s->imu_ok;
-  in->acc_ok = true;
+  in->acc_ok = s->acc_ok;
   in->roll_rad = s->tilt_deg * 0.0174533f;
   in->pitch_rad = 0;
   in->gyro_norm_rps = 0.01f;
@@ -157,6 +158,8 @@ static void sim_tick(sim_t *s) {
   in->vz_vio = s->vz;
   in->vz_imu_valid = s->imu_vz_on;
   in->vz_imu = s->vz + 0.03f; /* small estimator error */
+  in->height_valid = s->pose_on;
+  in->height_m = s->z;
   in->batt_valid = true;
   in->batt_v = s->batt_v;
   in->kill_switch = s->kill_switch;
@@ -621,7 +624,7 @@ static void t_hover_record(void) {
   CHECK(s2.fs.state == FS_EMERG_LAND && s2.fs.tier == FS_TIER_OPENLOOP);
   const fs_event_t *e = find_ev(&s2, FS_EV_TIER, FS_TIER_OPENLOOP);
   CHECK(e && e->aux == FS_HOVER_PREV_FLIGHT);
-  CHECK(fabsf(s2.out.motor[1] - r.m[1] * s2.fs.cfg.openloop_start_frac) < 0.005f);
+  CHECK(fabsf(s2.out.motor[1] - r.m[1] * sqrtf(1.0f - 1.0f / FC_G)) < 0.005f); /* phase 1: thrust 1 - acc_down/g */
 
   g_test = "hover_missing_default";
   sim_init(&s2, NULL);
@@ -637,7 +640,7 @@ static void t_hover_record(void) {
   e = find_ev(&s2, FS_EV_TIER, FS_TIER_OPENLOOP);
   CHECK(e && e->aux == FS_HOVER_DEFAULT);
   for (int i = 0; i < 4; i++)
-    CHECK(fabsf(s2.out.motor[i] - s2.fs.cfg.openloop_default_thr * s2.fs.cfg.openloop_start_frac) < 1e-4f);
+    CHECK(fabsf(s2.out.motor[i] - s2.fs.cfg.openloop_default_thr * sqrtf(1.0f - 1.0f / FC_G)) < 1e-4f);
 }
 
 static void t_openloop_land(void) {
@@ -654,7 +657,7 @@ static void t_openloop_land(void) {
   CHECK(s.fs.state == FS_EMERG_LAND && s.fs.tier == FS_TIER_OPENLOOP && s.out.mode == FS_CTRL_OPENLOOP);
   const fs_event_t *e = find_ev(&s, FS_EV_TIER, FS_TIER_OPENLOOP);
   CHECK(e && e->from == FS_TIER_NONE && e->aux == FS_HOVER_THIS_FLIGHT && (e->reason & FS_R_IMU));
-  for (int i = 0; i < 4; i++) CHECK(fabsf(s.out.motor[i] - r.m[i] * s.fs.cfg.openloop_start_frac) < 1e-4f);
+  for (int i = 0; i < 4; i++) CHECK(fabsf(s.out.motor[i] - r.m[i] * sqrtf(1.0f - 1.0f / FC_G)) < 1e-4f);
   /* per-motor ratios preserved */
   CHECK(s.out.motor[2] > s.out.motor[0]);
   int ms = run_until(&s, FS_DISARMED, 10000);
@@ -878,6 +881,134 @@ static void t_review_regressions(void) {
   CHECK(run_until(&s, FS_DISARMED, 8000) >= 0);
 }
 
+/* ---------------- phone IMU = only IMU (user decision 2026-10-25) ---------------- */
+static void t_phone_imu(void) {
+  g_test = "phone_imu_stall_openloop_backcalc";
+  sim_t s;
+  sim_init(&s, NULL);
+  fly_to_hover(&s, 2000);
+  fs_hover_rec_t r;
+  fs_get_hover_record(&s.fs, &r);
+  CHECK(r.valid && fabsf(r.batt_v - 16.4f) < 0.01f);
+  s.nev = 0;
+  s.imu_ok = false; /* phone IMU stream lost (USB / phone): no gyro, no accel */
+  s.acc_ok = false;
+  sim_tick(&s);
+  CHECK(s.fs.state == FS_EMERG_LAND && s.fs.tier == FS_TIER_OPENLOOP);
+  const fs_event_t *e = find_ev(&s, FS_EV_TIER, FS_TIER_OPENLOOP);
+  CHECK(e && e->from == FS_TIER_NONE && e->aux == FS_HOVER_THIS_FLIGHT);
+  /* cut time from the last VIO height (~1 m): (0.4 + (1 - 0.08) / 0.4) * 1.2 + 0.3 = 3.54 s */
+  CHECK(s.fs.ol_cut_ms > 3300 && s.fs.ol_cut_ms < 3800);
+  int ms = -1, t_ground = -1;
+  float vz_min = 0;
+  for (int i = 0; i < 8000; i++) {
+    if (s.fs.state == FS_DISARMED) { ms = i; break; }
+    sim_tick(&s);
+    if (s.vz < vz_min) vz_min = s.vz;
+    if (t_ground < 0 && s.z <= 0.0f) t_ground = i;
+  }
+  CHECK(ms > 0 && (s.ev[s.nev - 1].reason & FS_R_LAND_TIMEOUT)); /* no accelerometer: no impact detection */
+  CHECK(s.z < 0.01f && t_ground > 0 && t_ground < ms);
+  printf("  phone-IMU loss (1 m): ground contact after %d ms at up to %.2f m/s, motors cut after %d ms (cut time %u ms)\n",
+         t_ground, (double)-vz_min, ms, s.fs.ol_cut_ms);
+
+  g_test = "openloop_phase2_and_volt_comp";
+  sim_init(&s, NULL);
+  fly_to_hover(&s, 2000);
+  fs_get_hover_record(&s.fs, &r);
+  s.batt_v = 15.0f; /* battery sagged since the takeoff record (16.4 V) */
+  run_ms(&s, 5);
+  s.imu_ok = s.acc_ok = false;
+  sim_tick(&s);
+  float vc = 16.4f / 15.0f;
+  CHECK(fabsf(s.fs.ol_vcomp - vc) < 0.01f);
+  CHECK(fabsf(s.out.motor[0] - r.m[0] * sqrtf(1.0f - 1.0f / FC_G) * vc) < 0.002f);
+  run_ms(&s, 500); /* after vz_down / acc_down = 0.4 s: cruise just under hover */
+  if (s.fs.state == FS_EMERG_LAND) CHECK(fabsf(s.out.motor[0] - r.m[0] * sqrtf(0.99f) * vc) < 0.002f);
+
+  g_test = "imu_fail_kill_option_still_works";
+  fs_config_t c;
+  fs_config_default(&c);
+  c.imu_fail_kill = true;
+  sim_init(&s, &c);
+  fly_to_hover(&s, 500);
+  s.imu_ok = s.acc_ok = false;
+  sim_tick(&s);
+  CHECK(s.fs.state == FS_KILLED);
+
+  g_test = "imu_stream_jitter";
+  imu_stream_t st;
+  imu_stream_init(&st, 10000, 0.002f);
+  float dt;
+  int64_t rx = 1000000;
+  CHECK(imu_stream_accept(&st, 5000000, 0, rx, &dt));
+  /* burst: 3 samples (2 ms apart on the phone) arrive in the same USB transfer -> dt from phone time */
+  CHECK(imu_stream_accept(&st, 5002000, 1, rx + 6000, &dt) && fabsf(dt - 0.002f) < 1e-6f);
+  CHECK(imu_stream_accept(&st, 5004000, 2, rx + 6000, &dt) && fabsf(dt - 0.002f) < 1e-6f);
+  CHECK(imu_stream_accept(&st, 5006000, 3, rx + 6000, &dt) && fabsf(dt - 0.002f) < 1e-6f);
+  CHECK(imu_stream_ok(&st, rx + 6000));
+  CHECK(!imu_stream_accept(&st, 5006000, 3, rx + 6100, &dt)); /* duplicate */
+  CHECK(!imu_stream_accept(&st, 5004000, 2, rx + 6100, &dt)); /* out of order */
+  CHECK(st.n_dup == 1 && st.n_old == 1);
+  CHECK(imu_stream_ok(&st, rx + 15900));  /* 9.9 ms of local silence: still ok */
+  CHECK(!imu_stream_ok(&st, rx + 16100)); /* > 10 ms: stale -> failsafe */
+  /* phone-time gap of 12 ms (sample drop on the phone) */
+  CHECK(imu_stream_accept(&st, 5018000, 4, rx + 18000, &dt));
+  CHECK(!imu_stream_ok(&st, rx + 18000) && st.n_gap == 1);
+  CHECK(fabsf(dt - 0.004f) < 1e-6f); /* long hole never integrated in one step (clamped to 2 x nominal) */
+  CHECK(imu_stream_accept(&st, 5020000, 6, rx + 20000, &dt) && imu_stream_ok(&st, rx + 20000) && st.n_seq_skip == 1);
+  CHECK(imu_stream_accept(&st, 1000, 0, rx + 22000, &dt) && st.gap_flag); /* app restart: resync, flagged */
+
+  g_test = "imu_stream_drives_fs";
+  sim_init(&s, NULL);
+  fly_to_hover(&s, 500);
+  imu_stream_init(&st, 10000, 0.002f);
+  int64_t tp = 0, tl = 0;
+  for (int i = 0; i < 40; i++) { tp += 2000; tl += 2000; imu_stream_accept(&st, tp, (uint16_t)i, tl, &dt); }
+  s.imu_ok = imu_stream_ok(&st, tl + 1000);
+  run_ms(&s, 1);
+  CHECK(s.fs.state == FS_FLYING);
+  s.imu_ok = imu_stream_ok(&st, tl + 11000); /* USB stalled 11 ms */
+  s.acc_ok = s.imu_ok;
+  sim_tick(&s);
+  CHECK(s.fs.state == FS_EMERG_LAND && s.fs.tier == FS_TIER_OPENLOOP);
+
+  g_test = "viop_imu_decode";
+  viop_imu_t m;
+  memset(&m, 0, sizeof(m));
+  m.t0_us = 123456789;
+  m.n = 3;
+  m.flags = VIOP_IMUF_BIAS_CORR;
+  m.sample_seq0 = 65535;
+  for (int i = 0; i < 3; i++) {
+    m.s[i].dt_us = (uint16_t)(2000 * i);
+    m.s[i].gyro[0] = 1000; m.s[i].gyro[1] = -500; m.s[i].gyro[2] = (int16_t)(10 * i);
+    m.s[i].acc[0] = 0; m.s[i].acc[1] = 1961; m.s[i].acc[2] = -200;
+  }
+  uint8_t fr[VIOP_MAX_FRAME];
+  int n = viop_build(fr, VIOP_T_IMU, VIOP_SRC_PHONE, 1, &m, viop_imu_payload_len(3));
+  CHECK(n == 8 + 12 + 42 + 2 && viop_check(fr, n) == 0);
+  viop_imu_dec_t d[VIOP_IMU_MAX_N];
+  CHECK(viop_imu_decode(fr + VIOP_HDR, fr[4], d) == 3);
+  CHECK(d[2].t_us == 123456789 + 4000 && d[1].seq == 0 && fabsf(d[0].gyro[0] - 1.0f) < 1e-6f && fabsf(d[0].acc[1] - 9.805f) < 1e-3f);
+  CHECK(viop_imu_decode(fr + VIOP_HDR, fr[4] - 1, d) == 0); /* length mismatch */
+  int n5 = viop_build(fr, VIOP_T_IMU, VIOP_SRC_PHONE, 2, &m, viop_imu_payload_len(5));
+  CHECK(n5 == 92 && n5 <= VIOP_MAX_FRAME); /* 5 samples still fit one ESP-NOW-relayable frame */
+
+  g_test = "pwm_output_limits";
+  CHECK(fc_pwm_pulse_us(0.0f, 1000, 2000) == 1000.0f);
+  CHECK(fc_pwm_pulse_us(-0.3f, 1000, 2000) == 1000.0f);
+  CHECK(fc_pwm_pulse_us(NAN, 1000, 2000) == 1000.0f); /* NaN -> motor stop */
+  CHECK(fc_pwm_pulse_us(1.7f, 1000, 2000) == 2000.0f);
+  CHECK(fabsf(fc_pwm_pulse_us(0.42f, 1000, 2000) - 1420.0f) < 0.01f);
+  CHECK(fc_pwm_duty(1000, 400, 14) == 6553); /* 1000 us of a 2500 us period, 14 bit */
+  CHECK(fc_pwm_duty(2000, 400, 14) == 13106);
+  CHECK(fc_pwm_duty(5000, 400, 14) == fc_pwm_duty(2480, 400, 14)); /* clamped: >= 20 us low time */
+  CHECK(fc_pwm_config_ok(50, 2000) && fc_pwm_config_ok(400, 2000) && fc_pwm_config_ok(490, 2000));
+  CHECK(!fc_pwm_config_ok(500, 2000)); /* 2000 us pulse does not fit a 2000 us period */
+  CHECK(fc_pwm_config_ok(2000, 250) && fabsf(fc_pwm_pulse_us(1.0f, 125, 250) - 250.0f) < 1e-3f); /* OneShot125 */
+}
+
 /* ---------------- fc_core sanity ("known answer" tests) ---------------- */
 static void t_core(void) {
   g_test = "att_est_static_tilt";
@@ -960,6 +1091,7 @@ int main(void) {
   t_normal_landing();
   t_land_cmd_ground();
   t_review_regressions();
+  t_phone_imu();
   t_core();
   g_test = "no_illegal_transitions";
   CHECK(g_illegal == 0);

@@ -239,3 +239,73 @@ void mixer_quad_x(float thr, const float torque[3], float idle, float out[4]) {
   if (lo + shift < idle) shift = idle - lo;
   for (int i = 0; i < 4; i++) out[i] = clampf(out[i] + shift, idle, 1.0f);
 }
+
+/* ---------------- phone IMU stream ---------------- */
+
+void imu_stream_init(imu_stream_t *s, int64_t max_gap_us, float nominal_dt) {
+  memset(s, 0, sizeof(*s));
+  s->max_gap_us = max_gap_us;
+  s->nominal_dt = nominal_dt;
+}
+
+bool imu_stream_accept(imu_stream_t *s, int64_t t_phone_us, uint16_t seq, int64_t rx_local_us, float *dt) {
+  *dt = 0;
+  if (!s->have) {
+    s->have = true;
+    s->last_t_us = t_phone_us;
+    s->last_rx_us = rx_local_us;
+    s->last_seq = seq;
+    s->gap_flag = false;
+    s->n_ok++;
+    *dt = s->nominal_dt;
+    return true;
+  }
+  int64_t d = t_phone_us - s->last_t_us;
+  if (d == 0) { s->n_dup++; return false; }
+  if (d < 0) {
+    if (d < -1000000) { /* phone clock / app restart: resync, treated as a gap */
+      s->last_t_us = t_phone_us; s->last_rx_us = rx_local_us; s->last_seq = seq; s->gap_flag = true; s->n_gap++;
+      *dt = s->nominal_dt;
+      return true;
+    }
+    s->n_old++;
+    return false;
+  }
+  if ((uint16_t)(seq - s->last_seq) != 1) s->n_seq_skip++;
+  s->gap_flag = d > s->max_gap_us;
+  if (s->gap_flag) s->n_gap++;
+  float fdt = (float)d * 1e-6f;
+  if (fdt > 2.0f * s->nominal_dt) fdt = 2.0f * s->nominal_dt; /* never integrate a long hole in one step */
+  *dt = fdt;
+  s->last_t_us = t_phone_us;
+  s->last_rx_us = rx_local_us;
+  s->last_seq = seq;
+  s->n_ok++;
+  return true;
+}
+
+bool imu_stream_ok(const imu_stream_t *s, int64_t now_local_us) {
+  return s->have && !s->gap_flag && now_local_us - s->last_rx_us <= s->max_gap_us;
+}
+
+void fc_rot3(const float R[9], const float v[3], float out[3]) {
+  for (int i = 0; i < 3; i++) out[i] = R[3 * i] * v[0] + R[3 * i + 1] * v[1] + R[3 * i + 2] * v[2];
+}
+
+/* ---------------- ESC pulses ---------------- */
+
+float fc_pwm_pulse_us(float thr, float min_us, float max_us) {
+  if (!(thr > 0.0f)) return min_us; /* NaN, 0, negative -> stop */
+  if (thr > 1.0f) thr = 1.0f;
+  return min_us + thr * (max_us - min_us);
+}
+
+uint32_t fc_pwm_duty(float pulse_us, float freq_hz, int bits) {
+  float period_us = 1e6f / freq_hz;
+  if (!(pulse_us >= 0.0f)) pulse_us = 0.0f;
+  if (pulse_us > period_us - 20.0f) pulse_us = period_us - 20.0f; /* keep >= 20 us low time */
+  float full = (float)((1u << bits) - 1u);
+  return (uint32_t)(pulse_us / period_us * full + 0.5f);
+}
+
+bool fc_pwm_config_ok(float freq_hz, float max_us) { return freq_hz > 0.0f && max_us + 20.0f <= 1e6f / freq_hz; }

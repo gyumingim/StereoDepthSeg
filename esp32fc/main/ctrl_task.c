@@ -1,5 +1,7 @@
-/* ctrl_task.c — the 1 kHz (FC_CTRL_HZ) loop on core 1: IMU -> attitude estimate -> safety -> rate control -> mixer ->
- * motors, all in one task so a KILL decided in a cycle reaches the ESCs in the same cycle.
+/* ctrl_task.c — the inner loop on core 1, EVENT-DRIVEN by the PHONE IMU samples (~500 Hz over USB CDC; user decision
+ * 2026-10-25: the phone IMU is the only IMU): samples -> attitude estimate -> safety -> rate control -> mixer -> motors,
+ * all in one task so a KILL decided in a cycle reaches the ESCs in the same cycle. Optional local IMU:
+ * FC_IMU_SOURCE = FC_IMU_LOCAL_ICM42688.
  * Rules inside the loop: no malloc, no logging, no blocking calls (queues with timeout 0), float only.
  * NOT COMPILED (ESP-IDF not installed). */
 #include <math.h>
@@ -24,6 +26,7 @@ void fc_safety_config(fs_config_t *c) {
 }
 
 static fs_t s_fs; /* static: never on the stack, owned by this task only */
+static float s_ground_z; /* NED z of the ground (VIO) captured while disarmed */
 
 static void dispatch(const fc_msg_t *m) {
   switch (m->type) {
@@ -47,7 +50,12 @@ void ctrl_task(void *arg) {
   hover_store_load(&prev);
   fs_set_prev_hover(&s_fs, &prev);
 
-  bool imu_present = imu_init(FC_CLOCK_IMU_DRDY ? (void *)xTaskGetCurrentTaskHandle() : NULL) == ESP_OK;
+#if FC_IMU_SOURCE == FC_IMU_LOCAL_ICM42688
+  bool imu_present = imu_init((void *)xTaskGetCurrentTaskHandle()) == ESP_OK; /* optional module */
+  uint16_t local_seq = 0;
+#endif
+  imu_stream_t ims; /* jitter / gap handling of the IMU sample stream (phone timestamps) */
+  imu_stream_init(&ims, FC_IMU_MAX_GAP_US, 1.0f / FC_IMU_NOMINAL_HZ);
 
   att_est_t att;
   att_est_init(&att, 1.0f, 0.2f, 0.5f);
@@ -59,38 +67,52 @@ void ctrl_task(void *arg) {
   esp_task_wdt_add(NULL);
   int64_t t_prev = esp_timer_get_time();
   float m_prev[FS_MAX_MOTORS] = {0};
-  float yaw_hold = 0;
-  uint32_t pose_seq_seen = 0, n = 0, imu_fail_run = 0, acc_fail_run = 0, overruns = 0, ev_drops = 0;
+  float yaw_hold = 0, gyro_b[3] = {0}, acc_b[3] = {0, 0, -9.80665f};
+  uint32_t pose_seq_seen = 0, n = 0, overruns = 0, ev_drops = 0;
   uint16_t loop_max_us = 0;
   bool overrun = false;
-  imu_sample_t im = {0};
   fs_state_t prev_state = FS_DISARMED;
   fs_ctrl_mode_t prev_mode = FS_CTRL_OFF;
 
   for (;;) {
-    uint32_t woke = ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(3)); /* IMU DRDY / gptimer; timeout = clock missing */
+    /* Woken by every phone IMU frame (link task notify) or the local IMU DRDY ISR. The short timeout keeps the safety
+       logic and the motor outputs running when the IMU stream STOPS — exactly when the failsafe must act. */
+    ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(FC_CTRL_TIMEOUT_MS));
     int64_t t0 = esp_timer_get_time();
-    float dt = (float)(t0 - t_prev) * 1e-6f;
+    float dt = (float)(t0 - t_prev) * 1e-6f; /* control step (local time); estimator steps use phone timestamps */
     t_prev = t0;
-    if (dt <= 0.0f || dt > 0.02f) dt = 1.0f / FC_CTRL_HZ;
+    if (dt <= 0.0f || dt > 0.02f) dt = 1.0f / FC_IMU_NOMINAL_HZ;
     uint32_t now = (uint32_t)(t0 / 1000);
 
-    /* 1) IMU (a single bad read reuses the last sample; 3 in a row = IMU failure) */
-    imu_sample_t s;
-    bool rd = imu_present && woke && imu_read(&s);
-    if (rd && s.acc_ok && s.gyro_ok) { im = s; imu_fail_run = 0; } else imu_fail_run++;
-    if (rd && s.acc_ok) { memcpy(im.acc, s.acc, sizeof(im.acc)); acc_fail_run = 0; } else acc_fail_run++;
-    bool imu_ok = imu_present && imu_fail_run < 3;
-    bool acc_ok = imu_present && acc_fail_run < 3;
-    float R[9], roll = 0, pitch = 0, yaw = 0;
-    if (imu_ok) {
-      att_est_update(&att, im.gyro, im.acc, dt);
-      att_est_rot(&att, R);
-      att_est_euler(&att, &roll, &pitch, &yaw);
-      vz_est_predict(&vz, R, im.acc, dt);
+    /* 1) integrate every new IMU sample in order, each with its own timestamp-based dt */
+    int n_new = 0;
+#if FC_IMU_SOURCE == FC_IMU_PHONE
+    fc_imu_msg_t sm;
+    while (xQueueReceive(g_imu_queue, &sm, 0) == pdTRUE) {
+      float sdt;
+      if (!imu_stream_accept(&ims, sm.t_phone_us, sm.seq, sm.rx_us, &sdt)) continue; /* duplicate / out of order */
+      memcpy(gyro_b, sm.gyro, sizeof(gyro_b));
+      memcpy(acc_b, sm.acc, sizeof(acc_b));
+#else
+    imu_sample_t ls;
+    if (imu_present && imu_read(&ls) && ls.acc_ok && ls.gyro_ok) {
+      float sdt;
+      if (!imu_stream_accept(&ims, ls.t_us, local_seq++, t0, &sdt)) sdt = 0;
+      memcpy(gyro_b, ls.gyro, sizeof(gyro_b));
+      memcpy(acc_b, ls.acc, sizeof(acc_b));
+#endif
+      att_est_update(&att, gyro_b, acc_b, sdt);
+      float Rs[9];
+      att_est_rot(&att, Rs);
+      vz_est_predict(&vz, Rs, acc_b, sdt);
+      n_new++;
     }
-    float gyro_n = sqrtf(im.gyro[0] * im.gyro[0] + im.gyro[1] * im.gyro[1] + im.gyro[2] * im.gyro[2]);
-    float acc_n = sqrtf(im.acc[0] * im.acc[0] + im.acc[1] * im.acc[1] + im.acc[2] * im.acc[2]);
+    bool imu_ok = imu_stream_ok(&ims, t0); /* no sample for > max gap, or a phone-time gap -> IMU failure */
+    bool acc_ok = imu_ok;                  /* both come from the same (phone) stream */
+    float roll = 0, pitch = 0, yaw = 0;
+    att_est_euler(&att, &roll, &pitch, &yaw);
+    float gyro_n = sqrtf(gyro_b[0] * gyro_b[0] + gyro_b[1] * gyro_b[1] + gyro_b[2] * gyro_b[2]);
+    float acc_n = sqrtf(acc_b[0] * acc_b[0] + acc_b[1] * acc_b[1] + acc_b[2] * acc_b[2]);
 
     /* 2) newest phone pose: vertical speed + yaw fusion */
     fc_pose_local_t pl;
@@ -102,6 +124,7 @@ void ctrl_task(void *arg) {
       if (imu_ok) att_est_fuse_yaw(&att, pl.yaw, 0.005f);
       pose_seq_seen = pl.seq;
     }
+    if (vio_fresh && s_fs.state == FS_DISARMED) s_ground_z = pl.p[2]; /* takeoff reference for the height */
 
     /* 3) messages from the other tasks (pose / heartbeat / link / commands / requests) */
     fc_msg_t msg;
@@ -119,6 +142,7 @@ void ctrl_task(void *arg) {
         .thr_cmd = sp_fresh ? sp.thr : 0.0f,
         .vz_vio_valid = vio_fresh, .vz_vio = -pl.v[2],
         .vz_imu_valid = vz_est_valid(&vz), .vz_imu = vz.vz,
+        .height_valid = vio_fresh, .height_m = s_ground_z - pl.p[2],
         .batt_valid = false, .batt_v = 0,
         .kill_switch = board_kill_switch() || g_kill_switch_isr,
         .loop_overrun = overrun,
@@ -136,19 +160,19 @@ void ctrl_task(void *arg) {
     switch (out.mode) {
       case FS_CTRL_NORMAL: {
         float t[3], rpy[3] = {sp.roll, sp.pitch, sp.yaw};
-        att_ctrl_step(&actl, rpy, roll, pitch, yaw, im.gyro, dt, true, t);
+        att_ctrl_step(&actl, rpy, roll, pitch, yaw, gyro_b, dt, true, t);
         mixer_quad_x(sp.thr, t, FC_MOTOR_IDLE, m);
         break;
       }
       case FS_CTRL_LAND_HOLD_XY: { /* roll/pitch from the position loop holding land_xy; collective from fc_safety */
         float t[3], rpy[3] = {sp_fresh ? sp.roll : 0.0f, sp_fresh ? sp.pitch : 0.0f, yaw_hold};
-        att_ctrl_step(&actl, rpy, roll, pitch, yaw, im.gyro, dt, true, t);
+        att_ctrl_step(&actl, rpy, roll, pitch, yaw, gyro_b, dt, true, t);
         mixer_quad_x(out.thr, t, FC_MOTOR_IDLE, m);
         break;
       }
       case FS_CTRL_LAND_LEVEL: {
         float t[3], rpy[3] = {0.0f, 0.0f, yaw_hold};
-        att_ctrl_step(&actl, rpy, roll, pitch, yaw, im.gyro, dt, true, t);
+        att_ctrl_step(&actl, rpy, roll, pitch, yaw, gyro_b, dt, true, t);
         mixer_quad_x(out.thr, t, FC_MOTOR_IDLE, m);
         break;
       }
@@ -209,7 +233,8 @@ void ctrl_task(void *arg) {
     /* 9) timing + watchdogs */
     uint32_t us = (uint32_t)(esp_timer_get_time() - t0);
     if (us > loop_max_us) loop_max_us = (uint16_t)(us > 65535 ? 65535 : us);
-    overrun = us > FC_CTRL_OVERRUN_US || !woke;
+    overrun = us > FC_CTRL_OVERRUN_US;
+    (void)n_new;
     if (overrun) overruns++;
     g_ctrl_alive++;
     if ((++n & 63) == 0) esp_task_wdt_reset();

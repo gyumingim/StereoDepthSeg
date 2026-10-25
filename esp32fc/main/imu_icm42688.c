@@ -1,7 +1,9 @@
-/* imu_icm42688.c — TDK ICM-42688-P over SPI (assumed IMU). NOT COMPILED / NOT HARDWARE-TESTED.
+/* imu_icm42688.c — OPTIONAL local IMU (TDK ICM-42688-P over SPI); compiled only with FC_IMU_SOURCE = FC_IMU_LOCAL_ICM42688. NOT COMPILED / NOT HARDWARE-TESTED.
  * Register values from the ICM-42688-P datasheet (rev 1.x): bank 0 only. Gyro 2000 dps, accel 16 g, ODR FC_IMU_ODR_HZ,
  * UI data-ready on INT1 (push-pull, active high, pulsed). Reads 12 data bytes + temperature with one polling transaction
  * (for 14-byte transfers polling is faster than queued DMA transactions on the ESP32). */
+#include "fc_config.h"
+#if FC_IMU_SOURCE == FC_IMU_LOCAL_ICM42688 /* optional module (default: phone IMU) */
 #include <math.h>
 #include <string.h>
 
@@ -137,3 +139,4 @@ bool imu_read(imu_sample_t *s) {
   }
   return true;
 }
+#endif /* FC_IMU_SOURCE == FC_IMU_LOCAL_ICM42688 */

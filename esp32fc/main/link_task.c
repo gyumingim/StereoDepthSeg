@@ -12,6 +12,7 @@
 #include "esp_wifi.h"
 #include "fc_config.h"
 #include "fc_shared.h"
+#include "fc_core.h"
 #include "fs_viop.h"
 #include "tinyusb.h"
 #include "tusb_cdc_acm.h"
@@ -27,6 +28,7 @@ static viop_stream_t s_usb_stream; /* touched only from the TinyUSB task (rx cal
 static const uint8_t k_pc_mac[6] = FC_PC_PEER_MAC;
 static uint16_t s_tx_seq_ev, s_tx_seq_st;
 static uint32_t s_pose_seq_local;
+static uint32_t s_imu_drops; /* IMU queue full (control task not keeping up) */
 
 /* ---------------- phone (USB CDC) ---------------- */
 
@@ -60,6 +62,20 @@ static void handle_phone_frame(const uint8_t *f, int n) {
     m.u.hb.vio_state = hb.state;
     m.u.hb.app_flags = hb.flags;
     fc_post(&m);
+  }
+  else if (type == VIOP_T_IMU) {
+#if FC_IMU_SOURCE == FC_IMU_PHONE
+    viop_imu_dec_t d[VIOP_IMU_MAX_N];
+    int ns = viop_imu_decode(f + VIOP_HDR, f[4], d);
+    int64_t rx = esp_timer_get_time();
+    for (int i = 0; i < ns; i++) {
+      fc_imu_msg_t m = {.t_phone_us = d[i].t_us, .rx_us = rx, .seq = d[i].seq};
+      fc_rot3(FC_PHONE_MOUNT, d[i].gyro, m.gyro); /* phone IMU axes -> drone body FRD */
+      fc_rot3(FC_PHONE_MOUNT, d[i].acc, m.acc);
+      if (xQueueSend(g_imu_queue, &m, 0) != pdTRUE) s_imu_drops++;
+    }
+    if (ns > 0 && g_ctrl_task) xTaskNotifyGive(g_ctrl_task); /* inner loop runs on arrival */
+#endif
   }
   /* VIOP_T_TIME_RESP (clock offset for latency statistics): TODO, not needed by the safety logic */
 }

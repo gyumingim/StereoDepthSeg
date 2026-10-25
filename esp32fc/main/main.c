@@ -2,7 +2,6 @@
 #include <string.h>
 
 #include "board.h"
-#include "driver/gptimer.h"
 #include "esp_attr.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -11,7 +10,7 @@
 #include "motor_out.h"
 #include "nvs_flash.h"
 
-QueueHandle_t g_fs_inbox, g_ev_queue;
+QueueHandle_t g_fs_inbox, g_ev_queue, g_imu_queue;
 TaskHandle_t g_ctrl_task, g_pos_task;
 volatile uint32_t g_ctrl_alive;
 volatile bool g_kill_switch_isr;
@@ -46,15 +45,6 @@ void fc_post(const fc_msg_t *m) {
 }
 uint32_t fc_ms(void) { return (uint32_t)(esp_timer_get_time() / 1000); }
 
-#if !FC_CLOCK_IMU_DRDY
-static bool IRAM_ATTR ctrl_alarm_cb(gptimer_handle_t t, const gptimer_alarm_event_data_t *e, void *arg) {
-  (void)t; (void)e; (void)arg;
-  BaseType_t hp = pdFALSE;
-  vTaskNotifyGiveFromISR(g_ctrl_task, &hp);
-  return hp == pdTRUE;
-}
-#endif
-
 void app_main(void) {
   /* 1) motors to a defined stop state FIRST (ESCs see DShot 0 / 1000 us from the first milliseconds) */
   ESP_ERROR_CHECK(motor_out_init());
@@ -65,21 +55,11 @@ void app_main(void) {
 
   g_fs_inbox = xQueueCreate(64, sizeof(fc_msg_t));
   g_ev_queue = xQueueCreate(64, sizeof(fs_event_t));
+  g_imu_queue = xQueueCreate(32, sizeof(fc_imu_msg_t));
 
-  /* 2) control task on core 1 (highest priority); it initialises the IMU itself (DRDY ISR notifies it) */
+  /* 2) control task on core 1 (highest priority), woken by each phone IMU frame (or the optional local IMU DRDY) */
   xTaskCreatePinnedToCore(ctrl_task, "ctrl", 6144, NULL, FC_PRIO_CTRL, &g_ctrl_task, FC_CORE_CTRL);
   xTaskCreatePinnedToCore(pos_task, "pos", 4096, NULL, FC_PRIO_POS, &g_pos_task, FC_CORE_CTRL);
-#if !FC_CLOCK_IMU_DRDY
-  gptimer_handle_t tim;
-  gptimer_config_t tc = {.clk_src = GPTIMER_CLK_SRC_DEFAULT, .direction = GPTIMER_COUNT_UP, .resolution_hz = 1000000};
-  ESP_ERROR_CHECK(gptimer_new_timer(&tc, &tim));
-  gptimer_event_callbacks_t cbs = {.on_alarm = ctrl_alarm_cb};
-  ESP_ERROR_CHECK(gptimer_register_event_callbacks(tim, &cbs, NULL));
-  gptimer_alarm_config_t ac = {.alarm_count = 1000000 / FC_CTRL_HZ, .reload_count = 0, .flags.auto_reload_on_alarm = 1};
-  ESP_ERROR_CHECK(gptimer_set_alarm_action(tim, &ac));
-  ESP_ERROR_CHECK(gptimer_enable(tim));
-  ESP_ERROR_CHECK(gptimer_start(tim));
-#endif
 
   /* 3) core 0: radio + USB link, supervisor */
   link_init();

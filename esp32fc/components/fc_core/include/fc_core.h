@@ -92,6 +92,34 @@ void pos_ctrl_reset(pos_ctrl_t *c);
  * Desaturation: roll/pitch keep priority, yaw is scaled down first, then the collective is shifted. */
 void mixer_quad_x(float thr, const float torque[3], float idle, float out[4]);
 
+/* ---------- phone IMU stream (jitter / gap handling) ----------
+ * The inner loop runs on PHONE IMU samples arriving over USB in bursts. dt comes from the PHONE timestamps (not the
+ * arrival time). Duplicates / out-of-order samples are dropped. A phone-time gap > max_gap_us between consecutive samples
+ * or no sample received for > max_gap_us of LOCAL time = stream not ok (-> fc_safety imu_ok = false = failsafe). */
+typedef struct {
+  int64_t max_gap_us;      /* default 10000 (user spec 10 ms) */
+  float nominal_dt;        /* used after a gap (s) */
+  int64_t last_t_us;       /* phone time of the last accepted sample */
+  int64_t last_rx_us;      /* local time it arrived */
+  uint16_t last_seq;
+  bool have, gap_flag;
+  uint32_t n_ok, n_dup, n_old, n_gap, n_seq_skip;
+} imu_stream_t;
+void imu_stream_init(imu_stream_t *s, int64_t max_gap_us, float nominal_dt);
+/* returns true if accepted; *dt = phone-time step (s), clamped to [0, 2 * nominal] after a gap */
+bool imu_stream_accept(imu_stream_t *s, int64_t t_phone_us, uint16_t seq, int64_t rx_local_us, float *dt);
+bool imu_stream_ok(const imu_stream_t *s, int64_t now_local_us);
+/* rotate a phone-IMU-axes vector into the drone body (FRD): v_b = R_BI v_i (row-major) */
+void fc_rot3(const float R[9], const float v[3], float out[3]);
+
+/* ---------- ESC pulse output (standard PWM / OneShot125) ----------
+ * throttle 0..1 -> pulse min_us..max_us (NaN / negative -> min_us = motor stop). duty for an LEDC timer of freq_hz and
+ * 2^bits steps; the pulse is clamped to period - 20 us. fc_pwm_config_ok: max pulse + 20 us must fit in the period
+ * (1000-2000 us PWM: up to 490 Hz). */
+float fc_pwm_pulse_us(float thr, float min_us, float max_us);
+uint32_t fc_pwm_duty(float pulse_us, float freq_hz, int bits);
+bool fc_pwm_config_ok(float freq_hz, float max_us);
+
 #ifdef __cplusplus
 }
 #endif
