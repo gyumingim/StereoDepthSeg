@@ -35,6 +35,7 @@ import java.util.Locale;
  * 0.6.20: intent profile rec20261025 (mode ov): recommended live settings as defaults (OvRunner doc; explicit intents win).
  * mode imu_tx (no camera, no VIO): only ViopImuSender for secs (intent viop_imu udp:HOST:PORT | usb, viop_imu_uncal) ->
  * files/ov/imu_tx_<time>/viop_imu.json + .csv (PC check of the phone IMU stream).
+ * 0.6.23 mode calcap: lens-calibration stills from the live-VIO stream at 10 fps, driven by the PC over TCP (CalCapRunner).
  * arcore: a GL thread loops Session.update() and per new frame logs/streams
  *   {"src":"arcore","t_sensor":android camera ts,"t_frame":ARCore ts,"t_call":..,"t_out":update() return,"status":..,"p":[..],"q":[..]}
  * also written to files/arlat_<ms>.csv. Latency = t_out - t_sensor (phone clock).
@@ -49,6 +50,7 @@ public class MainActivity extends Activity {
     private boolean sustainedOn;                   // 0.6.13 ov: Window sustained performance mode set
     private HsRecorder hs;
     private PeekRunner peek;                       // mode peek: 1 fps framing stills (0.6.9)
+    private CalCapRunner calcap;                   // mode calcap: auto lens-calibration stills at 10 fps (0.6.23)
     private HsPreview hsPrev;
     private Streamer streamer;
     private ViopImuSender imuTx;                    // 0.6.20 mode imu_tx
@@ -102,6 +104,47 @@ public class MainActivity extends Activity {
                 });
                 try { peek.start(); status.setText("위치 맞추기 (1 fps)"); }
                 catch (Exception e) { status.setText("peek error: " + e); peek = null; }
+            }
+            return;
+        }
+        if ("calcap".equals(mode)) {        // 0.6.23: auto lens-calibration stills (CalCapRunner doc); default app behaviour unchanged
+            if (calcap == null) {
+                calcap = new CalCapRunner(this, this::show);
+                calcap.fps = Math.max(1, Math.min(30, getIntent().getIntExtra("fps", 10)));
+                calcap.aeFps = Math.max(1, Math.min(60, getIntent().getIntExtra("ae_fps", 30)));
+                calcap.expUs = getIntent().getIntExtra("exp_us", 2000);
+                calcap.iso = getIntent().getIntExtra("iso", 0);
+                calcap.autoIso = getIntent().getIntExtra("auto_iso", 1) != 0;
+                calcap.isoScale = getIntent().getFloatExtra("iso_target_scale", 1f);
+                calcap.focusDpt = getIntent().getFloatExtra("focus_dpt", 0.5f);
+                calcap.port = getIntent().getIntExtra("port", 8811);
+                calcap.prevDiv = Math.max(1, Math.min(4, getIntent().getIntExtra("prev_div", 2)));
+                calcap.idleS = Math.max(30, getIntent().getIntExtra("idle_s", 300));
+                calcap.maxS = Math.max(30, Math.min(3600, getIntent().getIntExtra("max_s", 1200)));
+                calcap.lostS = Math.max(5, getIntent().getIntExtra("lost_s", 20));
+                calcap.connectGraceS = Math.max(10, getIntent().getIntExtra("connect_grace_s", 90));
+                // overheat guards: may only be made stricter than the defaults (SKIN 40 / AP 50 / battery 42.0 C)
+                calcap.maxSkinC = Math.min(40f, getIntent().getFloatExtra("max_skin_c", 40f));
+                calcap.maxApC = Math.min(50f, getIntent().getFloatExtra("max_ap_c", 50f));
+                calcap.maxBatteryTenthC = Math.min(420, getIntent().getIntExtra("max_temp_dc", 420));
+                final android.widget.ImageView iv = new android.widget.ImageView(this);
+                iv.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+                iv.setBackgroundColor(0xFF000000);
+                android.widget.LinearLayout ll = new android.widget.LinearLayout(this);
+                ll.setOrientation(android.widget.LinearLayout.VERTICAL);
+                if (status.getParent() != null) ((android.view.ViewGroup) status.getParent()).removeView(status);
+                ll.addView(iv, new android.widget.LinearLayout.LayoutParams(-1, 0, 3f));
+                ll.addView(status, new android.widget.LinearLayout.LayoutParams(-1, 0, 2f));
+                status.setPadding(30, 20, 30, 20);
+                setContentView(ll);
+                calcap.screen = new CalCapRunner.Screen() {
+                    @Override public void show(int bg, String t) { runOnUiThread(() -> {
+                        status.setBackgroundColor(bg); status.setTextColor(0xFFFFFFFF); status.setTextSize(26); status.setText(t); }); }
+                    @Override public void image(android.graphics.Bitmap b) { runOnUiThread(() -> iv.setImageBitmap(b)); }
+                };
+                calcap.onAutoStop = () -> runOnUiThread(this::finish);      // onPause stops the runner (camera off, meta.json)
+                try { calcap.start(); }
+                catch (Exception e) { status.setText("calcap error: " + e); android.util.Log.e("arlat", "calcap", e); calcap.stop(); calcap = null; finish(); }
             }
             return;
         }
@@ -334,6 +377,7 @@ public class MainActivity extends Activity {
         if (sustainedOn) { try { getWindow().setSustainedPerformanceMode(false); } catch (Throwable ignored) { } sustainedOn = false; }
         if (hs != null) { hs.stop(); hs = null; }
         if (peek != null) { peek.stop(); peek = null; }
+        if (calcap != null) { calcap.stop(); calcap = null; }   // 0.6.23: camera off whenever the activity leaves the front
         if (hsPrev != null) { hsPrev.stop(); hsPrev = null; }
         if (worker != null) {
             try { worker.join(2000); } catch (InterruptedException ignored) { }

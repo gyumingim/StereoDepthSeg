@@ -1,0 +1,6 @@
+2026-10-25 20:48 smoke test (phone screen was off/dozing, facing the wall; lock held), app 0.6.23-calcap vc 29:
+STAT: fps_measured 9.9999 (dt 99.93-100.06 ms, 53 intervals), exposure 2000000 ns, ISO 550 (auto once), focus 0.4987 dpt,
+frame_duration 100 ms, crop 0 0 4080 3060, rolling skew 6540750 ns (same crop + skew as VIO run_20261025_201235_main60_c4f60),
+af/ae mode 0 (off), OIS 0, NR 0, edge 0. PREV 15/15 in 3.5 s. CAP 3 -> 3 PGM 1920x1080 uint8.
+After STOP + force-stop: Active Camera Clients [] , no app process. stop_reason "pc stop".
+First try 20:46 failed: lock-screen resume/pause/resume restarted the runner -> fixed (ServerSocket reuse + PC wakeup + reconnect).

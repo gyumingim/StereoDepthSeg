@@ -1,0 +1,73 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>렌즈 자동 캡처</title>
+<style>
+html,body{margin:0;height:100%;background:#fff;overflow:hidden;font-family:sans-serif}
+#b{position:absolute;inset:0;margin:auto;max-width:100vw;max-height:100vh;image-rendering:pixelated}
+/* thin status lines in the white margins above / below the 5x3 board (24 px at 1:1 full screen) */
+.bar{position:fixed;left:0;right:0;height:22px;line-height:22px;font:bold 15px sans-serif;color:#222;padding:0 10px;
+     white-space:nowrap;overflow:hidden;z-index:2;background:#fff}
+#top{top:0}#bot{bottom:0}
+#prog{position:absolute;left:0;top:0;bottom:0;background:#bbf7d0;z-index:-1}
+.ok{background:#16a34a!important;color:#fff!important}.snap{background:#2563eb!important;color:#fff!important}
+#panel{position:fixed;z-index:5;right:16px;top:30px;width:min(560px,92vw);max-height:88vh;overflow:auto;background:#fff;
+       border:1px solid #888;border-radius:10px;padding:12px 14px;box-shadow:0 4px 24px #0004;font-size:14px}
+#panel button{font:bold 16px sans-serif;padding:10px 16px;border:0;border-radius:8px;margin:0 6px 6px 0;cursor:pointer}
+#go{background:#16a34a;color:#fff}#st{background:#dc2626;color:#fff}#ns,#fs,#hide{background:#e5e7eb}
+#pv{width:100%;background:#000;display:block;margin:6px 0;min-height:40px}
+table{border-collapse:collapse;width:100%;font-size:13px}td{padding:2px 4px;border-bottom:1px solid #eee}
+.s-ok{color:#16a34a;font-weight:700}.s-pending{color:#2563eb;font-weight:700}.s-missing{color:#999}
+#log{white-space:pre-wrap;font:12px monospace;color:#444;max-height:140px;overflow:auto;background:#f6f6f6;padding:4px}
+#tog{position:fixed;z-index:4;right:6px;bottom:1px;font:12px sans-serif;padding:1px 8px;border:1px solid #aaa;border-radius:6px;background:#fff;cursor:pointer}
+</style></head>
+<body><img id="b" src="board/charuco_laptop_5x3.png" alt="ChArUco 5x3">
+<div class="bar" id="top">렌즈 자동 캡처 — 오른쪽 아래 「패널」 → 시작</div>
+<div class="bar" id="bot"><div id="prog"></div><span id="bt"></span></div>
+<button id="tog">패널</button>
+<div id="panel">
+  <div><button id="go">시작</button><button id="st">정지</button><button id="fs">전체화면</button><button id="ns">새 세트</button><button id="hide">패널 닫기</button></div>
+  <div id="sum" style="font-weight:700;margin:4px 0"></div>
+  <div id="msg" style="color:#b45309"></div>
+  <img id="pv" alt="">
+  <table id="tb"></table>
+  <div style="margin-top:6px;color:#555">로그</div><div id="log"></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+let beepSeen=null, actx=null, running=false, pvTimer=null;
+function audio(){ try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+document.addEventListener('click',audio);
+function tone(f,ms){ try{ audio(); const o=actx.createOscillator(),g=actx.createGain(); o.frequency.value=f; g.gain.value=0.3; o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime+ms/1000);}catch(e){} }
+async function post(p){ try{ return await (await fetch(p,{method:'POST'})).json(); }catch(e){ return {ok:false,msg:'서버 연결 안 됨'}; } }
+$('go').onclick=async()=>{ audio(); const r=await post('/api/start'); if(!r.ok) $('msg').textContent=r.msg||'시작 실패'; else { $('panel').style.display='none';
+  document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen().catch(()=>{}); } };
+$('st').onclick=()=>post('/api/stop');
+$('ns').onclick=async()=>{ if(!confirm('새 세트를 만들까요? (지금까지 찍은 것은 그 폴더에 그대로 남음)')) return; const r=await post('/api/newset'); $('msg').textContent=r.ok?('새 세트: '+r.set_dir):r.msg; };
+$('fs').onclick=()=>document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();
+$('hide').onclick=()=>$('panel').style.display='none';
+$('tog').onclick=()=>{ const p=$('panel'); p.style.display=p.style.display==='none'?'':'none'; };
+document.addEventListener('keydown',e=>{ if(e.key==='p'||e.key==='P'){ $('tog').click(); } if(e.key==='Escape'){ $('panel').style.display=''; } });
+function pv(){ if($('panel').style.display==='none'||!running) return; $('pv').src='/api/prev?'+Date.now(); }
+setInterval(pv,300);
+async function poll(){
+  let s; try{ s=await (await fetch('/api/state')).json(); }catch(e){ $('top').textContent='서버 연결 안 됨'; return; }
+  running=s.running;
+  const left=s.n_total-s.n_ok, p=s.pose;
+  let t;
+  if(!s.running) t=(s.msg?s.msg+' · ':'')+'대기 · 채운 칸 '+s.n_ok+'/'+s.n_total+(s.stop_reason?' · 마지막 정지: '+s.stop_reason:'');
+  else if(s.phase!=='촬영 중') t=s.phase+'…';
+  else t=(s.match?'✔ 맞음 — 그대로! ':'목표: '+s.target+' · '+s.hint)+(p?'   | 거리 '+p.dist.toFixed(2)+' m · 기울기 '+Math.round(p.tilt)+'° (turn '+Math.round(p.turn)+', lean '+Math.round(p.lean)+')':'   | 보드 안 보임');
+  $('top').textContent=t;
+  $('top').classList.toggle('ok',!!(s.running&&s.match)); $('bot').classList.toggle('ok',!!(s.running&&s.match));
+  $('bt').textContent='채운 칸 '+s.n_ok+'/'+s.n_total+' · 남은 '+left+(s.last_capture?' · 방금: '+s.last_capture:'')+(s.phone_stat&&s.phone_stat.temps?' · 폰 SKIN '+s.phone_stat.temps.skin_c+'°C':'')+(s.phone_stat?' · '+(s.phone_stat.fps_measured||0).toFixed(1)+' fps':'');
+  $('prog').style.width=(100*s.n_ok/s.n_total)+'%';
+  $('sum').textContent=(s.running?'촬영 중':'대기')+' · 채운 칸 '+s.n_ok+'/'+s.n_total+' · 세트 '+s.set_dir;
+  if(s.camera_off_check) $('msg').textContent=(s.msg?s.msg+' · ':'')+'카메라 꺼짐 확인: '+s.camera_off_check;
+  else if(s.msg) $('msg').textContent=s.msg;
+  $('tb').innerHTML=s.slots.map(x=>'<tr><td class="s-'+x.status+'">'+({ok:'✔',pending:'…',missing:'·'}[x.status])+'</td><td>'+x.label+'</td><td style="color:#aaa">'+x.id+'</td></tr>').join('');
+  $('log').textContent=s.log.slice(-25).join('\n'); $('log').scrollTop=1e9;
+  if(beepSeen===null) beepSeen=s.beep;
+  else if(s.beep>beepSeen){ beepSeen=s.beep; if((s.beep_msg||'').startsWith('끝')){ tone(660,700); setTimeout(()=>tone(440,900),750); }
+    else { tone(1200,120); setTimeout(()=>tone(1600,160),150); $('top').classList.add('snap'); setTimeout(()=>$('top').classList.remove('snap'),600); } }
+}
+setInterval(poll,250); poll();
+</script></body></html>
