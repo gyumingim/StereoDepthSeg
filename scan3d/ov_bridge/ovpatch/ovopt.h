@@ -46,7 +46,7 @@ struct Flags {
   // --- changes results (2026-10-26, branch ovgyro-20261026) ---
   int gyro_klt = 0;    // TrackKLT mono temporal KLT start points moved by the gyro rotation between the frames (VioManager
                        // integrates bias-corrected gyro over the frame gap, R_ItoC, t_d); 2 = also re-track LK failures from
-                       // the upstream start point. 0 = off (upstream code path). See ovpatch/gyro_klt.h.
+                       // the upstream start point. 0 = off (upstream results; only output counters run). See gyro_klt.h.
   // --- profiling ---
   int prof = 0;        // per-stage timers (ov_bridge --prof-log FILE)
   // --- behaviour (2026-10-25, branch ovrobust; NOT part of --ovopt / all_exact; set by ov_bridge --init-still) ---
