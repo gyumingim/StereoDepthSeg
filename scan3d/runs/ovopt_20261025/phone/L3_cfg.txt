@@ -1,0 +1,5 @@
+# L3 heavier configs with the options (does max_slam 70 / 100 fit 33 ms now?), real time, 1 repeat each.
+C_s70_exact ov_bridge_ovopt c4s70 2 2 1.0 --ovopt all_exact --prof-log out/C_s70_exact/prof.csv
+C_s100_near ov_bridge_ovopt c4s100 2 2 1.0 --ovopt all_exact,ekf_gemm,ekf_chol,par_cov --prof-log out/C_s100_near/prof.csv
+C_s70_near ov_bridge_ovopt c4s70 2 2 1.0 --ovopt all_exact,ekf_gemm,ekf_chol,par_cov --prof-log out/C_s70_near/prof.csv
+C_s100_exact ov_bridge_ovopt c4s100 2 2 1.0 --ovopt all_exact --prof-log out/C_s100_exact/prof.csv

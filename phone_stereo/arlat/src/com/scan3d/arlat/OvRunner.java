@@ -103,11 +103,14 @@ import java.util.concurrent.LinkedBlockingQueue;
  * meta.json "ov_predict" / "ov_predict_hz" / "predict_lines", perf "ov_predict" / "bridge_predict" (ready line).
  *
  * 0.6.18 (branch ovopt-20261025; every default = 0.6.17 behaviour): intent ov_opt "LIST" = ov_bridge --ovopt LIST (speed
- * options of the patched OpenVINS, e.g. "all_exact" = skip_retri,par_tri,par_jac,par_ma,cov_move,frame_nocopy,givens_rm:
- * poses bit-identical; see scan3d/ov_bridge/main.cpp); intent ov_prof 1 = ov_bridge --prof-log <run>/ov_prof.csv (per-frame
+ * options of the patched OpenVINS, e.g. "all_exact" = skip_retri,par_tri,par_jac,par_ma,par_s,cov_move,frame_nocopy,givens_rm:
+ * poses identical on the PC checks, phone check pending; see scan3d/ov_bridge/main.cpp); intent ov_prof 1 = ov_bridge
+ * --prof-log <run>/ov_prof.csv (per-frame
  * OpenVINS stage times); intent idle_spin_ms W = ov_bridge --idle-spin-ms W (with idle_spin > 0: spin only W ms before
  * the expected next frame); intent spin_wfe 1 = with idle_spin 2 pass --idle-spin 3 (pool waits with WFE between input
- * polls instead of a yield loop). meta.json + perf "ov_opt" / "ov_prof" / "idle_spin_ms" / "spin_wfe".
+ * polls instead of a yield loop); intent drop_late_ms N = ov_bridge --drop-late N (after init, skip a frame fed more than
+ * N ms later than the best lag so far: no backlog spiral; changes results only when it drops). meta.json + perf "ov_opt" /
+ * "ov_prof" / "idle_spin_ms" / "spin_wfe" / "drop_late_ms".
  */
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
@@ -185,6 +188,7 @@ class OvRunner implements SensorEventListener {
     boolean ovProf = false;                     // 0.6.18 intent ov_prof 1: ov_bridge --prof-log <run>/ov_prof.csv
     int idleSpinMs = 0;                         // 0.6.18 intent idle_spin_ms: ov_bridge --idle-spin-ms W (0 = whole gap)
     boolean spinWfe = false;                    // 0.6.18 intent spin_wfe 1: idle_spin 2 -> ov_bridge --idle-spin 3
+    int dropLateMs = 0;                         // 0.6.18 intent drop_late_ms: ov_bridge --drop-late MS (0 = off)
     private BufferedWriter predW;               // poses_pred.csv (predict > 0)
     private long nPred;
     private long lastPoseTns = -1, lastPoseSensor = -1, lastPoseArrive = -1;   // frame of the latest pose line (reader)
@@ -354,6 +358,7 @@ class OvRunner implements SensorEventListener {
             Collections.addAll(cmd, "--ovopt", ovOpt);
         }
         if (ovProf) Collections.addAll(cmd, "--prof-log", new File(runDir, "ov_prof.csv").getAbsolutePath());          // 0.6.18
+        if (dropLateMs > 0) Collections.addAll(cmd, "--drop-late", Integer.toString(dropLateMs));                       // 0.6.18
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.environment().put("LD_LIBRARY_PATH", lib);
         pb.redirectError(new File(runDir, "bridge_stderr.log"));
@@ -381,7 +386,8 @@ class OvRunner implements SensorEventListener {
                 .put("device", android.os.Build.MODEL).put("ov_threads", ovThreads).put("klt_overlap", kltOverlap ? 1 : 0)
                 .put("ov_idle_spin", idleSpin).put("ov_predict", predict).put("ov_predict_hz", predictHz)
                 .put("ov_predict_stream", predictStream ? 1 : 0)
-                .put("ov_opt", ovOpt).put("ov_prof", ovProf ? 1 : 0).put("idle_spin_ms", idleSpinMs).put("spin_wfe", spinWfe ? 1 : 0);
+                .put("ov_opt", ovOpt).put("ov_prof", ovProf ? 1 : 0).put("idle_spin_ms", idleSpinMs).put("spin_wfe", spinWfe ? 1 : 0)
+                .put("drop_late_ms", dropLateMs);
 
         proc = pb.start();
         bridgePid = pidOf(proc);
@@ -397,6 +403,7 @@ class OvRunner implements SensorEventListener {
         notePerf("ov_prof", ovProf ? 1 : 0);
         notePerf("idle_spin_ms", idleSpinMs);
         notePerf("spin_wfe", spinWfe ? 1 : 0);
+        notePerf("drop_late_ms", dropLateMs);
         notePerf("bridge_pid", bridgePid);
         notePerf("sdk", android.os.Build.VERSION.SDK_INT);
         writerT = new Thread(this::writer, "ov-writer");

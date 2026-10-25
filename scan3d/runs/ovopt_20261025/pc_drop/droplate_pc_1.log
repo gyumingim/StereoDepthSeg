@@ -1,0 +1,16 @@
+Sun Oct 25 12:48:19 KST 2026
+== A0 12:48:19 bridge on cpu 3 ()
+feeder3 speed 1.00: 43308 records, 2327 frames, 88.68 s, late_max 7848.00 ms, late_cam_max 7817.94 ms, cam late>5ms 1977
+{"run": "/tmp/ovopt/droplate/A0", "poses": 2327, "tracked": 2003, "matched": 1988, "ate_cm": 0.319, "max_err_cm": 2.18, "scale": 1.0104, "late_dropped": null, "frames_fed": 2327, "lag_p50_ms": 4259.5, "lag_p95_ms": 7754.8, "lag_max_ms": 7879.3, "proc_p50_ms": 32.88, "proc_p95_ms": 49.14}
+== A50 12:49:49 bridge on cpu 3 (--drop-late 50)
+feeder3 speed 1.00: 43308 records, 2327 frames, 82.37 s, late_max 104.80 ms, late_cam_max 74.74 ms, cam late>5ms 759
+[ov_bridge] drop-late: limit 50.0 ms | dropped 269 frames | min lag 661274825.4 ms
+{"run": "/tmp/ovopt/droplate/A50", "poses": 2058, "tracked": 1734, "matched": 1721, "ate_cm": 0.301, "max_err_cm": 2.21, "scale": 1.0101, "late_dropped": 268, "frames_fed": 2058, "lag_p50_ms": 54.0, "lag_p95_ms": 86.1, "lag_max_ms": 135.7, "proc_p50_ms": 28.19, "proc_p95_ms": 46.83}
+== X0 12:51:13 bridge on cpu 3 (--ovopt all_exact)
+feeder3 speed 1.00: 43308 records, 2327 frames, 85.50 s, late_max 7031.38 ms, late_cam_max 7001.22 ms, cam late>5ms 1977
+{"run": "/tmp/ovopt/droplate/X0", "poses": 2327, "tracked": 2003, "matched": 1988, "ate_cm": 0.319, "max_err_cm": 2.18, "scale": 1.0104, "late_dropped": null, "frames_fed": 2327, "lag_p50_ms": 3238.4, "lag_p95_ms": 6924.7, "lag_max_ms": 7062.6, "proc_p50_ms": 32.52, "proc_p95_ms": 44.76}
+== X50 12:52:39 bridge on cpu 3 (--ovopt all_exact --drop-late 50)
+feeder3 speed 1.00: 43308 records, 2327 frames, 82.37 s, late_max 85.40 ms, late_cam_max 53.37 ms, cam late>5ms 737
+[ov_bridge] drop-late: limit 50.0 ms | dropped 245 frames | min lag 661445147.1 ms
+{"run": "/tmp/ovopt/droplate/X50", "poses": 2082, "tracked": 1758, "matched": 1746, "ate_cm": 0.261, "max_err_cm": 2.08, "scale": 1.0081, "late_dropped": 245, "frames_fed": 2082, "lag_p50_ms": 55.8, "lag_p95_ms": 86.3, "lag_max_ms": 115.6, "proc_p50_ms": 28.43, "proc_p95_ms": 44.67}
+Sun Oct 25 12:54:03 KST 2026

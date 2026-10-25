@@ -8,7 +8,8 @@
 //
 // "exact" options keep every floating point operation of upstream (same code, same order per feature / per block),
 // they only skip output that nothing reads or run independent per-feature / per-block work on several threads.
-// Checked with the PC identity harness (pose lines bit-identical) and on the phone (camera-free replay).
+// Checked on the PC (x86) identity harness: pose lines identical (all fields; 9 digits, and 17 digits with
+// ov_bridge --pose-precision 17). NOT yet checked on the phone (ARM) - see runs/ovopt_20261025/README.md phone plan.
 #pragma once
 
 #include <chrono>
@@ -25,6 +26,7 @@ struct Flags {
   int par_tri = 0;     // UpdaterMSCKF::update + UpdaterSLAM::delayed_init: triangulate + Gauss-Newton features in parallel
   int par_jac = 0;     // UpdaterMSCKF::update + UpdaterSLAM::update: per-feature Jacobian / nullspace / chi2 in parallel
   int par_ma = 0;      // StateHelper::EKFUpdate: M = P*H^T computed per state variable block in parallel
+  int par_s = 0;       // StateHelper::EKFUpdate: P_small + S = H P H^T + R as one more task next to M (needs par_ma or ekf_gemm)
   int cov_move = 0;    // StateHelper::marginalize: move (not copy) the new covariance matrix
   int frame_nocopy = 0;  // ov_bridge: remap a frame straight from the received record (no 2 MB copy first)
   int givens_rm = 0;   // UpdaterMSCKF: measurement compression Givens loop on a row-major copy (same rotations)

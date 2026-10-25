@@ -33,7 +33,8 @@
 # arlat 0.6.18 (branch ovopt-20261025, all default off): --es ov_opt all_exact (ov_bridge --ovopt: patched OpenVINS speed
 # options, poses bit-identical on the PC checks; near-exact extras e.g. all_exact,ekf_gemm,qr_compress), --ei ov_prof 1
 # (<run>/ov_prof.csv = per-frame OpenVINS stage times, analyse with runs/ovopt_20261025/prof_an.py), --ei idle_spin_ms W
-# (with idle_spin > 0: spin only W ms before the expected frame), --ei spin_wfe 1 (with idle_spin 2: pool waits with WFE).
+# (with idle_spin > 0: spin only W ms before the expected frame), --ei spin_wfe 1 (with idle_spin 2: pool waits with WFE),
+# --ei drop_late_ms N (after init skip frames fed > N ms later than the best lag: no backlog spiral; changes results).
 set -uo pipefail
 cmd=${1:?push|run|clean}; S=${2:?<ip:port>}; shift 2
 ADB=${ADB:-/mnt/c/Users/a3162/platform-tools/adb.exe}

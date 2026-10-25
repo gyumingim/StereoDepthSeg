@@ -1,0 +1,13 @@
+# L2 timing (real time, idle_spin 2, threads 2): c4 reps 2-3 (with L1 = 3 reps each of A / B / W) and c4n400s100c20
+# A / B / W x 2, alternating order. A = no options, B = all_exact, W = all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov.
+T_exact_r2 ov_bridge_ovopt c4 2 2 1.0 --ovopt all_exact --prof-log out/T_exact_r2/prof.csv
+T_near_r2 ov_bridge_ovopt c4 2 2 1.0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov --prof-log out/T_near_r2/prof.csv
+T_none_r3 ov_bridge_ovopt c4 2 2 1.0 --prof-log out/T_none_r3/prof.csv
+N_none_r1 ov_bridge_ovopt c4n400s100c20 2 2 1.0 --prof-log out/N_none_r1/prof.csv
+N_exact_r1 ov_bridge_ovopt c4n400s100c20 2 2 1.0 --ovopt all_exact --prof-log out/N_exact_r1/prof.csv
+N_near_r1 ov_bridge_ovopt c4n400s100c20 2 2 1.0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov --prof-log out/N_near_r1/prof.csv
+T_near_r3 ov_bridge_ovopt c4 2 2 1.0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov --prof-log out/T_near_r3/prof.csv
+T_exact_r3 ov_bridge_ovopt c4 2 2 1.0 --ovopt all_exact --prof-log out/T_exact_r3/prof.csv
+N_near_r2 ov_bridge_ovopt c4n400s100c20 2 2 1.0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov --prof-log out/N_near_r2/prof.csv
+N_exact_r2 ov_bridge_ovopt c4n400s100c20 2 2 1.0 --ovopt all_exact --prof-log out/N_exact_r2/prof.csv
+N_none_r2 ov_bridge_ovopt c4n400s100c20 2 2 1.0 --prof-log out/N_none_r2/prof.csv

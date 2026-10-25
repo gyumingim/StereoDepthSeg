@@ -1,0 +1,8 @@
+# L1 (user-approved 2026-10-25 13:00): identity + c4 timing reps (real time, idle_spin 2, threads 2).
+# Identity: I_none17 vs I_exact17 (17 digits, this branch no options vs all_exact); I_ref (0.6.17 APK binary) vs
+# I_none (9 digits); I_near17 = size of the near-exact drift. Timing: I_none* = A, I_exact17 = B, I_near17 = W.
+I_none17 ov_bridge_ovopt c4 2 2 1.0 --pose-precision 17 --prof-log out/I_none17/prof.csv
+I_exact17 ov_bridge_ovopt c4 2 2 1.0 --ovopt all_exact --pose-precision 17 --prof-log out/I_exact17/prof.csv
+I_ref ov_bridge_0617_ref c4 2 2 1.0
+I_near17 ov_bridge_ovopt c4 2 2 1.0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov --pose-precision 17 --prof-log out/I_near17/prof.csv
+I_none ov_bridge_ovopt c4 2 2 1.0 --prof-log out/I_none/prof.csv

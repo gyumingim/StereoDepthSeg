@@ -29,11 +29,11 @@ for cfg in ${CFGS:-c4 c4n400s100c20}; do
     for v in ${VARS:-A B C}; do
       n=${cfg}_${v}_r$r
       o=${OPT[$v]}
-      t0=$(date +%s.%N)
-      $FULL $C/estimator_config.yaml --stdio --max-speed 8 --lost-frames 1000000 --startup-lost-frames 1000000 \
+      TIMEFORMAT="%U %S %R"   # bash time: user / sys CPU s + wall s of the bridge process (2026-10-25 run 3 on)
+      tt=$( { time $FULL $C/estimator_config.yaml --stdio --max-speed 8 --lost-frames 1000000 --startup-lost-frames 1000000 \
         --remap $REMAP --threads 2 --timing-log $OUT/$n.tl.csv --prof-log $OUT/$n.prof.csv ${o:+--ovopt $o} \
-        < $STREAM > $OUT/$n.jsonl 2> $OUT/$n.err
-      echo "== $n rc $? wall $(echo "$(date +%s.%N) - $t0" | bc | cut -c1-6) s poses $(grep -c '"pose"' $OUT/$n.jsonl) ovopt '$o' load $(cut -d' ' -f1 /proc/loadavg)"
+        --pose-precision ${PREC:-9} < $STREAM > $OUT/$n.jsonl 2> $OUT/$n.err ; } 2>&1 )
+      echo "== $n cpu_user_sys_wall_s $tt poses $(grep -c '"pose"' $OUT/$n.jsonl) ovopt '$o' prec ${PREC:-9} load $(cut -d' ' -f1 /proc/loadavg)"
       mv $C/ov_timing.txt $OUT/$n.ov_timing.txt 2>/dev/null
     done
   done

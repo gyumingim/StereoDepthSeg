@@ -1,0 +1,15 @@
+# L4 heat (c4, all_exact): idle-spin modes, start only at SKIN <= 34 (SKIN_MAX_START=34 bash ...), 2 repeats.
+# Per run: SKIN/AP start/end/max, battery current_now every 5 s (energy proxy; note charging status), clocks.
+H_sp2_r1 ov_bridge_ovopt c4 2 2 1.0 --ovopt all_exact
+H_sp0_r1 ov_bridge_ovopt c4 0 2 1.0 --ovopt all_exact
+H_sp3_r1 ov_bridge_ovopt c4 3 2 1.0 --ovopt all_exact
+H_w15_r1 ov_bridge_ovopt c4 2 2 1.0 --ovopt all_exact --idle-spin-ms 15
+H_w22_r1 ov_bridge_ovopt c4 2 2 1.0 --ovopt all_exact --idle-spin-ms 22
+H_w15_r2 ov_bridge_ovopt c4 2 2 1.0 --ovopt all_exact --idle-spin-ms 15
+H_sp3_r2 ov_bridge_ovopt c4 3 2 1.0 --ovopt all_exact
+H_sp0_r2 ov_bridge_ovopt c4 0 2 1.0 --ovopt all_exact
+H_w22_r2 ov_bridge_ovopt c4 2 2 1.0 --ovopt all_exact --idle-spin-ms 22
+H_sp2_r2 ov_bridge_ovopt c4 2 2 1.0 --ovopt all_exact
+# one spinning thread instead of two: threads 1 + main-thread spin (klt bench T1 spin 3.8-4.4 ms = T2 pool spin), par_* idle
+H_t1sp1_r1 ov_bridge_ovopt c4 1 1 1.0 --ovopt all_exact
+H_t1sp1_r2 ov_bridge_ovopt c4 1 1 1.0 --ovopt all_exact

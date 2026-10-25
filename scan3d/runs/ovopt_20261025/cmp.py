@@ -1,5 +1,6 @@
 # Compare ov_bridge pose lines: all fields except timing (ms, remap_ms, wait_ms). Prints identical-line counts and a
-# hash of the non-timing content per file (same hash = bit-identical poses, counters and calibration).
+# hash of the non-timing content per file (same hash = identical printed poses, counters and calibration at the
+# printed precision: 9 significant digits by default, 17 = round-trip exact doubles with ov_bridge --pose-precision 17).
 #   python3 cmp.py REF.jsonl OTHER.jsonl [...]
 import hashlib
 import json

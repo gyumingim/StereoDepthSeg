@@ -19,6 +19,7 @@ struct Field {
 const Field kFields[] = {
     {"skip_retri", &Flags::skip_retri, true}, {"par_tri", &Flags::par_tri, true},
     {"par_jac", &Flags::par_jac, true},       {"par_ma", &Flags::par_ma, true},
+    {"par_s", &Flags::par_s, true},
     {"cov_move", &Flags::cov_move, true},     {"frame_nocopy", &Flags::frame_nocopy, true},
     {"givens_rm", &Flags::givens_rm, true},
     {"ekf_gemm", &Flags::ekf_gemm, false},

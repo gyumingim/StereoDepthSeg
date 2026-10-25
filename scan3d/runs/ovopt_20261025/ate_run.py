@@ -48,6 +48,10 @@ CONDS = {
     "G": dict(ovopt="ekf_gemm"),                               # near-exact: one GEMM for M = P H^T
     "Q": dict(ovopt="qr_compress"),                            # near-exact: Householder measurement compression
     "GQ": dict(ovopt="ekf_gemm,qr_compress"),
+    "K": dict(ovopt="ekf_chol"),                               # near-exact: no S^-1 / K (W = M U^-1)
+    "P": dict(ovopt="par_cov"),                                # near-exact: covariance update in 2 parts
+    "W": dict(ovopt="all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov"),  # every option together
+    "W2": dict(ovopt="all_exact,ekf_gemm,ekf_chol,par_cov"),   # without qr_compress (givens_rm exact instead)
     # Phase 4 configs (accuracy only; exact options do not change results)
     "S70": dict(cfg="max_slam=70"),
     "S100": dict(cfg="max_slam=100"),
@@ -103,6 +107,11 @@ def job(name):
     d = CONDS[cond]
     vb.BRIDGE = wrapper(cond)
     vb.TEMPLATE = MAIN / "config" / "mono" / "estimator_config.yaml"
+    # the bench makes its temp config dir under <main checkout>/scan3d/runs/vio_*: keep ours out of the shared checkout
+    import tempfile as _tf
+    import types
+    (OUT / "tmp").mkdir(parents=True, exist_ok=True)
+    vb.tempfile = types.SimpleNamespace(mkdtemp=lambda prefix="vio_", dir=None: _tf.mkdtemp(prefix=prefix, dir=str(OUT / "tmp")))
     cfg = BASE_CFG + ("," + d["cfg"] if d.get("cfg") else "")
     a = argparse.Namespace(rec=f"recordings/{rec}", fps=30.0, size="960x540", npts=d.get("npts", 200),
                            clones=d.get("clones", 15), noise="cfg", noise_scale=1.0, imu_calib=None, lever=LEVER,
@@ -215,9 +224,33 @@ def score(conds, ref):
     print("saved", OUT / f"score_{tag}.json")
 
 
+def check_fps30(cond="B0"):
+    """Reproducibility: this branch's bridge (no options) vs the established fps30 C4 run of each cell
+    (main checkout runs/fps30/<key>_C4.poses.jsonl.gz, made 2026-10-24 with the bridge of that day)."""
+    allc, _, _ = cells()
+    same = diff = missing = 0
+    for r, o in allc:
+        key = f"{r[-6:]}_o{o}"
+        a = MAIN / "runs" / "fps30" / f"{key}_C4.poses.jsonl.gz"
+        b = OUT / cond / f"{key}_{cond}.poses.jsonl.gz"
+        if not a.exists() or not b.exists():
+            missing += 1
+            continue
+        strip = lambda m: {k: v for k, v in m.items() if k not in ("ms", "remap_ms", "wait_ms")}
+        A = [strip(json.loads(x)) for x in gzip.open(a, "rt") if x.strip()]
+        B = [strip(json.loads(x)) for x in gzip.open(b, "rt") if x.strip()]
+        ok = A == B
+        same += ok
+        diff += not ok
+        if not ok:
+            first = next((i for i, (x, y) in enumerate(zip(A, B)) if x != y), min(len(A), len(B)))
+            print(f"{key}: DIFFERENT (poses {len(A)} vs {len(B)}, first diff {first})")
+    print(f"fps30 C4 vs {cond}: identical cells {same}, different {diff}, missing {missing}")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["freeze", "run", "job", "score"])
+    ap.add_argument("cmd", choices=["freeze", "run", "job", "score", "check"])
     ap.add_argument("arg", nargs="?", default="")
     ap.add_argument("--par", type=int, default=8)
     ap.add_argument("--ref", default="B0")
@@ -228,5 +261,7 @@ if __name__ == "__main__":
         run_sched(a.arg.split(","), a.par)
     elif a.cmd == "job":
         job(a.arg)
+    elif a.cmd == "check":
+        check_fps30(a.arg or "B0")
     else:
         score(a.arg.split(","), a.ref)

@@ -1,0 +1,17 @@
+start 12:52:52 list L1_ident.txt skin_max_start 36.0
+Features	: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt
+12:52:52 I_none17 run bin ov_bridge_ovopt cfg c4 spin 2 thr 2 speed 1.0 extra '--pose-precision 17 --prof-log out/I_none17/prof.csv' SKIN 30.9 AP 31.3 cpu9_cap 2784000 screen Awake fg com.android.settings/com.android.settings.SubSettings
+12:54:20 I_none17 done SKIN 35.7 max 35.8 aborted 0
+12:54:20 I_exact17 run bin ov_bridge_ovopt cfg c4 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact --pose-precision 17 --prof-log out/I_exact17/prof.csv' SKIN 35.7 AP 42.3 cpu9_cap 2592000 screen Awake fg com.android.settings/com.android.settings.SubSettings
+12:55:48 I_exact17 done SKIN 36.4 max 36.6 aborted 0
+12:55:48 I_ref wait SKIN 36.4
+12:56:03 I_ref run bin ov_bridge_0617_ref cfg c4 spin 2 thr 2 speed 1.0 extra '' SKIN 35.8 AP 38.1 cpu9_cap 2016000 screen Awake fg com.android.settings/com.android.settings.SubSettings
+12:57:31 I_ref done SKIN 36.1 max 36.2 aborted 0
+12:57:31 I_near17 wait SKIN 36.1
+12:57:46 I_near17 run bin ov_bridge_ovopt cfg c4 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov --pose-precision 17 --prof-log out/I_near17/prof.csv' SKIN 35.7 AP 38.2 cpu9_cap 2112000 screen Awake fg com.android.settings/com.android.settings.SubSettings
+12:59:14 I_near17 done SKIN 36.3 max 36.4 aborted 0
+12:59:14 I_none wait SKIN 36.3
+12:59:30 I_none run bin ov_bridge_ovopt cfg c4 spin 2 thr 2 speed 1.0 extra '--prof-log out/I_none/prof.csv' SKIN 35.7 AP 37.6 cpu9_cap 2016000 screen Awake fg com.android.settings/com.android.settings.SubSettings
+13:00:57 I_none done SKIN 36.1 max 36.1 aborted 0
+ALL DONE 13:00:57 L1_ident.txt
+no bridge/feeder left

@@ -18,9 +18,15 @@
 //   W must be large; the heat/time trade is a phone measurement. stderr idle spin line + "window .. blocked ..".
 // --ovopt LIST (2026-10-25, branch ovopt-20261025): speed options of the patched OpenVINS copies (ovpatch/ovopt.h) and
 //   of this bridge, comma separated, all off by default (= output and code path unchanged). Exact (pose lines
-//   bit-identical on the PC identity runs; phone replay check pending): skip_retri, par_tri, par_jac, par_ma, cov_move,
-//   frame_nocopy, givens_rm; "all_exact" = all of them. Near-exact (other rounding, same math): ekf_gemm, qr_compress
-//   (qr_compress replaces givens_rm). "name=0" turns one off.
+//   identical on the PC identity runs at 9 and 17 digits; phone replay check pending): skip_retri, par_tri, par_jac,
+//   par_ma, par_s, cov_move, frame_nocopy, givens_rm; "all_exact" = all of them. Near-exact (other rounding, same math):
+//   ekf_gemm, qr_compress (replaces givens_rm), ekf_chol, par_cov. "name=0" turns one off.
+// --pose-precision N (2026-10-25, default 9 = unchanged): significant digits of the numbers in the pose / pred lines
+//   (17 = round-trip exact doubles, for identity checks).
+// --drop-late MS (2026-10-25, default 0 = off; CHANGES results when it drops): after initialisation a frame is not fed
+//   (its IMU is) when its feed lag (CLOCK_BOOTTIME now - frame t_ns) exceeds the smallest lag seen in this run by more
+//   than MS -> the backlog cannot grow once processing is slower than the frames (phone "cliff", 2026-10-25 replay).
+//   Pose lines get "late_dropped" (only with the flag), stderr "[ov_bridge] drop-late ...".
 //   frame_nocopy (bridge): a frame that is remapped is read straight from the received record buffer (no 2 MB copy
 //   first). Needs a build with the OpenVINS sources compiled in (phone build, PC -DOV_FULL_SOURCE=ON); the PC build
 //   that links libov_msckf_lib.so rejects --ovopt (except frame_nocopy / prof). stderr "[ov_bridge] ovopt ...",
@@ -196,6 +202,8 @@ struct Args {
   std::string ovopt;        // --ovopt LIST (header, ovpatch/ovopt.h)
   std::string prof_log;     // --prof-log FILE (header)
   double idle_spin_ms = 0.0;  // --idle-spin-ms W (header; 0 = spin the whole gap)
+  int pose_precision = 9;     // --pose-precision N (header; 9 = unchanged)
+  double drop_late_ms = 0.0;  // --drop-late MS (header; 0 = off)
 };
 
 // ---- --idle-spin (header) ----
@@ -757,7 +765,7 @@ public:
     n_pred_++;
     if (h_pred_.size() < 2000000) h_pred_.push_back(static_cast<float>(h * 1e3));
     std::ostringstream o;
-    o.precision(9);
+    o.precision(args_.pose_precision);  // --pose-precision (default 9 = unchanged)
     o << "{\"type\":\"pred\",\"t_ns\":" << (t0_ns_ + static_cast<int64_t>(std::llround(t_pred * 1e9))) << ",\"t\":";
     jnum(o, t_pred - t_off);
     o << ",\"t_cam_ns\":" << pred_cam_t_ns_ << ",\"t_state\":";
@@ -777,6 +785,12 @@ public:
     jarr(o, q_GtoI);
     o << "}\n";
     out += o.str();
+  }
+
+  void log_drop() const {  // --drop-late summary (2026-10-25)
+    if (args_.drop_late_ms <= 0.0) return;
+    std::fprintf(stderr, "[ov_bridge] drop-late: limit %.1f ms | dropped %llu frames | min lag %.1f ms\n", args_.drop_late_ms,
+                 static_cast<unsigned long long>(n_late_dropped_), lag_min_ms_ < 1e299 ? lag_min_ms_ : -1.0);
   }
 
   void log_predict() const {
@@ -931,6 +945,7 @@ private:
       if (!cams_.empty() && cams_.front().t < last_imu_t_ - dt) {
         CamMsg c = std::move(cams_.front());
         cams_.pop_front();
+        if (late_drop(c)) continue;  // --drop-late (2026-10-25, default off)
         feed_camera(c, out);
         continue;
       }
@@ -958,6 +973,22 @@ private:
       }
       break;
     }
+  }
+
+  // --drop-late MS (2026-10-25, ovopt; 0 = off = unchanged): skip a frame (IMU still fed) when it would be fed more
+  // than MS later than the best case seen so far: lag = CLOCK_BOOTTIME now - frame t_ns (live: the camera timestamp
+  // is on the same clock; replay: + a constant offset), relative to the minimum lag of this run. Stops the backlog
+  // spiral once processing exceeds the frame period (phone replay 2026-10-25 "cliff"). Only after initialisation.
+  bool late_drop(const CamMsg &c) {
+    if (args_.drop_late_ms <= 0.0) return false;
+    const double lag_ms = static_cast<double>(boot_ns() - c.t_ns) / 1e6;
+    if (lag_ms < lag_min_ms_) lag_min_ms_ = lag_ms;
+    if (!sys_->initialized() || lag_ms - lag_min_ms_ <= args_.drop_late_ms) return false;
+    n_late_dropped_++;
+    if (n_late_dropped_ <= 20 || n_late_dropped_ % 100 == 0)
+      std::fprintf(stderr, "[ov_bridge] drop-late: frame t=%.3f %.1f ms late (> %.1f) -> skipped (#%llu)\n", c.t,
+                   lag_ms - lag_min_ms_, args_.drop_late_ms, static_cast<unsigned long long>(n_late_dropped_));
+    return true;
   }
 
   // --init-gate: 이 카메라 시각까지 init 창 동안 자이로가 조용했나 (넣은 IMU 기준). why 에 이유.
@@ -1161,7 +1192,7 @@ private:
       n_msckf = sys_->get_good_features_MSCKF().size();
     }
     std::ostringstream o;
-    o.precision(9);
+    o.precision(args_.pose_precision);  // --pose-precision (default 9 = unchanged)
     o << "{\"type\":\"pose\",\"t_ns\":" << c.t_ns << ",\"t\":";
     jnum(o, c.t);
     o << ",\"mono\":" << (c.data.sensor_ids.size() == 1 ? "true" : "false");
@@ -1228,6 +1259,7 @@ private:
     o << ",\"cam_dropped\":" << n_cam_dropped_ << ",\"imu_dropped\":" << n_imu_dropped_
       << ",\"cam_rejected\":" << n_cam_rejected_ << ",\"exceptions\":" << n_exceptions_
       << ",\"imu_held\":" << imu_hold_.size() << ",\"n_reinit_state\":" << n_reinit_state_;
+    if (args_.drop_late_ms > 0.0) o << ",\"late_dropped\":" << n_late_dropped_;  // --drop-late only (2026-10-25)
     if (args_.emit_features > 0 && init) {
       o << ",\"slam_pts\":[";
       size_t k = std::min(slam.size(), static_cast<size_t>(args_.emit_features));
@@ -1321,6 +1353,8 @@ private:
   static constexpr double kGateSkipCamS = 0.8;   // --init-gate: 카메라 시작 뒤 이 시간 동안의 프레임은 그림자에 안 넣음
   static constexpr double kGateMinImuS = 0.8;    // --init-gate: 확인에 쓸 IMU 최소 길이 (s)
   uint64_t n_cam_dropped_ = 0, n_imu_dropped_ = 0, n_cam_rejected_ = 0, n_exceptions_ = 0;
+  uint64_t n_late_dropped_ = 0;     // --drop-late
+  double lag_min_ms_ = 1e300;       // --drop-late: smallest feed lag seen
 };
 
 // 한 연결(또는 stdin) 을 끝까지 처리. 반환 false = QUIT 받음.
@@ -1383,7 +1417,7 @@ void usage() {
                "                 [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S] [--remap FILE]\n"
                "                 [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST] [--threads N]\n"
                "                 [--klt-overlap 0|1] [--idle-spin 0|1|2|3] [--idle-spin-ms W] [--predict 0|1|2] [--predict-hz HZ]\n"
-               "                 [--ovopt LIST] [--prof-log FILE]\n");
+               "                 [--ovopt LIST] [--prof-log FILE] [--pose-precision N] [--drop-late MS]\n");
 }
 
 }  // namespace
@@ -1457,6 +1491,8 @@ int main(int argc, char **argv) {
     }
     else if (s == "--ovopt") a.ovopt = next();
     else if (s == "--prof-log") a.prof_log = next();
+    else if (s == "--pose-precision") a.pose_precision = std::max(1, std::min(17, std::stoi(next())));
+    else if (s == "--drop-late") a.drop_late_ms = std::max(0.0, std::stod(next()));
     else if (s == "--reinit-max-gap") a.reinit_max_gap = std::stod(next());
     else if (s == "--reinit-sigma") {  // ori_deg,pos_m,vel_m_s
       std::string v = next();
@@ -1493,7 +1529,8 @@ int main(int argc, char **argv) {
     ovopt::Flags f = ovopt::g;
     f.frame_nocopy = 0;
     f.prof = 0;
-    if (f.skip_retri || f.par_tri || f.par_jac || f.par_ma || f.cov_move || f.givens_rm || f.ekf_gemm || f.qr_compress) {
+    if (f.skip_retri || f.par_tri || f.par_jac || f.par_ma || f.par_s || f.cov_move || f.givens_rm || f.ekf_gemm ||
+        f.qr_compress || f.ekf_chol || f.par_cov) {
       std::fprintf(stderr, "[ov_bridge] --ovopt %s needs a build with the OpenVINS sources (OV_FULL_SOURCE / phone build)\n",
                    a.ovopt.c_str());
       return 2;
@@ -1533,6 +1570,7 @@ int main(int argc, char **argv) {
     apply_affinity(g_pinned ? &g_pin : nullptr, "end");
     if (g_idle.mode) g_idle.log("end");
     b.log_predict();
+    b.log_drop();
     return 0;
   }
 

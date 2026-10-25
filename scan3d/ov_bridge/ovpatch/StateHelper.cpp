@@ -24,6 +24,8 @@
 // of the upstream file. All changes behind ovpatch/ovopt.h flags, default off = upstream code path:
 //  - par_ma (exact): EKFUpdate computes each variable's block M_i = sum_m P_im H_m^T (same products, same order) on the
 //    OpenCV pool; blocks are disjoint rows of M_a.
+//  - par_s (exact): P_small and S = H P_small H^T + R (same statements) run as one more task beside the M_a tasks
+//    (par_ma) or beside the ekf_gemm product; both only read P. Without par_ma / ekf_gemm it does nothing.
 //  - cov_move (exact): marginalize() moves Cov_new into the state instead of copying it (same values).
 //  - ekf_gemm (near-exact): EKFUpdate gathers the P columns of the measured variables and computes M_a = P_c H^T as one
 //    GEMM (different summation order than the per-block sums).
@@ -147,15 +149,38 @@ void StateHelper::EKFUpdate(std::shared_ptr<State> state, const std::vector<std:
     current_it += meas_var->size();
   }
 
+  // scan3d par_s (exact): P_small + S (below) computed as one more task next to the M = P H^T work (reads P only)
+  Eigen::MatrixXd P_small;
+  Eigen::MatrixXd S(R.rows(), R.rows());
+  auto compute_S = [&]() {
+    P_small = StateHelper::get_marginal_covariance(state, H_order);
+    S.triangularView<Eigen::Upper>() = H * P_small * H.transpose();
+    S.triangularView<Eigen::Upper>() += R;
+  };
+  bool s_done = false;
+
   //==========================================================
   //==========================================================
   // For each active variable find its M = P*H^T
   if (ovopt::g.ekf_gemm) {
     // scan3d ekf_gemm (near-exact): M_a = P(:, H vars) * H^T as one product on the gathered columns
-    Eigen::MatrixXd P_c(state->_Cov.rows(), H.cols());
-    for (size_t i = 0; i < H_order.size(); i++)
-      P_c.middleCols(H_id[i], H_order[i]->size()) = state->_Cov.middleCols(H_order[i]->id(), H_order[i]->size());
-    M_a.noalias() = P_c * H.transpose();
+    auto gemm_ma = [&]() {
+      Eigen::MatrixXd P_c(state->_Cov.rows(), H.cols());
+      for (size_t i = 0; i < H_order.size(); i++)
+        P_c.middleCols(H_id[i], H_order[i]->size()) = state->_Cov.middleCols(H_order[i]->id(), H_order[i]->size());
+      M_a.noalias() = P_c * H.transpose();
+    };
+    if (ovopt::g.par_s) {
+      ovopt::par_for(true, 2, [&](int t) {
+        if (t == 0)
+          gemm_ma();
+        else
+          compute_S();
+      });
+      s_done = true;
+    } else {
+      gemm_ma();
+    }
   } else if (ovopt::g.par_ma) {
     // scan3d par_ma (exact): the loop below, one variable per task (ids / sizes read up front, no shared_ptr copies)
     const int n_h = (int)H_order.size();
@@ -171,7 +196,12 @@ void StateHelper::EKFUpdate(std::shared_ptr<State> state, const std::vector<std:
       v_sz[v] = state->_variables[v]->size();
     }
     const Eigen::MatrixXd &Cov = state->_Cov;
-    ovopt::par_for(true, n_var, [&](int v) {
+    const bool with_s = ovopt::g.par_s != 0;  // par_s: task n_var computes P_small + S
+    ovopt::par_for(true, n_var + (with_s ? 1 : 0), [&](int v) {
+      if (v == n_var) {
+        compute_S();
+        return;
+      }
       // Sum up effect of each subjacobian = K_i= \sum_m (P_im Hm^T)
       Eigen::MatrixXd M_i = Eigen::MatrixXd::Zero(v_sz[v], res.rows());
       for (int i = 0; i < n_h; i++) {
@@ -179,6 +209,7 @@ void StateHelper::EKFUpdate(std::shared_ptr<State> state, const std::vector<std:
       }
       M_a.block(v_id[v], 0, v_sz[v], res.rows()) = M_i;
     });
+    s_done = with_s;
   } else {
     for (const auto &var : state->_variables) {
       // Sum up effect of each subjacobian = K_i= \sum_m (P_im Hm^T)
@@ -195,14 +226,15 @@ void StateHelper::EKFUpdate(std::shared_ptr<State> state, const std::vector<std:
 
   //==========================================================
   //==========================================================
-  // Get covariance of the involved terms
-  Eigen::MatrixXd P_small = StateHelper::get_marginal_covariance(state, H_order);
+  if (!s_done) {
+    // Get covariance of the involved terms
+    P_small = StateHelper::get_marginal_covariance(state, H_order);
 
-  // Residual covariance S = H*Cov*H' + R
-  Eigen::MatrixXd S(R.rows(), R.rows());
-  S.triangularView<Eigen::Upper>() = H * P_small * H.transpose();
-  S.triangularView<Eigen::Upper>() += R;
-  // Eigen::MatrixXd S = H * P_small * H.transpose() + R;
+    // Residual covariance S = H*Cov*H' + R
+    S.triangularView<Eigen::Upper>() = H * P_small * H.transpose();
+    S.triangularView<Eigen::Upper>() += R;
+    // Eigen::MatrixXd S = H * P_small * H.transpose() + R;
+  }
   prof_lap.to(ovopt::S_EKF_S);
 
   // scan3d ekf_chol (near-exact): with S = U^T U, K M^T = M S^-1 M^T = W W^T for W = M U^-1 and K r = W (U^-T r), so

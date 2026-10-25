@@ -19,6 +19,20 @@ set(Ceres_DIR "${DEPS}/ceres-install/lib/cmake/Ceres")
 find_package(Ceres REQUIRED)
 
 set(S "${OV_SRC}")
+# ovpatch/ copies are based on upstream open_vins 69488123: warn if OV_SRC holds other versions of the replaced files
+foreach (pair "ov_core/src/track/TrackKLT.cpp=ec5b2cd169935ff1df1537cdfec6d62e"
+              "ov_msckf/src/core/VioManager.cpp=0c38ccd6284bee46b559d1e366600fd1"
+              "ov_msckf/src/state/StateHelper.cpp=69b3289a5061a008537d777558c3280c"
+              "ov_msckf/src/update/UpdaterMSCKF.cpp=9c640902a78f3f7f82a763a6ed6043bc"
+              "ov_msckf/src/update/UpdaterSLAM.cpp=411be47759278c9c7b4dcd531279bb06")
+  string(REPLACE "=" ";" kv "${pair}")
+  list(GET kv 0 f)
+  list(GET kv 1 h)
+  file(MD5 "${S}/${f}" got)
+  if (NOT got STREQUAL h)
+    message(WARNING "ovpatch: ${S}/${f} is not the upstream 69488123 version the ovpatch copy is based on (md5 ${got})")
+  endif ()
+endforeach ()
 # ovpatch/ copies replace upstream files (each patch is a no-op unless its ov_bridge --ovopt flag is set):
 #   TrackKLT.cpp (2026-10-24, arlat 0.6.15, KLT overlap, identical output),
 #   VioManager.cpp / StateHelper.cpp / UpdaterMSCKF.cpp / UpdaterSLAM.cpp + ovopt.cpp (2026-10-25, ovopt).

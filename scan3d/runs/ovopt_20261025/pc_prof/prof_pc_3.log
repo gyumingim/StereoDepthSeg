@@ -1,0 +1,78 @@
+Sun Oct 25 12:10:59 KST 2026
+stream /tmp/ovopt/raw80.bin (4828128372 B) remap 206cfa2658e43306 bridge 8fff2c08d5851bf8
+ 12:11:00 up 7 days, 23:46,  2 users,  load average: 1.32, 1.18, 0.92
+== c4_A_r1 cpu_user_sys_wall_s 29.474 2.428 24.837 poses 2327 ovopt '' prec 9 load 1.57
+== c4_B_r1 cpu_user_sys_wall_s 26.636 2.011 17.883 poses 2327 ovopt 'all_exact' prec 9 load 1.44
+== c4_G_r1 cpu_user_sys_wall_s 22.853 1.915 16.715 poses 2327 ovopt 'all_exact,ekf_gemm' prec 9 load 1.57
+== c4_K_r1 cpu_user_sys_wall_s 25.486 2.116 16.953 poses 2327 ovopt 'all_exact,ekf_chol' prec 9 load 1.60
+== c4_P_r1 cpu_user_sys_wall_s 26.502 2.555 17.112 poses 2327 ovopt 'all_exact,par_cov' prec 9 load 1.61
+== c4_W_r1 cpu_user_sys_wall_s 22.275 2.248 15.156 poses 2327 ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov' prec 9 load 1.41
+== c4_A_r2 cpu_user_sys_wall_s 29.352 2.676 24.938 poses 2327 ovopt '' prec 9 load 1.33
+== c4_B_r2 cpu_user_sys_wall_s 26.177 2.194 17.705 poses 2327 ovopt 'all_exact' prec 9 load 1.24
+== c4_G_r2 cpu_user_sys_wall_s 22.846 1.861 16.685 poses 2327 ovopt 'all_exact,ekf_gemm' prec 9 load 1.35
+== c4_K_r2 cpu_user_sys_wall_s 25.542 2.165 17.006 poses 2327 ovopt 'all_exact,ekf_chol' prec 9 load 1.25
+== c4_P_r2 cpu_user_sys_wall_s 26.478 2.595 17.121 poses 2327 ovopt 'all_exact,par_cov' prec 9 load 1.41
+== c4_W_r2 cpu_user_sys_wall_s 22.015 2.357 15.063 poses 2327 ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov' prec 9 load 1.46
+== c4_A_r3 cpu_user_sys_wall_s 29.843 2.541 25.222 poses 2327 ovopt '' prec 9 load 1.36
+== c4_B_r3 cpu_user_sys_wall_s 25.848 2.111 17.425 poses 2327 ovopt 'all_exact' prec 9 load 1.34
+== c4_G_r3 cpu_user_sys_wall_s 22.722 1.794 16.533 poses 2327 ovopt 'all_exact,ekf_gemm' prec 9 load 1.26
+== c4_K_r3 cpu_user_sys_wall_s 25.414 1.955 16.813 poses 2327 ovopt 'all_exact,ekf_chol' prec 9 load 1.28
+== c4_P_r3 cpu_user_sys_wall_s 26.799 2.403 17.205 poses 2327 ovopt 'all_exact,par_cov' prec 9 load 1.41
+== c4_W_r3 cpu_user_sys_wall_s 22.082 2.301 15.040 poses 2327 ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov' prec 9 load 1.39
+== identity c4 (ref = A r1)
+ref /tmp/ovopt/prof3/c4_A_r1.jsonl: poses 2327 tracking 2003 hash 64f4e472d4518fe8
+/tmp/ovopt/prof3/c4_A_r2.jsonl: poses 2327 identical_lines 2327/2327 identical_state 2327/2327 hash 64f4e472d4518fe8 first_diff None IDENTICAL
+/tmp/ovopt/prof3/c4_A_r3.jsonl: poses 2327 identical_lines 2327/2327 identical_state 2327/2327 hash 64f4e472d4518fe8 first_diff None IDENTICAL
+/tmp/ovopt/prof3/c4_B_r1.jsonl: poses 2327 identical_lines 2327/2327 identical_state 2327/2327 hash 64f4e472d4518fe8 first_diff None IDENTICAL
+/tmp/ovopt/prof3/c4_B_r2.jsonl: poses 2327 identical_lines 2327/2327 identical_state 2327/2327 hash 64f4e472d4518fe8 first_diff None IDENTICAL
+/tmp/ovopt/prof3/c4_B_r3.jsonl: poses 2327 identical_lines 2327/2327 identical_state 2327/2327 hash 64f4e472d4518fe8 first_diff None IDENTICAL
+/tmp/ovopt/prof3/c4_G_r1.jsonl: poses 2327 identical_lines 325/2327 identical_state 325/2327 hash 1d292d85851ab26f first_diff 325 DIFFERENT
+/tmp/ovopt/prof3/c4_G_r2.jsonl: poses 2327 identical_lines 325/2327 identical_state 325/2327 hash 1d292d85851ab26f first_diff 325 DIFFERENT
+/tmp/ovopt/prof3/c4_G_r3.jsonl: poses 2327 identical_lines 325/2327 identical_state 325/2327 hash 1d292d85851ab26f first_diff 325 DIFFERENT
+/tmp/ovopt/prof3/c4_K_r1.jsonl: poses 2327 identical_lines 325/2327 identical_state 325/2327 hash f2dafc9f41c3e4aa first_diff 325 DIFFERENT
+/tmp/ovopt/prof3/c4_K_r2.jsonl: poses 2327 identical_lines 325/2327 identical_state 325/2327 hash f2dafc9f41c3e4aa first_diff 325 DIFFERENT
+/tmp/ovopt/prof3/c4_K_r3.jsonl: poses 2327 identical_lines 325/2327 identical_state 325/2327 hash f2dafc9f41c3e4aa first_diff 325 DIFFERENT
+/tmp/ovopt/prof3/c4_P_r1.jsonl: poses 2327 identical_lines 341/2327 identical_state 343/2327 hash afb6b585ac7c4109 first_diff 329 DIFFERENT
+/tmp/ovopt/prof3/c4_P_r2.jsonl: poses 2327 identical_lines 341/2327 identical_state 343/2327 hash afb6b585ac7c4109 first_diff 329 DIFFERENT
+/tmp/ovopt/prof3/c4_P_r3.jsonl: poses 2327 identical_lines 341/2327 identical_state 343/2327 hash afb6b585ac7c4109 first_diff 329 DIFFERENT
+/tmp/ovopt/prof3/c4_W_r1.jsonl: poses 2327 identical_lines 325/2327 identical_state 325/2327 hash 19e631a1e5b1d169 first_diff 325 DIFFERENT
+/tmp/ovopt/prof3/c4_W_r2.jsonl: poses 2327 identical_lines 325/2327 identical_state 325/2327 hash 19e631a1e5b1d169 first_diff 325 DIFFERENT
+/tmp/ovopt/prof3/c4_W_r3.jsonl: poses 2327 identical_lines 325/2327 identical_state 325/2327 hash 19e631a1e5b1d169 first_diff 325 DIFFERENT
+== c4n400s100c20_A_r1 cpu_user_sys_wall_s 61.984 2.484 55.301 poses 2327 ovopt '' prec 9 load 1.16
+== c4n400s100c20_B_r1 cpu_user_sys_wall_s 57.975 3.004 40.600 poses 2327 ovopt 'all_exact' prec 9 load 1.20
+== c4n400s100c20_G_r1 cpu_user_sys_wall_s 46.395 2.932 37.439 poses 2327 ovopt 'all_exact,ekf_gemm' prec 9 load 1.33
+== c4n400s100c20_K_r1 cpu_user_sys_wall_s 56.330 3.137 38.983 poses 2327 ovopt 'all_exact,ekf_chol' prec 9 load 1.30
+== c4n400s100c20_P_r1 cpu_user_sys_wall_s 59.210 4.119 37.752 poses 2327 ovopt 'all_exact,par_cov' prec 9 load 1.45
+== c4n400s100c20_W_r1 cpu_user_sys_wall_s 44.734 3.742 31.565 poses 2327 ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov' prec 9 load 1.34
+== c4n400s100c20_A_r2 cpu_user_sys_wall_s 62.416 2.233 55.460 poses 2327 ovopt '' prec 9 load 1.51
+== c4n400s100c20_B_r2 cpu_user_sys_wall_s 58.370 3.122 40.955 poses 2327 ovopt 'all_exact' prec 9 load 1.26
+== c4n400s100c20_G_r2 cpu_user_sys_wall_s 46.465 2.756 37.370 poses 2327 ovopt 'all_exact,ekf_gemm' prec 9 load 1.14
+== c4n400s100c20_K_r2 cpu_user_sys_wall_s 56.316 3.216 39.018 poses 2327 ovopt 'all_exact,ekf_chol' prec 9 load 1.33
+== c4n400s100c20_P_r2 cpu_user_sys_wall_s 59.489 4.023 37.931 poses 2327 ovopt 'all_exact,par_cov' prec 9 load 1.29
+== c4n400s100c20_W_r2 cpu_user_sys_wall_s 44.836 3.453 31.429 poses 2327 ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov' prec 9 load 1.17
+== c4n400s100c20_A_r3 cpu_user_sys_wall_s 62.770 2.344 55.871 poses 2327 ovopt '' prec 9 load 1.18
+== c4n400s100c20_B_r3 cpu_user_sys_wall_s 58.572 2.923 40.958 poses 2327 ovopt 'all_exact' prec 9 load 1.23
+== c4n400s100c20_G_r3 cpu_user_sys_wall_s 46.318 2.729 37.228 poses 2327 ovopt 'all_exact,ekf_gemm' prec 9 load 1.21
+== c4n400s100c20_K_r3 cpu_user_sys_wall_s 56.400 3.165 39.100 poses 2327 ovopt 'all_exact,ekf_chol' prec 9 load 1.20
+== c4n400s100c20_P_r3 cpu_user_sys_wall_s 59.441 4.089 37.902 poses 2327 ovopt 'all_exact,par_cov' prec 9 load 1.17
+== c4n400s100c20_W_r3 cpu_user_sys_wall_s 44.493 3.910 31.513 poses 2327 ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov' prec 9 load 1.16
+== identity c4n400s100c20 (ref = A r1)
+ref /tmp/ovopt/prof3/c4n400s100c20_A_r1.jsonl: poses 2327 tracking 2003 hash 4f1d2a88ed5e4a83
+/tmp/ovopt/prof3/c4n400s100c20_A_r2.jsonl: poses 2327 identical_lines 2327/2327 identical_state 2327/2327 hash 4f1d2a88ed5e4a83 first_diff None IDENTICAL
+/tmp/ovopt/prof3/c4n400s100c20_A_r3.jsonl: poses 2327 identical_lines 2327/2327 identical_state 2327/2327 hash 4f1d2a88ed5e4a83 first_diff None IDENTICAL
+/tmp/ovopt/prof3/c4n400s100c20_B_r1.jsonl: poses 2327 identical_lines 2327/2327 identical_state 2327/2327 hash 4f1d2a88ed5e4a83 first_diff None IDENTICAL
+/tmp/ovopt/prof3/c4n400s100c20_B_r2.jsonl: poses 2327 identical_lines 2327/2327 identical_state 2327/2327 hash 4f1d2a88ed5e4a83 first_diff None IDENTICAL
+/tmp/ovopt/prof3/c4n400s100c20_B_r3.jsonl: poses 2327 identical_lines 2327/2327 identical_state 2327/2327 hash 4f1d2a88ed5e4a83 first_diff None IDENTICAL
+/tmp/ovopt/prof3/c4n400s100c20_G_r1.jsonl: poses 2327 identical_lines 325/2327 identical_state 325/2327 hash 8e4e7f3f589f144f first_diff 325 DIFFERENT
+/tmp/ovopt/prof3/c4n400s100c20_G_r2.jsonl: poses 2327 identical_lines 325/2327 identical_state 325/2327 hash 8e4e7f3f589f144f first_diff 325 DIFFERENT
+/tmp/ovopt/prof3/c4n400s100c20_G_r3.jsonl: poses 2327 identical_lines 325/2327 identical_state 325/2327 hash 8e4e7f3f589f144f first_diff 325 DIFFERENT
+/tmp/ovopt/prof3/c4n400s100c20_K_r1.jsonl: poses 2327 identical_lines 325/2327 identical_state 325/2327 hash eced6cee58cd972a first_diff 325 DIFFERENT
+/tmp/ovopt/prof3/c4n400s100c20_K_r2.jsonl: poses 2327 identical_lines 325/2327 identical_state 325/2327 hash eced6cee58cd972a first_diff 325 DIFFERENT
+/tmp/ovopt/prof3/c4n400s100c20_K_r3.jsonl: poses 2327 identical_lines 325/2327 identical_state 325/2327 hash eced6cee58cd972a first_diff 325 DIFFERENT
+/tmp/ovopt/prof3/c4n400s100c20_P_r1.jsonl: poses 2327 identical_lines 337/2327 identical_state 341/2327 hash 055c6fca5ebd765d first_diff 328 DIFFERENT
+/tmp/ovopt/prof3/c4n400s100c20_P_r2.jsonl: poses 2327 identical_lines 337/2327 identical_state 341/2327 hash 055c6fca5ebd765d first_diff 328 DIFFERENT
+/tmp/ovopt/prof3/c4n400s100c20_P_r3.jsonl: poses 2327 identical_lines 337/2327 identical_state 341/2327 hash 055c6fca5ebd765d first_diff 328 DIFFERENT
+/tmp/ovopt/prof3/c4n400s100c20_W_r1.jsonl: poses 2327 identical_lines 325/2327 identical_state 325/2327 hash 1e6c36d1fd6f3be0 first_diff 325 DIFFERENT
+/tmp/ovopt/prof3/c4n400s100c20_W_r2.jsonl: poses 2327 identical_lines 325/2327 identical_state 325/2327 hash 1e6c36d1fd6f3be0 first_diff 325 DIFFERENT
+/tmp/ovopt/prof3/c4n400s100c20_W_r3.jsonl: poses 2327 identical_lines 325/2327 identical_state 325/2327 hash 1e6c36d1fd6f3be0 first_diff 325 DIFFERENT
+Sun Oct 25 12:28:35 KST 2026

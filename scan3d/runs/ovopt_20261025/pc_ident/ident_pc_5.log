@@ -1,0 +1,40 @@
+Sun Oct 25 12:30:49 KST 2026
+stream /tmp/idlespin/pose_ab/stream.bin (439100152 bytes) cfg /home/system/scanner/StereoDepthSeg-ovopt/scan3d/runs/ovopt_20261025/cfg_identity/estimator_config.yaml
+94b4d7d0737f005a3c7bd49a62553db6b801abd792aa5b1ab94bebc0e918b795 /home/system/scanner/StereoDepthSeg/scan3d/ov_bridge/build_par/ov_bridge
+821a7fd5d59066753aa261b68604e9600a481b667a2fcda5c08826ea6937da12 /home/system/scanner/StereoDepthSeg-ovopt/scan3d/ov_bridge/build_ovopt_def/ov_bridge
+71bb15d95c1feb12db9d9c66dfe0cbf5bae9b407f911144087cfeab73f330a2a /home/system/scanner/StereoDepthSeg-ovopt/scan3d/ov_bridge/build_ovopt_full/ov_bridge
+== BP rc 0 6.9420 s poses 845 | 
+== DEF rc 0 6.8901 s poses 845 | 
+== FULL0 rc 0 6.8286 s poses 845 | 
+== skip_retri rc 0 5.9562 s poses 845 | --ovopt skip_retri
+== par_tri rc 0 6.8662 s poses 845 | --ovopt par_tri
+== par_jac rc 0 6.6142 s poses 845 | --ovopt par_jac
+== par_ma rc 0 6.3807 s poses 845 | --ovopt par_ma
+== par_s rc 0 7.0034 s poses 845 | --ovopt par_s
+== cov_move rc 0 6.7224 s poses 845 | --ovopt cov_move
+== givens_rm rc 0 6.6279 s poses 845 | --ovopt givens_rm
+== all_exact rc 0 5.1694 s poses 845 | --ovopt all_exact
+== ekf_gemm rc 0 5.8842 s poses 845 | --ovopt ekf_gemm
+== qr_compress rc 0 6.8904 s poses 845 | --ovopt qr_compress
+== ekf_chol rc 0 6.5852 s poses 845 | --ovopt ekf_chol
+== par_cov rc 0 6.6856 s poses 845 | --ovopt par_cov
+== identity vs BP (main checkout build_par = 0.6.17 bridge)
+ref /tmp/ovopt/ident/BP.jsonl: poses 845 tracking 704 hash d7958f8247fbc180
+/tmp/ovopt/ident/DEF.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash d7958f8247fbc180 first_diff None IDENTICAL
+/tmp/ovopt/ident/FULL0.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash d7958f8247fbc180 first_diff None IDENTICAL
+/tmp/ovopt/ident/all_exact.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash d7958f8247fbc180 first_diff None IDENTICAL
+/tmp/ovopt/ident/cov_move.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash d7958f8247fbc180 first_diff None IDENTICAL
+/tmp/ovopt/ident/ekf_chol.jsonl: poses 845 identical_lines 222/845 identical_state 237/845 hash 13a42c549001cab6 first_diff 145 DIFFERENT
+/tmp/ovopt/ident/ekf_gemm.jsonl: poses 845 identical_lines 221/845 identical_state 234/845 hash 18caab0fead90a2f first_diff 145 DIFFERENT
+/tmp/ovopt/ident/givens_rm.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash d7958f8247fbc180 first_diff None IDENTICAL
+/tmp/ovopt/ident/par_cov.jsonl: poses 845 identical_lines 220/845 identical_state 230/845 hash 3a80b5c7e408cf27 first_diff 163 DIFFERENT
+/tmp/ovopt/ident/par_jac.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash d7958f8247fbc180 first_diff None IDENTICAL
+/tmp/ovopt/ident/par_ma.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash d7958f8247fbc180 first_diff None IDENTICAL
+/tmp/ovopt/ident/par_s.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash d7958f8247fbc180 first_diff None IDENTICAL
+/tmp/ovopt/ident/par_tri.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash d7958f8247fbc180 first_diff None IDENTICAL
+/tmp/ovopt/ident/qr_compress.jsonl: poses 845 identical_lines 191/845 identical_state 194/845 hash 4b94794e09dc4b7f first_diff 146 DIFFERENT
+/tmp/ovopt/ident/skip_retri.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash d7958f8247fbc180 first_diff None IDENTICAL
+== BP vs 0.6.16 paced reference (idle_spin_check P0)
+ref /tmp/idlespin/pose_ab/P0.jsonl: poses 845 tracking 704 hash d7958f8247fbc180
+/tmp/ovopt/ident/BP.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash d7958f8247fbc180 first_diff None IDENTICAL
+Sun Oct 25 12:32:28 KST 2026
