@@ -56,6 +56,10 @@ CONDS = {  # ovrobust: name -> dict(args=extra ov_bridge args)
     "BLR1": dict(args=f"--health 1 --test-blank {BLANK_T0}:1 --recover 15"),
     "BLR2": dict(args=f"--health 1 --test-blank {BLANK_T0}:2 --recover 15"),
     "SIR": dict(args="--health 1 --init-still 1 --recover 15"),      # static init + recovery (no blank)
+    # recover policy v2 (2026-10-25 17:15, after BLR2 v1: wait N frames with vision back, no full reset, num_pts after
+    # injection); BLR1 / BLR2 above = policy v1 (BLR1 v1 not run)
+    "BLR1b": dict(args=f"--health 1 --test-blank {BLANK_T0}:1 --recover 15"),
+    "BLR2b": dict(args=f"--health 1 --test-blank {BLANK_T0}:2 --recover 15"),
 }
 
 

@@ -31,11 +31,13 @@
 //   "still, then jerk" init will initialize at the next motion (e.g. takeoff) - a go signal, no algorithm change. stderr "[ov_bridge] health ..." summary at the end.
 // --recover N (default 0 = off): automatic recovery after N consecutive LOST frames of a VioManager that has done at
 //   least one feature update (startup / still-after-init LOST never triggers it):
-//   a) vision back (tracked >= --recover-min-feats, default 20), state finite, |v| <= --max-speed and since_upd <=
+//   (policy v2 2026-10-25 after the blank test: wait until vision has been back for N frames with still no update;
+//   full reset only with --recover-full 1; injected VioManager tracks num_pts, not init_max_features)
+//   a) vision back for N frames (tracked >= --recover-min-feats, default 20), state finite, |v| <= --max-speed, since_upd <=
 //      --recover-max-gap (default 3 s): new VioManager started from the old state (same injection as --reinit-state:
 //      pose, velocity, biases, extrinsics, time offset, inflated covariance) -> same world frame, no jump;
 //      line {"type":"reset","auto":true,"reason":"recover","reinit":"state",...}.
-//   b) since_upd > --recover-max-gap or the state is bad: new VioManager with a normal (static) initialization; once
+//   b) (--recover-full 1 only) since_upd > --recover-max-gap or the state is bad: new VioManager with a normal (static) initialization; once
 //      it is initialized its poses are mapped onto the last pose output before the reset with a 4-DoF offset (yaw +
 //      translation; gravity is common) -> the output stays one continuous frame ("seg" counts the segments, pose
 //      lines carry "seg" and "frame_off":[yaw_rad,x,y,z] while an offset is active); line reason "recover",
@@ -247,6 +249,7 @@ struct Args {
   int recover = 0;            // --recover N (0 = off)
   double recover_max_gap = 3.0;
   int recover_min_feats = 20;
+  int recover_full = 0;       // --recover-full 0|1 (full reset when the state is bad / the gap too long; default off)
   std::string test_blank;     // --test-blank T0:D,...
 };
 
@@ -745,8 +748,9 @@ public:
   }
 
   // VioManager 새로 만들기. 붙잡아 둔 IMU(imu_hold_) 는 새 시스템에 그대로 넣을 수 있으므로 남긴다.
-  void make_system() {
-    sys_ = std::make_shared<ov_msckf::VioManager>(params_);
+  void make_system(ov_msckf::VioManagerOptions *p = nullptr) {  // VioManager takes a non-const reference
+    if (p) sys_ = std::make_shared<ov_msckf::VioManager>(*p);
+    else sys_ = std::make_shared<ov_msckf::VioManager>(params_);
     pred_pending_ = false;
     make_shadow(false);
     init_checked_ = false;
@@ -1339,10 +1343,14 @@ private:
  private:
   // ---- --recover N (2026-10-25, ovrobust, header) ----
   void try_recover(const CamMsg &c, std::string &out) {
-    if (!sys_->initialized() || !h_upd_seen_ || h_lost_run_ < args_.recover) return;
     const HealthRec &r = hrec_;
+    // frames in a row with vision back (tracked >= min feats) while LOST: OpenVINS usually resumes by itself within a
+    // few frames after a loss of vision (2026-10-25 blank test: 0.1 s) - injecting at the first frame back only resets a
+    // filter that was about to recover, so wait --recover N frames with vision back and still no update.
+    h_vis_back_run_ = (r.state == H_LOST && r.tracked >= args_.recover_min_feats) ? h_vis_back_run_ + 1 : 0;
+    if (!sys_->initialized() || !h_upd_seen_ || h_lost_run_ < args_.recover) return;
     const bool gap_ok = r.since_upd >= 0.0 && r.since_upd <= args_.recover_max_gap;
-    if (!h_state_bad_ && gap_ok && r.tracked >= args_.recover_min_feats) {
+    if (!h_state_bad_ && gap_ok && h_vis_back_run_ >= args_.recover) {
       std::string extra;
       if (reinit_from_state(extra, args_.recover_max_gap)) {
         n_recover_state_++;
@@ -1353,7 +1361,7 @@ private:
         return;
       }
     }
-    if (h_state_bad_ || !gap_ok) {  // full reset; output frame continued with a 4-DoF offset once re-initialized
+    if (args_.recover_full && (h_state_bad_ || !gap_ok)) {  // full reset (opt-in); 4-DoF output offset once re-initialized
       if (have_last_out_) {
         off_anchor_R_ = last_out_R_;
         off_anchor_p_ = last_out_p_;
@@ -1456,7 +1464,16 @@ private:
     Eigen::Matrix<double, 7, 1> ext = st->_calib_IMUtoCAM.at(0)->value();
     Eigen::VectorXd dt = st->_calib_dt_CAMtoIMU->value();
     if (!imu.allFinite() || !ext.allFinite() || !dt.allFinite()) return false;
-    make_system();
+    if (from_recover) {
+      // --recover (2026-10-25): an injected VioManager never runs its own initialization, which is where upstream raises
+      // the tracker from init_max_features (50) to num_pts -> without this it would track only 50 points afterwards.
+      // (--reinit-state keeps the old behaviour unchanged.)
+      ov_msckf::VioManagerOptions pi = params_;
+      pi.init_options.init_max_features = params_.num_pts;
+      make_system(&pi);
+    } else {
+      make_system();
+    }
     auto ns = sys_->get_state();
     ns->_calib_IMUtoCAM.at(0)->set_value(ext);
     ns->_calib_IMUtoCAM.at(0)->set_fej(ext);
@@ -1707,6 +1724,7 @@ private:
   int h_prev_state_ = -1;
   uint64_t h_n_[4] = {0, 0, 0, 0}, h_transitions_ = 0, h_n_trans_log_ = 0;
   uint64_t n_recover_state_ = 0, n_recover_full_ = 0, n_blanked_ = 0, h_n_ready_ = 0;
+  int h_vis_back_run_ = 0;
   std::vector<std::pair<double, double>> blank_;  // --test-blank windows (s after the first camera record)
   bool have_last_out_ = false, off_pending_ = false, off_active_ = false;
   Eigen::Matrix3d last_out_R_ = Eigen::Matrix3d::Identity(), off_anchor_R_ = Eigen::Matrix3d::Identity();
@@ -1779,7 +1797,7 @@ void usage() {
                "                 [--klt-overlap 0|1] [--idle-spin 0|1|2|3] [--idle-spin-ms W] [--predict 0|1|2] [--predict-hz HZ]\n"
                "                 [--ovopt LIST] [--prof-log FILE] [--pose-precision N] [--drop-late MS]\n"
                "                 [--init-still 0|1] [--health 0|1] [--health-log FILE] [--health-cfg K=V,..] [--recover N]\n"
-               "                 [--recover-max-gap S] [--recover-min-feats N] [--test-blank T0:D,..]\n");
+               "                 [--recover-max-gap S] [--recover-min-feats N] [--recover-full 0|1] [--test-blank T0:D,..]\n");
 }
 
 }  // namespace
@@ -1862,6 +1880,7 @@ int main(int argc, char **argv) {
     else if (s == "--recover") a.recover = std::max(0, std::stoi(next()));
     else if (s == "--recover-max-gap") a.recover_max_gap = std::stod(next());
     else if (s == "--recover-min-feats") a.recover_min_feats = std::stoi(next());
+    else if (s == "--recover-full") a.recover_full = std::stoi(next()) != 0 ? 1 : 0;
     else if (s == "--test-blank") a.test_blank = next();
     else if (s == "--reinit-max-gap") a.reinit_max_gap = std::stod(next());
     else if (s == "--reinit-sigma") {  // ori_deg,pos_m,vel_m_s
