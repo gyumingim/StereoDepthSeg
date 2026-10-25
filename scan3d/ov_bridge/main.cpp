@@ -24,7 +24,7 @@
 //
 // integ-20261025 (all default off = unchanged):
 // --profile rec20261025: named live profile = --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin 2
-//   --idle-spin-ms 20 --drop-late 50 --health 1 (team measurements 2026-10-25, runs/integ_20261025/README.md). Applied before the
+//   --idle-spin-ms 20 --drop-late 50 --health 1 --predict 2 --predict-hz 200 --pred-thread 1 (stdio only; user 19:40) (team measurements 2026-10-25, runs/integ_20261025/README.md). Applied before the
 //   other arguments, so any explicit flag overrides its part. Without --profile nothing changes.
 // --pred-thread 1 with --mav-udp / --viop-udp: the prediction thread also sends each of its predictions (frame + 1/HZ
 //   grid of IMU time) as MAVLink / VIOP POSE (before this, that combination sent nothing). The snapshot then also carries
@@ -2508,6 +2508,9 @@ int main(int argc, char **argv) {
       a.idle_spin_ms = 20.0;
       a.drop_late_ms = 50.0;
       a.health = 1;  // ovrobust health status (read only: poses identical; pose lines get "h")
+      a.predict = 2;  // user 2026-10-25 19:40: 200 Hz IMU-forward prediction from the prediction thread (read only)
+      a.predict_hz = 200.0;
+      a.pred_thread = 1;  // dropped again below for --tcp (needs stdio)
     } else if (pn != "none") {
       std::fprintf(stderr, "[ov_bridge] unknown --profile %s (known: rec20261025, none)\n", pn.c_str());
       return 2;
@@ -2622,6 +2625,7 @@ int main(int argc, char **argv) {
 
   g_idle.mode = a.idle_spin;
   g_idle.win_ms = a.idle_spin_ms;
+  if (a.profile == "rec20261025" && a.tcp) a.pred_thread = 0;  // integ: profile prediction thread is stdio only
   if (a.pred_thread && (a.predict <= 0 || a.tcp)) {  // 2026-10-25
     std::fprintf(stderr, "[ov_bridge] --pred-thread needs --predict 1|2 and --stdio\n");
     return 2;
@@ -2711,8 +2715,9 @@ int main(int argc, char **argv) {
     ::unsetenv("OV_KLT_PYR");
   }
   if (!a.profile.empty())
-    std::fprintf(stderr, "[ov_bridge] profile %s: ovopt '%s' idle_spin %d idle_spin_ms %.0f drop_late %.0f health %d (after explicit flags)\n",
-                 a.profile.c_str(), a.ovopt.c_str(), a.idle_spin, a.idle_spin_ms, a.drop_late_ms, a.health);
+    std::fprintf(stderr, "[ov_bridge] profile %s: ovopt '%s' idle_spin %d idle_spin_ms %.0f drop_late %.0f health %d predict %d hz %.0f pred_thread %d (after explicit flags)\n",
+                 a.profile.c_str(), a.ovopt.c_str(), a.idle_spin, a.idle_spin_ms, a.drop_late_ms, a.health, a.predict,
+                 a.predict_hz, a.pred_thread);
 
   // --cpus: pin before any thread exists (Bridge / OpenVINS / OpenCV threads inherit it)
   if (!a.cpus.empty()) {

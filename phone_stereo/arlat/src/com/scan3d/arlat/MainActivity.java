@@ -225,6 +225,11 @@ public class MainActivity extends Activity {
                     if (!getIntent().hasExtra("idle_spin_ms")) ov.idleSpinMs = 20;
                     if (!getIntent().hasExtra("drop_late_ms")) ov.dropLateMs = 50;
                     if (!getIntent().hasExtra("ov_health")) ov.ovHealth = true;
+                    // 0.6.21 (user 19:40): IMU priority send (incl. chunked images) + 200 Hz prediction with the prediction thread
+                    if (!getIntent().hasExtra("imu_prio")) ov.imuPrio = 1;
+                    if (!getIntent().hasExtra("predict")) ov.predict = 2;
+                    if (!getIntent().hasExtra("predict_hz")) ov.predictHz = 200;
+                    if (!getIntent().hasExtra("pred_thread")) ov.predThread = 1;
                 } else if (prof != null && !prof.isEmpty() && !"none".equals(prof)) throw new IllegalArgumentException("unknown profile " + prof);
                 String vu = getIntent().getStringExtra("viop_udp");                     // 0.6.20: ov_bridge --viop-udp HOST:PORT
                 ov.viopUdp = vu == null ? "" : vu.trim();

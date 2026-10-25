@@ -1,0 +1,60 @@
+Sun Oct 25 19:38:23 KST 2026
+b10debb4504a69a61da988a19a0636dad0e06e143b9f3d3652834f98a9501e34  /home/system/scanner/StereoDepthSeg-ovopt/scan3d/ov_bridge/build_ovopt_full/ov_bridge
+011290b2254237d356b8c48ad033e6b8ac5146cb098f1268fefa455dee9f49cb  /home/system/scanner/StereoDepthSeg-integ/scan3d/ov_bridge/build_integ_full/ov_bridge
+== h_ex rc 0 poses 845 | --ovopt all_exact
+== h_ex_ref rc 0 poses 845 | --ovopt all_exact
+== h_def rc 0 poses 845 | 
+== h_ref rc 0 poses 845 | 
+== h_envpyr rc 0 poses 845 | 
+== h_health rc 0 poses 845 | --health 1
+== h_pt_viop rc 0 poses 845 | --predict 2 --predict-hz 200 --pred-thread 1 --viop-udp 127.0.0.1:14699
+== h_pt_ref rc 0 poses 845 | --predict 2 --predict-hz 200 --pred-thread 1
+== r_prof_nodl rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec20261025 --drop-late 0
+== r_w3_ref rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin 2 --idle-spin-ms 20
+== r_ref rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin
+== r_def rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin
+== r_prof rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec20261025
+== harness: integ vs ovopt base
+ref /tmp/integ/ident/h_ref.jsonl: poses 845 tracking 815 hash 08688db0b4efe77d pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ/ident/h_def.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 0 first_diff None [] IDENTICAL
+/tmp/integ/ident/h_envpyr.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 0 first_diff None [] IDENTICAL
+ref /tmp/integ/ident/h_ex_ref.jsonl: poses 845 tracking 815 hash 08688db0b4efe77d pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ/ident/h_ex.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 0 first_diff None [] IDENTICAL
+ref /tmp/integ/ident/h_pt_ref.jsonl: poses 845 tracking 815 hash 08688db0b4efe77d pred 2428 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ/ident/h_pt_viop.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 2123 first_diff None [] IDENTICAL
+ref /tmp/integ/ident/h_ref.jsonl: poses 845 tracking 815 hash 08688db0b4efe77d pred 0 (excluded ['h', 'ms', 'remap_ms', 'wait_ms'])
+/tmp/integ/ident/h_health.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 0 first_diff None [] IDENTICAL
+== raw80: integ vs ovopt base
+ref /tmp/integ/ident/r_ref.jsonl: poses 2327 tracking 2003 hash 1e58bb28d8b3b8ca pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ/ident/r_def.jsonl: poses 2327 identical 2327/2327 hash 1e58bb28d8b3b8ca pred 0 first_diff None [] IDENTICAL
+ref /tmp/integ/ident/r_w3_ref.jsonl: poses 2327 tracking 2003 hash c5f0887c72811b73 pred 0 (excluded ['h', 'ms', 'remap_ms', 'wait_ms'])
+/tmp/integ/ident/r_prof_nodl.jsonl: poses 2327 identical 2327/2327 hash c5f0887c72811b73 pred 6051 first_diff None [] IDENTICAL
+/tmp/integ/ident/r_prof.jsonl: poses 2327 identical 0/2327 hash 164bf1887e1f1b22 pred 6072 first_diff 0 ['late_dropped'] DIFFERENT
+      1 [ov_bridge] OV_KLT_PYR=3 in the environment ignored (use --klt-pyr N)
+      1 [ov_bridge] drop-late: limit 50.0 ms | dropped 0 frames | min lag 685778851.9 ms
+      2 [ov_bridge] health t=13.466 INIT -> OK (tracked 121 used 11 since_upd 0.00 pos_std 0.087)
+      1 [ov_bridge] health t=2.998 INIT -> OK (tracked 181 used 0 since_upd 0.00 pos_std 0.122)
+      1 [ov_bridge] health t=22.365 OK -> DEGRADED (tracked 189 used 25 since_upd 0.00 pos_std 0.087)
+      1 [ov_bridge] health t=22.398 DEGRADED -> OK (tracked 188 used 43 since_upd 0.00 pos_std 0.087)
+      1 [ov_bridge] health t=22.465 OK -> DEGRADED (tracked 165 used 24 since_upd 0.00 pos_std 0.087)
+      1 [ov_bridge] health t=22.532 DEGRADED -> OK (tracked 220 used 10 since_upd 0.00 pos_std 0.087)
+      1 [ov_bridge] health t=23.665 OK -> DEGRADED (tracked 193 used 0 since_upd 0.23 pos_std 0.087)
+      1 [ov_bridge] health t=24.432 DEGRADED -> LOST (tracked 193 used 0 since_upd 1.00 pos_std 0.087)
+      1 [ov_bridge] health t=3.232 OK -> DEGRADED (tracked 181 used 0 since_upd 0.23 pos_std 0.093)
+      1 [ov_bridge] health t=3.998 DEGRADED -> LOST (tracked 181 used 0 since_upd 1.00 pos_std 0.089)
+      1 [ov_bridge] health t=6.798 LOST -> OK (tracked 168 used 4 since_upd 0.00 pos_std 0.087)
+      1 [ov_bridge] health: frames INIT 30 OK 510 DEGRADED 49 LOST 256 | transitions 11 | max LOST run 172 frames | recover state 0 full 0 | blanked 0 | init_ready frames 30
+      2 [ov_bridge] health: frames INIT 324 OK 2003 DEGRADED 0 LOST 0 | transitions 2 | max LOST run 0 frames | recover state 0 full 0 | blanked 0 | init_ready frames 319
+      3 [ov_bridge] ovrobust: init_still 0 | health 1 log - | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 0 (max gap 3.0 s, min feats 20) | test blank 0 windows
+      1 [ov_bridge] pred thread: mode 2 hz 200 | lines 2123 (frame 814 rate 1309) snapshots 815 | compute us p50 40.1 p95 162.1 max 245.2 | horizon ms p50 508.4 p95 531.4 max 533.3 | thread cpu 0.183 s (pred) 0.128 s (reader)
+      1 [ov_bridge] pred thread: mode 2 hz 200 | lines 2428 (frame 814 rate 1614) snapshots 815 | compute us p50 21.4 p95 131.6 max 205.9 | horizon ms p50 507.2 p95 527.3 max 533.3 | thread cpu 0.155 s (pred) 0.119 s (reader)
+      1 [ov_bridge] pred thread: mode 2 hz 200 | lines 6051 (frame 2003 rate 4048) snapshots 2003 | compute us p50 32.7 p95 54.7 max 229.8 | horizon ms p50 122.1 p95 156.9 max 506.8 | thread cpu 0.320 s (pred) 4.786 s (reader)
+      1 [ov_bridge] pred thread: mode 2 hz 200 | lines 6072 (frame 2003 rate 4069) snapshots 2003 | compute us p50 23.0 p95 45.7 max 145.1 | horizon ms p50 119.7 p95 155.3 max 506.8 | thread cpu 0.277 s (pred) 0.614 s (reader)
+      1 [ov_bridge] profile rec20261025: ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol' idle_spin 2 idle_spin_ms 20 drop_late 0 health 1 predict 2 hz 200 pred_thread 1 (after explicit flags)
+      1 [ov_bridge] profile rec20261025: ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol' idle_spin 2 idle_spin_ms 20 drop_late 50 health 1 predict 2 hz 200 pred_thread 1 (after explicit flags)
+      1 [ov_bridge] viop: new world frame (reset_counter 0)
+      1 [ov_bridge] viop: udp 127.0.0.1:14699 msgs 1 mount imu | sent 2123 fail 0 heartbeat 139 timesync 0 | age ms (send - predicted instant) p50 684954880.00 p95 684962752.00 max 684964224.00 | send - newest IMU receive ms p50 0.15 p95 0.24 max 31.71
+      1 [ov_bridge] viop: udp 127.0.0.1:14699 msgs odom mount imu yaw_align 1 replay_time 0 sysid 1
+Sun Oct 25 19:39:23 KST 2026
+ref /tmp/integ/ident/r_w3_ref.jsonl: poses 2327 tracking 2003 hash c5f0887c72811b73 pred 0 (excluded ['h', 'late_dropped', 'ms', 'remap_ms', 'wait_ms'])
+/tmp/integ/ident/r_prof.jsonl: poses 2327 identical 2327/2327 hash c5f0887c72811b73 pred 6072 first_diff None [] IDENTICAL

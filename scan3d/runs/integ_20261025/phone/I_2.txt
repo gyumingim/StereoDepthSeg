@@ -1,0 +1,5 @@
+# integ-20261025 I_2: A = current live combo (W3 + idle_spin 2 + 15 ms, 0.6.20 bridge = same code path), B = --profile rec20261025 (0.6.21 bridge: + drop-late 50, health, predict 2 @200 Hz pred thread), ABBA
+A_live_r1 ov_bridge_integ2 c4 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15
+B_prof_r1 ov_bridge_integ2 c4 2 2 1.0 1 0 raw80 --profile rec20261025
+B_prof_r2 ov_bridge_integ2 c4 2 2 1.0 1 0 raw80 --profile rec20261025
+A_live_r2 ov_bridge_integ2 c4 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15
