@@ -41,7 +41,7 @@ pull)
   for t in $(grep -v '^#' $HERE/$L.txt | awk 'NF{print $1}'); do
     mkdir -p $HERE/out_$L/$t
     for f in po.jsonl tl.csv prof.csv samp.txt run.txt pe.txt feeder.txt battery_start.txt battery_end.txt; do
-      $ADB pull $P/out/$t/$f "$(wslpath -w $HERE/out_$L/$t)\$f" > /dev/null 2>&1 || true
+      $ADB pull $P/out/$t/$f "$(wslpath -w $HERE/out_$L/$t)\\$f" > /dev/null 2>&1 || true
     done
     [ -f $HERE/out_$L/$t/po.jsonl ] && gzip -f $HERE/out_$L/$t/po.jsonl
   done

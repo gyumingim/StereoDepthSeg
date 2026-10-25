@@ -1,0 +1,12 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=1 rs_derot=0 rs_row_ppm=0 rs_postinit=0 ekf_sparse=0 sym_inplace=0 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol', prof log out/v_s100_A_r1/prof.csv)
+[ov_bridge] affinity start: (not pinned) threads 24023:ov_bridge_ovupd=0,1,2,3,4,5,6,7,8,9
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 2 -> 2 | TBB (ver 2021.11 interface 12110) | cpus 10 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /data/local/tmp/replay/remap_1920x1080.bin
+[ov_bridge] affinity ready: (not pinned) threads 24023:ov_bridge_ovupd=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin: mode 2 (pool) stripes 2 max 200 ms window 15.0 ms
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] affinity cam300: (not pinned) threads 24023:ov_bridge_ovupd=0,1,2,3,4,5,6,7,8,9 24026:ov_bridge_ovupd=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 6434 spun 2528 timeouts 1 spin 4.46 s | exit_us n 2527 p50 2.6 p95 7.8 p99 34.4 max 2301.4 | window 15.0 ms period 36.48 ms blocked 2230 (4.82 s)
+[ov_bridge] affinity end: (not pinned) threads 24023:ov_bridge_ovupd=0,1,2,3,4,5,6,7,8,9 24026:ov_bridge_ovupd=0,1,2,3,4,5,6,7,8,9 24773:ov_bridge_ovupd=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 43309 spun 4887 timeouts 1 spin 8.29 s | exit_us n 4886 p50 2.5 p95 6.1 p99 19.0 max 2301.4 | window 15.0 ms period 42.68 ms blocked 2541 (5.44 s)
