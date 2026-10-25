@@ -32,6 +32,8 @@
 #include "utils/opencv_lambda_body.h"
 #include "utils/print.h"
 
+#include "ovpipe.h"  // scan3d ovpipe patch (2026-10-26): --pipe 1 path in feed_new_camera, off by default
+
 using namespace ov_core;
 
 // ---- scan3d patch (2026-10-24, arlat 0.6.15): KLT overlap ----
@@ -73,6 +75,128 @@ static int scan3d_klt_pyr() {
 }
 
 void TrackKLT::feed_new_camera(const CameraData &message) {
+  // scan3d ovpipe patch (2026-10-26, ov_bridge --pipe 1; off = this block is skipped): see ovpatch/ovpipe.h
+  if (ovpipe::P.on.load(std::memory_order_relaxed) && ovpipe::P.target.load() == static_cast<const void *>(this) &&
+      message.images.size() == 1 && message.masks.size() == 1 && message.sensor_ids.size() == 1 && !use_stereo &&
+      !scan3d_klt_overlap_on()) {
+    auto &P = ovpipe::P;
+    const size_t cam_id = message.sensor_ids.at(0);
+    // tracker state before any compute of this tracker generation (members untouched until the first commit;
+    // currid is only changed by computes, all under P.compute_m) - caller holds P.compute_m
+    auto initial_state = [&](uint64_t gen) -> std::shared_ptr<ovpipe::Res> {
+      if (!P.init_state || P.init_trk != static_cast<const void *>(this) || P.init_gen != gen) {
+        auto r = std::make_shared<ovpipe::Res>();
+        std::lock_guard<std::mutex> lckv(mtx_last_vars);
+        auto it_i = img_last.find(cam_id);
+        if (it_i != img_last.end()) r->st.img = it_i->second;
+        auto it_m = img_mask_last.find(cam_id);
+        if (it_m != img_mask_last.end()) r->st.mask = it_m->second;
+        auto it_y = img_pyramid_last.find(cam_id);
+        if (it_y != img_pyramid_last.end()) r->st.pyr = it_y->second;
+        auto it_p = pts_last.find(cam_id);
+        if (it_p != pts_last.end()) r->st.pts = it_p->second;
+        auto it_d = ids_last.find(cam_id);
+        if (it_d != ids_last.end()) r->st.ids = it_d->second;
+        r->st.currid = currid;
+        r->id = 0;
+        P.init_state = r;
+        P.init_trk = static_cast<const void *>(this);
+        P.init_gen = gen;
+      }
+      return P.init_state;
+    };
+    // = upstream feed_new_camera (histogram + pyramid) + feed_monocular, but reading the previous state from `in` and
+    // writing everything into a Res instead of the database / members. Caller holds P.compute_m.
+    auto compute = [&](const ovpipe::Res &in, const cv::Mat &img_in, const cv::Mat &mask) -> std::shared_ptr<ovpipe::Res> {
+      auto r = std::make_shared<ovpipe::Res>();
+      r->id = P.next_id.fetch_add(1);
+      r->base = in.id;
+      if (scan3d_klt_pyr() > 0) pyr_levels = scan3d_klt_pyr();
+      const int nf0 = num_features;
+      currid = in.st.currid;
+      cv::Mat img;
+      if (histogram_method == HistogramMethod::HISTOGRAM) {
+        cv::equalizeHist(img_in, img);
+      } else if (histogram_method == HistogramMethod::CLAHE) {
+        double eq_clip_limit = 10.0;
+        cv::Size eq_win_size = cv::Size(8, 8);
+        cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(eq_clip_limit, eq_win_size);
+        clahe->apply(img_in, img);
+      } else {
+        img = img_in;
+      }
+      std::vector<cv::Mat> imgpyr;
+      cv::buildOpticalFlowPyramid(img, imgpyr, win_size, pyr_levels);
+      r->st.img = img;
+      r->st.pyr = imgpyr;
+      r->st.mask = mask;
+      if (in.st.pts.empty()) {  // upstream: no tracks last time -> detect only
+        perform_detection_monocular(imgpyr, mask, r->st.pts, r->st.ids);
+      } else {
+        auto pts_left_old = in.st.pts;
+        auto ids_left_old = in.st.ids;
+        perform_detection_monocular(in.st.pyr, in.st.mask, pts_left_old, ids_left_old);
+        std::vector<uchar> mask_ll;
+        std::vector<cv::KeyPoint> pts_left_new = pts_left_old;
+        perform_matching(in.st.pyr, imgpyr, pts_left_old, pts_left_new, cam_id, cam_id, mask_ll);
+        assert(pts_left_new.size() == ids_left_old.size());
+        if (mask_ll.empty()) {
+          r->rsc_fail = true;  // pts / ids stay empty
+        } else {
+          for (size_t i = 0; i < pts_left_new.size(); i++) {
+            if (pts_left_new.at(i).pt.x < 0 || pts_left_new.at(i).pt.y < 0 || (int)pts_left_new.at(i).pt.x >= img.cols ||
+                (int)pts_left_new.at(i).pt.y >= img.rows)
+              continue;
+            if ((int)mask.at<uint8_t>((int)pts_left_new.at(i).pt.y, (int)pts_left_new.at(i).pt.x) > 127)
+              continue;
+            if (mask_ll[i]) {
+              r->st.pts.push_back(pts_left_new[i]);
+              r->st.ids.push_back(ids_left_old[i]);
+            }
+          }
+          r->obs.reserve(r->st.pts.size());
+          for (size_t i = 0; i < r->st.pts.size(); i++) {
+            cv::Point2f npt_l = camera_calib.at(cam_id)->undistort_cv(r->st.pts.at(i).pt);
+            r->obs.push_back({r->st.ids.at(i), r->st.pts.at(i).pt.x, r->st.pts.at(i).pt.y, npt_l.x, npt_l.y});
+          }
+        }
+      }
+      r->st.currid = currid;
+      r->nf = (num_features == nf0) ? nf0 : -1;
+      return r;
+    };
+    if (ovpipe::tl_worker) {  // worker precompute (ovpipe::Pipe::run): result -> tl_out, nothing shared is written
+      std::lock_guard<std::mutex> lc(P.compute_m);
+      std::shared_ptr<ovpipe::Res> base = ovpipe::tl_base ? ovpipe::tl_base : initial_state(ovpipe::tl_gen);
+      ovpipe::tl_out = compute(*base, message.images.at(0), message.masks.at(0));
+      return;
+    }
+    // main thread (track_image_and_update): take the precomputed result if it was computed from the committed state
+    std::lock_guard<std::mutex> lck(mtx_feeds.at(cam_id));
+    std::shared_ptr<ovpipe::Res> r = P.claim(ovpipe::tl_seq, num_features);
+    const bool fresh = !r;
+    if (fresh) {  // = the sequential path: compute now from the committed state
+      std::lock_guard<std::mutex> lc(P.compute_m);
+      std::shared_ptr<ovpipe::Res> base = P.com_res();
+      if (!base) base = initial_state(P.gen());
+      r = compute(*base, message.images.at(0), message.masks.at(0));
+      P.add_sync();
+    }
+    // commit = the upstream tail: database writes, then "move forward in time"
+    for (const auto &o : r->obs)
+      database->update_feature(o.id, message.timestamp, cam_id, o.u, o.v, o.nu, o.nv);
+    {
+      std::lock_guard<std::mutex> lckv(mtx_last_vars);
+      img_last[cam_id] = r->st.img;
+      img_pyramid_last[cam_id] = r->st.pyr;
+      img_mask_last[cam_id] = r->st.mask;
+      pts_last[cam_id] = r->st.pts;
+      ids_last[cam_id] = r->st.ids;
+    }
+    if (r->rsc_fail) PRINT_ERROR(RED "[KLT-EXTRACTOR]: Failed to get enough points to do RANSAC, resetting.....\n" RESET);
+    P.committed(r, fresh);
+    return;
+  }
   if (scan3d_klt_pyr() > 0) pyr_levels = scan3d_klt_pyr();  // scan3d ovheat patch (default off = upstream 5)
 
   // Error check that we have all the data

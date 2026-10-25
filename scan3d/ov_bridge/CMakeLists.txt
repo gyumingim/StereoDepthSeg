@@ -110,7 +110,7 @@ set_target_properties(ov_bridge PROPERTIES
   INSTALL_RPATH "${OV_BUILD};${OV_LOCAL}/lib")
 
 # klt_bench (2026-10-24): TrackKLT / remap timing vs OpenCV thread count (CPU only)
-add_executable(klt_bench klt_bench.cpp ovpatch/TrackKLT.cpp)
+add_executable(klt_bench klt_bench.cpp ovpatch/TrackKLT.cpp ovpatch/ovopt.cpp)  # ovopt.cpp: ovpipe symbols (2026-10-26)
 target_compile_definitions(klt_bench PRIVATE ROS_AVAILABLE=0 ENABLE_ARUCO_TAGS=1)
 target_include_directories(klt_bench PRIVATE "${OV_SRC}/ov_core/src" "${OV_SRC}/ov_core/src/track" ${EIGEN3_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 target_link_libraries(klt_bench PRIVATE ${OV_MSCKF_LIB} ${OpenCV_LIBRARIES} ${Boost_LIBRARIES} Threads::Threads)

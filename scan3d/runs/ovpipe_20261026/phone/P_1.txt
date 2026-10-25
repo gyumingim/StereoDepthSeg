@@ -1,0 +1,10 @@
+# ovpipe P_1 (2026-10-26): camera-free raw80 replay, c4, 2 threads. 60 fps proxy = raw80 paced at speed 2.0 (frame every
+# 16.7 ms, same images); 30 fps = speed 1.0. A = --profile rec60 / rec20261025 (pipe off), B = same + --pipe 1. ABBA.
+A60_r1 ov_bridge_ovpipe c4 2 2 2.0 1 0 raw80 --profile rec60
+B60_r1 ov_bridge_ovpipe c4 2 2 2.0 1 0 raw80 --profile rec60 --pipe 1
+B60_r2 ov_bridge_ovpipe c4 2 2 2.0 1 0 raw80 --profile rec60 --pipe 1
+A60_r2 ov_bridge_ovpipe c4 2 2 2.0 1 0 raw80 --profile rec60
+A30_r1 ov_bridge_ovpipe c4 2 2 1.0 1 0 raw80 --profile rec20261025
+B30_r1 ov_bridge_ovpipe c4 2 2 1.0 1 0 raw80 --profile rec20261025 --pipe 1
+B30_r2 ov_bridge_ovpipe c4 2 2 1.0 1 0 raw80 --profile rec20261025 --pipe 1
+A30_r2 ov_bridge_ovpipe c4 2 2 1.0 1 0 raw80 --profile rec20261025

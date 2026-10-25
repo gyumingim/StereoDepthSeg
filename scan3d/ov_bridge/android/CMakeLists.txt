@@ -71,7 +71,7 @@ endif ()
 
 # klt_bench (2026-10-24): TrackKLT / remap timing vs OpenCV thread count on the phone (adb shell, CPU only, no camera)
 add_executable(klt_bench ../klt_bench.cpp
-  ${S}/ov_core/src/track/TrackBase.cpp ../ovpatch/TrackKLT.cpp ${S}/ov_core/src/feat/Feature.cpp
+  ${S}/ov_core/src/track/TrackBase.cpp ../ovpatch/TrackKLT.cpp ../ovpatch/ovopt.cpp ${S}/ov_core/src/feat/Feature.cpp
   ${S}/ov_core/src/feat/FeatureDatabase.cpp ${S}/ov_core/src/utils/print.cpp)
 target_compile_definitions(klt_bench PRIVATE ROS_AVAILABLE=0 ENABLE_ARUCO_TAGS=0)
 target_include_directories(klt_bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/shim ${S}/ov_core/src ${S}/ov_core/src/track ${DEPS}/include/eigen3 ${DEPS}/include

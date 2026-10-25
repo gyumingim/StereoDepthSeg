@@ -1,0 +1,50 @@
+Sun Oct 25 22:31:53 KST 2026
+32cf9bb2f73e7cb4995499ef3cd647862d7ae8237ccb95fca3f417396db06b67  /home/system/scanner/StereoDepthSeg-integ/scan3d/ov_bridge/build_integ_full/ov_bridge
+7b72a57554dc92b51df1ecbe1e58c3261f91166013fb55c3d09edd72acaa3f74  /home/system/scanner/StereoDepthSeg-ovpipe/scan3d/ov_bridge/build_ovpipe_full/ov_bridge
+== r_pipe rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --pipe 1
+== r60_ref rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec60 --drop-late 0
+== r_def rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin
+== r_ref rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin
+== r60_pipe rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec60 --drop-late 0 --pipe 1
+== x_w3 rc 0 poses 2389 | inject --profile rec60 --drop-late 0
+== x_pipe rc 0 poses 2389 | inject --pipe 1
+== x_def rc 0 poses 2389 | inject 
+== h_pipe rc 0 poses 845 | --pipe 1
+== h_ref rc 0 poses 845 | 
+== h_def rc 0 poses 845 | 
+== x_pipe_w3 rc 0 poses 2389 | inject --pipe 1 --profile rec60 --drop-late 0
+== h_pipe_pt rc 0 poses 845 | --pipe 1 --predict 2 --predict-hz 200 --pred-thread 1
+== harness
+ref /tmp/ovpipe/ident/h_ref.jsonl: poses 845 tracking 815 hash 08688db0b4efe77d pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/ovpipe/ident/h_def.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 0 first_diff None [] IDENTICAL
+/tmp/ovpipe/ident/h_pipe.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 0 first_diff None [] IDENTICAL
+/tmp/ovpipe/ident/h_pipe_pt.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 3475 first_diff None [] IDENTICAL
+== raw80
+ref /tmp/ovpipe/ident/r_ref.jsonl: poses 2327 tracking 2003 hash 1e58bb28d8b3b8ca pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/ovpipe/ident/r_def.jsonl: poses 2327 identical 2327/2327 hash 1e58bb28d8b3b8ca pred 0 first_diff None [] IDENTICAL
+/tmp/ovpipe/ident/r_pipe.jsonl: poses 2327 identical 2327/2327 hash 1e58bb28d8b3b8ca pred 0 first_diff None [] IDENTICAL
+== raw80 rec60 profile
+ref /tmp/ovpipe/ident/r60_ref.jsonl: poses 2327 tracking 2003 hash c5f0887c72811b73 pred 9399 (excluded ['h', 'ms', 'remap_ms', 'wait_ms'])
+/tmp/ovpipe/ident/r60_pipe.jsonl: poses 2327 identical 2327/2327 hash c5f0887c72811b73 pred 8533 first_diff None [] IDENTICAL
+== injected (drops + reset)
+ref /tmp/ovpipe/ident/x_def.jsonl: poses 2389 tracking 1201 hash da39112f45c117b3 pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/ovpipe/ident/x_pipe.jsonl: poses 2389 identical 2389/2389 hash da39112f45c117b3 pred 0 first_diff None [] IDENTICAL
+ref /tmp/ovpipe/ident/x_w3.jsonl: poses 2389 tracking 1201 hash 69366db912e95ded pred 4962 (excluded ['h', 'ms', 'remap_ms', 'wait_ms'])
+/tmp/ovpipe/ident/x_pipe_w3.jsonl: poses 2389 identical 2389/2389 hash 69366db912e95ded pred 4964 first_diff None [] IDENTICAL
+/tmp/ovpipe/ident/h_pipe.err:[ov_bridge] pipe: on (worker thread: remap + KLT tracking of the next frame while the main thread updates)
+/tmp/ovpipe/ident/h_pipe.err:[ov_bridge] pipe: submitted 845 | fed frames: precomputed 845, synchronous 0 (miss base 0 nf 0 gen 0, no job 0, no result 0) | drops 0 rechains 1 | worker tracks 845 (10.86 ms avg) wasted 0 exc 0, remaps 0.00 ms avg | claim waited 354 (avg 7.46 max 35.22 ms) | image waits 0 (0.00 ms) | trackers 1
+/tmp/ovpipe/ident/h_pipe_pt.err:[ov_bridge] pipe: on (worker thread: remap + KLT tracking of the next frame while the main thread updates)
+/tmp/ovpipe/ident/h_pipe_pt.err:[ov_bridge] pipe: submitted 845 | fed frames: precomputed 844, synchronous 1 (miss base 0 nf 1 gen 0, no job 0, no result 0) | drops 0 rechains 2 | worker tracks 845 (9.93 ms avg) wasted 0 exc 0, remaps 0.00 ms avg | claim waited 325 (avg 6.75 max 28.98 ms) | image waits 2 (13.89 ms) | trackers 1
+/tmp/ovpipe/ident/r60_pipe.err:[ov_bridge] pipe: on (worker thread: remap + KLT tracking of the next frame while the main thread updates)
+/tmp/ovpipe/ident/r60_pipe.err:[ov_bridge] pipe: submitted 2327 | fed frames: precomputed 2327, synchronous 0 (miss base 0 nf 0 gen 0, no job 0, no result 0) | drops 0 rechains 1 | worker tracks 2327 (11.58 ms avg) wasted 0 exc 0, remaps 4.07 ms avg | claim waited 1153 (avg 8.57 max 81.84 ms) | image waits 55 (215.23 ms) | trackers 1
+/tmp/ovpipe/ident/r_pipe.err:[ov_bridge] pipe: on (worker thread: remap + KLT tracking of the next frame while the main thread updates)
+/tmp/ovpipe/ident/r_pipe.err:[ov_bridge] pipe: submitted 2327 | fed frames: precomputed 2327, synchronous 0 (miss base 0 nf 0 gen 0, no job 0, no result 0) | drops 0 rechains 1 | worker tracks 2327 (7.67 ms avg) wasted 0 exc 0, remaps 3.02 ms avg | claim waited 357 (avg 6.47 max 35.03 ms) | image waits 47 (153.59 ms) | trackers 1
+/tmp/ovpipe/ident/x_def.err:[0m[33mimage receiinject: images 2327 every 37 reset_at 1200
+/tmp/ovpipe/ident/x_pipe.err:[ov_bridge] pipe: on (worker thread: remap + KLT tracking of the next frame while the main thread updates)
+/tmp/ovpipe/ident/x_pipe.err:[0m[33mimage receiinject: images 2327 every 37 reset_at 1200
+/tmp/ovpipe/ident/x_pipe.err:[ov_bridge] pipe: submitted 2389 | fed frames: precomputed 2389, synchronous 0 (miss base 0 nf 0 gen 0, no job 0, no result 0) | drops 0 rechains 2 | worker tracks 2391 (10.28 ms avg) wasted 0 exc 0, remaps 4.58 ms avg | claim waited 1085 (avg 9.89 max 113.24 ms) | image waits 188 (974.24 ms) | trackers 2
+/tmp/ovpipe/ident/x_pipe_w3.err:[ov_bridge] pipe: on (worker thread: remap + KLT tracking of the next frame while the main thread updates)
+/tmp/ovpipe/ident/x_pipe_w3.err:[0m[33mimage receiinject: images 2327 every 37 reset_at 1200
+/tmp/ovpipe/ident/x_pipe_w3.err:[ov_bridge] pipe: submitted 2389 | fed frames: precomputed 2387, synchronous 2 (miss base 0 nf 2 gen 0, no job 0, no result 0) | drops 0 rechains 4 | worker tracks 2391 (8.00 ms avg) wasted 0 exc 0, remaps 3.36 ms avg | claim waited 1459 (avg 7.34 max 51.78 ms) | image waits 187 (611.72 ms) | trackers 2
+/tmp/ovpipe/ident/x_w3.err:[0m[33mimage receiinject: images 2327 every 37 reset_at 1200
+Sun Oct 25 22:34:48 KST 2026

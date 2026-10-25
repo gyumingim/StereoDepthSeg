@@ -233,6 +233,7 @@
 #include <opencv2/imgproc.hpp>
 
 #include "ovopt.h"  // ovpatch/: --ovopt flags + profiler (2026-10-25)
+#include "ovpipe.h"  // ovpatch/: --pipe (2026-10-26, ovpipe)
 #include "mav_out.h"  // --mav-udp drone output (2026-10-25, ovdrone)
 
 #include "core/VioManager.h"
@@ -313,6 +314,7 @@ struct Args {
   int recover_min_feats = 20;
   int recover_full = 0;       // --recover-full 0|1 (full reset when the state is bad / the gap too long; default off)
   std::string test_blank;     // --test-blank T0:D,...
+  int pipe = 0;               // --pipe 0|1 (2026-10-26, ovpipe; header)
 };
 
 // --health rules (header); --health-cfg upd_deg=0.2,... overrides
@@ -423,6 +425,7 @@ struct InRec {
   uint32_t type = 0;  // record type (chunks already assembled into kStereo) or kEof / kBad
   std::vector<uint8_t> buf;
   int64_t t_hdr_boot = 0, t_rx_boot = 0, t_hdr_mono = 0;
+  uint64_t pipe_seq = 0;  // --pipe (2026-10-26): image record number handed to ovpipe::P (0 = none)
 };
 constexpr int kMaxPendingImg = 2;  // reader stops reading at a new image while this many images are unprocessed
 struct InQueue {
@@ -480,8 +483,10 @@ struct InQueue {
 };
 InQueue *g_inq = nullptr;
 inline bool input_ready(int fd) { return g_inq ? g_inq->n.load(std::memory_order_acquire) > 0 : fd_ready(fd); }
+inline bool pipe_busy() { return ovpipe::P.on.load(std::memory_order_relaxed) && ovpipe::P.busy.load(std::memory_order_relaxed); }
 struct IdleSpin {
   int mode = 0, stripes = 1;
+  uint64_t pipe_spin1_waits = 0;  // --pipe: waits (or rests of waits) spun on the main thread only
   uint64_t waits = 0, spun = 0, timeouts = 0;  // waits = calls, spun = input was not there yet
   double spin_s = 0.0;                          // total time spent spinning
   std::vector<float> exit_us;                   // mode 2 exit latencies (every spun wait)
@@ -540,7 +545,11 @@ struct IdleSpin {
     spun++;
     const int64_t t0 = mono_ns(), tmax = t0 + static_cast<int64_t>(kIdleSpinMaxMs * 1e6);
     bool timed_out = false;
-    if (mode == 1) {
+    // --pipe (2026-10-26): while the pipe worker computes, the OpenCV pool must stay free for its KLT -> modes 2/3 spin
+    // on the main thread only (mode 1) for this wait. Without --pipe pipe_busy() is always false (unchanged).
+    const bool pipe_spin1 = mode >= 2 && pipe_busy();
+    if (pipe_spin1) pipe_spin1_waits++;
+    if (mode == 1 || pipe_spin1) {
       while (!input_ready(fd)) {
         cpu_relax();
         if (mono_ns() > tmax) {
@@ -582,6 +591,7 @@ struct IdleSpin {
       std::atomic<bool> go{false};
       std::atomic<int64_t> t_seen{0};
       std::atomic<bool> to{false};
+      std::atomic<bool> pipe_left{false};
       cv::parallel_for_(
           cv::Range(0, stripes),
           [&](const cv::Range &) {
@@ -590,6 +600,11 @@ struct IdleSpin {
               if (input_ready(fd)) {
                 int64_t z = 0;
                 t_seen.compare_exchange_strong(z, mono_ns());
+                go.store(true);
+                break;
+              }
+              if (pipe_busy()) {  // --pipe: the worker started -> free the pool (main spins on below)
+                pipe_left.store(true);
                 go.store(true);
                 break;
               }
@@ -607,6 +622,16 @@ struct IdleSpin {
       if (t_seen.load() > 0) {
         last_exit_us = (t_ret - t_seen.load()) / 1e3;
         if (exit_us.size() < 2000000) exit_us.push_back(static_cast<float>(last_exit_us));
+      }
+      if (pipe_left.load() && t_seen.load() == 0 && !timed_out) {  // --pipe: rest of this wait = mode 1
+        pipe_spin1_waits++;
+        while (!input_ready(fd)) {
+          cpu_relax();
+          if (mono_ns() > tmax) {
+            timed_out = true;
+            break;
+          }
+        }
       }
     }
     const int64_t t1 = mono_ns();
@@ -634,6 +659,8 @@ struct IdleSpin {
     if (win_ms > 0.0)  // --idle-spin-ms (2026-10-25)
       std::fprintf(stderr, " | window %.1f ms period %.2f ms blocked %llu (%.2f s)", win_ms, period_ns / 1e6,
                    static_cast<unsigned long long>(blocked), blocked_s);
+    if (ovpipe::P.on.load())  // --pipe (2026-10-26)
+      std::fprintf(stderr, " | pipe main-only spins %llu", static_cast<unsigned long long>(pipe_spin1_waits));
     std::fprintf(stderr, "\n");
   }
 };
@@ -792,6 +819,7 @@ struct CamMsg {
   int64_t rx_hdr_boot_ns = 0, rx_boot_ns = 0;     // --timing-log: record header / payload read (CLOCK_BOOTTIME)
   double spin_wait_us = -1.0, spin_exit_us = -1.0;  // --idle-spin wait before this record (IdleSpin)
   bool blank = false;                                // --test-blank: image replaced by black
+  uint64_t pipe_seq = 0;                             // --pipe: record sequence number (0 = none)
 };
 
 // ---- --pred-thread (header; 2026-10-25) ----
@@ -1108,6 +1136,18 @@ public:
                  cfg_threads, a.threads, params_.num_opencv_threads, cv_parallel_.c_str(), cv::getNumberOfCPUs(),
                  a.klt_overlap);
     if (!a.remap.empty()) load_remap(a.remap);
+    if (ovpipe::P.on.load() && (params_.state_options.num_cameras != 1 || params_.downsample_cameras || !params_.use_klt)) {
+      std::fprintf(stderr, "[ov_bridge] pipe: only mono KLT without downsample_cameras -> --pipe off\n");
+      ovpipe::P.on.store(false);
+    }
+    if (ovpipe::P.on.load()) {  // --pipe (2026-10-26): worker gets the same remap tables / mask as on_stereo
+      ovpipe::P.map_x = map_x_;
+      ovpipe::P.map_y = map_y_;
+      ovpipe::P.remap_src_w = remap_src_w_;
+      ovpipe::P.remap_src_h = remap_src_h_;
+      ovpipe::P.frame_nocopy = ovopt::g.frame_nocopy != 0;
+      if (params_.use_mask && params_.masks.count(0)) ovpipe::P.mask = params_.masks.at(0);
+    }
     if (!a.timing_log.empty()) {
       tlog_ = std::fopen(a.timing_log.c_str(), "w");
       if (tlog_)
@@ -1176,6 +1216,54 @@ public:
 
   bool ok() const { return ok_; }
 
+  // ---- --pipe (2026-10-26, ovpipe; header + ovpatch/ovpipe.h). All no-ops while ovpipe::P.on is false. ----
+  void set_pipe_seq(uint64_t s) { cur_pipe_seq_ = s; }
+  void pipe_drop(uint64_t seq) {
+    if (seq && ovpipe::P.on.load()) ovpipe::P.drop(seq);
+  }
+  void pipe_attach() {
+    if (!ovpipe::P.on.load()) return;
+    std::shared_ptr<ov_core::TrackBase> t = ovpipe::last_tracker;  // set by the VioManager constructor just now
+    ovpipe::last_tracker.reset();
+    if (!t) {
+      std::fprintf(stderr, "[ov_bridge] pipe: no tracker from the VioManager -> pipe idle for it\n");
+      ovpipe::P.set_tracker(nullptr, nullptr, nullptr);
+      return;
+    }
+    ov_core::TrackBase *tp = t.get();
+    ovpipe::P.set_tracker(
+        t,
+        [tp](const cv::Mat &img, const cv::Mat &mask) {
+          ov_core::CameraData d;
+          d.timestamp = 0.0;  // not used by the precompute (the commit uses the fed frame time)
+          d.sensor_ids.push_back(0);
+          d.images.push_back(img);
+          d.masks.push_back(mask);
+          tp->feed_new_camera(d);
+        },
+        static_cast<const void *>(tp));
+    n_pipe_attach_++;
+  }
+  void log_pipe() const {
+    if (!ovpipe::P.on.load()) return;
+    const ovpipe::Stats st = ovpipe::P.stats();
+    std::fprintf(stderr,
+                 "[ov_bridge] pipe: submitted %llu | fed frames: precomputed %llu, synchronous %llu (miss base %llu nf %llu "
+                 "gen %llu, no job %llu, no result %llu) | drops %llu rechains %llu | worker tracks %llu (%.2f ms avg) wasted "
+                 "%llu exc %llu, remaps %.2f ms avg | claim waited %llu (avg %.2f max %.2f ms) | image waits %llu (%.2f ms) | "
+                 "trackers %llu\n",
+                 (unsigned long long)st.submitted,
+                 (unsigned long long)st.hits, (unsigned long long)st.sync,
+                 (unsigned long long)st.miss_base, (unsigned long long)st.miss_nf, (unsigned long long)st.miss_gen,
+                 (unsigned long long)st.nojob, (unsigned long long)st.nores, (unsigned long long)st.drops,
+                 (unsigned long long)st.rechains, (unsigned long long)st.worker_tracks,
+                 st.worker_tracks ? st.worker_track_ms / st.worker_tracks : 0.0, (unsigned long long)st.worker_wasted,
+                 (unsigned long long)st.worker_exc, st.submitted ? st.worker_remap_ms / st.submitted : 0.0,
+                 (unsigned long long)st.claim_waited, st.claim_waited ? st.claim_wait_ms / st.claim_waited : 0.0,
+                 st.max_claim_wait_ms, (unsigned long long)st.img_waits, st.img_wait_ms,
+                 (unsigned long long)n_pipe_attach_);
+  }
+
   // --init-gate 그림자 VioManager (넓힌 시차 기준) 새로 만들기. refeed = 지금까지 넣은 최근 IMU 를 다시 넣음.
   void make_shadow(bool refeed) {
     shadow_.reset();
@@ -1188,8 +1276,10 @@ public:
 
   // VioManager 새로 만들기. 붙잡아 둔 IMU(imu_hold_) 는 새 시스템에 그대로 넣을 수 있으므로 남긴다.
   void make_system(ov_msckf::VioManagerOptions *p = nullptr) {  // VioManager takes a non-const reference
+    for (const auto &c : cams_) pipe_drop(c.pipe_seq);  // --pipe: queued frames are not fed (cleared below)
     if (p) sys_ = std::make_shared<ov_msckf::VioManager>(*p);
     else sys_ = std::make_shared<ov_msckf::VioManager>(params_);
+    pipe_attach();  // --pipe (2026-10-26): the worker tracks for the tracker of the new VioManager
     pred_pending_ = false;
     snap_dirty_ = true;  // --pred-thread: the published snapshot is stale
     make_shadow(false);
@@ -1264,6 +1354,7 @@ public:
     if (args_.init_still) o << ",\"init_still\":1";                                                   // 2026-10-25 ovrobust
     if (health_on_) o << ",\"health\":" << args_.health << ",\"recover\":" << args_.recover;
     if (!blank_.empty()) o << ",\"test_blank\":" << jstr(args_.test_blank);
+    if (ovpipe::P.on.load()) o << ",\"pipe\":1";  // 2026-10-26 ovpipe
     o << "}\n";
     return o.str();
   }
@@ -1498,6 +1589,7 @@ private:
   void on_stereo(const std::vector<uint8_t> &buf, std::string &out) {
     if (buf.size() < 20) {
       out += err_line("STEREO payload too short");
+      pipe_drop(cur_pipe_seq_);
       return;
     }
     const uint8_t *p = buf.data();
@@ -1507,6 +1599,7 @@ private:
     size_t img = static_cast<size_t>(w) * h;
     if (n < 1 || n > 2 || w == 0 || h == 0 || buf.size() != 20 + n * img) {
       out += err_line("STEREO size mismatch");
+      pipe_drop(cur_pipe_seq_);
       return;
     }
     if (n > params_.state_options.num_cameras) n = static_cast<uint8_t>(params_.state_options.num_cameras);
@@ -1516,6 +1609,7 @@ private:
     // 그래서 use_stereo=true 면 2장짜리만 받는다 (클라이언트도 섞어 보내지 않음).
     if (params_.use_stereo && params_.state_options.num_cameras >= 2 && n != 2) {
       n_cam_rejected_++;
+      pipe_drop(cur_pipe_seq_);
       return;
     }
     // 크기가 바뀌어도 이전 피라미드와 맞지 않아 KLT 가 깨진다 → 처음 크기만 받는다.
@@ -1524,9 +1618,11 @@ private:
       img_h_ = h;
     } else if (w != img_w_ || h != img_h_) {
       n_cam_rejected_++;
+      pipe_drop(cur_pipe_seq_);
       return;
     }
     CamMsg c;
+    c.pipe_seq = cur_pipe_seq_;  // --pipe (2026-10-26; 0 = none)
     c.rx_hdr_boot_ns = rx_hdr_boot_ns_;
     c.rx_boot_ns = rx_boot_ns_;
     c.spin_wait_us = rx_spin_wait_us_;
@@ -1540,7 +1636,10 @@ private:
                       (remap_src_w_ > 0 ? (remap_src_w_ == static_cast<int>(w) && remap_src_h_ == static_cast<int>(h))
                                         : (map_x_.cols == static_cast<int>(w) && map_x_.rows == static_cast<int>(h)));
       cv::Mat g;
-      if (do_remap && ovopt::g.frame_nocopy) {
+      // --pipe (2026-10-26): the worker made this cam0 image already (same copy / remap as below, bit-identical)
+      const bool piped = i == 0 && c.pipe_seq && ovpipe::P.on.load() && ovpipe::P.get_image(c.pipe_seq, g, c.remap_ms);
+      if (piped) {
+      } else if (do_remap && ovopt::g.frame_nocopy) {
         // --ovopt frame_nocopy: remap straight from the record buffer (valid during this call; the remap output owns
         // its pixels, so nothing keeps pointing into buf after this loop iteration)
         g = cv::Mat(static_cast<int>(h), static_cast<int>(w), CV_8UC1, const_cast<uint8_t *>(p + 20 + i * img));
@@ -1548,7 +1647,7 @@ private:
         g.create(static_cast<int>(h), static_cast<int>(w), CV_8UC1);
         std::memcpy(g.data, p + 20 + i * img, img);
       }
-      if (do_remap) {
+      if (do_remap && !piped) {
         auto r0 = std::chrono::steady_clock::now();
         cv::Mat u;
         cv::remap(g, u, map_x_, map_y_, cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0));
@@ -1565,6 +1664,7 @@ private:
     }
     if (!cams_.empty() && c.t <= cams_.back().t) {
       n_cam_dropped_++;
+      pipe_drop(c.pipe_seq);
       return;
     }
     if (first_cam_t_ < -1e299) first_cam_t_ = c.t;
@@ -1577,6 +1677,7 @@ private:
     }
     cams_.push_back(std::move(c));
     while (cams_.size() > args_.max_cam_queue) {  // 밀리면 오래된 카메라만 버린다 (IMU 는 안 버림)
+      pipe_drop(cams_.front().pipe_seq);
       cams_.pop_front();
       n_cam_dropped_++;
     }
@@ -1595,7 +1696,10 @@ private:
       if (!cams_.empty() && cams_.front().t < last_imu_t_ - dt) {
         CamMsg c = std::move(cams_.front());
         cams_.pop_front();
-        if (late_drop(c)) continue;  // --drop-late (2026-10-25, default off)
+        if (late_drop(c)) {  // --drop-late (2026-10-25, default off)
+          pipe_drop(c.pipe_seq);
+          continue;
+        }
         feed_camera(c, out);
         continue;
       }
@@ -1676,12 +1780,15 @@ private:
     if (plog_) ovopt::prof_reset();  // --prof-log: stage timers of this frame only
     ovopt::health_reset();           // --health counters of this frame only (always counted, cheap)
     auto t0 = std::chrono::steady_clock::now();
+    ovpipe::tl_seq = c.pipe_seq;  // --pipe (2026-10-26): which precomputed tracking result belongs to this frame
     try {
       sys_->feed_measurement_camera(c.data);
     } catch (const std::exception &e) {  // cv::Exception 도 std::exception
+      ovpipe::tl_seq = 0;
       on_exception("feed_measurement_camera", e.what(), out);
       return;
     }
+    ovpipe::tl_seq = 0;
     double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
     if (plog_) {  // --prof-log row (timing only)
       bool init = sys_->initialized();
@@ -2254,6 +2361,8 @@ private:
   Eigen::Vector3d off_t_ = Eigen::Vector3d::Zero();
   int seg_ = 0;
   double lag_min_ms_ = 1e300;       // --drop-late: smallest feed lag seen
+  uint64_t cur_pipe_seq_ = 0;       // --pipe: seq of the record handle() is processing
+  uint64_t n_pipe_attach_ = 0;      // --pipe: trackers attached (VioManagers made)
 };
 
 // 한 연결(또는 stdin) 을 끝까지 처리. 반환 false = QUIT 받음.
@@ -2337,6 +2446,7 @@ bool serve(Bridge &b, int in_fd, int out_fd, bool is_socket) {
 
 // --pred-thread input reader (header): reads every record, assembles chunked images, gives IMU to the predictor at
 // once, queues the records in order for the main thread.
+uint64_t g_pipe_seq = 0;  // --pipe: image records read by the reader thread (only that thread writes it)
 void reader_main(int fd, InQueue *q, Predictor *pred) {
   std::vector<uint8_t> ca;
   bool ca_active = false;
@@ -2382,6 +2492,10 @@ void reader_main(int fd, InQueue *q, Predictor *pred) {
       r.t_hdr_boot = ca_hb;
       r.t_hdr_mono = ca_hm;
       r.t_rx_boot = boot_ns();
+      if (ovpipe::P.on.load()) {  // --pipe (2026-10-26): worker starts remap + tracking now
+        r.pipe_seq = ++g_pipe_seq;
+        ovpipe::P.submit(r.pipe_seq, r.buf.data(), r.buf.size());
+      }
       q->push(std::move(r));
       continue;
     }
@@ -2396,6 +2510,10 @@ void reader_main(int fd, InQueue *q, Predictor *pred) {
     if (r.type == kImu && r.buf.size() == 56) {
       imu_log_row(r.buf.data(), tb, r.t_rx_boot);
       if (pred) pred->push_imu(r.buf.data());
+    }
+    if (r.type == kStereo && ovpipe::P.on.load()) {  // --pipe (2026-10-26)
+      r.pipe_seq = ++g_pipe_seq;
+      ovpipe::P.submit(r.pipe_seq, r.buf.data(), r.buf.size());
     }
     const bool quit = r.type == kQuit;
     q->push(std::move(r));
@@ -2434,6 +2552,7 @@ bool serve_q(Bridge &b, int in_fd, int out_fd, Predictor *pred) {
     if (r.type == kStereo && g_idle.win_ms > 0.0) g_idle.note_frame(r.t_hdr_mono);
     if (r.type == kReset && pred) pred->reset_imu();  // (IMU read after the RESET may already be in: dropped once, rare)
     b.set_rx(r.t_hdr_boot, r.t_rx_boot, g_idle.mode ? g_idle.last_wait_us : -1.0, g_idle.last_exit_us);
+    b.set_pipe_seq(r.pipe_seq);  // --pipe (2026-10-26; 0 = none)
     out.clear();
     bool cont = true;
     if (r.type == kStereo && ++n_cam_rec == 300) {
@@ -2446,6 +2565,7 @@ bool serve_q(Bridge &b, int in_fd, int out_fd, Predictor *pred) {
       std::fprintf(stderr, "[ov_bridge] unhandled exception: %s\n", e.what());
       out += "{\"type\":\"error\",\"msg\":" + jstr(std::string("exception: ") + e.what()) + "}\n";
     }
+    if (r.pipe_seq) ovpipe::P.release(r.pipe_seq);  // --pipe: the worker no longer reads this record
     q->give_buf(std::move(r.buf));  // handle() keeps no pointer into the record (frame_nocopy: remap output owns pixels)
     if (!out.empty()) {
       std::lock_guard<std::mutex> lo(g_out_m);
@@ -2550,6 +2670,7 @@ int main(int argc, char **argv) {
     else if (s == "--cpus") a.cpus = next();
     else if (s == "--threads") a.threads = std::max(0, std::stoi(next()));
     else if (s == "--klt-overlap") a.klt_overlap = std::stoi(next()) != 0 ? 1 : 0;
+    else if (s == "--pipe") a.pipe = std::stoi(next()) != 0 ? 1 : 0;  // 2026-10-26 ovpipe
     else if (s == "--profile") next();  // integ-20261025 (applied above)
     else if (s == "--klt-pyr") a.klt_pyr = std::max(0, std::min(8, std::stoi(next())));  // 2026-10-25 ovheat
     else if (s == "--idle-spin") {
@@ -2666,6 +2787,22 @@ int main(int argc, char **argv) {
     }
   }
 #endif
+  if (a.pipe) {  // --pipe (2026-10-26, ovpipe): conditions, then on before the first VioManager exists
+    std::string err;
+#ifndef OVOPT_FULL
+    err = "--pipe needs a build with the OpenVINS sources (OV_FULL_SOURCE / phone build)";
+#endif
+    if (err.empty() && a.tcp) err = "--pipe needs --stdio";
+    if (err.empty() && a.predict > 0 && !a.pred_thread) err = "--pipe with --predict needs --pred-thread 1";
+    if (err.empty() && a.gate_mean > 0.0) err = "--pipe does not support --init-gate";
+    if (err.empty() && !a.test_blank.empty()) err = "--pipe does not support --test-blank";
+    if (err.empty() && a.klt_overlap) err = "--pipe does not support --klt-overlap 1";
+    if (!err.empty()) {
+      std::fprintf(stderr, "[ov_bridge] %s\n", err.c_str());
+      return 2;
+    }
+    ovpipe::P.on.store(true);
+  }
   if (!a.ovopt.empty() || ovopt::g.prof)
     std::fprintf(stderr, "[ov_bridge] ovopt: %s (--ovopt '%s', prof log %s)\n", ovopt::describe().c_str(), a.ovopt.c_str(),
                  a.prof_log.empty() ? "-" : a.prof_log.c_str());
@@ -2742,12 +2879,19 @@ int main(int argc, char **argv) {
 
   apply_affinity(g_pinned ? &g_pin : nullptr, "ready");
   if (!a.tcp) {
+    if (ovpipe::P.on.load()) {  // --pipe (2026-10-26)
+      std::fprintf(stderr, "[ov_bridge] pipe: on (worker thread: remap + KLT tracking of the next frame while the main thread updates)\n");
+      ovpipe::P.start();
+    }
     if (a.pred_thread) {  // --pred-thread (2026-10-25)
       // heap, never freed: after an output write failure the reader thread is detached and may still use it
       auto *pr = new Predictor(a.predict, a.predict_hz, a.pose_precision, out_fd, false);
       serve_q(b, STDIN_FILENO, out_fd, pr);
       pr->log();
       if (g_imu_log) std::fflush(g_imu_log);  // not closed: same reason (closed by process exit)
+    } else if (ovpipe::P.on.load()) {  // --pipe without --predict: the reader thread of --pred-thread, no predictions
+      serve_q(b, STDIN_FILENO, out_fd, nullptr);
+      if (g_imu_log) std::fflush(g_imu_log);
     } else {
       serve(b, STDIN_FILENO, out_fd, false);
       if (g_imu_log) std::fclose(g_imu_log);
@@ -2764,6 +2908,8 @@ int main(int argc, char **argv) {
       g_mav->close();
     }
     b.log_health();
+    b.log_pipe();  // --pipe (2026-10-26)
+    if (ovpipe::P.on.load()) ovpipe::P.stop();
     return 0;
   }
 

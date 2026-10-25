@@ -39,6 +39,7 @@
 #include <deque>
 #include <map>
 #include "ovopt.h"
+#include "ovpipe.h"  // scan3d ovpipe (2026-10-26): last_tracker hand-over to ov_bridge --pipe (read only)
 
 #include "core/VioManager.h"  // scan3d: dir prefix (copy lives in ovpatch/)
 
@@ -250,6 +251,7 @@ VioManager::VioManager(VioManagerOptions &params_) : thread_init_running(false),
         state->_cam_intrinsics_cameras, init_max_features, state->_options.max_aruco_features, params.use_stereo, params.histogram_method,
         params.fast_threshold, params.grid_x, params.grid_y, params.min_px_dist, params.knn_ratio));
   }
+  if (ovpipe::P.on.load()) ovpipe::last_tracker = trackFEATS;  // scan3d ovpipe: ov_bridge --pipe reads it right after constructing sys_
 
   // Initialize our aruco tag extractor
   if (params.use_aruco) {
