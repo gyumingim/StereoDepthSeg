@@ -27,6 +27,17 @@
 //    active_image, read only by get_active_tracks / get_active_image = the ROS visualizers) are not used by ov_bridge
 //    and it does not touch the state, the trackers or the feature database (reads only).
 //  - ovopt::Scope profiling timers (ovopt::g.prof, ov_bridge --prof-log): timing only.
+//  - ovopt::g.rs_derot (2026-10-25, branch ovdrone-20261025; CHANGES results, default 0 = off = upstream path):
+//    per-feature gyro rolling-shutter de-rotation, ported from the offline prototype ~/scanner/src/open_vins_rs
+//    (VioManager::rs_correct_features, docs/rs_correction_plan.md / _result.md, 2026-10-23). Right after the tracker
+//    put this frame's measurements into the feature database, each new measurement (uvs + uvs_norm) is rotated from its
+//    row time to the frame-centre time: tau = readout * (sensor_row/H_sensor - 0.5), b_ref = Exp(R_ItoC w_I tau) b_row,
+//    w_I = mean raw gyro within readout/2 + 2 ms of the frame (bias removed once initialised). Pure rotation
+//    (translation / depth ignored). KLT keeps its own point list, so tracking itself is unchanged. The frame time fed
+//    by the app is mid exposure + skew/2 = the centre row (OvRunner midOffsetNs). The IMU history lives in a file-static
+//    map keyed by the VioManager (the header is upstream, no new members).
+#include <deque>
+#include <map>
 #include "ovopt.h"
 
 #include "core/VioManager.h"  // scan3d: dir prefix (copy lives in ovpatch/)
@@ -57,6 +68,96 @@ using namespace ov_core;
 using namespace ov_type;
 using namespace ov_msckf;
 
+namespace {
+// rs_derot: last ~1 s of raw IMU per VioManager instance (only filled when the option is on)
+std::map<const VioManager *, std::deque<ov_core::ImuData>> g_rs_imu;
+
+void rs_correct(const VioManager *self, const ov_core::CameraData &message, std::shared_ptr<State> state,
+                std::shared_ptr<ov_core::TrackBase> track, bool initialized) {
+  ovopt::Scope prof_scope(ovopt::S_RS);
+  const auto &imu = g_rs_imu[self];
+  const double readout = ovopt::rs_readout_s();
+  const double dt_ci = state->_calib_dt_CAMtoIMU->value()(0);
+  const double t_imu = message.timestamp + dt_ci;
+  const double half = 0.5 * std::abs(readout) + 0.002;
+  Eigen::Vector3d wsum = Eigen::Vector3d::Zero();
+  int nw = 0;
+  for (const auto &m : imu) {
+    if (m.timestamp >= t_imu - half && m.timestamp <= t_imu + half) {
+      wsum += m.wm;
+      nw++;
+    }
+  }
+  if (nw == 0) {  // nearest sample within 20 ms
+    double best = 1e9;
+    for (const auto &m : imu) {
+      if (std::abs(m.timestamp - t_imu) < best) {
+        best = std::abs(m.timestamp - t_imu);
+        wsum = m.wm;
+        nw = 1;
+      }
+    }
+    if (nw == 0 || best > 0.02) {
+      ovopt::rs_stats.no_imu++;
+      return;
+    }
+  }
+  Eigen::Vector3d w_I = wsum / nw;
+  if (initialized)
+    w_I -= state->_imu->bias_g();
+  auto &S = ovopt::rs_stats;
+  S.frames++;
+  S.sum_w += w_I.norm();
+  S.max_w = std::max(S.max_w, w_I.norm());
+  const double row_scale = ovopt::g.rs_row_ppm != 0 ? ovopt::g.rs_row_ppm * 1e-6 : 1.0;
+  std::vector<std::shared_ptr<ov_core::Feature>> feats =
+      track->get_feature_database()->features_containing(message.timestamp, false, true);
+  for (size_t cam_id : message.sensor_ids) {
+    Eigen::Matrix3d R_ItoC = state->_calib_IMUtoCAM.at(cam_id)->Rot();
+    Eigen::Vector3d w_C = R_ItoC * w_I;
+    auto cam = state->_cam_intrinsics_cameras.at(cam_id);
+    const double H = (double)cam->h();
+    // bridge row map only for cam0 with the fed size equal to the map size
+    const bool use_map = cam_id == 0 && ovopt::rs_mapy != nullptr && ovopt::rs_src_h > 0 && ovopt::rs_map_h == cam->h() &&
+                         ovopt::rs_map_w == cam->w();
+    for (auto &f : feats) {
+      auto it = f->timestamps.find(cam_id);
+      if (it == f->timestamps.end())
+        continue;
+      auto &ts = it->second;
+      for (int k = (int)ts.size() - 1; k >= 0; k--) {
+        if (ts.at(k) != message.timestamp)
+          continue;
+        Eigen::VectorXf &uv = f->uvs.at(cam_id).at(k);
+        Eigen::VectorXf &un = f->uvs_norm.at(cam_id).at(k);
+        double frac;
+        if (use_map) {
+          int ui = std::min(std::max((int)std::lround(uv(0)), 0), ovopt::rs_map_w - 1);
+          int vi = std::min(std::max((int)std::lround(uv(1)), 0), ovopt::rs_map_h - 1);
+          frac = (double)ovopt::rs_mapy[(size_t)vi * ovopt::rs_map_w + ui] / ovopt::rs_src_h - 0.5;
+        } else {
+          frac = row_scale * ((double)uv(1) / H - 0.5);
+        }
+        const double tau = readout * frac;
+        Eigen::Vector3d b((double)un(0), (double)un(1), 1.0);
+        Eigen::Vector3d b2 = ov_core::exp_so3(w_C * tau) * b;
+        Eigen::Vector2f n2((float)(b2(0) / b2(2)), (float)(b2(1) / b2(2)));
+        Eigen::Vector2f uv2 = cam->distort_f(n2);
+        double sh = std::hypot((double)uv2(0) - uv(0), (double)uv2(1) - uv(1));
+        S.sum_shift += sh;
+        S.max_shift = std::max(S.max_shift, sh);
+        S.feats++;
+        uv(0) = uv2(0);
+        uv(1) = uv2(1);
+        un(0) = n2(0);
+        un(1) = n2(1);
+        break;
+      }
+    }
+  }
+}
+} // namespace
+
 VioManager::VioManager(VioManagerOptions &params_) : thread_init_running(false), thread_init_success(false) {
 
   // Nice startup message
@@ -66,6 +167,7 @@ VioManager::VioManager(VioManagerOptions &params_) : thread_init_running(false),
 
   // Nice debug
   this->params = params_;
+  g_rs_imu.erase(this);  // rs_derot: a new instance at a reused address starts with an empty IMU history
   params.print_and_load_estimator();
   params.print_and_load_noise();
   params.print_and_load_state();
@@ -186,6 +288,14 @@ void VioManager::feed_measurement_imu(const ov_core::ImuData &message) {
   }
   propagator->feed_imu(message, oldest_time);
 
+  // scan3d rs_derot: keep the last ~1 s of raw IMU (off = nothing stored)
+  if (ovopt::g.rs_derot != 0) {
+    auto &q = g_rs_imu[this];
+    q.push_back(message);
+    while (!q.empty() && q.front().timestamp < message.timestamp - 1.0)
+      q.pop_front();
+  }
+
   // Push back to our initializer
   if (!is_initialized_vio) {
     initializer->feed_imu(message, oldest_time);
@@ -298,6 +408,11 @@ void VioManager::track_image_and_update(const ov_core::CameraData &message_const
     if (is_initialized_vio && trackARUCO != nullptr) {
       trackARUCO->feed_new_camera(message);
     }
+  }
+
+  // scan3d rs_derot: rolling-shutter de-rotation of this frame's new measurements (off = not called)
+  if (ovopt::g.rs_derot != 0) {
+    rs_correct(this, message, state, trackFEATS, is_initialized_vio);
   }
   rT2 = boost::posix_time::microsec_clock::local_time();
 
