@@ -111,11 +111,23 @@ import java.util.concurrent.LinkedBlockingQueue;
  * polls instead of a yield loop); intent drop_late_ms N = ov_bridge --drop-late N (after init, skip a frame fed more than
  * N ms later than the best lag so far: no backlog spiral; changes results only when it drops). meta.json + perf "ov_opt" /
  * "ov_prof" / "idle_spin_ms" / "spin_wfe" / "drop_late_ms".
+ *
+ * 0.6.19 (branch ovopt-20261025; every default = 0.6.18 behaviour): intent imu_prio 1 = IMU records never wait behind an
+ * image write: IMU go to their own queue, the writer sends all waiting IMU first, then the image as 64 KB chunk records
+ * (types 5/6, scan3d/ov_bridge/main.cpp header) with the IMU that arrived meanwhile written between the chunks, flushing
+ * after every IMU batch. An IMU sample is sent ahead of a pending image only if t_imu <= t_image + 200 ms (the bridge holds
+ * IMU <= 250 ms waiting for a camera, so the bridge feeds OpenVINS the identical sequence; PC check with reordered
+ * streams). intent pred_thread (default 1, used with predict 2) = ov_bridge --pred-thread 1 (input reader + prediction
+ * thread: predicted poses also while a frame is processed); pred_thread 0 = the 0.6.18 predict 2. intent imu_log 1
+ * (timing only): imu_samples.csv (every sensor event: type, event.timestamp, elapsedRealtimeNanos in onSensorChanged; ring
+ * of the last 2^19), imu_enq.csv (IMU record t_ns, queued), imu_writes.csv (t_ns, writer dequeued, write/flush call that
+ * pushed it into the pipe returned), ov_bridge --imu-log bridge_imu.csv (t_ns, header / payload read, CLOCK_BOOTTIME).
+ * meta.json + perf "imu_prio" / "pred_thread" / "imu_log", meta "chunked_images".
  */
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261025-ovopt";
+    static final String VERSION = "ov-20261025-imuprio";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";
@@ -189,6 +201,19 @@ class OvRunner implements SensorEventListener {
     int idleSpinMs = 0;                         // 0.6.18 intent idle_spin_ms: ov_bridge --idle-spin-ms W (0 = whole gap)
     boolean spinWfe = false;                    // 0.6.18 intent spin_wfe 1: idle_spin 2 -> ov_bridge --idle-spin 3
     int dropLateMs = 0;                         // 0.6.18 intent drop_late_ms: ov_bridge --drop-late MS (0 = off)
+    int imuPrio = 0;                            // 0.6.19 intent imu_prio: 1 = IMU never waits behind an image write (class doc)
+    int predThread = 1;                         // 0.6.19 intent pred_thread: with predict 2 -> ov_bridge --pred-thread 1
+    boolean imuLog = false;                     // 0.6.19 intent imu_log: IMU delivery logs (class doc)
+    private final LinkedBlockingQueue<byte[]> imuQ = new LinkedBlockingQueue<>(65536);   // imu_prio: IMU records
+    private final java.util.concurrent.Semaphore wake = new java.util.concurrent.Semaphore(0);   // imu_prio: writer wake-up
+    static final int CHUNK = 65536;             // imu_prio: image chunk payload bytes
+    static final long IMU_LEAD_NS = 200_000_000L;   // imu_prio: IMU may go ahead of a pending image up to t_image + this
+    private long nChunkImg, nChunks;
+    static final int RING = 1 << 19;            // imu_log ring sizes (entries)
+    private long[] sRing, eRing, wRing;         // samples {type, t_event, t_arrive}, enq {t, enq}, writes {t, deq, done}
+    private long sN, eN, wN;
+    private long[] wPend = new long[4096];      // imu_log: ring slots of IMU written but not yet pushed by a write/flush
+    private int wPendN;
     private BufferedWriter predW;               // poses_pred.csv (predict > 0)
     private long nPred;
     private long lastPoseTns = -1, lastPoseSensor = -1, lastPoseArrive = -1;   // frame of the latest pose line (reader)
@@ -359,6 +384,11 @@ class OvRunner implements SensorEventListener {
         }
         if (ovProf) Collections.addAll(cmd, "--prof-log", new File(runDir, "ov_prof.csv").getAbsolutePath());          // 0.6.18
         if (dropLateMs > 0) Collections.addAll(cmd, "--drop-late", Integer.toString(dropLateMs));                       // 0.6.18
+        if (predict == 2 && predThread > 0) Collections.addAll(cmd, "--pred-thread", "1");                            // 0.6.19
+        if (imuLog) {                                                                                                   // 0.6.19
+            Collections.addAll(cmd, "--imu-log", new File(runDir, "bridge_imu.csv").getAbsolutePath());
+            sRing = new long[3 * RING]; eRing = new long[2 * RING]; wRing = new long[3 * RING];
+        }
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.environment().put("LD_LIBRARY_PATH", lib);
         pb.redirectError(new File(runDir, "bridge_stderr.log"));
@@ -387,7 +417,8 @@ class OvRunner implements SensorEventListener {
                 .put("ov_idle_spin", idleSpin).put("ov_predict", predict).put("ov_predict_hz", predictHz)
                 .put("ov_predict_stream", predictStream ? 1 : 0)
                 .put("ov_opt", ovOpt).put("ov_prof", ovProf ? 1 : 0).put("idle_spin_ms", idleSpinMs).put("spin_wfe", spinWfe ? 1 : 0)
-                .put("drop_late_ms", dropLateMs);
+                .put("drop_late_ms", dropLateMs)
+                .put("imu_prio", imuPrio).put("pred_thread", predict == 2 && predThread > 0 ? 1 : 0).put("imu_log", imuLog ? 1 : 0);
 
         proc = pb.start();
         bridgePid = pidOf(proc);
@@ -404,6 +435,9 @@ class OvRunner implements SensorEventListener {
         notePerf("idle_spin_ms", idleSpinMs);
         notePerf("spin_wfe", spinWfe ? 1 : 0);
         notePerf("drop_late_ms", dropLateMs);
+        notePerf("imu_prio", imuPrio);             // 0.6.19
+        notePerf("pred_thread", predict == 2 && predThread > 0 ? 1 : 0);
+        notePerf("imu_log", imuLog ? 1 : 0);
         notePerf("bridge_pid", bridgePid);
         notePerf("sdk", android.os.Build.VERSION.SDK_INT);
         writerT = new Thread(this::writer, "ov-writer");
@@ -738,19 +772,42 @@ class OvRunner implements SensorEventListener {
         synchronized (framesLock) { closeQuiet(framesW); framesW = null; }
         synchronized (posesLock) { closeQuiet(posesW); posesW = null; closeQuiet(eventsW); eventsW = null; closeQuiet(predW); predW = null; }
         closeQuiet(tempsW);
+        if (imuLog && runDir != null) {    // 0.6.19 imu_log rings (imu thread has been quit above; a late event may be torn)
+            try { if (imuThread != null) imuThread.join(300); } catch (InterruptedException ignored) { }
+            writeRing(new File(runDir, "imu_samples.csv"), "type,t_event_ns,t_arrive_ns", sRing, sN, 3);
+            writeRing(new File(runDir, "imu_enq.csv"), "t_ns,enq_ns", eRing, eN, 2);
+        }
         if (reader != null) { try { reader.close(); } catch (Exception ignored) { } reader = null; }
         try {
             meta.put("end_elapsed_ns", SystemClock.elapsedRealtimeNanos()).put("secs", (SystemClock.elapsedRealtimeNanos() - t0Elapsed) / 1e9)
                     .put("frames", nCam).put("poses", nPose).put("imu_records", nImu).put("acc_samples", nAcc)
                     .put("capture_results", nResults).put("predict_lines", nPred).put("pool_dropped", poolDropped).put("queue_dropped", camDropped)
                     .put("battery_c_end", batteryTenthC() / 10.0).put("thermal_status_end", thermalStatus())
-                    .put("stop_reason", stopReason).put("streamer_dropped", out.dropped);
+                    .put("stop_reason", stopReason).put("streamer_dropped", out.dropped)
+                    .put("chunked_images", nChunkImg).put("chunks", nChunks).put("imu_log_samples", sN).put("imu_log_writes", wN);
             if (runDir != null) java.nio.file.Files.write(new File(runDir, "meta.json").toPath(), meta.toString(1).getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) { android.util.Log.e("arlat", "ov meta", e); }   // meta.json last = all files complete
         android.util.Log.i("arlat", "ov stopped (" + stopReason + ") -> " + runDir);
     }
 
     private static void closeQuiet(java.io.Closeable c) { try { if (c != null) c.close(); } catch (Exception ignored) { } }
+
+    /** 0.6.19 imu_log: the last min(n, RING) entries of a ring (width longs each), oldest first. */
+    private static void writeRing(File f, String header, long[] ring, long n, int width) {
+        if (ring == null) return;
+        try (BufferedWriter w = new BufferedWriter(new FileWriter(f), 1 << 16)) {
+            w.write(header); w.write('\n');
+            long first = Math.max(0, n - RING);
+            StringBuilder sb = new StringBuilder(64);
+            for (long k = first; k < n; k++) {
+                int i = (int) (k & (RING - 1)) * width;
+                sb.setLength(0);
+                for (int c = 0; c < width; c++) { if (c > 0) sb.append(','); sb.append(ring[i + c]); }
+                sb.append('\n');
+                w.write(sb.toString());
+            }
+        } catch (Exception e) { android.util.Log.w("arlat", "imu log " + f, e); }
+    }
 
     private void onImage(ImageReader r) {
         long now = SystemClock.elapsedRealtimeNanos();
@@ -785,7 +842,7 @@ class OvRunner implements SensorEventListener {
             sent.put(tSend, new long[]{ts, now});
             if (sent.size() > 300) { final long old = tSend - 2_000_000_000L; sent.keySet().removeIf(k -> k < old); }
             if (!toBridge.offer(buf)) { fate = 2; camDropped++; pool.offer(buf); }
-            else enq = SystemClock.elapsedRealtimeNanos();
+            else { enq = SystemClock.elapsedRealtimeNanos(); wake.release(); }   // 0.6.19: wake the imu_prio writer
             if (fate == 0 && !fed) {
                 fed = true;
                 try { meta.put("first_fed_elapsed_ns", now).put("first_fed_t_sensor_ns", ts); } catch (Exception ignored) { }
@@ -814,6 +871,11 @@ class OvRunner implements SensorEventListener {
     private final java.util.ArrayList<Long> accT = new java.util.ArrayList<>();
 
     @Override public void onSensorChanged(SensorEvent e) {
+        if (sRing != null) {   // 0.6.19 imu_log: every sensor event (type, event time, delivery time)
+            int i = (int) (sN & (RING - 1)) * 3;
+            sRing[i] = e.sensor.getType(); sRing[i + 1] = e.timestamp; sRing[i + 2] = SystemClock.elapsedRealtimeNanos();
+            sN++;
+        }
         if (e.sensor.getType() == accType) {
             if (!accT.isEmpty() && e.timestamp <= accT.get(accT.size() - 1)) return;
             accT.add(e.timestamp);
@@ -853,7 +915,9 @@ class OvRunner implements SensorEventListener {
             rec.putDouble(Float.intBitsToFloat((int) g[1])).putDouble(Float.intBitsToFloat((int) g[2]))
                     .putDouble(Float.intBitsToFloat((int) g[3]));
             rec.putDouble(a[0]).putDouble(a[1]).putDouble(a[2]);
-            toBridge.offer(rec.array());
+            if (imuPrio > 0) { imuQ.offer(rec.array()); wake.release(); }   // 0.6.19 imu_prio: own queue
+            else toBridge.offer(rec.array());
+            if (eRing != null) { int i = (int) (eN & (RING - 1)) * 2; eRing[i] = tg; eRing[i + 1] = SystemClock.elapsedRealtimeNanos(); eN++; }
             nImu++;
         }
     }
@@ -873,11 +937,16 @@ class OvRunner implements SensorEventListener {
                 dumpEnd = SystemClock.elapsedRealtime() + dumpSecs * 1000L;
             }
             OutputStream o = proc.getOutputStream();
+            if (imuPrio > 0) { dump = writerPrio(o, dump, dumpEnd); return; }   // 0.6.19
             while (running) {
                 byte[] r = toBridge.poll(100, java.util.concurrent.TimeUnit.MILLISECONDS);
                 if (r == null) continue;
                 long deq = SystemClock.elapsedRealtimeNanos();
                 o.write(r);
+                if (wRing != null) {                      // 0.6.19 imu_log: IMU deq; done = when a write/flush pushed it
+                    if (r.length == 68) imuWritten(r, deq);
+                    else imuPushed(SystemClock.elapsedRealtimeNanos());   // the image write flushed the buffered IMU first
+                }
                 if (r.length > 68 && writesW != null) {   // image record: t_send_ns (bytes 12..19, LE) -> deq / write done
                     long tw = SystemClock.elapsedRealtimeNanos();
                     long ts = ByteBuffer.wrap(r, 12, 8).order(ByteOrder.LITTLE_ENDIAN).getLong();
@@ -888,15 +957,98 @@ class OvRunner implements SensorEventListener {
                     if (SystemClock.elapsedRealtime() > dumpEnd) { dump.close(); dump = null; status.show("dump done"); }
                 }
                 if (r.length > 68 && pool != null) pool.offer(r);    // image buffer back to the pool
-                if (toBridge.isEmpty()) o.flush();
+                if (toBridge.isEmpty()) { o.flush(); if (wRing != null) imuPushed(SystemClock.elapsedRealtimeNanos()); }
             }
             if (dump != null) dump.close();
         } catch (Exception e) {
             if (running) status.show("writer: " + e);
         } finally {
+            if (dump != null) closeQuiet(dump);
             closeQuiet(writesW);
             writesW = null;
+            if (wRing != null && runDir != null) writeRing(new File(runDir, "imu_writes.csv"), "t_ns,deq_ns,write_done_ns", wRing, wN, 3);
         }
+    }
+
+    /** 0.6.19 imu_log: an IMU record went into the (buffered) output stream at deq. */
+    private void imuWritten(byte[] r, long deq) {
+        int i = (int) (wN & (RING - 1)) * 3;
+        wRing[i] = ByteBuffer.wrap(r, 12, 8).order(ByteOrder.LITTLE_ENDIAN).getLong();
+        wRing[i + 1] = deq;
+        wRing[i + 2] = 0;
+        if (wPendN == wPend.length) wPend = java.util.Arrays.copyOf(wPend, wPendN * 2);
+        wPend[wPendN++] = wN;
+        wN++;
+    }
+
+    /** 0.6.19 imu_log: a write / flush call returned at t: every IMU written before it is in the pipe. */
+    private void imuPushed(long t) {
+        for (int k = 0; k < wPendN; k++) if (wN - wPend[k] < RING) wRing[(int) (wPend[k] & (RING - 1)) * 3 + 2] = t;
+        wPendN = 0;
+    }
+
+    /** 0.6.19 imu_prio writer: waiting IMU first, then the image in CHUNK pieces (types 5 / 6) with the IMU that arrived
+     *  meanwhile between the pieces; flush after every IMU batch and after the image. IMU newer than the pending image
+     *  + IMU_LEAD_NS wait until that image is out (keeps the bridge's feed order identical, class doc). Returns the dump
+     *  stream if still open (dumpSecs: logical records = whole images, in send order). */
+    private OutputStream writerPrio(OutputStream o, OutputStream dump, long dumpEnd) throws Exception {
+        byte[] ch = new byte[12];
+        ByteBuffer chb = ByteBuffer.wrap(ch).order(ByteOrder.LITTLE_ENDIAN);
+        OutputStream[] dumpRef = {dump};
+        while (running) {
+            wake.tryAcquire(100, java.util.concurrent.TimeUnit.MILLISECONDS);
+            wake.drainPermits();                  // everything queued before this point is handled below
+            while (running) {
+                byte[] img = toBridge.peek();
+                if (img == null) { if (drainImu(o, Long.MAX_VALUE, dumpRef, dumpEnd) == 0) break; continue; }
+                long ti = ByteBuffer.wrap(img, 12, 8).order(ByteOrder.LITTLE_ENDIAN).getLong();
+                long limit = ti + IMU_LEAD_NS;
+                drainImu(o, limit, dumpRef, dumpEnd);
+                toBridge.poll();
+                long deq = SystemClock.elapsedRealtimeNanos();
+                for (int off = 12; off < img.length; ) {
+                    int n = Math.min(CHUNK, img.length - off);
+                    boolean last = off + n >= img.length;
+                    chb.clear();
+                    chb.putInt(MAGIC).putInt(last ? 6 : 5).putInt(n);
+                    o.write(ch);
+                    o.write(img, off, n);
+                    nChunks++;
+                    off += n;
+                    if (!last) drainImu(o, limit, dumpRef, dumpEnd);   // IMU that came in meanwhile goes between the chunks
+                }
+                o.flush();
+                long tw = SystemClock.elapsedRealtimeNanos();
+                if (wRing != null) imuPushed(tw);
+                nChunkImg++;
+                if (writesW != null) writesW.write(ti + "," + deq + "," + tw + "\n");
+                if (dumpRef[0] != null) dumpWrite(dumpRef, img, dumpEnd);
+                if (pool != null) pool.offer(img);
+            }
+        }
+        return dumpRef[0];
+    }
+
+    /** imu_prio: write every queued IMU record with t <= limit, then flush; returns the count. */
+    private int drainImu(OutputStream o, long limit, OutputStream[] dumpRef, long dumpEnd) throws Exception {
+        int k = 0;
+        byte[] r;
+        while ((r = imuQ.peek()) != null) {
+            if (ByteBuffer.wrap(r, 12, 8).order(ByteOrder.LITTLE_ENDIAN).getLong() > limit) break;
+            imuQ.poll();
+            long deq = SystemClock.elapsedRealtimeNanos();
+            o.write(r);
+            if (wRing != null) imuWritten(r, deq);
+            if (dumpRef[0] != null) dumpWrite(dumpRef, r, dumpEnd);
+            k++;
+        }
+        if (k > 0) { o.flush(); if (wRing != null) imuPushed(SystemClock.elapsedRealtimeNanos()); }
+        return k;
+    }
+
+    private void dumpWrite(OutputStream[] d, byte[] r, long dumpEnd) throws Exception {
+        d[0].write(r);
+        if (SystemClock.elapsedRealtime() > dumpEnd) { d[0].close(); d[0] = null; status.show("dump done"); }
     }
 
     private void readerLoop() {

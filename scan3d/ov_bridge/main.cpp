@@ -6,7 +6,7 @@
 //             [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S] [--remap FILE]
 //             [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST] [--threads N] [--klt-overlap 0|1]
 //             [--idle-spin 0|1|2|3] [--idle-spin-ms W] [--predict 0|1|2] [--predict-hz HZ] [--ovopt LIST]
-//             [--prof-log FILE]
+//             [--prof-log FILE] [--pose-precision N] [--drop-late MS] [--pred-thread 0|1] [--imu-log FILE]
 //
 // --idle-spin 3 / --idle-spin-ms W (2026-10-25, ovopt, heat; both default off = unchanged): 3 = like 2 (whole pool
 //   waits busy) but between the input polls every stripe waits for an event (aarch64 LDAXR + WFE on the shared "go"
@@ -50,6 +50,22 @@
 //   pose-line time axis (s, t_state axis: t_imu - dt_cam_imu), t_cam_ns = t_ns of the last frame pose, t_state, h =
 //   horizon (s, IMU time - state time), n_imu, src "frame"|"rate", status, p, q (Hamilton xyzw world<-IMU), v,
 //   T_world_cam0, q_GtoI_jpl. Only while initialised. stderr "[ov_bridge] predict ..." at the end (count, horizon).
+// --pred-thread 1 (2026-10-25, arlat 0.6.19 intent pred_thread; default 0 = everything above unchanged; needs
+//   --predict 1|2, stdio only): an input reader thread reads every record from stdin into an in-memory queue (the main
+//   thread consumes it in the same order -> the VIO sees the identical record sequence; the reader holds at most 2
+//   unprocessed image records, then it stops reading = pipe back-pressure as before) and hands every IMU sample at once
+//   to a prediction thread. After each frame the main thread copies the filter IMU state (+ calibration) into a
+//   snapshot under a mutex; the prediction thread propagates the latest snapshot with all received IMU newer than it
+//   (same equations as predict above). So predictions continue while a frame is being processed (mode 2: whenever the
+//   newest IMU crosses the next 1/HZ grid point of IMU time -> mean rate = HZ; mode 1 and 2: one "frame" line right
+//   after each frame's pose line). The filter is not touched by the thread. pred lines get "tb" (CLOCK_BOOTTIME ns
+//   when the line was formed). stderr "[ov_bridge] pred thread ..." at the end (lines, compute us, thread CPU s).
+// --imu-log FILE (2026-10-25, arlat 0.6.19 intent imu_log; timing only): one CSV row per received IMU record
+//   t_ns,rx_hdr_boot_ns,rx_boot_ns (CLOCK_BOOTTIME when its header / payload was read).
+// Chunked image records (2026-10-25, arlat 0.6.19 intent imu_prio): types 5 (CHUNK) and 6 (CHUNK_END) carry consecutive
+//   pieces of one type-2 STEREO payload; other records (IMU) may come between the pieces. CHUNK_END completes the
+//   payload, which is then handled exactly like a type-2 record (rx_hdr = header of the first piece). Clients that never
+//   send 5/6 see no change.
 //
 // --idle-spin MODE (2026-10-25, arlat 0.6.16 intent idle_spin): what the bridge does while it waits for the next input
 //   record (between frames / IMU samples). klt_bench 2026-10-24 (S24, scan3d/runs/klt_idle_bench_20261024): with a 29 ms
@@ -131,6 +147,9 @@
 #include <cerrno>
 #include <chrono>
 #include <cmath>
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -161,7 +180,8 @@
 namespace {
 
 constexpr uint32_t kMagic = 0x4F564252u;  // "OVBR"
-enum MsgType : uint32_t { kImu = 1, kStereo = 2, kReset = 3, kQuit = 4 };
+enum MsgType : uint32_t { kImu = 1, kStereo = 2, kReset = 3, kQuit = 4, kChunk = 5, kChunkEnd = 6 };
+constexpr uint32_t kEof = 0xFFFFFFF0u, kBad = 0xFFFFFFF1u;  // --pred-thread reader end markers (never on the wire)
 constexpr uint32_t kMaxPayload = 64u * 1024u * 1024u;
 
 struct Args {
@@ -204,7 +224,24 @@ struct Args {
   double idle_spin_ms = 0.0;  // --idle-spin-ms W (header; 0 = spin the whole gap)
   int pose_precision = 9;     // --pose-precision N (header; 9 = unchanged)
   double drop_late_ms = 0.0;  // --drop-late MS (header; 0 = off)
+  int pred_thread = 0;        // --pred-thread 0|1 (header; 0 = off)
+  std::string imu_log;        // --imu-log FILE (header)
 };
+
+// --imu-log (2026-10-25): written by the thread that reads the input (main, or the --pred-thread reader)
+FILE *g_imu_log = nullptr;
+uint64_t g_imu_log_n = 0;
+inline int64_t rd_i64(const uint8_t *p) {
+  int64_t v;
+  std::memcpy(&v, p, sizeof(v));
+  return v;
+}
+inline void imu_log_row(const uint8_t *payload, int64_t t_hdr, int64_t t_rx) {
+  if (!g_imu_log) return;
+  std::fprintf(g_imu_log, "%lld,%lld,%lld\n", static_cast<long long>(rd_i64(payload)), static_cast<long long>(t_hdr),
+               static_cast<long long>(t_rx));
+  if (++g_imu_log_n % 500 == 0) std::fflush(g_imu_log);
+}
 
 // ---- --idle-spin (header) ----
 constexpr double kIdleSpinMaxMs = 200.0;  // spin at most this long per wait, then block
@@ -248,6 +285,56 @@ inline bool fd_ready(int fd) {
   if (r < 0) return errno != EINTR;
   return r > 0;
 }
+// ---- --pred-thread input queue (header; 2026-10-25). Without --pred-thread g_inq stays null and every wait below is
+// the original fd poll.
+struct InRec {
+  uint32_t type = 0;  // record type (chunks already assembled into kStereo) or kEof / kBad
+  std::vector<uint8_t> buf;
+  int64_t t_hdr_boot = 0, t_rx_boot = 0, t_hdr_mono = 0;
+};
+constexpr int kMaxPendingImg = 2;  // reader stops reading at a new image while this many images are unprocessed
+struct InQueue {
+  std::mutex m;
+  std::condition_variable cv, cv_space;
+  std::deque<InRec> q;
+  std::atomic<int> n{0};
+  int pending_img = 0;
+  uint64_t space_waits = 0;
+  void push(InRec &&r) {
+    {
+      std::lock_guard<std::mutex> lk(m);
+      if (r.type == kStereo) pending_img++;
+      q.push_back(std::move(r));
+      n.store(static_cast<int>(q.size()), std::memory_order_release);
+    }
+    cv.notify_one();
+  }
+  bool wait_for(int ms) {  // until non-empty (true) or timeout; ms < 0 = no timeout
+    std::unique_lock<std::mutex> lk(m);
+    if (ms < 0) cv.wait(lk, [&] { return !q.empty(); });
+    else cv.wait_for(lk, std::chrono::milliseconds(ms), [&] { return !q.empty(); });
+    return !q.empty();
+  }
+  InRec pop() {
+    std::unique_lock<std::mutex> lk(m);
+    cv.wait(lk, [&] { return !q.empty(); });
+    InRec r = std::move(q.front());
+    q.pop_front();
+    n.store(static_cast<int>(q.size()), std::memory_order_release);
+    if (r.type == kStereo) {
+      pending_img--;
+      cv_space.notify_one();
+    }
+    return r;
+  }
+  void wait_space() {
+    std::unique_lock<std::mutex> lk(m);
+    if (pending_img >= kMaxPendingImg) space_waits++;
+    cv_space.wait(lk, [&] { return pending_img < kMaxPendingImg; });
+  }
+};
+InQueue *g_inq = nullptr;
+inline bool input_ready(int fd) { return g_inq ? g_inq->n.load(std::memory_order_acquire) > 0 : fd_ready(fd); }
 struct IdleSpin {
   int mode = 0, stripes = 1;
   uint64_t waits = 0, spun = 0, timeouts = 0;  // waits = calls, spun = input was not there yet
@@ -276,7 +363,7 @@ struct IdleSpin {
     if (mode == 0) return;
     waits++;
     last_exit_us = -1.0;
-    if (fd_ready(fd)) {
+    if (input_ready(fd)) {
       last_wait_us = 0.0;
       return;
     }
@@ -288,10 +375,14 @@ struct IdleSpin {
       if (tb < open_at) {
         pollfd p{fd, POLLIN, 0};
         int r;
-        do {
+        if (g_inq) {  // --pred-thread: wait on the input queue
           const int64_t left = open_at - mono_ns();
-          r = left > 0 ? ::poll(&p, 1, static_cast<int>((left + 999999) / 1000000)) : 0;
-        } while (r < 0 && errno == EINTR);
+          r = left > 0 ? (g_inq->wait_for(static_cast<int>((left + 999999) / 1000000)) ? 1 : 0) : 0;
+        } else
+          do {
+            const int64_t left = open_at - mono_ns();
+            r = left > 0 ? ::poll(&p, 1, static_cast<int>((left + 999999) / 1000000)) : 0;
+          } while (r < 0 && errno == EINTR);
         const int64_t te = mono_ns();
         blocked_s += (te - tb) / 1e9;
         if (r != 0) {  // input (or EOF / error) before the window
@@ -305,7 +396,7 @@ struct IdleSpin {
     const int64_t t0 = mono_ns(), tmax = t0 + static_cast<int64_t>(kIdleSpinMaxMs * 1e6);
     bool timed_out = false;
     if (mode == 1) {
-      while (!fd_ready(fd)) {
+      while (!input_ready(fd)) {
         cpu_relax();
         if (mono_ns() > tmax) {
           timed_out = true;
@@ -321,7 +412,7 @@ struct IdleSpin {
           [&](const cv::Range &) {
             int k = 0;
             while (!go.load(std::memory_order_acquire)) {
-              if (fd_ready(fd)) {
+              if (input_ready(fd)) {
                 int64_t z = 0;
                 t_seen.compare_exchange_strong(z, mono_ns());
                 go.store(1, std::memory_order_release);  // the store wakes the other stripes out of WFE
@@ -351,7 +442,7 @@ struct IdleSpin {
           [&](const cv::Range &) {
             int k = 0;
             while (!go.load(std::memory_order_relaxed)) {
-              if (fd_ready(fd)) {
+              if (input_ready(fd)) {
                 int64_t z = 0;
                 t_seen.compare_exchange_strong(z, mono_ns());
                 go.store(true);
@@ -379,8 +470,10 @@ struct IdleSpin {
     if (timed_out) {  // nothing for kIdleSpinMaxMs: block until input
       timeouts++;
       pollfd p{fd, POLLIN, 0};
-      while (::poll(&p, 1, -1) < 0 && errno == EINTR) {
-      }
+      if (g_inq) g_inq->wait_for(-1);  // --pred-thread
+      else
+        while (::poll(&p, 1, -1) < 0 && errno == EINTR) {
+        }
     }
   }
   void log(const char *tag) const {
@@ -555,6 +648,221 @@ struct CamMsg {
   double spin_wait_us = -1.0, spin_exit_us = -1.0;  // --idle-spin wait before this record (IdleSpin)
 };
 
+// ---- --pred-thread (header; 2026-10-25) ----
+std::mutex g_out_m;  // serialises output writes of the main thread and the prediction thread (--pred-thread only)
+
+// copy of the filter numbers a prediction needs (made by the main thread after a frame, read by the prediction thread)
+struct PredSnap {
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  bool valid = false, frame = false, lost = false;
+  int64_t t0_ns = 0, cam_t_ns = 0;
+  double t_state = 0.0, t_off = 0.0, grav = 9.81;
+  Eigen::Matrix<double, 16, 1> x;  // [q_GtoI(4) p(3) v(3) bg(3) ba(3)]
+  Eigen::Matrix3d Dw, Da, Tg, R_A, R_G, R_ItoC;
+  Eigen::Vector3d p_IinC;
+};
+
+class Predictor {
+public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  Predictor(int mode, double hz, int precision, int out_fd, bool is_socket)
+      : mode_(mode), period_ns_(static_cast<int64_t>(std::llround(1e9 / hz))), hz_(hz), prec_(precision), out_fd_(out_fd),
+        sock_(is_socket) {}
+  void start() { th_ = std::thread([this] { run(); }); }
+  void stop() {
+    {
+      std::lock_guard<std::mutex> lk(m_);
+      stop_ = true;
+    }
+    cv_.notify_all();
+    if (th_.joinable()) th_.join();
+  }
+  // reader thread: every received IMU record (same drop rule as Bridge::on_imu: not newer -> dropped, non-finite)
+  void push_imu(const uint8_t *p) {
+    PImu s;
+    s.t_ns = rd_i64(p);
+    double v[6];
+    std::memcpy(v, p + 8, sizeof(v));
+    s.wm << v[0], v[1], v[2];
+    s.am << v[3], v[4], v[5];
+    if (!s.wm.allFinite() || !s.am.allFinite()) return;
+    {
+      std::lock_guard<std::mutex> lk(m_);
+      if (s.t_ns <= newest_) return;
+      imu_.push_back(s);
+      newest_ = s.t_ns;
+      while (imu_.size() > 2 && imu_.front().t_ns < s.t_ns - 3000000000LL) imu_.pop_front();
+    }
+    cv_.notify_one();
+  }
+  void set_snap(const PredSnap &s) {  // main thread, after the frame's pose line was written
+    {
+      std::lock_guard<std::mutex> lk(m_);
+      snap_ = s;
+      if (s.frame) frame_due_ = true;
+      n_snap_++;
+    }
+    cv_.notify_one();
+  }
+  void invalidate() {
+    std::lock_guard<std::mutex> lk(m_);
+    snap_.valid = false;
+    frame_due_ = false;
+  }
+  void log() const {
+    std::vector<float> e = us_, h = h_;
+    std::sort(e.begin(), e.end());
+    std::sort(h.begin(), h.end());
+    auto q = [](const std::vector<float> &v, double f) {
+      return v.empty() ? -1.0 : static_cast<double>(v[std::min(v.size() - 1, size_t(f * v.size()))]);
+    };
+    std::fprintf(stderr,
+                 "[ov_bridge] pred thread: mode %d hz %.0f | lines %llu (frame %llu rate %llu) snapshots %llu | compute us p50 "
+                 "%.1f p95 %.1f max %.1f | horizon ms p50 %.1f p95 %.1f max %.1f | thread cpu %.3f s (pred) %.3f s (reader)\n",
+                 mode_, hz_, static_cast<unsigned long long>(n_frame_ + n_rate_), static_cast<unsigned long long>(n_frame_),
+                 static_cast<unsigned long long>(n_rate_), static_cast<unsigned long long>(n_snap_), q(e, 0.5), q(e, 0.95),
+                 e.empty() ? -1.0 : static_cast<double>(e.back()), q(h, 0.5), q(h, 0.95),
+                 h.empty() ? -1.0 : static_cast<double>(h.back()), cpu_s_, reader_cpu_s);
+  }
+  double reader_cpu_s = 0.0;  // set by the reader thread at its end
+
+private:
+  struct PImu {
+    int64_t t_ns;
+    Eigen::Vector3d wm, am;
+  };
+  void run() {
+    std::vector<ov_core::ImuData> d;
+    std::unique_lock<std::mutex> lk(m_);
+    while (true) {
+      cv_.wait(lk, [&] { return stop_ || (snap_.valid && (frame_due_ || (mode_ == 2 && newest_ >= next_due_))); });
+      if (stop_) break;
+      const bool frame = frame_due_;
+      frame_due_ = false;
+      const int64_t t1n = newest_;
+      if (mode_ == 2 && t1n >= next_due_)  // rate grid on IMU time: mean rate = hz (restart after a gap)
+        next_due_ = (next_due_ <= 0 || t1n >= next_due_ + period_ns_) ? t1n + period_ns_ : next_due_ + period_ns_;
+      const PredSnap s = snap_;
+      // IMU samples after the state time (+ the one before it, for the interpolated first sample), up to t1n
+      const double time0 = s.t_state + s.t_off, time1 = (t1n - s.t0_ns) * 1e-9;
+      d.clear();
+      bool have_before = false;
+      ov_core::ImuData before;
+      size_t i0 = imu_.size();
+      while (i0 > 0 && (imu_[i0 - 1].t_ns - s.t0_ns) * 1e-9 > time0) i0--;
+      if (i0 > 0) {
+        const auto &b = imu_[i0 - 1];
+        before.timestamp = (b.t_ns - s.t0_ns) * 1e-9;
+        before.wm = b.wm;
+        before.am = b.am;
+        have_before = true;
+      }
+      for (size_t i = i0; i < imu_.size(); i++) {
+        ov_core::ImuData m;
+        m.timestamp = (imu_[i].t_ns - s.t0_ns) * 1e-9;
+        m.wm = imu_[i].wm;
+        m.am = imu_[i].am;
+        if (m.timestamp > time1) break;
+        if (d.empty()) {
+          ov_core::ImuData f = m;
+          if (have_before && m.timestamp > before.timestamp) {
+            double w = (time0 - before.timestamp) / (m.timestamp - before.timestamp);
+            f.wm = (1 - w) * before.wm + w * m.wm;
+            f.am = (1 - w) * before.am + w * m.am;
+          }
+          f.timestamp = time0;
+          d.push_back(f);
+        }
+        d.push_back(m);
+      }
+      lk.unlock();
+      const auto c0 = std::chrono::steady_clock::now();
+      std::string line = compute(s, d, frame ? "frame" : "rate");
+      const float us = std::chrono::duration<float, std::micro>(std::chrono::steady_clock::now() - c0).count();
+      {
+        std::lock_guard<std::mutex> lo(g_out_m);
+        write_full(out_fd_, line, sock_);
+      }
+      lk.lock();
+      (frame ? n_frame_ : n_rate_)++;
+      if (us_.size() < 2000000) us_.push_back(us);
+      if (h_.size() < 2000000) h_.push_back(static_cast<float>(last_h_ * 1e3));
+    }
+    timespec ts;
+    ::clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
+    cpu_s_ = ts.tv_sec + ts.tv_nsec * 1e-9;
+  }
+  // = Bridge::predict (same mean equations as Propagator::fast_state_propagate), from a snapshot
+  std::string compute(const PredSnap &s, const std::vector<ov_core::ImuData> &d, const char *src) {
+    Eigen::Matrix<double, 16, 1> x = s.x;
+    const Eigen::Vector3d bg = x.block(10, 0, 3, 1), ba = x.block(13, 0, 3, 1);
+    const Eigen::Vector3d grav(0.0, 0.0, s.grav);
+    for (size_t i = 0; i + 1 < d.size(); i++) {
+      const auto &m0 = d[i], &m1 = d[i + 1];
+      const double dt = m1.timestamp - m0.timestamp;
+      if (dt <= 0.0) continue;
+      Eigen::Vector3d a1 = s.R_A * s.Da * (m0.am - ba), a2 = s.R_A * s.Da * (m1.am - ba);
+      Eigen::Vector3d a = 0.5 * (a1 + a2);
+      Eigen::Vector3d w1 = s.R_G * s.Dw * (m0.wm - bg - s.Tg * a1), w2 = s.R_G * s.Dw * (m1.wm - bg - s.Tg * a2);
+      Eigen::Vector3d w = 0.5 * (w1 + w2);
+      Eigen::Matrix3d R = ov_core::quat_2_Rot(x.block(0, 0, 4, 1));
+      Eigen::Vector3d v = x.block(7, 0, 3, 1), p = x.block(4, 0, 3, 1);
+      x.block(0, 0, 4, 1) = ov_core::rot_2_quat(ov_core::exp_so3(-w * dt) * R);
+      x.block(4, 0, 3, 1) = p + v * dt + 0.5 * R.transpose() * a * dt * dt - 0.5 * grav * dt * dt;
+      x.block(7, 0, 3, 1) = v + R.transpose() * a * dt - grav * dt;
+    }
+    const double time0 = s.t_state + s.t_off;
+    const double h = d.size() >= 2 ? d.back().timestamp - time0 : 0.0;
+    last_h_ = h;
+    Eigen::Vector4d q_GtoI = x.block(0, 0, 4, 1);
+    Eigen::Matrix3d R_ItoG = ov_core::quat_2_Rot(q_GtoI).transpose();
+    Eigen::Vector3d p_IinG = x.block(4, 0, 3, 1), v = x.block(7, 0, 3, 1);
+    Eigen::Quaterniond qh(R_ItoG);
+    Eigen::Matrix3d R_CtoG = R_ItoG * s.R_ItoC.transpose();
+    Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
+    T.block<3, 3>(0, 0) = R_CtoG;
+    T.block<3, 1>(0, 3) = p_IinG - R_CtoG * s.p_IinC;
+    const double t_pred = time0 + h;
+    std::ostringstream o;
+    o.precision(prec_);
+    o << "{\"type\":\"pred\",\"t_ns\":" << (s.t0_ns + static_cast<int64_t>(std::llround(t_pred * 1e9))) << ",\"t\":";
+    jnum(o, t_pred - s.t_off);
+    o << ",\"t_cam_ns\":" << s.cam_t_ns << ",\"t_state\":";
+    jnum(o, s.t_state);
+    o << ",\"h\":";
+    jnum(o, h);
+    o << ",\"n_imu\":" << (d.empty() ? 0 : d.size() - 1) << ",\"src\":\"" << src << "\",\"status\":\""
+      << (s.lost ? "lost" : "tracking") << "\",\"p\":";
+    jarr(o, p_IinG);
+    o << ",\"q\":[";
+    jnum(o, qh.x()); o << ","; jnum(o, qh.y()); o << ","; jnum(o, qh.z()); o << ","; jnum(o, qh.w());
+    o << "],\"v\":";
+    jarr(o, v);
+    o << ",\"T_world_cam0\":";
+    jarr(o, T);
+    o << ",\"q_GtoI_jpl\":";
+    jarr(o, q_GtoI);
+    o << ",\"tb\":" << boot_ns() << "}\n";
+    return o.str();
+  }
+
+  int mode_;
+  int64_t period_ns_;
+  double hz_;
+  int prec_, out_fd_;
+  bool sock_;
+  std::thread th_;
+  std::mutex m_;
+  std::condition_variable cv_;
+  bool stop_ = false, frame_due_ = false;
+  PredSnap snap_;
+  std::deque<PImu> imu_;
+  int64_t newest_ = INT64_MIN, next_due_ = 0;
+  uint64_t n_frame_ = 0, n_rate_ = 0, n_snap_ = 0;
+  std::vector<float> us_, h_;
+  double last_h_ = 0.0, cpu_s_ = 0.0;
+};
+
 class Bridge {
 public:
   Bridge(const Args &a) : args_(a) {
@@ -627,6 +935,7 @@ public:
   void make_system() {
     sys_ = std::make_shared<ov_msckf::VioManager>(params_);
     pred_pending_ = false;
+    snap_dirty_ = true;  // --pred-thread: the published snapshot is stale
     make_shadow(false);
     init_checked_ = false;
     cams_.clear();
@@ -684,6 +993,7 @@ public:
       << ",\"predict_hz\":" << args_.predict_hz;
     if (!args_.ovopt.empty() || !args_.prof_log.empty()) o << ",\"ovopt\":" << jstr(ovopt::describe());  // 2026-10-25
     if (args_.idle_spin_ms > 0.0) o << ",\"idle_spin_ms\":" << args_.idle_spin_ms;                       // 2026-10-25
+    if (args_.pred_thread) o << ",\"pred_thread\":" << args_.pred_thread;                                 // 2026-10-25
     o << "}\n";
     return o.str();
   }
@@ -785,6 +1095,34 @@ public:
     jarr(o, q_GtoI);
     o << "}\n";
     out += o.str();
+  }
+
+  // --pred-thread (2026-10-25): copy the numbers a prediction needs (main thread; only reads the state)
+  bool snap_dirty() const { return snap_dirty_; }
+  void make_snap(PredSnap &s) {
+    snap_dirty_ = false;
+    s.valid = false;
+    s.frame = pred_pending_;
+    pred_pending_ = false;
+    if (!sys_ || !sys_->initialized()) return;
+    auto st = sys_->get_state();
+    if (st->_timestamp < 0.0) return;
+    s.valid = true;
+    s.lost = lost_;
+    s.t0_ns = t0_ns_;
+    s.cam_t_ns = pred_cam_t_ns_;
+    s.t_state = st->_timestamp;
+    s.t_off = st->_calib_dt_CAMtoIMU->value()(0);
+    s.grav = params_.gravity_mag;
+    s.x = st->_imu->value();
+    s.Dw = ov_msckf::State::Dm(st->_options.imu_model, st->_calib_imu_dw->value());
+    s.Da = ov_msckf::State::Dm(st->_options.imu_model, st->_calib_imu_da->value());
+    s.Tg = ov_msckf::State::Tg(st->_calib_imu_tg->value());
+    s.R_A = st->_calib_imu_ACCtoIMU->Rot();
+    s.R_G = st->_calib_imu_GYROtoIMU->Rot();
+    auto calib0 = st->_calib_IMUtoCAM.at(0);
+    s.R_ItoC = calib0->Rot();
+    s.p_IinC = calib0->pos();
   }
 
   void log_drop() const {  // --drop-late summary (2026-10-25)
@@ -1022,6 +1360,7 @@ private:
   }
 
   void feed_camera(const CamMsg &c, std::string &out) {
+    snap_dirty_ = true;              // --pred-thread: publish a new snapshot after this record
     if (plog_) ovopt::prof_reset();  // --prof-log: stage timers of this frame only
     auto t0 = std::chrono::steady_clock::now();
     try {
@@ -1310,6 +1649,7 @@ private:
   double rx_spin_wait_us_ = -1.0, rx_spin_exit_us_ = -1.0;
   uint64_t tlog_rows_ = 0;
   bool pred_pending_ = false;            // --predict: a frame update since the last prediction
+  bool snap_dirty_ = false;              // --pred-thread: state changed since the last make_snap
   double last_pred_imu_t_ = -1e300;      // newest_imu_t_ of the last prediction
   int64_t pred_cam_t_ns_ = 0;            // t_ns of the last frame pose
   uint64_t n_pred_ = 0;
@@ -1363,6 +1703,9 @@ bool serve(Bridge &b, int in_fd, int out_fd, bool is_socket) {
   std::string out;
   uint32_t hdr[3];
   uint64_t n_cam_rec = 0;
+  std::vector<uint8_t> ca_buf;  // chunked image being assembled (types 5/6)
+  bool ca_active = false;
+  int64_t ca_t_hdr = 0;
   // --idle-spin 2: stripes = OpenCV pool size (VioManager ctor already called cv::setNumThreads)
   g_idle.stripes = std::max(1, cv::getNumThreads());
   std::fprintf(stderr, "[ov_bridge] idle spin: mode %d (%s) stripes %d max %.0f ms", g_idle.mode,
@@ -1379,9 +1722,32 @@ bool serve(Bridge &b, int in_fd, int out_fd, bool is_socket) {
       write_full(out_fd, "{\"type\":\"error\",\"msg\":\"bad header, closing\"}\n", is_socket);
       return true;
     }
-    buf.resize(hdr[2]);
-    if (hdr[2] && !read_full(in_fd, buf.data(), hdr[2])) break;
-    b.set_rx(t_hdr, boot_ns(), g_idle.mode ? g_idle.last_wait_us : -1.0, g_idle.last_exit_us);
+    int64_t t_hdr_rec = t_hdr;
+    if (hdr[1] == kChunk || hdr[1] == kChunkEnd) {  // chunked image (2026-10-25, header): append, handle at CHUNK_END
+      if (!ca_active) {
+        ca_active = true;
+        ca_buf.clear();
+        ca_t_hdr = t_hdr;
+        if (g_idle.win_ms > 0.0) g_idle.note_frame(mono_ns());
+      }
+      const size_t o0 = ca_buf.size();
+      if (o0 + hdr[2] > kMaxPayload) {
+        write_full(out_fd, "{\"type\":\"error\",\"msg\":\"chunked payload too large, closing\"}\n", is_socket);
+        return true;
+      }
+      ca_buf.resize(o0 + hdr[2]);
+      if (hdr[2] && !read_full(in_fd, ca_buf.data() + o0, hdr[2])) break;
+      if (hdr[1] == kChunk) continue;
+      ca_active = false;
+      buf.swap(ca_buf);
+      hdr[1] = kStereo;
+      t_hdr_rec = ca_t_hdr;
+    } else {
+      buf.resize(hdr[2]);
+      if (hdr[2] && !read_full(in_fd, buf.data(), hdr[2])) break;
+    }
+    if (g_imu_log && hdr[1] == kImu && buf.size() == 56) imu_log_row(buf.data(), t_hdr, boot_ns());  // --imu-log
+    b.set_rx(t_hdr_rec, boot_ns(), g_idle.mode ? g_idle.last_wait_us : -1.0, g_idle.last_exit_us);
     out.clear();
     bool cont = true;
     if (hdr[1] == kStereo && ++n_cam_rec == 300) {
@@ -1410,6 +1776,142 @@ bool serve(Bridge &b, int in_fd, int out_fd, bool is_socket) {
   return true;
 }
 
+// --pred-thread input reader (header): reads every record, assembles chunked images, gives IMU to the predictor at
+// once, queues the records in order for the main thread.
+void reader_main(int fd, InQueue *q, Predictor *pred) {
+  std::vector<uint8_t> ca;
+  bool ca_active = false;
+  int64_t ca_hb = 0, ca_hm = 0;
+  uint32_t hdr[3];
+  auto finish = [&](uint32_t type) {
+    InRec e;
+    e.type = type;
+    q->push(std::move(e));
+    timespec ts;
+    ::clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
+    if (pred) pred->reader_cpu_s = ts.tv_sec + ts.tv_nsec * 1e-9;
+  };
+  while (true) {
+    if (!read_full(fd, hdr, sizeof(hdr))) break;
+    const int64_t tb = boot_ns(), tm = mono_ns();
+    if (hdr[0] != kMagic || hdr[2] > kMaxPayload) {
+      finish(kBad);
+      return;
+    }
+    const bool chunk = hdr[1] == kChunk || hdr[1] == kChunkEnd;
+    if (hdr[1] == kStereo || (chunk && !ca_active)) q->wait_space();  // a new image: at most kMaxPendingImg queued
+    if (chunk) {
+      if (!ca_active) {
+        ca_active = true;
+        ca.clear();
+        ca.reserve(4u << 20);
+        ca_hb = tb;
+        ca_hm = tm;
+      }
+      const size_t o0 = ca.size();
+      if (o0 + hdr[2] > kMaxPayload) {
+        finish(kBad);
+        return;
+      }
+      ca.resize(o0 + hdr[2]);
+      if (hdr[2] && !read_full(fd, ca.data() + o0, hdr[2])) break;
+      if (hdr[1] == kChunk) continue;
+      ca_active = false;
+      InRec r;
+      r.type = kStereo;
+      r.buf.swap(ca);
+      r.t_hdr_boot = ca_hb;
+      r.t_hdr_mono = ca_hm;
+      r.t_rx_boot = boot_ns();
+      q->push(std::move(r));
+      continue;
+    }
+    InRec r;
+    r.type = hdr[1];
+    r.buf.resize(hdr[2]);
+    if (hdr[2] && !read_full(fd, r.buf.data(), hdr[2])) break;
+    r.t_hdr_boot = tb;
+    r.t_hdr_mono = tm;
+    r.t_rx_boot = boot_ns();
+    if (r.type == kImu && r.buf.size() == 56) {
+      imu_log_row(r.buf.data(), tb, r.t_rx_boot);
+      if (pred) pred->push_imu(r.buf.data());
+    }
+    const bool quit = r.type == kQuit;
+    q->push(std::move(r));
+    if (quit) {
+      finish(kEof);
+      return;
+    }
+  }
+  finish(kEof);
+}
+
+// --pred-thread main loop (stdio): same record handling as serve(), records come from the reader thread's queue.
+bool serve_q(Bridge &b, int in_fd, int out_fd, Predictor *pred) {
+  auto *q = new InQueue();  // not freed if the reader is still blocked in read() at QUIT (process ends anyway)
+  g_inq = q;
+  std::string out;
+  uint64_t n_cam_rec = 0;
+  g_idle.stripes = std::max(1, cv::getNumThreads());
+  std::fprintf(stderr, "[ov_bridge] idle spin: mode %d (%s) stripes %d max %.0f ms", g_idle.mode,
+               idle_spin_name(g_idle.mode), g_idle.stripes, kIdleSpinMaxMs);
+  if (g_idle.win_ms > 0.0) std::fprintf(stderr, " window %.1f ms", g_idle.win_ms);
+  std::fprintf(stderr, " | pred thread (input reader thread on)\n");
+  if (!write_full(out_fd, b.ready_line(), false)) return true;
+  if (pred) pred->start();
+  std::thread rd([q, in_fd, pred] { reader_main(in_fd, q, pred); });
+  bool ret = true, write_fail = false;
+  while (true) {
+    g_idle.wait(in_fd);  // --idle-spin on the queue (mode 0: pop() blocks)
+    InRec r = q->pop();
+    if (r.type == kEof) break;
+    if (r.type == kBad) {
+      std::lock_guard<std::mutex> lo(g_out_m);
+      write_full(out_fd, "{\"type\":\"error\",\"msg\":\"bad header, closing\"}\n", false);
+      break;
+    }
+    if (r.type == kStereo && g_idle.win_ms > 0.0) g_idle.note_frame(r.t_hdr_mono);
+    b.set_rx(r.t_hdr_boot, r.t_rx_boot, g_idle.mode ? g_idle.last_wait_us : -1.0, g_idle.last_exit_us);
+    out.clear();
+    bool cont = true;
+    if (r.type == kStereo && ++n_cam_rec == 300) {
+      apply_affinity(g_pinned ? &g_pin : nullptr, "cam300");
+      if (g_idle.mode) g_idle.log("cam300");
+    }
+    try {
+      cont = b.handle(r.type, r.buf, out);
+    } catch (const std::exception &e) {
+      std::fprintf(stderr, "[ov_bridge] unhandled exception: %s\n", e.what());
+      out += "{\"type\":\"error\",\"msg\":" + jstr(std::string("exception: ") + e.what()) + "}\n";
+    }
+    if (!out.empty()) {
+      std::lock_guard<std::mutex> lo(g_out_m);
+      if (!write_full(out_fd, out, false)) {
+        write_fail = true;
+        break;
+      }
+    }
+    if (pred && b.snap_dirty()) {  // after the pose line: the prediction thread continues from the new state
+      PredSnap s;
+      b.make_snap(s);
+      if (s.valid) pred->set_snap(s);
+      else pred->invalidate();
+    }
+    if (!cont) {
+      ret = false;
+      break;
+    }
+  }
+  if (pred) pred->stop();
+  std::fprintf(stderr, "[ov_bridge] pred thread reader: image space waits %llu\n",
+               static_cast<unsigned long long>(q->space_waits));
+  if (write_fail) rd.detach();  // the reader may still block in read(); the process is about to end
+  else rd.join();                // EOF / bad header / QUIT: the reader has returned or returns now
+  g_inq = nullptr;
+  return ret;
+}
+
 void usage() {
   std::fprintf(stderr,
                "usage: ov_bridge <estimator_config.yaml> [--stdio | --tcp HOST:PORT] [--max-cam-queue N]\n"
@@ -1417,7 +1919,8 @@ void usage() {
                "                 [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S] [--remap FILE]\n"
                "                 [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST] [--threads N]\n"
                "                 [--klt-overlap 0|1] [--idle-spin 0|1|2|3] [--idle-spin-ms W] [--predict 0|1|2] [--predict-hz HZ]\n"
-               "                 [--ovopt LIST] [--prof-log FILE] [--pose-precision N] [--drop-late MS]\n");
+               "                 [--ovopt LIST] [--prof-log FILE] [--pose-precision N] [--drop-late MS]\n"
+               "                 [--pred-thread 0|1] [--imu-log FILE]\n");
 }
 
 }  // namespace
@@ -1493,6 +1996,8 @@ int main(int argc, char **argv) {
     else if (s == "--prof-log") a.prof_log = next();
     else if (s == "--pose-precision") a.pose_precision = std::max(1, std::min(17, std::stoi(next())));
     else if (s == "--drop-late") a.drop_late_ms = std::max(0.0, std::stod(next()));
+    else if (s == "--pred-thread") a.pred_thread = std::stoi(next()) != 0 ? 1 : 0;   // 2026-10-25
+    else if (s == "--imu-log") a.imu_log = next();                                     // 2026-10-25
     else if (s == "--reinit-max-gap") a.reinit_max_gap = std::stod(next());
     else if (s == "--reinit-sigma") {  // ori_deg,pos_m,vel_m_s
       std::string v = next();
@@ -1514,6 +2019,15 @@ int main(int argc, char **argv) {
 
   g_idle.mode = a.idle_spin;
   g_idle.win_ms = a.idle_spin_ms;
+  if (a.pred_thread && (a.predict <= 0 || a.tcp)) {  // 2026-10-25
+    std::fprintf(stderr, "[ov_bridge] --pred-thread needs --predict 1|2 and --stdio\n");
+    return 2;
+  }
+  if (!a.imu_log.empty()) {  // 2026-10-25
+    g_imu_log = std::fopen(a.imu_log.c_str(), "w");
+    if (g_imu_log) std::fprintf(g_imu_log, "t_ns,rx_hdr_boot_ns,rx_boot_ns\n");
+    else std::fprintf(stderr, "[ov_bridge] imu log: cannot open %s\n", a.imu_log.c_str());
+  }
 
   // --ovopt / --prof-log (2026-10-25): set the ovpatch flags before any VioManager exists
   if (!a.ovopt.empty()) {
@@ -1566,7 +2080,14 @@ int main(int argc, char **argv) {
 
   apply_affinity(g_pinned ? &g_pin : nullptr, "ready");
   if (!a.tcp) {
-    serve(b, STDIN_FILENO, out_fd, false);
+    if (a.pred_thread) {  // --pred-thread (2026-10-25)
+      Predictor pr(a.predict, a.predict_hz, a.pose_precision, out_fd, false);
+      serve_q(b, STDIN_FILENO, out_fd, &pr);
+      pr.log();
+    } else
+      serve(b, STDIN_FILENO, out_fd, false);
+    if (g_imu_log) std::fclose(g_imu_log);
+    g_imu_log = nullptr;
     apply_affinity(g_pinned ? &g_pin : nullptr, "end");
     if (g_idle.mode) g_idle.log("end");
     b.log_predict();

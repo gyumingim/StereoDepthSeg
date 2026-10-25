@@ -97,6 +97,9 @@ python3 -m pyflakes scan3d/<고친 파일>.py      # WSL. Windows 스크립트�
 - WSL 백그라운드 실행은 `nohup … &` (그냥 `&` 는 `wsl -e` 가 끝나면 같이 죽는다).
 - (2026-10-25 ovopt) 폰 재생 시간 비교는 run 마다 **SKIN<35·AP<37 °C + 30 s 식힘** 뒤 시작 (안 하면 4 run 만에 큰 코어 상한 2784→2016 MHz, 순서 효과가
   옵션 효과보다 큼). `adb shell "… nohup … &"` 는 `< /dev/null` 이 있어야 돌아온다. 스크립트 안 adb.exe 의 Windows 경로는 `/` 로 (Git Bash heredoc 이 `\\` 를 줄임).
+- (2026-10-25 imuprio) Git Bash heredoc 은 `\\n` 도 `\n` 으로 줄인다 → C/Python 문자열에 줄바꿈이 박힘. 백슬래시가 든 편집 스크립트는 **Write 도구로 파일을 만들고** raw 문자열로.
+  bridge 입력 순서: IMU 가 영상보다 먼저 와도 `--imu-hold` 0.25 s 안이면 OpenVINS 에 들어가는 순서·결과가 똑같다 (lead 0.18 s 동일, 0.4 s 는 달라짐)
+  → 앱 imu_prio 는 펜딩 영상 + 200 ms 넘는 IMU 를 앞세우지 않는다. 무거운 PC 부하(load 16)에서 잰 지연은 참고만.
 
 ## 10. 커밋 규칙
 - 사용자가 말할 때만 커밋·push. force push 금지. `git add -A` 금지 (다른 에이전트 작업 파일이 섞임) — 자기 파일만 경로로.

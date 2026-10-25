@@ -15,6 +15,9 @@ Per run (docs/phone_session_60fps_plan.md "On-phone OpenVINS timing"):
     t_out - t_pred (t_pred = predicted instant = newest IMU sample, IMU/sensor clock; assumes IMU and camera timestamps
     share elapsedRealtimeNanos) and the horizon t_pred - t_cam (t_cam = mid-exposure frame time it starts from), per src
     (frame = once per frame update, rate = between frames, mode 2); tracking lines only
+  arlat 0.6.19: age of the newest predicted pose at a 1 kHz consumer (poses_pred.csv t_out / t_pred) and, with
+    --ei imu_log 1, the IMU delivery chain per sensor / per record (imu_samples.csv, imu_enq.csv, imu_writes.csv,
+    bridge_imu.csv; see imu_delivery)
   drops: camera gaps in frames.csv (sensor timestamps > 1.5 periods apart -> frames the camera / ImageReader skipped),
     Java pool / queue drops (frames.csv fate 1 / 2), bridge queue drops (bridge_timing.csv cam_dropped), and fed frames
     per second vs the requested fps
@@ -111,6 +114,58 @@ def segments(spec, t_end):
     return out
 
 
+SENSOR_NAMES = {1: "accel", 4: "gyro", 16: "gyro_uncal", 35: "accel_uncal"}
+
+
+def imu_delivery(run):
+    """arlat 0.6.19 --ei imu_log 1: IMU delivery chain, all on elapsedRealtimeNanos / CLOCK_BOOTTIME (ms):
+    per sensor event: onSensorChanged time - event.timestamp (imu_samples.csv); per IMU record (gyro time t):
+    queued - t (gyro held until a bracketing accel arrived + interpolation), writer dequeued - queued, in the pipe
+    (write / flush call returned) - dequeued (imu_enq.csv, imu_writes.csv), bridge read - t (bridge_imu.csv, ov_bridge
+    --imu-log; end-to-end incl. sensor HAL) and bridge read - in the pipe."""
+    out = {}
+    s = read_csv(run / "imu_samples.csv")
+    if s:
+        typ = np.array([int(r["type"]) for r in s])
+        te = np.array([int(r["t_event_ns"]) for r in s], np.int64)
+        ta = np.array([int(r["t_arrive_ns"]) for r in s], np.int64)
+        for t in sorted(set(typ.tolist())):
+            m = typ == t
+            out[f"sensor_{SENSOR_NAMES.get(t, t)}"] = dict(delivery_ms=stats((ta[m] - te[m]) / 1e6),
+                                                         interval_ms=stats(np.diff(np.sort(te[m])) / 1e6))
+    e, w, b = read_csv(run / "imu_enq.csv"), read_csv(run / "imu_writes.csv"), read_csv(run / "bridge_imu.csv")
+    enq = {int(r["t_ns"]): int(r["enq_ns"]) for r in e} if e else {}
+    wr = {int(r["t_ns"]): (int(r["deq_ns"]), int(r["write_done_ns"])) for r in w} if w else {}
+    br = {int(r["t_ns"]): int(r["rx_boot_ns"]) for r in b} if b else {}
+    if enq:
+        out["record_queued_minus_t_ms"] = stats([(v - k) / 1e6 for k, v in enq.items()])
+    if wr:
+        out["writer_deq_minus_queued_ms"] = stats([(d - enq[k]) / 1e6 for k, (d, _) in wr.items() if k in enq])
+        out["in_pipe_minus_deq_ms"] = stats([(dn - d) / 1e6 for k, (d, dn) in wr.items() if dn > 0])
+        out["in_pipe_minus_t_ms"] = stats([(dn - k) / 1e6 for k, (d, dn) in wr.items() if dn > 0])
+    if br:
+        out["bridge_rx_minus_t_ms"] = stats([(v - k) / 1e6 for k, v in br.items()])
+        if wr:
+            out["bridge_rx_minus_in_pipe_ms"] = stats([(v - wr[k][1]) / 1e6 for k, v in br.items() if k in wr and wr[k][1] > 0])
+    return out
+
+
+def pred_age(pp):
+    """poses_pred.csv (tracking lines): consumer view at 1 kHz on the app clock: age = t - t_pred of the newest predicted
+    instant received (t_out) by t; gap between received lines; mean rate."""
+    rr = [r for r in pp if r["status"] == "tracking"]
+    if len(rr) < 2:
+        return {}
+    rx = np.array([int(r["t_out_ns"]) for r in rr], np.int64)
+    tp = np.array([int(r["t_pred_ns"]) for r in rr], np.int64)
+    o = np.argsort(rx, kind="stable")
+    rx, tp = rx[o], np.maximum.accumulate(tp[o])
+    g = np.arange(rx[0], rx[-1], 1_000_000, dtype=np.int64)
+    k = np.searchsorted(rx, g, side="right") - 1
+    return dict(age_at_consumer_ms_1khz=stats((g - tp[k]) / 1e6), gap_between_lines_ms=stats(np.diff(rx) / 1e6),
+                rate_hz=round(float(len(rx) / ((rx[-1] - rx[0]) / 1e9)), 1))
+
+
 def report(run, a):
     meta = json.load(open(run / "meta.json")) if (run / "meta.json").exists() else {}
     fps = float(meta.get("fps") or a.fps)
@@ -177,6 +232,9 @@ def report(run, a):
                                          n_imu=stats([float(r["n_imu"]) for r, k in zip(rr, mm) if k]))
         segs[name] = sg
     res["segments"] = segs
+    res["imu_delivery"] = imu_delivery(run)          # arlat 0.6.19 --ei imu_log 1
+    if pp:
+        res["pred_consumer"] = pred_age(pp)          # 0.6.19: age of the newest predicted pose at a 1 kHz consumer
     if fr:
         ts = [int(r["t_sensor_ns"]) for r in fr]
         t_first = int(t_ns[init][0]) if (init.any() and not a.all_frames) else -1   # drops over the judged frames only
@@ -250,6 +308,19 @@ def show(res):
                 print(f"   predicted pose [{src}] {name:8s} n {la['n']}: latency t_out - t_pred p50 {la['p50']} / p95 {la['p95']} / max {la['max']} ms"
                       f" (pose: {lp.get('p50', '-')} / {lp.get('p95', '-')} / {lp.get('max', '-')}) | horizon t_pred - t_cam p50 {ho['p50']}"
                       f" / p95 {ho['p95']} / max {ho['max']} ms")
+    pc = res.get("pred_consumer") or {}
+    if pc:                                     # arlat 0.6.19
+        ag, gp = pc["age_at_consumer_ms_1khz"], pc["gap_between_lines_ms"]
+        print(f"   predicted pose at a 1 kHz consumer: age p50 {ag.get('p50')} / p95 {ag.get('p95')} / max {ag.get('max')} "
+              f"(mean {ag.get('mean')}) ms | gap between lines p50 {gp.get('p50')} / p95 {gp.get('p95')} / max {gp.get('max')} ms"
+              f" | {pc.get('rate_hz')} Hz")
+    for k, v in (res.get("imu_delivery") or {}).items():
+        if isinstance(v, dict) and "delivery_ms" in v:
+            d, iv = v["delivery_ms"], v["interval_ms"]
+            print(f"   IMU {k[7:]:12s} n {d.get('n')}: delivery (onSensorChanged - event) p50 {d.get('p50')} / p95 {d.get('p95')}"
+                  f" / max {d.get('max')} ms | interval p50 {iv.get('p50')} ms")
+        elif isinstance(v, dict) and v.get("n"):
+            print(f"   IMU record {k:28s} p50 {v.get('p50')} / p95 {v.get('p95')} / p99 {v.get('p99')} / max {v.get('max')} ms")
     print(f"   -> {res.get('verdict')}")
 
 

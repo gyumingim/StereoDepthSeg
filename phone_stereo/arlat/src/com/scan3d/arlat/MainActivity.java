@@ -184,6 +184,9 @@ public class MainActivity extends Activity {
                 ov.idleSpinMs = Math.max(0, Math.min(1000, getIntent().getIntExtra("idle_spin_ms", 0)));   // 0.6.18: --idle-spin-ms
                 ov.spinWfe = getIntent().getIntExtra("spin_wfe", 0) != 0;               // 0.6.18: idle_spin 2 -> --idle-spin 3
                 ov.dropLateMs = Math.max(0, Math.min(10000, getIntent().getIntExtra("drop_late_ms", 0)));   // 0.6.18: --drop-late
+                ov.imuPrio = getIntent().getIntExtra("imu_prio", 0) != 0 ? 1 : 0;        // 0.6.19: IMU never waits behind an image write
+                ov.predThread = getIntent().getIntExtra("pred_thread", 1) != 0 ? 1 : 0;  // 0.6.19: predict 2 -> --pred-thread 1 (0 = 0.6.18 mode 2)
+                ov.imuLog = getIntent().getIntExtra("imu_log", 0) != 0;                 // 0.6.19: IMU delivery logs
                 sustainedOn = false;
                 try {
                     boolean sup = ((android.os.PowerManager) getSystemService(POWER_SERVICE)).isSustainedPerformanceModeSupported();

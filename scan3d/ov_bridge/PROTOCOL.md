@@ -52,6 +52,15 @@ RPATH 가 `~/scanner/src/ovbuild`, `~/scanner/local/lib` 로 박혀 있어 `LD_L
 | 2 | STEREO | `<qIIB3x`: t_ns, w, h, n_cams (1/2), 패딩 3 B → 이어서 n_cams × (w·h) 8bit 회색 (행 우선, 빈틈 없음) | 20 + n·w·h |
 | 3 | RESET | 없음. VioManager 를 새로 만든다 (설정 그대로) | 0 |
 | 4 | QUIT | 없음. 종료 | 0 |
+| 5 | CHUNK (2026-10-25, arlat 0.6.19 imu_prio) | type-2 STEREO payload 의 앞쪽 조각 (아무 길이) | 임의 |
+| 6 | CHUNK_END | 마지막 조각. 모은 payload 를 type 2 레코드와 똑같이 처리 (rx_hdr 시각 = 첫 조각 헤더) | 임의 |
+
+- 조각 사이에 다른 레코드(IMU)가 끼어도 된다 → 앱이 2 MB 영상을 쓰는 동안에도 IMU 가 기다리지 않음. 5/6 을 안 보내는
+  클라이언트는 아무 변화 없음. 앱은 펜딩 영상 시각 + 200 ms 보다 늦은 IMU 는 그 영상보다 먼저 보내지 않는다 (bridge 의
+  `--imu-hold` 0.25 s 안이면 OpenVINS 에 들어가는 순서가 똑같음: PC 검사 = 재배열 스트림 lead 0 / 0.1 / 0.18 s 동일,
+  0.4 s 대조군은 달라짐 — `runs/imuprio_20261025`).
+- `--pred-thread 1` (`--predict 1|2`, stdio): 입력 읽기 스레드 + 예측 스레드. 예측 줄에 `tb` (줄을 만든 CLOCK_BOOTTIME ns) 추가.
+  `--imu-log FILE`: IMU 레코드마다 `t_ns,rx_hdr_boot_ns,rx_boot_ns`.
 
 - **시각**: `t_ns` 는 Android `elapsedRealtimeNanos` 시계 그대로(int64 ns). bridge 가 첫 레코드 시각 t0 을 빼서 `(t_ns − t0)·1e-9` 초로 OpenVINS 에 넣는다. IMU·카메라 모두 같은 시계여야 한다.
 - **IMU**: Android 센서(기기) 축 (세로로 볼 때 x 오른쪽, y 위, z 화면 밖). 자이로 = `TYPE_GYROSCOPE`, 가속도 = 중력 포함 원시 `TYPE_ACCELEROMETER` (정지 시 |a| ≈ 9.8, 위쪽 +). 한 레코드 = 같은 시각의 (gyro, accel) 쌍 → 클라이언트가 자이로 시각에 가속도를 보간해 만든다. 시각이 직전 IMU 이하이면 버림(`imu_dropped`).
