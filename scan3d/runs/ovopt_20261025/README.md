@@ -15,7 +15,8 @@ re-computed the identity / timing / ATE numbers (phase 1 and final); their wordi
   that the slower run fell into (KLT 14.8 ms in backlog frames vs 6.0). Lower bound from the thermally unfavourable
   L1 pair: -2.2 ms p50 (-15 %).
 - Near-exact set W3 = all_exact + ekf_gemm + qr_compress + ekf_chol: phone c4 10.9/16.6 (1 run; W with par_cov
-  11.6-12.1/17.2-17.9 in 4 runs). Offline accuracy of the near-exact sets = baseline (ATE median 0.5914 cm, paired 0.000).
+  11.6-12.1/17.2-17.9 in 4 runs). Offline accuracy of every near-exact set (W, W2, W3, each option alone) = baseline:
+  ATE median 0.5914 cm, paired 0.000 cm, same 8 divergent cells of 42.
 - **Heat**: `--idle-spin-ms 15` (spin only the last 15 ms before the next frame) is as fast as the full idle spin and
   cooler (AP mean -1.3 C, max -1.7 C, 2 reps). WFE spin (`--idle-spin 3`) = no change. No spin = coolest but 22.8 ms p50.
 - Configs: keep C4. max_slam 70 -0.018 cm paired (small, +24 % compute), max_slam 100 / 400 pts no clear gain, clones
@@ -66,13 +67,17 @@ x86 build has no AVX/FMA (same flags as libov_msckf_lib.so); PC and phone stage 
 | X all_exact | 8 | 0.5914 | identical poses in 42/42 | 14.38 / 23.24 |
 | W all options | 8 | 0.5914 | 34, 0.000 / 0.000, 16 | 11.79 / 18.87 |
 | W2 (W without qr) | 8 | 0.5914 | 34, -0.000 / -0.000, 19 | 11.96 / 19.34 |
+| W3 (W without par_cov) = recommended near-exact set | 8 | 0.5914 | 34, -0.000 / -0.000, 21 | 11.71 / 19.25 |
+| G / Q / K / P (one near-exact option each) | 8 each | 0.5914 each | 34, 0.000 / 0.000 each | 15.07 / 17.12 / 17.60 / 16.87 med |
 | S70 max_slam 70 | 8 | 0.5881 | 34, -0.0175 / -0.0151, 23 (sign test p 0.06) | 20.68 / 32.46 |
 | S100 max_slam 100 | 8 | 0.6035 | 34, +0.0019 / -0.0048, 17 | 24.44 / 39.02 |
 | N400 400 pts | 8 | 0.578 | 34, +0.0241 / -0.0474, 15 (mixed: 7 cells changed > 0.3 cm both ways) | 24.92 / 38.09 |
 | C20 15 -> 20 clones | 11 (+134550 o0/o1, 221925 o1) | 0.6081 | 31, -0.0009 / +0.0197, 16 | 17.32 / 34.72 |
 | U50 max_slam_in_update 50 | 8 | 0.5823 | 34, +0.0048 / +0.0028, 15 | 20.30 / 30.91 |
 | M60 max_msckf_in_update 60 | 8 | 0.5663 | 34, -0.0144 / +0.0003, 21 | 17.77 / 28.45 |
-W3 and single near-exact options: `pc_ate/score_*W3*.json` (see the final report for the values).
+Bench ms = single-threaded bench (num_opencv_threads 1, 8 jobs in parallel on the PC), so the par_* options do not
+show there. Score file: `pc_ate/score_B0_W_W2_W3_X_G_Q_K_P_S70_S100_N400_C20_U50_M60.json`. Not run (stopped for time):
+S100U50 (partial), N400M80, N400S100C20, N300S70.
 
 ## Backlog "cliff" guard (`pc_drop/`): `--drop-late 50`, PC 1-core overload (c4n400s100c20, real-time feed)
 lag p95 7.8 s -> 86 ms (max 7.9 s -> 0.14 s), 11 % of frames skipped, ATE 0.32 -> 0.30 cm (A) / 0.32 -> 0.26 cm
@@ -108,6 +113,20 @@ that the user used the phone (Twitter) and charged it -> the remaining runs were
   ~30 s -> coarse. 80 s runs: long-run heat (6 min live) not measured.
 - Compiler flags (L6, 1 run each): `-march=armv8.2-a+fp16+dotprod` and `-flto=thin` builds give identical poses (17
   digits) and no speed gain (13.7 / 21.0, 14.0 / 21.5 vs default all_exact 12.3-13.6 p50) -> not adopted.
+
+## Live test (needs the user: camera; after "ㄱ"), install, rollback
+APK `...\scratchpad\arlat_0.6.18_ovopt.apk` (versionCode 24, 0.6.18-ovopt-20261025; libov_bridge.so sha256 7523659...
+= the binary tested on the phone). Without the new intents it behaves like 0.6.17.
+```
+adb -s 100.79.156.20:5555 install -r C:\Users\a3162\AppData\Local\Temp\claude\c--Users-a3162-Desktop----\27548596-eef5-4a58-bd39-e92ba44d822c\scratchpad\arlat_0.6.18_ovopt.apk
+# WSL, from ~/scanner/StereoDepthSeg-ovopt (each 40 s C4, same motion as before):
+LIVE=1 SEG=still0:0:8,hand:8:38,still:38:40 bash scan3d/tools/ov_phone_run.sh run 100.79.156.20:5555 c4 42 --ei idle_spin 2
+LIVE=1 SEG=still0:0:8,hand:8:38,still:38:40 bash scan3d/tools/ov_phone_run.sh run 100.79.156.20:5555 c4 42 --ei idle_spin 2 --es ov_opt all_exact --ei ov_prof 1
+LIVE=1 SEG=still0:0:8,hand:8:38,still:38:40 bash scan3d/tools/ov_phone_run.sh run 100.79.156.20:5555 c4 42 --ei idle_spin 2 --ei idle_spin_ms 15 --es ov_opt all_exact,ekf_gemm,qr_compress,ekf_chol --ei ov_prof 1
+# optional backlog guard: add --ei drop_late_ms 50
+adb -s 100.79.156.20:5555 install -r -d C:\Users\a3162\AppData\Local\Temp\claude\c--Users-a3162-Desktop----\27548596-eef5-4a58-bd39-e92ba44d822c\scratchpad\arlat_0.6.17.apk   # rollback
+```
+Code rollback: the branch is separate (gyumingim untouched); every option is off unless passed.
 
 ## Files
 - scripts: `ident_pc.sh`, `ident17.sh` (identity), `prof_pc.sh` + `prof_an.py` + `cpu_an.py` (timing / stages / CPU),
