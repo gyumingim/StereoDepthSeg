@@ -1,0 +1,35 @@
+Sun Oct 25 23:18:47 KST 2026
+32cf9bb2f73e7cb4995499ef3cd647862d7ae8237ccb95fca3f417396db06b67  /home/system/scanner/StereoDepthSeg-integ/scan3d/ov_bridge/build_integ_full/ov_bridge
+671e11d3e3a0ef4594489e8ff069fd325258492fa3249987d0ea400dbe785139  /home/system/scanner/StereoDepthSeg-esp32fix/scan3d/ov_bridge/build_esp32fix_full/ov_bridge
+== hv_mine1 rc 0 poses 845 | --predict 2 --predict-hz 200 --pred-thread 1 --viop-udp 127.0.0.1:14773 --viop-hb-src 1
+== hv_ref rc 0 poses 845 | --predict 2 --predict-hz 200 --pred-thread 1 --viop-udp 127.0.0.1:14771
+== h_mine rc 0 poses 845 | 
+== hv_mine0 rc 0 poses 845 | --predict 2 --predict-hz 200 --pred-thread 1 --viop-udp 127.0.0.1:14772
+== h_ref rc 0 poses 845 | 
+== r_ref rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec20261025 --drop-late 0
+== rv_mine1 rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec20261025 --drop-late 0 --viop-udp 127.0.0.1:14774 --viop-hb-src 1
+== r_mine rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec20261025 --drop-late 0
+-- h_ref vs h_mine
+ref /tmp/esp32fix/ident/h_ref.jsonl: poses 845 tracking 815 hash 08688db0b4efe77d pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/esp32fix/ident/h_mine.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 0 first_diff None [] IDENTICAL
+-- hv_ref vs hv_mine0
+ref /tmp/esp32fix/ident/hv_ref.jsonl: poses 845 tracking 815 hash 08688db0b4efe77d pred 3045 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/esp32fix/ident/hv_mine0.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 3177 first_diff None [] IDENTICAL
+-- hv_ref vs hv_mine1
+ref /tmp/esp32fix/ident/hv_ref.jsonl: poses 845 tracking 815 hash 08688db0b4efe77d pred 3045 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/esp32fix/ident/hv_mine1.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 3157 first_diff None [] IDENTICAL
+-- r_ref vs r_mine
+ref /tmp/esp32fix/ident/r_ref.jsonl: poses 2327 tracking 2003 hash d150eca6ccc3119a pred 10197 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/esp32fix/ident/r_mine.jsonl: poses 2327 identical 2327/2327 hash d150eca6ccc3119a pred 9553 first_diff None [] IDENTICAL
+-- r_ref vs rv_mine1
+ref /tmp/esp32fix/ident/r_ref.jsonl: poses 2327 tracking 2003 hash d150eca6ccc3119a pred 10197 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/esp32fix/ident/rv_mine1.jsonl: poses 2327 identical 2327/2327 hash d150eca6ccc3119a pred 8360 first_diff None [] IDENTICAL
+[ov_bridge] viop: udp 127.0.0.1:14773 msgs odom mount imu yaw_align 1 replay_time 0 sysid 1
+[ov_bridge] viop heartbeat: thread 20.0 Hz (feed 100 ms / main loop 200 ms liveness)
+[ov_bridge] viop: udp 127.0.0.1:14773 msgs 1 mount imu | sent 3157 fail 0 heartbeat 329 timesync 0 | age ms (send - predicted instant) p50 698185216.00 p95 698188800.00 max 698189888.00 | send - newest IMU receive ms p50 1.18 p95 24.64 max 92.83
+[ov_bridge] viop heartbeat thread: 20.0 Hz | sent gap ms p50 50.00 p95 52.23 max 58.77 | skipped: feed stale 0 main loop stale 0 | late wakeups 0
+[ov_bridge] viop: udp 127.0.0.1:14774 msgs odom mount imu yaw_align 1 replay_time 0 sysid 1
+[ov_bridge] viop heartbeat: thread 20.0 Hz (feed 100 ms / main loop 200 ms liveness)
+[ov_bridge] viop: udp 127.0.0.1:14774 msgs 1 mount imu | sent 8360 fail 0 heartbeat 748 timesync 0 | age ms (send - predicted instant) p50 699028032.00 p95 699042560.00 max 699044224.00 | send - newest IMU receive ms p50 3.82 p95 18.72 max 90.10
+[ov_bridge] viop heartbeat thread: 20.0 Hz | sent gap ms p50 50.00 p95 52.17 max 81.00 | skipped: feed stale 0 main loop stale 0 | late wakeups 0
+Sun Oct 25 23:19:49 KST 2026

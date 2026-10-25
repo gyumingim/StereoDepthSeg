@@ -88,14 +88,13 @@ void fs_config_default(fs_config_t *c) {
   c->openloop_default_thr = 0.33f;
   c->openloop_thrust_exp = 2.0f;
   c->openloop_acc_down = 1.0f;
-  /* esp32fix 2026-10-26: 0.4 -> 0.6 m/s and 0.99 -> 0.95 with cut mode 1 (sim sweep h 0.2-3 m x record error +-3 %:
-   * C sim test t_openloop_cut 0.3/1/2 m x +-3 %: worst impact 2.19 m/s, no cut in the air, <= 0.18 s on the ground
-   * above 85 % hover thrust; Python model 0.2-3 m: worst impact 2.98 m/s). Legacy: mode 0, 0.4, 0.99 */
-  c->openloop_vz_down = 0.6f;
-  c->openloop_cruise_ratio = 0.95f;
+  /* esp32fix 2026-10-26: defaults = esp32fc (mode 0, 0.4, 0.99); the user decides. Mode 1 is opt-in and was evaluated
+   * with openloop_cut_mode = 1, openloop_vz_down = 0.6, openloop_cruise_ratio = 0.95 (test t_openloop_cut, README) */
+  c->openloop_vz_down = 0.4f;
+  c->openloop_cruise_ratio = 0.99f;
   c->openloop_cut_margin = 1.2f;
   c->openloop_volt_comp = true;
-  c->openloop_cut_mode = 1;
+  c->openloop_cut_mode = 0;
   c->openloop_thr_err = 0.03f;
   c->openloop_end_ratio = 0.70f;
   c->openloop_end_ramp_s = 0.4f;
@@ -104,6 +103,7 @@ void fs_config_default(fs_config_t *c) {
   c->openloop_vio_touch_h = 0.10f;
   c->openloop_vio_touch_ms = 150;
   c->openloop_vio_desc_vz = 0.3f;
+  c->openloop_vio_extend_ms = 2000;
   c->rec_skip_ms = 300;
   c->rec_min_ms = 500;
   c->rec_window_ms = 3000;
@@ -574,7 +574,14 @@ static void land_step(fs_t *fs, const fs_input_t *in, fs_output_t *out) {
       if (!fs->ol_touch_timing) { fs->ol_touch_timing = true; fs->t_ol_touch_ms = in->now_ms; }
       if (elapsed(in->now_ms, fs->t_ol_touch_ms) >= c->openloop_vio_touch_ms) { go(fs, FS_DISARMED, FS_R_TOUCHDOWN); return; }
     } else fs->ol_touch_timing = false;
-    if (elapsed(in->now_ms, fs->t_tier_ms) >= fs->ol_cut_ms) { go(fs, FS_DISARMED, FS_R_LAND_TIMEOUT); return; }
+    /* mode 1: never cut on the timer while VIO is usable and still shows a descent (vz <= -touch_vz_max), for at most
+     * openloop_vio_extend_ms past the cut time (descent direction only + cap: a tip-over on the ground cannot keep the
+     * motors on). Verifier 2026-10-26: the timer cut still descending vehicles in the air with VIO alive. */
+    if (elapsed(in->now_ms, fs->t_tier_ms) >= fs->ol_cut_ms) {
+      const bool extend = c->openloop_cut_mode == 1 && vio_ok && in->vz_vio <= -c->touch_vz_max &&
+                          elapsed(in->now_ms, fs->t_tier_ms) < fs->ol_cut_ms + c->openloop_vio_extend_ms;
+      if (!extend) { go(fs, FS_DISARMED, FS_R_LAND_TIMEOUT); return; }
+    }
   } else {
     bool have_vz = (fs->tier == FS_TIER_VIO) ? in->vz_vio_valid : in->vz_imu_valid;
     float vz = (fs->tier == FS_TIER_VIO) ? in->vz_vio : in->vz_imu;

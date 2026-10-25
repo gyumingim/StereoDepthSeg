@@ -378,6 +378,10 @@ inline void imu_log_row(const uint8_t *payload, int64_t t_hdr, int64_t t_rx) {
 }
 
 std::unique_ptr<mav::Out> g_mav;  // --mav-udp (nullptr = off)
+// esp32fix-20261026: set only with --viop-hb-src 1; the input reader thread touches the link object only through this
+// pointer (default: never), and that object is then never destroyed (released at the clean exit, see main) so a detached
+// reader can never use a destroyed object.
+std::atomic<mav::Out *> g_hb_feed_out{nullptr};
 
 // ---- --idle-spin (header) ----
 constexpr double kIdleSpinMaxMs = 200.0;  // spin at most this long per wait, then block
@@ -2404,7 +2408,7 @@ void reader_main(int fd, InQueue *q, Predictor *pred) {
     if (r.type == kImu && r.buf.size() == 56) {
       imu_log_row(r.buf.data(), tb, r.t_rx_boot);
       if (pred) pred->push_imu(r.buf.data());
-      if (g_mav) g_mav->note_feed();  // esp32fix-20261026: --viop-hb-src 1 feed liveness (no-op otherwise)
+      if (mav::Out *ho = g_hb_feed_out.load(std::memory_order_acquire)) ho->note_feed();  // esp32fix: --viop-hb-src 1 only
     }
     const bool quit = r.type == kQuit;
     q->push(std::move(r));
@@ -2718,6 +2722,7 @@ int main(int argc, char **argv) {
                  viop ? "viop" : "mav", mo->host.c_str(), mo->port, a.mav_msg.c_str(), mo->mount_name.c_str(), a.mav_yaw_align, a.mav_replay_time, a.mav_sysid);
     g_mav = std::move(mo);
     g_mav->hb_thread_start();  // --viop-hb-src 1 only (beats start once IMU is received and handled)
+    if (g_mav->hb_src) g_hb_feed_out.store(g_mav.get(), std::memory_order_release);
     if (g_mav->hb_src) std::fprintf(stderr, "[ov_bridge] viop heartbeat: thread %.1f Hz (feed %d ms / main loop %d ms liveness)\n",
                                     g_mav->hb_hz, g_mav->hb_feed_ms, g_mav->hb_main_ms);
   }
@@ -2778,6 +2783,7 @@ int main(int argc, char **argv) {
       for (int i = 0; i < 3; i++) g_mav->hb_tick(false, false, true);  // VIOP: "stopping" heartbeats on a clean exit
       g_mav->report();
       g_mav->close();
+      if (g_hb_feed_out.load()) (void)g_mav.release();  // --viop-hb-src 1: keep the object alive for a detached reader
     }
     b.log_health();
     return 0;

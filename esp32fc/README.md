@@ -18,12 +18,12 @@
 - **착륙 단계**
   1. **LAND_VIO**: 제자리 x,y를 유지하며 0.3 m/s로 하강합니다.
   2. **LAND_IMU**: 수평을 유지하고, 폰 IMU로 하강 속도를 추정합니다.
-  3. **LAND_OPENLOOP**: 자세 제어가 없습니다. 이번 비행 이륙 때 기록한 모터별 값에서 출력을 **역산**합니다. 추력 ∝ 명령² 모델을 쓰고 배터리 전압 차이를 보정합니다. 처음 0.6 s는 1 m/s²로 하강을 시작하고, 이후는 hover의 95 % 추력으로 내려갑니다.
-     - **모터 끄는 시점 (esp32fix 2026-10-26 고침)**: 마지막 VIO 높이에서, 기록값이 ±3 % 틀린 두 경우를 미리 계산해 가장 이른 착지 시각(t_fast)과 가장 늦은 착지 시각(t_slow)을 구합니다. t_fast부터 0.4 s 동안 추력을 hover의 70 %로 내리고, t_slow + 0.2 s에 모터를 끕니다. 폰 pose가 아직 오면(IMU 프레임만 끊긴 경우) VIO로 하강을 본 뒤 높이 < 0.10 m · |vz| < 0.2 m/s가 0.15 s 이어질 때 바로 끕니다.
+  3. **LAND_OPENLOOP**: 자세 제어가 없습니다. 이번 비행 이륙 때 기록한 모터별 값에서 출력을 **역산**합니다. 추력 ∝ 명령² 모델을 쓰고 배터리 전압 차이를 보정합니다. 처음 0.4 s는 1 m/s²로 하강을 시작하고, 이후는 hover의 99 % 추력으로 내려갑니다. 마지막 VIO 높이로 예상 착지 시간을 계산해 그 1.2배 뒤에 모터를 끕니다 (기본 = `openloop_cut_mode 0`).
+     - **선택 사항 `openloop_cut_mode 1` (esp32fix 2026-10-26, 기본 꺼짐 — 사용자가 정함; 함께 `openloop_vz_down 0.6`, `openloop_cruise_ratio 0.95`)**: 마지막 VIO 높이에서, 기록값이 ±3 % 틀린 두 경우를 미리 계산해 가장 이른 착지 시각(t_fast)과 가장 늦은 착지 시각(t_slow)을 구합니다. t_fast부터 0.4 s 동안 추력을 hover의 70 %로 내리고, t_slow + 0.2 s에 모터를 끕니다. 폰 pose가 아직 오면(IMU 프레임만 끊긴 경우) VIO로 하강을 본 뒤 높이 < 0.10 m · |vz| < 0.2 m/s가 0.15 s 이어질 때 바로 끕니다. 타이머 시각에 VIO가 아직 하강을 보이면 최대 2 s 기다립니다. 기본 방식은 시뮬레이션에서 착지 뒤 98 % 추력으로 1.2–1.7 s 돌고, 기록값이 3 % 크면 공중에서 끕니다. 근거와 실패 범위: `scan3d/runs/esp32fix_20261026/README.md`.
      - 예전 방식(`openloop_cut_mode = 0`): 착지 후 약 1.7 s 동안 hover의 98 % 추력으로 돌았고, 기록값이 3 % 높으면 하강이 멈춰 공중에서 모터가 꺼졌습니다(시뮬레이션 1.6 m 높이).
   - **폰 IMU가 끊기면 VIO·IMU 단계가 둘 다 불가능하므로 바로 OPENLOOP으로 갑니다.** `imu_fail_kill` 설정을 켜면 대신 KILL합니다.
   - 단계는 내려가기만 하고, 착륙 중 비행으로 돌아가지 않습니다.
-- **PC 단위시험: 516개 검사 모두 통과** (esp32fix 2026-10-26; 이전 389개) (gcc, ASan/UBSan, 시뮬레이션). 검사 대상: 폰 IMU 끊김 → OPENLOOP, IMU 지터 처리, PWM 출력 한계.
+- **PC 단위시험: 573개 검사 모두 통과** (esp32fix 2026-10-26; 이전 389개) (gcc, ASan/UBSan, 시뮬레이션). 검사 대상: 폰 IMU 끊김 → OPENLOOP, IMU 지터 처리, PWM 출력 한계.
 - **ESP-IDF 미설치**: `idf.py build`는 해 보지 못했습니다. IDF 스텁으로 문법 검사만 했고, PWM/OneShot/DShot × 폰/로컬 IMU 6가지 조합 모두 통과했습니다.
 
 ### ⚠ 안전 위험: 비행 제어기에 독립 IMU가 없음 (사용자에게)
@@ -137,7 +137,7 @@ States: `DISARMED, ARMED_IDLE, FLYING, EMERG_LAND, KILLED`. Anything not in this
 |---|---|---|---|
 | LAND_VIO | pose fresh + heartbeat ok + phone IMU ok | pos loop holds land-start x,y; collective PI on VIO vz → −0.30 m/s | touchdown (accel quiet, \|f\|≈g, low collective or impact, \|vz\| small, 300 ms) |
 | LAND_IMU | no usable VIO, phone IMU ok | level, yaw hold; vz from the IMU estimator, else a timed collective ramp | same touchdown test |
-| LAND_OPENLOOP | **phone IMU lost** (→ VIO and IMU tiers impossible), or a VIO/IMU landing longer than 30 s | **no attitude control.** Per motor: `cmd_i = hover_i · r^(1/k) · V_rec/V_now`, with k = 2 (thrust ∝ cmd²). r = 1 − 1.0/g for 0.6 s (descend at ~0.6 m/s), then r = 0.95; from t_fast r ramps to 0.70 in 0.4 s. | **mode 1 (default, esp32fix):** at the tier start the profile is simulated from the last VIO height with the thrust off by −3 % / +3 % → earliest / latest touchdown t_fast / t_slow; cut at t_slow + 0.2 s (max 6 s). If poses + heartbeat still arrive and a VIO descent (vz < −0.3 m/s) was seen: cut when height < 0.10 m and \|vz\| < 0.2 m/s for 150 ms. Impact cut if an accelerometer is still available. **mode 0 (legacy):** cut at (touchdown estimate with constant 0.4 m/s) × 1.2 + 0.3 s. |
+| LAND_OPENLOOP | **phone IMU lost** (→ VIO and IMU tiers impossible), or a VIO/IMU landing longer than 30 s | **no attitude control.** Per motor: `cmd_i = hover_i · r^(1/k) · V_rec/V_now`, with k = 2 (thrust ∝ cmd²). r = 1 − 1.0/g for 0.4 s (descend at ~0.4 m/s), then r = 0.99 (mode 1 as tested: 0.6 s / 0.6 m/s, then 0.95; from t_fast r ramps to 0.70 in 0.4 s). | **mode 1 (opt-in, esp32fix; default off):** at the tier start the profile is simulated from the last VIO height with the thrust off by −3 % / +3 % → earliest / latest touchdown t_fast / t_slow; cut at t_slow + 0.2 s (max 6 s). If poses + heartbeat still arrive and a VIO descent (vz < −0.3 m/s) was seen: cut when height < 0.10 m and \|vz\| < 0.2 m/s for 150 ms. While VIO is usable and still shows a descent (vz ≤ −0.2 m/s) the timer cut waits, at most 2 s. Impact cut if an accelerometer is still available. **mode 0 (default, esp32fc):** cut at (touchdown estimate with constant 0.4 m/s) × 1.2 + 0.3 s. |
 
 **This flight's takeoff record** (the source for "back-calculate from the vertical takeoff"):
 
@@ -150,7 +150,7 @@ States: `DISARMED, ARMED_IDLE, FLYING, EMERG_LAND, KILLED`. Anything not in this
 
 ## 4. PC unit tests (all pass)
 
-`make -C esp32fc/test` builds with gcc 11.4 in WSL, `-Wall -Wextra -Werror -fsanitize=address,undefined`. Result: **516 checks, 0 failed** (esp32fix 2026-10-26; 389 before). Raw logs: `scan3d/runs/esp32fix_20261026/test_*.log` (earlier: `scan3d/runs/esp32fc_20261025/test_safety_run.log`).
+`make -C esp32fc/test` builds with gcc 11.4 in WSL, `-Wall -Wextra -Werror -fsanitize=address,undefined`. Result: **573 checks, 0 failed** (esp32fix 2026-10-26; 389 before). Raw logs: `scan3d/runs/esp32fix_20261026/test_*.log` (earlier: `scan3d/runs/esp32fc_20261025/test_safety_run.log`).
 
 The sim is a 1 kHz 1-D vertical model: thrust ∝ cmd² (matches the open-loop model), ground contact with an impact spike, per-motor trims. It feeds phone pose 200 Hz, heartbeat 20 Hz and PC heartbeat 10 Hz.
 
@@ -167,8 +167,8 @@ Earlier scenarios (all still pass): arm rules, pose / heartbeat / both stalls, h
 
 Results printed by the tests (sim, 1 run each):
 
-- **Phone-IMU loss from 1 m (esp32fix, mode 1):** ground contact after 1.45 s at 1.24 m/s, motors cut at 2.05 s: 0.6 s on the ground, of which ~30 ms above 85 % of hover thrust (rest ramping to 70 %). Legacy (mode 0, esp32fc): contact 1.86 s at 0.80 m/s, cut 3.53 s = **~1.7 s on the ground at ~98 % hover**.
-- **Sweep (`t_openloop_cut`, height 0.3 / 1 / 2 m × thrust error −3 / 0 / +3 %, 1 run each, deterministic sim):** mode 1 worst: impact 2.19 m/s, never cut in the air, on-ground spin ≤ 1.05 s, of it ≤ 0.18 s above 85 % hover. Legacy worst: cut in the air at 1.62 m (impact 5.64 m/s), on-ground spin 3.7 s at > 85 % hover. Python model of the same sweep (0.2–3 m, ±1.5 / ±3 %): `scan3d/runs/esp32fix_20261026/olsim3_out.txt`.
+- **Phone-IMU loss from 1 m (default mode 0):** contact 1.86 s at 0.80 m/s, cut 3.53 s = **~1.7 s on the ground at ~98 % hover** (this test's record is ~1 % low). Opt-in mode 1, record exact: contact 1.57 s at 1.23 m/s, cut 2.05 s.
+- **Sweep (`t_openloop_cut`, height 0.3 / 1 / 2 m × thrust error −3 / 0 / +3 %, 1 run each, deterministic sim):** error relative to the actual record. Mode 1 worst: impact 2.35 m/s, no cut in the air **within the same model** (predictor = test plant), ≤ 0.12 s on the ground above 85 % hover. Mode 0 worst: cut in the air 3/9 (up to 3.37 m), on-ground spin 3.5 s at > 85 % hover. Failure ranges with other plant models: run README. Python model of the same sweep (0.2–3 m, ±1.5 / ±3 %): `scan3d/runs/esp32fix_20261026/olsim3_out.txt`.
 - **VIO still alive, IMU frames lost (mode 1):** cut 150 ms after ground contact (VIO touchdown).
 - Trade-off (sim): impact speed at 1 m rises from 0.80 to 1.24 m/s (descent 0.6 m/s + end ramp) in exchange for ~1.1 s less spinning on the ground at near-hover thrust.
 - **Takeoff record:** 0.7 % below the true hover.
@@ -219,7 +219,7 @@ Results printed by the tests (sim, 1 run each):
 | phone mount | `viop_mount_cam_fwd`, phone at CG | decide |
 | ESP-NOW | channel 1, accepts any MAC | **pair + encrypt before flying** |
 | gains | provisional (450 class) | tune on the vehicle (lower rate-loop bandwidth because of the phone IMU latency) |
-| open-loop landing | k = 2, 1 m/s², 0.6 m/s, 0.95, band ±3 %, end 0.70 / 0.4 s, hold 0.2 s, VIO touchdown 0.10 m / 150 ms (legacy `openloop_cut_mode = 0` + 0.4 m/s + 0.99) | to be tested in sim / real (user) |
+| open-loop landing | default (esp32fc): k = 2, 1 m/s², 0.4 m/s, 0.99, margin 1.2. Opt-in `openloop_cut_mode = 1` (+ 0.6 m/s, 0.95): band ±3 %, end 0.70 / 0.4 s, hold 0.2 s, VIO touchdown 0.10 m / 150 ms after a descent, timer waits ≤ 2 s while VIO descends | user decides mode 1; to be tested in sim / real |
 
 ## 7. Protocol / integration notes
 
