@@ -11,7 +11,9 @@ What it does (README.md next to this file has the user procedure):
   4. when the pose fills a still-missing slot and is steady (~0.4 s), tells the phone to save the next N (4) full-res
      1920x1080 raw Y frames (PGM, lossless) -> adb pull into <out>/calcap_<time>/<phone session>/ -> re-check on the
      stills (slot still filled, board found in every frame) -> the slot counts.
-  5. Feedback: phone screen = live picture with the yellow TARGET outline + green detected corners + big text;
+  5. Feedback: phone screen = the phone's OWN live camera picture (app 0.6.25, every frame, no PC images) with the guide
+     overlay the PC sends as "OVL <json>" (translucent yellow TARGET board shape at the slot pose, detected board in
+     green/orange, hold progress n/5, blue while capturing) + big text (MSG);
      laptop page = thin status lines above / below the board + beep per capture, panel with slot table on demand.
   6. Stops (camera off, verified with dumpsys media.camera) on: "정지" button, all slots done, phone auto-stop (idle 5 min,
      SKIN >= 40 / AP >= 50 / battery 42 C, 20 min max, PC silent 20 s), PC-side SKIN >= 40 or AP >= 50.
@@ -66,6 +68,8 @@ ap.add_argument("--lock-dir", default=r"C:\Users\a3162\AppData\Local\Temp\claude
 ap.add_argument("--fake", default="", help="host:port of fake_phone.py (PC test without the phone; no adb)")
 ap.add_argument("--fake-dir", default="", help="fake phone's files dir (pull = copy)")
 ap.add_argument("--autostart", action="store_true", help="start a session right away (tests)")
+ap.add_argument("--send-img", action="store_true",
+                help="also send the old PC-rendered guide picture (IMG, for app <= 0.6.24); default off (app draws OVL itself)")
 ap.add_argument("--exit-after", action="store_true", help="exit the server when the session ends (tests)")
 A = ap.parse_args()
 A.frames = max(3, min(5, A.frames))
@@ -224,6 +228,7 @@ def load_set(d):
         for c in captures:
             if c.get("ok") and c["slot"] in slot_state:
                 slot_state[c["slot"]] = "ok"
+        state["n_ok"] = sum(v == "ok" for v in slot_state.values())     # page shows the done count right away
     log(f"세트 이어서: {d} (채운 칸 {sum(v == 'ok' for v in slot_state.values())})")
 
 
@@ -306,6 +311,33 @@ def draw(gray, scale, pose, corners, target_slot, board, matched, steady_n):
         cv2.rectangle(img, (0, 0), (w - 1, h - 1), (0, 200, 0), max(4, int(12 * scale)))
         cv2.rectangle(img, (0, h - 14), (int(w * min(1.0, steady_n / 5.0)), h - 1), (0, 200, 0), -1)
     return img
+
+
+def _pts(a):
+    """Nx2 full-res px -> [[x, y], ...] rounded (None if empty / not finite)."""
+    if a is None or len(a) == 0:
+        return None
+    a = np.asarray(a, np.float64).reshape(-1, 2)
+    if not np.all(np.isfinite(a)):
+        return None
+    return [[round(float(x), 1), round(float(y), 1)] for x, y in a]
+
+
+def overlay(scale, corners, target_slot, board, col, n_same):
+    """Small guide overlay for the phone's own picture (all in 1920x1080 sensor px)."""
+    o = dict(col=col, n=int(n_same), N=5, edge=int(SL.EDGE_PX))
+    if target_slot is not None:
+        try:
+            o["tgt"] = _pts(SL.target_outline(target_slot, board or BOARDS[0], K_FULL, DIST))
+        except Exception:
+            pass
+        d = SL.target_pose(target_slot)[2]
+        o["lbl"] = f"{target_slot['label']} · {d:.2f} m"
+    if corners is not None and len(corners):
+        c = np.asarray(corners, np.float32).reshape(-1, 2)
+        o["det"] = _pts(cv2.convexHull(c).reshape(-1, 2) / scale)
+        o["pts"] = _pts(c / scale)
+    return {k: v for k, v in o.items() if v is not None}
 
 
 # ---------------------------------------------------------------- pull + re-check on the stills
@@ -568,7 +600,10 @@ def run_loop(ph):
                                                       if k2 in ("board", "n", "tilt", "turn", "lean", "dist", "pos", "edge")},
                          match=match["id"] if match else "", target=target["label"] if target else "", hint=hint,
                          phase="촬영 중")
-        if k % 2 == 0:       # guidance picture to the phone ~5x/s (small)
+        # 0.6.25: the phone shows its own picture; send only the small overlay (every preview, ~3-5 Hz)
+        ocol = "blue" if now < blue_until else ("green" if match else ("orange" if p is not None else "none"))
+        ph.cmd("OVL " + json.dumps(overlay(scale, corners, target, board, ocol, n_same), ensure_ascii=False, separators=(",", ":")))
+        if A.send_img and k % 2 == 0:       # old: PC-rendered guidance picture (apps <= 0.6.24)
             small = cv2.resize(img, (480, 270), interpolation=cv2.INTER_AREA)
             ok_, e2 = cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, 60])
             ph.cmd("IMG " + base64.b64encode(e2.tobytes()).decode())
@@ -590,6 +625,7 @@ def run_loop(ph):
         if steady:
             info = dict(slot=match["id"], pose={k2: p[k2] for k2 in ("board", "n", "tilt", "turn", "lean", "dist", "pos", "edge", "bbox")},
                         t_pc=time.strftime("%Y-%m-%d %H:%M:%S"), preview_ts=ts)
+            ph.cmd("OVL " + json.dumps(overlay(scale, corners, match, board, "blue", HOLD_N), ensure_ascii=False, separators=(",", ":")))
             ph.cmd(f"MSG 2563eb 파랑: 촬영 중! {match['label']}\\n움직이지 말기…")
             last_msg = ""
             with lock:

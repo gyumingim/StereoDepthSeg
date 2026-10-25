@@ -128,9 +128,8 @@ public class MainActivity extends Activity {
                 calcap.maxSkinC = Float.isNaN(ms) ? 40f : Math.min(40f, ms);     // NaN would switch the check off
                 calcap.maxApC = Float.isNaN(ma) ? 50f : Math.min(50f, ma);
                 calcap.maxBatteryTenthC = Math.min(420, getIntent().getIntExtra("max_temp_dc", 420));
-                final android.widget.ImageView iv = new android.widget.ImageView(this);
-                iv.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
-                iv.setBackgroundColor(0xFF000000);
+                calcap.localDiv = Math.max(0, Math.min(8, getIntent().getIntExtra("local_div", 3)));   // 0.6.25 own picture; 0 = off
+                final CalCapView iv = new CalCapView(this);      // 0.6.25: own live picture + PC overlay (was a PC-rendered JPEG)
                 android.widget.LinearLayout ll = new android.widget.LinearLayout(this);
                 ll.setOrientation(android.widget.LinearLayout.VERTICAL);
                 if (status.getParent() != null) ((android.view.ViewGroup) status.getParent()).removeView(status);
@@ -141,7 +140,10 @@ public class MainActivity extends Activity {
                 calcap.screen = new CalCapRunner.Screen() {
                     @Override public void show(int bg, String t) { runOnUiThread(() -> {
                         status.setBackgroundColor(bg); status.setTextColor(0xFFFFFFFF); status.setTextSize(26); status.setText(t); }); }
-                    @Override public void image(android.graphics.Bitmap b) { runOnUiThread(() -> iv.setImageBitmap(b)); }
+                    @Override public void image(android.graphics.Bitmap b) { }     // old PC picture: ignored (own picture shown)
+                    @Override public void frame(byte[] y, int w, int h) { iv.frame(y, w, h); }
+                    @Override public void overlay(org.json.JSONObject j) { iv.overlay(j); }
+                    @Override public void sensorOrientation(int so) { iv.setSensorOrientation(so); }
                 };
                 calcap.onAutoStop = () -> runOnUiThread(this::finish);      // onPause stops the runner (camera off, meta.json)
                 try { calcap.start(); }

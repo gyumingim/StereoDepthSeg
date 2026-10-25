@@ -1,6 +1,6 @@
 """Fake phone for testing calcap_server.py + calcap_calib.py without the phone (2026-10-25).
 
-Speaks the app's calcap TCP protocol (PREV / CAP / STAT / MSG / IMG / STOP) and renders the laptop 5x3 ChArUco board
+Speaks the app's calcap TCP protocol (PREV / CAP / STAT / MSG / OVL / IMG / STOP) and renders the laptop 5x3 ChArUco board
 (the real PNG) through a KNOWN "true" lens (default: cal20261024d with fx, fy x1.004 and cx +3, cy -2 px, i.e. NOT the
 lens the server uses for guidance) at a scripted pose sequence that visits every slot's target pose (held ~1.6 s, with
 moves in between). CAP writes PGM stills + frames.jsonl like the app into <dir>/<session>/.
@@ -140,8 +140,11 @@ def handle(c):
         elif cmd == "STAT":
             c.sendall(("STAT " + json.dumps(dict(frames=stats["frames"], fps_measured=A.fps, dir="/fake/" + SESSION,
                                                  temps=dict(skin_c=30.0, ap_c=33.0), captures=stats["caps"], fake=True)) + "\n").encode())
-        elif cmd in ("MSG", "IMG"):
-            stats["msgs" if cmd == "MSG" else "imgs"] += 1
+        elif cmd in ("MSG", "IMG", "OVL"):
+            if cmd == "OVL":
+                json.loads(line[4:])          # must be valid json for the app (0.6.25)
+            k = dict(MSG="msgs", IMG="imgs", OVL="ovls")[cmd]
+            stats[k] = stats.get(k, 0) + 1
             c.sendall(b"OK\n")
         elif cmd == "STOP":
             c.sendall(b"OK\n")

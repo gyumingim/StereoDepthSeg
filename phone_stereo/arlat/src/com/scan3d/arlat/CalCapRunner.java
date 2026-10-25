@@ -59,21 +59,34 @@ import java.util.function.Consumer;
  *   CAP <n> <tag> [json]  -> waits for the next n frames, saves them -> "DONE {json}" (or "BUSY" / "FAIL {json}")
  *   STAT                  -> "STAT {json}" (frames, measured fps, last capture result, ISO, temps, ...)
  *   MSG <rrggbb> <text>   -> big text on the phone screen ("\n" in text = new line) -> "OK"
+ *   OVL <json>            -> (0.6.25) guide overlay drawn over the phone's OWN live picture (CalCapView) -> "OK"
+ *   IMG <base64 jpeg>     -> (old, kept for compatibility; the PC no longer sends it by default) PC-rendered picture -> "OK"
  *   STOP                  -> "OK", then the runner stops (camera off) and the activity finishes
+ * 0.6.25: the screen shows the phone's own camera picture at the camera rate (Y plane of every frame of the SAME ImageReader,
+ * decimated by local_div (3 -> 640x360), drawn by CalCapView); no second Surface, so the session / sensor mode / crop / frame
+ * duration of the calibration stream are unchanged. The PC sends only the small OVL overlay (target outline, detected board).
  * Auto stop (camera off, meta.json written): PC never connected within connect_grace_s (90) or silent for lost_s (20);
  * no capture for idle_s (300); max_s (1200); SKIN >= max_skin_c (40) or AP >= max_ap_c (50) from the thermal HAL dump
  * (needs adb 'pm grant com.scan3d.arlat android.permission.DUMP', else only battery / thermal status are used);
  * battery >= max_temp_dc (420 = 42.0 C); thermal status >= SEVERE. onPause (app left / screen off) also stops.
  */
 class CalCapRunner {
-    interface Screen { void show(int bg, String text); void image(android.graphics.Bitmap b); }
+    interface Screen {
+        void show(int bg, String text);
+        void image(android.graphics.Bitmap b);
+        /** 0.6.25: the phone's own live picture = Y of THIS frame decimated by localDiv (camera thread, every frame). */
+        default void frame(byte[] y, int w, int h) { }
+        /** 0.6.25: guide overlay from the PC ("OVL <json>", 1920x1080 sensor coordinates). */
+        default void overlay(JSONObject j) { }
+        default void sensorOrientation(int so) { }
+    }
 
     final Context ctx;
     final Consumer<String> status;
     Screen screen;
     Runnable onAutoStop;
     // parameters (MainActivity sets them from the intent)
-    int fps = 10, aeFps = 30, expUs = 2000, iso = 0, port = 8811, prevDiv = 2, jpegQ = 80;
+    int fps = 10, aeFps = 30, expUs = 2000, iso = 0, port = 8811, prevDiv = 2, jpegQ = 80, localDiv = 3;
     int idleS = 300, maxS = 1200, connectGraceS = 90, lostS = 20, maxBatteryTenthC = 420, maxCapFrames = 8;
     float focusDpt = 0.5f, maxSkinC = 40f, maxApC = 50f;
     boolean autoIso = true;
@@ -109,7 +122,7 @@ class CalCapRunner {
     // preview (made only on request)
     private final Object prevLock = new Object();
     private volatile boolean prevWanted;
-    private byte[] prevY, prevRow;
+    private byte[] prevY, prevRow, localY, localRow;
     private long prevTs;
     private boolean prevReady;
 
@@ -138,7 +151,7 @@ class CalCapRunner {
         meta.put("app", "arlat mode calcap").put("session", stamp).put("dir", dir.getAbsolutePath())
                 .put("params", new JSONObject().put("fps", fps).put("ae_fps", aeFps).put("exp_us", expUs).put("iso", iso)
                         .put("auto_iso", autoIso).put("iso_target_scale", isoScale).put("focus_dpt", focusDpt).put("port", port)
-                        .put("prev_div", prevDiv).put("idle_s", idleS).put("max_s", maxS).put("connect_grace_s", connectGraceS)
+                        .put("prev_div", prevDiv).put("local_div", localDiv).put("idle_s", idleS).put("max_s", maxS).put("connect_grace_s", connectGraceS)
                         .put("lost_s", lostS).put("max_skin_c", maxSkinC).put("max_ap_c", maxApC).put("max_temp_dc", maxBatteryTenthC))
                 .put("stream", "camera 0, SESSION_REGULAR, TEMPLATE_RECORD, YUV_420_888 1920x1080 (= OvRunner main / std60)")
                 .put("battery_c_start", batteryTenthC() / 10.0).put("charging_start", charging());
@@ -165,7 +178,8 @@ class CalCapRunner {
         offer(ch);
         Integer so = ch.get(CameraCharacteristics.SENSOR_ORIENTATION);
         if (so != null) sensorOrientation = so;
-        meta.put("sensor_orientation", sensorOrientation);
+        meta.put("sensor_orientation", sensorOrientation).put("local_preview", "own Y of every frame / local_div " + localDiv + " (no extra Surface)");
+        if (screen != null) screen.sensorOrientation(sensorOrientation);
         reader = ImageReader.newInstance(W, H, ImageFormat.YUV_420_888, 4);
         reader.setOnImageAvailableListener(this::onImage, camH);
         cm.openCamera("0", new CameraDevice.StateCallback() {
@@ -327,6 +341,16 @@ class CalCapRunner {
                 else for (int y = 0; y < H; y++) { b.position(y * rs); b.get(cap, y * W, W); }
                 if (!writeQ.offer(new Object[]{cap, ts, id, k, tag, info})) { pool.offer(cap); synchronized (capLock) { capSkipped++; } }
             }
+            if (screen != null && localDiv > 0) {      // 0.6.25: own live picture (same frame, no extra stream)
+                int d = localDiv, lw = W / d, lh = H / d;
+                if (localY == null || localY.length != lw * lh) { localY = new byte[lw * lh]; localRow = new byte[W]; }
+                for (int y = 0; y < lh; y++) {
+                    b.position(y * d * rs); b.get(localRow, 0, W);
+                    int o = y * lw;
+                    for (int x = 0; x < lw; x++) localY[o + x] = localRow[x * d];
+                }
+                screen.frame(localY, lw, lh);
+            }
             if (prevWanted) {
                 int d = Math.max(1, prevDiv), pw = W / d, ph = H / d;
                 if (prevY == null || prevY.length != pw * ph) { prevY = new byte[pw * ph]; prevRow = new byte[W]; }
@@ -465,6 +489,12 @@ class CalCapRunner {
             String t = (a.length > 2 ? a[2] : "") + (a.length > 3 ? " " + a[3] : "");
             show(bg, t.replace("\\n", "\n"));
             reply(out, "OK");
+        } else if (c.equals("OVL")) {
+            try {
+                JSONObject j = new JSONObject(line.length() > 4 ? line.substring(4) : "{}");
+                if (screen != null) screen.overlay(j);
+                reply(out, "OK");
+            } catch (Exception e) { reply(out, "ERR ovl " + e); }
         } else if (c.equals("IMG")) {
             try {
                 byte[] j = android.util.Base64.decode(a.length > 1 ? a[1] : "", android.util.Base64.DEFAULT);
