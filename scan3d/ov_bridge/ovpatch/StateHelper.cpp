@@ -159,10 +159,72 @@ void StateHelper::EKFUpdate(std::shared_ptr<State> state, const std::vector<std:
   };
   bool s_done = false;
 
+  // scan3d ekf_sparse (near-exact, 2026-10-26 ovupd): structure-exploiting M and S for block-sparse H (see ovopt.h)
+  bool m_done = false;
+  if (ovopt::g.ekf_sparse) {
+    const int m = (int)H.rows();
+    const int nb = (int)H_order.size();
+    std::vector<std::vector<int>> b_rows(nb);
+    long fill = 0;
+    for (int b = 0; b < nb; b++) {
+      const int c0 = H_id[b], sz = H_order[b]->size();
+      for (int r = 0; r < m; r++)
+        if ((H.block(r, c0, 1, sz).array() != 0.0).any())
+          b_rows[b].push_back(r);
+      fill += (long)sz * (long)b_rows[b].size();
+    }
+    const int pct = ovopt::g.ekf_sparse == 1 ? 50 : ovopt::g.ekf_sparse;
+    ovopt::count(ovopt::C_SPARSE_TRY, 1);
+    if (m > 0 && fill * 100 <= (long)pct * (long)H.cols() * (long)m) {
+      ovopt::count(ovopt::C_SPARSE_USED, 1);
+      const Eigen::MatrixXd &Cov = state->_Cov;
+      const int N = (int)Cov.rows();
+      // M_a(:, rows_b) += P(:, var_b) * H(rows_b, var_b)^T, in H_order
+      for (int b = 0; b < nb; b++) {
+        const std::vector<int> &rw = b_rows[b];
+        const int k = (int)rw.size();
+        if (k == 0)
+          continue;
+        const int c0 = H_id[b], sz = H_order[b]->size(), vid = H_order[b]->id();
+        if (rw.back() - rw.front() + 1 == k) {
+          M_a.middleCols(rw.front(), k).noalias() += Cov.middleCols(vid, sz) * H.block(rw.front(), c0, k, sz).transpose();
+        } else {
+          Eigen::MatrixXd Hc(k, sz);
+          for (int j = 0; j < k; j++)
+            Hc.row(j) = H.block(rw[j], c0, 1, sz);
+          Eigen::MatrixXd Mc(N, k);
+          Mc.noalias() = Cov.middleCols(vid, sz) * Hc.transpose();
+          for (int j = 0; j < k; j++)
+            M_a.col(rw[j]) += Mc.col(j);
+        }
+      }
+      // S = H * (P_small H^T) + R, where P_small H^T = rows of M_a of the H variables
+      S.setZero();
+      for (int b = 0; b < nb; b++) {
+        const std::vector<int> &rw = b_rows[b];
+        const int k = (int)rw.size();
+        if (k == 0)
+          continue;
+        const int c0 = H_id[b], sz = H_order[b]->size(), vid = H_order[b]->id();
+        if (rw.back() - rw.front() + 1 == k) {
+          S.middleRows(rw.front(), k).noalias() += H.block(rw.front(), c0, k, sz) * M_a.middleRows(vid, sz);
+        } else {
+          for (int j = 0; j < k; j++)
+            S.row(rw[j]).noalias() += H.block(rw[j], c0, 1, sz) * M_a.middleRows(vid, sz);
+        }
+      }
+      S.triangularView<Eigen::Upper>() += R;
+      m_done = true;
+      s_done = true;
+    }
+  }
+
   //==========================================================
   //==========================================================
   // For each active variable find its M = P*H^T
-  if (ovopt::g.ekf_gemm) {
+  if (m_done) {
+    // scan3d ekf_sparse: M_a and S done above
+  } else if (ovopt::g.ekf_gemm) {
     // scan3d ekf_gemm (near-exact): M_a = P(:, H vars) * H^T as one product on the gathered columns
     auto gemm_ma = [&]() {
       Eigen::MatrixXd P_c(state->_Cov.rows(), H.cols());
@@ -282,7 +344,25 @@ void StateHelper::EKFUpdate(std::shared_ptr<State> state, const std::vector<std:
       state->_Cov.triangularView<Eigen::Upper>() -= K * M_a.transpose();
   }
   prof_lap.to(ovopt::S_EKF_COV);
-  state->_Cov = state->_Cov.selfadjointView<Eigen::Upper>();
+  if (ovopt::g.sym_inplace) {
+    // scan3d sym_inplace (exact, 2026-10-26 ovupd): lower = upper^T in place (same values as the selfadjoint copy)
+    Eigen::MatrixXd &P = state->_Cov;
+    const int N = (int)P.rows();
+    const int BS = 32;
+    for (int jb = 0; jb < N; jb += BS) {      // column block of the lower triangle
+      const int je = std::min(N, jb + BS);
+      for (int ib = jb; ib < N; ib += BS) {   // row block (ib >= jb)
+        const int ie = std::min(N, ib + BS);
+        for (int j = jb; j < je; j++) {
+          const int i0 = std::max(ib, j + 1);
+          for (int i = i0; i < ie; i++)
+            P(i, j) = P(j, i);
+        }
+      }
+    }
+  } else {
+    state->_Cov = state->_Cov.selfadjointView<Eigen::Upper>();
+  }
   // Cov -= K * M_a.transpose();
   // Cov = 0.5*(Cov+Cov.transpose());
 
@@ -650,6 +730,19 @@ void StateHelper::initialize_invertible(std::shared_ptr<State> state, std::share
     current_it += meas_var->size();
   }
 
+  Eigen::MatrixXd M(H_R.rows(), H_R.rows());
+  if (ovopt::g.init_gemm) {
+    // scan3d init_gemm (near-exact, 2026-10-26 ovupd): M_a = P(:, H vars) H_R^T as one GEMM; H_R P_small H_R^T from M_a rows
+    Eigen::MatrixXd P_c(state->_Cov.rows(), H_R.cols());
+    for (size_t i = 0; i < H_order.size(); i++)
+      P_c.middleCols(H_id[i], H_order[i]->size()) = state->_Cov.middleCols(H_order[i]->id(), H_order[i]->size());
+    M_a.noalias() = P_c * H_R.transpose();
+    Eigen::MatrixXd Mv(H_R.cols(), H_R.rows());
+    for (size_t i = 0; i < H_order.size(); i++)
+      Mv.middleRows(H_id[i], H_order[i]->size()) = M_a.middleRows(H_order[i]->id(), H_order[i]->size());
+    M.noalias() = H_R * Mv;
+    M.triangularView<Eigen::Upper>() += R;
+  } else {
   //==========================================================
   //==========================================================
   // For each active variable find its M = P*H^T
@@ -670,9 +763,9 @@ void StateHelper::initialize_invertible(std::shared_ptr<State> state, std::share
   Eigen::MatrixXd P_small = StateHelper::get_marginal_covariance(state, H_order);
 
   // M = H_R*Cov*H_R' + R
-  Eigen::MatrixXd M(H_R.rows(), H_R.rows());
   M.triangularView<Eigen::Upper>() = H_R * P_small * H_R.transpose();
   M.triangularView<Eigen::Upper>() += R;
+  }  // scan3d init_gemm
 
   // Covariance of the variable/landmark that will be initialized
   assert(H_L.rows() == H_L.cols());

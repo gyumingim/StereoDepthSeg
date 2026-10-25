@@ -1,0 +1,9 @@
+# ovupd V2: max_slam 50 A/B ABBA, then max_slam 100 B vs C (= B + par_cov) ABBA
+v_s50_A_r1 ov_bridge_ovupd c4 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --prof-log out/v_s50_A_r1/prof.csv
+v_s50_B_r1 ov_bridge_ovupd c4 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse --idle-spin-ms 15 --prof-log out/v_s50_B_r1/prof.csv
+v_s50_B_r2 ov_bridge_ovupd c4 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse --idle-spin-ms 15 --prof-log out/v_s50_B_r2/prof.csv
+v_s50_A_r2 ov_bridge_ovupd c4 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --prof-log out/v_s50_A_r2/prof.csv
+v_s100_C_r1 ov_bridge_ovupd c4s100 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse,par_cov --idle-spin-ms 15 --prof-log out/v_s100_C_r1/prof.csv
+v_s100_Bc_r1 ov_bridge_ovupd c4s100 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse --idle-spin-ms 15 --prof-log out/v_s100_Bc_r1/prof.csv
+v_s100_Bc_r2 ov_bridge_ovupd c4s100 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse --idle-spin-ms 15 --prof-log out/v_s100_Bc_r2/prof.csv
+v_s100_C_r2 ov_bridge_ovupd c4s100 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse,par_cov --idle-spin-ms 15 --prof-log out/v_s100_C_r2/prof.csv

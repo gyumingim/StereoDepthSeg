@@ -1,0 +1,5 @@
+# ovupd U2: same as U1 for max_slam 50 (c4 = live config)
+s50_A_r1 ov_bridge_ovupd c4 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --prof-log out/s50_A_r1/prof.csv
+s50_B_r1 ov_bridge_ovupd c4 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse --idle-spin-ms 15 --prof-log out/s50_B_r1/prof.csv
+s50_B_r2 ov_bridge_ovupd c4 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse --idle-spin-ms 15 --prof-log out/s50_B_r2/prof.csv
+s50_A_r2 ov_bridge_ovupd c4 2 2 1.0 1 0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --prof-log out/s50_A_r2/prof.csv
