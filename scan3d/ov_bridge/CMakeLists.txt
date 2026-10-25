@@ -33,6 +33,7 @@ if (OV_FULL_SOURCE)
   # ovpatch/ copies are based on upstream open_vins 69488123: warn if OV_SRC holds other versions of the replaced files
   foreach (pair "ov_core/src/track/TrackKLT.cpp=ec5b2cd169935ff1df1537cdfec6d62e"
                 "ov_msckf/src/core/VioManager.cpp=0c38ccd6284bee46b559d1e366600fd1"
+                "ov_msckf/src/core/VioManagerHelper.cpp=690f3f2fae333f4737026b005f163058"
                 "ov_msckf/src/state/StateHelper.cpp=69b3289a5061a008537d777558c3280c"
                 "ov_msckf/src/update/UpdaterMSCKF.cpp=9c640902a78f3f7f82a763a6ed6043bc"
                 "ov_msckf/src/update/UpdaterSLAM.cpp=411be47759278c9c7b4dcd531279bb06")
@@ -56,7 +57,7 @@ if (OV_FULL_SOURCE)
     ${S}/ov_init/src/init/InertialInitializer.cpp ${S}/ov_init/src/dynamic/DynamicInitializer.cpp
     ${S}/ov_init/src/static/StaticInitializer.cpp
     ${S}/ov_msckf/src/state/State.cpp ovpatch/StateHelper.cpp ${S}/ov_msckf/src/state/Propagator.cpp
-    ovpatch/VioManager.cpp ${S}/ov_msckf/src/core/VioManagerHelper.cpp
+    ovpatch/VioManager.cpp ovpatch/VioManagerHelper.cpp
     ${S}/ov_msckf/src/update/UpdaterHelper.cpp ovpatch/UpdaterMSCKF.cpp
     ovpatch/UpdaterSLAM.cpp ${S}/ov_msckf/src/update/UpdaterZeroVelocity.cpp)
   set(OV_FULL_DEFS ROS_AVAILABLE=0 ENABLE_ARUCO_TAGS=0 OVOPT_FULL=1)

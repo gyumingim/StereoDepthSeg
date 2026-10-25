@@ -10,6 +10,7 @@ Flags g;
 const float *rs_mapy = nullptr;
 int rs_map_w = 0, rs_map_h = 0, rs_src_h = 0;
 RsStats rs_stats;
+Health h;  // 2026-10-25 ovrobust health counters
 double prof_ms[N_SLOTS] = {0};
 long prof_cnt[N_COUNTS] = {0};
 

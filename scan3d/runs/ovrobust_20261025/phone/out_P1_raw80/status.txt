@@ -1,0 +1,39 @@
+start 17:07:28 list P1_raw80.txt skin_max_start 36.0
+Features	: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt
+17:07:28 A wait SKIN 37.9 AP 40.0
+17:07:43 A wait SKIN 37.9 AP 40.0
+17:07:59 A wait SKIN 37.9 AP 39.7
+17:08:14 A wait SKIN 37.8 AP 39.6
+17:08:29 A wait SKIN 37.7 AP 39.4
+17:08:44 A wait SKIN 37.7 AP 39.4
+17:09:00 A wait SKIN 37.7 AP 39.8
+17:09:15 A wait SKIN 37.7 AP 39.7
+17:09:30 A wait SKIN 37.6 AP 39.4
+17:09:45 A wait SKIN 37.6 AP 39.5
+17:10:00 A wait SKIN 37.6 AP 39.6
+17:10:16 A wait SKIN 37.6 AP 39.5
+17:10:31 A wait SKIN 37.4 AP 39.1
+17:10:46 A wait SKIN 37.4 AP 39.4
+17:11:01 A wait SKIN 37.4 AP 39.5
+17:11:16 A wait SKIN 37.4 AP 39.3
+17:11:31 A wait SKIN 37.4 AP 39.8
+17:11:47 A wait SKIN 37.9 AP 42.6
+17:12:02 A wait SKIN 38.0 AP 40.9
+17:12:17 A wait SKIN 37.8 AP 40.1
+17:12:32 A wait SKIN 37.4 AP 39.7
+17:12:47 A wait SKIN 37.3 AP 39.5
+17:13:03 A wait SKIN 37.2 AP 39.5
+17:13:18 A wait SKIN 37.0 AP 39.5
+17:13:33 A wait SKIN 36.4 AP 37.8
+17:13:48 A run bin ov_bridge_ovrobust cfg c4r spin 2 thr 2 speed 1.0 extra '--ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15' SKIN 35.7 AP 36.6 cpu9_cap 2784000 screen Awake fg com.kakao.talk/com.kakao.talk.activity.adaptive.main.AdaptiveMainActivity
+17:15:17 A done SKIN 35.7 max 35.9 aborted 0
+17:15:18 B run bin ov_bridge_ovrobust cfg c4r spin 2 thr 2 speed 1.0 extra '--ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --health 1' SKIN 35.7 AP 43.0 cpu9_cap 2784000 screen Awake fg com.kakao.talk/com.kakao.talk.activity.adaptive.main.AdaptiveMainActivity
+17:16:47 B done SKIN 35.5 max 35.7 aborted 0
+17:16:47 C run bin ov_bridge_ovrobust cfg c4r spin 2 thr 2 speed 1.0 extra '--ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --health 1 --init-still 1' SKIN 35.5 AP 43.0 cpu9_cap 2784000 screen Awake fg com.kakao.talk/com.kakao.talk.activity.adaptive.main.AdaptiveMainActivity
+17:18:16 C done SKIN 34.1 max 35.5 aborted 0
+17:18:16 D run bin ov_bridge_ovrobust cfg c4r spin 2 thr 2 speed 1.0 extra '--ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --health 1 --test-blank 20:2 --recover 15' SKIN 34.1 AP 38.7 cpu9_cap 2784000 screen Awake fg com.kakao.talk/com.kakao.talk.activity.adaptive.main.AdaptiveMainActivity
+17:19:45 D done SKIN 33.0 max 34.1 aborted 0
+17:19:46 E run bin ov_bridge_ovrobust cfg c4r spin 2 thr 2 speed 1.0 extra '--ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --health 1 --test-blank 20:2' SKIN 33.0 AP 36.9 cpu9_cap 2784000 screen Awake fg com.kakao.talk/com.kakao.talk.activity.adaptive.main.AdaptiveMainActivity
+17:21:14 E done SKIN 33.7 max 33.7 aborted 0
+ALL DONE 17:21:15 P1_raw80.txt
+no bridge/feeder left

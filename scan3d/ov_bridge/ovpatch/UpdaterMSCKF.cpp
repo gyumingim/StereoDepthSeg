@@ -80,6 +80,7 @@ void UpdaterMSCKF::update(std::shared_ptr<State> state, std::vector<std::shared_
   rT0 = boost::posix_time::microsec_clock::local_time();
   ovopt::Lap prof_lap;  // scan3d: timing only
   ovopt::count(ovopt::C_MSCKF_FEATS, (long)feature_vec.size());
+  ovopt::h.msckf_in += (long)feature_vec.size();  // scan3d health (ovrobust)
 
   // 0. Get all timestamps our clones are at (and thus valid measurement times)
   std::vector<double> clonetimes;
@@ -190,6 +191,7 @@ void UpdaterMSCKF::update(std::shared_ptr<State> state, std::vector<std::shared_
   }
   rT2 = boost::posix_time::microsec_clock::local_time();
   prof_lap.to(ovopt::S_MSCKF_TRI);
+  ovopt::h.msckf_tri += (long)feature_vec.size();  // scan3d health (ovrobust)
 
   // Calculate the max possible measurement size
   size_t max_meas_size = 0;
@@ -406,6 +408,7 @@ void UpdaterMSCKF::update(std::shared_ptr<State> state, std::vector<std::shared_
   rT3 = boost::posix_time::microsec_clock::local_time();
   prof_lap.to(ovopt::S_MSCKF_JAC);
 
+  ovopt::h.msckf_used += (long)feature_vec.size();  // scan3d health (ovrobust): after the chi2 test
   // We have appended all features to our Hx_big, res_big
   // Delete it so we do not reuse information
   for (size_t f = 0; f < feature_vec.size(); f++) {

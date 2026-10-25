@@ -193,6 +193,9 @@ public class MainActivity extends Activity {
                 if (mm != null) ov.mavMount = mm.trim();
                 String mg = getIntent().getStringExtra("mav_msg");                      // ovdrone: --mav-msg odom|vpe|both
                 if (mg != null) ov.mavMsg = mg.trim();
+                ov.ovHealth = getIntent().getIntExtra("ov_health", 0) != 0;                 // ovrobust: --health 1 + health.csv
+                ov.initStill = getIntent().getIntExtra("init_still", 0) != 0;               // ovrobust: --init-still 1
+                ov.recoverFrames = Math.max(0, Math.min(1000, getIntent().getIntExtra("recover", 0)));   // ovrobust: --recover N
                 sustainedOn = false;
                 try {
                     boolean sup = ((android.os.PowerManager) getSystemService(POWER_SERVICE)).isSustainedPerformanceModeSupported();

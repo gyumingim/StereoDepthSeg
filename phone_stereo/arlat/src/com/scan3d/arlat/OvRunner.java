@@ -223,6 +223,11 @@ class OvRunner implements SensorEventListener {
     String mavUdp = "";
     String mavMount = "imu";
     String mavMsg = "odom";
+    // ovrobust (2026-10-25, all default off = unchanged): intent ov_health 1 -> ov_bridge --health 1 --health-log <run>/health.csv,
+    // init_still 1 -> --init-still 1 (static init while still, ZUPT stays off), recover N -> --recover N (auto recovery)
+    boolean ovHealth = false;
+    boolean initStill = false;
+    int recoverFrames = 0;
     private BufferedWriter predW;               // poses_pred.csv (predict > 0)
     private long nPred;
     private long lastPoseTns = -1, lastPoseSensor = -1, lastPoseArrive = -1;   // frame of the latest pose line (reader)
@@ -406,6 +411,9 @@ class OvRunner implements SensorEventListener {
             Collections.addAll(cmd, "--mav-udp", mavUdp, "--mav-mount", mavMount, "--mav-msg", mavMsg,
                     "--mav-log", new File(runDir, "mav_log.csv").getAbsolutePath());
         }
+        if (ovHealth) Collections.addAll(cmd, "--health", "1", "--health-log", new File(runDir, "health.csv").getAbsolutePath());  // ovrobust
+        if (initStill) Collections.addAll(cmd, "--init-still", "1");                                                    // ovrobust
+        if (recoverFrames > 0) Collections.addAll(cmd, "--recover", Integer.toString(recoverFrames));                    // ovrobust
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.environment().put("LD_LIBRARY_PATH", lib);
         pb.redirectError(new File(runDir, "bridge_stderr.log"));
@@ -435,7 +443,8 @@ class OvRunner implements SensorEventListener {
                 .put("ov_predict_stream", predictStream ? 1 : 0)
                 .put("ov_opt", ovOpt).put("ov_prof", ovProf ? 1 : 0).put("idle_spin_ms", idleSpinMs).put("spin_wfe", spinWfe ? 1 : 0)
                 .put("drop_late_ms", dropLateMs).put("mav_udp", mavUdp).put("mav_mount", mavMount).put("mav_msg", mavMsg)
-                .put("imu_prio", imuPrio).put("pred_thread", predict == 2 && predThread > 0 ? 1 : 0).put("imu_log", imuLog ? 1 : 0);
+                .put("imu_prio", imuPrio).put("pred_thread", predict == 2 && predThread > 0 ? 1 : 0).put("imu_log", imuLog ? 1 : 0)
+                .put("ov_health", ovHealth ? 1 : 0).put("init_still", initStill ? 1 : 0).put("recover", recoverFrames);   // ovrobust
 
         proc = pb.start();
         bridgePid = pidOf(proc);
@@ -455,6 +464,9 @@ class OvRunner implements SensorEventListener {
         notePerf("imu_prio", imuPrio);             // 0.6.19
         notePerf("pred_thread", predict == 2 && predThread > 0 ? 1 : 0);
         notePerf("imu_log", imuLog ? 1 : 0);
+        notePerf("ov_health", ovHealth ? 1 : 0);    // ovrobust
+        notePerf("init_still", initStill ? 1 : 0);
+        notePerf("recover", recoverFrames);
         notePerf("bridge_pid", bridgePid);
         notePerf("sdk", android.os.Build.VERSION.SDK_INT);
         writerT = new Thread(this::writer, "ov-writer");

@@ -1,0 +1,18 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol', prof log -)
+[ov_bridge] affinity start: (not pinned) threads 13309:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 2 -> 2 | TBB (ver 2021.11 interface 12110) | cpus 10 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /data/local/tmp/replay/remap_1920x1080.bin
+[ov_bridge] ovrobust: init_still 1 | health 1 log out/S0/hl.csv | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 0 (max gap 3.0 s, min feats 20) | test blank 0 windows
+[ov_bridge] affinity ready: (not pinned) threads 13309:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin: mode 2 (pool) stripes 2 max 200 ms window 15.0 ms
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] health t=2.978 INIT -> OK (tracked 118 used 0 since_upd 0.00 pos_std 0.108)
+[ov_bridge] health t=3.211 OK -> DEGRADED (tracked 120 used 0 since_upd 0.23 pos_std 0.147)
+[ov_bridge] health t=4.011 DEGRADED -> LOST (tracked 124 used 0 since_upd 1.03 pos_std 0.471)
+[ov_bridge] health t=5.745 LOST -> OK (tracked 125 used 2 since_upd 0.00 pos_std 0.136)
+[ov_bridge] affinity cam300: (not pinned) threads 13309:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9 13323:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9 13464:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 6408 spun 2019 timeouts 1 spin 3.49 s | exit_us n 2018 p50 1.8 p95 6.5 p99 194.6 max 6392.5 | window 15.0 ms period 33.21 ms blocked 2786 (5.57 s)
+[ov_bridge] affinity end: (not pinned) threads 13309:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9 13323:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9 13464:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 38085 spun 17115 timeouts 1 spin 28.60 s | exit_us n 17114 p50 1.9 p95 5.1 p99 53.8 max 9669.7 | window 15.0 ms period 32.72 ms blocked 12009 (22.29 s)
+[ov_bridge] health: frames INIT 22 OK 1995 DEGRADED 24 LOST 52 | transitions 5 | max LOST run 52 frames | recover state 0 full 0 | blanked 0

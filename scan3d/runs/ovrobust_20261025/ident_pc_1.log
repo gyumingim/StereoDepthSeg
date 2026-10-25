@@ -1,0 +1,29 @@
+Sun Oct 25 16:08:00 KST 2026
+5ab8f7c83fe4f741cebebf85115710ad222539577545edeed4e8b107b95cf54f  /home/system/scanner/StereoDepthSeg-ovrobust/scan3d/ov_bridge/build_ovrobust_full/ov_bridge
+== R0 rc 0 poses 845 | 
+== RH rc 0 poses 845 | --health 1 --health-log /tmp/ovrobust/ident/RH.hlog
+== RHW rc 0 poses 845 | --health 1 --health-log /tmp/ovrobust/ident/RHW.hlog --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol
+== RW rc 0 poses 845 | --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol
+== RREC rc 0 poses 845 | --health 1 --health-log /tmp/ovrobust/ident/RREC.hlog --recover 15
+== RSI rc 0 poses 845 | --init-still 1 --health 1 --health-log /tmp/ovrobust/ident/RSI.hlog
+== vs BP
+ref /tmp/ovopt/ident/BP.jsonl: poses 845 tracking 704 hash d7958f8247fbc180
+/tmp/ovrobust/ident/R0.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash d7958f8247fbc180 first_diff None IDENTICAL
+/tmp/ovrobust/ident/RH.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash d7958f8247fbc180 first_diff None IDENTICAL
+/tmp/ovrobust/ident/RREC.jsonl: poses 845 identical_lines 688/845 identical_state 688/845 hash 3ae5ac5b0c1bc564 first_diff 688 DIFFERENT
+/tmp/ovrobust/ident/RSI.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash d7958f8247fbc180 first_diff None IDENTICAL
+== RHW vs RW (near-exact set, health on/off)
+ref /tmp/ovrobust/ident/RW.jsonl: poses 845 tracking 704 hash 1a380e86a247b522
+/tmp/ovrobust/ident/RHW.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash 1a380e86a247b522 first_diff None IDENTICAL
+[ov_bridge] ovrobust: init_still 0 | health 1 log /tmp/ovrobust/ident/RH.hlog | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 0 (max gap 3.0 s, min feats 20) | test blank 0 windows
+[ov_bridge] health: frames INIT 141 OK 507 DEGRADED 25 LOST 172 | transitions 6 | max LOST run 172 frames | recover state 0 full 0 | blanked 0
+[ov_bridge] ovrobust: init_still 0 | health 1 log /tmp/ovrobust/ident/RHW.hlog | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 0 (max gap 3.0 s, min feats 20) | test blank 0 windows
+[ov_bridge] health: frames INIT 141 OK 507 DEGRADED 25 LOST 172 | transitions 6 | max LOST run 172 frames | recover state 0 full 0 | blanked 0
+[ov_bridge] ovrobust: init_still 0 | health 1 log /tmp/ovrobust/ident/RREC.hlog | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 15 (max gap 3.0 s, min feats 20) | test blank 0 windows
+[ov_bridge] recover #1 t=24.898: state injection (since_upd 1.47 s, tracked 193, pos_std 0.087)
+[ov_bridge] health: frames INIT 298 OK 507 DEGRADED 25 LOST 15 | transitions 7 | max LOST run 15 frames | recover state 1 full 0 | blanked 0
+[ov_bridge] ovrobust: init_still 1 | health 1 log /tmp/ovrobust/ident/RSI.hlog | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 0 (max gap 3.0 s, min feats 20) | test blank 0 windows
+[ov_bridge] health: frames INIT 141 OK 507 DEGRADED 25 LOST 172 | transitions 6 | max LOST run 172 frames | recover state 0 full 0 | blanked 0
+R0 first tracking: 6.69822926
+RSI first tracking: 6.69822926
+Sun Oct 25 16:09:07 KST 2026

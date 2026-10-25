@@ -31,6 +31,44 @@
 //   the 9x9 marginal covariance (q, p, v) and the SLAM feature count. Without --pred-thread the old main-loop path
 //   (predict(): emits only while the input is idle, >= 1/HZ after the last one -> ~127 Hz at 200 on the phone) is unchanged.
 // OV_KLT_PYR from the environment is ignored (removed + logged) unless --klt-pyr N is given.
+//             [--init-still 0|1] [--health 0|1] [--health-log FILE] [--health-cfg K=V,..]
+//             [--recover N] [--recover-max-gap S] [--recover-min-feats N] [--test-blank T0:D,..]
+//
+// ---- 2026-10-25, branch ovrobust-20261025 (all default off = output and code path unchanged) ----
+// --init-still 0|1 (NOT RECOMMENDED, 2026-10-25 offline 37/45 cells divergent): static initialization while still. Upstream OpenVINS waits for "still, then a jerk" whenever ZUPT
+//   is off (VioManagerHelper: wait_for_jerk = updaterZUPT == nullptr), so the phone has to be moved to initialize.
+//   1 = ovpatch/VioManagerHelper.cpp calls the same static initializer with wait_for_jerk = false: it initializes as
+//   soon as the last init_window_time of IMU is still (accel std < init_imu_thresh in both halves, disparity <
+//   init_max_disparity) -> gravity direction, gyro bias, accel bias, v = 0. ZUPT stays OFF: nothing ties the state
+//   to "still" afterwards (this is NOT a zero-velocity update; only the initial state and its moment change).
+// --health 0|1: per fed frame a health record "h":{...} in the pose line; --health-log FILE: the same as one CSV row per
+//   fed frame (header = names). Fields: tracked (KLT ids on cam0), slam / msckf (as the pose line), msckf_in / _tri /
+//   _used, slam_in / _clean / _used, delay_in / _ok (ovpatch health counters: features into each update, after
+//   triangulation / cleaning, after the chi2 test), chi2_rej (= msckf_tri - msckf_used + slam_clean - slam_used),
+//   pos_std / vel_std (m, m/s: sqrt of the trace of the IMU position / velocity marginal covariance), ori_std_deg,
+//   since_upd (s since the last frame whose update used >= 1 feature; since init when none yet), state
+//   INIT / OK / DEGRADED / LOST and lost_run (consecutive LOST frames). Read only: poses identical with / without.
+//   Rules (--health-cfg overrides, defaults in HealthCfg): LOST = not finite or |v| > --max-speed, or since_upd >
+//   upd_lost (1.0 s), or pos_std > std_lost (1.0 m), or tracked < trk_lost (10) for >= trk_lost_frames (15) frames;
+//   DEGRADED = since_upd > upd_deg (0.2 s), pos_std > std_deg (0.25 m), tracked < trk_deg (40), or chi2 rejected >
+//   rej_deg (0.5) of >= 10 candidates; else OK. Before init: init_ready = 1 when the last init_window_time of IMU is
+//   still (accel std < init_imu_thresh in both halves, like the static initializer) and tracked >= 15: the upstream
+//   "still, then jerk" init will initialize at the next motion (e.g. takeoff) - a go signal, no algorithm change. stderr "[ov_bridge] health ..." summary at the end.
+// --recover N (default 0 = off): automatic recovery after N consecutive LOST frames of a VioManager that has done at
+//   least one feature update (startup / still-after-init LOST never triggers it):
+//   (policy v2 2026-10-25 after the blank test: wait until vision has been back for N frames with still no update;
+//   full reset only with --recover-full 1; injected VioManager tracks num_pts, not init_max_features)
+//   a) vision back for N frames (tracked >= --recover-min-feats, default 20), state finite, |v| <= --max-speed, since_upd <=
+//      --recover-max-gap (default 3 s): new VioManager started from the old state (same injection as --reinit-state:
+//      pose, velocity, biases, extrinsics, time offset, inflated covariance) -> same world frame, no jump;
+//      line {"type":"reset","auto":true,"reason":"recover","reinit":"state",...}.
+//   b) (--recover-full 1 only) since_upd > --recover-max-gap or the state is bad: new VioManager with a normal (static) initialization; once
+//      it is initialized its poses are mapped onto the last pose output before the reset with a 4-DoF offset (yaw +
+//      translation; gravity is common) -> the output stays one continuous frame ("seg" counts the segments, pose
+//      lines carry "seg" and "frame_off":[yaw_rad,x,y,z] while an offset is active); line reason "recover",
+//      "reinit":"full". c) otherwise wait (vision not back yet). stderr "[ov_bridge] recover ..." per event.
+// --test-blank T0:D,... (TEST ONLY, default off): cam0 image replaced by black for D s starting T0 s after the first
+//   camera record (IMU unchanged) -> synthetic loss of vision for recovery tests. Pose lines get "blank":true.
 //
 // --idle-spin 3 / --idle-spin-ms W (2026-10-25, ovopt, heat; both default off = unchanged): 3 = like 2 (whole pool
 //   waits busy) but between the input polls every stripe waits for an event (aarch64 LDAXR + WFE on the shared "go"
@@ -265,6 +303,59 @@ struct Args {
   double viop_hb_hz = 20.0;   // --viop-hb-hz (VIOP heartbeat rate; 0 = none)
   std::string mav_msg = "odom", mav_mount = "imu", mav_log;
   int mav_yaw_align = 1, mav_replay_time = 0, mav_sysid = 1;
+  // 2026-10-25 ovrobust (header)
+  int init_still = 0;         // --init-still 0|1
+  int health = 0;             // --health 0|1 (pose line "h")
+  std::string health_log;     // --health-log FILE
+  std::string health_cfg;     // --health-cfg K=V,...
+  int recover = 0;            // --recover N (0 = off)
+  double recover_max_gap = 3.0;
+  int recover_min_feats = 20;
+  int recover_full = 0;       // --recover-full 0|1 (full reset when the state is bad / the gap too long; default off)
+  std::string test_blank;     // --test-blank T0:D,...
+};
+
+// --health rules (header); --health-cfg upd_deg=0.2,... overrides
+struct HealthCfg {
+  double upd_deg = 0.2, upd_lost = 1.0;  // s since the last feature update
+  double std_deg = 0.25, std_lost = 1.0; // m, position std
+  int trk_deg = 40, trk_lost = 10, trk_lost_frames = 15;
+  double rej_deg = 0.5;                  // chi2 rejected share (>= 10 candidates)
+  bool parse(const std::string &v) {
+    std::stringstream ss(v);
+    std::string tok;
+    while (std::getline(ss, tok, ',')) {
+      if (tok.empty()) continue;
+      auto eq = tok.find('=');
+      if (eq == std::string::npos) return false;
+      std::string k = tok.substr(0, eq);
+      double x = std::atof(tok.c_str() + eq + 1);
+      if (k == "upd_deg") upd_deg = x;
+      else if (k == "upd_lost") upd_lost = x;
+      else if (k == "std_deg") std_deg = x;
+      else if (k == "std_lost") std_lost = x;
+      else if (k == "trk_deg") trk_deg = static_cast<int>(x);
+      else if (k == "trk_lost") trk_lost = static_cast<int>(x);
+      else if (k == "trk_lost_frames") trk_lost_frames = static_cast<int>(x);
+      else if (k == "rej_deg") rej_deg = x;
+      else return false;
+    }
+    return true;
+  }
+};
+enum HState : int { H_INIT = 0, H_OK = 1, H_DEGRADED = 2, H_LOST = 3 };
+const char *hstate_name(int s) { return s == H_OK ? "OK" : s == H_DEGRADED ? "DEGRADED" : s == H_LOST ? "LOST" : "INIT"; }
+struct HealthRec {
+  int state = H_INIT;
+  bool init = false;
+  long tracked = -1, slam = 0, msckf = 0;
+  ovopt::Health c;  // counters of this frame
+  long chi2_rej = 0, used = 0;
+  double pos_std = NAN, vel_std = NAN, ori_std_deg = NAN, since_upd = NAN;
+  int lost_run = 0;
+  int init_ready = 0;  // before init: last init_window_time of fed IMU still (both halves accel std < init_imu_thresh) and
+                       // tracked >= 15 -> the upstream "still then jerk" init will fire at the next motion (takeoff)
+  double acc_std = NAN;  // max of the two half-window accel stds (m/s^2), before init
 };
 
 // --imu-log (2026-10-25): written by the thread that reads the input (main, or the --pred-thread reader)
@@ -700,6 +791,7 @@ struct CamMsg {
   std::chrono::steady_clock::time_point t_recv;
   int64_t rx_hdr_boot_ns = 0, rx_boot_ns = 0;     // --timing-log: record header / payload read (CLOCK_BOOTTIME)
   double spin_wait_us = -1.0, spin_exit_us = -1.0;  // --idle-spin wait before this record (IdleSpin)
+  bool blank = false;                                // --test-blank: image replaced by black
 };
 
 // ---- --pred-thread (header; 2026-10-25) ----
@@ -1032,6 +1124,39 @@ public:
         std::fprintf(plog_, "\n");
       } else std::fprintf(stderr, "[ov_bridge] prof log: cannot open %s\n", a.prof_log.c_str());
     }
+    if (!a.health_log.empty()) {  // --health-log (2026-10-25 ovrobust)
+      hlog_ = std::fopen(a.health_log.c_str(), "w");
+      if (hlog_)
+        std::fprintf(hlog_, "t_ns,t,state,init,tracked,slam,msckf,msckf_in,msckf_tri,msckf_used,slam_in,slam_clean,slam_used,"
+                            "delay_in,delay_ok,chi2_rej,pos_std,vel_std,ori_std_deg,since_upd,lost_run,seg,blank,recover_n,init_ready,acc_std\n");
+      else std::fprintf(stderr, "[ov_bridge] health log: cannot open %s\n", a.health_log.c_str());
+    }
+    if (!a.health_cfg.empty() && !hcfg_.parse(a.health_cfg)) {
+      std::fprintf(stderr, "[ov_bridge] bad --health-cfg %s\n", a.health_cfg.c_str());
+      ok_ = false;
+      return;
+    }
+    health_on_ = a.health || hlog_ || a.recover > 0;
+    {  // --test-blank T0:D,...
+      std::stringstream ss(a.test_blank);
+      std::string tok;
+      while (std::getline(ss, tok, ',')) {
+        double t0 = 0, d = 0;
+        if (tok.empty()) continue;
+        if (std::sscanf(tok.c_str(), "%lf:%lf", &t0, &d) != 2 || d <= 0) {
+          std::fprintf(stderr, "[ov_bridge] bad --test-blank %s\n", a.test_blank.c_str());
+          ok_ = false;
+          return;
+        }
+        blank_.push_back({t0, t0 + d});
+      }
+    }
+    if (health_on_ || a.init_still || !blank_.empty())
+      std::fprintf(stderr, "[ov_bridge] ovrobust: init_still %d | health %d log %s | rules upd %.2f/%.2f s std %.2f/%.2f m trk %d/%d(%d fr) "
+                   "rej %.2f | recover %d (max gap %.1f s, min feats %d) | test blank %zu windows\n",
+                   a.init_still, a.health, a.health_log.empty() ? "-" : a.health_log.c_str(), hcfg_.upd_deg, hcfg_.upd_lost,
+                   hcfg_.std_deg, hcfg_.std_lost, hcfg_.trk_deg, hcfg_.trk_lost, hcfg_.trk_lost_frames, hcfg_.rej_deg, a.recover,
+                   a.recover_max_gap, a.recover_min_feats, blank_.size());
     if (a.gate_mean > 0.0 && a.gate_disp_deg > 0.0 && params_.camera_intrinsics.count(0)) {
       double fx = params_.camera_intrinsics.at(0)->get_value()(0);
       double px = fx * std::tan(a.gate_disp_deg * M_PI / 180.0);
@@ -1062,8 +1187,9 @@ public:
   }
 
   // VioManager 새로 만들기. 붙잡아 둔 IMU(imu_hold_) 는 새 시스템에 그대로 넣을 수 있으므로 남긴다.
-  void make_system() {
-    sys_ = std::make_shared<ov_msckf::VioManager>(params_);
+  void make_system(ov_msckf::VioManagerOptions *p = nullptr) {  // VioManager takes a non-const reference
+    if (p) sys_ = std::make_shared<ov_msckf::VioManager>(*p);
+    else sys_ = std::make_shared<ov_msckf::VioManager>(params_);
     pred_pending_ = false;
     snap_dirty_ = true;  // --pred-thread: the published snapshot is stale
     make_shadow(false);
@@ -1073,6 +1199,10 @@ public:
     zero_feat_frames_ = 0;
     feat_seen_ = false;
     lost_ = false;
+    h_last_upd_t_ = -1e300;   // --health (2026-10-25): per VioManager
+    h_upd_seen_ = false;
+    h_lost_run_ = 0;
+    h_trk_low_run_ = 0;
   }
 
   // --timing-log receive info of the record handle() gets next (serve; timing only, never used by the VIO)
@@ -1107,6 +1237,7 @@ public:
       last_upd_t_ = -1e300;
       newest_imu_t_ = -1e300;
       first_cam_t_ = -1e300;
+      off_active_ = off_pending_ = false;  // --recover frame offset (2026-10-25)
       out += "{\"type\":\"reset\"}\n";
       return true;
     case kQuit:
@@ -1130,6 +1261,9 @@ public:
     if (args_.pred_thread) o << ",\"pred_thread\":" << args_.pred_thread;                                 // 2026-10-25
     if (!args_.profile.empty()) o << ",\"profile\":" << jstr(args_.profile);                            // integ-20261025
     if (g_mav) o << ",\"mav_udp\":" << jstr(args_.mav_udp) << ",\"mav_mount\":" << jstr(g_mav->mount_name);  // ovdrone
+    if (args_.init_still) o << ",\"init_still\":1";                                                   // 2026-10-25 ovrobust
+    if (health_on_) o << ",\"health\":" << args_.health << ",\"recover\":" << args_.recover;
+    if (!blank_.empty()) o << ",\"test_blank\":" << jstr(args_.test_blank);
     o << "}\n";
     return o.str();
   }
@@ -1201,6 +1335,7 @@ public:
     Eigen::Vector4d q_GtoI = x.block(0, 0, 4, 1);
     Eigen::Matrix3d R_ItoG = ov_core::quat_2_Rot(q_GtoI).transpose();
     Eigen::Vector3d p_IinG = x.block(4, 0, 3, 1), v = x.block(7, 0, 3, 1);
+    apply_off(R_ItoG, p_IinG, v, q_GtoI);  // --recover full reset: output frame offset (2026-10-25; no-op otherwise)
     Eigen::Quaterniond qh(R_ItoG);
     auto calib0 = st->_calib_IMUtoCAM.at(0);
     Eigen::Matrix3d R_CtoG = R_ItoG * calib0->Rot().transpose();
@@ -1433,6 +1568,13 @@ private:
       return;
     }
     if (first_cam_t_ < -1e299) first_cam_t_ = c.t;
+    for (const auto &bw : blank_) {  // --test-blank (2026-10-25, TEST ONLY): black cam0 image in the window
+      if (c.t - first_cam_t_ >= bw.first && c.t - first_cam_t_ < bw.second) {
+        c.data.images[0] = cv::Mat::zeros(c.data.images[0].rows, c.data.images[0].cols, CV_8UC1);
+        c.blank = true;
+        n_blanked_++;
+      }
+    }
     cams_.push_back(std::move(c));
     while (cams_.size() > args_.max_cam_queue) {  // 밀리면 오래된 카메라만 버린다 (IMU 는 안 버림)
       cams_.pop_front();
@@ -1532,6 +1674,7 @@ private:
   void feed_camera(const CamMsg &c, std::string &out) {
     snap_dirty_ = true;              // --pred-thread: publish a new snapshot after this record
     if (plog_) ovopt::prof_reset();  // --prof-log: stage timers of this frame only
+    ovopt::health_reset();           // --health counters of this frame only (always counted, cheap)
     auto t0 = std::chrono::steady_clock::now();
     try {
       sys_->feed_measurement_camera(c.data);
@@ -1562,6 +1705,13 @@ private:
     }
     // --init-gate: 그림자 VioManager (기본 쪽이 아직 정지 초기화 전일 때만)
     const char *gate_tag = shadow_ ? feed_shadow(c) : nullptr;
+    if (health_on_) {  // --health / --health-log / --recover (2026-10-25): read-only record of this frame
+      try {
+        health_compute(c);
+      } catch (const std::exception &e) {
+        std::fprintf(stderr, "[ov_bridge] health exception: %s\n", e.what());
+      }
+    }
     try {
       std::string pl = pose_line(c, ms);
       if (gate_tag && !pl.empty() && pl.back() == '\n' && pl.size() > 2 && pl[pl.size() - 2] == '}')
@@ -1579,7 +1729,179 @@ private:
       std::string extra;
       if (!(args_.reinit_state && reinit_from_state(extra))) make_system();
       out += "{\"type\":\"reset\",\"auto\":true,\"reason\":\"lost\"" + extra + "}\n";
+    } else if (args_.recover > 0) {
+      try_recover(c, out);  // --recover (2026-10-25, default off)
     }
+  }
+
+  // ---- --health (2026-10-25, ovrobust): one read-only record per fed frame ----
+  void health_compute(const CamMsg &c) {
+    HealthRec r;
+    r.c = ovopt::h;
+    r.tracked = ovopt::h.tracked;
+    r.init = sys_->initialized();
+    r.chi2_rej = (r.c.msckf_tri - r.c.msckf_used) + (r.c.slam_clean - r.c.slam_used);
+    r.used = r.c.msckf_used + r.c.slam_used;
+    if (r.tracked >= 0 && r.tracked < hcfg_.trk_lost) h_trk_low_run_++;
+    else if (r.tracked >= 0) h_trk_low_run_ = 0;
+    if (!r.init) {
+      r.state = H_INIT;
+      h_lost_run_ = 0;
+      const double W = params_.init_options.init_window_time, tn = last_imu_t_;
+      auto half_std = [&](double a, double b) {  // = StaticInitializer sample std of |a - mean|
+        Eigen::Vector3d m = Eigen::Vector3d::Zero();
+        int n = 0;
+        for (const auto &x : imu_recent_)
+          if (x.timestamp > a && x.timestamp <= b) { m += x.am; n++; }
+        if (n < 2) return static_cast<double>(NAN);
+        m /= n;
+        double v = 0.0;
+        for (const auto &x : imu_recent_)
+          if (x.timestamp > a && x.timestamp <= b) v += (x.am - m).squaredNorm();
+        return std::sqrt(v / (n - 1));
+      };
+      if (!imu_recent_.empty() && imu_recent_.front().timestamp <= tn - W) {
+        const double s1 = half_std(tn - 0.5 * W, tn), s2 = half_std(tn - W, tn - 0.5 * W);
+        r.acc_std = std::max(s1, s2);
+        r.init_ready = (s1 < params_.init_options.init_imu_thresh && s2 < params_.init_options.init_imu_thresh &&
+                        r.tracked >= 15) ? 1 : 0;
+      }
+      if (r.init_ready) h_n_ready_++;
+    } else {
+      auto st = sys_->get_state();
+      r.slam = static_cast<long>(sys_->get_features_SLAM().size());
+      r.msckf = static_cast<long>(sys_->get_good_features_MSCKF().size());
+      const double ts = st->_timestamp;
+      if (h_last_upd_t_ < -1e299) h_last_upd_t_ = ts;  // first initialized frame: count from here
+      if (r.used > 0) {
+        h_last_upd_t_ = ts;
+        h_upd_seen_ = true;
+      }
+      r.since_upd = ts - h_last_upd_t_;
+      std::vector<std::shared_ptr<ov_type::Type>> vars = {st->_imu->q(), st->_imu->p(), st->_imu->v()};
+      Eigen::MatrixXd C = ov_msckf::StateHelper::get_marginal_covariance(st, vars);  // 9x9 copy, read only
+      r.ori_std_deg = std::sqrt(std::max(0.0, C.block(0, 0, 3, 3).trace())) * 180.0 / M_PI;
+      r.pos_std = std::sqrt(std::max(0.0, C.block(3, 3, 3, 3).trace()));
+      r.vel_std = std::sqrt(std::max(0.0, C.block(6, 6, 3, 3).trace()));
+      const Eigen::Vector3d v = st->_imu->vel(), p = st->_imu->pos();
+      const bool bad = !v.allFinite() || !p.allFinite() || !std::isfinite(r.pos_std) || v.norm() > args_.max_speed;
+      h_state_bad_ = bad;
+      const long cand = r.c.msckf_tri + r.c.slam_clean;
+      if (bad || r.since_upd > hcfg_.upd_lost || r.pos_std > hcfg_.std_lost || h_trk_low_run_ >= hcfg_.trk_lost_frames)
+        r.state = H_LOST;
+      else if (r.since_upd > hcfg_.upd_deg || r.pos_std > hcfg_.std_deg || (r.tracked >= 0 && r.tracked < hcfg_.trk_deg) ||
+               (cand >= 10 && r.chi2_rej > hcfg_.rej_deg * cand))
+        r.state = H_DEGRADED;
+      else
+        r.state = H_OK;
+      h_lost_run_ = r.state == H_LOST ? h_lost_run_ + 1 : 0;
+    }
+    r.lost_run = h_lost_run_;
+    // summary counters
+    h_n_[r.state]++;
+    if (r.state != h_prev_state_) {
+      h_transitions_++;
+      if (h_prev_state_ >= 0 && h_n_trans_log_ < 200) {
+        h_n_trans_log_++;
+        std::fprintf(stderr, "[ov_bridge] health t=%.3f %s -> %s (tracked %ld used %ld since_upd %.2f pos_std %.3f)\n", c.t,
+                     hstate_name(h_prev_state_), hstate_name(r.state), r.tracked, r.used, r.since_upd, r.pos_std);
+      }
+      h_prev_state_ = r.state;
+    }
+    h_max_lost_run_ = std::max(h_max_lost_run_, r.lost_run);
+    hrec_ = r;
+    if (hlog_) {
+      std::fprintf(hlog_, "%lld,%.6f,%s,%d,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%.5g,%.5g,%.5g,%.4f,%d,%d,%d,%llu,%d,%.4g\n",
+                   static_cast<long long>(c.t_ns), c.t, hstate_name(r.state), r.init ? 1 : 0, r.tracked, r.slam, r.msckf,
+                   r.c.msckf_in, r.c.msckf_tri, r.c.msckf_used, r.c.slam_in, r.c.slam_clean, r.c.slam_used, r.c.delay_in,
+                   r.c.delay_ok, r.chi2_rej, r.pos_std, r.vel_std, r.ori_std_deg, r.since_upd, r.lost_run, seg_, c.blank ? 1 : 0,
+                   static_cast<unsigned long long>(n_recover_state_ + n_recover_full_), r.init_ready, r.acc_std);
+      if (++hlog_rows_ % 30 == 0) std::fflush(hlog_);
+    }
+  }
+
+  void health_json(std::ostringstream &o) const {
+    const HealthRec &r = hrec_;
+    o << ",\"h\":{\"state\":\"" << hstate_name(r.state) << "\",\"tracked\":" << r.tracked << ",\"used\":" << r.used
+      << ",\"chi2_rej\":" << r.chi2_rej << ",\"msckf_in\":" << r.c.msckf_in << ",\"msckf_used\":" << r.c.msckf_used
+      << ",\"slam_in\":" << r.c.slam_in << ",\"slam_used\":" << r.c.slam_used << ",\"delay_ok\":" << r.c.delay_ok
+      << ",\"pos_std\":";
+    jnum(o, r.pos_std);
+    o << ",\"vel_std\":";
+    jnum(o, r.vel_std);
+    o << ",\"ori_std_deg\":";
+    jnum(o, r.ori_std_deg);
+    o << ",\"since_upd\":";
+    jnum(o, r.since_upd);
+    o << ",\"lost_run\":" << r.lost_run;
+    if (!r.init) o << ",\"init_ready\":" << r.init_ready;
+    o << "}";
+  }
+
+ public:
+  void log_health() const {
+    if (!health_on_) return;
+    std::fprintf(stderr, "[ov_bridge] health: frames INIT %llu OK %llu DEGRADED %llu LOST %llu | transitions %llu | max LOST run %d "
+                 "frames | recover state %llu full %llu | blanked %llu | init_ready frames %llu\n",
+                 static_cast<unsigned long long>(h_n_[0]), static_cast<unsigned long long>(h_n_[1]),
+                 static_cast<unsigned long long>(h_n_[2]), static_cast<unsigned long long>(h_n_[3]),
+                 static_cast<unsigned long long>(h_transitions_), h_max_lost_run_,
+                 static_cast<unsigned long long>(n_recover_state_), static_cast<unsigned long long>(n_recover_full_),
+                 static_cast<unsigned long long>(n_blanked_), static_cast<unsigned long long>(h_n_ready_));
+  }
+
+ private:
+  // ---- --recover N (2026-10-25, ovrobust, header) ----
+  void try_recover(const CamMsg &c, std::string &out) {
+    const HealthRec &r = hrec_;
+    // frames in a row with vision back (tracked >= min feats) while LOST: OpenVINS usually resumes by itself within a
+    // few frames after a loss of vision (2026-10-25 blank test: 0.1 s) - injecting at the first frame back only resets a
+    // filter that was about to recover, so wait --recover N frames with vision back and still no update.
+    h_vis_back_run_ = (r.state == H_LOST && r.tracked >= args_.recover_min_feats) ? h_vis_back_run_ + 1 : 0;
+    if (!sys_->initialized() || !h_upd_seen_ || h_lost_run_ < args_.recover) return;
+    const bool gap_ok = r.since_upd >= 0.0 && r.since_upd <= args_.recover_max_gap;
+    if (!h_state_bad_ && gap_ok && h_vis_back_run_ >= args_.recover) {
+      std::string extra;
+      if (reinit_from_state(extra, args_.recover_max_gap)) {
+        n_recover_state_++;
+        std::fprintf(stderr, "[ov_bridge] recover #%llu t=%.3f: state injection (since_upd %.2f s, tracked %ld, pos_std %.3f)\n",
+                     static_cast<unsigned long long>(n_recover_state_ + n_recover_full_), c.t, r.since_upd, r.tracked, r.pos_std);
+        out += "{\"type\":\"reset\",\"auto\":true,\"reason\":\"recover\",\"t\":" + std::to_string(c.t) + extra +
+               ",\"n_recover\":" + std::to_string(n_recover_state_ + n_recover_full_) + "}\n";
+        return;
+      }
+    }
+    if (args_.recover_full && (h_state_bad_ || !gap_ok)) {  // full reset (opt-in); 4-DoF output offset once re-initialized
+      if (have_last_out_) {
+        off_anchor_R_ = last_out_R_;
+        off_anchor_p_ = last_out_p_;
+        off_pending_ = true;
+      }
+      make_system();
+      n_recover_full_++;
+      std::fprintf(stderr, "[ov_bridge] recover #%llu t=%.3f: full reset (since_upd %.2f s, bad %d, tracked %ld) -> new init, "
+                   "offset %s\n", static_cast<unsigned long long>(n_recover_state_ + n_recover_full_), c.t, r.since_upd,
+                   h_state_bad_ ? 1 : 0, r.tracked, off_pending_ ? "pending" : "none (no previous pose)");
+      out += "{\"type\":\"reset\",\"auto\":true,\"reason\":\"recover\",\"reinit\":\"full\",\"t\":" + std::to_string(c.t) +
+             ",\"n_recover\":" + std::to_string(n_recover_state_ + n_recover_full_) + "}\n";
+    }
+    // else: vision not back yet and the gap is still small -> wait
+  }
+
+  static double yaw_of(const Eigen::Matrix3d &R) { return std::atan2(R(1, 0), R(0, 0)); }  // R = world <- body
+  static Eigen::Matrix3d Rz(double a) {
+    Eigen::Matrix3d R;
+    R << std::cos(a), -std::sin(a), 0, std::sin(a), std::cos(a), 0, 0, 0, 1;
+    return R;
+  }
+  // output frame offset (--recover full reset): world_out = Rz(yaw) * world_new + t. No-op when not active.
+  void apply_off(Eigen::Matrix3d &R_ItoG, Eigen::Vector3d &p_IinG, Eigen::Vector3d &v, Eigen::Vector4d &q_GtoI) const {
+    if (!off_active_) return;
+    const Eigen::Matrix3d Rz_ = Rz(off_yaw_);
+    R_ItoG = Rz_ * R_ItoG;
+    p_IinG = Rz_ * p_IinG + off_t_;
+    v = Rz_ * v;
+    q_GtoI = ov_core::rot_2_quat(R_ItoG.transpose());
   }
 
   // --init-gate 그림자 처리 (기본 sys_ 에 카메라를 넣은 직후). 반환: 포즈 줄 표시 ("shadow" = 이번에 그림자로 바꿈) 또는 nullptr.
@@ -1632,14 +1954,17 @@ private:
   }
 
   // lost → 새 VioManager 에 옛 상태를 넣어 정지 없이 이어 가기. 성공하면 true, extra 에 JSON 필드 (",\"reinit\":\"state\",...").
-  bool reinit_from_state(std::string &extra) {
-    if (!sys_->initialized() || lost_bad_) return false;
+  bool reinit_from_state(std::string &extra, double max_gap = -1.0) {
+    const bool from_recover = max_gap >= 0.0;
+    if (max_gap < 0.0) max_gap = args_.reinit_max_gap;  // --recover passes --recover-max-gap (2026-10-25)
+    else last_upd_t_ = h_last_upd_t_;                   // --recover: the health record's last update time
+    if (!sys_->initialized() || (!from_recover && lost_bad_)) return false;
     auto st = sys_->get_state();
     double t = st->_timestamp;
     double gap = t - last_upd_t_;
     std::ostringstream o;
     o.precision(6);
-    if (!(gap >= 0.0 && gap <= args_.reinit_max_gap)) {
+    if (!(gap >= 0.0 && gap <= max_gap)) {
       o << ",\"reinit\":\"static\",\"gap\":";
       jnum(o, gap);
       extra = o.str();
@@ -1649,7 +1974,16 @@ private:
     Eigen::Matrix<double, 7, 1> ext = st->_calib_IMUtoCAM.at(0)->value();
     Eigen::VectorXd dt = st->_calib_dt_CAMtoIMU->value();
     if (!imu.allFinite() || !ext.allFinite() || !dt.allFinite()) return false;
-    make_system();
+    if (from_recover) {
+      // --recover (2026-10-25): an injected VioManager never runs its own initialization, which is where upstream raises
+      // the tracker from init_max_features (50) to num_pts -> without this it would track only 50 points afterwards.
+      // (--reinit-state keeps the old behaviour unchanged.)
+      ov_msckf::VioManagerOptions pi = params_;
+      pi.init_options.init_max_features = params_.num_pts;
+      make_system(&pi);
+    } else {
+      make_system();
+    }
     auto ns = sys_->get_state();
     ns->_calib_IMUtoCAM.at(0)->set_value(ext);
     ns->_calib_IMUtoCAM.at(0)->set_fej(ext);
@@ -1718,11 +2052,27 @@ private:
       auto calib0 = st->_calib_IMUtoCAM.at(0);
       Eigen::Matrix3d R_ItoC = calib0->Rot();
       Eigen::Vector3d p_IinC = calib0->pos();
+      if (off_pending_) {  // --recover full reset (2026-10-25): first pose of the new segment -> the anchor (yaw + xyz)
+        off_yaw_ = yaw_of(off_anchor_R_) - yaw_of(R_ItoG);
+        off_t_ = off_anchor_p_ - Rz(off_yaw_) * p_IinG;
+        off_active_ = true;
+        off_pending_ = false;
+        seg_++;
+        std::fprintf(stderr, "[ov_bridge] recover: segment %d frame offset yaw %.2f deg t %.3f %.3f %.3f m\n", seg_,
+                     off_yaw_ * 180.0 / M_PI, off_t_(0), off_t_(1), off_t_(2));
+      }
+      apply_off(R_ItoG, p_IinG, v, q_GtoI);  // no-op unless a --recover offset is active
+      qh = Eigen::Quaterniond(R_ItoG);
       Eigen::Matrix3d R_CtoG = R_ItoG * R_ItoC.transpose();
       Eigen::Vector3d p_CinG = p_IinG - R_CtoG * p_IinC;
       Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
       T.block<3, 3>(0, 0) = R_CtoG;
       T.block<3, 1>(0, 3) = p_CinG;
+      if (p_IinG.allFinite() && R_ItoG.allFinite()) {  // --recover anchor for a later full reset
+        last_out_R_ = R_ItoG;
+        last_out_p_ = p_IinG;
+        have_last_out_ = true;
+      }
 
       bool bad = !p_IinG.allFinite() || !v.allFinite() || !R_CtoG.allFinite() || !T.allFinite() ||
                  v.norm() > args_.max_speed;
@@ -1769,6 +2119,13 @@ private:
       << ",\"cam_rejected\":" << n_cam_rejected_ << ",\"exceptions\":" << n_exceptions_
       << ",\"imu_held\":" << imu_hold_.size() << ",\"n_reinit_state\":" << n_reinit_state_;
     if (args_.drop_late_ms > 0.0) o << ",\"late_dropped\":" << n_late_dropped_;  // --drop-late only (2026-10-25)
+    if (args_.health && health_on_) health_json(o);                                // --health (2026-10-25)
+    if (args_.recover > 0 && (seg_ > 0 || off_active_)) {                         // --recover frame offset
+      o << ",\"seg\":" << seg_ << ",\"frame_off\":[";
+      jnum(o, off_yaw_); o << ","; jnum(o, off_t_(0)); o << ","; jnum(o, off_t_(1)); o << ","; jnum(o, off_t_(2));
+      o << "]";
+    }
+    if (c.blank) o << ",\"blank\":true";                                            // --test-blank
     if (args_.emit_features > 0 && init) {
       o << ",\"slam_pts\":[";
       size_t k = std::min(slam.size(), static_cast<size_t>(args_.emit_features));
@@ -1839,6 +2196,7 @@ public:
   ~Bridge() {
     if (tlog_) std::fclose(tlog_);
     if (plog_) std::fclose(plog_);
+    if (hlog_) std::fclose(hlog_);
   }
 
 private:
@@ -1874,6 +2232,27 @@ private:
   static constexpr double kGateMinImuS = 0.8;    // --init-gate: 확인에 쓸 IMU 최소 길이 (s)
   uint64_t n_cam_dropped_ = 0, n_imu_dropped_ = 0, n_cam_rejected_ = 0, n_exceptions_ = 0;
   uint64_t n_late_dropped_ = 0;     // --drop-late
+  // ---- 2026-10-25 ovrobust: --health / --recover / --test-blank ----
+  bool health_on_ = false;
+  HealthCfg hcfg_;
+  HealthRec hrec_;                  // record of the latest fed frame
+  FILE *hlog_ = nullptr;
+  uint64_t hlog_rows_ = 0;
+  double h_last_upd_t_ = -1e300;    // state time of the last frame whose update used >= 1 feature (per VioManager)
+  bool h_upd_seen_ = false;         // this VioManager has done >= 1 feature update
+  bool h_state_bad_ = false;
+  int h_lost_run_ = 0, h_trk_low_run_ = 0, h_max_lost_run_ = 0;
+  int h_prev_state_ = -1;
+  uint64_t h_n_[4] = {0, 0, 0, 0}, h_transitions_ = 0, h_n_trans_log_ = 0;
+  uint64_t n_recover_state_ = 0, n_recover_full_ = 0, n_blanked_ = 0, h_n_ready_ = 0;
+  int h_vis_back_run_ = 0;
+  std::vector<std::pair<double, double>> blank_;  // --test-blank windows (s after the first camera record)
+  bool have_last_out_ = false, off_pending_ = false, off_active_ = false;
+  Eigen::Matrix3d last_out_R_ = Eigen::Matrix3d::Identity(), off_anchor_R_ = Eigen::Matrix3d::Identity();
+  Eigen::Vector3d last_out_p_ = Eigen::Vector3d::Zero(), off_anchor_p_ = Eigen::Vector3d::Zero();
+  double off_yaw_ = 0.0;
+  Eigen::Vector3d off_t_ = Eigen::Vector3d::Zero();
+  int seg_ = 0;
   double lag_min_ms_ = 1e300;       // --drop-late: smallest feed lag seen
 };
 
@@ -2104,7 +2483,9 @@ void usage() {
                "                 [--klt-overlap 0|1] [--klt-pyr N] [--idle-spin 0|1|2|3] [--idle-spin-ms W] [--predict 0|1|2] [--predict-hz HZ]\n"
                "                 [--ovopt LIST] [--prof-log FILE] [--pose-precision N] [--drop-late MS]\n"
                "                 [--pred-thread 0|1] [--imu-log FILE] [--profile rec20261025|none]\n"
-               "                 [--mav-udp HOST:PORT | --viop-udp HOST:PORT] [--viop-hb-hz HZ]\n");
+               "                 [--mav-udp HOST:PORT | --viop-udp HOST:PORT] [--viop-hb-hz HZ]\n"
+               "                 [--init-still 0|1] [--health 0|1] [--health-log FILE] [--health-cfg K=V,..] [--recover N]\n"
+               "                 [--recover-max-gap S] [--recover-min-feats N] [--recover-full 0|1] [--test-blank T0:D,..]\n");
 }
 
 }  // namespace
@@ -2210,6 +2591,15 @@ int main(int argc, char **argv) {
     else if (s == "--drop-late") a.drop_late_ms = std::max(0.0, std::stod(next()));
     else if (s == "--pred-thread") a.pred_thread = std::stoi(next()) != 0 ? 1 : 0;   // 2026-10-25
     else if (s == "--imu-log") a.imu_log = next();                                     // 2026-10-25
+    else if (s == "--init-still") a.init_still = std::stoi(next()) != 0 ? 1 : 0;   // 2026-10-25 ovrobust
+    else if (s == "--health") a.health = std::stoi(next()) != 0 ? 1 : 0;
+    else if (s == "--health-log") a.health_log = next();
+    else if (s == "--health-cfg") a.health_cfg = next();
+    else if (s == "--recover") a.recover = std::max(0, std::stoi(next()));
+    else if (s == "--recover-max-gap") a.recover_max_gap = std::stod(next());
+    else if (s == "--recover-min-feats") a.recover_min_feats = std::stoi(next());
+    else if (s == "--recover-full") a.recover_full = std::stoi(next()) != 0 ? 1 : 0;
+    else if (s == "--test-blank") a.test_blank = next();
     else if (s == "--reinit-max-gap") a.reinit_max_gap = std::stod(next());
     else if (s == "--reinit-sigma") {  // ori_deg,pos_m,vel_m_s
       std::string v = next();
@@ -2250,6 +2640,13 @@ int main(int argc, char **argv) {
     }
   }
   if (!a.prof_log.empty()) ovopt::g.prof = 1;
+  ovopt::g.init_still = a.init_still;  // --init-still (2026-10-25): read by ovpatch/VioManagerHelper.cpp
+#ifndef OVOPT_FULL
+  if (a.init_still) {
+    std::fprintf(stderr, "[ov_bridge] --init-still needs a build with the OpenVINS sources (OV_FULL_SOURCE / phone build)\n");
+    return 2;
+  }
+#endif
 #ifndef OVOPT_FULL
   {  // PC build linking libov_msckf_lib.so: only the bridge-side options work, the OpenVINS ones would silently do nothing
     ovopt::Flags f = ovopt::g;
@@ -2359,6 +2756,7 @@ int main(int argc, char **argv) {
       g_mav->report();
       g_mav->close();
     }
+    b.log_health();
     return 0;
   }
 

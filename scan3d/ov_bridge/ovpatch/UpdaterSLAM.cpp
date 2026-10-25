@@ -79,6 +79,7 @@ void UpdaterSLAM::delayed_init(std::shared_ptr<State> state, std::vector<std::sh
   rT0 = boost::posix_time::microsec_clock::local_time();
   ovopt::Lap prof_lap;  // scan3d: timing only
   ovopt::count(ovopt::C_SLAM_DELAY, (long)feature_vec.size());
+  ovopt::h.delay_in += (long)feature_vec.size();  // scan3d health (ovrobust)
 
   // 0. Get all timestamps our clones are at (and thus valid measurement times)
   std::vector<double> clonetimes;
@@ -285,6 +286,7 @@ void UpdaterSLAM::delayed_init(std::shared_ptr<State> state, std::vector<std::sh
   }
   rT3 = boost::posix_time::microsec_clock::local_time();
   prof_lap.to(ovopt::S_DELAY_INIT);
+  ovopt::h.delay_ok += (long)feature_vec.size();  // scan3d health (ovrobust): initialized landmarks
 
   // Debug print timing information
   if (!feature_vec.empty()) {
@@ -306,6 +308,7 @@ void UpdaterSLAM::update(std::shared_ptr<State> state, std::vector<std::shared_p
   rT0 = boost::posix_time::microsec_clock::local_time();
   ovopt::Lap prof_lap;  // scan3d: timing only
   ovopt::count(ovopt::C_SLAM_UP, (long)feature_vec.size());
+  ovopt::h.slam_in += (long)feature_vec.size();  // scan3d health (ovrobust)
 
   // 0. Get all timestamps our clones are at (and thus valid measurement times)
   std::vector<double> clonetimes;
@@ -343,6 +346,7 @@ void UpdaterSLAM::update(std::shared_ptr<State> state, std::vector<std::shared_p
     }
   }
   rT1 = boost::posix_time::microsec_clock::local_time();
+  ovopt::h.slam_clean += (long)feature_vec.size();  // scan3d health (ovrobust)
 
   // Calculate the max possible measurement size
   size_t max_meas_size = 0;
@@ -651,6 +655,7 @@ void UpdaterSLAM::update(std::shared_ptr<State> state, std::vector<std::shared_p
   rT2 = boost::posix_time::microsec_clock::local_time();
   prof_lap.to(ovopt::S_SLAM_JAC);
 
+  ovopt::h.slam_used += (long)feature_vec.size();  // scan3d health (ovrobust): after the chi2 test
   // We have appended all features to our Hx_big, res_big
   // Delete it so we do not reuse information
   for (size_t f = 0; f < feature_vec.size(); f++) {
