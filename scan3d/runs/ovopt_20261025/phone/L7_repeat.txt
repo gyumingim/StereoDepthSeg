@@ -1,0 +1,8 @@
+# L7 (verifier note: only one gated no-options c4 run in L2): more gated A runs + 0.6.17 reference + all_exact,
+# c4, real time, idle_spin 2, threads 2, same gate (SKIN < 35, AP < 37, 30 s). No --prof-log on A / ref (pure timing).
+R_none_r1 ov_bridge_ovopt c4 2 2 1.0
+R_ref_r1 ov_bridge_0617_ref c4 2 2 1.0
+R_exact_r1 ov_bridge_ovopt c4 2 2 1.0 --ovopt all_exact
+R_none_r2 ov_bridge_ovopt c4 2 2 1.0
+R_exact_r2 ov_bridge_ovopt c4 2 2 1.0 --ovopt all_exact
+R_ref_r2 ov_bridge_0617_ref c4 2 2 1.0

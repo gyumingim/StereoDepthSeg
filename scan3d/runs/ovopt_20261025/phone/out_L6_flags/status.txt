@@ -1,0 +1,86 @@
+start 14:09:06 list L6_flags.txt skin_max_start 35.0
+Features	: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt
+14:09:37 F_w3_r1 run bin ov_bridge_ovopt cfg c4 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --pose-precision 17 --prof-log out/F_w3_r1/prof.csv' SKIN 34.0 AP 34.7 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+14:11:04 F_w3_r1 done SKIN 36.3 max 36.4 aborted 0
+14:11:35 F_march_r1 wait SKIN 35.4 AP 36.8
+14:11:50 F_march_r1 wait SKIN 35.2 AP 36.5
+14:12:05 F_march_r1 run bin ov_bridge_ovopt_march cfg c4 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact --pose-precision 17 --prof-log out/F_march_r1/prof.csv' SKIN 34.8 AP 35.8 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+14:13:33 F_march_r1 done SKIN 36.6 max 36.6 aborted 0
+14:14:04 F_w_r1 wait SKIN 36.0 AP 37.5
+14:14:19 F_w_r1 wait SKIN 35.5 AP 36.9
+14:14:34 F_w_r1 wait SKIN 35.3 AP 36.6
+14:14:49 F_w_r1 run bin ov_bridge_ovopt cfg c4 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov --pose-precision 17 --prof-log out/F_w_r1/prof.csv' SKIN 34.9 AP 36.0 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+14:16:17 F_w_r1 done SKIN 36.6 max 36.6 aborted 0
+14:16:48 F_lto_r1 wait SKIN 35.8 AP 37.4
+14:17:03 F_lto_r1 wait SKIN 35.6 AP 37.0
+14:17:18 F_lto_r1 wait SKIN 35.2 AP 36.3
+14:17:33 F_lto_r1 wait SKIN 35.1 AP 36.0
+14:17:49 F_lto_r1 run bin ov_bridge_ovopt_lto cfg c4 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact --pose-precision 17 --prof-log out/F_lto_r1/prof.csv' SKIN 34.7 AP 35.6 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+14:19:17 F_lto_r1 done SKIN 36.5 max 36.7 aborted 0
+14:19:47 F_def_r1 wait SKIN 36.6 AP 43.8
+14:20:02 F_def_r1 wait SKIN 36.6 AP 41.1
+14:20:17 F_def_r1 wait SKIN 36.8 AP 41.7
+14:20:32 F_def_r1 wait SKIN 37.0 AP 43.0
+14:20:47 F_def_r1 wait SKIN 37.4 AP 43.2
+14:21:03 F_def_r1 wait SKIN 37.4 AP 43.9
+14:21:18 F_def_r1 wait SKIN 37.2 AP 41.2
+14:21:33 F_def_r1 wait SKIN 37.1 AP 40.2
+14:21:48 F_def_r1 wait SKIN 36.9 AP 40.7
+14:22:04 F_def_r1 wait SKIN 36.9 AP 40.1
+14:22:19 F_def_r1 wait SKIN 36.8 AP 39.9
+14:22:34 F_def_r1 wait SKIN 37.2 AP 42.5
+14:22:49 F_def_r1 wait SKIN 37.3 AP 42.1
+14:23:04 F_def_r1 wait SKIN 37.3 AP 41.7
+14:23:19 F_def_r1 wait SKIN 37.4 AP 42.4
+14:23:35 F_def_r1 wait SKIN 37.3 AP 40.3
+14:23:50 F_def_r1 wait SKIN 37.1 AP 40.2
+14:24:05 F_def_r1 wait SKIN 36.9 AP 40.2
+14:24:20 F_def_r1 wait SKIN 36.9 AP 41.1
+14:24:35 F_def_r1 wait SKIN 37.0 AP 40.8
+14:24:51 F_def_r1 wait SKIN 37.0 AP 40.3
+14:25:06 F_def_r1 wait SKIN 37.1 AP 41.5
+14:25:21 F_def_r1 wait SKIN 37.1 AP 40.4
+14:25:36 F_def_r1 wait SKIN 37.0 AP 40.2
+14:25:51 F_def_r1 wait SKIN 36.9 AP 39.7
+14:26:07 F_def_r1 wait SKIN 36.9 AP 40.1
+14:26:22 F_def_r1 wait SKIN 36.9 AP 40.9
+14:26:37 F_def_r1 wait SKIN 37.1 AP 41.6
+14:26:52 F_def_r1 wait SKIN 37.1 AP 40.6
+14:27:07 F_def_r1 wait SKIN 37.0 AP 41.0
+14:27:23 F_def_r1 wait SKIN 37.0 AP 40.0
+14:27:38 F_def_r1 wait SKIN 37.0 AP 40.2
+14:27:53 F_def_r1 wait SKIN 37.1 AP 40.9
+14:28:08 F_def_r1 wait SKIN 37.1 AP 41.0
+14:28:23 F_def_r1 wait SKIN 37.1 AP 40.5
+14:28:39 F_def_r1 wait SKIN 37.1 AP 40.3
+14:28:54 F_def_r1 wait SKIN 37.0 AP 39.9
+14:29:09 F_def_r1 wait SKIN 37.4 AP 44.7
+14:29:24 F_def_r1 wait SKIN 37.7 AP 43.7
+14:29:39 F_def_r1 wait SKIN 37.5 AP 41.2
+14:29:55 F_def_r1 wait SKIN 37.4 AP 40.4
+14:30:10 F_def_r1 wait SKIN 37.3 AP 40.4
+14:30:25 F_def_r1 wait SKIN 37.3 AP 41.4
+14:30:40 F_def_r1 wait SKIN 37.4 AP 41.0
+14:30:55 F_def_r1 wait SKIN 37.2 AP 40.1
+14:31:11 F_def_r1 wait SKIN 37.1 AP 40.3
+14:31:26 F_def_r1 wait SKIN 37.0 AP 40.0
+14:31:41 F_def_r1 wait SKIN 37.2 AP 41.0
+14:31:56 F_def_r1 wait SKIN 38.4 AP 43.9
+14:32:11 F_def_r1 wait SKIN 38.4 AP 43.9
+14:32:27 F_def_r1 wait SKIN 38.4 AP 43.1
+14:32:42 F_def_r1 wait SKIN 38.4 AP 42.0
+14:32:57 F_def_r1 wait SKIN 38.3 AP 41.6
+14:33:12 F_def_r1 wait SKIN 38.2 AP 41.9
+14:33:27 F_def_r1 wait SKIN 38.1 AP 41.5
+14:33:43 F_def_r1 wait SKIN 38.3 AP 41.1
+14:33:58 F_def_r1 wait SKIN 38.3 AP 40.9
+14:34:13 F_def_r1 wait SKIN 38.4 AP 42.6
+14:34:28 F_def_r1 wait SKIN 38.5 AP 42.1
+14:34:43 F_def_r1 wait SKIN 38.6 AP 44.2
+14:34:59 F_def_r1 wait SKIN 38.8 AP 42.8
+14:35:14 F_def_r1 wait SKIN 38.7 AP 42.3
+14:35:29 F_def_r1 wait SKIN 38.6 AP 42.5
+14:35:44 F_def_r1 wait SKIN 38.7 AP 42.7
+14:35:59 F_def_r1 wait SKIN 38.6 AP 41.7
+14:36:15 F_def_r1 wait SKIN 38.5 AP 41.7
+14:36:23 STOPPED by PC: user using the phone (twitter 128% CPU) + charging, SKIN 38.7 AP 44 - remaining L6 runs F_def_r1 F_w3n_r1 F_w3_r2 not run

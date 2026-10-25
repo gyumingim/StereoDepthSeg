@@ -95,6 +95,8 @@ python3 -m pyflakes scan3d/<고친 파일>.py      # WSL. Windows 스크립트�
   `cd //wsl.localhost/Ubuntu-22.04/home/system/scanner/StereoDepthSeg && git -c safe.directory='*' push origin gyumingim` (Git Bash).
 - `vio_bench_server.py` 를 **녹화를 PC 로 가져오는 중에 재시작하지 말 것** (`GET /api/pull` 의 `active` 먼저 확인) — 가져오기는 이어져도 폰 사본 정리·진행률이 끊긴다.
 - WSL 백그라운드 실행은 `nohup … &` (그냥 `&` 는 `wsl -e` 가 끝나면 같이 죽는다).
+- (2026-10-25 ovopt) 폰 재생 시간 비교는 run 마다 **SKIN<35·AP<37 °C + 30 s 식힘** 뒤 시작 (안 하면 4 run 만에 큰 코어 상한 2784→2016 MHz, 순서 효과가
+  옵션 효과보다 큼). `adb shell "… nohup … &"` 는 `< /dev/null` 이 있어야 돌아온다. 스크립트 안 adb.exe 의 Windows 경로는 `/` 로 (Git Bash heredoc 이 `\\` 를 줄임).
 
 ## 10. 커밋 규칙
 - 사용자가 말할 때만 커밋·push. force push 금지. `git add -A` 금지 (다른 에이전트 작업 파일이 섞임) — 자기 파일만 경로로.

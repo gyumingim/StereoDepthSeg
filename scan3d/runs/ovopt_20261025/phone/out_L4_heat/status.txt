@@ -1,0 +1,109 @@
+start 13:03:49 list L2_timing.txt skin_max_start 35.0
+Features	: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt
+13:04:19 T_exact_r2 run bin ov_bridge_ovopt cfg c4 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact --prof-log out/T_exact_r2/prof.csv' SKIN 34.5 AP 35.9 cpu9_cap 2784000 screen Awake fg com.android.settings/com.android.settings.SubSettings
+13:05:47 T_exact_r2 done SKIN 36.4 max 36.5 aborted 0
+13:06:17 T_near_r2 wait SKIN 35.5 AP 37.3
+13:06:33 T_near_r2 wait SKIN 35.1 AP 36.3
+13:06:48 T_near_r2 run bin ov_bridge_ovopt cfg c4 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov --prof-log out/T_near_r2/prof.csv' SKIN 34.8 AP 36.1 cpu9_cap 2784000 screen Awake fg com.android.settings/com.android.settings.SubSettings
+13:08:16 T_near_r2 done SKIN 36.4 max 36.5 aborted 0
+13:08:46 T_none_r3 wait SKIN 35.6 AP 37.5
+13:09:01 T_none_r3 wait SKIN 35.2 AP 36.6
+13:09:17 T_none_r3 wait SKIN 35.1 AP 36.7
+13:09:32 T_none_r3 run bin ov_bridge_ovopt cfg c4 spin 2 thr 2 speed 1.0 extra '--prof-log out/T_none_r3/prof.csv' SKIN 34.7 AP 35.7 cpu9_cap 2784000 screen Awake fg com.android.settings/com.android.settings.SubSettings
+13:11:00 T_none_r3 done SKIN 36.4 max 36.6 aborted 0
+13:11:30 N_none_r1 wait SKIN 36.0 AP 37.9
+13:11:45 N_none_r1 wait SKIN 35.5 AP 36.8
+13:12:00 N_none_r1 wait SKIN 35.0 AP 36.1
+13:12:16 N_none_r1 run bin ov_bridge_ovopt cfg c4n400s100c20 spin 2 thr 2 speed 1.0 extra '--prof-log out/N_none_r1/prof.csv' SKIN 34.9 AP 35.8 cpu9_cap 2784000 screen Awake fg com.android.settings/com.android.settings.SubSettings
+13:14:28 N_none_r1 done SKIN 36.1 max 36.5 aborted 0
+13:14:58 N_exact_r1 wait SKIN 35.5 AP 37.1
+13:15:13 N_exact_r1 wait SKIN 35.3 AP 36.7
+13:15:28 N_exact_r1 wait SKIN 35.1 AP 36.4
+13:15:43 N_exact_r1 run bin ov_bridge_ovopt cfg c4n400s100c20 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact --prof-log out/N_exact_r1/prof.csv' SKIN 34.8 AP 35.8 cpu9_cap 2784000 screen Awake fg com.android.settings/com.android.settings.SubSettings
+13:17:17 N_exact_r1 done SKIN 36.7 max 36.7 aborted 0
+13:17:47 N_near_r1 wait SKIN 36.0 AP 37.6
+13:18:02 N_near_r1 wait SKIN 35.4 AP 36.7
+13:18:17 N_near_r1 wait SKIN 35.3 AP 36.4
+13:18:33 N_near_r1 run bin ov_bridge_ovopt cfg c4n400s100c20 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov --prof-log out/N_near_r1/prof.csv' SKIN 34.9 AP 35.9 cpu9_cap 2784000 screen Awake fg com.android.settings/com.android.settings.SubSettings
+13:20:01 N_near_r1 done SKIN 36.7 max 36.8 aborted 0
+13:20:31 T_near_r3 wait SKIN 36.2 AP 44.0
+13:20:46 T_near_r3 wait SKIN 36.6 AP 41.7
+13:21:01 T_near_r3 wait SKIN 36.4 AP 40.4
+13:21:16 T_near_r3 wait SKIN 36.3 AP 39.5
+13:21:32 T_near_r3 wait SKIN 36.2 AP 38.2
+13:21:47 T_near_r3 wait SKIN 35.9 AP 37.5
+13:22:02 T_near_r3 wait SKIN 35.4 AP 36.4
+13:22:17 T_near_r3 wait SKIN 35.2 AP 36.0
+13:22:33 T_near_r3 run bin ov_bridge_ovopt cfg c4 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov --prof-log out/T_near_r3/prof.csv' SKIN 34.7 AP 35.4 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+13:24:00 T_near_r3 done SKIN 36.4 max 36.6 aborted 0
+13:24:31 T_exact_r3 wait SKIN 35.5 AP 36.9
+13:24:46 T_exact_r3 wait SKIN 35.1 AP 35.9
+13:25:01 T_exact_r3 run bin ov_bridge_ovopt cfg c4 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact --prof-log out/T_exact_r3/prof.csv' SKIN 34.6 AP 35.3 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+13:26:29 T_exact_r3 done SKIN 36.4 max 36.5 aborted 0
+13:26:59 N_near_r2 wait SKIN 35.5 AP 36.9
+13:27:15 N_near_r2 wait SKIN 35.1 AP 36.0
+13:27:30 N_near_r2 run bin ov_bridge_ovopt cfg c4n400s100c20 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov --prof-log out/N_near_r2/prof.csv' SKIN 34.8 AP 35.9 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+13:28:58 N_near_r2 done SKIN 36.4 max 36.5 aborted 0
+13:29:28 N_exact_r2 wait SKIN 35.6 AP 37.2
+13:29:43 N_exact_r2 wait SKIN 35.2 AP 36.4
+13:29:59 N_exact_r2 run bin ov_bridge_ovopt cfg c4n400s100c20 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact --prof-log out/N_exact_r2/prof.csv' SKIN 34.9 AP 36.0 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+13:31:27 N_exact_r2 done SKIN 36.5 max 36.5 aborted 0
+13:31:57 N_none_r2 wait SKIN 35.6 AP 37.2
+13:32:12 N_none_r2 wait SKIN 35.3 AP 36.2
+13:32:28 N_none_r2 run bin ov_bridge_ovopt cfg c4n400s100c20 spin 2 thr 2 speed 1.0 extra '--prof-log out/N_none_r2/prof.csv' SKIN 34.9 AP 36.0 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+13:34:39 N_none_r2 done SKIN 36.1 max 36.4 aborted 0
+ALL DONE 13:34:39 L2_timing.txt
+no bridge/feeder left
+start 13:36:35 list L4_heat.txt skin_max_start 35.0
+Features	: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt
+13:37:05 H_sp2_r1 run bin ov_bridge_ovopt cfg c4 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact' SKIN 34.1 AP 34.9 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+13:38:33 H_sp2_r1 done SKIN 36.2 max 36.4 aborted 0
+13:39:03 H_sp0_r1 wait SKIN 35.4 AP 36.8
+13:39:18 H_sp0_r1 wait SKIN 35.3 AP 36.6
+13:39:34 H_sp0_r1 run bin ov_bridge_ovopt cfg c4 spin 0 thr 2 speed 1.0 extra '--ovopt all_exact' SKIN 34.9 AP 35.9 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+13:41:01 H_sp0_r1 done SKIN 35.2 max 35.2 aborted 0
+13:41:32 H_sp3_r1 run bin ov_bridge_ovopt cfg c4 spin 3 thr 2 speed 1.0 extra '--ovopt all_exact' SKIN 34.8 AP 36.1 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+13:43:00 H_sp3_r1 done SKIN 36.4 max 36.4 aborted 0
+13:43:30 H_w15_r1 wait SKIN 35.7 AP 37.1
+13:43:45 H_w15_r1 wait SKIN 35.2 AP 36.5
+13:44:00 H_w15_r1 wait SKIN 35.1 AP 36.1
+13:44:16 H_w15_r1 run bin ov_bridge_ovopt cfg c4 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact --idle-spin-ms 15' SKIN 34.6 AP 35.5 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+13:45:43 H_w15_r1 done SKIN 36.3 max 36.3 aborted 0
+13:46:13 H_w22_r1 wait SKIN 35.5 AP 36.9
+13:46:29 H_w22_r1 wait SKIN 35.3 AP 36.4
+13:46:44 H_w22_r1 run bin ov_bridge_ovopt cfg c4 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact --idle-spin-ms 22' SKIN 34.9 AP 35.9 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+13:48:12 H_w22_r1 done SKIN 36.7 max 36.7 aborted 0
+13:48:42 H_w15_r2 wait SKIN 36.0 AP 37.7
+13:48:57 H_w15_r2 wait SKIN 35.6 AP 36.7
+13:49:12 H_w15_r2 wait SKIN 35.2 AP 36.4
+13:49:28 H_w15_r2 run bin ov_bridge_ovopt cfg c4 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact --idle-spin-ms 15' SKIN 34.9 AP 35.8 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+13:50:56 H_w15_r2 done SKIN 36.4 max 36.4 aborted 0
+13:51:26 H_sp3_r2 wait SKIN 35.6 AP 37.0
+13:51:41 H_sp3_r2 wait SKIN 35.3 AP 36.8
+13:51:56 H_sp3_r2 wait SKIN 35.1 AP 36.2
+13:52:12 H_sp3_r2 run bin ov_bridge_ovopt cfg c4 spin 3 thr 2 speed 1.0 extra '--ovopt all_exact' SKIN 34.8 AP 35.9 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+13:53:39 H_sp3_r2 done SKIN 36.5 max 36.6 aborted 0
+13:54:10 H_sp0_r2 wait SKIN 35.8 AP 37.5
+13:54:25 H_sp0_r2 wait SKIN 35.4 AP 36.7
+13:54:40 H_sp0_r2 wait SKIN 35.1 AP 36.4
+13:54:55 H_sp0_r2 run bin ov_bridge_ovopt cfg c4 spin 0 thr 2 speed 1.0 extra '--ovopt all_exact' SKIN 34.9 AP 35.8 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+13:56:23 H_sp0_r2 done SKIN 35.2 max 35.3 aborted 0
+13:56:54 H_w22_r2 run bin ov_bridge_ovopt cfg c4 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact --idle-spin-ms 22' SKIN 34.7 AP 35.7 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+13:58:21 H_w22_r2 done SKIN 36.6 max 36.7 aborted 0
+13:58:52 H_sp2_r2 wait SKIN 35.9 AP 37.5
+13:59:07 H_sp2_r2 wait SKIN 35.3 AP 36.7
+13:59:22 H_sp2_r2 wait SKIN 35.2 AP 36.3
+13:59:37 H_sp2_r2 run bin ov_bridge_ovopt cfg c4 spin 2 thr 2 speed 1.0 extra '--ovopt all_exact' SKIN 34.8 AP 35.7 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+14:01:05 H_sp2_r2 done SKIN 36.5 max 36.6 aborted 0
+14:01:35 H_t1sp1_r1 wait SKIN 35.6 AP 37.1
+14:01:51 H_t1sp1_r1 wait SKIN 35.5 AP 36.8
+14:02:06 H_t1sp1_r1 wait SKIN 35.0 AP 36.1
+14:02:21 H_t1sp1_r1 run bin ov_bridge_ovopt cfg c4 spin 1 thr 1 speed 1.0 extra '--ovopt all_exact' SKIN 34.9 AP 36.1 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+14:03:49 H_t1sp1_r1 done SKIN 36.4 max 36.5 aborted 0
+14:04:19 H_t1sp1_r2 wait SKIN 35.8 AP 37.6
+14:04:34 H_t1sp1_r2 wait SKIN 35.3 AP 36.6
+14:04:50 H_t1sp1_r2 wait SKIN 35.1 AP 36.3
+14:05:05 H_t1sp1_r2 run bin ov_bridge_ovopt cfg c4 spin 1 thr 1 speed 1.0 extra '--ovopt all_exact' SKIN 34.8 AP 36.1 cpu9_cap 2784000 screen Awake fg com.brave.browser/com.google.android.apps.chrome.Main
+14:06:33 H_t1sp1_r2 done SKIN 36.5 max 36.6 aborted 0
+ALL DONE 14:06:33 L4_heat.txt
+no bridge/feeder left
