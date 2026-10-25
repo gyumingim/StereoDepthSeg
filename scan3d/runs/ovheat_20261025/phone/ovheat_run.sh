@@ -6,8 +6,8 @@
 #   STREAM = "raw80" (/data/local/tmp/replay/raw80.bin) or a file name in /data/local/tmp/ovheat.
 #   LOOPS > 1 replays the stream again (feeder4: passes >= 1 leave out the first SKIP_S s, times shifted) - add
 #   --auto-reset to EXTRA so the pose jump at each seam resets + re-initialises the VIO.
-# Gate before each run: SKIN < SKIN_MAX_START and AP < AP_MAX_START ("Current temperatures from HAL"), screen not used by
-# another app; abort at SKIN >= 38. Samples every 5 s: SKIN / AP, big-core caps, all clocks, battery current, screen,
+# Gate before each run: SKIN < SKIN_MAX_START (default 36, user 2026-10-25 16:30) and AP < AP_MAX_START (default 50)
+# ("Current temperatures from HAL"), screen not used by another app; abort at SKIN >= SKIN_ABORT (45) or AP >= AP_ABORT (50). Samples every 5 s: SKIN / AP, big-core caps, all clocks, battery current, screen,
 # bridge thread CPU times.
 cd /data/local/tmp/ovheat || exit 1
 R=/data/local/tmp/replay
@@ -15,8 +15,10 @@ C=/data/local/tmp/ovheat/cfg
 export LD_LIBRARY_PATH=/data/local/tmp/ovheat/lib
 ST=out/status.txt
 mkdir -p out
-SKIN_MAX_START=${SKIN_MAX_START:-35.0}
-AP_MAX_START=${AP_MAX_START:-37.0}
+SKIN_MAX_START=${SKIN_MAX_START:-36.0}
+AP_MAX_START=${AP_MAX_START:-50.0}
+SKIN_ABORT=${SKIN_ABORT:-45.0}
+AP_ABORT=${AP_ABORT:-50.0}
 skin() { dumpsys thermalservice | grep -A40 'Current temperatures from HAL' | grep -m1 'mName=SKIN' | sed 's/.*mValue=\([0-9.]*\).*/\1/'; }
 ap() { dumpsys thermalservice | grep -A40 'Current temperatures from HAL' | grep -m1 'mName=AP,' | sed 's/.*mValue=\([0-9.]*\).*/\1/'; }
 gt() { awk -v a="$1" -v b="$2" 'BEGIN{exit !(a>=b)}'; }
@@ -52,8 +54,8 @@ bst $(dumpsys battery | grep -m1 ' status:' | awk '{print $2}') wake $(wake) \
 cap9 $(cat /sys/devices/system/cpu/cpu9/cpufreq/scaling_max_freq) cap7 $(cat /sys/devices/system/cpu/cpu7/cpufreq/scaling_max_freq) \
 cap4 $(cat /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq) freq $(cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq | xargs)"
       [ -n "$P" ] && cat /proc/$P/task/*/stat 2>/dev/null | awk '{print "  tid " $1 " ut " $14 " stt " $15 " cpu " $39}'; } >> $O/samp.txt
-    s=$(skin); gt "$s" "$SMAX" && SMAX=$s
-    if gt "$s" 38.0; then AB=1; echo "$(date +%T) $TAG ABORT SKIN $s" >> $ST; pkill feeder4_ovheat; pkill $BIN; sleep 2; fi
+    s=$(skin); a=$(ap); gt "$s" "$SMAX" && SMAX=$s
+    if gt "$s" "$SKIN_ABORT" || gt "$a" "$AP_ABORT"; then AB=1; echo "$(date +%T) $TAG ABORT SKIN $s AP $a" >> $ST; pkill feeder4_ovheat; pkill $BIN; sleep 2; fi
   done
   wait
   [ -f $C/$CFG/ov_timing.txt ] && mv $C/$CFG/ov_timing.txt $O/ov_timing.txt

@@ -78,8 +78,14 @@ for dd in dirs:
         for line in open(d / "pe.txt"):
             if "idle spin end" in line or ("idle spin" in line and "waits" in line):
                 spin = line.strip()
+    chg = []
+    for bf in ("battery_start.txt", "battery_end.txt"):
+        if (d / bf).exists():
+            bt = open(d / bf).read()
+            pw = [k for k in ("AC", "USB", "Wireless") if re.search(k + r" powered: true", bt)]
+            chg.append("+".join(pw) if pw else "batt")
     p = L["proc"][tr]
-    print(f"## {d.name}  ({kv.get('extra', '')}; spin {kv.get('idle_spin')} thr {kv.get('threads')} loops {kv.get('loops')}; "
+    print(f"## {d.name}  [power {'/'.join(chg)}]  ({kv.get('extra', '')}; spin {kv.get('idle_spin')} thr {kv.get('threads')} loops {kv.get('loops')}; "
           f"start {kv.get('start')} end {kv.get('end')} aborted {kv.get('aborted')} screen {kv.get('screen_start')}/{kv.get('screen_end')})")
     print(f"- proc p50/p95/max {pc(p, 50):.2f} / {pc(p, 95):.2f} / {p.max() if len(p) else float('nan'):.1f} ms, >33 ms {(p > 33.3).mean() * 100:.2f} %, "
           f"lag p95/max {pc(L['lag'][tr], 95):.1f} / {L['lag'].max():.1f} ms, fed {len(L['proc'])} (tracking {int(tr.sum())}), "
