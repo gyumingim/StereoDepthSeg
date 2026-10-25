@@ -2482,7 +2482,7 @@ void usage() {
                "                 [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST] [--threads N]\n"
                "                 [--klt-overlap 0|1] [--klt-pyr N] [--idle-spin 0|1|2|3] [--idle-spin-ms W] [--predict 0|1|2] [--predict-hz HZ]\n"
                "                 [--ovopt LIST] [--prof-log FILE] [--pose-precision N] [--drop-late MS]\n"
-               "                 [--pred-thread 0|1] [--imu-log FILE] [--profile rec20261025|none]\n"
+               "                 [--pred-thread 0|1] [--imu-log FILE] [--profile rec20261025|rec60|none]\n"
                "                 [--mav-udp HOST:PORT | --viop-udp HOST:PORT] [--viop-hb-hz HZ]\n"
                "                 [--init-still 0|1] [--health 0|1] [--health-log FILE] [--health-cfg K=V,..] [--recover N]\n"
                "                 [--recover-max-gap S] [--recover-min-feats N] [--recover-full 0|1] [--test-blank T0:D,..]\n");
@@ -2502,7 +2502,7 @@ int main(int argc, char **argv) {
   for (int i = 2; i + 1 < argc; i++) {
     if (std::string(argv[i]) != "--profile") continue;
     const std::string pn = argv[i + 1];
-    if (pn == "rec20261025") {
+    if (pn == "rec20261025" || pn == "rec60") {  // rec60 = same with idle-spin-ms 0 (60 fps: window > period)
       a.ovopt = "all_exact,ekf_gemm,qr_compress,ekf_chol";
       a.idle_spin = 2;
       a.idle_spin_ms = 20.0;
@@ -2511,8 +2511,9 @@ int main(int argc, char **argv) {
       a.predict = 2;  // user 2026-10-25 19:40: 200 Hz IMU-forward prediction from the prediction thread (read only)
       a.predict_hz = 200.0;
       a.pred_thread = 1;  // dropped again below for --tcp (needs stdio)
+      if (pn == "rec60") a.idle_spin_ms = 0.0;
     } else if (pn != "none") {
-      std::fprintf(stderr, "[ov_bridge] unknown --profile %s (known: rec20261025, none)\n", pn.c_str());
+      std::fprintf(stderr, "[ov_bridge] unknown --profile %s (known: rec20261025, rec60, none)\n", pn.c_str());
       return 2;
     }
     a.profile = pn;
@@ -2625,7 +2626,7 @@ int main(int argc, char **argv) {
 
   g_idle.mode = a.idle_spin;
   g_idle.win_ms = a.idle_spin_ms;
-  if (a.profile == "rec20261025" && a.tcp) a.pred_thread = 0;  // integ: profile prediction thread is stdio only
+  if (!a.profile.empty() && a.profile != "none" && (a.tcp || a.predict <= 0)) a.pred_thread = 0;  // profile thread: stdio + predict only
   if (a.pred_thread && (a.predict <= 0 || a.tcp)) {  // 2026-10-25
     std::fprintf(stderr, "[ov_bridge] --pred-thread needs --predict 1|2 and --stdio\n");
     return 2;

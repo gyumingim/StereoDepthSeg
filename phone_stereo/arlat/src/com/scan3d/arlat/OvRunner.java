@@ -127,7 +127,8 @@ import java.util.concurrent.LinkedBlockingQueue;
  * meta.json + perf "imu_prio" / "pred_thread" / "imu_log", meta "chunked_images".
  * 0.6.20 (integ-20261025, all default off = 0.6.19): intent profile rec20261025 = defaults ov_opt
  * all_exact,ekf_gemm,qr_compress,ekf_chol, idle_spin 2, idle_spin_ms 20, drop_late_ms 50, ov_health 1, and (0.6.21)
- * imu_prio 1, predict 2, predict_hz 200, pred_thread 1 (explicit intents win; MainActivity); intent viop_udp HOST:PORT = ov_bridge --viop-udp (VIOP v2 POSE + HEARTBEAT, needs predict 1|2;
+ * imu_prio 1, predict 2, predict_hz 200, pred_thread 1 (explicit intents win; MainActivity); (0.6.22) profile rec60 =
+ * the same + fps 60 + ov_cfg c4f60 + idle_spin_ms 0 (whole gap: the 20 ms window is longer than the 16.7 ms period); intent viop_udp HOST:PORT = ov_bridge --viop-udp (VIOP v2 POSE + HEARTBEAT, needs predict 1|2;
  * with predict 2 + pred_thread the POSE rate = predict_hz), viop_hb_hz (default 20); intent viop_imu udp:HOST:PORT | usb
  * = ViopImuSender (phone IMU 0x06 frames from its own sensor thread; usb untested) -> <run>/viop_imu.json + .csv.
  * meta.json "profile" / "viop_udp" / "viop_hb_hz" / "viop_imu".
@@ -135,7 +136,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261025-integ-0.6.21";
+    static final String VERSION = "ov-20261025-integ-0.6.22";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";

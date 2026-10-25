@@ -218,7 +218,7 @@ public class MainActivity extends Activity {
                 ov.recoverFrames = Math.max(0, Math.min(1000, getIntent().getIntExtra("recover", 0)));   // ovrobust: --recover N
                 // 0.6.20 (integ): named profile = defaults for intents not given explicitly; no profile = 0.6.19 defaults
                 String prof = getIntent().getStringExtra("profile");
-                if ("rec20261025".equals(prof)) {
+                if ("rec20261025".equals(prof) || "rec60".equals(prof)) {
                     ov.profile = prof;
                     if (!getIntent().hasExtra("ov_opt")) ov.ovOpt = "all_exact,ekf_gemm,qr_compress,ekf_chol";
                     if (!getIntent().hasExtra("idle_spin")) ov.idleSpin = 2;
@@ -230,6 +230,13 @@ public class MainActivity extends Activity {
                     if (!getIntent().hasExtra("predict")) ov.predict = 2;
                     if (!getIntent().hasExtra("predict_hz")) ov.predictHz = 200;
                     if (!getIntent().hasExtra("pred_thread")) ov.predThread = 1;
+                    if ("rec60".equals(prof)) {   // 0.6.22 (user 20:00): same + 60 fps C4 (config c4f60)
+                        if (!getIntent().hasExtra("fps")) ov.fps = 60;
+                        if (!getIntent().hasExtra("ov_cfg")) ov.cfgName = "c4f60";
+                        // 20 ms window > 16.7 ms frame period: spin the whole gap (0 = no window), set explicitly
+                        if (!getIntent().hasExtra("idle_spin_ms")) ov.idleSpinMs = 0;
+                        // drop_late 50 ms kept = same latency bound in time (3 frames at 60 fps)
+                    }
                 } else if (prof != null && !prof.isEmpty() && !"none".equals(prof)) throw new IllegalArgumentException("unknown profile " + prof);
                 String vu = getIntent().getStringExtra("viop_udp");                     // 0.6.20: ov_bridge --viop-udp HOST:PORT
                 ov.viopUdp = vu == null ? "" : vu.trim();

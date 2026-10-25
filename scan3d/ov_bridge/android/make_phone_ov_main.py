@@ -78,7 +78,13 @@ VARIANTS = {"base60": (60, 200, 11), "n150": (60, 150, 11), "n100": (60, 100, 11
             # feature is still updated each frame), max_msckf_in_update stays 40 (as c4)
             "c4s100": (30, 200, 15, (960, 540), 22.5, {"max_slam": "100", **HIST_NONE}),
             "c4c20": (30, 200, 20, (960, 540), 22.5, HIST_NONE),
-            "c4n400s100c20": (30, 400, 20, (960, 540), 22.5, {"max_slam": "100", **HIST_NONE})}
+            "c4n400s100c20": (30, 400, 20, (960, 540), 22.5, {"max_slam": "100", **HIST_NONE}),
+            # 2026-10-25 user: C4 quality at 60 fps (integ-20261025). Only track_frequency differs from c4 (write_config
+            # uses fps for nothing else); clones 15 kept = 0.25 s window (60 fps baseline used 11 = 0.18 s) and the same
+            # state size / update cost per frame as c4; init_max_disparity 22.5 px is over the 1.0 s init window, not
+            # per frame -> unchanged. The committed folder was made by copying c4 and editing track_frequency + paths
+            # (identical to what this entry generates; regenerating all variants rewrites the float32 remaps = noise).
+            "c4f60": (60, 200, 15, (960, 540), 22.5, HIST_NONE)}
 # final_baseline_run.py: init_window=1.0, init_disp=15.0, cfg_over="num_opencv_threads=2,try_zupt=false", init_cfg strict
 INIT_OVER = {"init_window_time": "1.0", "init_max_disparity": "15.00", "num_opencv_threads": "2", "try_zupt": "false"}
 # feature-init limits = F1, adopted 2026-10-24 (docs/fi_limits_result.md; OpenVINS defaults 40 / 10000)
