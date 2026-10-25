@@ -32,6 +32,9 @@ import java.util.Locale;
  * ov_cfg (config subdir of files/ov), ov_preset bench | live, imu raw | cal, ov_timing 0/1, max_temp_dc, pool,
  * perf 0/1 (0.6.13, default 1: thread priorities + PerformanceHintManager + sustained mode, OvRunner doc);
  * results in files/ov/run_<time>_.../ (OvRunner).
+ * 0.6.20: intent profile rec20261025 (mode ov): recommended live settings as defaults (OvRunner doc; explicit intents win).
+ * mode imu_tx (no camera, no VIO): only ViopImuSender for secs (intent viop_imu udp:HOST:PORT | usb, viop_imu_uncal) ->
+ * files/ov/imu_tx_<time>/viop_imu.json + .csv (PC check of the phone IMU stream).
  * arcore: a GL thread loops Session.update() and per new frame logs/streams
  *   {"src":"arcore","t_sensor":android camera ts,"t_frame":ARCore ts,"t_call":..,"t_out":update() return,"status":..,"p":[..],"q":[..]}
  * also written to files/arlat_<ms>.csv. Latency = t_out - t_sensor (phone clock).
@@ -48,6 +51,7 @@ public class MainActivity extends Activity {
     private PeekRunner peek;                       // mode peek: 1 fps framing stills (0.6.9)
     private HsPreview hsPrev;
     private Streamer streamer;
+    private ViopImuSender imuTx;                    // 0.6.20 mode imu_tx
 
     @Override
     protected void onCreate(Bundle b) {
@@ -139,6 +143,22 @@ public class MainActivity extends Activity {
             }
             return;
         }
+        if ("imu_tx".equals(mode)) {        // 0.6.20: phone IMU sender only (no camera)
+            if (imuTx == null) {
+                try {
+                    String tg = getIntent().getStringExtra("viop_imu");
+                    java.io.File d = new java.io.File(getExternalFilesDir(null), "ov/imu_tx_" + new java.text.SimpleDateFormat(
+                            "yyyyMMdd_HHmmss", Locale.US).format(new java.util.Date()));
+                    d.mkdirs();
+                    imuTx = new ViopImuSender(this, tg == null ? "" : tg.trim(), getIntent().getIntExtra("viop_imu_uncal", 0) != 0, d);
+                    imuTx.start();
+                    status.setText("imu_tx " + tg + " -> " + d);
+                    final ViopImuSender mine = imuTx;
+                    status.postDelayed(() -> { if (imuTx == mine) finish(); }, Math.max(1, secs > 0 ? secs : 30) * 1000L);
+                } catch (Exception e) { status.setText("imu_tx error: " + e); imuTx = null; }
+            }
+            return;
+        }
         if ("ov".equals(mode)) {
             if (ov == null) {
                 ov = new OvRunner(this, this::show, streamer);
@@ -196,6 +216,22 @@ public class MainActivity extends Activity {
                 ov.ovHealth = getIntent().getIntExtra("ov_health", 0) != 0;                 // ovrobust: --health 1 + health.csv
                 ov.initStill = getIntent().getIntExtra("init_still", 0) != 0;               // ovrobust: --init-still 1
                 ov.recoverFrames = Math.max(0, Math.min(1000, getIntent().getIntExtra("recover", 0)));   // ovrobust: --recover N
+                // 0.6.20 (integ): named profile = defaults for intents not given explicitly; no profile = 0.6.19 defaults
+                String prof = getIntent().getStringExtra("profile");
+                if ("rec20261025".equals(prof)) {
+                    ov.profile = prof;
+                    if (!getIntent().hasExtra("ov_opt")) ov.ovOpt = "all_exact,ekf_gemm,qr_compress,ekf_chol";
+                    if (!getIntent().hasExtra("idle_spin")) ov.idleSpin = 2;
+                    if (!getIntent().hasExtra("idle_spin_ms")) ov.idleSpinMs = 20;
+                    if (!getIntent().hasExtra("drop_late_ms")) ov.dropLateMs = 50;
+                    if (!getIntent().hasExtra("ov_health")) ov.ovHealth = true;
+                } else if (prof != null && !prof.isEmpty() && !"none".equals(prof)) throw new IllegalArgumentException("unknown profile " + prof);
+                String vu = getIntent().getStringExtra("viop_udp");                     // 0.6.20: ov_bridge --viop-udp HOST:PORT
+                ov.viopUdp = vu == null ? "" : vu.trim();
+                ov.viopHbHz = Math.max(0, Math.min(200, getIntent().getIntExtra("viop_hb_hz", 20)));
+                String vi = getIntent().getStringExtra("viop_imu");                     // 0.6.20: ViopImuSender
+                ov.viopImu = vi == null ? "" : vi.trim();
+                ov.viopImuUncal = getIntent().getIntExtra("viop_imu_uncal", 0) != 0;
                 sustainedOn = false;
                 try {
                     boolean sup = ((android.os.PowerManager) getSystemService(POWER_SERVICE)).isSustainedPerformanceModeSupported();
@@ -282,6 +318,7 @@ public class MainActivity extends Activity {
         running = false;
         if (cam2 != null) { cam2.stop(); cam2 = null; }
         if (ov != null) { ov.stop(); ov = null; }
+        if (imuTx != null) { imuTx.stop(); imuTx = null; }   // 0.6.20 mode imu_tx
         if (sustainedOn) { try { getWindow().setSustainedPerformanceMode(false); } catch (Throwable ignored) { } sustainedOn = false; }
         if (hs != null) { hs.stop(); hs = null; }
         if (peek != null) { peek.stop(); peek = null; }

@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.scan3d.arlat"
-    android:versionCode="25" android:versionName="0.6.19-imuprio-20261025">
+    android:versionCode="26" android:versionName="0.6.20-integ-20261025">
     <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="34" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -11,6 +11,8 @@
     <uses-permission android:name="android.permission.DUMP" />
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
     <uses-feature android:name="android.hardware.camera.ar" android:required="true" />
+    <!-- 0.6.20 ViopImuSender usb (optional, untested): phone IMU -> ESP32 over USB CDC -->
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
     <queries><package android:name="com.google.ar.core" /></queries>
     <application android:label="ARCore Latency" android:debuggable="true" android:extractNativeLibs="true"
         android:theme="@android:style/Theme.Material.NoActionBar">

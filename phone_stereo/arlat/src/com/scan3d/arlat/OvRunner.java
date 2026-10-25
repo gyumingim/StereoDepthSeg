@@ -125,11 +125,17 @@ import java.util.concurrent.LinkedBlockingQueue;
  * of the last 2^19), imu_enq.csv (IMU record t_ns, queued), imu_writes.csv (t_ns, writer dequeued, write/flush call that
  * pushed it into the pipe returned), ov_bridge --imu-log bridge_imu.csv (t_ns, header / payload read, CLOCK_BOOTTIME).
  * meta.json + perf "imu_prio" / "pred_thread" / "imu_log", meta "chunked_images".
+ * 0.6.20 (integ-20261025, all default off = 0.6.19): intent profile rec20261025 = defaults ov_opt
+ * all_exact,ekf_gemm,qr_compress,ekf_chol, idle_spin 2, idle_spin_ms 20, drop_late_ms 50, ov_health 1 (explicit intents
+ * win; MainActivity); intent viop_udp HOST:PORT = ov_bridge --viop-udp (VIOP v2 POSE + HEARTBEAT, needs predict 1|2;
+ * with predict 2 + pred_thread the POSE rate = predict_hz), viop_hb_hz (default 20); intent viop_imu udp:HOST:PORT | usb
+ * = ViopImuSender (phone IMU 0x06 frames from its own sensor thread; usb untested) -> <run>/viop_imu.json + .csv.
+ * meta.json "profile" / "viop_udp" / "viop_hb_hz" / "viop_imu".
  */
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261025-imuprio";
+    static final String VERSION = "ov-20261025-integ";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";
@@ -228,6 +234,12 @@ class OvRunner implements SensorEventListener {
     boolean ovHealth = false;
     boolean initStill = false;
     int recoverFrames = 0;
+    String profile = "";                        // 0.6.20 intent profile (applied in MainActivity; recorded here)
+    String viopUdp = "";                        // 0.6.20 intent viop_udp HOST:PORT -> ov_bridge --viop-udp
+    int viopHbHz = 20;                          // 0.6.20 intent viop_hb_hz -> --viop-hb-hz
+    String viopImu = "";                        // 0.6.20 intent viop_imu udp:HOST:PORT | usb -> ViopImuSender
+    boolean viopImuUncal = false;               // 0.6.20 intent viop_imu_uncal 1
+    private ViopImuSender imuTx;
     private BufferedWriter predW;               // poses_pred.csv (predict > 0)
     private long nPred;
     private long lastPoseTns = -1, lastPoseSensor = -1, lastPoseArrive = -1;   // frame of the latest pose line (reader)
@@ -411,6 +423,13 @@ class OvRunner implements SensorEventListener {
             Collections.addAll(cmd, "--mav-udp", mavUdp, "--mav-mount", mavMount, "--mav-msg", mavMsg,
                     "--mav-log", new File(runDir, "mav_log.csv").getAbsolutePath());
         }
+        if (!viopUdp.isEmpty()) {                                                                                      // 0.6.20
+            if (!viopUdp.matches("[0-9.]+:[0-9]+")) throw new IllegalArgumentException("bad viop_udp " + viopUdp);
+            if (!mavUdp.isEmpty()) throw new IllegalArgumentException("viop_udp and mav_udp: pick one");
+            if (predict < 1) throw new IllegalArgumentException("viop_udp needs predict 1 or 2");
+            Collections.addAll(cmd, "--viop-udp", viopUdp, "--viop-hb-hz", Integer.toString(viopHbHz),
+                    "--viop-log", new File(runDir, "viop_log.csv").getAbsolutePath());
+        }
         if (ovHealth) Collections.addAll(cmd, "--health", "1", "--health-log", new File(runDir, "health.csv").getAbsolutePath());  // ovrobust
         if (initStill) Collections.addAll(cmd, "--init-still", "1");                                                    // ovrobust
         if (recoverFrames > 0) Collections.addAll(cmd, "--recover", Integer.toString(recoverFrames));                    // ovrobust
@@ -444,7 +463,12 @@ class OvRunner implements SensorEventListener {
                 .put("ov_opt", ovOpt).put("ov_prof", ovProf ? 1 : 0).put("idle_spin_ms", idleSpinMs).put("spin_wfe", spinWfe ? 1 : 0)
                 .put("drop_late_ms", dropLateMs).put("mav_udp", mavUdp).put("mav_mount", mavMount).put("mav_msg", mavMsg)
                 .put("imu_prio", imuPrio).put("pred_thread", predict == 2 && predThread > 0 ? 1 : 0).put("imu_log", imuLog ? 1 : 0)
-                .put("ov_health", ovHealth ? 1 : 0).put("init_still", initStill ? 1 : 0).put("recover", recoverFrames);   // ovrobust
+                .put("ov_health", ovHealth ? 1 : 0).put("init_still", initStill ? 1 : 0).put("recover", recoverFrames)   // ovrobust
+                .put("profile", profile).put("viop_udp", viopUdp).put("viop_hb_hz", viopHbHz).put("viop_imu", viopImu);   // 0.6.20
+        if (!viopImu.isEmpty()) {   // 0.6.20: own sensor thread, independent of the VIO feed (class doc)
+            imuTx = new ViopImuSender(ctx, viopImu, viopImuUncal, runDir);
+            imuTx.start();
+        }
 
         proc = pb.start();
         bridgePid = pidOf(proc);
@@ -779,6 +803,10 @@ class OvRunner implements SensorEventListener {
     void stop() {
         if (!running && proc == null) return;
         running = false;
+        if (imuTx != null) {   // 0.6.20
+            try { meta.put("viop_imu_result", imuTx.stop()); } catch (Exception ignored) { }
+            imuTx = null;
+        }
         try { ((SensorManager) ctx.getSystemService(Context.SENSOR_SERVICE)).unregisterListener(this); } catch (Exception ignored) { }
         if (dev != null) { dev.close(); dev = null; }
         if (camThread != null) camThread.quitSafely();
