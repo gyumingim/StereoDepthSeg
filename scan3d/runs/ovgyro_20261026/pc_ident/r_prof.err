@@ -1,20 +1,20 @@
 [ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 rs_postinit=0 gyro_klt=0 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol', prof log -)
 [ov_bridge] profile rec20261025: ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol' idle_spin 2 idle_spin_ms 20 drop_late 0 health 1 predict 2 hz 200 pred_thread 1 (after explicit flags)
-[ov_bridge] affinity start: (not pinned) threads 5421:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] affinity start: (not pinned) threads 88500:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 Setting printing level to: WARNING
 [ov_bridge] opencv threads: config 2, --threads 2 -> 2 | TBB (ver 2020.3 interface 11103) | cpus 16 | klt overlap 0
 [ov_bridge] remap 960x540 (source 1920x1080) from /tmp/ovopt/remap_1920x1080.bin
 [ov_bridge] ovrobust: init_still 0 | health 1 log - | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 0 (max gap 3.0 s, min feats 20) | test blank 0 windows
-[ov_bridge] affinity ready: (not pinned) threads 5421:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] affinity ready: (not pinned) threads 88500:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 [ov_bridge] idle spin: mode 2 (pool) stripes 2 max 200 ms window 20.0 ms | pred thread (input reader thread on)
 [ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
-[ov_bridge] affinity cam300: (not pinned) threads 5421:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 5436:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 5437:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 5440:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
-[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 6434 spun 1 timeouts 0 spin 0.00 s | exit_us n 1 p50 2.0 p95 2.0 p99 2.0 max 2.0 | window 20.0 ms period 16.11 ms blocked 91 (0.01 s)
+[ov_bridge] affinity cam300: (not pinned) threads 88500:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 88508:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 88509:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 88516:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 6434 spun 0 timeouts 0 spin 0.00 s | exit_us n 0 p50 -1.0 p95 -1.0 p99 -1.0 max -1.0 | window 20.0 ms period 6.72 ms blocked 268 (0.01 s)
 [ov_bridge] health t=13.466 INIT -> OK (tracked 121 used 11 since_upd 0.00 pos_std 0.087)
-[ov_bridge] pred thread reader: image space waits 2270
-[ov_bridge] pred thread: mode 2 hz 200 | lines 9389 (frame 1952 rate 7437) snapshots 2003 | compute us p50 26.0 p95 61.0 max 19212.7 | horizon ms p50 122.1 p95 154.5 max 506.8 | thread cpu 0.625 s (pred) 1.393 s (reader)
-[ov_bridge] affinity end: (not pinned) threads 5421:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 5440:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
-[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 43309 spun 19 timeouts 1 spin 1.11 s | exit_us n 18 p50 10.9 p95 111683.4 p99 111683.4 max 111683.4 | window 20.0 ms period 22.98 ms blocked 91 (0.01 s)
+[ov_bridge] pred thread reader: image space waits 2324
+[ov_bridge] pred thread: mode 2 hz 200 | lines 6026 (frame 2003 rate 4023) snapshots 2003 | compute us p50 33.8 p95 57.4 max 1701.7 | horizon ms p50 120.7 p95 155.0 max 506.8 | thread cpu 0.338 s (pred) 1.104 s (reader)
+[ov_bridge] affinity end: (not pinned) threads 88500:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 88516:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 43309 spun 0 timeouts 0 spin 0.00 s | exit_us n 0 p50 -1.0 p95 -1.0 p99 -1.0 max -1.0 | window 20.0 ms period 12.09 ms blocked 268 (0.01 s)
 [ov_bridge] predict: mode 2 hz 200 | lines 0 | horizon ms p50 -1.0 p95 -1.0 max -1.0
 [ov_bridge] health: frames INIT 324 OK 2003 DEGRADED 0 LOST 0 | transitions 2 | max LOST run 0 frames | recover state 0 full 0 | blanked 0 | init_ready frames 319
 [33m[init]: not enough feats to compute disp: 0,0 < 15

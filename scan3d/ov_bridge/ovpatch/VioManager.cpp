@@ -137,7 +137,13 @@ void gk_prepare(const VioManager *self, double t_cam, std::shared_ptr<State> sta
   P.held = s.back()->timestamp < t1 ? t1 - std::max(s.back()->timestamp, t0) : 0.0;
   P.have = true;
   // mode 3/4: translation from the state (last update = last frame) + SLAM landmark depths
-  if (P.mode >= 3 && initialized && std::abs(state->_timestamp - t_last) < 1e-6) {
+  bool t_allowed = true;  // mode 5 guards: health OK and plausible speed
+  if (scan3d_gyro::guards_on(P.mode) && initialized &&
+      (!P.health_ok || state->_imu->vel().norm() > scan3d_gyro::kGuardVmax)) {
+    t_allowed = false;
+    scan3d_gyro::frame_stats.t_blocked++;
+  }
+  if (P.mode >= 3 && t_allowed && initialized && std::abs(state->_timestamp - t_last) < 1e-6) {
     const Eigen::Vector3d p_IinC = state->_calib_IMUtoCAM.at(0)->pos();
     const Eigen::Matrix3d R_GtoI = state->_imu->Rot();
     const Eigen::Vector3d p_IinG = state->_imu->pos();

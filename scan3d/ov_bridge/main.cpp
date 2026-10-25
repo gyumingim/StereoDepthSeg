@@ -1435,8 +1435,10 @@ public:
                  k.pts_in, k.klt_ok, k.pts_in ? 100.0 * k.klt_ok / k.pts_in : 0.0, k.pts_out,
                  k.pts_in ? 100.0 * k.pts_out / k.pts_in : 0.0, k.fb_ok, k.fb_try, k.shift_n ? k.shift_sum / k.shift_n : 0.0,
                  k.shift_max);
-    std::fprintf(stderr, "[ov_bridge] gyro_klt mode %d: LK result - start px mean %.3f | LK result - old px mean %.3f (n %ld)\n",
-                 ovopt::g.gyro_klt, k.res_n ? k.res_sum / k.res_n : 0.0, k.res_n ? k.flow_sum / k.res_n : 0.0, k.res_n);
+    std::fprintf(stderr, "[ov_bridge] gyro_klt mode %d: LK result - start px mean %.3f | LK result - old px mean %.3f (n %ld) | "
+                 "guards: capped pts %ld, translation refused frames %ld\n",
+                 ovopt::g.gyro_klt, k.res_n ? k.res_sum / k.res_n : 0.0, k.res_n ? k.flow_sum / k.res_n : 0.0, k.res_n, k.capped,
+                 k.t_blocked);
   }
 
   void log_rs() const {  // ovopt rs_derot summary (2026-10-25)
@@ -1694,6 +1696,7 @@ private:
     if (plog_) ovopt::prof_reset();  // --prof-log: stage timers of this frame only
     ovopt::health_reset();           // --health counters of this frame only (always counted, cheap)
     scan3d_gyro::frame_stats = scan3d_gyro::Stats();  // ovgyro KLT counters of this frame only (output only)
+    scan3d_gyro::pred.health_ok = !health_on_ || hrec_.state == H_OK;  // ovgyro mode 5 guard (read only otherwise)
     auto t0 = std::chrono::steady_clock::now();
     try {
       sys_->feed_measurement_camera(c.data);

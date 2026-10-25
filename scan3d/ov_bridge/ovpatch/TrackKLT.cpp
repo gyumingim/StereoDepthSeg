@@ -67,9 +67,16 @@ void scan3d_gyro_guess(const std::shared_ptr<CamBase> &cam, const std::vector<cv
   for (size_t i = 0; i < pts_old.size() && i < pts_new.size(); i++) {
     cv::Point2f n0 = cam->undistort_cv(pts_old[i].pt);
     Eigen::Vector3d b = P.R_C1C0 * Eigen::Vector3d((double)n0.x, (double)n0.y, 1.0);
-    if (P.have_t) {  // mode 3/4: + translation scaled by the inverse depth (own SLAM landmark, else median)
+    if (P.have_t) {  // mode 3/4/5: + translation scaled by the inverse depth (own SLAM landmark, else median)
       auto iz = i < ids.size() ? P.invz.find(ids[i]) : P.invz.end();
-      b += (iz != P.invz.end() ? iz->second : P.invz_med) * P.t_C1;
+      Eigen::Vector3d bt = b + (iz != P.invz.end() ? iz->second : P.invz_med) * P.t_C1;
+      // mode 5: the translation part (filter velocity x depth) may move the start point by at most kGuardShiftPx
+      // (approx. focal length x normalised-coordinate change); otherwise use the rotation-only (gyro) prediction.
+      if (scan3d_gyro::guards_on(P.mode) && b(2) > 0.2 && bt(2) > 0.2 &&
+          cam->get_K()(0, 0) * (bt.head<2>() / bt(2) - b.head<2>() / b(2)).norm() > scan3d_gyro::guard_shift_px())
+        S.capped++;
+      else
+        b = bt;
     }
     if (b(2) < 0.2)
       continue;

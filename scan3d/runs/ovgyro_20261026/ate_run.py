@@ -54,6 +54,7 @@ CONDS = {
     "PG1": dict(args="--profile rec20261025 --drop-late 0 --klt-stats 1 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,gyro_klt=1"),
     "PG3": dict(args="--profile rec20261025 --drop-late 0 --klt-stats 1 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,gyro_klt=3"),
     "PG4": dict(args="--profile rec20261025 --drop-late 0 --klt-stats 1 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,gyro_klt=4"),
+    "PG5": dict(args="--profile rec20261025 --drop-late 0 --klt-stats 1 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,gyro_klt=5"),
     "BG1": dict(args="--klt-stats 1 --ovopt gyro_klt=1"),
     "BG3": dict(args="--klt-stats 1 --ovopt gyro_klt=3"),
     "B0": dict(),
