@@ -23,7 +23,7 @@ for n in names:
     err = open(f"{O}/{n}.err").read()
     fd = open(f"{O}/{n}.feeder").read().strip().splitlines()
     m = re.search(r"dropped (\d+) frames", err); drops = int(m.group(1)) if m else -1
-    m1 = re.search(r"forced (\d+) \| re-anchors (\d+) \| max late run (\d+)", err)
+    m1 = re.search(r"forced (\d+) \| re-anchors (\d+) \| (?:late-lost \d+ \| )?max late run (\d+)", err)
     forced, rean, mlr = (m1.groups() if m1 else ("-", "-", "-"))
     stl = re.search(r"pred thread stale \(--pred-stale-ms\): (\d+)", err)
     t0 = P[0]["t"] if P else 0
