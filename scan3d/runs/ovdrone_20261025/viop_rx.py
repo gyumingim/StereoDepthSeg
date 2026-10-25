@@ -24,6 +24,7 @@ import time
 SYNC = b"\xA5\x5A"
 VER = 2
 T_POSE, T_HB, T_TREQ, T_TRESP = 0x01, 0x02, 0x10, 0x11
+T_IMU = 0x06  # integ-20261025: phone IMU stream (viop_proto.h VIOP_T_IMU), DIR/imu.csv + check "imu"
 POSE_FMT = "<QIHH3f3f4h3f3H3H3HBBH"
 assert struct.calcsize(POSE_FMT) == 82
 POSE_F = ["t_pred_us", "send_delay_us", "horizon_100us", "flags", "px", "py", "pz", "vx", "vy", "vz", "qw", "qx", "qy", "qz",
@@ -106,6 +107,8 @@ class Cap:
         self.fq.write("pc_send_ns,pc_recv_ns,phone_rx_ns,rtt_ms\n")
         self.fh = open(os.path.join(out, "hb.csv"), "w")
         self.fh.write("pc_ns,seq,t_phone_us,state,flags,imu_age_ms,pose_age_ms,period_ms,reset_counter,quality\n")
+        self.fi = open(os.path.join(out, "imu.csv"), "w")
+        self.fi.write("pc_ns,seq,t_us,flags,sample_seq,gx,gy,gz,ax,ay,az\n")
         self.n = 0
         self.types = {}
 
@@ -119,6 +122,13 @@ class Cap:
         elif typ == T_HB and len(pl) == 18:
             t, stt, fl, ia, pa, per, rc, q = struct.unpack("<QBBHHHBB", pl)
             self.fh.write(f"{pc},{seq},{t},{stt},{fl},{ia},{pa},{per},{rc},{q}\n")
+        elif typ == T_IMU and len(pl) >= 26 and (len(pl) - 12) % 14 == 0:
+            t0, n, fl, sq0 = struct.unpack("<QBBH", pl[:12])
+            if 1 <= n <= 5 and len(pl) == 12 + 14 * n:
+                for i in range(n):
+                    dt, gx, gy, gz, ax, ay, az = struct.unpack("<H6h", pl[12 + 14 * i:26 + 14 * i])
+                    self.fi.write(f"{pc},{seq},{t0 + dt},{fl},{(sq0 + i) & 0xFFFF},{gx * 1e-3:.3f},{gy * 1e-3:.3f},"
+                                  f"{gz * 1e-3:.3f},{ax * 5e-3:.3f},{ay * 5e-3:.3f},{az * 5e-3:.3f}\n")
         elif typ == T_TRESP and len(pl) == 16:
             treq, tph = struct.unpack("<QQ", pl)
             if treq in pend:
@@ -126,7 +136,7 @@ class Cap:
                 self.fq.write(f"{treq},{pc},{tph},{(pc - treq) / 1e6:.3f}\n")
 
     def close(self, meta):
-        for f in (self.raw, self.fp, self.fq, self.fh):
+        for f in (self.raw, self.fp, self.fq, self.fh, self.fi):
             f.close()
         meta.update(made=time.strftime("%F %T"), pose_frames=self.n, types={hex(k): c for k, c in self.types.items()},
                     clock="time.perf_counter_ns", argv=sys.argv)
@@ -218,7 +228,30 @@ def check(a):
     pg = read_csv(os.path.join(D, "ping.csv")) if os.path.exists(os.path.join(D, "ping.csv")) else []
     meta = json.load(open(os.path.join(D, "meta.json"))) if os.path.exists(os.path.join(D, "meta.json")) else {}
     rep = dict(dir=D, made=time.strftime("%F %T"), pose_frames=len(v), meta=meta)
+    ip = os.path.join(D, "imu.csv")
+    if os.path.exists(ip):  # integ-20261025: VIOP_T_IMU stream
+        im = read_csv(ip)
+        if len(im) > 2:
+            ts = [r["t_us"] / 1e3 for r in im]
+            g = [ts[i + 1] - ts[i] for i in range(len(ts) - 1)]
+            pa = [(im[i + 1]["pc_ns"] - im[i]["pc_ns"]) / 1e6 for i in range(len(im) - 1)]
+            sq = [int(r["seq"]) for r in im]
+            rel = [im[i]["pc_ns"] / 1e6 - ts[i] for i in range(len(im))]
+            mn = min(rel)
+            rep["imu"] = dict(samples=len(im), rate_hz=round((len(im) - 1) / ((ts[-1] - ts[0]) / 1e3), 1),
+                              lost_by_frame_seq=sum((sq[i + 1] - sq[i] - 1) % 65536 for i in range(len(sq) - 1)),
+                              sample_gap_ms_p50=round(pct(g, .5), 3), sample_gap_ms_p95=round(pct(g, .95), 3),
+                              sample_gap_ms_max=round(max(g), 3), sample_gaps_over_10ms=sum(1 for x in g if x > 10),
+                              non_increasing_t=sum(1 for x in g if x <= 0),
+                              arrival_gap_ms_p95=round(pct(pa, .95), 3), arrival_gap_ms_max=round(max(pa), 3),
+                              arrival_jitter_rel_ms_p50=round(pct([x - mn for x in rel], .5), 3),
+                              arrival_jitter_rel_ms_p95=round(pct([x - mn for x in rel], .95), 3),
+                              gyro_mean=[round(sum(r[k] for r in im) / len(im), 4) for k in ("gx", "gy", "gz")],
+                              acc_mean=[round(sum(r[k] for r in im) / len(im), 3) for k in ("ax", "ay", "az")],
+                              acc_norm_mean=round(sum(math.sqrt(r["ax"] ** 2 + r["ay"] ** 2 + r["az"] ** 2) for r in im) / len(im), 3),
+                              flags=sorted(set(int(r["flags"]) for r in im)))
     if len(v) < 3:
+        json.dump(rep, open(os.path.join(D, "check.json"), "w"), indent=1)
         print(rep)
         return
     pc = [r["pc_ns"] for r in v]

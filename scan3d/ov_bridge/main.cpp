@@ -22,6 +22,16 @@
 //   from the main input loop on IMU records, so they stop when the feed stops / the bridge hangs; 3 "stopping"
 //   heartbeats on a clean exit) + TIME_RESP replies. --viop-log FILE, --viop-replay-time 0|1 as for MAVLink.
 //
+// integ-20261025 (all default off = unchanged):
+// --profile rec20261025: named live profile = --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin 2
+//   --idle-spin-ms 20 --drop-late 50 (team measurements 2026-10-25, runs/integ_20261025/README.md). Applied before the
+//   other arguments, so any explicit flag overrides its part. Without --profile nothing changes.
+// --pred-thread 1 with --mav-udp / --viop-udp: the prediction thread also sends each of its predictions (frame + 1/HZ
+//   grid of IMU time) as MAVLink / VIOP POSE (before this, that combination sent nothing). The snapshot then also carries
+//   the 9x9 marginal covariance (q, p, v) and the SLAM feature count. Without --pred-thread the old main-loop path
+//   (predict(): emits only while the input is idle, >= 1/HZ after the last one -> ~127 Hz at 200 on the phone) is unchanged.
+// OV_KLT_PYR from the environment is ignored (removed + logged) unless --klt-pyr N is given.
+//
 // --idle-spin 3 / --idle-spin-ms W (2026-10-25, ovopt, heat; both default off = unchanged): 3 = like 2 (whole pool
 //   waits busy) but between the input polls every stripe waits for an event (aarch64 LDAXR + WFE on the shared "go"
 //   word: woken by the stripe that sees input, by interrupts or by the ~100 us timer event stream) instead of a yield
@@ -247,6 +257,7 @@ struct Args {
   double idle_spin_ms = 0.0;  // --idle-spin-ms W (header; 0 = spin the whole gap)
   int pose_precision = 9;     // --pose-precision N (header; 9 = unchanged)
   double drop_late_ms = 0.0;  // --drop-late MS (header; 0 = off)
+  std::string profile;        // --profile NAME (integ-20261025; "" = none)
   int pred_thread = 0;        // --pred-thread 0|1 (header; 0 = off)
   std::string imu_log;        // --imu-log FILE (header)
   std::string mav_udp;        // --mav-udp HOST:PORT (header; "" = off)
@@ -703,6 +714,12 @@ struct PredSnap {
   Eigen::Matrix<double, 16, 1> x;  // [q_GtoI(4) p(3) v(3) bg(3) ba(3)]
   Eigen::Matrix3d Dw, Da, Tg, R_A, R_G, R_ItoC;
   Eigen::Vector3d p_IinC;
+  // integ-20261025: only filled with --mav-udp / --viop-udp (drone output from the prediction thread)
+  bool has_link = false;
+  const void *epoch = nullptr;  // VioManager instance (frame alignment / reset counter)
+  Eigen::Matrix<double, 9, 9> P9 = Eigen::Matrix<double, 9, 9>::Zero();
+  double sigma_w = 0.0;
+  int n_feat = 0;
 };
 
 class Predictor {
@@ -916,6 +933,18 @@ private:
     T.block<3, 3>(0, 0) = R_CtoG;
     T.block<3, 1>(0, 3) = p_IinG - R_CtoG * s.p_IinC;
     const double t_pred = time0 + h;
+    if (g_mav && s.has_link && std::strcmp(src, "check") != 0) {  // integ-20261025: drone link from the prediction thread
+      Eigen::Vector3d w_I = Eigen::Vector3d::Zero(), f_I = Eigen::Vector3d::Zero();
+      if (!d.empty()) {  // newest IMU sample used (= Bridge::predict: rate + specific force, bias removed)
+        w_I = d.back().wm - bg;
+        f_I = d.back().am - ba;
+      }
+      const int n_int = cont ? cache_n_ : (d.empty() ? 0 : static_cast<int>(d.size()) - 1);
+      const double rate = (n_int > 0 && h > 0.0) ? n_int / h : 400.0;
+      g_mav->emit(s.epoch, s.t0_ns + static_cast<int64_t>(std::llround(t_pred * 1e9)), R_ItoG, p_IinG, v, w_I, s.P9, s.lost,
+                  s.sigma_w * s.sigma_w * std::min(rate, 2000.0), f_I, src,
+                  s.t0_ns + static_cast<int64_t>(std::llround(time0 * 1e9)), s.n_feat);
+    }
     std::ostringstream o;
     o.precision(prec_);
     o << "{\"type\":\"pred\",\"t_ns\":" << (s.t0_ns + static_cast<int64_t>(std::llround(t_pred * 1e9))) << ",\"t\":";
@@ -1099,6 +1128,7 @@ public:
     if (!args_.ovopt.empty() || !args_.prof_log.empty()) o << ",\"ovopt\":" << jstr(ovopt::describe());  // 2026-10-25
     if (args_.idle_spin_ms > 0.0) o << ",\"idle_spin_ms\":" << args_.idle_spin_ms;                       // 2026-10-25
     if (args_.pred_thread) o << ",\"pred_thread\":" << args_.pred_thread;                                 // 2026-10-25
+    if (!args_.profile.empty()) o << ",\"profile\":" << jstr(args_.profile);                            // integ-20261025
     if (g_mav) o << ",\"mav_udp\":" << jstr(args_.mav_udp) << ",\"mav_mount\":" << jstr(g_mav->mount_name);  // ovdrone
     o << "}\n";
     return o.str();
@@ -1246,6 +1276,14 @@ public:
     auto calib0 = st->_calib_IMUtoCAM.at(0);
     s.R_ItoC = calib0->Rot();
     s.p_IinC = calib0->pos();
+    if (g_mav) {  // integ-20261025: what the drone link needs (= Bridge::predict)
+      s.has_link = true;
+      s.epoch = sys_.get();
+      std::vector<std::shared_ptr<ov_type::Type>> vars = {st->_imu->q(), st->_imu->p(), st->_imu->v()};
+      s.P9 = ov_msckf::StateHelper::get_marginal_covariance(st, vars);
+      s.sigma_w = params_.imu_noises.sigma_w;
+      s.n_feat = static_cast<int>(st->_features_SLAM.size());
+    }
   }
 
   void log_rs() const {  // ovopt rs_derot summary (2026-10-25)
@@ -2065,7 +2103,8 @@ void usage() {
                "                 [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST] [--threads N]\n"
                "                 [--klt-overlap 0|1] [--klt-pyr N] [--idle-spin 0|1|2|3] [--idle-spin-ms W] [--predict 0|1|2] [--predict-hz HZ]\n"
                "                 [--ovopt LIST] [--prof-log FILE] [--pose-precision N] [--drop-late MS]\n"
-               "                 [--pred-thread 0|1] [--imu-log FILE]\n");
+               "                 [--pred-thread 0|1] [--imu-log FILE] [--profile rec20261025|none]\n"
+               "                 [--mav-udp HOST:PORT | --viop-udp HOST:PORT] [--viop-hb-hz HZ]\n");
 }
 
 }  // namespace
@@ -2078,6 +2117,21 @@ int main(int argc, char **argv) {
   }
   Args a;
   a.config = argv[1];
+  // --profile NAME (integ-20261025): preset values first, explicit flags below override them
+  for (int i = 2; i + 1 < argc; i++) {
+    if (std::string(argv[i]) != "--profile") continue;
+    const std::string pn = argv[i + 1];
+    if (pn == "rec20261025") {
+      a.ovopt = "all_exact,ekf_gemm,qr_compress,ekf_chol";
+      a.idle_spin = 2;
+      a.idle_spin_ms = 20.0;
+      a.drop_late_ms = 50.0;
+    } else if (pn != "none") {
+      std::fprintf(stderr, "[ov_bridge] unknown --profile %s (known: rec20261025, none)\n", pn.c_str());
+      return 2;
+    }
+    a.profile = pn;
+  }
   for (int i = 2; i < argc; i++) {
     std::string s = argv[i];
     auto next = [&]() -> std::string {
@@ -2110,6 +2164,7 @@ int main(int argc, char **argv) {
     else if (s == "--cpus") a.cpus = next();
     else if (s == "--threads") a.threads = std::max(0, std::stoi(next()));
     else if (s == "--klt-overlap") a.klt_overlap = std::stoi(next()) != 0 ? 1 : 0;
+    else if (s == "--profile") next();  // integ-20261025 (applied above)
     else if (s == "--klt-pyr") a.klt_pyr = std::max(0, std::min(8, std::stoi(next())));  // 2026-10-25 ovheat
     else if (s == "--idle-spin") {
       a.idle_spin = std::stoi(next());
@@ -2253,6 +2308,13 @@ int main(int argc, char **argv) {
   ::setenv("OV_KLT_OVERLAP", a.klt_overlap ? "1" : "0", 1);
   // --klt-pyr (2026-10-25, ovheat): read once by ovpatch/TrackKLT.cpp; only set when given (unset = upstream levels)
   if (a.klt_pyr > 0) ::setenv("OV_KLT_PYR", std::to_string(a.klt_pyr).c_str(), 1);
+  else if (const char *e = std::getenv("OV_KLT_PYR")) {  // integ-20261025: never change behaviour from the environment
+    std::fprintf(stderr, "[ov_bridge] OV_KLT_PYR=%s in the environment ignored (use --klt-pyr N)\n", e);
+    ::unsetenv("OV_KLT_PYR");
+  }
+  if (!a.profile.empty())
+    std::fprintf(stderr, "[ov_bridge] profile %s: ovopt '%s' idle_spin %d idle_spin_ms %.0f drop_late %.0f (after explicit flags)\n",
+                 a.profile.c_str(), a.ovopt.c_str(), a.idle_spin, a.idle_spin_ms, a.drop_late_ms);
 
   // --cpus: pin before any thread exists (Bridge / OpenVINS / OpenCV threads inherit it)
   if (!a.cpus.empty()) {

@@ -110,6 +110,7 @@ struct Out {
   std::atomic<bool> stop{false};
   std::thread th;
   std::mutex mu;  // send() from the main thread and the timesync / heartbeat thread
+  std::mutex emu; // integ-20261025: emit() (main or prediction thread) vs note_imu() / hb_tick() (main thread)
   // ---- stats ----
   uint64_t n_sent = 0, n_fail = 0, n_ts = 0, n_hb = 0;
   std::vector<float> age_ms, int_ms;  // send - predicted instant (boot clock); send - newest IMU receive
@@ -262,6 +263,7 @@ struct Out {
 
   // called for every IMU record (main thread) with its sensor time (ns)
   void note_imu(int64_t t_sensor_ns) {
+    std::lock_guard<std::mutex> lk(emu);
     imu_rx_boot = boot_ns();
     if (replay_time) replay_off_ns = std::min(replay_off_ns, imu_rx_boot - t_sensor_ns);
   }
@@ -271,6 +273,7 @@ struct Out {
             const Eigen::Vector3d &v_IinG, const Eigen::Vector3d &w_I, const Eigen::Matrix<double, 9, 9> &P9, bool lost,
             double sigma_w2_rate, const Eigen::Vector3d &f_I, const char *src, int64_t t_state_ns = 0, int n_feat = 0) {
     if (fd < 0) return;
+    std::lock_guard<std::mutex> lk(emu);
     if (proto == 1) {
       emit_viop(sys_epoch, t_pred_ns, t_state_ns, R_ItoG, p_IinG, v_IinG, w_I, f_I, P9, lost, n_feat, src);
       return;
@@ -363,6 +366,7 @@ struct Out {
   uint64_t n_hb_viop = 0;
   void hb_tick(bool initialized, bool lost, bool stopping = false) {
     if (fd < 0 || proto != 1 || hb_hz <= 0.0) return;
+    std::lock_guard<std::mutex> lk(emu);
     const int64_t now = boot_ns();
     if (!stopping && now - hb_last < static_cast<int64_t>(1e9 / hb_hz)) return;
     hb_last = now;
