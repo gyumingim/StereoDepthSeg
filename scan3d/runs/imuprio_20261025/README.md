@@ -10,13 +10,18 @@ Everything is behind flags; defaults = 0.6.18. Numbers marked 추정 are estimat
   over the image stays < `--imu-hold` 0.25 s (lead 0 / 0.1 / 0.18 s identical; lead 0.4 s control differs).
 - **Predicted pose age at a 1 kHz consumer (PC paced, 40 ms camera delay)**: predict 1 p50 25.5 / 23.3, p95 156 / 119 ms
   -> predict 2 + pred thread + chunked images p50 4.0 / 4.4, p95 9.5 / 11.1 ms (2 reps; PC load 13-19 from other agents,
-  so the absolute numbers are 참고). Without chunked images the thread alone had a bad rep (p95 106 ms: the feeder's
-  2 MB write blocked the IMU) -> use both together.
+  so the absolute numbers are 참고). Without chunked images the thread alone had a bad rep (p95 106 ms; cause not
+  measured, 추정 the feeder's 2 MB write blocking the IMU) -> use both together. An earlier set run 3 in parallel on the
+  same loaded PC (`pc_paced/paced_par.log`, /tmp/imuprio/acc) was worse for every mode (P2tc p95 28.3, P2t 43.3, P1 1313 ms)
+  and is kept only as a load-contaminated record; same ordering of the modes.
 - **Accuracy at 200 Hz** (truth = the later VIO pose, not GT): rate lines pos err p50 0.06-0.08 / p95 0.24-0.27 cm, ori
   p50 0.04-0.05 / p95 0.19-0.21 deg at horizon p50 68-77 ms (no prediction: 1.15-1.31 / 4.3-5.8 cm).
 - **Phone cost (camera-free replay, final binary, c4 all_exact idle_spin 2, 17-digit output)**: pred thread 7.7-7.9 s CPU
-  and reader thread 11.7-12.1 s per 80 s run; whole bridge 172 s vs 148 s CPU (+24 s = +0.3 core, 1 rep each, includes the
-  idle-spin threads); per-frame proc p50 9.8 / 10.1 vs 9.6 ms (p95 14.5 / 14.9 vs 14.2) = +0.2-0.5 ms (noise level, 추정).
+  and reader thread 11.7-12.1 s per 80 s run; whole bridge 172 s vs 148 s CPU (+24 s = +0.3 core ≈ pred 7.6 + reader
+  11.6 (mostly sys = pipe reads, before on the main thread inside its spin) + other ~5 s; 1 rep each, last sample ~5 s
+  before the end); per-frame proc p50 9.8 / 10.1 vs 9.6 ms (p95 14.5 / 14.9 vs 14.2) = +0.2-0.5 ms (추정 noise level,
+  weak: R3 vs R3b differ by 0.28 ms, order R3 -> R1 -> R3b, AP rose to 46 C). Phone replay input is type-2 records only
+  (the chunk path ran on the PC only).
   Prediction compute p50 0.29 ms on the phone (mostly 17-digit JSON formatting, 추정; live uses 9 digits).
 - Live latency on the phone: not measured (needs the user + camera). Commands below.
 
@@ -52,6 +57,8 @@ APK 0.6.19-imuprio-20261025 (versionCode 25), protection unchanged (40 C self-st
 - App writer (imu_prio, Java) not executed (needs the camera); framing = reorder.py emulation (same layout).
 - Live IMU delivery latency, live predicted-pose age; benefit of imu_prio without pred_thread is ~0 (old bridge loop does
   not read while processing a frame).
+- Low-risk known issue: a RESET record while a frame prediction is due could integrate with an empty IMU buffer
+  (signed overflow in a time difference, rare; the app never sends RESET).
 - The 200 ms cap protects only images already queued in the app; an image reaching onImage > ~250 ms after exposure
   would change the feed order (same in 0.6.18). In a backlog (2 unprocessed images) the reader stops reading IMU too.
 
