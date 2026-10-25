@@ -36,6 +36,8 @@ import java.util.Locale;
  * mode imu_tx (no camera, no VIO): only ViopImuSender for secs (intent viop_imu udp:HOST:PORT | usb, viop_imu_uncal) ->
  * files/ov/imu_tx_<time>/viop_imu.json + .csv (PC check of the phone IMU stream).
  * 0.6.23 mode calcap: lens-calibration stills from the live-VIO stream at 10 fps, driven by the PC over TCP (CalCapRunner).
+ * 0.6.26 (integ2-20261026): profiles rec20261025/rec60 ov_opt + sym_inplace,ekf_sparse; bridge --drop-late mode 1 (droplatefix),
+ *   intent viop_hb_src (esp32fix), ov_opt gyro_klt=N opt-in (ovgyro). calcap unchanged.
  * arcore: a GL thread loops Session.update() and per new frame logs/streams
  *   {"src":"arcore","t_sensor":android camera ts,"t_frame":ARCore ts,"t_call":..,"t_out":update() return,"status":..,"p":[..],"q":[..]}
  * also written to files/arlat_<ms>.csv. Latency = t_out - t_sensor (phone clock).
@@ -266,7 +268,9 @@ public class MainActivity extends Activity {
                 String prof = getIntent().getStringExtra("profile");
                 if ("rec20261025".equals(prof) || "rec60".equals(prof)) {
                     ov.profile = prof;
-                    if (!getIntent().hasExtra("ov_opt")) ov.ovOpt = "all_exact,ekf_gemm,qr_compress,ekf_chol";
+                    // 0.6.26 (integ2-20261026): + ovupd sym_inplace (exact) and ekf_sparse (near-exact); old 0.6.25 profile = ov_opt
+                    // "all_exact,ekf_gemm,qr_compress,ekf_chol" given explicitly. gyro_klt is NOT in any profile (opt-in via ov_opt).
+                    if (!getIntent().hasExtra("ov_opt")) ov.ovOpt = "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse";
                     if (!getIntent().hasExtra("idle_spin")) ov.idleSpin = 2;
                     if (!getIntent().hasExtra("idle_spin_ms")) ov.idleSpinMs = 20;
                     if (!getIntent().hasExtra("drop_late_ms")) ov.dropLateMs = 50;
