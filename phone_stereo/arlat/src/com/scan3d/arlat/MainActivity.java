@@ -287,6 +287,7 @@ public class MainActivity extends Activity {
                 String vu = getIntent().getStringExtra("viop_udp");                     // 0.6.20: ov_bridge --viop-udp HOST:PORT
                 ov.viopUdp = vu == null ? "" : vu.trim();
                 ov.viopHbHz = Math.max(0, Math.min(200, getIntent().getIntExtra("viop_hb_hz", 20)));
+                ov.viopHbSrc = getIntent().getIntExtra("viop_hb_src", 0) != 0 ? 1 : 0;  // esp32fix: 1 = steady heartbeat thread
                 String vi = getIntent().getStringExtra("viop_imu");                     // 0.6.20: ViopImuSender
                 ov.viopImu = vi == null ? "" : vi.trim();
                 ov.viopImuUncal = getIntent().getIntExtra("viop_imu_uncal", 0) != 0;

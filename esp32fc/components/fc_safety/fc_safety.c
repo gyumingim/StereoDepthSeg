@@ -88,10 +88,22 @@ void fs_config_default(fs_config_t *c) {
   c->openloop_default_thr = 0.33f;
   c->openloop_thrust_exp = 2.0f;
   c->openloop_acc_down = 1.0f;
+  /* esp32fix 2026-10-26: defaults = esp32fc (mode 0, 0.4, 0.99); the user decides. Mode 1 is opt-in and was evaluated
+   * with openloop_cut_mode = 1, openloop_vz_down = 0.6, openloop_cruise_ratio = 0.95 (test t_openloop_cut, README) */
   c->openloop_vz_down = 0.4f;
   c->openloop_cruise_ratio = 0.99f;
   c->openloop_cut_margin = 1.2f;
   c->openloop_volt_comp = true;
+  c->openloop_cut_mode = 0;
+  c->openloop_thr_err = 0.03f;
+  c->openloop_end_ratio = 0.70f;
+  c->openloop_end_ramp_s = 0.4f;
+  c->openloop_hold_s = 0.2f;
+  c->openloop_vio_touch = true;
+  c->openloop_vio_touch_h = 0.10f;
+  c->openloop_vio_touch_ms = 150;
+  c->openloop_vio_desc_vz = 0.3f;
+  c->openloop_vio_extend_ms = 2000;
   c->rec_skip_ms = 300;
   c->rec_min_ms = 500;
   c->rec_window_ms = 3000;
@@ -140,6 +152,10 @@ static void reset_land(fs_t *fs) {
   fs->touch_timing = false;
   fs->ol_src = FS_HOVER_NONE;
   fs->impact_seen = false;
+  fs->ol_ramp = false;
+  fs->ol_touch_timing = false;
+  fs->ol_desc_seen = false;
+  fs->ol_fast_ms = fs->ol_slow_ms = 0;
 }
 
 static bool go(fs_t *fs, fs_state_t to, uint32_t reason) {
@@ -435,6 +451,33 @@ static uint32_t vio_bad_bits(const fs_t *fs, const fs_input_t *in) {
   return r;
 }
 
+/* open-loop thrust / weight ratio at t s after the tier start. ramp_s < 0: no end ramp (mode 0, or before t_fast) */
+static float ol_ratio(const fs_config_t *c, float t, float ramp_s) {
+  float t1 = c->openloop_vz_down / c->openloop_acc_down;
+  float r = t < t1 ? 1.0f - c->openloop_acc_down / G0 : c->openloop_cruise_ratio;
+  if (c->openloop_cut_mode == 1 && ramp_s >= 0.0f && t >= ramp_s) {
+    float f = c->openloop_end_ramp_s > 0.0f ? (t - ramp_s) / c->openloop_end_ramp_s : 1.0f;
+    if (f > 1.0f) f = 1.0f;
+    r = r * (1.0f - f) + c->openloop_end_ratio * f;
+  }
+  return r;
+}
+
+/* 1-D fall of the open-loop profile from h0 with the thrust scaled by m; returns the touchdown time in ms (or max_ms).
+ * 5 ms steps, <= openloop_max_ms / 5 iterations (1200 at 6 s): run twice at the tier start only. */
+static uint32_t ol_sim_touch(const fs_config_t *c, float h0, float m, float ramp_s) {
+  const float dt = 0.005f;
+  float z = h0, v = 0.0f;
+  uint32_t n = c->openloop_max_ms / 5u;
+  for (uint32_t i = 0; i < n; i++) {
+    float t = (float)i * dt;
+    v += (ol_ratio(c, t, ramp_s) * m - 1.0f) * G0 * dt;
+    z += v * dt;
+    if (z <= 0.0f) return (i + 1u) * 5u;
+  }
+  return c->openloop_max_ms;
+}
+
 static void set_tier(fs_t *fs, fs_tier_t t, uint32_t why) {
   fs_tier_t from = fs->tier;
   uint8_t aux = 0;
@@ -450,10 +493,25 @@ static void set_tier(fs_t *fs, fs_tier_t t, uint32_t why) {
     fs->ol_vcomp = 1.0f;
     if (c->openloop_volt_comp && src && src->batt_v > 1.0f && fs->have_input && fs->last.batt_valid && fs->last.batt_v > 1.0f)
       fs->ol_vcomp = clampf(src->batt_v / fs->last.batt_v, 0.85f, 1.2f);
-    /* cut time from the last known height: phase 1 accelerates to vz_down, then ~constant descent */
     float t1 = c->openloop_vz_down / c->openloop_acc_down;
     fs->ol_cut_ms = c->openloop_max_ms;
-    if (fs->last_height_valid && fs->last_height > 0.0f) {
+    fs->ol_ramp = false;
+    fs->ol_touch_timing = false;
+    fs->ol_desc_seen = false;
+    fs->ol_fast_ms = fs->ol_slow_ms = 0;
+    if (c->openloop_cut_mode == 1) {
+      /* band of touchdown times for a record that is off by -/+ thr_err. No height known: no end ramp, cut at
+       * openloop_max_ms (as the legacy mode) */
+      if (fs->last_height_valid && fs->last_height > 0.0f) {
+        float h = fs->last_height;
+        fs->ol_fast_ms = ol_sim_touch(c, h, 1.0f - c->openloop_thr_err, -1.0f);
+        fs->ol_slow_ms = ol_sim_touch(c, h, 1.0f + c->openloop_thr_err, (float)fs->ol_fast_ms * 1e-3f);
+        uint32_t cut = fs->ol_slow_ms + (uint32_t)(c->openloop_hold_s * 1000.0f);
+        if (cut < fs->ol_cut_ms) fs->ol_cut_ms = cut;
+        fs->ol_ramp = true;
+      }
+    } else if (fs->last_height_valid && fs->last_height > 0.0f) {
+      /* legacy (mode 0) cut time from the last known height: phase 1 accelerates to vz_down, then ~constant descent */
       float d1 = 0.5f * c->openloop_acc_down * t1 * t1;
       float t_est = t1 + (fs->last_height > d1 ? (fs->last_height - d1) / c->openloop_vz_down : 0.0f);
       float ms = (t_est * c->openloop_cut_margin + 0.3f) * 1000.0f;
@@ -500,14 +558,30 @@ static void land_step(fs_t *fs, const fs_input_t *in, fs_output_t *out) {
   float t_tier = (float)elapsed(in->now_ms, fs->t_tier_ms) * 1e-3f;
   out->vz_target = -c->land_rate_mps;
   if (fs->tier == FS_TIER_OPENLOOP) {
-    float t1 = c->openloop_vz_down / c->openloop_acc_down;
-    float ratio = t_tier < t1 ? 1.0f - c->openloop_acc_down / G0 : c->openloop_cruise_ratio;
+    float ratio = ol_ratio(c, t_tier, fs->ol_ramp ? (float)fs->ol_fast_ms * 1e-3f : -1.0f);
     float frac = powf(ratio, 1.0f / c->openloop_thrust_exp) * fs->ol_vcomp;
     for (int i = 0; i < c->n_motors; i++) out->motor[i] = clampf(fs->ol_base[i] * frac, 0.0f, 1.0f);
     fs->land_thr = hover * frac;
     bool impact = in->acc_ok && fs->impact_seen && (int32_t)(fs->t_impact_ms - fs->t_tier_ms) >= 0;
     if (impact) { go(fs, FS_DISARMED, FS_R_IMPACT | FS_R_TOUCHDOWN); return; }
-    if (elapsed(in->now_ms, fs->t_tier_ms) >= fs->ol_cut_ms) { go(fs, FS_DISARMED, FS_R_LAND_TIMEOUT); return; }
+    /* mode 1: VIO still usable (only the IMU frames stopped): on the ground near the takeoff height, not moving --
+     * only after a descent was seen on VIO in this tier (verifier 2026-10-26: at the tier start the vehicle hovers with
+     * vz ~ 0, so a hover just above the takeoff height, or a low VIO height, would otherwise cut in the air) */
+    const bool vio_ok = vio_usable(fs, in);
+    if (vio_ok && in->vz_vio < -c->openloop_vio_desc_vz) fs->ol_desc_seen = true;
+    if (c->openloop_cut_mode == 1 && c->openloop_vio_touch && vio_ok && fs->ol_desc_seen && in->height_valid &&
+        in->height_m < c->openloop_vio_touch_h && fabsf(in->vz_vio) < c->touch_vz_max) {
+      if (!fs->ol_touch_timing) { fs->ol_touch_timing = true; fs->t_ol_touch_ms = in->now_ms; }
+      if (elapsed(in->now_ms, fs->t_ol_touch_ms) >= c->openloop_vio_touch_ms) { go(fs, FS_DISARMED, FS_R_TOUCHDOWN); return; }
+    } else fs->ol_touch_timing = false;
+    /* mode 1: never cut on the timer while VIO is usable and still shows a descent (vz <= -touch_vz_max), for at most
+     * openloop_vio_extend_ms past the cut time (descent direction only + cap: a tip-over on the ground cannot keep the
+     * motors on). Verifier 2026-10-26: the timer cut still descending vehicles in the air with VIO alive. */
+    if (elapsed(in->now_ms, fs->t_tier_ms) >= fs->ol_cut_ms) {
+      const bool extend = c->openloop_cut_mode == 1 && vio_ok && in->vz_vio <= -c->touch_vz_max &&
+                          elapsed(in->now_ms, fs->t_tier_ms) < fs->ol_cut_ms + c->openloop_vio_extend_ms;
+      if (!extend) { go(fs, FS_DISARMED, FS_R_LAND_TIMEOUT); return; }
+    }
   } else {
     bool have_vz = (fs->tier == FS_TIER_VIO) ? in->vz_vio_valid : in->vz_imu_valid;
     float vz = (fs->tier == FS_TIER_VIO) ? in->vz_vio : in->vz_imu;

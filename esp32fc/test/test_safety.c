@@ -38,6 +38,8 @@ typedef struct {
   bool hb_freeze_seq;
   uint16_t pose_seq, hb_seq;
   float tilt_deg;             /* forced roll */
+  float h_ofs;                /* VIO height error (reported height = z + h_ofs) */
+  float vz_ofs;               /* VIO vertical speed error (reported vz = vz + vz_ofs) */
   float batt_v;
   bool kill_switch, overrun, nan_out;
   uint32_t rng;
@@ -155,11 +157,11 @@ static void sim_tick(sim_t *s) {
   in->acc_norm = acc_norm;
   in->thr_cmd = thr_cmd;
   in->vz_vio_valid = s->pose_on && s->vio_vz_on;
-  in->vz_vio = s->vz;
+  in->vz_vio = s->vz + s->vz_ofs;
   in->vz_imu_valid = s->imu_vz_on;
   in->vz_imu = s->vz + 0.03f; /* small estimator error */
   in->height_valid = s->pose_on;
-  in->height_m = s->z;
+  in->height_m = s->z + s->h_ofs;
   in->batt_valid = true;
   in->batt_v = s->batt_v;
   in->kill_switch = s->kill_switch;
@@ -882,6 +884,167 @@ static void t_review_regressions(void) {
 }
 
 /* ---------------- phone IMU = only IMU (user decision 2026-10-25) ---------------- */
+/* esp32fix 2026-10-26: open-loop cut (phone IMU + VIO lost) over heights x hover-record thrust error.
+ * Fly to z0, record hover, then change the true hover so that the recorded commands give m x weight thrust. */
+typedef struct { int t_ground, t_cut, ms_hi; float vimp, z_cut; uint32_t reason; } ol_res_t;
+static ol_res_t ol_case2(const fs_config_t *c, float z0, float m, bool keep_pose, float h_ofs, float vz_ofs);
+static ol_res_t ol_case(const fs_config_t *c, float z0, float m, bool keep_pose) { return ol_case2(c, z0, m, keep_pose, 0, 0); }
+static ol_res_t ol_case2(const fs_config_t *c, float z0, float m, bool keep_pose, float h_ofs, float vz_ofs) {
+  sim_t s;
+  sim_init(&s, c);
+  s.z_target = z0;
+  run_ms(&s, 600);
+  CHECK(cmd(&s, FS_CMD_ARM));
+  s.want_fly = true;
+  run_ms(&s, 5000);
+  CHECK(s.fs.state == FS_FLYING && fabsf(s.z - z0) < 0.1f && s.fs.rec.valid);
+  /* sim thrust = (col / hover_true)^2 and the open-loop collective = mean of the recorded per-motor commands * frac:
+   * hover_true = mean(record) / sqrt(m) makes the RECORD exactly m x weight (verifier: the record itself is 1-1.5 % low,
+   * so 0.42 / sqrt(m) did not give the nominal error) */
+  {
+    float mr = 0;
+    for (int i = 0; i < 4; i++) mr += 0.25f * s.fs.rec.m[i];
+    s.hover_true = mr / sqrtf(m);
+  }
+  s.h_ofs = h_ofs;
+  s.vz_ofs = vz_ofs;
+  s.nev = 0;
+  s.imu_ok = s.acc_ok = false;
+  if (!keep_pose) s.pose_on = s.hb_on = false;
+  ol_res_t r = {-1, -1, 0, 0.0f, -1.0f, 0};
+  for (int i = 0; i < 9000; i++) {
+    float vz_before = s.vz;
+    sim_tick(&s);
+    if (r.t_ground < 0 && s.z <= 0.0f) { r.t_ground = i; r.vimp = -vz_before; }
+    if (r.t_ground >= 0 && s.out.motors_enabled) {
+      float tr = (s.applied / s.hover_true) * (s.applied / s.hover_true);
+      if (tr > 0.85f) r.ms_hi++;
+    }
+    if (s.fs.state == FS_DISARMED) { r.t_cut = i; r.z_cut = s.z; r.reason = s.ev[s.nev - 1].reason; break; }
+  }
+  if (r.t_ground < 0 && r.z_cut > 0) r.vimp = sqrtf(s.vz * s.vz + 2.0f * FC_G * r.z_cut); /* falls after the cut */
+  CHECK(g_illegal == 0);
+  return r;
+}
+
+static void mode1_cfg(fs_config_t *c) {
+  fs_config_default(c);
+  c->openloop_cut_mode = 1;
+  c->openloop_vz_down = 0.6f;
+  c->openloop_cruise_ratio = 0.95f;
+}
+
+static void t_openloop_cut(void) {
+  static const float hs[] = {0.3f, 1.0f, 2.0f};
+  static const float ms[] = {0.97f, 1.0f, 1.03f};
+  for (int legacy = 1; legacy >= 0; legacy--) {
+    fs_config_t c;
+    if (legacy) fs_config_default(&c); /* default = legacy esp32fc (mode 0, 0.4, 0.99) */
+    else mode1_cfg(&c);
+    float w_v = 0, w_zcut = 0;
+    int w_hi = 0, w_spin = 0;
+    for (int a = 0; a < 3; a++)
+      for (int b = 0; b < 3; b++) {
+        g_test = legacy ? "openloop_cut_legacy_sweep" : "openloop_cut_mode1_sweep";
+        ol_res_t r = ol_case(&c, hs[a], ms[b], false);
+        int spin = r.t_ground >= 0 ? r.t_cut - r.t_ground : 0;
+        printf("  %s h %.1f m thrust x%.2f: ground %d ms, cut %d ms (%s), on-ground spin %d ms (>85%% hover %d ms), "
+               "impact %.2f m/s%s\n", legacy ? "legacy" : "mode1 ", (double)hs[a], (double)ms[b], r.t_ground, r.t_cut,
+               (r.reason & FS_R_TOUCHDOWN) ? "touch" : "timer", spin, r.ms_hi, (double)r.vimp,
+               r.z_cut > 0.01f ? " CUT IN THE AIR" : "");
+        CHECK(r.t_cut > 0);
+        if (r.vimp > w_v) w_v = r.vimp;
+        if (r.z_cut > w_zcut) w_zcut = r.z_cut;
+        if (r.ms_hi > w_hi) w_hi = r.ms_hi;
+        if (spin > w_spin) w_spin = spin;
+        if (!legacy) {
+          CHECK(r.t_ground >= 0 && r.z_cut < 0.01f); /* no cut in the air within +-3 % record error (SAME model) */
+          CHECK(r.ms_hi <= 250);                     /* <= 0.25 s on the ground above 85 % hover thrust */
+          CHECK(spin <= 1500);
+          CHECK(r.vimp < 3.0f);
+        }
+      }
+    printf("  %s worst: impact %.2f m/s, cut height %.2f m, on-ground spin %d ms, >85%% hover on ground %d ms\n",
+           legacy ? "legacy" : "mode1 ", (double)w_v, (double)w_zcut, w_spin, w_hi);
+    if (legacy) CHECK(w_zcut > 0.5f && w_hi > 1500); /* documents the legacy failure modes */
+  }
+
+  g_test = "openloop_vio_touchdown";
+  fs_config_t c;
+  mode1_cfg(&c);
+  ol_res_t r = ol_case(&c, 1.0f, 1.0f, true); /* IMU frames stop, poses + heartbeat continue */
+  printf("  mode1 + VIO: ground %d ms, cut %d ms (%s), impact %.2f m/s\n", r.t_ground, r.t_cut,
+         (r.reason & FS_R_TOUCHDOWN) ? "touch" : "timer", (double)r.vimp);
+  CHECK(r.t_ground > 0 && (r.reason & FS_R_TOUCHDOWN) && r.t_cut - r.t_ground >= 150 && r.t_cut - r.t_ground <= 300);
+  c.openloop_vio_touch = false;
+  r = ol_case(&c, 1.0f, 1.0f, true);
+  CHECK(r.t_ground > 0 && (r.reason & FS_R_LAND_TIMEOUT) && !(r.reason & FS_R_TOUCHDOWN));
+
+  /* verifier 2026-10-26 regression: hovering 1 m up while VIO says 0.05 m (took off from a higher surface / VIO height
+   * error): at the tier start vz ~ 0 -> the VIO touchdown must NOT fire before a descent was seen (was: cut at 150 ms),
+   * and (second verifier) the timer computed from the wrong height must not cut while VIO still shows the descent:
+   * run to the end -> cut on the ground */
+  g_test = "openloop_vio_touch_needs_descent";
+  mode1_cfg(&c);
+  r = ol_case2(&c, 1.0f, 1.0f, true, -0.95f, 0.0f);
+  printf("  mode1 + VIO, VIO height 0.95 m low: ground %d ms, cut %d ms (%s), z at cut %.2f, impact %.2f m/s\n", r.t_ground,
+         r.t_cut, (r.reason & FS_R_TOUCHDOWN) ? "touch" : "timer", (double)r.z_cut, (double)r.vimp);
+  CHECK(r.t_cut > 250 && r.t_ground > 0 && r.z_cut < 0.01f); /* timer deferred until VIO stops descending = on the ground */
+  fs_config_default(&c); /* legacy (default) for reference */
+  r = ol_case2(&c, 1.0f, 1.0f, true, -0.95f, 0.0f);
+  printf("  legacy + VIO, VIO height 0.95 m low: cut %d ms, z at cut %.2f\n", r.t_cut, (double)r.z_cut);
+
+  /* timer deferred while VIO shows descent: VIO alive, record error -8..+8 %, 1 and 2 m -> no cut in the air */
+  g_test = "openloop_timer_waits_for_vio_descent";
+  {
+    static const float mm[] = {0.92f, 0.97f, 1.0f, 1.03f, 1.05f, 1.08f};
+    mode1_cfg(&c);
+    c.openloop_vio_touch = false; /* timer only (+ deferral), so the deferral itself is what is tested */
+    for (int a = 1; a <= 2; a++)
+      for (int b = 0; b < 6; b++) {
+        r = ol_case2(&c, (float)a, mm[b], true, 0.0f, 0.0f);
+        printf("  mode1 timer+VIO deferral h %d m thrust x%.2f: ground %d ms, cut %d ms, z at cut %.2f, impact %.2f m/s\n", a,
+               (double)mm[b], r.t_ground, r.t_cut, (double)r.z_cut, (double)r.vimp);
+        CHECK(r.t_ground > 0 && r.z_cut < 0.01f);
+      }
+  }
+  /* cap: VIO keeps reporting a descent on the ground (e.g. tipped over, vz bias) -> cut at ol_cut_ms + extend cap */
+  g_test = "openloop_vio_deferral_cap";
+  {
+    sim_t s;
+    mode1_cfg(&c);
+    c.openloop_vio_touch = false;
+    sim_init(&s, &c);
+    fly_to_hover(&s, 2000);
+    s.vz_ofs = -0.5f;
+    s.imu_ok = s.acc_ok = false;
+    sim_tick(&s);
+    uint32_t cut = s.fs.ol_cut_ms, t0 = s.fs.t_tier_ms;
+    int took = run_until(&s, FS_DISARMED, 10000);
+    printf("  mode1 deferral cap: cut %u ms after the tier start (timer %u + cap %u)\n", s.t - t0, cut, c.openloop_vio_extend_ms);
+    CHECK(took > 0 && s.t - t0 >= cut + c.openloop_vio_extend_ms && s.t - t0 <= cut + c.openloop_vio_extend_ms + 2);
+  }
+  /* mode 1 profile: cruise before t_fast, end ratio after the ramp */
+  g_test = "openloop_mode1_profile";
+  {
+    sim_t s;
+    mode1_cfg(&c);
+    sim_init(&s, &c);
+    fly_to_hover(&s, 2000);
+    fs_hover_rec_t hr;
+    fs_get_hover_record(&s.fs, &hr);
+    s.imu_ok = s.acc_ok = false;
+    s.pose_on = s.hb_on = false;
+    sim_tick(&s);
+    CHECK(s.fs.ol_ramp && s.fs.ol_fast_ms > 1000 && s.fs.ol_fast_ms < s.fs.ol_slow_ms && s.fs.ol_cut_ms == s.fs.ol_slow_ms + 200);
+    uint32_t t0 = s.fs.t_tier_ms;
+    while (s.fs.state == FS_EMERG_LAND && s.t - t0 < 700) sim_tick(&s);
+    CHECK(s.fs.state == FS_EMERG_LAND && fabsf(s.out.motor[0] - hr.m[0] * sqrtf(0.95f)) < 0.002f);
+    while (s.fs.state == FS_EMERG_LAND && s.t - t0 < s.fs.ol_fast_ms + 410) sim_tick(&s);
+    if (s.fs.state == FS_EMERG_LAND) CHECK(fabsf(s.out.motor[0] - hr.m[0] * sqrtf(0.70f)) < 0.002f);
+  }
+}
+
 static void t_phone_imu(void) {
   g_test = "phone_imu_stall_openloop_backcalc";
   sim_t s;
@@ -1092,6 +1255,7 @@ int main(void) {
   t_land_cmd_ground();
   t_review_regressions();
   t_phone_imu();
+  t_openloop_cut();
   t_core();
   g_test = "no_illegal_transitions";
   CHECK(g_illegal == 0);

@@ -1,0 +1,31 @@
+cc -std=c99 -O1 -g -Wall -Wextra -Werror -Wshadow -fsanitize=address,undefined -fno-sanitize-recover=all -I../components/fc_safety/include -I../components/fc_core/include -I../components/viop/include test_safety.c ../components/fc_safety/fc_safety.c ../components/fc_core/fc_core.c -o test_safety -lm
+./test_safety
+  pose stall: land triggered, IMU tier, touchdown after 3516 ms
+  hb stall: VIO tier, touchdown after 3786 ms (descent 1 m at 0.30 m/s)
+  hover record: m = 0.4086 0.4211 0.4273 0.4107 (true 0.4116 0.4242 0.4305 0.4137), 3000 samples, frozen=1
+  open-loop: motors cut after 1447 ms by impact, z=0.00
+  IMU tier w/o vz: touchdown after 3700 ms (reason 0x20000)
+  phone-IMU loss (1 m): ground contact after 1446 ms at up to 1.24 m/s, motors cut after 2050 ms (cut time 2050 ms)
+  legacy h 0.3 m thrust x0.97: ground 718 ms, cut 1435 ms (timer), on-ground spin 717 ms (>85% hover 717 ms), impact 0.68 m/s
+  legacy h 0.3 m thrust x1.00: ground 857 ms, cut 1435 ms (timer), on-ground spin 578 ms (>85% hover 578 ms), impact 0.51 m/s
+  legacy h 0.3 m thrust x1.03: ground 1258 ms, cut 1435 ms (timer), on-ground spin 177 ms (>85% hover 177 ms), impact 0.23 m/s
+  legacy h 1.0 m thrust x0.97: ground 1465 ms, cut 3526 ms (timer), on-ground spin 2061 ms (>85% hover 2061 ms), impact 1.11 m/s
+  legacy h 1.0 m thrust x1.00: ground 1859 ms, cut 3526 ms (timer), on-ground spin 1667 ms (>85% hover 1667 ms), impact 0.80 m/s
+  legacy h 1.0 m thrust x1.03: ground -1 ms, cut 3526 ms (timer), on-ground spin 0 ms (>85% hover 0 ms), impact 1.31 m/s CUT IN THE AIR
+  legacy h 2.0 m thrust x0.97: ground 2307 ms, cut 6000 ms (timer), on-ground spin 3693 ms (>85% hover 3693 ms), impact 1.45 m/s
+  legacy h 2.0 m thrust x1.00: ground 3156 ms, cut 6000 ms (timer), on-ground spin 2844 ms (>85% hover 2844 ms), impact 0.96 m/s
+  legacy h 2.0 m thrust x1.03: ground -1 ms, cut 6000 ms (timer), on-ground spin 0 ms (>85% hover 0 ms), impact 5.64 m/s CUT IN THE AIR
+  legacy worst: impact 5.64 m/s, cut height 1.62 m, on-ground spin 3693 ms, >85% hover on ground 3693 ms
+  mode1  h 0.3 m thrust x0.97: ground 672 ms, cut 1120 ms (timer), on-ground spin 448 ms (>85% hover 126 ms), impact 0.86 m/s
+  mode1  h 0.3 m thrust x1.00: ground 755 ms, cut 1120 ms (timer), on-ground spin 365 ms (>85% hover 85 ms), impact 0.74 m/s
+  mode1  h 0.3 m thrust x1.03: ground 880 ms, cut 1120 ms (timer), on-ground spin 240 ms (>85% hover 0 ms), impact 0.68 m/s
+  mode1  h 1.0 m thrust x0.97: ground 1263 ms, cut 2050 ms (timer), on-ground spin 787 ms (>85% hover 171 ms), impact 1.43 m/s
+  mode1  h 1.0 m thrust x1.00: ground 1447 ms, cut 2050 ms (timer), on-ground spin 603 ms (>85% hover 29 ms), impact 1.24 m/s
+  mode1  h 1.0 m thrust x1.03: ground 1709 ms, cut 2050 ms (timer), on-ground spin 341 ms (>85% hover 0 ms), impact 1.34 m/s
+  mode1  h 2.0 m thrust x0.97: ground 1894 ms, cut 2940 ms (timer), on-ground spin 1046 ms (>85% hover 181 ms), impact 1.91 m/s
+  mode1  h 2.0 m thrust x1.00: ground 2209 ms, cut 2940 ms (timer), on-ground spin 731 ms (>85% hover 0 ms), impact 1.75 m/s
+  mode1  h 2.0 m thrust x1.03: ground 2609 ms, cut 2940 ms (timer), on-ground spin 331 ms (>85% hover 0 ms), impact 2.19 m/s
+  mode1  worst: impact 2.19 m/s, cut height 0.00 m, on-ground spin 1046 ms, >85% hover on ground 181 ms
+  mode1 + VIO: ground 1447 ms, cut 1597 ms (touch), impact 1.24 m/s
+  att_est: roll 20.06 deg (20), pitch -10.03 deg (-10), bias 0.0094 -0.0194
+ALL PASS: 510 checks, 0 failed

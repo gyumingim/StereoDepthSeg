@@ -22,6 +22,9 @@
 //   the ESP32-S3 flight firmware: one POSE frame (92 B) per prediction + HEARTBEAT frames (--viop-hb-hz, default 20, sent
 //   from the main input loop on IMU records, so they stop when the feed stops / the bridge hangs; 3 "stopping"
 //   heartbeats on a clean exit) + TIME_RESP replies. --viop-log FILE, --viop-replay-time 0|1 as for MAVLink.
+// --viop-hb-src 0|1 (esp32fix-20261026; default 0 = as above, unchanged): 1 = heartbeat from a dedicated thread on a
+//   steady 1/HZ grid; a beat is skipped while no IMU record was received for 100 ms or the main loop handled no IMU
+//   record for 200 ms (feed stopped / bridge hung -> heartbeats stop as before). See mav_out.h hb_run.
 //
 // integ-20261025 (all default off = unchanged):
 // --profile rec20261025: named live profile = --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin 2
@@ -336,6 +339,7 @@ struct Args {
   std::string mav_udp;        // --mav-udp HOST:PORT (header; "" = off)
   std::string viop_udp;       // --viop-udp HOST:PORT (header; "" = off)
   double viop_hb_hz = 20.0;   // --viop-hb-hz (VIOP heartbeat rate; 0 = none)
+  int viop_hb_src = 0;        // --viop-hb-src 0|1 (esp32fix-20261026: 1 = steady heartbeat thread; 0 = main loop)
   std::string mav_msg = "odom", mav_mount = "imu", mav_log;
   int mav_yaw_align = 1, mav_replay_time = 0, mav_sysid = 1;
   // 2026-10-25 ovrobust (header)
@@ -409,6 +413,10 @@ inline void imu_log_row(const uint8_t *payload, int64_t t_hdr, int64_t t_rx) {
 }
 
 std::unique_ptr<mav::Out> g_mav;  // --mav-udp (nullptr = off)
+// esp32fix-20261026: set only with --viop-hb-src 1; the input reader thread touches the link object only through this
+// pointer (default: never), and that object is then never destroyed (released at the clean exit, see main) so a detached
+// reader can never use a destroyed object.
+std::atomic<mav::Out *> g_hb_feed_out{nullptr};
 
 // ---- --idle-spin (header) ----
 constexpr double kIdleSpinMaxMs = 200.0;  // spin at most this long per wait, then block
@@ -1269,7 +1277,11 @@ public:
       on_imu(buf.data(), out);
       if (g_mav && have_t0_) {
         g_mav->note_imu(t0_ns_ + static_cast<int64_t>(std::llround(newest_imu_t_ * 1e9)));
-        g_mav->hb_tick(sys_ && sys_->initialized(), lost_ || late_lost_ || hb_stale());  // VIOP heartbeat from the main loop (stops if the feed stops)
+        if (g_mav->hb_src) {  // esp32fix-20261026 --viop-hb-src 1: the heartbeat thread sends; the main loop only reports
+          g_mav->note_main(sys_ && sys_->initialized(), lost_ || late_lost_ || hb_stale());  // integ2: + droplatefix lost flags
+          if (!g_inq) g_mav->note_feed();  // no reader thread: the main loop is where IMU is received
+        } else
+          g_mav->hb_tick(sys_ && sys_->initialized(), lost_ || late_lost_ || hb_stale());  // VIOP heartbeat from the main loop (stops if the feed stops)
       }
       return true;
     case kStereo:
@@ -2539,6 +2551,7 @@ void reader_main(int fd, InQueue *q, Predictor *pred) {
     if (r.type == kImu && r.buf.size() == 56) {
       imu_log_row(r.buf.data(), tb, r.t_rx_boot);
       if (pred) pred->push_imu(r.buf.data());
+      if (mav::Out *ho = g_hb_feed_out.load(std::memory_order_acquire)) ho->note_feed();  // esp32fix: --viop-hb-src 1 only
     }
     const bool quit = r.type == kQuit;
     q->push(std::move(r));
@@ -2627,7 +2640,7 @@ void usage() {
                "                 [--ovopt LIST] [--prof-log FILE] [--pose-precision N] [--drop-late MS]\n"
                "                 [--drop-late-mode 0|1] [--drop-late-cap N] [--drop-late-win S] [--pred-stale-ms MS]\n"
                "                 [--pred-thread 0|1] [--imu-log FILE] [--profile rec20261025|rec60|none]\n"
-               "                 [--mav-udp HOST:PORT | --viop-udp HOST:PORT] [--viop-hb-hz HZ]\n"
+               "                 [--mav-udp HOST:PORT | --viop-udp HOST:PORT] [--viop-hb-hz HZ] [--viop-hb-src 0|1]\n"
                "                 [--init-still 0|1] [--health 0|1] [--health-log FILE] [--health-cfg K=V,..] [--recover N]\n"
                "                 [--recover-max-gap S] [--recover-min-feats N] [--recover-full 0|1] [--test-blank T0:D,..]\n");
 }
@@ -2730,6 +2743,7 @@ int main(int argc, char **argv) {
     else if (s == "--viop-replay-time") a.mav_replay_time = std::stoi(next());
     else if (s == "--viop-log") a.mav_log = next();
     else if (s == "--viop-hb-hz") a.viop_hb_hz = std::stod(next());
+    else if (s == "--viop-hb-src") a.viop_hb_src = std::stoi(next());  // esp32fix-20261026
     else if (s == "--mav-msg") a.mav_msg = next();
     else if (s == "--mav-mount") a.mav_mount = next();
     else if (s == "--mav-yaw-align") a.mav_yaw_align = std::stoi(next());
@@ -2848,6 +2862,8 @@ int main(int argc, char **argv) {
     mo->yaw_align = a.mav_yaw_align != 0;
     mo->hb_hz = a.viop_hb_hz;
     if (viop && (a.viop_hb_hz < 0.0 || a.viop_hb_hz > 200.0)) err = "--viop-hb-hz must be in [0, 200]";
+    if (a.viop_hb_src != 0 && a.viop_hb_src != 1) err = "--viop-hb-src must be 0 or 1";
+    mo->hb_src = viop ? a.viop_hb_src : 0;  // esp32fix-20261026
     mo->replay_time = a.mav_replay_time != 0;
     mo->sysid = a.mav_sysid;
     if (err.empty() && !a.mav_log.empty() && !(mo->log = std::fopen(a.mav_log.c_str(), "w"))) err = "cannot open --mav-log";
@@ -2859,6 +2875,10 @@ int main(int argc, char **argv) {
     std::fprintf(stderr, "[ov_bridge] %s: udp %s:%d msgs %s mount %s yaw_align %d replay_time %d sysid %d\n", 
                  viop ? "viop" : "mav", mo->host.c_str(), mo->port, a.mav_msg.c_str(), mo->mount_name.c_str(), a.mav_yaw_align, a.mav_replay_time, a.mav_sysid);
     g_mav = std::move(mo);
+    g_mav->hb_thread_start();  // --viop-hb-src 1 only (beats start once IMU is received and handled)
+    if (g_mav->hb_src) g_hb_feed_out.store(g_mav.get(), std::memory_order_release);
+    if (g_mav->hb_src) std::fprintf(stderr, "[ov_bridge] viop heartbeat: thread %.1f Hz (feed %d ms / main loop %d ms liveness)\n",
+                                    g_mav->hb_hz, g_mav->hb_feed_ms, g_mav->hb_main_ms);
   }
 
   // --klt-overlap: read once by ovpatch/TrackKLT.cpp at the first camera frame
@@ -2919,9 +2939,11 @@ int main(int argc, char **argv) {
     b.log_drop();
     b.log_rs();
     if (g_mav) {
+      g_mav->hb_thread_stop();  // --viop-hb-src 1 (no-op otherwise)
       for (int i = 0; i < 3; i++) g_mav->hb_tick(false, false, true);  // VIOP: "stopping" heartbeats on a clean exit
       g_mav->report();
       g_mav->close();
+      if (g_hb_feed_out.load()) (void)g_mav.release();  // --viop-hb-src 1: keep the object alive for a detached reader
     }
     b.log_health();
     return 0;
