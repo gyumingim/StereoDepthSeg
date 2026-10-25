@@ -60,6 +60,8 @@ CONDS = {  # ovrobust: name -> dict(args=extra ov_bridge args)
     # injection); BLR1 / BLR2 above = policy v1 (BLR1 v1 not run)
     "BLR1b": dict(args=f"--health 1 --test-blank {BLANK_T0}:1 --recover 15"),
     "BLR2b": dict(args=f"--health 1 --test-blank {BLANK_T0}:2 --recover 15"),
+    # 2026-10-25 18:40: --recover v2 on the normal (unblanked) cells -> false-trigger rate / pose change vs H
+    "R": dict(args="--health 1 --recover 15"),
 }
 
 

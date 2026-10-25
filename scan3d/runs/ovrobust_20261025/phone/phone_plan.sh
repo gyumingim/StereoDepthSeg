@@ -37,15 +37,13 @@ run)
   echo "started $L" ;;
 status)
   $ADB shell "tail -5 $P/out/status.txt" ;;
-pull)
+pull)   # whole run dirs into the Windows stage dir (adb.exe), then copy without the raw po.jsonl (po.jsonl.gz kept)
   L=${2:?list name}; mkdir -p $ST/pull_$L $HERE/out_$L
   for t in $(awk '!/^#/ && NF {print $1}' $HERE/$L.txt); do
     $ADB shell "cd $P/out/$t && gzip -kf po.jsonl" || true
-    for f in po.jsonl.gz pe.txt tl.csv hl.csv run.txt samp.txt feeder.txt progress.txt; do
-      mkdir -p $ST/pull_$L/$t; $ADB pull $P/out/$t/$f "$WST\pull_$L\$t\$f" > /dev/null 2>&1 || echo "pull $t/$f failed"
-    done
+    $ADB pull $P/out/$t "$WST\pull_$L" > /dev/null || echo "pull $t failed"
+    mkdir -p $HERE/out_$L/$t; (cd $ST/pull_$L/$t && cp $(ls | grep -v '^po.jsonl$') $HERE/out_$L/$t/)
   done
-  $ADB pull $P/out/status.txt "$WST\pull_$L\status.txt" > /dev/null
-  cp -r $ST/pull_$L/. $HERE/out_$L/
+  $ADB pull $P/out/status.txt "$WST\pull_$L\status.txt" > /dev/null; cp $ST/pull_$L/status.txt $HERE/out_$L/
   ls $HERE/out_$L ;;
 esac

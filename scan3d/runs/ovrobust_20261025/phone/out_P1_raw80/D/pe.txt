@@ -1,0 +1,50 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol', prof log -)
+[ov_bridge] affinity start: (not pinned) threads 30285:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 2 -> 2 | TBB (ver 2021.11 interface 12110) | cpus 10 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /data/local/tmp/replay/remap_1920x1080.bin
+[ov_bridge] ovrobust: init_still 0 | health 1 log out/D/hl.csv | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 15 (max gap 3.0 s, min feats 20) | test blank 1 windows
+[ov_bridge] affinity ready: (not pinned) threads 30285:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin: mode 2 (pool) stripes 2 max 200 ms window 15.0 ms
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] affinity cam300: (not pinned) threads 30285:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9 30288:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 6434 spun 2369 timeouts 1 spin 4.23 s | exit_us n 2368 p50 2.5 p95 8.6 p99 186.1 max 4291.6 | window 15.0 ms period 36.49 ms blocked 2207 (4.70 s)
+[ov_bridge] health t=13.466 INIT -> OK (tracked 130 used 10 since_upd 0.00 pos_std 0.087)
+[ov_bridge] health t=22.031 OK -> DEGRADED (tracked 0 used 40 since_upd 0.00 pos_std 0.087)
+[ov_bridge] health t=22.498 DEGRADED -> LOST (tracked 0 used 0 since_upd 0.40 pos_std 0.087)
+[ov_bridge] lost -> reinit from state t=24.000 gap=1.90 s |v|=0.17 (#1)
+[ov_bridge] recover #1 t=24.000: state injection (since_upd 1.90 s, tracked 162, pos_std 0.097)
+[ov_bridge] health t=24.033 LOST -> INIT (tracked 61 used 0 since_upd nan pos_std nan)
+[ov_bridge] health t=24.167 INIT -> OK (tracked 55 used 0 since_upd 0.00 pos_std 0.194)
+[ov_bridge] health t=24.363 OK -> DEGRADED (tracked 55 used 0 since_upd 0.20 pos_std 0.261)
+[ov_bridge] health t=24.463 DEGRADED -> OK (tracked 53 used 2 since_upd 0.00 pos_std 0.174)
+[ov_bridge] health t=25.231 OK -> DEGRADED (tracked 39 used 39 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=27.200 DEGRADED -> OK (tracked 58 used 21 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=27.633 OK -> DEGRADED (tracked 38 used 21 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=27.830 DEGRADED -> OK (tracked 47 used 30 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=29.331 OK -> DEGRADED (tracked 39 used 39 since_upd 0.00 pos_std 0.174)
+[ov_bridge] health t=32.765 DEGRADED -> OK (tracked 44 used 28 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=32.831 OK -> DEGRADED (tracked 37 used 30 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=42.331 DEGRADED -> OK (tracked 57 used 30 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=42.598 OK -> DEGRADED (tracked 37 used 34 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=45.030 DEGRADED -> OK (tracked 63 used 30 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=45.530 OK -> DEGRADED (tracked 39 used 29 since_upd 0.00 pos_std 0.174)
+[ov_bridge] health t=46.298 DEGRADED -> OK (tracked 49 used 28 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=46.598 OK -> DEGRADED (tracked 39 used 26 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=48.496 DEGRADED -> OK (tracked 45 used 29 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=48.863 OK -> DEGRADED (tracked 39 used 29 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=51.300 DEGRADED -> OK (tracked 50 used 29 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=51.400 OK -> DEGRADED (tracked 38 used 22 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=51.533 DEGRADED -> OK (tracked 44 used 14 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=51.629 OK -> DEGRADED (tracked 39 used 13 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=53.265 DEGRADED -> OK (tracked 51 used 20 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=71.967 OK -> DEGRADED (tracked 39 used 24 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=72.029 DEGRADED -> OK (tracked 45 used 27 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=72.430 OK -> DEGRADED (tracked 39 used 29 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=73.097 DEGRADED -> OK (tracked 58 used 30 since_upd 0.00 pos_std 0.173)
+[ov_bridge] health t=77.365 OK -> DEGRADED (tracked 39 used 38 since_upd 0.00 pos_std 0.174)
+[ov_bridge] health t=80.832 DEGRADED -> OK (tracked 65 used 24 since_upd 0.00 pos_std 0.174)
+[ov_bridge] health t=81.132 OK -> DEGRADED (tracked 38 used 22 since_upd 0.00 pos_std 0.173)
+[ov_bridge] affinity end: (not pinned) threads 30285:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9 30288:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 43309 spun 19783 timeouts 1 spin 33.31 s | exit_us n 19782 p50 2.5 p95 7.1 p99 54.7 max 4291.6 | window 15.0 ms period 33.38 ms blocked 11020 (22.33 s)
+[ov_bridge] health: frames INIT 328 OK 1052 DEGRADED 901 LOST 46 | transitions 35 | max LOST run 46 frames | recover state 1 full 0 | blanked 59 | init_ready frames 319
