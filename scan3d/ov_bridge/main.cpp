@@ -220,6 +220,7 @@ struct Args {
   int pose_precision = 9;     // --pose-precision N (header; 9 = unchanged)
   double drop_late_ms = 0.0;  // --drop-late MS (header; 0 = off)
   std::string mav_udp;        // --mav-udp HOST:PORT (header; "" = off)
+  std::string viop_udp;       // --viop-udp HOST:PORT (header; "" = off)
   std::string mav_msg = "odom", mav_mount = "imu", mav_log;
   int mav_yaw_align = 1, mav_replay_time = 0, mav_sysid = 1;
 };
@@ -798,7 +799,8 @@ public:
       const double rate = (d.size() >= 2 && h > 0.0) ? (d.size() - 1) / h : 400.0;
       const double sw = params_.imu_noises.sigma_w;
       g_mav->emit(sys_.get(), t0_ns_ + static_cast<int64_t>(std::llround(t_pred * 1e9)), R_ItoG, x.block(4, 0, 3, 1),
-                  x.block(7, 0, 3, 1), w_I, P9, lost_, sw * sw * std::min(rate, 2000.0), f_I, src);
+                  x.block(7, 0, 3, 1), w_I, P9, lost_, sw * sw * std::min(rate, 2000.0), f_I, src,
+                  t0_ns_ + static_cast<int64_t>(std::llround(time0 * 1e9)), static_cast<int>(st->_features_SLAM.size()));
     }
     n_pred_++;
     if (h_pred_.size() < 2000000) h_pred_.push_back(static_cast<float>(h * 1e3));
@@ -1549,6 +1551,9 @@ int main(int argc, char **argv) {
     else if (s == "--ovopt") a.ovopt = next();
     else if (s == "--prof-log") a.prof_log = next();
     else if (s == "--mav-udp") a.mav_udp = next();
+    else if (s == "--viop-udp") a.viop_udp = next();
+    else if (s == "--viop-replay-time") a.mav_replay_time = std::stoi(next());
+    else if (s == "--viop-log") a.mav_log = next();
     else if (s == "--mav-msg") a.mav_msg = next();
     else if (s == "--mav-mount") a.mav_mount = next();
     else if (s == "--mav-yaw-align") a.mav_yaw_align = std::stoi(next());
@@ -1606,15 +1611,19 @@ int main(int argc, char **argv) {
                  a.prof_log.empty() ? "-" : a.prof_log.c_str());
 
   // --mav-udp (2026-10-25, ovdrone): drone output prototype, needs the prediction stream
-  if (!a.mav_udp.empty()) {
+  if (!a.mav_udp.empty() || !a.viop_udp.empty()) {
     auto mo = std::make_unique<mav::Out>();
-    auto c = a.mav_udp.rfind(':');
+    const bool viop = !a.viop_udp.empty();
+    const std::string hp = viop ? a.viop_udp : a.mav_udp;
+    mo->proto = viop ? 1 : 0;
+    auto c = hp.rfind(':');
     std::string err;
-    if (a.predict < 1) err = "--mav-udp needs --predict 1 or 2";
-    else if (c == std::string::npos) err = "--mav-udp needs HOST:PORT";
+    if (viop && !a.mav_udp.empty()) err = "--viop-udp and --mav-udp: pick one";
+    else if (a.predict < 1) err = "--mav-udp / --viop-udp need --predict 1 or 2";
+    else if (c == std::string::npos) err = "--mav-udp / --viop-udp need HOST:PORT";
     else {
-      mo->host = a.mav_udp.substr(0, c);
-      mo->port = std::atoi(a.mav_udp.c_str() + c + 1);
+      mo->host = hp.substr(0, c);
+      mo->port = std::atoi(hp.c_str() + c + 1);
       if (mo->port <= 0 || mo->port > 65535) err = "bad --mav-udp port";
     }
     if (err.empty() && !mav::Out::parse_mount(a.mav_mount, mo->R_BI, mo->mount_name)) err = "bad --mav-mount " + a.mav_mount;
@@ -1631,8 +1640,8 @@ int main(int argc, char **argv) {
       std::fprintf(stderr, "[ov_bridge] %s\n", err.c_str());
       return 2;
     }
-    std::fprintf(stderr, "[ov_bridge] mav: udp %s:%d msgs %s mount %s yaw_align %d replay_time %d sysid %d\n", mo->host.c_str(),
-                 mo->port, a.mav_msg.c_str(), mo->mount_name.c_str(), a.mav_yaw_align, a.mav_replay_time, a.mav_sysid);
+    std::fprintf(stderr, "[ov_bridge] %s: udp %s:%d msgs %s mount %s yaw_align %d replay_time %d sysid %d\n", 
+                 viop ? "viop" : "mav", mo->host.c_str(), mo->port, a.mav_msg.c_str(), mo->mount_name.c_str(), a.mav_yaw_align, a.mav_replay_time, a.mav_sysid);
     g_mav = std::move(mo);
   }
 

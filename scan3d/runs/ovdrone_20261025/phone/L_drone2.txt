@@ -1,0 +1,10 @@
+# ovdrone phone replay (2026-10-25): raw80 c4, real time, W3 = live best combo (all_exact + ekf_gemm + qr_compress +
+# ekf_chol, idle_spin 2, idle_spin_ms 15). rs_derot timing (prof slot "rs"), predict 2 @200 Hz without output, with the
+# VIOP v2 UDP output (PC 100.92.214.97:14556, viop_rx.py) and with the MAVLink UDP output (PC :14555, mav_rx.py).
+T_base_r1 ov_bridge_ovdrone c4 2 2 1.0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --prof-log out/T_base_r1/prof.csv
+T_rs_r1 ov_bridge_ovdrone c4 2 2 1.0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,rs_derot --idle-spin-ms 15 --prof-log out/T_rs_r1/prof.csv
+M_pred_r1 ov_bridge_ovdrone c4 2 2 1.0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --predict 2 --predict-hz 200 --prof-log out/M_pred_r1/prof.csv
+M_viop_r1 ov_bridge_ovdrone c4 2 2 1.0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --predict 2 --predict-hz 200 --viop-udp 100.92.214.97:14556 --viop-replay-time 1 --viop-log out/M_viop_r1/viop_log.csv --prof-log out/M_viop_r1/prof.csv
+M_mav_r1 ov_bridge_ovdrone c4 2 2 1.0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --predict 2 --predict-hz 200 --mav-udp 100.92.214.97:14555 --mav-msg odom --mav-mount cam_fwd --mav-replay-time 1 --mav-log out/M_mav_r1/mav_log.csv --prof-log out/M_mav_r1/prof.csv
+T_rs_r2 ov_bridge_ovdrone c4 2 2 1.0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,rs_derot --idle-spin-ms 15 --prof-log out/T_rs_r2/prof.csv
+T_base_r2 ov_bridge_ovdrone c4 2 2 1.0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --prof-log out/T_base_r2/prof.csv

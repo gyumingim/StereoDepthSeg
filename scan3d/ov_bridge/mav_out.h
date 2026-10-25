@@ -1,5 +1,10 @@
-// mav_out.h — drone pose output of ov_bridge: IMU-forward-predicted pose as MAVLink 2 over UDP (2026-10-25, branch
-// ovdrone-20261025, prototype). Header-only, no MAVLink library: the few messages are hand-encoded (field order, CRC
+// mav_out.h — drone pose output of ov_bridge: IMU-forward-predicted pose over UDP (2026-10-25, branch
+// ovdrone-20261025, prototype). Two wire formats (one per run):
+//   proto 1 = VIOP v2 (--viop-udp HOST:PORT): compact framed POSE message (92-byte frame, viop_proto.h) for the ESP32-S3
+//             custom flight firmware (user decisions 2026-10-25): world z-up / phone-IMU body frame, the ESP32 applies
+//             its mount; same bytes over USB CDC / ESP-NOW later. Clock: TIME_REQ frames answered at once (TIME_RESP)
+//             by the socket thread. No heartbeat.
+//   proto 0 = MAVLink 2 (--mav-udp HOST:PORT, optional mode kept from the first prototype), described below. Header-only, no MAVLink library: the few messages are hand-encoded (field order, CRC
 // extra and lengths checked against pymavlink 2.x common.xml, runs/ovdrone_20261025/README.md). Default off: only
 // ov_bridge --mav-udp HOST:PORT creates it. Nothing here talks to a flight controller; it only sends UDP datagrams.
 //
@@ -51,6 +56,8 @@
 
 #include <Eigen/Eigen>
 
+#include "viop_proto.h"
+
 namespace mav {
 
 inline int64_t boot_ns() {
@@ -83,6 +90,8 @@ struct Out {
   int port = 0;
   int sysid = 1, compid = 197;
   int msgs = 1;  // bit 0 ODOMETRY, bit 1 VISION_POSITION_ESTIMATE
+  int proto = 0; // 0 MAVLink 2, 1 VIOP (viop_proto.h)
+  uint32_t viop_seq = 0;
   bool yaw_align = true;
   bool replay_time = false;
   Eigen::Matrix3d R_BI = Eigen::Matrix3d::Identity();
@@ -184,13 +193,19 @@ struct Out {
     return r == static_cast<ssize_t>(f.size());
   }
 
+  bool send_raw(const void *d, size_t n) {
+    std::lock_guard<std::mutex> lk(mu);
+    ssize_t r = ::sendto(fd, d, n, MSG_DONTWAIT, reinterpret_cast<const sockaddr *>(&dst), sizeof(dst));
+    return r == static_cast<ssize_t>(n);
+  }
+
   // background thread: TIMESYNC replies (immediately on receipt) + 1 Hz HEARTBEAT
   void loop() {
     int64_t next_hb = 0;
     uint8_t rx[300];
     while (!stop) {
       int64_t now = boot_ns();
-      if (now >= next_hb) {
+      if (proto == 0 && now >= next_hb) {
         Buf p;
         p.u32(0);   // custom_mode
         p.u8(18);   // type MAV_TYPE_ONBOARD_CONTROLLER
@@ -207,6 +222,22 @@ struct Out {
       ssize_t n = ::recvfrom(fd, rx, sizeof(rx), 0, reinterpret_cast<sockaddr *>(&src), &sl);
       if (n <= 0) continue;
       const int64_t t_rx = boot_ns();
+      if (n >= VIOP_HDR + 2 && rx[0] == VIOP_SYNC0) {  // VIOP TIME_REQ -> TIME_RESP with the phone boot time at receipt
+        if (viop_check(rx, static_cast<int>(n)) == 0 && rx[3] == VIOP_T_TIME_REQ && rx[4] == sizeof(viop_time_t)) {
+          viop_time_t t;
+          std::memcpy(&t, rx + VIOP_HDR, sizeof(t));
+          t.t_phone_rx_ns = static_cast<uint64_t>(t_rx);
+          uint8_t f[VIOP_MAX_FRAME];
+          const int fs = viop_build(f, VIOP_T_TIME_RESP, VIOP_SRC_PHONE, static_cast<uint16_t>(rx[6] | (rx[7] << 8)), &t,
+                                    sizeof(t));
+          {
+            std::lock_guard<std::mutex> lk(mu);
+            ::sendto(fd, f, fs, MSG_DONTWAIT, reinterpret_cast<const sockaddr *>(&src), sl);
+          }
+          n_ts++;
+        }
+        continue;
+      }
       // MAVLink 2 TIMESYNC request: FD len 0 0 seq sys comp 6F 00 00 payload(tc1 int64, ts1 int64; zeros truncated)
       if (n < 12 || rx[0] != 0xFD || rx[7] != 111 || rx[8] != 0 || rx[9] != 0) continue;
       const int len = rx[1];
@@ -238,8 +269,12 @@ struct Out {
   // one prediction -> ODOMETRY / VISION_POSITION_ESTIMATE. P9 = marginal covariance of (q_GtoI JPL error, p, v).
   void emit(const void *sys_epoch, int64_t t_pred_ns, const Eigen::Matrix3d &R_ItoG, const Eigen::Vector3d &p_IinG,
             const Eigen::Vector3d &v_IinG, const Eigen::Vector3d &w_I, const Eigen::Matrix<double, 9, 9> &P9, bool lost,
-            double sigma_w2_rate, const Eigen::Vector3d &f_I, const char *src) {
+            double sigma_w2_rate, const Eigen::Vector3d &f_I, const char *src, int64_t t_state_ns = 0, int n_feat = 0) {
     if (fd < 0) return;
+    if (proto == 1) {
+      emit_viop(sys_epoch, t_pred_ns, t_state_ns, R_ItoG, p_IinG, v_IinG, w_I, f_I, P9, lost, n_feat, src);
+      return;
+    }
     if (sys_epoch != epoch) {  // first pose of a (re)initialised filter: align L, count resets
       if (epoch != nullptr) reset_counter++;
       epoch = sys_epoch;
@@ -318,15 +353,79 @@ struct Out {
     }
   }
 
+  // VIOP v2 POSE frame (viop_proto.h): world z-up / phone IMU frame, no mount, no yaw alignment (the ESP32 does that)
+  bool viop_reset_pending = true;
+  static uint16_t sat16(double v) { return static_cast<uint16_t>(std::max(0.0, std::min(65535.0, std::round(v)))); }
+  void emit_viop(const void *sys_epoch, int64_t t_pred_ns, int64_t t_state_ns, const Eigen::Matrix3d &R_ItoG,
+                 const Eigen::Vector3d &p, const Eigen::Vector3d &v, const Eigen::Vector3d &w_I, const Eigen::Vector3d &f_I,
+                 const Eigen::Matrix<double, 9, 9> &P9, bool lost, int n_feat, const char *src) {
+    if (sys_epoch != epoch) {
+      if (epoch != nullptr) reset_counter++;
+      epoch = sys_epoch;
+      viop_reset_pending = true;
+      std::fprintf(stderr, "[ov_bridge] viop: new world frame (reset_counter %d)\n", reset_counter);
+    }
+    status = lost ? 5 : 4;
+    const int64_t off = (replay_time && replay_off_ns != INT64_MAX) ? replay_off_ns : 0;
+    const int64_t t_pred = t_pred_ns + off;
+    viop_pose_t k;
+    std::memset(&k, 0, sizeof(k));
+    k.t_pred_us = static_cast<uint64_t>(std::max<int64_t>(0, t_pred / 1000));
+    k.horizon_100us = static_cast<uint16_t>(std::max<int64_t>(0, std::min<int64_t>(65535, (t_pred_ns - t_state_ns) / 100000)));
+    Eigen::Quaterniond q(R_ItoG);
+    q.normalize();
+    if (q.w() < 0) q.coeffs() *= -1.0;  // w >= 0 (same rotation)
+    float pw[3], vw[3], wi[3];
+    for (int i = 0; i < 3; i++) {
+      pw[i] = static_cast<float>(p(i));
+      vw[i] = static_cast<float>(v(i));
+      wi[i] = static_cast<float>(w_I(i));
+      k.att_std_100urad[i] = sat16(std::sqrt(std::max(0.0, P9(i, i))) * 1e4);
+      k.pos_std_mm[i] = sat16(std::sqrt(std::max(0.0, P9(3 + i, 3 + i))) * 1e3);
+      k.vel_std_mm_s[i] = sat16(std::sqrt(std::max(0.0, P9(6 + i, 6 + i))) * 1e3);
+    }
+    std::memcpy(k.p_w, pw, 12);
+    std::memcpy(k.v_w, vw, 12);
+    std::memcpy(k.w_i, wi, 12);
+    const double qc[4] = {q.w(), q.x(), q.y(), q.z()};
+    int16_t qi[4];
+    for (int i = 0; i < 4; i++) qi[i] = static_cast<int16_t>(std::lround(std::max(-1.0, std::min(1.0, qc[i])) * 32767.0));
+    std::memcpy(k.q_wi, qi, 8);
+    const double sig_pos = std::sqrt(std::max(0.0, P9.block<3, 3>(3, 3).trace() / 3.0));
+    const int quality = lost ? 0 : std::min(100, std::max(1, static_cast<int>(std::lround(100.0 * (1.0 - sig_pos / 0.20)))));
+    k.flags = static_cast<uint16_t>(VIOP_F_VALID | (lost ? 0 : VIOP_F_TRACKING) |
+                                    (std::strcmp(src, "frame") == 0 ? VIOP_F_FROM_FRAME : 0) |
+                                    (viop_reset_pending ? VIOP_F_RESET : 0) | (replay_time ? VIOP_F_REPLAY : 0));
+    viop_reset_pending = false;
+    k.reset_counter = reset_counter;
+    k.quality = static_cast<uint8_t>(quality);
+    k.n_feat = static_cast<uint16_t>(std::max(0, std::min(65535, n_feat)));
+    const int64_t t_send = boot_ns();
+    k.send_delay_us = static_cast<uint32_t>(std::max<int64_t>(0, std::min<int64_t>(0xffffffffLL, (t_send - t_pred) / 1000)));
+    uint8_t fr[VIOP_MAX_FRAME];
+    const int fs = viop_build(fr, VIOP_T_POSE, VIOP_SRC_PHONE, static_cast<uint16_t>(viop_seq++ & 0xffff), &k, sizeof(k));
+    const bool ok = send_raw(fr, static_cast<size_t>(fs));
+    const int64_t now = boot_ns();
+    if (ok) n_sent++; else n_fail++;
+    const double age = (t_send - t_pred) * 1e-6, im = imu_rx_boot ? (now - imu_rx_boot) * 1e-6 : -1.0;
+    if (age_ms.size() < 2000000) { age_ms.push_back(static_cast<float>(age)); int_ms.push_back(static_cast<float>(im)); }
+    if (log)
+      std::fprintf(log, "%lld,%lld,%lld,%.3f,%.3f,%s,%d,%.6f,%.6f,%.6f,%.7f,%.7f,%.7f,%.7f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%d,%d,"
+                        "%.4f,%.4f,%.4f\n",
+                   static_cast<long long>(t_pred_ns), static_cast<long long>(t_pred / 1000), static_cast<long long>(t_send),
+                   age, im, src, lost ? 0 : 1, p(0), p(1), p(2), q.w(), q.x(), q.y(), q.z(), v(0), v(1), v(2), w_I(0), w_I(1),
+                   w_I(2), sig_pos, quality, reset_counter, f_I(0), f_I(1), f_I(2));
+  }
+
   void report() const {
     auto q = [](std::vector<float> e, double f) {
       if (e.empty()) return -1.0;
       std::sort(e.begin(), e.end());
       return static_cast<double>(e[std::min(e.size() - 1, static_cast<size_t>(f * e.size()))]);
     };
-    std::fprintf(stderr, "[ov_bridge] mav: udp %s:%d msgs %d mount %s | sent %llu fail %llu heartbeat %llu timesync %llu | "
+    std::fprintf(stderr, "[ov_bridge] %s: udp %s:%d msgs %d mount %s | sent %llu fail %llu heartbeat %llu timesync %llu | "
                  "age ms (send - predicted instant%s) p50 %.2f p95 %.2f max %.2f | send - newest IMU receive ms p50 %.2f "
-                 "p95 %.2f max %.2f\n", host.c_str(), port, msgs, mount_name.c_str(), static_cast<unsigned long long>(n_sent),
+                 "p95 %.2f max %.2f\n", proto == 1 ? "viop" : "mav", host.c_str(), port, msgs, mount_name.c_str(), static_cast<unsigned long long>(n_sent),
                  static_cast<unsigned long long>(n_fail), static_cast<unsigned long long>(n_hb),
                  static_cast<unsigned long long>(n_ts), replay_time ? ", replay-timed" : "", q(age_ms, 0.5), q(age_ms, 0.95),
                  q(age_ms, 1.0), q(int_ms, 0.5), q(int_ms, 0.95), q(int_ms, 1.0));

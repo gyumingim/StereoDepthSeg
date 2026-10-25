@@ -184,6 +184,12 @@ public class MainActivity extends Activity {
                 ov.idleSpinMs = Math.max(0, Math.min(1000, getIntent().getIntExtra("idle_spin_ms", 0)));   // 0.6.18: --idle-spin-ms
                 ov.spinWfe = getIntent().getIntExtra("spin_wfe", 0) != 0;               // 0.6.18: idle_spin 2 -> --idle-spin 3
                 ov.dropLateMs = Math.max(0, Math.min(10000, getIntent().getIntExtra("drop_late_ms", 0)));   // 0.6.18: --drop-late
+                String mu = getIntent().getStringExtra("mav_udp");                      // ovdrone: ov_bridge --mav-udp HOST:PORT
+                ov.mavUdp = mu == null ? "" : mu.trim();
+                String mm = getIntent().getStringExtra("mav_mount");                    // ovdrone: --mav-mount imu|cam_fwd|cam_down|9 numbers
+                if (mm != null) ov.mavMount = mm.trim();
+                String mg = getIntent().getStringExtra("mav_msg");                      // ovdrone: --mav-msg odom|vpe|both
+                if (mg != null) ov.mavMsg = mg.trim();
                 sustainedOn = false;
                 try {
                     boolean sup = ((android.os.PowerManager) getSystemService(POWER_SERVICE)).isSustainedPerformanceModeSupported();
