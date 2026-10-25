@@ -1,0 +1,31 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=0 qr_compress=0 ekf_chol=0 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 (--ovopt 'all_exact', prof log -)
+[ov_bridge] viop: udp 127.0.0.1:14556 msgs odom mount imu yaw_align 1 replay_time 1 sysid 1
+[ov_bridge] affinity start: (not pinned) threads 31394:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 31398:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 2 -> 2 | TBB (ver 2020.3 interface 11103) | cpus 16 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /tmp/ovopt/remap_1920x1080.bin
+[ov_bridge] affinity ready: (not pinned) threads 31394:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 31398:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] idle spin: mode 0 (off) stripes 2 max 200 ms
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] affinity cam300: (not pinned) threads 31394:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 31398:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 31727:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] viop: new world frame (reset_counter 0)
+[ov_bridge] affinity end: (not pinned) threads 31394:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 31398:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 31727:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] predict: mode 2 hz 200 | lines 1436 | horizon ms p50 33.3 p95 41.7 max 72.1
+[ov_bridge] viop: udp 127.0.0.1:14556 msgs 1 mount imu | sent 1436 fail 0 heartbeat 782 timesync 96 | age ms (send - predicted instant, replay-timed) p50 0.21 p95 1.99 max 30.27 | send - newest IMU receive ms p50 0.28 p95 0.59 max 14.32
+[33m[init]: not enough feats to compute disp: 0,0 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,0 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m

@@ -1,0 +1,16 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=1 rs_derot=0 rs_row_ppm=0 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol', prof log out/M_mav_r1/prof.csv)
+[ov_bridge] mav: udp 100.92.214.97:14555 msgs odom mount cam_fwd yaw_align 1 replay_time 1 sysid 1
+[ov_bridge] affinity start: (not pinned) threads 19913:ov_bridge_ovdro=0,1,2,3,4,5,6,7,8,9 19920:ov_bridge_ovdro=0,1,2,3,4,5,6,7,8,9
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 2 -> 2 | TBB (ver 2021.11 interface 12110) | cpus 10 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /data/local/tmp/replay/remap_1920x1080.bin
+[ov_bridge] affinity ready: (not pinned) threads 19913:ov_bridge_ovdro=0,1,2,3,4,5,6,7,8,9 19920:ov_bridge_ovdro=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin: mode 2 (pool) stripes 2 max 200 ms window 15.0 ms
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] affinity cam300: (not pinned) threads 19913:ov_bridge_ovdro=0,1,2,3,4,5,6,7,8,9 19920:ov_bridge_ovdro=0,1,2,3,4,5,6,7,8,9 19921:ov_bridge_ovdro=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 6434 spun 2365 timeouts 1 spin 4.20 s | exit_us n 2364 p50 2.5 p95 8.4 p99 226.6 max 2050.2 | window 15.0 ms period 36.48 ms blocked 2188 (4.69 s)
+[ov_bridge] mav: frame aligned (reset_counter 0, psi0 179.8 deg, mount cam_fwd)
+[ov_bridge] affinity end: (not pinned) threads 19913:ov_bridge_ovdro=0,1,2,3,4,5,6,7,8,9 19920:ov_bridge_ovdro=0,1,2,3,4,5,6,7,8,9 19921:ov_bridge_ovdro=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 43309 spun 19570 timeouts 1 spin 32.94 s | exit_us n 19569 p50 2.1 p95 5.4 p99 27.0 max 6703.2 | window 15.0 ms period 33.40 ms blocked 9298 (18.73 s)
+[ov_bridge] predict: mode 2 hz 200 | lines 8757 | horizon ms p50 27.6 p95 39.6 max 402.6
+[ov_bridge] mav: udp 100.92.214.97:14555 msgs 1 mount cam_fwd | sent 8757 fail 0 heartbeat 82 timesync 164 | age ms (send - predicted instant, replay-timed) p50 0.25 p95 1.93 max 14.58 | send - newest IMU receive ms p50 0.03 p95 0.37 max 2.65

@@ -1,0 +1,79 @@
+// ViopUsbForwarder.java — DESIGN SKELETON, NOT COMPILED, NOT IN THE APP (2026-10-25, branch ovdrone-20261025).
+// Phone side of transport option (1): phone --USB-OTG--> drone ESP32-S3 native USB (CDC-ACM, Espressif VID 0x303A).
+//
+// Why a forwarder in the app (and not the bridge writing USB itself): on Android only an app holding a UsbManager
+// permission can open the device; the ov_bridge child process cannot open /dev/bus/usb (no root) and ProcessBuilder does
+// not pass extra file descriptors. So: ov_bridge --viop-udp 127.0.0.1:PORT (same flag, loopback) -> this thread
+// receives each datagram (= one VIOP frame) and writes it unchanged to the CDC bulk-OUT endpoint. Extra latency is one
+// loopback hop + one bulkTransfer (~0.1-1 ms, 추정, not measured: no hardware). Heartbeat liveness is preserved:
+// heartbeats are created only by the bridge main loop, and if this forwarder thread hangs they stop as well.
+// Alternative worth testing when hardware exists: usb-serial-for-android (mik3y) CdcAcmSerialDriver, same structure.
+// Reverse direction (drone -> phone: TIME_REQ, later commands) = bulk-IN read loop -> sendto(bridge socket).
+//
+// Wiring (later, by the integration agent): OvRunner when intent viop_usb 1: start the bridge with
+// --viop-udp 127.0.0.1:14560 and start this forwarder; meta.json "viop_usb".
+package com.scan3d.arlat;
+
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.hardware.usb.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+
+final class ViopUsbForwarder implements Runnable {
+    static final int ESPRESSIF_VID = 0x303A;
+    private final Context ctx;
+    private final int port;
+    private volatile boolean stop;
+    long frames, usbErrors, maxWriteNs;
+
+    ViopUsbForwarder(Context ctx, int port) { this.ctx = ctx; this.port = port; }
+
+    void stop() { stop = true; }
+
+    @Override public void run() {
+        UsbManager um = (UsbManager) ctx.getSystemService(Context.USB_SERVICE);
+        UsbDevice dev = null;
+        for (UsbDevice d : um.getDeviceList().values()) if (d.getVendorId() == ESPRESSIF_VID) dev = d;
+        if (dev == null) return;                                   // no ESP32 plugged in
+        if (!um.hasPermission(dev)) {                              // the user must accept the system dialog once
+            um.requestPermission(dev, PendingIntent.getBroadcast(ctx, 0, new Intent("com.scan3d.arlat.USB"),
+                    PendingIntent.FLAG_IMMUTABLE));
+            return;
+        }
+        UsbInterface data = null;                                  // CDC data interface: class 0x0A, bulk IN + OUT
+        for (int i = 0; i < dev.getInterfaceCount(); i++)
+            if (dev.getInterface(i).getInterfaceClass() == UsbConstants.USB_CLASS_CDC_DATA) data = dev.getInterface(i);
+        if (data == null) return;
+        UsbEndpoint out = null;
+        for (int i = 0; i < data.getEndpointCount(); i++) {
+            UsbEndpoint e = data.getEndpoint(i);
+            if (e.getType() == UsbConstants.USB_ENDPOINT_XFER_BULK && e.getDirection() == UsbConstants.USB_DIR_OUT) out = e;
+        }
+        UsbDeviceConnection c = um.openDevice(dev);
+        if (c == null || out == null || !c.claimInterface(data, true)) return;
+        // (CDC SET_LINE_CODING / SET_CONTROL_LINE_STATE on the control interface are ignored by ESP32-S3 native USB-CDC;
+        //  send them anyway if the firmware waits for DTR: c.controlTransfer(0x21, 0x22, 0x03, ctrlIf, null, 0, 100))
+        byte[] buf = new byte[256];
+        try (DatagramSocket s = new DatagramSocket(port, InetAddress.getLoopbackAddress())) {
+            s.setSoTimeout(200);
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
+            while (!stop) {
+                DatagramPacket p = new DatagramPacket(buf, buf.length);
+                try { s.receive(p); } catch (java.net.SocketTimeoutException t) { continue; }
+                long t0 = System.nanoTime();
+                int r = c.bulkTransfer(out, p.getData(), p.getLength(), 20);   // one VIOP frame, unchanged
+                long dt = System.nanoTime() - t0;
+                if (r != p.getLength()) usbErrors++; else frames++;
+                if (dt > maxWriteNs) maxWriteNs = dt;
+            }
+        } catch (java.io.IOException e) {
+            usbErrors++;
+        } finally {
+            c.releaseInterface(data);
+            c.close();
+        }
+    }
+}
