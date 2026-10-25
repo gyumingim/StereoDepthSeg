@@ -144,6 +144,14 @@ def camera_clients():
 
 
 # ---------------------------------------------------------------- phone lock (team rule: mkdir, owner-checked release)
+def _pid_alive(pid):
+    try:
+        out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"], capture_output=True, text=True, timeout=5).stdout
+        return str(pid) in out
+    except Exception:
+        return True          # unsure -> treat as alive (do not steal)
+
+
 def lock_take():
     if not A.lock_dir or A.fake:
         return True, ""
@@ -154,6 +162,14 @@ def lock_take():
             who = open(os.path.join(A.lock_dir, "owner.txt"), encoding="utf-8", errors="replace").read().strip()
         except Exception:
             who = "?"
+        # 10-25: a killed earlier calcap server leaves its lock behind -> take it over if that pid is gone
+        import re as _re
+        m = _re.search(r"pid (\d+) ", who)
+        if LOCK_OWNER in who and m and not _pid_alive(int(m.group(1))):
+            log("죽은 calcap 서버의 잠금을 넘겨받음: " + who)
+            with open(os.path.join(A.lock_dir, "owner.txt"), "w", encoding="utf-8") as f:
+                f.write(f"{LOCK_OWNER} pid {os.getpid()} since {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            return True, ""
         return False, who
     with open(os.path.join(A.lock_dir, "owner.txt"), "w", encoding="utf-8") as f:
         f.write(f"{LOCK_OWNER} pid {os.getpid()} since {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
