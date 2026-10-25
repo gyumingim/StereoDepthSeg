@@ -19,11 +19,11 @@
   1. **LAND_VIO**: 제자리 x,y를 유지하며 0.3 m/s로 하강합니다.
   2. **LAND_IMU**: 수평을 유지하고, 폰 IMU로 하강 속도를 추정합니다.
   3. **LAND_OPENLOOP**: 자세 제어가 없습니다. 이번 비행 이륙 때 기록한 모터별 값에서 출력을 **역산**합니다. 추력 ∝ 명령² 모델을 쓰고 배터리 전압 차이를 보정합니다. 처음 0.6 s는 1 m/s²로 하강을 시작하고, 이후는 hover의 95 % 추력으로 내려갑니다.
-     - **모터 끄는 시점 (esp32fix 2026-10-26 고침)**: 마지막 VIO 높이에서, 기록값이 ±3 % 틀린 두 경우를 미리 계산해 가장 이른 착지 시각(t_fast)과 가장 늦은 착지 시각(t_slow)을 구합니다. t_fast부터 0.4 s 동안 추력을 hover의 70 %로 내리고, t_slow + 0.2 s에 모터를 끕니다. 폰 pose가 아직 오면(IMU 프레임만 끊긴 경우) 높이 < 0.10 m · |vz| < 0.2 m/s가 0.15 s 이어질 때 바로 끕니다.
+     - **모터 끄는 시점 (esp32fix 2026-10-26 고침)**: 마지막 VIO 높이에서, 기록값이 ±3 % 틀린 두 경우를 미리 계산해 가장 이른 착지 시각(t_fast)과 가장 늦은 착지 시각(t_slow)을 구합니다. t_fast부터 0.4 s 동안 추력을 hover의 70 %로 내리고, t_slow + 0.2 s에 모터를 끕니다. 폰 pose가 아직 오면(IMU 프레임만 끊긴 경우) VIO로 하강을 본 뒤 높이 < 0.10 m · |vz| < 0.2 m/s가 0.15 s 이어질 때 바로 끕니다.
      - 예전 방식(`openloop_cut_mode = 0`): 착지 후 약 1.7 s 동안 hover의 98 % 추력으로 돌았고, 기록값이 3 % 높으면 하강이 멈춰 공중에서 모터가 꺼졌습니다(시뮬레이션 1.6 m 높이).
   - **폰 IMU가 끊기면 VIO·IMU 단계가 둘 다 불가능하므로 바로 OPENLOOP으로 갑니다.** `imu_fail_kill` 설정을 켜면 대신 KILL합니다.
   - 단계는 내려가기만 하고, 착륙 중 비행으로 돌아가지 않습니다.
-- **PC 단위시험: 510개 검사 모두 통과** (esp32fix 2026-10-26; 이전 389개) (gcc, ASan/UBSan, 시뮬레이션). 검사 대상: 폰 IMU 끊김 → OPENLOOP, IMU 지터 처리, PWM 출력 한계.
+- **PC 단위시험: 516개 검사 모두 통과** (esp32fix 2026-10-26; 이전 389개) (gcc, ASan/UBSan, 시뮬레이션). 검사 대상: 폰 IMU 끊김 → OPENLOOP, IMU 지터 처리, PWM 출력 한계.
 - **ESP-IDF 미설치**: `idf.py build`는 해 보지 못했습니다. IDF 스텁으로 문법 검사만 했고, PWM/OneShot/DShot × 폰/로컬 IMU 6가지 조합 모두 통과했습니다.
 
 ### ⚠ 안전 위험: 비행 제어기에 독립 IMU가 없음 (사용자에게)
@@ -137,7 +137,7 @@ States: `DISARMED, ARMED_IDLE, FLYING, EMERG_LAND, KILLED`. Anything not in this
 |---|---|---|---|
 | LAND_VIO | pose fresh + heartbeat ok + phone IMU ok | pos loop holds land-start x,y; collective PI on VIO vz → −0.30 m/s | touchdown (accel quiet, \|f\|≈g, low collective or impact, \|vz\| small, 300 ms) |
 | LAND_IMU | no usable VIO, phone IMU ok | level, yaw hold; vz from the IMU estimator, else a timed collective ramp | same touchdown test |
-| LAND_OPENLOOP | **phone IMU lost** (→ VIO and IMU tiers impossible), or a VIO/IMU landing longer than 30 s | **no attitude control.** Per motor: `cmd_i = hover_i · r^(1/k) · V_rec/V_now`, with k = 2 (thrust ∝ cmd²). r = 1 − 1.0/g for 0.6 s (descend at ~0.6 m/s), then r = 0.95; from t_fast r ramps to 0.70 in 0.4 s. | **mode 1 (default, esp32fix):** at the tier start the profile is simulated from the last VIO height with the thrust off by −3 % / +3 % → earliest / latest touchdown t_fast / t_slow; cut at t_slow + 0.2 s (max 6 s). If poses + heartbeat still arrive: cut when height < 0.10 m and \|vz\| < 0.2 m/s for 150 ms. Impact cut if an accelerometer is still available. **mode 0 (legacy):** cut at (touchdown estimate with constant 0.4 m/s) × 1.2 + 0.3 s. |
+| LAND_OPENLOOP | **phone IMU lost** (→ VIO and IMU tiers impossible), or a VIO/IMU landing longer than 30 s | **no attitude control.** Per motor: `cmd_i = hover_i · r^(1/k) · V_rec/V_now`, with k = 2 (thrust ∝ cmd²). r = 1 − 1.0/g for 0.6 s (descend at ~0.6 m/s), then r = 0.95; from t_fast r ramps to 0.70 in 0.4 s. | **mode 1 (default, esp32fix):** at the tier start the profile is simulated from the last VIO height with the thrust off by −3 % / +3 % → earliest / latest touchdown t_fast / t_slow; cut at t_slow + 0.2 s (max 6 s). If poses + heartbeat still arrive and a VIO descent (vz < −0.3 m/s) was seen: cut when height < 0.10 m and \|vz\| < 0.2 m/s for 150 ms. Impact cut if an accelerometer is still available. **mode 0 (legacy):** cut at (touchdown estimate with constant 0.4 m/s) × 1.2 + 0.3 s. |
 
 **This flight's takeoff record** (the source for "back-calculate from the vertical takeoff"):
 
@@ -150,7 +150,7 @@ States: `DISARMED, ARMED_IDLE, FLYING, EMERG_LAND, KILLED`. Anything not in this
 
 ## 4. PC unit tests (all pass)
 
-`make -C esp32fc/test` builds with gcc 11.4 in WSL, `-Wall -Wextra -Werror -fsanitize=address,undefined`. Result: **510 checks, 0 failed** (esp32fix 2026-10-26; 389 before). Raw logs: `scan3d/runs/esp32fix_20261026/test_*.log` (earlier: `scan3d/runs/esp32fc_20261025/test_safety_run.log`).
+`make -C esp32fc/test` builds with gcc 11.4 in WSL, `-Wall -Wextra -Werror -fsanitize=address,undefined`. Result: **516 checks, 0 failed** (esp32fix 2026-10-26; 389 before). Raw logs: `scan3d/runs/esp32fix_20261026/test_*.log` (earlier: `scan3d/runs/esp32fc_20261025/test_safety_run.log`).
 
 The sim is a 1 kHz 1-D vertical model: thrust ∝ cmd² (matches the open-loop model), ground contact with an impact spike, per-motor trims. It feeds phone pose 200 Hz, heartbeat 20 Hz and PC heartbeat 10 Hz.
 
