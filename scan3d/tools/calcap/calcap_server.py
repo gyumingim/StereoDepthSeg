@@ -144,6 +144,9 @@ def camera_clients():
 
 
 # ---------------------------------------------------------------- phone lock (team rule: mkdir, owner-checked release)
+STEADY_PX, STEADY_DIST_M, STEADY_DEG = 8.0, 0.01, 1.5   # 5-frame spread limits for "same pose" (user 10-25)
+
+
 def _pid_alive(pid):
     try:
         out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"], capture_output=True, text=True, timeout=5).stdout
@@ -548,8 +551,12 @@ def run_loop(ph):
         run.reverse()
         steady = False
         if match and len(run) >= HOLD_N:
-            cx = [h[1]["cx"] for h in run]; cy = [h[1]["cy"] for h in run]; tl = [h[1]["tilt"] for h in run]
-            steady = max(np.ptp(cx), np.ptp(cy)) <= 20 and np.ptp(tl) <= 4.0
+            # user 10-25: the 5 frames must have the SAME distance, angle and position (not just the same slot), so a
+            # moving phone is never captured. Limits = spread over the 5 frames (full-res px, m, deg).
+            def spread(key):
+                return float(np.ptp([h[1][key] for h in run]))
+            steady = (max(spread("cx"), spread("cy")) <= STEADY_PX and spread("dist") <= STEADY_DIST_M
+                      and max(spread("tilt"), spread("turn"), spread("lean")) <= STEADY_DEG)
         target = match or SL.nearest_missing(missing, p)
         hint = "모든 칸 완료!" if target is None else ("그대로 멈추기…" if match else SL.hint(target, p))
         n_same = len(run) if match else 0               # 0..5 consecutive matching frames
@@ -571,7 +578,12 @@ def run_loop(ph):
         if p is not None:
             msg += f"\\n거리 {p['dist']:.2f} m · 기울기 {p['tilt']:.0f}°"
         if match and not steady:     # user 10-25: show the hold progress while green
-            msg = f"초록: 그대로 멈추기 {min(n_same, HOLD_N)}/{HOLD_N}\\n" + msg
+            if n_same >= HOLD_N:     # slot matched 5x but the pose still moves
+                sp = lambda k: float(np.ptp([h[1][k] for h in run]))
+                msg = (f"초록: 흔들림 — 더 가만히 (거리 ±{sp('dist') * 50:.1f} cm, 각도 ±"
+                       f"{max(sp('tilt'), sp('turn'), sp('lean')) / 2:.1f}°)\\n" + msg)
+            else:
+                msg = f"초록: 그대로 멈추기 {min(n_same, HOLD_N)}/{HOLD_N}\\n" + msg
         if (color, msg) != last_msg and now >= blue_until:   # keep the blue "captured" screen visible for a moment
             ph.cmd(f"MSG {color} {msg}")
             last_msg = (color, msg)
