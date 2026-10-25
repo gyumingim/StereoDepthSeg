@@ -503,6 +503,7 @@ def run_loop(ph):
     last_stat = last_th = 0.0
     last_msg = ""
     k = 0
+    blue_until = 0.0
     t_start = time.time()
     while not stop_ev.is_set():
         k += 1
@@ -543,13 +544,15 @@ def run_loop(ph):
         msg = (f"목표: {target['label']}\\n{hint}\\n남은 칸 {n_left}/{len(SL.SLOTS)}" if target else "모든 칸 완료! 끝내는 중")
         if p is not None:
             msg += f"\\n거리 {p['dist']:.2f} m · 기울기 {p['tilt']:.0f}°"
-        if (color, msg) != last_msg:
+        if match and not steady:     # user 10-25: show the hold progress while green
+            msg = f"초록: 그대로 멈추기 {min(n_same, 4)}/4\\n" + msg
+        if (color, msg) != last_msg and now >= blue_until:   # keep the blue "captured" screen visible for a moment
             ph.cmd(f"MSG {color} {msg}")
             last_msg = (color, msg)
         if steady:
             info = dict(slot=match["id"], pose={k2: p[k2] for k2 in ("board", "n", "tilt", "turn", "lean", "dist", "pos", "edge", "bbox")},
                         t_pc=time.strftime("%Y-%m-%d %H:%M:%S"), preview_ts=ts)
-            ph.cmd(f"MSG 2563eb 찰칵! {match['label']}\\n움직이지 말기…")
+            ph.cmd(f"MSG 2563eb 파랑: 촬영 중! {match['label']}\\n움직이지 말기…")
             last_msg = ""
             with lock:
                 slot_state[match["id"]] = "pending"
@@ -562,6 +565,8 @@ def run_loop(ph):
                     state["beep_msg"] = "찰칵 " + match["label"]
                     state["last_capture"] = match["label"]
                 log(f"캡처 {match['id']}: {len(d['files'])}장 (건너뜀 {d['skipped']})")
+                ph.cmd(f"MSG 2563eb 파랑: 촬영 완료 ✓ {match['label']} ({len(d['files'])}장, 1920x1080)\\n다음 칸으로 옮기세요")
+                blue_until = time.time() + 1.5
                 pullq.put(dict(cap=d["cap"], slot=match["id"], remote_dir=d["dir"], files=d["files"], pose=info["pose"]))
             else:
                 log(f"캡처 실패 {match['id']}: {r[:200]}")
