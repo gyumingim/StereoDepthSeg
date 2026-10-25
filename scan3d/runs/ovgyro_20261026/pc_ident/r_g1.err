@@ -1,0 +1,38 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 rs_postinit=0 gyro_klt=1 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,gyro_klt=1', prof log -)
+[ov_bridge] profile rec20261025: ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,gyro_klt=1' idle_spin 2 idle_spin_ms 20 drop_late 0 health 1 predict 2 hz 200 pred_thread 1 (after explicit flags)
+[ov_bridge] affinity start: (not pinned) threads 10987:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 2 -> 2 | TBB (ver 2020.3 interface 11103) | cpus 16 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /tmp/ovopt/remap_1920x1080.bin
+[ov_bridge] ovrobust: init_still 0 | health 1 log - | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 0 (max gap 3.0 s, min feats 20) | test blank 0 windows
+[ov_bridge] affinity ready: (not pinned) threads 10987:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] idle spin: mode 2 (pool) stripes 2 max 200 ms window 20.0 ms | pred thread (input reader thread on)
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] affinity cam300: (not pinned) threads 10987:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 11003:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 11004:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 11009:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 6434 spun 0 timeouts 0 spin 0.00 s | exit_us n 0 p50 -1.0 p95 -1.0 p99 -1.0 max -1.0 | window 20.0 ms period 12.51 ms blocked 207 (0.01 s)
+[ov_bridge] health t=13.466 INIT -> OK (tracked 121 used 11 since_upd 0.00 pos_std 0.087)
+[ov_bridge] pred thread reader: image space waits 2297
+[ov_bridge] pred thread: mode 2 hz 200 | lines 9336 (frame 1972 rate 7364) snapshots 2003 | compute us p50 26.5 p95 60.1 max 11478.0 | horizon ms p50 121.9 p95 149.1 max 506.8 | thread cpu 0.598 s (pred) 1.306 s (reader)
+[ov_bridge] affinity end: (not pinned) threads 10987:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 11009:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 43309 spun 6 timeouts 0 spin 0.37 s | exit_us n 6 p50 9.9 p95 22614.8 p99 22614.8 max 22614.8 | window 20.0 ms period 25.96 ms blocked 207 (0.01 s)
+[ov_bridge] predict: mode 2 hz 200 | lines 0 | horizon ms p50 -1.0 p95 -1.0 max -1.0
+[ov_bridge] gyro_klt mode 1: frames 2326 (no rotation 0) | pts in 386172 LK ok 384304 (99.52 %) kept 382015 (98.92 %) | fallback 0/0 | predicted shift px mean 10.998 max 90.71
+[ov_bridge] gyro_klt mode 1: LK result - start px mean 11.890 | LK result - old px mean 9.788 (n 384304)
+[ov_bridge] health: frames INIT 324 OK 2003 DEGRADED 0 LOST 0 | transitions 2 | max LOST run 0 frames | recover state 0 full 0 | blanked 0 | init_ready frames 319
+[33m[init]: not enough feats to compute disp: 0,0 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,0 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m

@@ -1,0 +1,4 @@
+# ovgyro repeat (P_r2 of G_1 invalid: adb pull ran during it, drop-late dropped 2002/2327 frames)
+P_r3 ov_bridge_ovgyro c4 2 2 1.0 --profile rec20261025 --klt-stats 1 --prof-log out/P_r3/prof.csv
+G3_r3 ov_bridge_ovgyro c4 2 2 1.0 --profile rec20261025 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,gyro_klt=3 --klt-stats 1 --prof-log out/G3_r3/prof.csv
+P_r4 ov_bridge_ovgyro c4 2 2 1.0 --profile rec20261025 --klt-stats 1 --prof-log out/P_r4/prof.csv

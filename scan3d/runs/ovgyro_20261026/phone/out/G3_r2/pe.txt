@@ -1,0 +1,22 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=1 rs_derot=0 rs_row_ppm=0 rs_postinit=0 gyro_klt=3 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,gyro_klt=3', prof log out/G3_r2/prof.csv)
+[ov_bridge] profile rec20261025: ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,gyro_klt=3' idle_spin 2 idle_spin_ms 20 drop_late 50 health 1 predict 2 hz 200 pred_thread 1 (after explicit flags)
+[ov_bridge] affinity start: (not pinned) threads 27042:ov_bridge_ovgyr=0,1,2,3,4,5,6,7,8,9
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 2 -> 2 | TBB (ver 2021.11 interface 12110) | cpus 10 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /data/local/tmp/replay/remap_1920x1080.bin
+[ov_bridge] ovrobust: init_still 0 | health 1 log - | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 0 (max gap 3.0 s, min feats 20) | test blank 0 windows
+[ov_bridge] affinity ready: (not pinned) threads 27042:ov_bridge_ovgyr=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin: mode 2 (pool) stripes 2 max 200 ms window 20.0 ms | pred thread (input reader thread on)
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] affinity cam300: (not pinned) threads 27042:ov_bridge_ovgyr=0,1,2,3,4,5,6,7,8,9 27046:ov_bridge_ovgyr=0,1,2,3,4,5,6,7,8,9 27047:ov_bridge_ovgyr=0,1,2,3,4,5,6,7,8,9 27049:ov_bridge_ovgyr=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 6434 spun 3242 timeouts 1 spin 7.65 s | exit_us n 3241 p50 1.6 p95 3.0 p99 7.0 max 77.3 | window 20.0 ms period 36.48 ms blocked 1652 (3.58 s)
+[ov_bridge] health t=13.466 INIT -> OK (tracked 130 used 9 since_upd 0.00 pos_std 0.087)
+[ov_bridge] pred thread reader: image space waits 0
+[ov_bridge] pred thread: mode 2 hz 200 | lines 14689 (frame 2003 rate 12686) snapshots 2003 | compute us p50 183.5 p95 347.1 max 4329.1 | horizon ms p50 42.8 p95 64.5 max 402.6 | thread cpu 6.996 s (pred) 11.625 s (reader)
+[ov_bridge] affinity end: (not pinned) threads 27042:ov_bridge_ovgyr=0,1,2,3,4,5,6,7,8,9 27049:ov_bridge_ovgyr=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 43309 spun 18404 timeouts 1 spin 46.77 s | exit_us n 18403 p50 1.8 p95 3.2 p99 6.5 max 1860.4 | window 20.0 ms period 33.36 ms blocked 2063 (4.36 s)
+[ov_bridge] predict: mode 2 hz 200 | lines 0 | horizon ms p50 -1.0 p95 -1.0 max -1.0
+[ov_bridge] drop-late: limit 50.0 ms | dropped 0 frames | min lag 112554361.2 ms
+[ov_bridge] gyro_klt mode 3: frames 2326 (no rotation 0) | pts in 386790 LK ok 384696 (99.46 %) kept 381333 (98.59 %) | fallback 0/0 | predicted shift px mean 9.787 max 74.10
+[ov_bridge] gyro_klt mode 3: LK result - start px mean 1.876 | LK result - old px mean 9.948 (n 384696)
+[ov_bridge] health: frames INIT 324 OK 2003 DEGRADED 0 LOST 0 | transitions 2 | max LOST run 0 frames | recover state 0 full 0 | blanked 0 | init_ready frames 319

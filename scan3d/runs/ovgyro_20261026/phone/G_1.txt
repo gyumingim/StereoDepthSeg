@@ -1,0 +1,5 @@
+# ovgyro phone replay timing (raw80 c4, real time, threads 2, idle_spin 2, live profile rec20261025), ABBA
+P_r1 ov_bridge_ovgyro c4 2 2 1.0 --profile rec20261025 --klt-stats 1 --prof-log out/P_r1/prof.csv
+G3_r1 ov_bridge_ovgyro c4 2 2 1.0 --profile rec20261025 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,gyro_klt=3 --klt-stats 1 --prof-log out/G3_r1/prof.csv
+G3_r2 ov_bridge_ovgyro c4 2 2 1.0 --profile rec20261025 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,gyro_klt=3 --klt-stats 1 --prof-log out/G3_r2/prof.csv
+P_r2 ov_bridge_ovgyro c4 2 2 1.0 --profile rec20261025 --klt-stats 1 --prof-log out/P_r2/prof.csv

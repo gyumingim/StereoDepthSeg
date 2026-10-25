@@ -33,6 +33,7 @@ const Field kFields[] = {
     {"rs_postinit", &Flags::rs_postinit, false},
     {"ekf_sparse", &Flags::ekf_sparse, false}, {"sym_inplace", &Flags::sym_inplace, false},
     {"init_gemm", &Flags::init_gemm, false},  // 2026-10-26 ovupd
+    {"gyro_klt", &Flags::gyro_klt, false},  // 2026-10-26 ovgyro (changes results)
 };
 } // namespace
 

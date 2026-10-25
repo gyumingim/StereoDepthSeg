@@ -21,6 +21,7 @@
 
 #include "TrackKLT.h"
 
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 
@@ -32,7 +33,71 @@
 #include "utils/opencv_lambda_body.h"
 #include "utils/print.h"
 
+#include "gyro_klt.h"  // scan3d ovgyro (2026-10-26)
+
 using namespace ov_core;
+
+// ---- scan3d patch (2026-10-26, branch ovgyro-20261026): gyro-aided KLT (see ovpatch/gyro_klt.h) ----
+// mode 0 (default): no prediction, no fallback = upstream; only integer/float counters are added (output-only, read by
+// ov_bridge --klt-stats). mode 1/2: the temporal KLT start points of mono tracking are moved by the gyro rotation that
+// VioManager computed for this frame (scan3d_gyro::pred); mode 2 re-tracks LK failures from the upstream start point.
+namespace scan3d_gyro {
+Pred pred;
+Stats frame_stats;
+Stats total;
+}  // namespace scan3d_gyro
+namespace {
+bool g_gk_temporal = false;  // the perform_matching call in progress is the mono temporal one (counters / fallback)
+bool g_gk_fallback = false;  // mode 2 and the start points were moved for this call
+
+// Move the start points pts_new (= copy of pts_old) by the gyro rotation of this frame. Points whose rotated bearing is
+// behind / far outside the view or lands outside the image keep the upstream start point.
+void scan3d_gyro_guess(const std::shared_ptr<CamBase> &cam, const std::vector<cv::KeyPoint> &pts_old, const std::vector<size_t> &ids,
+                       std::vector<cv::KeyPoint> &pts_new,
+                       int w, int h) {
+  auto &P = scan3d_gyro::pred;
+  auto &S = scan3d_gyro::frame_stats;
+  g_gk_fallback = false;
+  if (P.mode <= 0)
+    return;
+  if (!P.have) {
+    S.no_rot++;
+    return;
+  }
+  for (size_t i = 0; i < pts_old.size() && i < pts_new.size(); i++) {
+    cv::Point2f n0 = cam->undistort_cv(pts_old[i].pt);
+    Eigen::Vector3d b = P.R_C1C0 * Eigen::Vector3d((double)n0.x, (double)n0.y, 1.0);
+    if (P.have_t) {  // mode 3/4/5: + translation scaled by the inverse depth (own SLAM landmark, else median)
+      auto iz = i < ids.size() ? P.invz.find(ids[i]) : P.invz.end();
+      Eigen::Vector3d bt = b + (iz != P.invz.end() ? iz->second : P.invz_med) * P.t_C1;
+      // mode 5: the translation part (filter velocity x depth) may move the start point by at most kGuardShiftPx
+      // (approx. focal length x normalised-coordinate change); otherwise use the rotation-only (gyro) prediction.
+      if (scan3d_gyro::guards_on(P.mode) && b(2) > 0.2 && bt(2) > 0.2 &&
+          cam->get_K()(0, 0) * (bt.head<2>() / bt(2) - b.head<2>() / b(2)).norm() > scan3d_gyro::guard_shift_px())
+        S.capped++;
+      else
+        b = bt;
+    }
+    if (b(2) < 0.2)
+      continue;
+    double nx = b(0) / b(2), ny = b(1) / b(2);
+    if (std::abs(nx) > 2.0 || std::abs(ny) > 2.0)
+      continue;
+    cv::Point2f p1 = cam->distort_cv(cv::Point2f((float)nx, (float)ny));
+    if (!(p1.x >= 0.f && p1.y >= 0.f && p1.x < (float)w && p1.y < (float)h))
+      continue;
+    double s = std::hypot((double)(p1.x - pts_old[i].pt.x), (double)(p1.y - pts_old[i].pt.y));
+    pts_new[i].pt = p1;
+    S.shift_sum += s;
+    S.pdx += p1.x - pts_old[i].pt.x;
+    S.pdy += p1.y - pts_old[i].pt.y;
+    S.shift_n++;
+    if (s > S.shift_max)
+      S.shift_max = s;
+  }
+  g_gk_fallback = scan3d_gyro::fallback_on(P.mode);
+}
+}  // namespace
 
 // ---- scan3d patch (2026-10-24, arlat 0.6.15): KLT overlap ----
 // Patched copy of open_vins ov_core/src/track/TrackKLT.cpp (upstream commit 69488123, file otherwise unchanged; built
@@ -124,7 +189,11 @@ void TrackKLT::feed_new_camera(const CameraData &message) {
       // ---- from here: upstream feed_monocular tail, unchanged ----
       std::vector<uchar> mask_ll;
       std::vector<cv::KeyPoint> pts_left_new = pts_left_old;
+      scan3d_gyro_guess(camera_calib.at(cam_id), pts_left_old, ids_left_old, pts_left_new, img.cols, img.rows);  // scan3d ovgyro (mode 0: no-op)
+      g_gk_temporal = true;
       perform_matching(img_pyramid_last[cam_id], imgpyr, pts_left_old, pts_left_new, cam_id, cam_id, mask_ll);
+      g_gk_temporal = false;
+      g_gk_fallback = false;
       assert(pts_left_new.size() == ids_left_old.size());
       rT4 = boost::posix_time::microsec_clock::local_time();
       if (mask_ll.empty()) {
@@ -162,6 +231,7 @@ void TrackKLT::feed_new_camera(const CameraData &message) {
         pts_last[cam_id] = good_left;
         ids_last[cam_id] = good_ids_left;
       }
+      scan3d_gyro::frame_stats.pts_out += (long)good_left.size();  // scan3d ovgyro counter (output only)
       rT5 = boost::posix_time::microsec_clock::local_time();
       PRINT_ALL("[TIME-KLT]: %.4f seconds for pyramid + detection (overlap, %d detected)\n", (rT2 - rT1).total_microseconds() * 1e-6,
                 (int)pts_left_old.size() - pts_before_detect);
@@ -263,9 +333,13 @@ void TrackKLT::feed_monocular(const CameraData &message, size_t msg_id) {
   // Our return success masks, and predicted new features
   std::vector<uchar> mask_ll;
   std::vector<cv::KeyPoint> pts_left_new = pts_left_old;
+  scan3d_gyro_guess(camera_calib.at(cam_id), pts_left_old, ids_left_old, pts_left_new, img.cols, img.rows);  // scan3d ovgyro (mode 0: no-op)
 
   // Lets track temporally
+  g_gk_temporal = true;  // scan3d ovgyro
   perform_matching(img_pyramid_last[cam_id], imgpyr, pts_left_old, pts_left_new, cam_id, cam_id, mask_ll);
+  g_gk_temporal = false;
+  g_gk_fallback = false;
   assert(pts_left_new.size() == ids_left_old.size());
   rT4 = boost::posix_time::microsec_clock::local_time();
 
@@ -317,6 +391,7 @@ void TrackKLT::feed_monocular(const CameraData &message, size_t msg_id) {
     pts_last[cam_id] = good_left;
     ids_last[cam_id] = good_ids_left;
   }
+  scan3d_gyro::frame_stats.pts_out += (long)good_left.size();  // scan3d ovgyro counter (output only)
   rT5 = boost::posix_time::microsec_clock::local_time();
 
   // Timing information
@@ -985,7 +1060,55 @@ void TrackKLT::perform_matching(const std::vector<cv::Mat> &img0pyr, const std::
   std::vector<uchar> mask_klt;
   std::vector<float> error;
   cv::TermCriteria term_crit = cv::TermCriteria(cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 30, 0.01);
+  std::vector<cv::Point2f> scan3d_start;  // scan3d ovgyro counters: LK start points (copy only for the temporal call)
+  if (g_gk_temporal)
+    scan3d_start = pts1;
   cv::calcOpticalFlowPyrLK(img0pyr, img1pyr, pts0, pts1, mask_klt, error, win_size, pyr_levels, term_crit, cv::OPTFLOW_USE_INITIAL_FLOW);
+  if (g_gk_temporal) {  // sanity counters: |LK result - start| vs |LK result - old| over LK successes from the first call
+    auto &S = scan3d_gyro::frame_stats;
+    for (size_t i = 0; i < mask_klt.size() && i < scan3d_start.size(); i++) {
+      if (!mask_klt[i])
+        continue;
+      S.res_sum += std::hypot((double)(pts1[i].x - scan3d_start[i].x), (double)(pts1[i].y - scan3d_start[i].y));
+      S.flow_sum += std::hypot((double)(pts1[i].x - pts0[i].x), (double)(pts1[i].y - pts0[i].y));
+      S.fdx += pts1[i].x - pts0[i].x;
+      S.fdy += pts1[i].y - pts0[i].y;
+      S.res_n++;
+    }
+  }
+
+  // scan3d ovgyro (2026-10-26): mode 2 = re-track LK failures from the upstream start point (old position, pts0) with
+  // the same LK call; counters for --klt-stats (mono temporal call only). Mode 0/1: no extra LK call.
+  if (g_gk_fallback) {
+    std::vector<size_t> idx;
+    std::vector<cv::Point2f> a, b;
+    for (size_t i = 0; i < mask_klt.size(); i++) {
+      if (!mask_klt[i]) {
+        idx.push_back(i);
+        a.push_back(pts0[i]);
+      }
+    }
+    if (!idx.empty()) {
+      b = a;
+      std::vector<uchar> st;
+      std::vector<float> er;
+      cv::calcOpticalFlowPyrLK(img0pyr, img1pyr, a, b, st, er, win_size, pyr_levels, term_crit, cv::OPTFLOW_USE_INITIAL_FLOW);
+      scan3d_gyro::frame_stats.fb_try += (long)idx.size();
+      for (size_t k = 0; k < idx.size(); k++) {
+        if (k < st.size() && st[k]) {
+          pts1[idx[k]] = b[k];
+          mask_klt[idx[k]] = 1;
+          scan3d_gyro::frame_stats.fb_ok++;
+        }
+      }
+    }
+  }
+  if (g_gk_temporal) {
+    scan3d_gyro::frame_stats.frames++;
+    scan3d_gyro::frame_stats.pts_in += (long)pts0.size();
+    for (uchar m : mask_klt)
+      scan3d_gyro::frame_stats.klt_ok += m ? 1 : 0;
+  }
 
   // Normalize these points, so we can then do ransac
   // We don't want to do ransac on distorted image uvs since the mapping is nonlinear
