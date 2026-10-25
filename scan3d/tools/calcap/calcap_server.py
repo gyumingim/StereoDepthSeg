@@ -519,14 +519,25 @@ def run_loop(ph):
         match = next((s for s in missing if SL.fills(s, p)), None)
         now = time.time()
         hist.append((now, p, match["id"] if match else None))
-        hist = [h for h in hist if now - h[0] <= 0.45]
+        # 10-25 fix: the preview arrives at only ~3-5 Hz, so "3 frames inside 0.45 s" never happened (stuck at 2/4).
+        # Now: same slot continuously for >= HOLD_S (time based, >= 2 frames), small motion.
+        HOLD_S = 0.4
+        hist = [h for h in hist if now - h[0] <= 1.0]
+        run = []
+        for h in reversed(hist):                       # newest run of frames matching this slot
+            if match and h[2] == match["id"] and h[1] is not None:
+                run.append(h)
+            else:
+                break
+        run.reverse()
+        hold = (now - run[0][0]) if len(run) >= 2 else 0.0
         steady = False
-        if match and len(hist) >= 3 and all(h[2] == match["id"] for h in hist) and now - hist[0][0] >= 0.25:
-            cx = [h[1]["cx"] for h in hist]; cy = [h[1]["cy"] for h in hist]; tl = [h[1]["tilt"] for h in hist]
-            steady = max(np.ptp(cx), np.ptp(cy)) <= 10 and np.ptp(tl) <= 3.0
+        if match and len(run) >= 2 and hold >= HOLD_S:
+            cx = [h[1]["cx"] for h in run]; cy = [h[1]["cy"] for h in run]; tl = [h[1]["tilt"] for h in run]
+            steady = max(np.ptp(cx), np.ptp(cy)) <= 20 and np.ptp(tl) <= 4.0
         target = match or SL.nearest_missing(missing, p)
         hint = "모든 칸 완료!" if target is None else ("그대로 멈추기…" if match else SL.hint(target, p))
-        n_same = sum(1 for h in hist if match and h[2] == match["id"])
+        n_same = min(4, int(4 * hold / HOLD_S)) if match else 0     # 0..4 progress for the bar / "n/4" text
         img = draw(gray, scale, p, corners, target, board, match is not None, n_same)
         ok_, enc = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 70])
         latest_prev.update(jpg=enc.tobytes(), t=now)
