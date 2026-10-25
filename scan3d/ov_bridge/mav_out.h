@@ -45,6 +45,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -139,6 +140,8 @@ struct Out {
     return true;
   }
 
+  ~Out() { hb_thread_stop(); }  // esp32fix: never destroy a joinable heartbeat thread (--viop-hb-src 1, e.g. --tcp exit)
+
   bool open(std::string &err) {
     fd = ::socket(AF_INET, SOCK_DGRAM, 0);
     if (fd < 0) { err = std::string("socket: ") + std::strerror(errno); return false; }
@@ -160,6 +163,7 @@ struct Out {
   }
 
   void close() {
+    hb_thread_stop();
     if (fd < 0) return;
     stop = true;
     if (th.joinable()) th.join();
@@ -369,12 +373,68 @@ struct Out {
     std::lock_guard<std::mutex> lk(emu);
     const int64_t now = boot_ns();
     if (!stopping && now - hb_last < static_cast<int64_t>(1e9 / hb_hz)) return;
+    hb_build_send(now, initialized, lost, stopping, imu_rx_boot);
+  }
+
+  // --viop-hb-src 1 (esp32fix-20261026; default 0 = hb_tick from the main loop above, unchanged): a dedicated thread
+  // sends the heartbeat on a steady 1/hb_hz grid (CLOCK_MONOTONIC sleep_until) instead of "on the next main-loop IMU
+  // record once the period has elapsed" (PC paced: gaps up to 99-122 ms at 20 Hz, 18.7-18.9 Hz mean, because the main
+  // loop is busy with a frame). Liveness is kept: a beat is sent only while (a) an IMU record was RECEIVED within
+  // hb_feed_ms (reader thread with --pred-thread, else main loop) and (b) the main loop handled a record within
+  // hb_main_ms (a hung VIO / bridge stops the heartbeat even though the prediction thread may still emit poses).
+  // Otherwise the beat is skipped (counted), so the ESP32 heartbeat timeout (250 ms) still fires. state / lost come
+  // from the main loop (atomics). The 3 STOPPING beats on a clean exit are sent after the thread is stopped.
+  int hb_src = 0;
+  int hb_feed_ms = 100, hb_main_ms = 200;
+  std::atomic<int64_t> hb_feed_boot{0}, hb_main_boot{0};
+  std::atomic<bool> hb_init{false}, hb_lost{false}, hb_stop{false};
+  std::thread hb_th;
+  uint64_t n_hb_skip_feed = 0, n_hb_skip_main = 0, n_hb_late = 0;
+  std::vector<float> hb_gap_ms;  // thread mode: gaps between sent beats (send boot time)
+  void note_feed() { if (hb_src) hb_feed_boot.store(boot_ns(), std::memory_order_relaxed); }
+  void note_main(bool initialized, bool lost) {
+    hb_init.store(initialized, std::memory_order_relaxed);
+    hb_lost.store(lost, std::memory_order_relaxed);
+    hb_main_boot.store(boot_ns(), std::memory_order_release);
+  }
+  void hb_thread_start() {
+    if (fd < 0 || proto != 1 || hb_hz <= 0.0 || hb_src != 1 || hb_th.joinable()) return;
+    hb_stop = false;
+    hb_th = std::thread([this] { hb_run(); });
+  }
+  void hb_thread_stop() {
+    hb_stop = true;
+    if (hb_th.joinable()) hb_th.join();
+  }
+  void hb_run() {
+    const auto per = std::chrono::nanoseconds(static_cast<int64_t>(std::llround(1e9 / hb_hz)));
+    auto next = std::chrono::steady_clock::now() + per;
+    int64_t last_sent = 0;
+    while (!hb_stop.load()) {
+      std::this_thread::sleep_until(next);
+      if (hb_stop.load()) break;
+      const auto wake = std::chrono::steady_clock::now();
+      next += per;
+      if (wake > next) { next = wake + per; n_hb_late++; }  // starved for > 1 period: no burst of catch-up beats
+      const int64_t now = boot_ns(), fb = hb_feed_boot.load(std::memory_order_relaxed),
+                    mb = hb_main_boot.load(std::memory_order_acquire);
+      if (!fb || now - fb > static_cast<int64_t>(hb_feed_ms) * 1000000) { n_hb_skip_feed++; continue; }
+      if (!mb || now - mb > static_cast<int64_t>(hb_main_ms) * 1000000) { n_hb_skip_main++; continue; }
+      std::lock_guard<std::mutex> lk(emu);
+      hb_build_send(now, hb_init.load(std::memory_order_relaxed), hb_lost.load(std::memory_order_relaxed), false, fb);
+      if (last_sent && hb_gap_ms.size() < 2000000) hb_gap_ms.push_back(static_cast<float>((now - last_sent) * 1e-6));
+      last_sent = now;
+    }
+  }
+
+  // caller holds emu. imu_rx = receive boot time of the newest IMU record (age -> VIOP_HBF_IMU_STALE)
+  void hb_build_send(int64_t now, bool initialized, bool lost, bool stopping, int64_t imu_rx) {
     hb_last = now;
     viop_heartbeat_t hb;
     std::memset(&hb, 0, sizeof(hb));
     hb.t_phone_us = static_cast<uint64_t>(now / 1000);
     hb.state = stopping ? VIOP_HB_STOPPING : !initialized ? VIOP_HB_STARTING : lost ? VIOP_HB_LOST : VIOP_HB_TRACKING;
-    const int64_t imu_age = imu_rx_boot ? (now - imu_rx_boot) / 1000000 : 65535;
+    const int64_t imu_age = imu_rx ? (now - imu_rx) / 1000000 : 65535;
     const int64_t pose_age = pose_last ? (now - pose_last) / 1000000 : 65535;
     hb.flags = static_cast<uint8_t>((stopping ? VIOP_HBF_STOPPING : 0) | (imu_age > 100 ? VIOP_HBF_IMU_STALE : 0) |
                                     (pose_age > 200 ? VIOP_HBF_POSE_STALE : 0));
@@ -465,6 +525,11 @@ struct Out {
                  static_cast<unsigned long long>(n_fail), static_cast<unsigned long long>(proto == 1 ? n_hb_viop : n_hb),
                  static_cast<unsigned long long>(n_ts), replay_time ? ", replay-timed" : "", q(age_ms, 0.5), q(age_ms, 0.95),
                  q(age_ms, 1.0), q(int_ms, 0.5), q(int_ms, 0.95), q(int_ms, 1.0));
+    if (proto == 1 && hb_src == 1)
+      std::fprintf(stderr, "[ov_bridge] viop heartbeat thread: %.1f Hz | sent gap ms p50 %.2f p95 %.2f max %.2f | skipped: feed "
+                   "stale %llu main loop stale %llu | late wakeups %llu\n", hb_hz, q(hb_gap_ms, 0.5), q(hb_gap_ms, 0.95),
+                   q(hb_gap_ms, 1.0), static_cast<unsigned long long>(n_hb_skip_feed),
+                   static_cast<unsigned long long>(n_hb_skip_main), static_cast<unsigned long long>(n_hb_late));
   }
 };
 

@@ -132,6 +132,8 @@ import java.util.concurrent.LinkedBlockingQueue;
  * with predict 2 + pred_thread the POSE rate = predict_hz), viop_hb_hz (default 20); intent viop_imu udp:HOST:PORT | usb
  * = ViopImuSender (phone IMU 0x06 frames from its own sensor thread; usb untested) -> <run>/viop_imu.json + .csv.
  * meta.json "profile" / "viop_udp" / "viop_hb_hz" / "viop_imu".
+ * esp32fix-20261026 (default off = unchanged command line): intent viop_hb_src 1 -> ov_bridge --viop-hb-src 1 (VIOP
+ * heartbeat from a steady 20 Hz thread instead of the main loop); meta.json "viop_hb_src".
  */
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
@@ -238,6 +240,7 @@ class OvRunner implements SensorEventListener {
     String profile = "";                        // 0.6.20 intent profile (applied in MainActivity; recorded here)
     String viopUdp = "";                        // 0.6.20 intent viop_udp HOST:PORT -> ov_bridge --viop-udp
     int viopHbHz = 20;                          // 0.6.20 intent viop_hb_hz -> --viop-hb-hz
+    int viopHbSrc = 0;                          // esp32fix intent viop_hb_src 1 -> --viop-hb-src 1 (0: flag not passed)
     String viopImu = "";                        // 0.6.20 intent viop_imu udp:HOST:PORT | usb -> ViopImuSender
     boolean viopImuUncal = false;               // 0.6.20 intent viop_imu_uncal 1
     private ViopImuSender imuTx;
@@ -430,6 +433,7 @@ class OvRunner implements SensorEventListener {
             if (predict < 1) throw new IllegalArgumentException("viop_udp needs predict 1 or 2");
             Collections.addAll(cmd, "--viop-udp", viopUdp, "--viop-hb-hz", Integer.toString(viopHbHz),
                     "--viop-log", new File(runDir, "viop_log.csv").getAbsolutePath());
+            if (viopHbSrc != 0) Collections.addAll(cmd, "--viop-hb-src", "1");                                         // esp32fix
         }
         if (ovHealth) Collections.addAll(cmd, "--health", "1", "--health-log", new File(runDir, "health.csv").getAbsolutePath());  // ovrobust
         if (initStill) Collections.addAll(cmd, "--init-still", "1");                                                    // ovrobust
@@ -465,7 +469,8 @@ class OvRunner implements SensorEventListener {
                 .put("drop_late_ms", dropLateMs).put("mav_udp", mavUdp).put("mav_mount", mavMount).put("mav_msg", mavMsg)
                 .put("imu_prio", imuPrio).put("pred_thread", predict == 2 && predThread > 0 ? 1 : 0).put("imu_log", imuLog ? 1 : 0)
                 .put("ov_health", ovHealth ? 1 : 0).put("init_still", initStill ? 1 : 0).put("recover", recoverFrames)   // ovrobust
-                .put("profile", profile).put("viop_udp", viopUdp).put("viop_hb_hz", viopHbHz).put("viop_imu", viopImu);   // 0.6.20
+                .put("profile", profile).put("viop_udp", viopUdp).put("viop_hb_hz", viopHbHz).put("viop_imu", viopImu)   // 0.6.20
+                .put("viop_hb_src", viopHbSrc);                                                                      // esp32fix
         if (!viopImu.isEmpty()) {   // 0.6.20: own sensor thread, independent of the VIO feed (class doc)
             imuTx = new ViopImuSender(ctx, viopImu, viopImuUncal, runDir);
             imuTx.start();
