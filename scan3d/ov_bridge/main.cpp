@@ -7,6 +7,20 @@
 //             [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST] [--threads N] [--klt-overlap 0|1]
 //             [--idle-spin 0|1|2|3] [--idle-spin-ms W] [--predict 0|1|2] [--predict-hz HZ] [--ovopt LIST]
 //             [--prof-log FILE] [--pose-precision N] [--drop-late MS] [--pred-thread 0|1] [--imu-log FILE]
+//             [--mav-udp HOST:PORT [--mav-msg odom|vpe|both] [--mav-mount PRESET|R9] [--mav-yaw-align 0|1]
+//             [--mav-replay-time 0|1] [--mav-sysid N] [--mav-log FILE]]
+//
+// --mav-udp HOST:PORT (2026-10-25, branch ovdrone-20261025, drone output prototype; default off = nothing sent, output
+//   unchanged): every --predict line (needs --predict 1|2) is also sent as MAVLink 2 ODOMETRY (#331, LOCAL_FRD / BODY_FRD,
+//   VIO estimator, reset_counter, quality) and/or VISION_POSITION_ESTIMATE (#102) in UDP datagrams to HOST:PORT, plus a
+//   1 Hz HEARTBEAT and immediate TIMESYNC replies (clock offset for the receiver). Frames, mount presets (imu, cam_fwd,
+//   cam_down or 9 numbers R_body<-imu), covariance, time base: mav_out.h header and runs/ovdrone_20261025/README.md.
+//   --mav-log FILE = one CSV row per sent prediction (incl. send age and the body-frame accelerometer for the gravity
+//   check). stderr "[ov_bridge] mav: ..." (frame alignment per (re)init, end summary with send-age percentiles).
+// --viop-udp HOST:PORT (2026-10-25, ovdrone; default off): instead of MAVLink, the custom VIOP v2 link of viop_proto.h for
+//   the ESP32-S3 flight firmware: one POSE frame (92 B) per prediction + HEARTBEAT frames (--viop-hb-hz, default 20, sent
+//   from the main input loop on IMU records, so they stop when the feed stops / the bridge hangs; 3 "stopping"
+//   heartbeats on a clean exit) + TIME_RESP replies. --viop-log FILE, --viop-replay-time 0|1 as for MAVLink.
 //
 // --idle-spin 3 / --idle-spin-ms W (2026-10-25, ovopt, heat; both default off = unchanged): 3 = like 2 (whole pool
 //   waits busy) but between the input polls every stripe waits for an event (aarch64 LDAXR + WFE on the shared "go"
@@ -21,6 +35,11 @@
 //   identical on the PC identity runs at 9 and 17 digits; phone replay check pending): skip_retri, par_tri, par_jac,
 //   par_ma, par_s, cov_move, frame_nocopy, givens_rm; "all_exact" = all of them. Near-exact (other rounding, same math):
 //   ekf_gemm, qr_compress (replaces givens_rm), ekf_chol, par_cov. "name=0" turns one off.
+//   Changes results (2026-10-25, branch ovdrone-20261025, default off): rs_derot[=US] = gyro rolling-shutter de-rotation
+//   of every new feature measurement to the frame-centre row time (ovpatch/VioManager.cpp; US = sensor readout first->
+//   last row in microseconds, signed, plain "rs_derot" = 6540 = S24 live 1920x1080 @30 skew). With a v2 --remap file the
+//   exact sensor row of each feature comes from the remap y table; without one rs_row_ppm=N (row scale x 1e6, 0 = 1)
+//   maps fed rows to sensor rows. stderr "[ov_bridge] rs_derot: ..." at the end (mean / max shift px, mean gyro).
 // --pose-precision N (2026-10-25, default 9 = unchanged): significant digits of the numbers in the pose / pred lines
 //   (17 = round-trip exact doubles, for identity checks).
 // --drop-late MS (2026-10-25, default 0 = off; CHANGES results when it drops): after initialisation a frame is not fed
@@ -164,6 +183,7 @@
 #include <opencv2/imgproc.hpp>
 
 #include "ovopt.h"  // ovpatch/: --ovopt flags + profiler (2026-10-25)
+#include "mav_out.h"  // --mav-udp drone output (2026-10-25, ovdrone)
 
 #include "core/VioManager.h"
 #include "core/VioManagerOptions.h"
@@ -226,6 +246,11 @@ struct Args {
   double drop_late_ms = 0.0;  // --drop-late MS (header; 0 = off)
   int pred_thread = 0;        // --pred-thread 0|1 (header; 0 = off)
   std::string imu_log;        // --imu-log FILE (header)
+  std::string mav_udp;        // --mav-udp HOST:PORT (header; "" = off)
+  std::string viop_udp;       // --viop-udp HOST:PORT (header; "" = off)
+  double viop_hb_hz = 20.0;   // --viop-hb-hz (VIOP heartbeat rate; 0 = none)
+  std::string mav_msg = "odom", mav_mount = "imu", mav_log;
+  int mav_yaw_align = 1, mav_replay_time = 0, mav_sysid = 1;
 };
 
 // --imu-log (2026-10-25): written by the thread that reads the input (main, or the --pred-thread reader)
@@ -242,6 +267,8 @@ inline void imu_log_row(const uint8_t *payload, int64_t t_hdr, int64_t t_rx) {
                static_cast<long long>(t_rx));
   if (++g_imu_log_n % 500 == 0) std::fflush(g_imu_log);
 }
+
+std::unique_ptr<mav::Out> g_mav;  // --mav-udp (nullptr = off)
 
 // ---- --idle-spin (header) ----
 constexpr double kIdleSpinMaxMs = 200.0;  // spin at most this long per wait, then block
@@ -1033,6 +1060,10 @@ public:
         return true;
       }
       on_imu(buf.data(), out);
+      if (g_mav && have_t0_) {
+        g_mav->note_imu(t0_ns_ + static_cast<int64_t>(std::llround(newest_imu_t_ * 1e9)));
+        g_mav->hb_tick(sys_ && sys_->initialized(), lost_);  // VIOP heartbeat from the main loop (stops if the feed stops)
+      }
       return true;
     case kStereo:
       on_stereo(buf, out);
@@ -1065,6 +1096,7 @@ public:
     if (!args_.ovopt.empty() || !args_.prof_log.empty()) o << ",\"ovopt\":" << jstr(ovopt::describe());  // 2026-10-25
     if (args_.idle_spin_ms > 0.0) o << ",\"idle_spin_ms\":" << args_.idle_spin_ms;                       // 2026-10-25
     if (args_.pred_thread) o << ",\"pred_thread\":" << args_.pred_thread;                                 // 2026-10-25
+    if (g_mav) o << ",\"mav_udp\":" << jstr(args_.mav_udp) << ",\"mav_mount\":" << jstr(g_mav->mount_name);  // ovdrone
     o << "}\n";
     return o.str();
   }
@@ -1143,6 +1175,23 @@ public:
     T.block<3, 3>(0, 0) = R_CtoG;
     T.block<3, 1>(0, 3) = p_IinG - R_CtoG * calib0->pos();
     const double t_pred = time0 + h;  // IMU clock (s from t0)
+    if (g_mav) {  // --mav-udp (2026-10-25): same predicted state -> MAVLink (reads only)
+      const ov_core::ImuData *nw = nullptr;  // newest IMU sample (rate + specific force for the output)
+      if (!imu_hold_.empty()) nw = &imu_hold_.back();
+      if (!imu_recent_.empty() && (!nw || imu_recent_.back().timestamp > nw->timestamp)) nw = &imu_recent_.back();
+      Eigen::Vector3d w_I = Eigen::Vector3d::Zero(), f_I = Eigen::Vector3d::Zero();
+      if (nw) {
+        w_I = nw->wm - bg;
+        f_I = nw->am - ba;
+      }
+      std::vector<std::shared_ptr<ov_type::Type>> vars = {st->_imu->q(), st->_imu->p(), st->_imu->v()};
+      Eigen::Matrix<double, 9, 9> P9 = ov_msckf::StateHelper::get_marginal_covariance(st, vars);
+      const double rate = (d.size() >= 2 && h > 0.0) ? (d.size() - 1) / h : 400.0;
+      const double sw = params_.imu_noises.sigma_w;
+      g_mav->emit(sys_.get(), t0_ns_ + static_cast<int64_t>(std::llround(t_pred * 1e9)), R_ItoG, x.block(4, 0, 3, 1),
+                  x.block(7, 0, 3, 1), w_I, P9, lost_, sw * sw * std::min(rate, 2000.0), f_I, src,
+                  t0_ns_ + static_cast<int64_t>(std::llround(time0 * 1e9)), static_cast<int>(st->_features_SLAM.size()));
+    }
     n_pred_++;
     if (h_pred_.size() < 2000000) h_pred_.push_back(static_cast<float>(h * 1e3));
     std::ostringstream o;
@@ -1194,6 +1243,15 @@ public:
     auto calib0 = st->_calib_IMUtoCAM.at(0);
     s.R_ItoC = calib0->Rot();
     s.p_IinC = calib0->pos();
+  }
+
+  void log_rs() const {  // ovopt rs_derot summary (2026-10-25)
+    if (ovopt::g.rs_derot == 0) return;
+    const auto &S = ovopt::rs_stats;
+    std::fprintf(stderr, "[ov_bridge] rs_derot: readout %.1f us | %s | frames %ld (no imu %ld) feats %ld | shift px mean %.4f "
+                 "max %.3f | gyro rad/s mean %.3f max %.3f\n", ovopt::rs_readout_s() * 1e6,
+                 ovopt::rs_mapy ? "remap rows" : "row scale", S.frames, S.no_imu, S.feats,
+                 S.feats ? S.sum_shift / S.feats : 0.0, S.max_shift, S.frames ? S.sum_w / S.frames : 0.0, S.max_w);
   }
 
   void log_drop() const {  // --drop-late summary (2026-10-25)
@@ -1709,10 +1767,20 @@ private:
       return;
     }
     cv::convertMaps(mx, my, map_x_, map_y_, CV_16SC2);
+    if (ovopt::g.rs_derot != 0 && remap_src_h_ > 0) {  // rs_derot: exact sensor row of each fed pixel (2026-10-25)
+      rs_mapy_ = my;
+      ovopt::rs_mapy = reinterpret_cast<const float *>(rs_mapy_.data);
+      ovopt::rs_map_w = wh[0];
+      ovopt::rs_map_h = wh[1];
+      ovopt::rs_src_h = remap_src_h_;
+      std::fprintf(stderr, "[ov_bridge] rs_derot: readout %.1f us, sensor rows from the remap y table (source h %d)\n",
+                   ovopt::rs_readout_s() * 1e6, remap_src_h_);
+    }
     std::fprintf(stderr, "[ov_bridge] remap %dx%d (source %dx%d) from %s\n", wh[0], wh[1],
                  remap_src_w_ > 0 ? remap_src_w_ : wh[0], remap_src_h_ > 0 ? remap_src_h_ : wh[1], path.c_str());
   }
   int remap_src_w_ = 0, remap_src_h_ = 0;  // v2 remap file: frames of this size are remapped (0 = map size)
+  cv::Mat rs_mapy_;                        // rs_derot: float copy of the remap y table (only with the option)
   FILE *tlog_ = nullptr;                   // --timing-log
   FILE *plog_ = nullptr;                   // --prof-log (2026-10-25)
   uint64_t plog_rows_ = 0;
@@ -2068,6 +2136,17 @@ int main(int argc, char **argv) {
     }
     else if (s == "--ovopt") a.ovopt = next();
     else if (s == "--prof-log") a.prof_log = next();
+    else if (s == "--mav-udp") a.mav_udp = next();
+    else if (s == "--viop-udp") a.viop_udp = next();
+    else if (s == "--viop-replay-time") a.mav_replay_time = std::stoi(next());
+    else if (s == "--viop-log") a.mav_log = next();
+    else if (s == "--viop-hb-hz") a.viop_hb_hz = std::stod(next());
+    else if (s == "--mav-msg") a.mav_msg = next();
+    else if (s == "--mav-mount") a.mav_mount = next();
+    else if (s == "--mav-yaw-align") a.mav_yaw_align = std::stoi(next());
+    else if (s == "--mav-replay-time") a.mav_replay_time = std::stoi(next());
+    else if (s == "--mav-sysid") a.mav_sysid = std::stoi(next());
+    else if (s == "--mav-log") a.mav_log = next();
     else if (s == "--pose-precision") a.pose_precision = std::max(1, std::min(17, std::stoi(next())));
     else if (s == "--drop-late") a.drop_late_ms = std::max(0.0, std::stod(next()));
     else if (s == "--pred-thread") a.pred_thread = std::stoi(next()) != 0 ? 1 : 0;   // 2026-10-25
@@ -2118,7 +2197,7 @@ int main(int argc, char **argv) {
     f.frame_nocopy = 0;
     f.prof = 0;
     if (f.skip_retri || f.par_tri || f.par_jac || f.par_ma || f.par_s || f.cov_move || f.givens_rm || f.ekf_gemm ||
-        f.qr_compress || f.ekf_chol || f.par_cov) {
+        f.qr_compress || f.ekf_chol || f.par_cov || f.rs_derot) {
       std::fprintf(stderr, "[ov_bridge] --ovopt %s needs a build with the OpenVINS sources (OV_FULL_SOURCE / phone build)\n",
                    a.ovopt.c_str());
       return 2;
@@ -2128,6 +2207,43 @@ int main(int argc, char **argv) {
   if (!a.ovopt.empty() || ovopt::g.prof)
     std::fprintf(stderr, "[ov_bridge] ovopt: %s (--ovopt '%s', prof log %s)\n", ovopt::describe().c_str(), a.ovopt.c_str(),
                  a.prof_log.empty() ? "-" : a.prof_log.c_str());
+
+  // --mav-udp (2026-10-25, ovdrone): drone output prototype, needs the prediction stream
+  if (!a.mav_udp.empty() || !a.viop_udp.empty()) {
+    auto mo = std::make_unique<mav::Out>();
+    const bool viop = !a.viop_udp.empty();
+    const std::string hp = viop ? a.viop_udp : a.mav_udp;
+    mo->proto = viop ? 1 : 0;
+    auto c = hp.rfind(':');
+    std::string err;
+    if (viop && !a.mav_udp.empty()) err = "--viop-udp and --mav-udp: pick one";
+    else if (a.predict < 1) err = "--mav-udp / --viop-udp need --predict 1 or 2";
+    else if (c == std::string::npos) err = "--mav-udp / --viop-udp need HOST:PORT";
+    else {
+      mo->host = hp.substr(0, c);
+      mo->port = std::atoi(hp.c_str() + c + 1);
+      if (mo->port <= 0 || mo->port > 65535) err = "bad --mav-udp port";
+    }
+    if (err.empty() && !mav::Out::parse_mount(a.mav_mount, mo->R_BI, mo->mount_name)) err = "bad --mav-mount " + a.mav_mount;
+    if (err.empty()) {
+      mo->msgs = a.mav_msg == "odom" ? 1 : a.mav_msg == "vpe" ? 2 : a.mav_msg == "both" ? 3 : 0;
+      if (!mo->msgs) err = "--mav-msg must be odom, vpe or both";
+    }
+    mo->yaw_align = a.mav_yaw_align != 0;
+    mo->hb_hz = a.viop_hb_hz;
+    if (viop && (a.viop_hb_hz < 0.0 || a.viop_hb_hz > 200.0)) err = "--viop-hb-hz must be in [0, 200]";
+    mo->replay_time = a.mav_replay_time != 0;
+    mo->sysid = a.mav_sysid;
+    if (err.empty() && !a.mav_log.empty() && !(mo->log = std::fopen(a.mav_log.c_str(), "w"))) err = "cannot open --mav-log";
+    if (err.empty() && !mo->open(err)) err = "mav: " + err;
+    if (!err.empty()) {
+      std::fprintf(stderr, "[ov_bridge] %s\n", err.c_str());
+      return 2;
+    }
+    std::fprintf(stderr, "[ov_bridge] %s: udp %s:%d msgs %s mount %s yaw_align %d replay_time %d sysid %d\n", 
+                 viop ? "viop" : "mav", mo->host.c_str(), mo->port, a.mav_msg.c_str(), mo->mount_name.c_str(), a.mav_yaw_align, a.mav_replay_time, a.mav_sysid);
+    g_mav = std::move(mo);
+  }
 
   // --klt-overlap: read once by ovpatch/TrackKLT.cpp at the first camera frame
   ::setenv("OV_KLT_OVERLAP", a.klt_overlap ? "1" : "0", 1);
@@ -2169,6 +2285,12 @@ int main(int argc, char **argv) {
     if (g_idle.mode) g_idle.log("end");
     b.log_predict();
     b.log_drop();
+    b.log_rs();
+    if (g_mav) {
+      for (int i = 0; i < 3; i++) g_mav->hb_tick(false, false, true);  // VIOP: "stopping" heartbeats on a clean exit
+      g_mav->report();
+      g_mav->close();
+    }
     return 0;
   }
 

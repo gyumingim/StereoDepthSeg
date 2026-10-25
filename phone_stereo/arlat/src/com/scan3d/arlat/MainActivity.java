@@ -187,6 +187,12 @@ public class MainActivity extends Activity {
                 ov.imuPrio = getIntent().getIntExtra("imu_prio", 0) != 0 ? 1 : 0;        // 0.6.19: IMU never waits behind an image write
                 ov.predThread = getIntent().getIntExtra("pred_thread", 1) != 0 ? 1 : 0;  // 0.6.19: predict 2 -> --pred-thread 1 (0 = 0.6.18 mode 2)
                 ov.imuLog = getIntent().getIntExtra("imu_log", 0) != 0;                 // 0.6.19: IMU delivery logs
+                String mu = getIntent().getStringExtra("mav_udp");                      // ovdrone: ov_bridge --mav-udp HOST:PORT
+                ov.mavUdp = mu == null ? "" : mu.trim();
+                String mm = getIntent().getStringExtra("mav_mount");                    // ovdrone: --mav-mount imu|cam_fwd|cam_down|9 numbers
+                if (mm != null) ov.mavMount = mm.trim();
+                String mg = getIntent().getStringExtra("mav_msg");                      // ovdrone: --mav-msg odom|vpe|both
+                if (mg != null) ov.mavMsg = mg.trim();
                 sustainedOn = false;
                 try {
                     boolean sup = ((android.os.PowerManager) getSystemService(POWER_SERVICE)).isSustainedPerformanceModeSupported();

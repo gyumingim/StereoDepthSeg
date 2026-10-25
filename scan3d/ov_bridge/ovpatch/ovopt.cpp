@@ -7,6 +7,9 @@
 namespace ovopt {
 
 Flags g;
+const float *rs_mapy = nullptr;
+int rs_map_w = 0, rs_map_h = 0, rs_src_h = 0;
+RsStats rs_stats;
 double prof_ms[N_SLOTS] = {0};
 long prof_cnt[N_COUNTS] = {0};
 
@@ -25,6 +28,8 @@ const Field kFields[] = {
     {"ekf_gemm", &Flags::ekf_gemm, false},
     {"qr_compress", &Flags::qr_compress, false}, {"ekf_chol", &Flags::ekf_chol, false},
     {"par_cov", &Flags::par_cov, false},      {"prof", &Flags::prof, false},
+    {"rs_derot", &Flags::rs_derot, false},    {"rs_row_ppm", &Flags::rs_row_ppm, false},
+    {"rs_postinit", &Flags::rs_postinit, false},
 };
 } // namespace
 
@@ -77,7 +82,7 @@ const char *slot_name(int s) {
   static const char *n[N_SLOTS] = {"track",     "prop",      "select",     "msckf_clean", "msckf_tri", "msckf_jac",
                                    "msckf_comp", "msckf_ekf", "slam_marg",  "slam_jac",    "slam_ekf",  "delay_tri",
                                    "delay_init", "retri",     "db_clean",   "anchor",      "marg_clone", "ekf_ma",
-                                   "ekf_s",      "ekf_k",     "ekf_cov",    "ekf_sym",     "ekf_dx"};
+                                   "ekf_s",      "ekf_k",     "ekf_cov",    "ekf_sym",     "ekf_dx",    "rs"};
   return (s >= 0 && s < N_SLOTS) ? n[s] : "?";
 }
 const char *count_name(int c) {

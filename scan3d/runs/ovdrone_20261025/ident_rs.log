@@ -1,0 +1,28 @@
+Sun Oct 25 16:03:12 KST 2026
+71bb15d95c1feb12db9d9c66dfe0cbf5bae9b407f911144087cfeab73f330a2a  /tmp/ovopt/ate/bin/ov_bridge_71bb15d95c1f
+b76c78e10e94c1c8fd1d4649722a8e76eae5929807e3271a2285c04477087890  /home/system/scanner/StereoDepthSeg-ovdrone/scan3d/ov_bridge/build_ovdrone_full/ov_bridge
+== h_ref rc 0 poses 845 | 
+== h_mine rc 0 poses 845 | 
+== h_mine_ex rc 0 poses 845 | --ovopt all_exact
+== r_ref rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin
+== r_mine rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin
+== r_mine_ex rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --ovopt all_exact
+== r_rs rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --ovopt all_exact,rs_derot
+== r_rsflip rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --ovopt all_exact,rs_derot=-6540
+ref /tmp/ovdrone/ident/h_ref.jsonl: poses 845 tracking 704 hash f42c104b1ac655c2
+/tmp/ovdrone/ident/h_mine.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash f42c104b1ac655c2 first_diff None IDENTICAL
+/tmp/ovdrone/ident/h_mine_ex.jsonl: poses 845 identical_lines 845/845 identical_state 845/845 hash f42c104b1ac655c2 first_diff None IDENTICAL
+ref /tmp/ovdrone/ident/r_ref.jsonl: poses 2327 tracking 2003 hash 1e58bb28d8b3b8ca
+/tmp/ovdrone/ident/r_mine.jsonl: poses 2327 identical_lines 2327/2327 identical_state 2327/2327 hash 1e58bb28d8b3b8ca first_diff None IDENTICAL
+/tmp/ovdrone/ident/r_mine_ex.jsonl: poses 2327 identical_lines 2327/2327 identical_state 2327/2327 hash 1e58bb28d8b3b8ca first_diff None IDENTICAL
+/tmp/ovdrone/ident/r_rs.jsonl: poses 2327 identical_lines 324/2327 identical_state 324/2327 hash d42f241f05974d0e first_diff 324 DIFFERENT
+/tmp/ovdrone/ident/r_rsflip.jsonl: poses 2327 identical_lines 324/2327 identical_state 324/2327 hash 2d84a50567d4207e first_diff 324 DIFFERENT
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=0 qr_compress=0 ekf_chol=0 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 (--ovopt 'all_exact', prof log -)
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=0 qr_compress=0 ekf_chol=0 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 (--ovopt 'all_exact', prof log -)
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=0 qr_compress=0 ekf_chol=0 par_cov=0 prof=0 rs_derot=1 rs_row_ppm=0 (--ovopt 'all_exact,rs_derot', prof log -)
+[ov_bridge] rs_derot: readout 6540.0 us, sensor rows from the remap y table (source h 1080)
+[ov_bridge] rs_derot: readout 6540.0 us | remap rows | frames 2327 (no imu 0) feats 384580 | shift px mean 0.4531 max 7.699 | gyro rad/s mean 0.436 max 2.753
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=0 qr_compress=0 ekf_chol=0 par_cov=0 prof=0 rs_derot=-6540 rs_row_ppm=0 (--ovopt 'all_exact,rs_derot=-6540', prof log -)
+[ov_bridge] rs_derot: readout -6540.0 us, sensor rows from the remap y table (source h 1080)
+[ov_bridge] rs_derot: readout -6540.0 us | remap rows | frames 2327 (no imu 0) feats 384580 | shift px mean 0.4530 max 7.836 | gyro rad/s mean 0.436 max 2.750
+Sun Oct 25 16:07:09 KST 2026

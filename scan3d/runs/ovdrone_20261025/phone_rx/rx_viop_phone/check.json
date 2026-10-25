@@ -1,0 +1,116 @@
+{
+ "dir": "rx_viop_phone",
+ "made": "2026-10-25 17:48:19",
+ "pose_frames": 8746,
+ "meta": {
+  "note": "receiver crashed with WinError 10054 after the sender exited (fixed since); files flushed at exit"
+ },
+ "rate": {
+  "duration_s": 68.89,
+  "frames_per_s": 126.95,
+  "lost_by_seq": 0,
+  "arrival_gap_ms_p50": 6.12,
+  "arrival_gap_ms_p95": 18.75,
+  "arrival_gap_ms_max": 314.7,
+  "arrival_gap_std_ms": 7.8,
+  "t_pred_gap_ms_p50": 6.02,
+  "t_pred_gap_ms_p95": 16.04,
+  "t_pred_gap_ms_max": 38.07,
+  "non_increasing_t_pred": 1
+ },
+ "phone_internal": {
+  "send_minus_t_pred_ms_p50": 0.17,
+  "p95": 1.75,
+  "max": 9.61,
+  "horizon_ms_p50": 27.5,
+  "horizon_ms_p95": 39.5
+ },
+ "latency": {
+  "pings": 163,
+  "rtt_ms_min": 86.34,
+  "rtt_ms_p50": 90.87,
+  "offset_uncertainty_ms": 43.17,
+  "offset_spread_best_ms": 2.2,
+  "arrival_minus_t_pred_ms_p50": 45.47,
+  "p95": 54.57,
+  "max": 356.87,
+  "network_ms_p50": 45.04,
+  "network_ms_p95": 53.98,
+  "network_ms_max": 356.82,
+  "network_ms_min": 40.89
+ },
+ "frames": {
+  "quat_norm_err_max": 2.15e-05,
+  "vel_consistency_rms_m_s": 0.0099,
+  "vel_norm_rms_m_s": 0.2976,
+  "rate_consistency_rms_rad_s": 0.0167,
+  "rate_norm_rms_rad_s": 0.6979,
+  "pos_range_m": [
+   0.392,
+   0.4557,
+   0.2876
+  ],
+  "first_pos": [
+   0.002,
+   0.0011,
+   0.0007
+  ],
+  "last_pos": [
+   0.1169,
+   0.189,
+   0.1669
+  ],
+  "pos_std_mm_p50": [
+   50.0,
+   50.0,
+   50.0
+  ],
+  "att_std_deg_p50": [
+   1.1,
+   0.103,
+   0.35
+  ],
+  "quality_min_p50": [
+   75,
+   75
+  ],
+  "n_feat_p50": 50,
+  "flags": {
+   "0x1f": 1,
+   "0x13": 6743,
+   "0x17": 2002
+  },
+  "reset_counters": [
+   0
+  ]
+ },
+ "heartbeat": {
+  "n": 1593,
+  "per_s": 19.33,
+  "gap_ms_p50": 50.65,
+  "gap_ms_p95": 64.25,
+  "gap_ms_max": 333.97,
+  "lost_by_seq": 0,
+  "states": {
+   "0": 257,
+   "1": 1333,
+   "3": 3
+  },
+  "last_state": 3,
+  "last_flags": 1,
+  "imu_age_ms_p95": 0.0
+ },
+ "gravity_check": {
+  "specific_force_world_mean": [
+   0.005,
+   0.003,
+   9.802
+  ],
+  "expect": "(0, 0, +9.81): world z up, q = IMU -> world",
+  "rows": 8746
+ },
+ "transport_vs_bridge_log": {
+  "matched": 8746,
+  "max_abs_diff": 0.00108
+ }
+}

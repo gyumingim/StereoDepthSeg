@@ -35,10 +35,31 @@ struct Flags {
   int qr_compress = 0; // UpdaterMSCKF: measurement compression with Householder QR instead of Givens rotations
   int ekf_chol = 0;    // StateHelper::EKFUpdate: W = M U^-1 (S = U^T U), P -= W W^T, dx = W U^-T r (no S^-1, no K)
   int par_cov = 0;     // StateHelper::EKFUpdate: covariance update split in 2 balanced parts on the OpenCV pool
+  // --- changes results (2026-10-25, branch ovdrone-20261025) ---
+  int rs_derot = 0;    // VioManager: gyro rolling-shutter de-rotation of each new feature measurement to the frame-centre
+                       // row time. Value = sensor readout time first->last row in microseconds (signed, > 0 = top row of
+                       // the fed image first); 1 = the live default 6540 us (S24 main lens 1920x1080 @30, meta first_result
+                       // skew_ns 6539...). 0 = off (upstream code path).
+  int rs_postinit = 0; // rs_derot only after the VIO is initialised (the initialiser sees raw measurements); 0 = always
+  int rs_row_ppm = 0;  // rs_derot without a bridge row map (no --remap): fed-row fraction -> sensor-row fraction multiplier
+                       // x 1e6 (undistort crop: fy_raw*H_fed/(fy_fed*H_raw)); 0 = 1.0. Ignored when the bridge set rs_map.
   // --- profiling ---
   int prof = 0;        // per-stage timers (ov_bridge --prof-log FILE)
 };
 extern Flags g;
+
+// ---- rs_derot (2026-10-25): row map + statistics ----
+// When ov_bridge remaps the frames (--remap), it points rs_mapy at the map's y table (fed w x h floats = source row of
+// each fed pixel) and rs_src_h at the source (sensor) image height: the row time then uses the exact sensor row of the
+// feature (lens distortion included). Otherwise row fraction = rs_row_ppm/1e6 * (v/H - 0.5).
+extern const float *rs_mapy;
+extern int rs_map_w, rs_map_h, rs_src_h;
+struct RsStats {
+  long frames = 0, feats = 0, no_imu = 0;
+  double sum_shift = 0.0, max_shift = 0.0, sum_w = 0.0, max_w = 0.0;
+};
+extern RsStats rs_stats;
+inline double rs_readout_s() { return g.rs_derot == 1 ? 6540e-6 : g.rs_derot * 1e-6; }
 
 // parse "a,b,c" (names of the int fields above, "name=N" for a value, "all_exact" = every exact option);
 // returns false and sets err on an unknown name
@@ -87,6 +108,7 @@ enum Slot : int {
   S_EKF_COV,       //   P -= K*M^T (upper)
   S_EKF_SYM,       //   P = selfadjoint(P) + diagonal check
   S_EKF_DX,        //   dx = K*res + state update
+  S_RS,            // rs_derot feature de-rotation (2026-10-25)
   N_SLOTS
 };
 enum Count : int {

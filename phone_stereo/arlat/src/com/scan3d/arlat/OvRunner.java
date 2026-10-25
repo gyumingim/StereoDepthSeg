@@ -216,6 +216,13 @@ class OvRunner implements SensorEventListener {
     private long sN, eN, wN;
     private long[] wPend = new long[4096];      // imu_log: ring slots of IMU written but not yet pushed by a write/flush
     private int wPendN;
+    // ovdrone (2026-10-25, branch ovdrone-20261025; default off = unchanged): intent mav_udp "HOST:PORT" = ov_bridge
+    // --mav-udp (MAVLink 2 ODOMETRY of every predicted pose over UDP + 1 Hz HEARTBEAT + TIMESYNC replies; needs intent
+    // predict 1|2, see scan3d/ov_bridge/mav_out.h), intent mav_mount (default "imu") / mav_msg (default "odom"); the bridge
+    // also writes <run>/mav_log.csv. meta.json "mav_udp" / "mav_mount" / "mav_msg".
+    String mavUdp = "";
+    String mavMount = "imu";
+    String mavMsg = "odom";
     private BufferedWriter predW;               // poses_pred.csv (predict > 0)
     private long nPred;
     private long lastPoseTns = -1, lastPoseSensor = -1, lastPoseArrive = -1;   // frame of the latest pose line (reader)
@@ -391,6 +398,14 @@ class OvRunner implements SensorEventListener {
             Collections.addAll(cmd, "--imu-log", new File(runDir, "bridge_imu.csv").getAbsolutePath());
             sRing = new long[3 * RING]; eRing = new long[2 * RING]; wRing = new long[3 * RING];
         }
+        if (!mavUdp.isEmpty()) {                                                                                       // ovdrone
+            if (!mavUdp.matches("[0-9.]+:[0-9]+")) throw new IllegalArgumentException("bad mav_udp " + mavUdp);
+            if (!mavMount.matches("[a-z_]+|[-0-9.eE]+(,[-0-9.eE]+){8}")) throw new IllegalArgumentException("bad mav_mount " + mavMount);
+            if (!mavMsg.matches("odom|vpe|both")) throw new IllegalArgumentException("bad mav_msg " + mavMsg);
+            if (predict < 1) throw new IllegalArgumentException("mav_udp needs predict 1 or 2");
+            Collections.addAll(cmd, "--mav-udp", mavUdp, "--mav-mount", mavMount, "--mav-msg", mavMsg,
+                    "--mav-log", new File(runDir, "mav_log.csv").getAbsolutePath());
+        }
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.environment().put("LD_LIBRARY_PATH", lib);
         pb.redirectError(new File(runDir, "bridge_stderr.log"));
@@ -419,7 +434,7 @@ class OvRunner implements SensorEventListener {
                 .put("ov_idle_spin", idleSpin).put("ov_predict", predict).put("ov_predict_hz", predictHz)
                 .put("ov_predict_stream", predictStream ? 1 : 0)
                 .put("ov_opt", ovOpt).put("ov_prof", ovProf ? 1 : 0).put("idle_spin_ms", idleSpinMs).put("spin_wfe", spinWfe ? 1 : 0)
-                .put("drop_late_ms", dropLateMs)
+                .put("drop_late_ms", dropLateMs).put("mav_udp", mavUdp).put("mav_mount", mavMount).put("mav_msg", mavMsg)
                 .put("imu_prio", imuPrio).put("pred_thread", predict == 2 && predThread > 0 ? 1 : 0).put("imu_log", imuLog ? 1 : 0);
 
         proc = pb.start();
