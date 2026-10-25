@@ -75,8 +75,16 @@ CONDS = {
     "N30": dict(fps=30.0, args=NEWP),
     "OL30": dict(fps=30.0, args=OLDP, cfg=LIVE),
     "NL30": dict(fps=30.0, args=NEWP, cfg=LIVE),
+    # gyro (user 2026-10-26 morning): profile now has gyro_klt=5. Run with OV60_OUT=/tmp/integ2/ate_g and the new build;
+    # N30 / NL30 there = copies of the /tmp/integ2/ate results made with the 0.6.26 build (profile without gyro_klt),
+    # L60 there = copies of ov60eval L60 (integ 14de3b8 build, old rec60 profile) = reference only.
+    "G30": dict(fps=30.0, args=NEWP),
+    "GL30": dict(fps=30.0, args=NEWP, cfg=LIVE),
+    "L60": dict(fps=60.0, args=P60, cfg=LIVE),
+    "NL60": dict(fps=60.0, args=P60 + " --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse", cfg=LIVE),
+    "GL60": dict(fps=60.0, args=P60, cfg=LIVE),
 }
-PAIRS = [("O30", "N30"), ("OL30", "NL30")]
+PAIRS = [("O30", "N30"), ("OL30", "NL30"), ("N30", "G30"), ("NL30", "GL30"), ("L60", "NL60"), ("NL60", "GL60")]
 
 
 def hs_cells():
@@ -299,13 +307,17 @@ def score():
     _, drop, _ = hs_cells()
     hs = score_hs_std("hs", conds, gs)
     Shs, Phs = summarize(hs, conds, drop)
-    std, Sstd, Pstd, loops = [], {}, {}, {}  # integ2: HS 42 cells only
+    loops = {}  # integ2: HS 42 cells (+ std60 GT cells for the rec60 gyro sanity check, conds present only)
+    std = score_hs_std("std", conds, gs)
+    Sstd, Pstd = summarize(std, conds, None)
     res = dict(made=time.strftime("%F %T"), protocol=__doc__, conds=CONDS, bridge=json.load(open(OUT / "bin" / "bridge.json")),
                hs=dict(summary=Shs, paired=Phs, excluded=drop, cells=hs), std=dict(summary=Sstd, paired=Pstd, cells=std),
                loops=loops)
     json.dump(res, open(OUT / "score.json", "w"), indent=1, ensure_ascii=False)
     RD.mkdir(parents=True, exist_ok=True)
-    json.dump(res, open(RD / "score.json", "w"), indent=1, ensure_ascii=False)
+    rd_score = RD / "score.json" if OUT == Path("/tmp/integ2/ate") else RD / "gyro" / "score_gyro.json"  # keep the 0.6.26 score
+    rd_score.parent.mkdir(parents=True, exist_ok=True)
+    json.dump(res, open(rd_score, "w"), indent=1, ensure_ascii=False)
     for nm, S, P in (("HS 42", Shs, Phs), ("std60 GT", Sstd, Pstd)):
         print(f"\n## {nm}\n| cond | n | div | ate_w med (mean) cm | sim3 med | scale med | init s med | n_slam med | pc ms med |")
         print("|---|---|---|---|---|---|---|---|---|")
@@ -320,7 +332,7 @@ def score():
     print("\n## std60 loops (no GT)")
     for k, v in loops.items():
         print(k, {c: (x["loop_err_cm"], x["path_m"], x["tracked"]) for c, x in v.items()})
-    print("saved", OUT / "score.json", RD / "score.json")
+    print("saved", OUT / "score.json", rd_score)
 
 
 if __name__ == "__main__":

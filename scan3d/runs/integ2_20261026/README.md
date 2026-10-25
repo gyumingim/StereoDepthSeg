@@ -6,9 +6,33 @@
 - 새로 넣은 것 (통합 담당): `--pipe 1` 거부 (gyro_klt 와 같이 주면 전용 오류, rc 2), PC 빌드(OV 소스 없음)에서 ovupd 옵션도 거부, 프로필 ovopt 변경, 앱 0.6.26.
 - **앱 0.6.26-integ2-20261026 (vc 32) 폰에 설치함 (06:14:17)**. calcap 모드 시작·정지 확인 (아래).
 
+## 2026-10-26 아침: `gyro_klt=5` 를 프로필에 넣음 (사용자 결정) — 앱 0.6.27 (vc 33)
+- 바꾼 것: `--profile rec20261025` / `rec60` 의 ovopt 와 앱 profile 기본 `ov_opt` = `all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse,gyro_klt=5`
+  (`main.cpp`, `MainActivity.java`, 매니페스트 vc 33 / 0.6.27-integ2-20261026). 직접 준 `--ovopt` / intent `ov_opt` 가 이김 (그대로).
+  프로필 + `--pipe 1` 은 이제 gyro_klt 전용 오류 (rc 2) — `--pipe 1` 은 원래도 거부. calcap 코드 변경 없음.
+- PC 동일성 (`gyro/ident_gyro.{sh,log}`, 17자리): 프로필 없음 harness 845/845·raw80 2327/2327 = integ 와 IDENTICAL; 옛 integ 프로필(ovopt 직접) = integ IDENTICAL;
+  gyro 없는 ovopt 직접 (rec20261025·rec60) = 0.6.26 빌드 프로필과 IDENTICAL; 새 프로필 = 직접 `...,gyro_klt=5` (새 빌드·0.6.26 빌드 둘 다) IDENTICAL, 2회 동일.
+  새 프로필은 raw80 포즈 323 부터 다름 (gyro 효과, 예상대로). raw80 gyro 통계: 시작점 오차 평균 1.82 px, 상한 걸린 점 131, 이동 거부 프레임 4.
+- GT 42칸 (ov60eval 자, `--drop-late 0`, 칸당 1회 × 시작 3; `gyro/score_gyro.json`, `gyro/ate_score_gyro.txt`; N30/NL30 = 0.6.26 빌드 결과 재사용):
+
+  | 조건 | 발산 | ATE_w 중앙 (전체 정상칸) | 같은 칸 중앙 | 짝 차 중앙 | 222747_o0 |
+  |---|---|---|---|---|---|
+  | P: N30 → **G30** | 8 → **3** (131326_o0/o1, 154320_o0; 새 발산 0) | 0.5914 → 0.5965 | 34칸 0.5914 → 0.6026 | +0.012 cm (14/34 좋음, 녹화 5/12) | 0.98 → **1.68** |
+  | L: NL30 → **GL30** | 4 → **3** (131326_o0/o1/o2; 새 발산 0) | 0.5597 → 0.5342 | 38칸 0.5597 → 0.5392 | −0.013 cm (27/38, 녹화 9/13) | 1.13 → 1.58 |
+
+  구제된 칸: P = 214550 o0/o1/o2 (0.35/0.43/0.42 cm), 154320 o1/o2 (2.37/2.83) = ovgyro PG5 와 같은 5칸; L = 214550_o0 (0.50).
+  정상 칸 정확도 차이는 잡음 범위 (ovgyro 와 같은 결론). 222747 은 P·L 모두 악화 (재현되는 알려진 악화).
+- rec60 + gyro (처음 시험, std60 board 165506 × 시작 3, 라이브식 histogram NONE, 60 fps): **초기화·추적 정상** — 3/3 발산 없음, 초기화 시각 같음
+  (4.93/3.93/2.93 s), ATE_w 1.58/1.57/1.59 (gyro 없음 NL60) → 1.50/1.55/1.70 cm (GL60). 173432 은 gyro 유무·옛 ov60eval L60 모두 초기화 안 됨 (기존 문제, gyro 무관).
+- 앱 0.6.27: aapt vc 33 / 0.6.27-integ2-20261026, apksigner 같은 개발 인증서, APK 안 .so·classes.dex 에 새 ovopt 문자열 확인 (`gyro/build_apk_gyro.log`).
+  **설치 못 함**: 08:26 폰이 adb 에 없음 (ping 실패), 08:47 ping 은 되지만 5555 연결 거부 = 폰 무선 디버깅 꺼짐/포트 바뀜 (규칙대로 안 건드림).
+  설치 대기 APK = `scratchpad\integ2\apk\arlat_0.6.27.apk` (sha d90f7ce2), 되돌리기 APK = `scratchpad\integ2\apk\arlat_0.6.26_rollback.apk` (sha 3330e758, vc 32).
+- 확인 안 된 것: 폰 ARM 동일성, 라이브 카메라·빠른 손동작, 폰 시간 비용 (ovgyro: 모드 3 에서 1 ms 미만 차이는 못 봄).
+- 되돌리기: intent `ov_opt "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse"` (브리지 `--ovopt` 같은 값) = 0.6.26 프로필과 PC 비트 동일, 또는 0.6.26 APK `adb install -r -d`.
+
 ## 지금 프로필 (`--profile rec20261025` / `rec60`, 앱 intent `profile` 도 같음)
 `--ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse` `--idle-spin 2` `--idle-spin-ms 20` (rec60: 0) `--drop-late 50` (= **mode 1** 기본: cap 3, 창 3 s, pred-stale 500 ms 자동) `--health 1` `--predict 2 --predict-hz 200 --pred-thread 1`. 앱은 + `imu_prio 1`, rec60 = 60 fps + c4f60.
-- 넣지 않음: `par_cov` (폰에서 더 느림), `init_gemm`, `gyro_klt` (어느 프로필에도 없음).
+- **0.6.27 부터 ovopt 끝에 `,gyro_klt=5` 추가** (위 절). 넣지 않음: `par_cov` (폰에서 더 느림), `init_gemm`.
 - 옛 프로필 (integ-20261025) = 같은 프로필 + `--ovopt all_exact,ekf_gemm,qr_compress,ekf_chol` 를 직접 줌 (앱: intent `ov_opt` 같은 값). 옛 drop-late 규칙 = `--drop-late-mode 0`.
 - 선택 옵션만 (기본 꺼짐): `--ovopt gyro_klt=5` (앱 `ov_opt` 에 추가), `--viop-hb-src 1` (앱 intent `viop_hb_src 1`), ESP32 펌웨어 `openloop_cut_mode 1` (기본 0).
 
@@ -27,7 +51,7 @@
 
 ## 사용자가 정할 것
 1. **60 fps vs 30 fps**: 오프라인 자료로는 못 정함 (verify_ov60eval). 다음 실험 = 라이브 모드(2 ms·ISO 고정·0.5 dpt) 네이티브 60 fps + 보드 GT 녹화 8개 이상 (드론식 빠른 동작, 제자리 복귀, 시작·끝 2 s 정지) → 같은 자로 L60 vs L30 (짝·홀 두 위상) 짝 비교.
-2. **gyro_klt=5 켤지** (옵션만): GT 발산 8→3 (녹화 2개 구제), 222747_o0 +0.7 cm 악화, rec60·라이브 빠른 동작·ARM 동일성 미검증, `--pipe` 와 금지.
+2. ~~gyro_klt=5 켤지~~ → **켬 (사용자 2026-10-26 아침, 0.6.27)**. 당시 근거: GT 발산 8→3 (녹화 2개 구제), 222747_o0 +0.7 cm 악화, rec60·라이브 빠른 동작·ARM 동일성 미검증, `--pipe` 와 금지.
 3. **ESP32 openloop_cut_mode 1 켤지** (기본 0): 시뮬 결과뿐, 실패 범위는 esp32fc README.
 4. **NC05 (IMU 잡음 ×0.5)**: 42칸 발산 4→3, 짝 −0.031 cm (녹화 10/13, p≈0.09) — 프로필에 안 넣음.
 

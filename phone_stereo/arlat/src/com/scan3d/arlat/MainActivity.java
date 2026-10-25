@@ -38,6 +38,8 @@ import java.util.Locale;
  * 0.6.23 mode calcap: lens-calibration stills from the live-VIO stream at 10 fps, driven by the PC over TCP (CalCapRunner).
  * 0.6.26 (integ2-20261026): profiles rec20261025/rec60 ov_opt + sym_inplace,ekf_sparse; bridge --drop-late mode 1 (droplatefix),
  *   intent viop_hb_src (esp32fix), ov_opt gyro_klt=N opt-in (ovgyro). calcap unchanged.
+ * 0.6.27 (user 2026-10-26 morning): profiles rec20261025/rec60 ov_opt + gyro_klt=5 (ovgyro guarded mode, changes poses).
+ *   Without gyro = intent ov_opt "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse" (explicit intent wins).
  * arcore: a GL thread loops Session.update() and per new frame logs/streams
  *   {"src":"arcore","t_sensor":android camera ts,"t_frame":ARCore ts,"t_call":..,"t_out":update() return,"status":..,"p":[..],"q":[..]}
  * also written to files/arlat_<ms>.csv. Latency = t_out - t_sensor (phone clock).
@@ -269,8 +271,9 @@ public class MainActivity extends Activity {
                 if ("rec20261025".equals(prof) || "rec60".equals(prof)) {
                     ov.profile = prof;
                     // 0.6.26 (integ2-20261026): + ovupd sym_inplace (exact) and ekf_sparse (near-exact); old 0.6.25 profile = ov_opt
-                    // "all_exact,ekf_gemm,qr_compress,ekf_chol" given explicitly. gyro_klt is NOT in any profile (opt-in via ov_opt).
-                    if (!getIntent().hasExtra("ov_opt")) ov.ovOpt = "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse";
+                    // "all_exact,ekf_gemm,qr_compress,ekf_chol" given explicitly. 0.6.27 (user 2026-10-26): + gyro_klt=5 (ovgyro guarded mode);
+                    // profile without gyro = ov_opt "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse" given explicitly.
+                    if (!getIntent().hasExtra("ov_opt")) ov.ovOpt = "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse,gyro_klt=5";
                     if (!getIntent().hasExtra("idle_spin")) ov.idleSpin = 2;
                     if (!getIntent().hasExtra("idle_spin_ms")) ov.idleSpinMs = 20;
                     if (!getIntent().hasExtra("drop_late_ms")) ov.dropLateMs = 50;

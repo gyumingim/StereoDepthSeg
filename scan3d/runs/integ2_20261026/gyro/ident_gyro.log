@@ -1,0 +1,68 @@
+Mon Oct 26 08:25:38 KST 2026
+32cf9bb2f73e7cb4995499ef3cd647862d7ae8237ccb95fca3f417396db06b67  /home/system/scanner/StereoDepthSeg-integ/scan3d/ov_bridge/build_integ_full/ov_bridge
+a03114868d2afa089869706a8e851da71bfb937573fb4160a43622b9aae6dabb  /tmp/integ2g/ov_bridge_pc_0626
+c640f5344f35c974aec7ac625fa97e38b7e7153e5d88f1a589405e4ce898f03c  /home/system/scanner/StereoDepthSeg-integ2/scan3d/ov_bridge/build_integ2_full/ov_bridge
+16d3298 integ2 timing_awake: README fixes from independent verifier (charger already unplugged at w_O_r2 start, cap max 2592, softer awake claim)
+ M phone_stereo/arlat/AndroidManifest.xml
+ M phone_stereo/arlat/src/com/scan3d/arlat/MainActivity.java
+ M scan3d/ov_bridge/main.cpp
+== h_mine rc 0 poses 845 | 
+== h_ref rc 0 poses 845 | 
+== r_mine_old rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec20261025 --drop-late 0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol
+== r_ref rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec20261025 --drop-late 0
+== rp_ref rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin
+== rp_mine rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin
+== r60_mine_nogy rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec60 --drop-late 0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse
+== r60_old_new rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec60 --drop-late 0
+== r_mine_gyro rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec20261025 --drop-late 0
+== r_old_new rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec20261025 --drop-late 0
+== r_mine_nogy rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec20261025 --drop-late 0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse
+== r_mine_gyro_rep rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec20261025 --drop-late 0
+== r_mine_gyro_explicit rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec20261025 --drop-late 0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse,gyro_klt=5
+== r_old_gyro_explicit rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec20261025 --drop-late 0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse,gyro_klt=5
+== r60_mine_gyro rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec60 --drop-late 0
+-- h_ref vs h_mine
+ref /tmp/integ2g/ident/h_ref.jsonl: poses 845 tracking 815 hash 08688db0b4efe77d pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ2g/ident/h_mine.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 0 first_diff None [] IDENTICAL
+-- rp_ref vs rp_mine
+ref /tmp/integ2g/ident/rp_ref.jsonl: poses 2327 tracking 2003 hash 1e58bb28d8b3b8ca pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ2g/ident/rp_mine.jsonl: poses 2327 identical 2327/2327 hash 1e58bb28d8b3b8ca pred 0 first_diff None [] IDENTICAL
+-- r_ref vs r_mine_old
+ref /tmp/integ2g/ident/r_ref.jsonl: poses 2327 tracking 2003 hash d150eca6ccc3119a pred 6069 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ2g/ident/r_mine_old.jsonl: poses 2327 identical 2327/2327 hash d150eca6ccc3119a pred 6239 first_diff None [] IDENTICAL
+-- r_old_new vs r_mine_nogy
+ref /tmp/integ2g/ident/r_old_new.jsonl: poses 2327 tracking 2003 hash 3eb2ed324c921b7a pred 5975 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ2g/ident/r_mine_nogy.jsonl: poses 2327 identical 2327/2327 hash 3eb2ed324c921b7a pred 5983 first_diff None [] IDENTICAL
+-- r60_old_new vs r60_mine_nogy
+ref /tmp/integ2g/ident/r60_old_new.jsonl: poses 2327 tracking 2003 hash 3eb2ed324c921b7a pred 5979 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ2g/ident/r60_mine_nogy.jsonl: poses 2327 identical 2327/2327 hash 3eb2ed324c921b7a pred 5982 first_diff None [] IDENTICAL
+-- r_mine_gyro vs r_mine_gyro_rep
+ref /tmp/integ2g/ident/r_mine_gyro.jsonl: poses 2327 tracking 2003 hash a2f0928b52ec6ad7 pred 5966 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ2g/ident/r_mine_gyro_rep.jsonl: poses 2327 identical 2327/2327 hash a2f0928b52ec6ad7 pred 5974 first_diff None [] IDENTICAL
+-- r_mine_gyro vs r_mine_gyro_explicit
+ref /tmp/integ2g/ident/r_mine_gyro.jsonl: poses 2327 tracking 2003 hash a2f0928b52ec6ad7 pred 5966 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ2g/ident/r_mine_gyro_explicit.jsonl: poses 2327 identical 2327/2327 hash a2f0928b52ec6ad7 pred 6070 first_diff None [] IDENTICAL
+-- r_mine_gyro vs r_old_gyro_explicit
+ref /tmp/integ2g/ident/r_mine_gyro.jsonl: poses 2327 tracking 2003 hash a2f0928b52ec6ad7 pred 5966 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ2g/ident/r_old_gyro_explicit.jsonl: poses 2327 identical 2327/2327 hash a2f0928b52ec6ad7 pred 6084 first_diff None [] IDENTICAL
+-- r_mine_nogy vs r_mine_gyro
+ref /tmp/integ2g/ident/r_mine_nogy.jsonl: poses 2327 tracking 2003 hash 3eb2ed324c921b7a pred 5983 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ2g/ident/r_mine_gyro.jsonl: poses 2327 identical 323/2327 hash a2f0928b52ec6ad7 pred 5966 first_diff 323 ['h'] DIFFERENT
+-- r60_mine_nogy vs r60_mine_gyro
+ref /tmp/integ2g/ident/r60_mine_nogy.jsonl: poses 2327 tracking 2003 hash 3eb2ed324c921b7a pred 5982 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ2g/ident/r60_mine_gyro.jsonl: poses 2327 identical 323/2327 hash a2f0928b52ec6ad7 pred 6094 first_diff 323 ['h'] DIFFERENT
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 rs_postinit=0 ekf_sparse=1 sym_inplace=1 init_gemm=0 gyro_klt=5 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse,gyro_klt=5', prof log -)
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 rs_postinit=0 ekf_sparse=1 sym_inplace=1 init_gemm=0 gyro_klt=5 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse,gyro_klt=5', prof log -)
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 rs_postinit=0 ekf_sparse=1 sym_inplace=1 init_gemm=0 gyro_klt=0 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse', prof log -)
+[ov_bridge] gyro_klt mode 5: frames 2326 (no rotation 0) | pts in 382196 LK ok 380285 (99.50 %) kept 377947 (98.89 %) | fallback 0/0 | predicted shift px mean 9.830 max 90.71
+[ov_bridge] gyro_klt mode 5: LK result - start px mean 1.817 | LK result - old px mean 9.852 (n 380285) | guards: capped pts 131, translation refused frames 4
+[ov_bridge] gyro_klt mode 5: frames 2326 (no rotation 0) | pts in 382196 LK ok 380285 (99.50 %) kept 377947 (98.89 %) | fallback 0/0 | predicted shift px mean 9.830 max 90.71
+[ov_bridge] gyro_klt mode 5: LK result - start px mean 1.817 | LK result - old px mean 9.852 (n 380285) | guards: capped pts 131, translation refused frames 4
+-- refusal checks
+[ov_bridge] --ovopt gyro_klt cannot be used with --pipe 1: gyro_klt reads the filter state (velocity, SLAM depth) after the update of the previous frame, the pipelined tracker runs before that update. Use --pipe 0.
+rc profile+pipe1 2
+[ov_bridge] --pipe 1 is not in this build (ovpipe-20261026 not merged: stalls / deadlock). Use --pipe 0.
+rc profile+nogyro+pipe1 2
+[ov_bridge] --pipe 1 is not in this build (ovpipe-20261026 not merged: stalls / deadlock). Use --pipe 0.
+rc pipe1 alone 2
+Mon Oct 26 08:26:50 KST 2026

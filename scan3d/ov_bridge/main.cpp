@@ -27,8 +27,10 @@
 //   record for 200 ms (feed stopped / bridge hung -> heartbeats stop as before). See mav_out.h hb_run.
 //
 // integ-20261025 (all default off = unchanged):
-// --profile rec20261025: named live profile = --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse --idle-spin 2
-//   (integ2-20261026 added sym_inplace,ekf_sparse; the integ-20261025 profile = add --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol)
+// --profile rec20261025: named live profile = --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse,gyro_klt=5 --idle-spin 2
+//   (integ2-20261026 added sym_inplace,ekf_sparse; user 2026-10-26 morning added gyro_klt=5 (CHANGES poses; profile then refuses
+//   --pipe 1); the integ-20261025 profile = add --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol; profile without gyro = add
+//   --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse)
 //   --idle-spin-ms 20 --drop-late 50 --health 1 --predict 2 --predict-hz 200 --pred-thread 1 (stdio only; user 19:40) (team measurements 2026-10-25, runs/integ_20261025/README.md). Applied before the
 //   other arguments, so any explicit flag overrides its part. Without --profile nothing changes.
 // --pred-thread 1 with --mav-udp / --viop-udp: the prediction thread also sends each of its predictions (frame + 1/HZ
@@ -2700,7 +2702,8 @@ int main(int argc, char **argv) {
     if (std::string(argv[i]) != "--profile") continue;
     const std::string pn = argv[i + 1];
     if (pn == "rec20261025" || pn == "rec60") {  // rec60 = same with idle-spin-ms 0 (60 fps: window > period)
-      a.ovopt = "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse";  // integ2-20261026: + ovupd sym_inplace (exact), ekf_sparse (near-exact)
+      // integ2-20261026: + ovupd sym_inplace (exact), ekf_sparse (near-exact); user 2026-10-26 morning: + gyro_klt=5 (ovgyro, changes poses)
+      a.ovopt = "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse,gyro_klt=5";
       a.idle_spin = 2;
       a.idle_spin_ms = 20.0;
       a.drop_late_ms = 50.0;
