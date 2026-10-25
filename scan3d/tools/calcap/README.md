@@ -42,5 +42,5 @@ cd ~/scanner/StereoDepthSeg-calcap
 `fake_phone.py` (가짜 폰: 알려진 렌즈로 보드를 그려 줌) + `calcap_server.py --fake 127.0.0.1:8812 --fake-dir <dir> --lock-dir ""`.
 
 ## 앱
-arlat 0.6.23-calcap-20261025 (vc 29), `--es mode calcap` (기본 동작은 그대로). 인텐트: fps(10), exp_us(2000), focus_dpt(0.5), port(8811),
+arlat 0.6.24-calcap-20261025 (vc 30; 0.6.23 = vc 29 smoke-tested), `--es mode calcap` (기본 동작은 그대로). 인텐트: fps(10), exp_us(2000), focus_dpt(0.5), port(8811),
 idle_s(300), max_s(1200), max_skin_c(40, 더 낮게만), max_ap_c(50, 더 낮게만). PC 와는 TCP 8811 (PREV/CAP/STAT/MSG/IMG/STOP).

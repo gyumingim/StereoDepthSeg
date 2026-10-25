@@ -124,8 +124,9 @@ public class MainActivity extends Activity {
                 calcap.lostS = Math.max(5, getIntent().getIntExtra("lost_s", 20));
                 calcap.connectGraceS = Math.max(10, getIntent().getIntExtra("connect_grace_s", 90));
                 // overheat guards: may only be made stricter than the defaults (SKIN 40 / AP 50 / battery 42.0 C)
-                calcap.maxSkinC = Math.min(40f, getIntent().getFloatExtra("max_skin_c", 40f));
-                calcap.maxApC = Math.min(50f, getIntent().getFloatExtra("max_ap_c", 50f));
+                float ms = getIntent().getFloatExtra("max_skin_c", 40f), ma = getIntent().getFloatExtra("max_ap_c", 50f);
+                calcap.maxSkinC = Float.isNaN(ms) ? 40f : Math.min(40f, ms);     // NaN would switch the check off
+                calcap.maxApC = Float.isNaN(ma) ? 50f : Math.min(50f, ma);
                 calcap.maxBatteryTenthC = Math.min(420, getIntent().getIntExtra("max_temp_dc", 420));
                 final android.widget.ImageView iv = new android.widget.ImageView(this);
                 iv.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);

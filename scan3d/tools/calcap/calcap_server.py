@@ -355,6 +355,9 @@ def verify_capture(job):
         if len(common):
             a = c1[[list(i1).index(k) for k in common]]; b2 = c2[[list(i2).index(k) for k in common]]
             motion = float(np.max(np.linalg.norm(a - b2, axis=1)))
+    if motion is not None and motion > 3.0:        # stills must come from one still pose (verifier finding 2026-10-25)
+        ok = False
+        reasons.append(f"사진 사이 움직임 {motion:.1f} px > 3 px")
     rec = dict(cap=job["cap"], slot=slot["id"], label=slot["label"], phone_dir=job["remote_dir"], dir=sess,
                files=[f"{sess}/{n}" for n in job["files"]], preview_pose=job["pose"], still_poses=poses, ok=bool(ok),
                why=reasons, motion_px=motion, t=time.strftime("%Y-%m-%d %H:%M:%S"), pull_s=round(time.time() - t0, 1))

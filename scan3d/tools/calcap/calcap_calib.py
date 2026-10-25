@@ -132,8 +132,8 @@ def run_model(views, caps, model, rng, n_split=30):
     pass_pp = (np.maximum(hv[:, 1], hv[:, 2]) <= PP_TOL_PX) if len(hv) else np.zeros(0, bool)
     # groups: fx when only that group is used (small groups -> less certain)
     groups = {}
-    for gname, sel in (("near<0.95m", lambda v: v["dist"] is not None and v["dist"] < SL.DSPLIT),
-                       ("far>=0.95m", lambda v: v["dist"] is not None and v["dist"] >= SL.DSPLIT),
+    for gname, sel in ((f"near<{SL.DSPLIT}m", lambda v: v["dist"] is not None and v["dist"] < SL.DSPLIT),
+                       (f"far>={SL.DSPLIT}m", lambda v: v["dist"] is not None and v["dist"] >= SL.DSPLIT),
                        ("tilt<=25", lambda v: v["tilt"] is not None and v["tilt"] <= 25),
                        ("tilt>25", lambda v: v["tilt"] is not None and v["tilt"] > 25)):
         g = [v for v in vs if sel(v)]
@@ -218,7 +218,7 @@ def main():
     log(f"판정({main_m}): {verdict}. 이 값은 config/lens 에 자동으로 넣지 않음 (사람이 확인 후 결정).")
     res["verdict"] = verdict
     json.dump(res, open(os.path.join(out, f"calib_{a.tag}.json"), "w"), indent=1, default=lambda o: o.tolist() if hasattr(o, "tolist") else str(o))
-    cand = dict(K=r["K"], dist=(r["dist"] + [0.0] * 5)[:5], focus_dpt=0.5, model="k1k2p", fit=main_m, rms_px=r["rms_px"],
+    cand = dict(K=r["K"], dist=(r["dist"] + [0.0] * 5)[:5], focus_dpt=0.5, model="k1k2p (radtan; p1 p2 k3 = 0 for k12_notan)", fit=main_m, rms_px=r["rms_px"],
                 n_views=r["n_views"], n_captures=r["n_caps"], status="candidate (calcap, not installed)", verdict=verdict,
                 source=res["sets"], made=res["made"],
                 stream="std60/VIO 1920x1080 YUV, TEMPLATE_RECORD, focus 0.5 dpt, 2 ms, ISO auto once (calcap stills at 10 fps)")

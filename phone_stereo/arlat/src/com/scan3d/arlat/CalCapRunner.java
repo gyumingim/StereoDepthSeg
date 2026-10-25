@@ -86,6 +86,7 @@ class CalCapRunner {
     private HandlerThread camTh, tickTh;
     private Handler camH, tickH;
     private CameraDevice dev;
+    private final Object devLock = new Object();
     private CameraCaptureSession sess;
     private ImageReader reader;
     private AutoIso autoRes;
@@ -169,8 +170,10 @@ class CalCapRunner {
         reader.setOnImageAvailableListener(this::onImage, camH);
         cm.openCamera("0", new CameraDevice.StateCallback() {
             @Override public void onOpened(CameraDevice d) {
-                if (!running) { d.close(); return; }
-                dev = d;
+                synchronized (devLock) {          // stop() on the UI thread must see dev (verifier: close race)
+                    if (!running) { d.close(); return; }
+                    dev = d;
+                }
                 if (autoIso && iso <= 0 && expUs > 0) {
                     show(0xFF333333, "카메라 켜는 중 (밝기 측정)…");
                     AutoIso a = new AutoIso();
@@ -538,12 +541,12 @@ class CalCapRunner {
     private void show(int bg, String text) { if (screen != null) screen.show(bg, text); }
 
     void stop() {
-        if (!running) return;
+        if (!running) { try { if (tempsW != null) tempsW.close(); } catch (Exception ignored) { } return; }
         running = false;
         if (stopReason.isEmpty()) stopReason = "activity paused/finished";
         try { if (sess != null) sess.close(); } catch (Exception ignored) { }
-        try { if (dev != null) dev.close(); } catch (Exception ignored) { }
-        sess = null; dev = null;
+        synchronized (devLock) { try { if (dev != null) dev.close(); } catch (Exception ignored) { } dev = null; }
+        sess = null;
         try { if (srv != null) srv.close(); } catch (Exception ignored) { }
         try { Socket c = cli; if (c != null) c.close(); } catch (Exception ignored) { }
         try { if (srvT != null) srvT.join(1500); } catch (InterruptedException ignored) { }
