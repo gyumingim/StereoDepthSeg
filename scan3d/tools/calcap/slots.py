@@ -4,15 +4,17 @@ All pixel numbers are in FULL-RES 1920x1080 image units (the VIO stream). Shared
 the 960x540 preview), calcap_calib.py (re-check on the saved stills) and make_dry_set.py (synthetic test set).
 
 Slot = (where the board's inner corners sit in the image) x (board tilt) x (distance bin):
-  F-<pos>       frontal (tilt <= 12 deg) at 9 positions (C, T, B, L, R, TL, TR, BL, BR), distance 0.55-1.35 m
-  T20-<ax><s>-<near|far>  centre, ~20 deg (14-30) turn+/turn-/lean+/lean- (other axis <= 12), near 0.55-0.95 / far 0.95-1.35
+  F-<pos>       frontal (tilt <= 12 deg) at 9 positions (C, T, B, L, R, TL, TR, BL, BR), distance 0.40-1.20 m
+  T20-<ax><s>-<near|far>  centre, ~20 deg (14-30) turn+/turn-/lean+/lean- (other axis <= 12), near 0.40-0.70 / far 0.70-1.20
   T40-<ax><s>   centre, ~40 deg (32-55) turn+/-, lean+/-  (other axis <= 15)
   E40-<pos>-<ax><s>  edges: L/R with turn+/-, T/B with lean+/-  (~40 deg)
   K40-<pos>     corners TL/TR/BL/BR, tilt 30-55 in any direction
 Position: centre of the detected-corner bounding box in the 3x3 grid (thirds of 1920 / 1080); every non-centre position
 must also reach the named frame edge(s): gap between the corner bbox and that edge <= EDGE_PX.
-Distance window: 0.55-1.35 m (focus 0.5 dpt; estimated depth of field ~0.9 m..inf, so near shots are slightly soft -
-the calibration report splits fx by distance bin to show any effect).
+Distance window: 0.40-1.20 m. The laptop 5x3 board is small: synthetic fits (fake_phone, same 33 slots) gave fx sd 0.27 %
+with targets at ~0.85 m but 0.10 % (error 0.03 %) at ~0.5 m, so the targets are close. Focus 0.5 dpt: depth of field is
+estimated ~0.9 m..inf, so close shots are soft (not modelled in the synthetic test) - the calibration report splits fx by
+distance bin to show any effect.
 turn = atan2(n_x, |n_z|), lean = atan2(n_y, |n_z|), tilt = acos(|n_z|) with n = board normal in camera axes
 (same convention as the old board server shoot_server.py).
 """
@@ -26,7 +28,7 @@ import numpy as np
 W, H = 1920, 1080
 EDGE_PX = 250
 GOAL_GAP = 150.0      # target outline: inner-corner bbox this far from the named edges
-DMIN, DMAX, DSPLIT = 0.55, 1.35, 0.95
+DMIN, DMAX, DSPLIT = 0.40, 1.20, 0.70   # 2026-10-25 21:00: closer (synthetic: fx sd 0.27 % at ~0.85 m -> 0.10 % at 0.5 m)
 POS_NAME = {"C": "가운데", "T": "위 가장자리", "B": "아래 가장자리", "L": "왼쪽 가장자리", "R": "오른쪽 가장자리",
             "TL": "왼쪽 위 귀퉁이", "TR": "오른쪽 위 귀퉁이", "BL": "왼쪽 아래 귀퉁이", "BR": "오른쪽 아래 귀퉁이"}
 AX_NAME = {"turn": "좌우로 돌림", "lean": "앞뒤로 젖힘"}
@@ -201,7 +203,7 @@ def target_pose(slot):
     elif k == "K40":
         turn = 30.0 * (1 if "L" in slot["pos"] else -1)
         lean = 28.0 * (1 if "T" in slot["pos"] else -1)
-    d = 0.75 if slot.get("dbin") == "near" else (1.15 if slot.get("dbin") == "far" else 0.85)
+    d = 0.5 if slot.get("dbin") == "near" else (0.9 if slot.get("dbin") == "far" else 0.55)
     return turn, lean, d
 
 
