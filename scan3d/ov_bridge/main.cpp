@@ -113,6 +113,8 @@
 // --klt-overlap 0|1 (2026-10-24, default 0): sets OV_KLT_OVERLAP for the patched TrackKLT (ovpatch/TrackKLT.cpp: FAST
 //   top-off on the last frame runs in parallel with the current frame's histogram + pyramid; identical output).
 //   0 = upstream TrackKLT code path (default: on the S24 the overlap was not faster, klt_bench 2026-10-24).
+// --klt-pyr N (2026-10-25, ovheat, default 0 = off = upstream 5 levels): KLT pyramid levels (env OV_KLT_PYR for the
+//   patched TrackKLT). CHANGES results. Speed/accuracy study: runs/ovheat_20261025/README.md.
 //
 // --cpus LIST (2026-10-24, arlat 0.6.14 intent cpus): e.g. 7,8,9 or 7-9. sched_setaffinity at the very start of main (before
 //   OpenVINS / OpenCV create any thread, so all later threads inherit it) and again for every /proc/self/task thread;
@@ -236,6 +238,7 @@ struct Args {
   std::string cpus;         // --cpus LIST ("" = no pinning)
   int threads = 0;          // --threads N (0 = config num_opencv_threads)
   int klt_overlap = 0;      // --klt-overlap 0|1 (OV_KLT_OVERLAP for ovpatch/TrackKLT.cpp)
+  int klt_pyr = 0;          // --klt-pyr N (2026-10-25 ovheat; OV_KLT_PYR for ovpatch/TrackKLT.cpp; 0 = upstream 5 levels)
   int idle_spin = 0;        // --idle-spin 0|1|2 (header)
   int predict = 0;          // --predict 0|1|2 (header)
   double predict_hz = 100.0;  // --predict-hz (mode 2)
@@ -2060,7 +2063,7 @@ void usage() {
                "                 [--max-speed M_S] [--lost-frames N] [--startup-lost-frames N] [--auto-reset] [--emit-features N]\n"
                "                 [--imu-hold S] [--reinit-state] [--reinit-max-gap S] [--reinit-sigma ORI_DEG,POS_M,VEL_M_S] [--remap FILE]\n"
                "                 [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST] [--threads N]\n"
-               "                 [--klt-overlap 0|1] [--idle-spin 0|1|2|3] [--idle-spin-ms W] [--predict 0|1|2] [--predict-hz HZ]\n"
+               "                 [--klt-overlap 0|1] [--klt-pyr N] [--idle-spin 0|1|2|3] [--idle-spin-ms W] [--predict 0|1|2] [--predict-hz HZ]\n"
                "                 [--ovopt LIST] [--prof-log FILE] [--pose-precision N] [--drop-late MS]\n"
                "                 [--pred-thread 0|1] [--imu-log FILE]\n");
 }
@@ -2107,6 +2110,7 @@ int main(int argc, char **argv) {
     else if (s == "--cpus") a.cpus = next();
     else if (s == "--threads") a.threads = std::max(0, std::stoi(next()));
     else if (s == "--klt-overlap") a.klt_overlap = std::stoi(next()) != 0 ? 1 : 0;
+    else if (s == "--klt-pyr") a.klt_pyr = std::max(0, std::min(8, std::stoi(next())));  // 2026-10-25 ovheat
     else if (s == "--idle-spin") {
       a.idle_spin = std::stoi(next());
       if (a.idle_spin < 0 || a.idle_spin > 3) {
@@ -2247,6 +2251,8 @@ int main(int argc, char **argv) {
 
   // --klt-overlap: read once by ovpatch/TrackKLT.cpp at the first camera frame
   ::setenv("OV_KLT_OVERLAP", a.klt_overlap ? "1" : "0", 1);
+  // --klt-pyr (2026-10-25, ovheat): read once by ovpatch/TrackKLT.cpp; only set when given (unset = upstream levels)
+  if (a.klt_pyr > 0) ::setenv("OV_KLT_PYR", std::to_string(a.klt_pyr).c_str(), 1);
 
   // --cpus: pin before any thread exists (Bridge / OpenVINS / OpenCV threads inherit it)
   if (!a.cpus.empty()) {

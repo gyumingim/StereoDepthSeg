@@ -1,0 +1,33 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol', prof log -)
+[ov_bridge] affinity start: (not pinned) threads 30606:ov_bridge_ovhea=0,1,2,3,4,5,6,7,8,9
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 2 -> 2 | TBB (ver 2021.11 interface 12110) | cpus 10 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /data/local/tmp/replay/remap_1920x1080.bin
+[ov_bridge] affinity ready: (not pinned) threads 30606:ov_bridge_ovhea=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin: mode 2 (pool) stripes 2 max 200 ms window 15.0 ms
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] affinity cam300: (not pinned) threads 30606:ov_bridge_ovhea=0,1,2,3,4,5,6,7,8,9 30610:ov_bridge_ovhea=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 6434 spun 2518 timeouts 1 spin 4.51 s | exit_us n 2517 p50 2.5 p95 8.6 p99 45.3 max 6415.0 | window 15.0 ms period 36.47 ms blocked 2261 (4.83 s)
+[ov_bridge] drop-late: frame t=39.131 100.0 ms late (> 100.0) -> skipped (#1)
+[ov_bridge] drop-late: frame t=39.631 101.2 ms late (> 100.0) -> skipped (#2)
+[ov_bridge] drop-late: frame t=39.798 103.3 ms late (> 100.0) -> skipped (#3)
+[ov_bridge] drop-late: frame t=40.032 106.8 ms late (> 100.0) -> skipped (#4)
+[ov_bridge] drop-late: frame t=40.232 102.9 ms late (> 100.0) -> skipped (#5)
+[ov_bridge] drop-late: frame t=40.699 102.4 ms late (> 100.0) -> skipped (#6)
+[ov_bridge] drop-late: frame t=41.066 102.9 ms late (> 100.0) -> skipped (#7)
+[ov_bridge] drop-late: frame t=41.267 105.6 ms late (> 100.0) -> skipped (#8)
+[ov_bridge] drop-late: frame t=41.463 109.7 ms late (> 100.0) -> skipped (#9)
+[ov_bridge] drop-late: frame t=41.997 102.0 ms late (> 100.0) -> skipped (#10)
+[ov_bridge] drop-late: frame t=42.097 124.1 ms late (> 100.0) -> skipped (#11)
+[ov_bridge] drop-late: frame t=42.164 114.7 ms late (> 100.0) -> skipped (#12)
+[ov_bridge] drop-late: frame t=42.230 109.2 ms late (> 100.0) -> skipped (#13)
+[ov_bridge] drop-late: frame t=42.331 110.5 ms late (> 100.0) -> skipped (#14)
+[ov_bridge] drop-late: frame t=42.464 109.4 ms late (> 100.0) -> skipped (#15)
+[ov_bridge] drop-late: frame t=42.598 104.2 ms late (> 100.0) -> skipped (#16)
+[ov_bridge] drop-late: frame t=42.664 297.9 ms late (> 100.0) -> skipped (#17)
+[ov_bridge] drop-late: frame t=42.698 277.3 ms late (> 100.0) -> skipped (#18)
+[ov_bridge] drop-late: frame t=42.731 249.3 ms late (> 100.0) -> skipped (#19)
+[ov_bridge] drop-late: frame t=42.764 221.9 ms late (> 100.0) -> skipped (#20)
+[ov_bridge] affinity end: (not pinned) threads 30606:ov_bridge_ovhea=0,1,2,3,4,5,6,7,8,9 30610:ov_bridge_ovhea=0,1,2,3,4,5,6,7,8,9 31096:ov_bridge_ovhea=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 43309 spun 11272 timeouts 1 spin 18.21 s | exit_us n 11271 p50 2.0 p95 5.0 p99 15.1 max 6415.0 | window 15.0 ms period 35.97 ms blocked 2834 (5.95 s)
+[ov_bridge] drop-late: limit 100.0 ms | dropped 81 frames | min lag 92773530.0 ms

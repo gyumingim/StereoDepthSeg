@@ -58,7 +58,22 @@ static bool scan3d_klt_overlap_on() {
   return on;
 }
 
+// ---- scan3d patch (2026-10-25, ovheat): KLT pyramid levels ----
+// env OV_KLT_PYR=N (ov_bridge --klt-pyr N, 1..5): number of pyramid levels for buildOpticalFlowPyramid + LK (upstream
+// member pyr_levels = 5). Unset / 0 = upstream value unchanged (default). CHANGES results when set (other LK levels).
+static int scan3d_klt_pyr() {
+  static const int n = [] {
+    const char *e = std::getenv("OV_KLT_PYR");
+    int v = e ? std::atoi(e) : 0;
+    if (v < 0 || v > 8) v = 0;
+    if (v > 0) std::fprintf(stderr, "[ovpatch] TrackKLT pyramid levels %d (OV_KLT_PYR=%s)\n", v, e);
+    return v;
+  }();
+  return n;
+}
+
 void TrackKLT::feed_new_camera(const CameraData &message) {
+  if (scan3d_klt_pyr() > 0) pyr_levels = scan3d_klt_pyr();  // scan3d ovheat patch (default off = upstream 5)
 
   // Error check that we have all the data
   if (message.sensor_ids.empty() || message.sensor_ids.size() != message.images.size() || message.images.size() != message.masks.size()) {
