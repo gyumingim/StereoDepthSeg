@@ -253,6 +253,40 @@ def adb_reverse(adb, serial, phone_port, stream_port):
     return ok, out
 
 
+TEMP = {"t": None}      # phone temperatures, polled by ThermalPoller (2026-10-25: shown on the page)
+
+
+class ThermalPoller(threading.Thread):
+    """Every 5 s: SKIN / AP from the 'Current temperatures from HAL' section, thermal status, battery temperature."""
+    def __init__(self, adb, serial):
+        super().__init__(daemon=True)
+        self.adb, self.serial = adb, serial
+
+    def run(self):
+        import re
+        while True:
+            row = {"t": time.time()}
+            try:
+                cmd = [self.adb] + (["-s", self.serial] if self.serial else []) + [
+                    "shell", "dumpsys thermalservice; dumpsys battery | grep -E 'temperature:|AC powered:|USB powered:'"]
+                out = subprocess.run(cmd, capture_output=True, text=True, timeout=8,
+                                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
+                cur = out.split("Current temperatures from HAL")[-1].split("Temperature static thresholds")[0]
+                for name in ("SKIN", "AP"):
+                    m = re.findall(r"mValue=([0-9.]+), mType=\d+, mName=" + name + r"\b", cur)
+                    row[name.lower()] = float(m[-1]) if m else None
+                m = re.search(r"Thermal Status: (\d+)", out)
+                row["status"] = int(m.group(1)) if m else None
+                m = re.search(r"^\s*temperature: (\d+)", out, re.M)
+                row["battery"] = int(m.group(1)) / 10 if m else None
+                row["charging"] = bool(re.search(r"(AC|USB) powered: true", out))
+            except Exception as e:
+                row["error"] = str(e)[:100]
+            TEMP.clear()
+            TEMP.update(row)
+            time.sleep(5)
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
@@ -281,6 +315,8 @@ class Handler(BaseHTTPRequestHandler):
                 since = int(qs.get("since", ["0"])[0] or 0)
                 sid = int(qs.get("sid", ["-1"])[0] or -1)
                 return self.send(200, hub.state(since, sid))
+            if u.path == "/api/temp":
+                return self.send(200, dict(TEMP))
             if u.path == "/api/new":
                 hub.new_session(qs.get("tag", [""])[0])
                 log("new session", hub.sid, hub.tag)
@@ -344,6 +380,8 @@ button{font:inherit;font-size:12px;background:var(--panel);color:var(--fg);borde
  <div class="st"><span>이동 경로 길이</span><b id="s_len">-</b></div>
  <div class="st"><span>시작점에서 거리</span><b id="s_dist">-</b></div>
  <div class="st"><span>현재 위치 x, y, z</span><b id="s_xyz" style="font-size:14px">-</b></div>
+ <div class="st"><span>폰 표면 온도 (시작 &lt;36 · 중단 45)</span><b id="s_skin">-</b></div>
+ <div class="st"><span>칩(AP) / 배터리 온도</span><b id="s_ap" style="font-size:14px">-</b></div>
 </div>
 <div class="views">
  <div class="card"><h2>위에서 본 경로 (x-y, 격자 1 m)</h2><canvas id="top"></canvas></div>
@@ -416,6 +454,13 @@ async function poll(){if(busy)return;busy=true;try{
  if(j.sid!==sid||j.since===0&&P.length&&j.since!==P.length){sid=j.sid;P=[]}
  if(j.since===P.length)P=P.concat(j.poses);S=j;show();draw();
 }catch(e){txt("conn","서버 응답 없음")}finally{busy=false}}
+async function temp(){try{const t=await (await fetch("/api/temp",{cache:"no-store"})).json();const e=document.getElementById("s_skin");
+ if(t.skin==null){e.textContent="-";e.style.color="";txt("s_ap","폰 응답 없음");return}
+ e.textContent=t.skin.toFixed(1)+" °C"+(t.skin<36?" 시작 가능":t.skin<45?" 식히는 중":" 중단");
+ e.style.color=t.skin<36?C("--tr"):t.skin<45?C("--oth"):C("--lost");
+ txt("s_ap",fmt(t.ap,1," °C")+" / "+fmt(t.battery,1," °C")+(t.charging?" · 충전 중":"")+(t.status!=null?" · 발열 단계 "+t.status:""));
+}catch(e){}}
+setInterval(temp,5000);temp();
 setInterval(poll,100);poll();window.addEventListener("resize",draw);
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change",draw);
 </script></body></html>
@@ -441,6 +486,8 @@ def main():
     hs = HttpServer((a.host, a.port), Handler)
     hs.hub, hs.cfg = hub, a
     threading.Thread(target=ss.serve_forever, daemon=True).start()
+    if a.serial:
+        ThermalPoller(a.adb, a.serial).start()
     log(f"ov_live_view: page http://{a.host}:{a.port}  stream 127.0.0.1:{a.stream_port}  files {RUNS}")
     if not a.no_reverse:
         threading.Thread(target=adb_reverse, args=(a.adb, a.serial, a.phone_port, a.stream_port), daemon=True).start()
