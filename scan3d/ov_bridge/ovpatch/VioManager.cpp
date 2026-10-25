@@ -291,6 +291,11 @@ void VioManager::track_image_and_update(const ov_core::CameraData &message_const
   {
     ovopt::Scope prof_scope(ovopt::S_TRACK);
     trackFEATS->feed_new_camera(message);
+    {  // scan3d health (ovrobust): ids tracked on cam0 after this frame (read only)
+      auto ids = trackFEATS->get_last_ids();
+      auto it_ids = ids.find(message.sensor_ids.at(0));
+      ovopt::h.tracked = it_ids == ids.end() ? 0 : (long)it_ids->second.size();
+    }
 
     // If the aruco tracker is available, the also pass to it
     // NOTE: binocular tracking for aruco doesn't make sense as we by default have the ids

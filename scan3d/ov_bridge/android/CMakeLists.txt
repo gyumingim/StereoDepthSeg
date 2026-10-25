@@ -48,7 +48,7 @@ add_executable(ov_bridge
   ${S}/ov_init/src/init/InertialInitializer.cpp ${S}/ov_init/src/dynamic/DynamicInitializer.cpp
   ${S}/ov_init/src/static/StaticInitializer.cpp
   ${S}/ov_msckf/src/state/State.cpp ../ovpatch/StateHelper.cpp ${S}/ov_msckf/src/state/Propagator.cpp
-  ../ovpatch/VioManager.cpp ${S}/ov_msckf/src/core/VioManagerHelper.cpp
+  ../ovpatch/VioManager.cpp ../ovpatch/VioManagerHelper.cpp
   ${S}/ov_msckf/src/update/UpdaterHelper.cpp ../ovpatch/UpdaterMSCKF.cpp
   ../ovpatch/UpdaterSLAM.cpp ${S}/ov_msckf/src/update/UpdaterZeroVelocity.cpp)
 # ARUCO off on the phone (OpenCV SDK has no contrib aruco); bridge and library see the same macro since both compile here.

@@ -7,6 +7,7 @@
 namespace ovopt {
 
 Flags g;
+Health h;  // 2026-10-25 ovrobust health counters
 double prof_ms[N_SLOTS] = {0};
 long prof_cnt[N_COUNTS] = {0};
 

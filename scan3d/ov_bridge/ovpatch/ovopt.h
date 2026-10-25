@@ -37,8 +37,28 @@ struct Flags {
   int par_cov = 0;     // StateHelper::EKFUpdate: covariance update split in 2 balanced parts on the OpenCV pool
   // --- profiling ---
   int prof = 0;        // per-stage timers (ov_bridge --prof-log FILE)
+  // --- behaviour (2026-10-25, branch ovrobust; NOT part of --ovopt / all_exact; set by ov_bridge --init-still) ---
+  int init_still = 0;  // VioManagerHelper::try_to_initialize: wait_for_jerk = false with ZUPT off (static init while still)
 };
 extern Flags g;
+
+// ---- health counters (2026-10-25, branch ovrobust; ov_bridge --health / --health-log / --recover) ----
+// Always counted (a few integer adds per frame, no floating point, no state access): which features went into each
+// update and how many survived. ov_bridge resets them before every fed frame and reads them after it. Only the serial
+// parts of the updaters touch them (entry / after triangulation / after the chi2 loop), so par_* options do not race.
+struct Health {
+  long tracked = -1;    // VioManager: trackFEATS ids on cam0 after feed_new_camera (-1 = not set this frame)
+  long msckf_in = 0;    // UpdaterMSCKF::update: features in
+  long msckf_tri = 0;   //   after clean + triangulation (= candidates for the chi2 test)
+  long msckf_used = 0;  //   after the chi2 test (stacked into the update)
+  long slam_in = 0;     // UpdaterSLAM::update: SLAM features in (all chunks)
+  long slam_clean = 0;  //   after measurement cleaning (= chi2 candidates)
+  long slam_used = 0;   //   after the chi2 test
+  long delay_in = 0;    // UpdaterSLAM::delayed_init: features in
+  long delay_ok = 0;    //   initialized as SLAM landmarks
+};
+extern Health h;
+inline void health_reset() { h = Health(); }
 
 // parse "a,b,c" (names of the int fields above, "name=N" for a value, "all_exact" = every exact option);
 // returns false and sets err on an unknown name
