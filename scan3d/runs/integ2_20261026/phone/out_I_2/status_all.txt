@@ -1,0 +1,31 @@
+start 05:52:07 list I_1.txt skin_max_start 36.0 ap_max_start 50.0
+05:52:07 d_m0 run bin ov_bridge_integ2 cfg c4 thr 2 feed f3v:45:25:400:2 in /data/local/tmp/replay/raw80.bin extra '--profile rec20261025 --drop-late-mode 0 --viop-udp 127.0.0.1:14990 --viop-log out/d_m0/viop.csv' SKIN 29.6 AP 29.8 cpu9_cap 2304000 screen Dozing fg NotificationShade
+05:52:58 d_m0 done SKIN 31.9 max 31.9 aborted 0
+05:52:59 d_m1 run bin ov_bridge_integ2 cfg c4 thr 2 feed f3v:45:25:400:2 in /data/local/tmp/replay/raw80.bin extra '--profile rec20261025 --viop-udp 127.0.0.1:14991 --viop-log out/d_m1/viop.csv' SKIN 31.9 AP 38.6 cpu9_cap 2304000 screen Dozing fg NotificationShade
+05:53:49 d_m1 done SKIN 33.3 max 33.3 aborted 0
+05:53:50 t_N_r1 run bin ov_bridge_integ2 cfg c4 thr 2 feed f4 in /data/local/tmp/replay/raw80.bin extra '--profile rec20261025 --prof-log out/t_N_r1/prof.csv' SKIN 33.3 AP 41.2 cpu9_cap 2304000 screen Dozing fg NotificationShade
+05:55:35 t_N_r1 done SKIN 33.7 max 33.9 aborted 0
+05:55:36 t_O_r1 run bin ov_bridge_integ2 cfg c4 thr 2 feed f4 in /data/local/tmp/replay/raw80.bin extra '--profile rec20261025 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --prof-log out/t_O_r1/prof.csv' SKIN 33.7 AP 37.8 cpu9_cap 2304000 screen Dozing fg NotificationShade
+05:57:17 t_O_r1 done SKIN 34.5 max 34.5 aborted 0
+05:57:18 t_O_r2 run bin ov_bridge_integ2 cfg c4 thr 2 feed f4 in /data/local/tmp/replay/raw80.bin extra '--profile rec20261025 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --prof-log out/t_O_r2/prof.csv' SKIN 34.5 AP 39.2 cpu9_cap 2304000 screen Dozing fg NotificationShade
+05:58:50 t_O_r2 done SKIN 35.6 max 35.9 aborted 0
+05:58:51 t_N_r2 run bin ov_bridge_integ2 cfg c4 thr 2 feed f4 in /data/local/tmp/replay/raw80.bin extra '--profile rec20261025 --prof-log out/t_N_r2/prof.csv' SKIN 35.6 AP 40.6 cpu9_cap 2304000 screen Dozing fg NotificationShade
+06:00:19 t_N_r2 done SKIN 36.6 max 36.7 aborted 0
+ALL DONE 06:00:19 I_1.txt
+no bridge/feeder left
+start 06:04:20 list I_2.txt skin_max_start 36.0 ap_max_start 50.0
+06:04:20 t2_N_r1 run bin ov_bridge_integ2 cfg c4 thr 2 feed f4 in /data/local/tmp/replay/raw80.bin extra '--profile rec20261025 --drop-late 0 --prof-log out/t2_N_r1/prof.csv' SKIN 33.4 AP 34.6 cpu9_cap 2304000 screen Dozing fg NotificationShade
+06:05:53 t2_N_r1 done SKIN 36.0 max 36.0 aborted 0
+06:05:53 t2_O_r1 wait SKIN 36.0 AP 42.6 screen Dozing fg NotificationShade
+06:06:09 t2_O_r1 run bin ov_bridge_integ2 cfg c4 thr 2 feed f4 in /data/local/tmp/replay/raw80.bin extra '--profile rec20261025 --drop-late 0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --prof-log out/t2_O_r1/prof.csv' SKIN 35.5 AP 38.3 cpu9_cap 2304000 screen Dozing fg NotificationShade
+06:07:36 t2_O_r1 done SKIN 36.6 max 36.8 aborted 0
+06:07:36 t2_O_r2 wait SKIN 36.6 AP 42.3 screen Dozing fg NotificationShade
+06:07:52 t2_O_r2 wait SKIN 36.2 AP 38.8 screen Dozing fg NotificationShade
+06:08:08 t2_O_r2 run bin ov_bridge_integ2 cfg c4 thr 2 feed f4 in /data/local/tmp/replay/raw80.bin extra '--profile rec20261025 --drop-late 0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --prof-log out/t2_O_r2/prof.csv' SKIN 35.8 AP 38.0 cpu9_cap 2016000 screen Dozing fg NotificationShade
+06:09:38 t2_O_r2 done SKIN 36.5 max 36.6 aborted 0
+06:09:39 t2_N_r2 wait SKIN 36.5 AP 41.1 screen Dozing fg NotificationShade
+06:10:01 t2_N_r2 wait SKIN 36.0 AP 38.4 screen Dozing fg NotificationShade
+06:10:16 t2_N_r2 run bin ov_bridge_integ2 cfg c4 thr 2 feed f4 in /data/local/tmp/replay/raw80.bin extra '--profile rec20261025 --drop-late 0 --prof-log out/t2_N_r2/prof.csv' SKIN 35.7 AP 37.8 cpu9_cap 2208000 screen Dozing fg NotificationShade
+06:11:45 t2_N_r2 done SKIN 36.8 max 36.8 aborted 0
+ALL DONE 06:11:45 I_2.txt
+no bridge/feeder left
