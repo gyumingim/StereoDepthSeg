@@ -1,0 +1,177 @@
+{
+ "run": "/home/system/scanner/StereoDepthSeg-ovrobust/scan3d/runs/ovrobust_20261025/live/run_20261025_163232_main30_c4",
+ "made": "2026-10-25 16:34:10",
+ "script": "scan3d/tools/ov_phone_timing.py",
+ "inputs": [
+  "frame_2.y",
+  "poses.csv",
+  "preflight.txt",
+  "bridge_timing.csv",
+  "kalibr_imu_chain.yaml",
+  "kalibr_imucam_chain.yaml",
+  "frame_0.y",
+  "meta.json",
+  "estimator_config.yaml",
+  "frame_1.y",
+  "events.jsonl",
+  "writes.csv",
+  "frames.csv",
+  "bridge_stderr.log",
+  "temps.csv",
+  "ov_timing.txt",
+  "thermal_pc.txt",
+  "frame_3.y"
+ ],
+ "budget_ms": 16.7,
+ "fps": 30.0,
+ "only_initialised": true,
+ "meta": {
+  "app_version": "ov-20261025-imuprio",
+  "cam": "main",
+  "size": "1920x1080",
+  "fps": 30,
+  "cfg": "c4",
+  "preset": "bench",
+  "imu": "uncalibrated types 35/16 (values 0..2)",
+  "exp_us": 2000,
+  "iso": 0,
+  "focus_dpt": 0.5,
+  "yuv_min_frame_duration_ns": 16665880,
+  "first_result": "exp_ns 2000000 skew_ns 6540750 iso 1617 focus 0.49865365 frame_duration_ns 33333000 crop 0 0 4080 3060 dc null ois 0",
+  "stop_reason": "user (guide end 74 s)",
+  "secs": 76.741747579,
+  "bridge_exit": "0",
+  "device": "SM-S921N",
+  "perf": {
+   "sustained_mode_supported": false,
+   "sustained_mode_set": false,
+   "perf_on": true,
+   "hint_ms": 0,
+   "cpus": "off",
+   "ov_threads": "config",
+   "klt_overlap": 0,
+   "ov_idle_spin": 2,
+   "ov_predict": 0,
+   "ov_predict_hz": 100,
+   "ov_opt": "",
+   "ov_prof": 0,
+   "idle_spin_ms": 0,
+   "spin_wfe": 0,
+   "drop_late_ms": 0,
+   "imu_prio": 0,
+   "pred_thread": 0,
+   "imu_log": 0,
+   "bridge_pid": 2097,
+   "sdk": 36,
+   "prio_imu": "tid 2101 set -8 ok -> -8",
+   "prio_writer": "tid 2099 set -8 ok -> -8",
+   "prio_reader": "tid 2100 set -8 ok -> -8",
+   "prio_cam": "tid 2102 set -8 ok -> -8",
+   "bridge_cv_threads": 2,
+   "bridge_cv_parallel": "TBB (ver 2021.11 interface 12110)",
+   "bridge_klt_overlap": 0,
+   "bridge_idle_spin": 2,
+   "bridge_idle_spin_stripes": 2,
+   "bridge_predict": 0,
+   "bridge_predict_hz": 100,
+   "bridge_prio": "pid 2097 threads 3 new 3 set ok 3 fail 0 read back 2097:-8 2190:-8 2251:-8",
+   "bridge_affinity": "2097:libov_bridge.so=0-9 2190:libov_bridge.so=0-9 2251:libov_bridge.so=0-9",
+   "app_affinity": "2099:ov-writer=0-9 2100:ov-reader=0-9 2101:imu=0-9 2102:cam=0-9",
+   "hint_preferred_rate_ns": 166666660,
+   "hint": "app+bridge 7 tids",
+   "hint_target_ns": 33333333,
+   "hint_tids": "[2099, 2100, 2101, 2102, 2097, 2251, 2190] (app [2099, 2100, 2101, 2102])",
+   "bridge_prio_refresh": "pid 2097 threads 3 new 0 set ok 0 fail 0 read back ",
+   "hint_reports": 2194,
+   "hint_report_errors": 0
+  }
+ },
+ "frames_fed": 2223,
+ "frames_initialised": 0,
+ "t_init_s": null,
+ "bridge_affinity": [
+  "[ov_bridge] affinity start: (not pinned) threads 2097:libov_bridge.so=0,1,2,3,4,5,6,7,8,9",
+  "[ov_bridge] affinity ready: (not pinned) threads 2097:libov_bridge.so=0,1,2,3,4,5,6,7,8,9",
+  "[ov_bridge] affinity cam300: (not pinned) threads 2097:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 2190:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 2251:libov_bridge.so=0,1,2,3,4,5,6,7,8,9",
+  "[ov_bridge] affinity end: (not pinned) threads 2097:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 2190:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 2251:libov_bridge.so=0,1,2,3,4,5,6,7,8,9"
+ ],
+ "segments": {
+  "all": {
+   "t0": 0.0,
+   "t1": 74.071539711,
+   "frames": 0,
+   "fed_fps": null,
+   "per_frame_ms": {
+    "n": 0
+   },
+   "feed_ms": {
+    "n": 0
+   },
+   "remap_ms": {
+    "n": 0
+   },
+   "wait_ms": {
+    "n": 0
+   },
+   "bridge_cam_dropped": 0,
+   "latency_sensor_to_pose_ms": {
+    "n": 2223,
+    "p50": 57.572,
+    "p95": 66.601,
+    "p99": 78.085,
+    "max": 152.157,
+    "mean": 56.678
+   }
+  },
+  "still": {
+   "t0": 0.0,
+   "t1": 74.0,
+   "frames": 0,
+   "fed_fps": null,
+   "per_frame_ms": {
+    "n": 0
+   },
+   "feed_ms": {
+    "n": 0
+   },
+   "remap_ms": {
+    "n": 0
+   },
+   "wait_ms": {
+    "n": 0
+   },
+   "bridge_cam_dropped": 0,
+   "latency_sensor_to_pose_ms": {
+    "n": 2220,
+    "p50": 57.568,
+    "p95": 66.6,
+    "p99": 78.131,
+    "max": 152.157,
+    "mean": 56.663
+   }
+  }
+ },
+ "camera": {
+  "n": 2224,
+  "secs": 74.1,
+  "fps_measured": 30.0,
+  "gaps": 0,
+  "missing_est": 0,
+  "max_gap_ms": 34.14,
+  "median_period_ms": 33.334
+ },
+ "java_pool_dropped": 0,
+ "java_queue_dropped": 0,
+ "java_copy_us": {
+  "n": 2224,
+  "p50": 889.0,
+  "p95": 1265.85,
+  "p99": 1496.0,
+  "max": 4327.0,
+  "mean": 855.849
+ },
+ "frames_received": 2224,
+ "battery_c_max": 32.8,
+ "thermal_status_max": 0,
+ "skin_c_max_pc_log": 36.8
+}

@@ -19,6 +19,10 @@ Per run (docs/phone_session_60fps_plan.md "On-phone OpenVINS timing"):
     Java pool / queue drops (frames.csv fate 1 / 2), bridge queue drops (bridge_timing.csv cam_dropped), and fed frames
     per second vs the requested fps
   temperatures: battery max, thermal status max (temps.csv); SKIN comes from the PC thermal log (thermal_*.txt) if present
+  health (2026-10-25, ovrobust; app intent ov_health 1 -> RUN_DIR/health.csv = ov_bridge --health-log): share of frames
+    per state INIT / OK / DEGRADED / LOST (per segment too), transitions, longest LOST run, first OK, tracked / used
+    features, chi2 rejected share, position std, longest time without a feature update, recoveries (--recover)
+    and the "[ov_bridge] recover" / "health" stderr lines. Standalone: --health-csv FILE [FILE ...] (e.g. replay hl.csv).
 By default only frames after OpenVINS initialised (init = 1) count (--all-frames: every fed frame). Segments are seconds
 from the first fed frame. Writes RUN_DIR/timing_report.json (made time + inputs) and prints a table.
 """
@@ -99,6 +103,60 @@ def skin_log(run):
             if m:
                 vals.append(float(m.group(1)))
     return max(vals) if vals else None
+
+
+def health_summary(path, t0_ns=None, seg_spec=""):
+    """ov_bridge --health-log CSV -> summary dict (2026-10-25 ovrobust). t0_ns = segment time origin (default first row)."""
+    rows = read_csv(Path(path))
+    if not rows:
+        return None
+    t = np.array([int(r["t_ns"]) for r in rows], np.int64)
+    t0 = int(t0_ns) if t0_ns is not None else int(t[0])
+    tr = (t - t0) / 1e9
+    st = np.array([r["state"] for r in rows])
+    f = lambda k: np.array([float(r[k]) if r[k] not in ("", "nan") else np.nan for r in rows])
+    tracked, used, rej = f("tracked"), f("msckf_used") + f("slam_used"), f("chi2_rej")
+    cand = f("msckf_tri") + f("slam_clean")
+    pos_std, since = f("pos_std"), f("since_upd")
+    dt = float(np.median(np.diff(tr))) if len(tr) > 1 else 0.0
+
+    def frac(m):
+        n = int(m.sum())
+        return {s_: round(float((st[m] == s_).mean()), 4) if n else None for s_ in ("INIT", "OK", "DEGRADED", "LOST")} | {"n": n}
+    runs, cur = [], 0
+    for s_ in st:
+        cur = cur + 1 if s_ == "LOST" else 0
+        runs.append(cur)
+    trans = int((st[1:] != st[:-1]).sum())
+    ok = np.nonzero(st == "OK")[0]
+    ini = st != "INIT"
+    out = dict(file=str(path), frames=len(rows), states=frac(np.ones(len(st), bool)), transitions=trans,
+               longest_lost_s=round(max(runs) * dt, 2) if runs else 0.0, first_ok_s=round(float(tr[ok[0]]), 2) if len(ok) else None,
+               first_init_s=round(float(tr[ini][0]), 2) if ini.any() else None,
+               tracked=stats(tracked[ini]), used=stats(used[ini]),
+               chi2_rej_share=round(float(np.nansum(rej[ini]) / max(1.0, np.nansum(cand[ini]))), 4),
+               pos_std_m=stats(pos_std[ini]), since_upd_max_s=round(float(np.nanmax(since[ini])), 2) if ini.any() else None,
+               recoveries=int(float(rows[-1].get("recover_n") or 0)), segments_out=int(float(rows[-1].get("seg") or 0)),
+               blank_frames=int(sum(int(r.get("blank") or 0) for r in rows)))
+    if seg_spec:
+        out["by_segment"] = {name: frac((tr >= s0) & (tr < s1)) for name, s0, s1 in segments(seg_spec, float(tr[-1]))}
+    return out
+
+
+def show_health(h, pre="   "):
+    if not h:
+        return
+    s = h["states"]
+    print(f"{pre}health: OK {100 * (s['OK'] or 0):.1f} % DEGRADED {100 * (s['DEGRADED'] or 0):.1f} % LOST {100 * (s['LOST'] or 0):.1f} % "
+          f"INIT {100 * (s['INIT'] or 0):.1f} % of {h['frames']} | first init {h['first_init_s']} s, first OK {h['first_ok_s']} s | "
+          f"transitions {h['transitions']} | longest LOST {h['longest_lost_s']} s | no-update max {h['since_upd_max_s']} s | "
+          f"recoveries {h['recoveries']} (segments {h['segments_out']})")
+    print(f"{pre}        tracked p50 {h['tracked'].get('p50')} | used p50 {h['used'].get('p50')} | chi2 rejected "
+          f"{100 * h['chi2_rej_share']:.1f} % | pos std p50 {h['pos_std_m'].get('p50')} max {h['pos_std_m'].get('max')} m (incl. the 0.087 m init gauge)"
+          + (f" | blanked {h['blank_frames']}" if h.get("blank_frames") else ""))
+    for name, fr in (h.get("by_segment") or {}).items():
+        if fr["n"]:
+            print(f"{pre}        {name:10s} OK {100 * fr['OK']:.0f} % DEG {100 * fr['DEGRADED']:.0f} % LOST {100 * fr['LOST']:.0f} % INIT {100 * fr['INIT']:.0f} %")
 
 
 def segments(spec, t_end):
@@ -190,6 +248,11 @@ def report(run, a):
         res["battery_c_max"] = max(float(r["battery_c"]) for r in tp)
         res["thermal_status_max"] = max(int(r["thermal_status"]) for r in tp)
     res["skin_c_max_pc_log"] = skin_log(run)
+    if (run / "health.csv").exists():   # 2026-10-25 ovrobust (app intent ov_health)
+        res["health"] = health_summary(run / "health.csv", int(t_ns[0]), a.seg)
+        if se.exists():
+            res["health_log_lines"] = [l.strip() for l in open(se, errors="replace")
+                                       if l.startswith("[ov_bridge] recover") or l.startswith("[ov_bridge] health:")][:50]
     s = segs["all"]["per_frame_ms"]
     drops = res.get("java_pool_dropped", 0) + res.get("java_queue_dropped", 0) + segs["all"]["bridge_cam_dropped"]
     if s.get("n"):
@@ -250,17 +313,24 @@ def show(res):
                 print(f"   predicted pose [{src}] {name:8s} n {la['n']}: latency t_out - t_pred p50 {la['p50']} / p95 {la['p95']} / max {la['max']} ms"
                       f" (pose: {lp.get('p50', '-')} / {lp.get('p95', '-')} / {lp.get('max', '-')}) | horizon t_pred - t_cam p50 {ho['p50']}"
                       f" / p95 {ho['p95']} / max {ho['max']} ms")
+    show_health(res.get("health"))
+    for l in res.get("health_log_lines", [])[:10]:
+        print(f"   {l}")
     print(f"   -> {res.get('verdict')}")
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("runs", nargs="+")
+    ap.add_argument("runs", nargs="*")
+    ap.add_argument("--health-csv", nargs="+", default=[], help="only summarise these ov_bridge --health-log CSVs")
     ap.add_argument("--seg", default="", help="name:t0:t1,... seconds from the first fed frame (default: whole run)")
     ap.add_argument("--budget-ms", type=float, default=16.7)
     ap.add_argument("--fps", type=float, default=60.0, help="if meta.json is missing")
     ap.add_argument("--all-frames", action="store_true", help="also frames before OpenVINS initialised")
     a = ap.parse_args()
+    for h in a.health_csv:   # 2026-10-25 ovrobust
+        print(f"== {h}")
+        show_health(health_summary(h, None, a.seg))
     for r in a.runs:
         show(report(Path(r), a))
 

@@ -189,6 +189,11 @@ class OvRunner implements SensorEventListener {
     int idleSpinMs = 0;                         // 0.6.18 intent idle_spin_ms: ov_bridge --idle-spin-ms W (0 = whole gap)
     boolean spinWfe = false;                    // 0.6.18 intent spin_wfe 1: idle_spin 2 -> ov_bridge --idle-spin 3
     int dropLateMs = 0;                         // 0.6.18 intent drop_late_ms: ov_bridge --drop-late MS (0 = off)
+    // ovrobust (2026-10-25, all default off = unchanged): intent ov_health 1 -> ov_bridge --health 1 --health-log <run>/health.csv,
+    // init_still 1 -> --init-still 1 (static init while still, ZUPT stays off), recover N -> --recover N (auto recovery)
+    boolean ovHealth = false;
+    boolean initStill = false;
+    int recoverFrames = 0;
     private BufferedWriter predW;               // poses_pred.csv (predict > 0)
     private long nPred;
     private long lastPoseTns = -1, lastPoseSensor = -1, lastPoseArrive = -1;   // frame of the latest pose line (reader)
@@ -359,6 +364,9 @@ class OvRunner implements SensorEventListener {
         }
         if (ovProf) Collections.addAll(cmd, "--prof-log", new File(runDir, "ov_prof.csv").getAbsolutePath());          // 0.6.18
         if (dropLateMs > 0) Collections.addAll(cmd, "--drop-late", Integer.toString(dropLateMs));                       // 0.6.18
+        if (ovHealth) Collections.addAll(cmd, "--health", "1", "--health-log", new File(runDir, "health.csv").getAbsolutePath());  // ovrobust
+        if (initStill) Collections.addAll(cmd, "--init-still", "1");                                                    // ovrobust
+        if (recoverFrames > 0) Collections.addAll(cmd, "--recover", Integer.toString(recoverFrames));                    // ovrobust
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.environment().put("LD_LIBRARY_PATH", lib);
         pb.redirectError(new File(runDir, "bridge_stderr.log"));
@@ -387,7 +395,8 @@ class OvRunner implements SensorEventListener {
                 .put("ov_idle_spin", idleSpin).put("ov_predict", predict).put("ov_predict_hz", predictHz)
                 .put("ov_predict_stream", predictStream ? 1 : 0)
                 .put("ov_opt", ovOpt).put("ov_prof", ovProf ? 1 : 0).put("idle_spin_ms", idleSpinMs).put("spin_wfe", spinWfe ? 1 : 0)
-                .put("drop_late_ms", dropLateMs);
+                .put("drop_late_ms", dropLateMs)
+                .put("ov_health", ovHealth ? 1 : 0).put("init_still", initStill ? 1 : 0).put("recover", recoverFrames);   // ovrobust
 
         proc = pb.start();
         bridgePid = pidOf(proc);
@@ -404,6 +413,9 @@ class OvRunner implements SensorEventListener {
         notePerf("idle_spin_ms", idleSpinMs);
         notePerf("spin_wfe", spinWfe ? 1 : 0);
         notePerf("drop_late_ms", dropLateMs);
+        notePerf("ov_health", ovHealth ? 1 : 0);    // ovrobust
+        notePerf("init_still", initStill ? 1 : 0);
+        notePerf("recover", recoverFrames);
         notePerf("bridge_pid", bridgePid);
         notePerf("sdk", android.os.Build.VERSION.SDK_INT);
         writerT = new Thread(this::writer, "ov-writer");

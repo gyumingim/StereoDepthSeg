@@ -1,0 +1,7 @@
+# TAG BIN CFG IDLE_SPIN THREADS SPEED STREAM EXTRA  (raw80 = hs_20261021_213341 80 s, phone remap, c4 timeshift 0)
+# best live combo (ovopt W3 + idle_spin 2 + idle_spin_ms 15); A = no ovrobust flag, B = + health (timing overhead, identity)
+A ov_bridge_ovrobust c4r 2 2 1.0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15
+B ov_bridge_ovrobust c4r 2 2 1.0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --health 1
+C ov_bridge_ovrobust c4r 2 2 1.0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --health 1 --init-still 1
+D ov_bridge_ovrobust c4r 2 2 1.0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --health 1 --test-blank 20:2 --recover 15
+E ov_bridge_ovrobust c4r 2 2 1.0 raw80 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --idle-spin-ms 15 --health 1 --test-blank 20:2

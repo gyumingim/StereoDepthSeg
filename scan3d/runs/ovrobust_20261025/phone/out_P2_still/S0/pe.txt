@@ -1,0 +1,15 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol', prof log -)
+[ov_bridge] affinity start: (not pinned) threads 8444:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 2 -> 2 | TBB (ver 2021.11 interface 12110) | cpus 10 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /data/local/tmp/replay/remap_1920x1080.bin
+[ov_bridge] health log: cannot open /hl.csv
+[ov_bridge] ovrobust: init_still 0 | health 1 log /hl.csv | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 0 (max gap 3.0 s, min feats 20) | test blank 0 windows
+[ov_bridge] affinity ready: (not pinned) threads 8444:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin: mode 2 (pool) stripes 2 max 200 ms window 15.0 ms
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] affinity cam300: (not pinned) threads 8444:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9 8448:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9 8945:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 6408 spun 2454 timeouts 1 spin 4.28 s | exit_us n 2453 p50 2.3 p95 7.3 p99 68.8 max 1741.2 | window 15.0 ms period 33.38 ms blocked 2220 (4.58 s)
+[ov_bridge] affinity end: (not pinned) threads 8444:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9 8448:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9 8945:ov_bridge_ovrob=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 38085 spun 17795 timeouts 1 spin 29.88 s | exit_us n 17794 p50 1.6 p95 4.8 p99 49.2 max 15782.7 | window 15.0 ms period 32.76 ms blocked 12182 (24.23 s)
+[ov_bridge] health: frames INIT 2093 OK 0 DEGRADED 0 LOST 0 | transitions 1 | max LOST run 0 frames | recover state 0 full 0 | blanked 0
