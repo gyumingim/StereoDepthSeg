@@ -1,0 +1,70 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 rs_postinit=0 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol', prof log -)
+[ov_bridge] drop-late 50 ms mode 1 cap 3 win 3.00 s | pred-stale 500 ms
+[ov_bridge] profile rec20261025: ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol' idle_spin 2 idle_spin_ms 20 drop_late 50 health 1 predict 2 hz 200 pred_thread 1 (after explicit flags)
+[ov_bridge] affinity start: (not pinned) threads 83356:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 2 -> 2 | TBB (ver 2020.3 interface 11103) | cpus 16 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /tmp/ovopt/remap_1920x1080.bin
+[ov_bridge] ovrobust: init_still 0 | health 1 log - | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 0 (max gap 3.0 s, min feats 20) | test blank 0 windows
+[ov_bridge] affinity ready: (not pinned) threads 83356:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] idle spin: mode 2 (pool) stripes 2 max 200 ms window 20.0 ms | pred thread (input reader thread on)
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] affinity cam300: (not pinned) threads 83356:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 83364:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 83365:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 83369:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 84407:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 6434 spun 2348 timeouts 1 spin 6.80 s | exit_us n 2347 p50 6.5 p95 3907.2 p99 7769.2 max 14826.4 | window 20.0 ms period 36.47 ms blocked 1840 (4.30 s)
+[ov_bridge] health t=13.466 INIT -> OK (tracked 121 used 11 since_upd 0.00 pos_std 0.087)
+[ov_bridge] drop-late: frame t=25.598 52.4 ms late (> 50.0) -> skipped (#1)
+[ov_bridge] drop-late: frame t=27.066 83.2 ms late (> 50.0) -> skipped (#2)
+[ov_bridge] drop-late: frame t=27.099 52.4 ms late (> 50.0) -> skipped (#3)
+[ov_bridge] drop-late: frame t=27.166 60.6 ms late (> 50.0) -> skipped (#4)
+[ov_bridge] drop-late: frame t=27.233 73.8 ms late (> 50.0) -> skipped (#5)
+[ov_bridge] drop-late: frame t=27.300 89.8 ms late (> 50.0) -> skipped (#6)
+[ov_bridge] drop-late: frame t=27.333 57.8 ms late (> 50.0) -> skipped (#7)
+[ov_bridge] drop-late: frame t=27.400 66.8 ms late (> 50.0) -> skipped (#8)
+[ov_bridge] drop-late: frame t=27.467 85.5 ms late (> 50.0) -> skipped (#9)
+[ov_bridge] drop-late: frame t=27.500 54.0 ms late (> 50.0) -> skipped (#10)
+[ov_bridge] drop-late: frame t=27.567 89.3 ms late (> 50.0) -> skipped (#11)
+[ov_bridge] drop-late: frame t=27.600 57.5 ms late (> 50.0) -> skipped (#12)
+[ov_bridge] drop-late: frame t=27.663 77.7 ms late (> 50.0) -> skipped (#13)
+[ov_bridge] drop-late: frame t=27.729 78.8 ms late (> 50.0) -> skipped (#14)
+[ov_bridge] drop-late: frame t=27.796 84.0 ms late (> 50.0) -> skipped (#15)
+[ov_bridge] drop-late: frame t=27.830 52.1 ms late (> 50.0) -> skipped (#16)
+[ov_bridge] drop-late: frame t=27.896 56.9 ms late (> 50.0) -> skipped (#17)
+[ov_bridge] drop-late: frame t=27.963 66.4 ms late (> 50.0) -> skipped (#18)
+[ov_bridge] drop-late: frame t=28.030 82.4 ms late (> 50.0) -> skipped (#19)
+[ov_bridge] drop-late: frame t=28.063 52.0 ms late (> 50.0) -> skipped (#20)
+[ov_bridge] drop-late: frame t=32.631 70.6 ms late (> 50.0) -> skipped (#100)
+[ov_bridge] drop-late: frame t=38.196 94.4 ms late (> 50.0) -> skipped (#200)
+[ov_bridge] health t=40.599 OK -> DEGRADED (tracked 154 used 10 since_upd 0.00 pos_std 0.087)
+[ov_bridge] health t=40.699 DEGRADED -> OK (tracked 158 used 23 since_upd 0.00 pos_std 0.087)
+[ov_bridge] drop-late: frame t=43.799 77.3 ms late (> 50.0) -> skipped (#300)
+[ov_bridge] health t=47.366 OK -> DEGRADED (tracked 138 used 13 since_upd 0.00 pos_std 0.087)
+[ov_bridge] health t=47.466 DEGRADED -> OK (tracked 136 used 15 since_upd 0.00 pos_std 0.087)
+[ov_bridge] health t=48.330 OK -> DEGRADED (tracked 120 used 17 since_upd 0.00 pos_std 0.087)
+[ov_bridge] health t=48.430 DEGRADED -> OK (tracked 127 used 9 since_upd 0.00 pos_std 0.087)
+[ov_bridge] drop-late: frame t=49.531 61.7 ms late (> 50.0) -> skipped (#400)
+[ov_bridge] pred thread reader: image space waits 294
+[ov_bridge] pred thread: mode 2 hz 200 | lines 8208 (frame 736 rate 7472) snapshots 736 | compute us p50 29.8 p95 51.1 max 1803.4 | horizon ms p50 124.8 p95 190.4 max 234.4 | thread cpu 0.640 s (pred) 1.856 s (reader)
+[ov_bridge] pred thread stale (--pred-stale-ms): 0 lines marked lost
+[ov_bridge] affinity end: (not pinned) threads 83356:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 83369:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 84407:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 28888 spun 5413 timeouts 1 spin 14.30 s | exit_us n 5412 p50 10.5 p95 2793.4 p99 6927.8 max 17592.7 | window 20.0 ms period 33.41 ms blocked 2159 (5.02 s)
+[ov_bridge] predict: mode 2 hz 200 | lines 0 | horizon ms p50 -1.0 p95 -1.0 max -1.0
+[ov_bridge] drop-late: limit 50.0 ms | dropped 494 frames | min lag 711470181.4 ms
+[ov_bridge] drop-late mode 1: cap 3 win 3.00 s | forced 0 | re-anchors 0 | late-lost 0 | max late run 3 frames | pred stale 500 ms (main-loop stale preds 0)
+[ov_bridge] health: frames INIT 324 OK 733 DEGRADED 3 LOST 0 | transitions 8 | max LOST run 0 frames | recover state 0 full 0 | blanked 0 | init_ready frames 319
+[33m[init]: not enough feats to compute disp: 0,0 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,0 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m

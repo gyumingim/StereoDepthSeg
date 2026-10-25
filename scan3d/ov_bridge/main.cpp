@@ -7,6 +7,7 @@
 //             [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST] [--threads N] [--klt-overlap 0|1]
 //             [--idle-spin 0|1|2|3] [--idle-spin-ms W] [--predict 0|1|2] [--predict-hz HZ] [--ovopt LIST]
 //             [--prof-log FILE] [--pose-precision N] [--drop-late MS] [--pred-thread 0|1] [--imu-log FILE]
+//             [--drop-late-mode 0|1] [--drop-late-cap N] [--drop-late-win S] [--pred-stale-ms MS]
 //             [--mav-udp HOST:PORT [--mav-msg odom|vpe|both] [--mav-mount PRESET|R9] [--mav-yaw-align 0|1]
 //             [--mav-replay-time 0|1] [--mav-sysid N] [--mav-log FILE]]
 //
@@ -94,6 +95,35 @@
 //   (its IMU is) when its feed lag (CLOCK_BOOTTIME now - frame t_ns) exceeds the smallest lag seen in this run by more
 //   than MS -> the backlog cannot grow once processing is slower than the frames (phone "cliff", 2026-10-25 replay).
 //   Pose lines get "late_dropped" (only with the flag), stderr "[ov_bridge] drop-late ...".
+// --drop-late-mode 0|1 (2026-10-26, branch droplatefix-20261026; only matters with --drop-late > 0; default 1):
+//   0 = the 2026-10-25 rule above (reference = smallest lag of the whole run, never re-anchored, no limit on consecutive
+//       drops). BUG kept only for A/B: if the clock offset / feed latency rises by more than MS for good (phone replay
+//       P_r2: device suspend let CLOCK_BOOTTIME run ahead of the feeder's CLOCK_MONOTONIC; live: a lasting latency rise)
+//       EVERY later frame is dropped -> IMU-only for the rest of the run while health stays OK and the prediction
+//       thread keeps sending "tracking" (P_r2: horizon 69 s, |v| 127 m/s).
+//   1 = fixed rule (default whenever --drop-late is given, incl. --profile rec20261025 / rec60):
+//       a) while the lag of the late frames is flat (range over the last S s <= MS = drops do not reduce it) at most
+//          --drop-late-cap N (default 3) frames in a row are dropped, the next late frame is fed anyway ("forced"); while
+//          the lag moves (backlog draining / overload / drift) frames are dropped as in mode 0 (no cap);
+//       b) re-anchor: when every frame of the last --drop-late-win S (default 3.0 s of frame time) was late (dropped or
+//          forced), the reference becomes the smallest lag of that late run (stderr "drop-late: re-anchor ..."). A real
+//          backlog is drained by the drops (lag falls back under the limit -> the run ends), so only a lasting offset
+//          shift survives S seconds of drops;
+//       c) --health: a frame fed while it is late (forced) or within a late run of > N frames is at least DEGRADED;
+//          h gets "late_run" (consecutive late frames, mode 1 only);
+//          Re-anchor only when the lag over that window is flat (max - min <= MS; verifier 2026-10-26): a lag that is
+//          still rising after S s (overload backlog the capped drops cannot drain, or drifting clocks) is NOT re-anchored;
+//          after 2 S of such a run "late-lost": pose/pred status lost, MAVLink/VIOP lost, health LOST, until a frame is
+//          on time again (stderr "drop-late: ... late-lost");
+//       d) --pred-stale-ms defaults to 500 (see there).
+// --test-feed-sleep MS:T0 (TEST ONLY, default off): sleep MS before every fed frame from T0 s after the first camera
+//   record (overload simulation for the drop-late tests).
+//   stderr summary adds forced / re-anchors / max late run. Pose lines unchanged except "late_dropped" (as before).
+// --pred-stale-ms MS (2026-10-26, droplatefix; default 0 = off, but 500 when --drop-late > 0 with mode 1; explicit value
+//   wins): a prediction whose horizon h (newest IMU - filter state time) exceeds MS is marked lost: pred line "status":
+//   "lost" + "stale":true, MAVLink quality 0 / system_status CRITICAL, VIOP POSE without VIOP_F_TRACKING (quality 0) and
+//   VIOP heartbeat state LOST (main loop: same horizon test) -> the ESP32 (link_task.c: good = VALID && TRACKING &&
+//   quality > 0) stops trusting the extrapolated pose. Same protocol, nothing new on the wire. Normal live h ~0.06 s.
 //   frame_nocopy (bridge): a frame that is remapped is read straight from the received record buffer (no 2 MB copy
 //   first). Needs a build with the OpenVINS sources compiled in (phone build, PC -DOV_FULL_SOURCE=ON); the PC build
 //   that links libov_msckf_lib.so rejects --ovopt (except frame_nocopy / prof). stderr "[ov_bridge] ovopt ...",
@@ -295,6 +325,11 @@ struct Args {
   double idle_spin_ms = 0.0;  // --idle-spin-ms W (header; 0 = spin the whole gap)
   int pose_precision = 9;     // --pose-precision N (header; 9 = unchanged)
   double drop_late_ms = 0.0;  // --drop-late MS (header; 0 = off)
+  int drop_late_mode = 1;     // --drop-late-mode 0|1 (2026-10-26 droplatefix; 0 = old run-min rule, 1 = fixed)
+  int drop_late_cap = 3;      // --drop-late-cap N (mode 1: max consecutive drops)
+  double drop_late_win = 3.0; // --drop-late-win S (mode 1: re-anchor after S s of late frames)
+  double test_feed_sleep_ms = 0.0, test_feed_sleep_t0 = 0.0;  // --test-feed-sleep MS:T0 (TEST ONLY, 2026-10-26)
+  double pred_stale_ms = -1.0;  // --pred-stale-ms MS (-1 = auto: 500 with drop-late mode 1, else 0 = off)
   std::string profile;        // --profile NAME (integ-20261025; "" = none)
   int pred_thread = 0;        // --pred-thread 0|1 (header; 0 = off)
   std::string imu_log;        // --imu-log FILE (header)
@@ -801,6 +836,7 @@ std::mutex g_out_m;  // serialises output writes of the main thread and the pred
 struct PredSnap {
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   bool valid = false, frame = false, lost = false;
+  double stale_s = 0.0;  // --pred-stale-ms / 1000 (0 = off; 2026-10-26 droplatefix)
   int64_t t0_ns = 0, cam_t_ns = 0;
   double t_state = 0.0, t_off = 0.0, grav = 9.81;
   Eigen::Matrix<double, 16, 1> x;  // [q_GtoI(4) p(3) v(3) bg(3) ba(3)]
@@ -881,11 +917,15 @@ public:
                  static_cast<unsigned long long>(n_rate_), static_cast<unsigned long long>(n_snap_), q(e, 0.5), q(e, 0.95),
                  e.empty() ? -1.0 : static_cast<double>(e.back()), q(h, 0.5), q(h, 0.95),
                  h.empty() ? -1.0 : static_cast<double>(h.back()), cpu_s_, reader_cpu_s);
+    if (n_stale_ > 0 || stale_on)
+      std::fprintf(stderr, "[ov_bridge] pred thread stale (--pred-stale-ms): %llu lines marked lost\n",
+                   static_cast<unsigned long long>(n_stale_));
     if (check_)
       std::fprintf(stderr, "[ov_bridge] pred thread check (OVB_PRED_CHECK): incremental vs from scratch %llu compared, %llu differ\n",
                    static_cast<unsigned long long>(n_check_), static_cast<unsigned long long>(n_check_bad_));
   }
   double reader_cpu_s = 0.0;  // set by the reader thread at its end
+  bool stale_on = false;      // --pred-stale-ms active (summary line only)
 
 private:
   struct PImu {
@@ -1025,6 +1065,9 @@ private:
     T.block<3, 3>(0, 0) = R_CtoG;
     T.block<3, 1>(0, 3) = p_IinG - R_CtoG * s.p_IinC;
     const double t_pred = time0 + h;
+    const bool stale = s.stale_s > 0.0 && h > s.stale_s;  // --pred-stale-ms (2026-10-26): too long IMU-only -> lost
+    const bool lost = s.lost || stale;
+    if (stale && std::strcmp(src, "check") != 0) n_stale_++;
     if (g_mav && s.has_link && std::strcmp(src, "check") != 0) {  // integ-20261025: drone link from the prediction thread
       Eigen::Vector3d w_I = Eigen::Vector3d::Zero(), f_I = Eigen::Vector3d::Zero();
       if (!d.empty()) {  // newest IMU sample used (= Bridge::predict: rate + specific force, bias removed)
@@ -1033,7 +1076,7 @@ private:
       }
       const int n_int = cont ? cache_n_ : (d.empty() ? 0 : static_cast<int>(d.size()) - 1);
       const double rate = (n_int > 0 && h > 0.0) ? n_int / h : 400.0;
-      g_mav->emit(s.epoch, s.t0_ns + static_cast<int64_t>(std::llround(t_pred * 1e9)), R_ItoG, p_IinG, v, w_I, s.P9, s.lost,
+      g_mav->emit(s.epoch, s.t0_ns + static_cast<int64_t>(std::llround(t_pred * 1e9)), R_ItoG, p_IinG, v, w_I, s.P9, lost,
                   s.sigma_w * s.sigma_w * std::min(rate, 2000.0), f_I, src,
                   s.t0_ns + static_cast<int64_t>(std::llround(time0 * 1e9)), s.n_feat);
     }
@@ -1046,7 +1089,7 @@ private:
     o << ",\"h\":";
     jnum(o, h);
     o << ",\"n_imu\":" << (cont ? cache_n_ : (d.empty() ? 0 : static_cast<int>(d.size()) - 1)) << ",\"src\":\"" << src
-      << "\",\"status\":\"" << (s.lost ? "lost" : "tracking") << "\",\"p\":";
+      << "\",\"status\":\"" << (lost ? "lost" : "tracking") << "\",\"p\":";
     jarr(o, p_IinG);
     o << ",\"q\":[";
     jnum(o, qh.x()); o << ","; jnum(o, qh.y()); o << ","; jnum(o, qh.z()); o << ","; jnum(o, qh.w());
@@ -1056,6 +1099,7 @@ private:
     jarr(o, T);
     o << ",\"q_GtoI_jpl\":";
     jarr(o, q_GtoI);
+    if (stale) o << ",\"stale\":true";
     o << ",\"tb\":" << boot_ns() << "}\n";
     return o.str();
   }
@@ -1072,7 +1116,7 @@ private:
   PredSnap snap_;
   std::deque<PImu> imu_;
   int64_t newest_ = INT64_MIN, next_due_ = 0;
-  uint64_t n_frame_ = 0, n_rate_ = 0, n_snap_ = 0;
+  uint64_t n_frame_ = 0, n_rate_ = 0, n_snap_ = 0, n_stale_ = 0;
   std::vector<float> us_, h_;
   double last_h_ = 0.0, cpu_s_ = 0.0;
   // incremental prediction cache (prediction thread only)
@@ -1137,6 +1181,7 @@ public:
       return;
     }
     health_on_ = a.health || hlog_ || a.recover > 0;
+    pred_stale_s_ = a.pred_stale_ms > 0.0 ? a.pred_stale_ms / 1000.0 : 0.0;  // resolved in main (2026-10-26)
     {  // --test-blank T0:D,...
       std::stringstream ss(a.test_blank);
       std::string tok;
@@ -1224,7 +1269,7 @@ public:
       on_imu(buf.data(), out);
       if (g_mav && have_t0_) {
         g_mav->note_imu(t0_ns_ + static_cast<int64_t>(std::llround(newest_imu_t_ * 1e9)));
-        g_mav->hb_tick(sys_ && sys_->initialized(), lost_);  // VIOP heartbeat from the main loop (stops if the feed stops)
+        g_mav->hb_tick(sys_ && sys_->initialized(), lost_ || late_lost_ || hb_stale());  // VIOP heartbeat from the main loop (stops if the feed stops)
       }
       return true;
     case kStereo:
@@ -1343,6 +1388,8 @@ public:
     T.block<3, 3>(0, 0) = R_CtoG;
     T.block<3, 1>(0, 3) = p_IinG - R_CtoG * calib0->pos();
     const double t_pred = time0 + h;  // IMU clock (s from t0)
+    const bool stale = pred_stale_s_ > 0.0 && h > pred_stale_s_;  // --pred-stale-ms (2026-10-26)
+    if (stale) n_pred_stale_++;
     if (g_mav) {  // --mav-udp (2026-10-25): same predicted state -> MAVLink (reads only)
       const ov_core::ImuData *nw = nullptr;  // newest IMU sample (rate + specific force for the output)
       if (!imu_hold_.empty()) nw = &imu_hold_.back();
@@ -1357,7 +1404,7 @@ public:
       const double rate = (d.size() >= 2 && h > 0.0) ? (d.size() - 1) / h : 400.0;
       const double sw = params_.imu_noises.sigma_w;
       g_mav->emit(sys_.get(), t0_ns_ + static_cast<int64_t>(std::llround(t_pred * 1e9)), R_ItoG, x.block(4, 0, 3, 1),
-                  x.block(7, 0, 3, 1), w_I, P9, lost_, sw * sw * std::min(rate, 2000.0), f_I, src,
+                  x.block(7, 0, 3, 1), w_I, P9, lost_ || late_lost_ || stale, sw * sw * std::min(rate, 2000.0), f_I, src,
                   t0_ns_ + static_cast<int64_t>(std::llround(time0 * 1e9)), static_cast<int>(st->_features_SLAM.size()));
     }
     n_pred_++;
@@ -1371,7 +1418,7 @@ public:
     o << ",\"h\":";
     jnum(o, h);
     o << ",\"n_imu\":" << (d.empty() ? 0 : d.size() - 1) << ",\"src\":\"" << src << "\",\"status\":\""
-      << (lost_ ? "lost" : "tracking") << "\",\"p\":";
+      << ((lost_ || late_lost_ || stale) ? "lost" : "tracking") << "\",\"p\":";
     jarr(o, p_IinG);
     o << ",\"q\":[";
     jnum(o, qh.x()); o << ","; jnum(o, qh.y()); o << ","; jnum(o, qh.z()); o << ","; jnum(o, qh.w());
@@ -1396,7 +1443,8 @@ public:
     auto st = sys_->get_state();
     if (st->_timestamp < 0.0) return;
     s.valid = true;
-    s.lost = lost_;
+    s.lost = lost_ || late_lost_;  // late_lost_: --drop-late mode 1 (2026-10-26)
+    s.stale_s = pred_stale_s_;
     s.t0_ns = t0_ns_;
     s.cam_t_ns = pred_cam_t_ns_;
     s.t_state = st->_timestamp;
@@ -1434,6 +1482,13 @@ public:
     if (args_.drop_late_ms <= 0.0) return;
     std::fprintf(stderr, "[ov_bridge] drop-late: limit %.1f ms | dropped %llu frames | min lag %.1f ms\n", args_.drop_late_ms,
                  static_cast<unsigned long long>(n_late_dropped_), lag_min_ms_ < 1e299 ? lag_min_ms_ : -1.0);
+    if (args_.drop_late_mode == 1)
+      std::fprintf(stderr, "[ov_bridge] drop-late mode 1: cap %d win %.2f s | forced %llu | re-anchors %llu | late-lost %llu | max late run %d frames | "
+                   "pred stale %.0f ms (main-loop stale preds %llu)\n", args_.drop_late_cap, args_.drop_late_win,
+                   static_cast<unsigned long long>(n_late_forced_), static_cast<unsigned long long>(n_late_reanchor_),
+                   static_cast<unsigned long long>(n_late_lost_), late_run_max_, pred_stale_s_ * 1e3, static_cast<unsigned long long>(n_pred_stale_));
+    else
+      std::fprintf(stderr, "[ov_bridge] drop-late mode 0 (old rule: run-min reference, no cap)\n");
   }
 
   void log_predict() const {
@@ -1631,6 +1686,7 @@ private:
   // spiral once processing exceeds the frame period (phone replay 2026-10-25 "cliff"). Only after initialisation.
   bool late_drop(const CamMsg &c) {
     if (args_.drop_late_ms <= 0.0) return false;
+    if (args_.drop_late_mode == 1) return late_drop_v1(c);
     const double lag_ms = static_cast<double>(boot_ns() - c.t_ns) / 1e6;
     if (lag_ms < lag_min_ms_) lag_min_ms_ = lag_ms;
     if (!sys_->initialized() || lag_ms - lag_min_ms_ <= args_.drop_late_ms) return false;
@@ -1639,6 +1695,78 @@ private:
       std::fprintf(stderr, "[ov_bridge] drop-late: frame t=%.3f %.1f ms late (> %.1f) -> skipped (#%llu)\n", c.t,
                    lag_ms - lag_min_ms_, args_.drop_late_ms, static_cast<unsigned long long>(n_late_dropped_));
     return true;
+  }
+
+  // --drop-late-mode 1 (2026-10-26, droplatefix): run-min reference + re-anchor after drop_late_win s of only late frames,
+  // at most drop_late_cap drops in a row (then one late frame is fed = "forced"). See the header.
+  bool late_drop_v1(const CamMsg &c) {
+    const double lag_ms = static_cast<double>(boot_ns() - c.t_ns) / 1e6;
+    if (lag_ms < lag_min_ms_) lag_min_ms_ = lag_ms;
+    const bool late = sys_->initialized() && lag_ms - lag_min_ms_ > args_.drop_late_ms;
+    if (!late) {
+      if (late_lost_) std::fprintf(stderr, "[ov_bridge] drop-late: t=%.3f lag back under the limit -> late-lost cleared\n", c.t);
+      late_run_ = 0;
+      late_consec_drop_ = 0;
+      late_lost_ = false;
+      late_win_.clear();
+      return false;
+    }
+    if (late_run_ == 0) late_run_t0_ = c.t;
+    late_run_++;
+    late_run_max_ = std::max(late_run_max_, late_run_);
+    late_win_.emplace_back(c.t, lag_ms);  // lags of this late run within the last drop_late_win s
+    while (!late_win_.empty() && late_win_.front().first < c.t - args_.drop_late_win) late_win_.pop_front();
+    double lo = 1e300, hi = -1e300;  // lag range of this late run over the last drop_late_win s
+    for (const auto &e : late_win_) {
+      lo = std::min(lo, e.second);
+      hi = std::max(hi, e.second);
+    }
+    const bool moving = hi - lo > args_.drop_late_ms;  // falling (backlog draining) or rising (overload / drifting clock)
+    if (c.t - late_run_t0_ >= args_.drop_late_win) {  // only late frames for drop_late_win s
+      if (!moving) {  // flat over the window: lasting offset shift -> re-anchor (verifier 2026-10-26: a lag that still
+        n_late_reanchor_++;  // moves = overload backlog / drift must NOT be re-anchored)
+        std::fprintf(stderr, "[ov_bridge] drop-late: re-anchor #%llu at t=%.3f after %d late frames (%.2f s, window range %.1f ms): "
+                     "reference %.1f -> %.1f ms (+%.1f)\n", static_cast<unsigned long long>(n_late_reanchor_), c.t, late_run_,
+                     c.t - late_run_t0_, hi - lo, lag_min_ms_, lo, lo - lag_min_ms_);
+        lag_min_ms_ = lo;
+        late_run_ = 0;
+        late_consec_drop_ = 0;
+        if (late_lost_) std::fprintf(stderr, "[ov_bridge] drop-late: t=%.3f late-lost cleared by the re-anchor\n", c.t);
+        late_lost_ = false;
+        late_win_.clear();
+        if (lag_ms - lag_min_ms_ > args_.drop_late_ms) n_late_forced_++;
+        return false;  // fed
+      }
+      if (!late_lost_ && c.t - late_run_t0_ >= 2.0 * args_.drop_late_win) {  // still moving after 2 windows: not safe
+        late_lost_ = true;
+        n_late_lost_++;
+        std::fprintf(stderr, "[ov_bridge] drop-late: t=%.3f late for %.2f s and lag still moving (window range %.1f ms) -> late-lost "
+                     "(outputs marked lost until the lag is back or flat)\n", c.t, c.t - late_run_t0_, hi - lo);
+      }
+    }
+    // cap only while the lag is flat (= drops do not help: offset shift); a moving lag is a backlog the drops drain
+    // (old rule, no cap) or a drifting clock (all dropped -> --pred-stale-ms / late-lost mark the outputs lost)
+    if (!moving && late_consec_drop_ >= args_.drop_late_cap) {  // cap reached: feed this late frame
+      late_consec_drop_ = 0;
+      n_late_forced_++;
+      if (n_late_forced_ <= 20 || n_late_forced_ % 100 == 0)
+        std::fprintf(stderr, "[ov_bridge] drop-late: frame t=%.3f %.1f ms late -> fed anyway after %d drops (forced #%llu)\n", c.t,
+                     lag_ms - lag_min_ms_, args_.drop_late_cap, static_cast<unsigned long long>(n_late_forced_));
+      return false;
+    }
+    late_consec_drop_++;
+    n_late_dropped_++;
+    if (n_late_dropped_ <= 20 || n_late_dropped_ % 100 == 0)
+      std::fprintf(stderr, "[ov_bridge] drop-late: frame t=%.3f %.1f ms late (> %.1f) -> skipped (#%llu)\n", c.t,
+                   lag_ms - lag_min_ms_, args_.drop_late_ms, static_cast<unsigned long long>(n_late_dropped_));
+    return true;
+  }
+  // --pred-stale-ms for the VIOP heartbeat (main loop): newest IMU too far past the filter state time
+  bool hb_stale() const {
+    if (pred_stale_s_ <= 0.0 || !sys_ || !sys_->initialized()) return false;
+    auto st = sys_->get_state();
+    if (st->_timestamp < 0.0) return false;
+    return newest_imu_t_ - (st->_timestamp + st->_calib_dt_CAMtoIMU->value()(0)) > pred_stale_s_;
   }
 
   // --init-gate: 이 카메라 시각까지 init 창 동안 자이로가 조용했나 (넣은 IMU 기준). why 에 이유.
@@ -1672,6 +1800,8 @@ private:
   }
 
   void feed_camera(const CamMsg &c, std::string &out) {
+    if (args_.test_feed_sleep_ms > 0.0 && first_cam_t_ > -1e299 && c.t - first_cam_t_ >= args_.test_feed_sleep_t0)  // TEST ONLY
+      std::this_thread::sleep_for(std::chrono::microseconds(static_cast<int64_t>(args_.test_feed_sleep_ms * 1000.0)));
     snap_dirty_ = true;              // --pred-thread: publish a new snapshot after this record
     if (plog_) ovopt::prof_reset();  // --prof-log: stage timers of this frame only
     ovopt::health_reset();           // --health counters of this frame only (always counted, cheap)
@@ -1794,6 +1924,10 @@ private:
         r.state = H_DEGRADED;
       else
         r.state = H_OK;
+      // --drop-late-mode 1 (2026-10-26): a frame fed late (forced) or inside a long late run is at least DEGRADED
+      if (r.state == H_OK && args_.drop_late_ms > 0.0 && args_.drop_late_mode == 1 && late_run_ > args_.drop_late_cap)
+        r.state = H_DEGRADED;
+      if (late_lost_) r.state = H_LOST;  // --drop-late mode 1: lag still rising after 2 windows (2026-10-26)
       h_lost_run_ = r.state == H_LOST ? h_lost_run_ + 1 : 0;
     }
     r.lost_run = h_lost_run_;
@@ -1834,6 +1968,7 @@ private:
     o << ",\"since_upd\":";
     jnum(o, r.since_upd);
     o << ",\"lost_run\":" << r.lost_run;
+    if (args_.drop_late_ms > 0.0 && args_.drop_late_mode == 1) o << ",\"late_run\":" << late_run_;  // 2026-10-26
     if (!r.init) o << ",\"init_ready\":" << r.init_ready;
     o << "}";
   }
@@ -2087,7 +2222,7 @@ private:
       int lim = feat_seen_ ? args_.lost_frames : std::max(args_.lost_frames, args_.startup_lost_frames);
       lost_ = bad || zero_feat_frames_ >= lim;
 
-      o << ",\"status\":\"" << (lost_ ? "lost" : "tracking") << "\",\"init\":true";
+      o << ",\"status\":\"" << ((lost_ || late_lost_) ? "lost" : "tracking") << "\",\"init\":true";  // late_lost_: 2026-10-26
       o << ",\"p\":";
       jarr(o, p_IinG);
       o << ",\"q\":[";
@@ -2253,7 +2388,15 @@ private:
   double off_yaw_ = 0.0;
   Eigen::Vector3d off_t_ = Eigen::Vector3d::Zero();
   int seg_ = 0;
-  double lag_min_ms_ = 1e300;       // --drop-late: smallest feed lag seen
+  double lag_min_ms_ = 1e300;       // --drop-late: smallest feed lag seen (mode 1: current reference, re-anchored)
+  // --drop-late-mode 1 (2026-10-26 droplatefix)
+  int late_run_ = 0, late_consec_drop_ = 0, late_run_max_ = 0;  // consecutive late frames (dropped + forced) / drops
+  double late_run_t0_ = 0.0;
+  std::deque<std::pair<double, double>> late_win_;  // (frame t, lag ms) of the current late run, last drop_late_win s
+  bool late_lost_ = false;          // late for > 2 windows with a rising lag -> outputs marked lost
+  uint64_t n_late_lost_ = 0;
+  uint64_t n_late_forced_ = 0, n_late_reanchor_ = 0, n_pred_stale_ = 0;
+  double pred_stale_s_ = 0.0;       // --pred-stale-ms / 1000 (resolved in the constructor)
 };
 
 // 한 연결(또는 stdin) 을 끝까지 처리. 반환 false = QUIT 받음.
@@ -2482,6 +2625,7 @@ void usage() {
                "                 [--init-gate MEAN_RAD_S,MAX_RAD_S,DISP_DEG] [--timing-log FILE] [--cpus LIST] [--threads N]\n"
                "                 [--klt-overlap 0|1] [--klt-pyr N] [--idle-spin 0|1|2|3] [--idle-spin-ms W] [--predict 0|1|2] [--predict-hz HZ]\n"
                "                 [--ovopt LIST] [--prof-log FILE] [--pose-precision N] [--drop-late MS]\n"
+               "                 [--drop-late-mode 0|1] [--drop-late-cap N] [--drop-late-win S] [--pred-stale-ms MS]\n"
                "                 [--pred-thread 0|1] [--imu-log FILE] [--profile rec20261025|rec60|none]\n"
                "                 [--mav-udp HOST:PORT | --viop-udp HOST:PORT] [--viop-hb-hz HZ]\n"
                "                 [--init-still 0|1] [--health 0|1] [--health-log FILE] [--health-cfg K=V,..] [--recover N]\n"
@@ -2594,6 +2738,16 @@ int main(int argc, char **argv) {
     else if (s == "--mav-log") a.mav_log = next();
     else if (s == "--pose-precision") a.pose_precision = std::max(1, std::min(17, std::stoi(next())));
     else if (s == "--drop-late") a.drop_late_ms = std::max(0.0, std::stod(next()));
+    else if (s == "--drop-late-mode") a.drop_late_mode = std::stoi(next()) != 0 ? 1 : 0;           // 2026-10-26
+    else if (s == "--drop-late-cap") a.drop_late_cap = std::max(1, std::stoi(next()));            // 2026-10-26
+    else if (s == "--drop-late-win") a.drop_late_win = std::max(0.1, std::stod(next()));          // 2026-10-26
+    else if (s == "--test-feed-sleep") {  // TEST ONLY (2026-10-26 droplatefix): overload simulation
+      const std::string v = next();
+      const auto k = v.find(':');
+      a.test_feed_sleep_ms = std::stod(v.substr(0, k));
+      a.test_feed_sleep_t0 = k == std::string::npos ? 0.0 : std::stod(v.substr(k + 1));
+    }
+    else if (s == "--pred-stale-ms") a.pred_stale_ms = std::max(0.0, std::stod(next()));          // 2026-10-26
     else if (s == "--pred-thread") a.pred_thread = std::stoi(next()) != 0 ? 1 : 0;   // 2026-10-25
     else if (s == "--imu-log") a.imu_log = next();                                     // 2026-10-25
     else if (s == "--init-still") a.init_still = std::stoi(next()) != 0 ? 1 : 0;   // 2026-10-25 ovrobust
@@ -2715,6 +2869,11 @@ int main(int argc, char **argv) {
     std::fprintf(stderr, "[ov_bridge] OV_KLT_PYR=%s in the environment ignored (use --klt-pyr N)\n", e);
     ::unsetenv("OV_KLT_PYR");
   }
+  // --pred-stale-ms auto (2026-10-26 droplatefix): 500 ms with --drop-late mode 1, else off; explicit value wins
+  if (a.pred_stale_ms < 0.0) a.pred_stale_ms = (a.drop_late_ms > 0.0 && a.drop_late_mode == 1) ? 500.0 : 0.0;
+  if (a.drop_late_ms > 0.0 || a.pred_stale_ms > 0.0)
+    std::fprintf(stderr, "[ov_bridge] drop-late %.0f ms mode %d cap %d win %.2f s | pred-stale %.0f ms\n", a.drop_late_ms,
+                 a.drop_late_mode, a.drop_late_cap, a.drop_late_win, a.pred_stale_ms);
   if (!a.profile.empty())
     std::fprintf(stderr, "[ov_bridge] profile %s: ovopt '%s' idle_spin %d idle_spin_ms %.0f drop_late %.0f health %d predict %d hz %.0f pred_thread %d (after explicit flags)\n",
                  a.profile.c_str(), a.ovopt.c_str(), a.idle_spin, a.idle_spin_ms, a.drop_late_ms, a.health, a.predict,
@@ -2745,6 +2904,7 @@ int main(int argc, char **argv) {
     if (a.pred_thread) {  // --pred-thread (2026-10-25)
       // heap, never freed: after an output write failure the reader thread is detached and may still use it
       auto *pr = new Predictor(a.predict, a.predict_hz, a.pose_precision, out_fd, false);
+      pr->stale_on = a.pred_stale_ms > 0.0;
       serve_q(b, STDIN_FILENO, out_fd, pr);
       pr->log();
       if (g_imu_log) std::fflush(g_imu_log);  // not closed: same reason (closed by process exit)
