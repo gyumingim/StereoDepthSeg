@@ -1,0 +1,61 @@
+[ov_bridge] --ovopt gyro_klt cannot be used with --pipe 1: gyro_klt reads the filter state (velocity, SLAM depth) after the update of the previous frame, the pipelined tracker runs before that update. Use --pipe 0.
+[ov_bridge] --pipe 1 is not in this build (ovpipe-20261026 not merged: stalls / deadlock). Use --pipe 0.
+full/ov_bridge
+6ec1b41d246017b51c74b3046cf8b2f456ffe0d77bebf40b865867f59886c1e7  /tmp/imuprio/h_L0.4nc.bin
+366e0657e31d7d3f1f3d05ee4fb9828a8c8a1ee0ac7f574f99170af3b4e7d2fa  /tmp/ovopt/raw80.bin
+e5beaaefc850ac69beb32dab8640aeb3f97631aa3500e7089ca8c33485226256  /tmp/ovopt/cfg/c4/estimator_config.yaml
+47c88524463ca848da61710b072534e6c95b91acbb8e54bd47bf4fa1dc9f2d93  /home/system/scanner/StereoDepthSeg-integ/scan3d/runs/ovopt_20261025/cfg_identity/estimator_config.yaml
+7f5f6a7 integ2: merge ovgyro-20261026; profiles rec20261025/rec60 --ovopt + sym_inplace,ekf_sparse (ovupd); --pipe 1 refused (gyro_klt+pipe: own error; ovpipe not merged); PC build refuses ovupd options without OV sources
+== h_ref rc 0 poses 845 | 
+== h_mine rc 0 poses 845 | 
+== hv_mine1 rc 0 poses 845 | --predict 2 --predict-hz 200 --pred-thread 1 --viop-udp 127.0.0.1:14783 --viop-hb-src 1
+== hv_mine0 rc 0 poses 845 | --predict 2 --predict-hz 200 --pred-thread 1 --viop-udp 127.0.0.1:14782
+== hv_ref rc 0 poses 845 | --predict 2 --predict-hz 200 --pred-thread 1 --viop-udp 127.0.0.1:14781
+== r_mine_new rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec20261025 --drop-late 0
+== r_ref rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec20261025 --drop-late 0
+== r60_ref rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec60 --drop-late 0
+== r_mine_old rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec20261025 --drop-late 0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol
+== rp_ref rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin
+== rp_mine rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin
+== r_mine_new_rep rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec20261025 --drop-late 0
+== r_mine_dlm0 rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec20261025 --drop-late 0 --drop-late-mode 0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol
+== r60_mine_old rc 0 poses 2327 | --remap /tmp/ovopt/remap_1920x1080.bin --profile rec60 --drop-late 0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol
+-- h_ref vs h_mine
+ref /tmp/integ2/ident/h_ref.jsonl: poses 845 tracking 815 hash 08688db0b4efe77d pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ2/ident/h_mine.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 0 first_diff None [] IDENTICAL
+-- hv_ref vs hv_mine0
+ref /tmp/integ2/ident/hv_ref.jsonl: poses 845 tracking 815 hash 08688db0b4efe77d pred 2190 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ2/ident/hv_mine0.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 2376 first_diff None [] IDENTICAL
+-- hv_ref vs hv_mine1
+ref /tmp/integ2/ident/hv_ref.jsonl: poses 845 tracking 815 hash 08688db0b4efe77d pred 2190 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ2/ident/hv_mine1.jsonl: poses 845 identical 845/845 hash 08688db0b4efe77d pred 2174 first_diff None [] IDENTICAL
+-- r_ref vs r_mine_old
+ref /tmp/integ2/ident/r_ref.jsonl: poses 2327 tracking 2003 hash d150eca6ccc3119a pred 6042 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ2/ident/r_mine_old.jsonl: poses 2327 identical 2327/2327 hash d150eca6ccc3119a pred 6050 first_diff None [] IDENTICAL
+-- rp_ref vs rp_mine
+ref /tmp/integ2/ident/rp_ref.jsonl: poses 2327 tracking 2003 hash 1e58bb28d8b3b8ca pred 0 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ2/ident/rp_mine.jsonl: poses 2327 identical 2327/2327 hash 1e58bb28d8b3b8ca pred 0 first_diff None [] IDENTICAL
+-- r60_ref vs r60_mine_old
+ref /tmp/integ2/ident/r60_ref.jsonl: poses 2327 tracking 2003 hash d150eca6ccc3119a pred 6046 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ2/ident/r60_mine_old.jsonl: poses 2327 identical 2327/2327 hash d150eca6ccc3119a pred 6077 first_diff None [] IDENTICAL
+-- r_ref vs r_mine_dlm0
+ref /tmp/integ2/ident/r_ref.jsonl: poses 2327 tracking 2003 hash d150eca6ccc3119a pred 6042 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ2/ident/r_mine_dlm0.jsonl: poses 2327 identical 2327/2327 hash d150eca6ccc3119a pred 6065 first_diff None [] IDENTICAL
+-- r_ref vs r_mine_new
+ref /tmp/integ2/ident/r_ref.jsonl: poses 2327 tracking 2003 hash d150eca6ccc3119a pred 6042 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ2/ident/r_mine_new.jsonl: poses 2327 identical 333/2327 hash 3eb2ed324c921b7a pred 6046 first_diff 333 ['R_ItoC0', 'T_world_cam0', 'ba', 'bg', 'dt_cam_imu', 'h'] DIFFERENT
+-- r_mine_new vs r_mine_new_rep
+ref /tmp/integ2/ident/r_mine_new.jsonl: poses 2327 tracking 2003 hash 3eb2ed324c921b7a pred 6046 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/tmp/integ2/ident/r_mine_new_rep.jsonl: poses 2327 identical 2327/2327 hash 3eb2ed324c921b7a pred 6078 first_diff None [] IDENTICAL
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 rs_postinit=0 ekf_sparse=1 sym_inplace=1 init_gemm=0 gyro_klt=0 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse', prof log -)
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 rs_postinit=0 ekf_sparse=0 sym_inplace=0 init_gemm=0 gyro_klt=0 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol', prof log -)
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 rs_postinit=0 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol', prof log -)
+[ov_bridge] viop: udp 127.0.0.1:14783 msgs odom mount imu yaw_align 1 replay_time 0 sysid 1
+[ov_bridge] viop heartbeat: thread 20.0 Hz (feed 100 ms / main loop 200 ms liveness)
+[ov_bridge] viop: udp 127.0.0.1:14783 msgs 1 mount imu | sent 2174 fail 0 heartbeat 173 timesync 0 | age ms (send - predicted instant) p50 721707456.00 p95 721714560.00 max 721716032.00 | send - newest IMU receive ms p50 0.18 p95 0.37 max 30.34
+-- refusal checks
+rc 2
+rc 2
+rc gyro_klt=5 alone (empty input) 0
+[ov_bridge] ovopt: skip_retri=0 par_tri=0 par_jac=0 par_ma=0 par_s=0 cov_move=0 frame_nocopy=0 givens_rm=0 ekf_gemm=0 qr_compress=0 ekf_chol=0 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 rs_postinit=0 ekf_sparse=0 sym_inplace=0 init_gemm=0 gyro_klt=5 (--ovopt 'gyro_klt=5', prof log -)
+Mon Oct 26 05:51:38 KST 2026

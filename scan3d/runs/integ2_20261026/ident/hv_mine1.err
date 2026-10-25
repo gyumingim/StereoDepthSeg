@@ -1,0 +1,49 @@
+[ov_bridge] viop: udp 127.0.0.1:14783 msgs odom mount imu yaw_align 1 replay_time 0 sysid 1
+[ov_bridge] viop heartbeat: thread 20.0 Hz (feed 100 ms / main loop 200 ms liveness)
+[ov_bridge] affinity start: (not pinned) threads 12067:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 12073:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 12076:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 4, --threads 2 -> 2 | TBB (ver 2020.3 interface 11103) | cpus 16 | klt overlap 0
+[ov_bridge] affinity ready: (not pinned) threads 12067:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 12073:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 12076:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] idle spin: mode 0 (off) stripes 2 max 200 ms | pred thread (input reader thread on)
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] viop: new world frame (reset_counter 0)
+[ov_bridge] affinity cam300: (not pinned) threads 12067:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 12073:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 12076:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 12079:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 12080:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 12085:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] pred thread reader: image space waits 842
+[ov_bridge] pred thread: mode 2 hz 200 | lines 2174 (frame 814 rate 1360) snapshots 815 | compute us p50 46.1 p95 170.1 max 527.8 | horizon ms p50 506.4 p95 530.9 max 533.3 | thread cpu 0.209 s (pred) 0.178 s (reader)
+[ov_bridge] affinity end: (not pinned) threads 12067:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 12073:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 12076:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 12085:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] predict: mode 2 hz 200 | lines 0 | horizon ms p50 -1.0 p95 -1.0 max -1.0
+[ov_bridge] viop: udp 127.0.0.1:14783 msgs 1 mount imu | sent 2174 fail 0 heartbeat 173 timesync 0 | age ms (send - predicted instant) p50 721707456.00 p95 721714560.00 max 721716032.00 | send - newest IMU receive ms p50 0.18 p95 0.37 max 30.34
+[ov_bridge] viop heartbeat thread: 20.0 Hz | sent gap ms p50 50.00 p95 50.04 max 50.18 | skipped: feed stale 0 main loop stale 0 | late wakeups 0
+[33m[init]: not enough feats to compute disp: 0,0 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,0 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,65 < 15
+[0m[33mPropagator::select_imu_readings(): No IMU measurements to propagate with (0 of 2). IMU-CAMERA are likely messed up!!!
+[0m[31m[ZUPT]: There are no IMU data to check for zero velocity with!!
+[0m[33mPropagator::select_imu_readings(): No IMU measurements to propagate with (0 of 2). IMU-CAMERA are likely messed up!!!
+[0m[31m[ZUPT]: There are no IMU data to check for zero velocity with!!
+[0m[33mPropagator::select_imu_readings(): No IMU measurements to propagate with (0 of 2). IMU-CAMERA are likely messed up!!!
+[0m[31m[ZUPT]: There are no IMU data to check for zero velocity with!!
+[0m[33mPropagator::select_imu_readings(): No IMU measurements to propagate with (0 of 2). IMU-CAMERA are likely messed up!!!
+[0m[31m[ZUPT]: There are no IMU data to check for zero velocity with!!
+[0m

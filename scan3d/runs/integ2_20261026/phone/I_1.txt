@@ -1,0 +1,8 @@
+# integ2 phone list I_1 (2026-10-26): ARM drop-late check (permanent +400 ms shift at 25 s, 45 s of stream; old rule mode 0
+# vs new mode 1) + timing sanity of the new rec20261025 profile (N = + sym_inplace,ekf_sparse) vs the old one (O), ABBA.
+d_m0 ov_bridge_integ2 c4 2 f3v:45:25:400:2 --profile rec20261025 --drop-late-mode 0 --viop-udp 127.0.0.1:14990 --viop-log @O@/viop.csv
+d_m1 ov_bridge_integ2 c4 2 f3v:45:25:400:2 --profile rec20261025 --viop-udp 127.0.0.1:14991 --viop-log @O@/viop.csv
+t_N_r1 ov_bridge_integ2 c4 2 f4 --profile rec20261025 --prof-log @O@/prof.csv
+t_O_r1 ov_bridge_integ2 c4 2 f4 --profile rec20261025 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --prof-log @O@/prof.csv
+t_O_r2 ov_bridge_integ2 c4 2 f4 --profile rec20261025 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --prof-log @O@/prof.csv
+t_N_r2 ov_bridge_integ2 c4 2 f4 --profile rec20261025 --prof-log @O@/prof.csv
