@@ -52,6 +52,7 @@ CONDS = {
     "P": dict(ovopt="par_cov"),                                # near-exact: covariance update in 2 parts
     "W": dict(ovopt="all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov"),  # every option together
     "W2": dict(ovopt="all_exact,ekf_gemm,ekf_chol,par_cov"),   # without qr_compress (givens_rm exact instead)
+    "W3": dict(ovopt="all_exact,ekf_gemm,qr_compress,ekf_chol"),  # without par_cov (slower on the phone, 2026-10-25 L2)
     # Phase 4 configs (accuracy only; exact options do not change results)
     "S70": dict(cfg="max_slam=70"),
     "S100": dict(cfg="max_slam=100"),

@@ -1,0 +1,10 @@
+# L6 (c4 / c4n400s100c20, real time, idle_spin 2, threads 2): (a) W3 = all_exact,ekf_gemm,qr_compress,ekf_chol (W without par_cov:
+# L2 showed par_cov slower on the phone: ekf_cov 2.55 -> 3.63 ms at n400) vs W; (b) compiler-flag builds
+# (-march=armv8.2-a+fp16+dotprod, -flto=thin) vs the default build, all_exact, 17 digits (identity + time).
+F_w3_r1 ov_bridge_ovopt c4 2 2 1.0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --pose-precision 17 --prof-log out/F_w3_r1/prof.csv
+F_march_r1 ov_bridge_ovopt_march c4 2 2 1.0 --ovopt all_exact --pose-precision 17 --prof-log out/F_march_r1/prof.csv
+F_w_r1 ov_bridge_ovopt c4 2 2 1.0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,par_cov --pose-precision 17 --prof-log out/F_w_r1/prof.csv
+F_lto_r1 ov_bridge_ovopt_lto c4 2 2 1.0 --ovopt all_exact --pose-precision 17 --prof-log out/F_lto_r1/prof.csv
+F_def_r1 ov_bridge_ovopt c4 2 2 1.0 --ovopt all_exact --pose-precision 17 --prof-log out/F_def_r1/prof.csv
+F_w3n_r1 ov_bridge_ovopt c4n400s100c20 2 2 1.0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --prof-log out/F_w3n_r1/prof.csv
+F_w3_r2 ov_bridge_ovopt c4 2 2 1.0 --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol --pose-precision 17 --prof-log out/F_w3_r2/prof.csv
