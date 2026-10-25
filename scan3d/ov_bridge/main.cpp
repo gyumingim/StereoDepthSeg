@@ -32,6 +32,10 @@
 //   (predict(): emits only while the input is idle, >= 1/HZ after the last one -> ~127 Hz at 200 on the phone) is unchanged.
 // OV_KLT_PYR from the environment is ignored (removed + logged) unless --klt-pyr N is given.
 //             [--init-still 0|1] [--health 0|1] [--health-log FILE] [--health-cfg K=V,..]
+//             [--klt-stats 0|1] (2026-10-26 ovgyro, output only: pose line "klt":[in, LK ok, kept, mean predicted
+//             shift px, fallback tried, fallback ok, rotation 0|1, mean |LK result - start| px, mean |LK result - old|
+//             px]); --ovopt gyro_klt=1|2 = gyro-aided KLT start points
+//             (CHANGES results, default off; see ovpatch/gyro_klt.h)
 //             [--recover N] [--recover-max-gap S] [--recover-min-feats N] [--test-blank T0:D,..]
 //
 // ---- 2026-10-25, branch ovrobust-20261025 (all default off = output and code path unchanged) ----
@@ -233,6 +237,7 @@
 #include <opencv2/imgproc.hpp>
 
 #include "ovopt.h"  // ovpatch/: --ovopt flags + profiler (2026-10-25)
+#include "gyro_klt.h"  // ovpatch/: gyro-aided KLT counters (2026-10-26 ovgyro)
 #include "mav_out.h"  // --mav-udp drone output (2026-10-25, ovdrone)
 
 #include "core/VioManager.h"
@@ -306,6 +311,7 @@ struct Args {
   // 2026-10-25 ovrobust (header)
   int init_still = 0;         // --init-still 0|1
   int health = 0;             // --health 0|1 (pose line "h")
+  int klt_stats = 0;          // --klt-stats 0|1 (2026-10-26 ovgyro): pose line "klt" = temporal KLT counters (output only)
   std::string health_log;     // --health-log FILE
   std::string health_cfg;     // --health-cfg K=V,...
   int recover = 0;            // --recover N (0 = off)
@@ -1421,6 +1427,18 @@ public:
     }
   }
 
+  void log_gyro_klt() const {  // ovgyro summary (2026-10-26): whole-run temporal KLT counters
+    if (ovopt::g.gyro_klt == 0 && !args_.klt_stats) return;
+    const auto &k = scan3d_gyro::total;
+    std::fprintf(stderr, "[ov_bridge] gyro_klt mode %d: frames %ld (no rotation %ld) | pts in %ld LK ok %ld (%.2f %%) kept %ld "
+                 "(%.2f %%) | fallback %ld/%ld | predicted shift px mean %.3f max %.2f\n", ovopt::g.gyro_klt, k.frames, k.no_rot,
+                 k.pts_in, k.klt_ok, k.pts_in ? 100.0 * k.klt_ok / k.pts_in : 0.0, k.pts_out,
+                 k.pts_in ? 100.0 * k.pts_out / k.pts_in : 0.0, k.fb_ok, k.fb_try, k.shift_n ? k.shift_sum / k.shift_n : 0.0,
+                 k.shift_max);
+    std::fprintf(stderr, "[ov_bridge] gyro_klt mode %d: LK result - start px mean %.3f | LK result - old px mean %.3f (n %ld)\n",
+                 ovopt::g.gyro_klt, k.res_n ? k.res_sum / k.res_n : 0.0, k.res_n ? k.flow_sum / k.res_n : 0.0, k.res_n);
+  }
+
   void log_rs() const {  // ovopt rs_derot summary (2026-10-25)
     if (ovopt::g.rs_derot == 0) return;
     const auto &S = ovopt::rs_stats;
@@ -1675,6 +1693,7 @@ private:
     snap_dirty_ = true;              // --pred-thread: publish a new snapshot after this record
     if (plog_) ovopt::prof_reset();  // --prof-log: stage timers of this frame only
     ovopt::health_reset();           // --health counters of this frame only (always counted, cheap)
+    scan3d_gyro::frame_stats = scan3d_gyro::Stats();  // ovgyro KLT counters of this frame only (output only)
     auto t0 = std::chrono::steady_clock::now();
     try {
       sys_->feed_measurement_camera(c.data);
@@ -1683,6 +1702,7 @@ private:
       return;
     }
     double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+    scan3d_gyro::add(scan3d_gyro::total, scan3d_gyro::frame_stats);  // ovgyro whole-run counters (output only)
     if (plog_) {  // --prof-log row (timing only)
       bool init = sys_->initialized();
       size_t ns = init ? sys_->get_features_SLAM().size() : 0, nm = init ? sys_->get_good_features_MSCKF().size() : 0;
@@ -2120,6 +2140,21 @@ private:
       << ",\"imu_held\":" << imu_hold_.size() << ",\"n_reinit_state\":" << n_reinit_state_;
     if (args_.drop_late_ms > 0.0) o << ",\"late_dropped\":" << n_late_dropped_;  // --drop-late only (2026-10-25)
     if (args_.health && health_on_) health_json(o);                                // --health (2026-10-25)
+    if (args_.klt_stats) {  // --klt-stats (2026-10-26 ovgyro): in, LK ok, kept, mean predicted shift px, fallback try/ok, rotation
+      const auto &k = scan3d_gyro::frame_stats;
+      o << ",\"klt\":[" << k.pts_in << "," << k.klt_ok << "," << k.pts_out << ",";
+      jnum(o, k.shift_n ? k.shift_sum / k.shift_n : 0.0);
+      o << "," << k.fb_try << "," << k.fb_ok << "," << (scan3d_gyro::pred.have ? 1 : 0) << ",";
+      jnum(o, k.res_n ? k.res_sum / k.res_n : 0.0);   // mean |LK result - start| px
+      o << ",";
+      jnum(o, k.res_n ? k.flow_sum / k.res_n : 0.0);  // mean |LK result - old| px
+      for (double v : {k.shift_n ? k.pdx / k.shift_n : 0.0, k.shift_n ? k.pdy / k.shift_n : 0.0, k.res_n ? k.fdx / k.res_n : 0.0,
+                       k.res_n ? k.fdy / k.res_n : 0.0}) {  // mean predicted (x, y) and mean LK flow (x, y) px
+        o << ",";
+        jnum(o, v);
+      }
+      o << "]";
+    }
     if (args_.recover > 0 && (seg_ > 0 || off_active_)) {                         // --recover frame offset
       o << ",\"seg\":" << seg_ << ",\"frame_off\":[";
       jnum(o, off_yaw_); o << ","; jnum(o, off_t_(0)); o << ","; jnum(o, off_t_(1)); o << ","; jnum(o, off_t_(2));
@@ -2484,7 +2519,7 @@ void usage() {
                "                 [--ovopt LIST] [--prof-log FILE] [--pose-precision N] [--drop-late MS]\n"
                "                 [--pred-thread 0|1] [--imu-log FILE] [--profile rec20261025|rec60|none]\n"
                "                 [--mav-udp HOST:PORT | --viop-udp HOST:PORT] [--viop-hb-hz HZ]\n"
-               "                 [--init-still 0|1] [--health 0|1] [--health-log FILE] [--health-cfg K=V,..] [--recover N]\n"
+               "                 [--init-still 0|1] [--health 0|1] [--health-log FILE] [--health-cfg K=V,..] [--klt-stats 0|1] [--recover N]\n"
                "                 [--recover-max-gap S] [--recover-min-feats N] [--recover-full 0|1] [--test-blank T0:D,..]\n");
 }
 
@@ -2598,6 +2633,7 @@ int main(int argc, char **argv) {
     else if (s == "--imu-log") a.imu_log = next();                                     // 2026-10-25
     else if (s == "--init-still") a.init_still = std::stoi(next()) != 0 ? 1 : 0;   // 2026-10-25 ovrobust
     else if (s == "--health") a.health = std::stoi(next()) != 0 ? 1 : 0;
+    else if (s == "--klt-stats") a.klt_stats = std::stoi(next()) != 0 ? 1 : 0;  // 2026-10-26 ovgyro
     else if (s == "--health-log") a.health_log = next();
     else if (s == "--health-cfg") a.health_cfg = next();
     else if (s == "--recover") a.recover = std::max(0, std::stoi(next()));
@@ -2659,7 +2695,7 @@ int main(int argc, char **argv) {
     f.frame_nocopy = 0;
     f.prof = 0;
     if (f.skip_retri || f.par_tri || f.par_jac || f.par_ma || f.par_s || f.cov_move || f.givens_rm || f.ekf_gemm ||
-        f.qr_compress || f.ekf_chol || f.par_cov || f.rs_derot) {
+        f.qr_compress || f.ekf_chol || f.par_cov || f.rs_derot || f.gyro_klt) {
       std::fprintf(stderr, "[ov_bridge] --ovopt %s needs a build with the OpenVINS sources (OV_FULL_SOURCE / phone build)\n",
                    a.ovopt.c_str());
       return 2;
@@ -2758,6 +2794,7 @@ int main(int argc, char **argv) {
     b.log_predict();
     b.log_drop();
     b.log_rs();
+    b.log_gyro_klt();  // 2026-10-26 ovgyro
     if (g_mav) {
       for (int i = 0; i < 3; i++) g_mav->hb_tick(false, false, true);  // VIOP: "stopping" heartbeats on a clean exit
       g_mav->report();

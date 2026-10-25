@@ -31,6 +31,7 @@ const Field kFields[] = {
     {"par_cov", &Flags::par_cov, false},      {"prof", &Flags::prof, false},
     {"rs_derot", &Flags::rs_derot, false},    {"rs_row_ppm", &Flags::rs_row_ppm, false},
     {"rs_postinit", &Flags::rs_postinit, false},
+    {"gyro_klt", &Flags::gyro_klt, false},  // 2026-10-26 ovgyro (changes results)
 };
 } // namespace
 

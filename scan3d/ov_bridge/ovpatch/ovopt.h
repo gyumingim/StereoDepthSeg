@@ -43,6 +43,10 @@ struct Flags {
   int rs_postinit = 0; // rs_derot only after the VIO is initialised (the initialiser sees raw measurements); 0 = always
   int rs_row_ppm = 0;  // rs_derot without a bridge row map (no --remap): fed-row fraction -> sensor-row fraction multiplier
                        // x 1e6 (undistort crop: fy_raw*H_fed/(fy_fed*H_raw)); 0 = 1.0. Ignored when the bridge set rs_map.
+  // --- changes results (2026-10-26, branch ovgyro-20261026) ---
+  int gyro_klt = 0;    // TrackKLT mono temporal KLT start points moved by the gyro rotation between the frames (VioManager
+                       // integrates bias-corrected gyro over the frame gap, R_ItoC, t_d); 2 = also re-track LK failures from
+                       // the upstream start point. 0 = off (upstream code path). See ovpatch/gyro_klt.h.
   // --- profiling ---
   int prof = 0;        // per-stage timers (ov_bridge --prof-log FILE)
   // --- behaviour (2026-10-25, branch ovrobust; NOT part of --ovopt / all_exact; set by ov_bridge --init-still) ---

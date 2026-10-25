@@ -39,6 +39,8 @@
 #include <deque>
 #include <map>
 #include "ovopt.h"
+#include "gyro_klt.h"     // scan3d ovgyro (2026-10-26)
+#include "utils/quat_ops.h"  // scan3d ovgyro: exp_so3
 
 #include "core/VioManager.h"  // scan3d: dir prefix (copy lives in ovpatch/)
 
@@ -71,6 +73,105 @@ using namespace ov_msckf;
 namespace {
 // rs_derot: last ~1 s of raw IMU per VioManager instance (only filled when the option is on)
 std::map<const VioManager *, std::deque<ov_core::ImuData>> g_rs_imu;
+
+// ---- scan3d ovgyro (2026-10-26): gyro-aided KLT (ovopt::g.gyro_klt, ovpatch/gyro_klt.h) ----
+// Raw IMU history (only filled with the option) + camera time of the last frame given to the tracker, per instance.
+std::map<const VioManager *, std::deque<ov_core::ImuData>> g_gk_imu;
+std::map<const VioManager *, double> g_gk_last_t;
+
+// Rotation of the camera between the last tracked frame and this one from the gyro: R_I0I1 = prod Exp((w - b_g) dt) over
+// [t_last + t_d, t_now + t_d] (trapezoid w per IMU interval, the first / last sample held at the ends), then
+// R_C1C0 = R_ItoC R_I0I1^T R_ItoC^T. b_g only once initialised (before: raw gyro, bias is small). No rotation (tracker
+// keeps upstream start points) on the first frame, a gap > 0.2 s, time going backwards, or no gyro sample within 50 ms.
+void gk_prepare(const VioManager *self, double t_cam, std::shared_ptr<State> state, bool initialized) {
+  auto &P = scan3d_gyro::pred;
+  P.mode = ovopt::g.gyro_klt;
+  P.have = false;
+  P.R_C1C0.setIdentity();
+  P.n_imu = 0;
+  P.held = 0.0;
+  P.have_t = false;
+  P.t_C1.setZero();
+  P.invz_med = 0.0;
+  P.invz.clear();
+  auto it = g_gk_last_t.find(self);
+  const bool first = it == g_gk_last_t.end();
+  const double t_last = first ? 0.0 : it->second;
+  g_gk_last_t[self] = t_cam;
+  if (first || t_cam <= t_last || t_cam - t_last > 0.2)
+    return;
+  const double td = state->_calib_dt_CAMtoIMU->value()(0);
+  const double t0 = t_last + td, t1 = t_cam + td;
+  const auto &q = g_gk_imu[self];
+  if (q.empty())
+    return;
+  // samples near the interval
+  std::vector<const ov_core::ImuData *> s;
+  for (const auto &m : q)
+    if (m.timestamp >= t0 - 0.05 && m.timestamp <= t1 + 0.05)
+      s.push_back(&m);
+  if (s.empty())
+    return;
+  Eigen::Vector3d bg = initialized ? Eigen::Vector3d(state->_imu->bias_g()) : Eigen::Vector3d::Zero();
+  Eigen::Matrix3d R = Eigen::Matrix3d::Identity();  // R_I0<-It, grows by right multiplication
+  auto step = [&](const Eigen::Vector3d &w, double dt) {
+    if (dt > 0)
+      R = R * ov_core::exp_so3((w - bg) * dt);
+  };
+  // [t0, first sample): hold the first sample
+  if (s.front()->timestamp > t0)
+    step(s.front()->wm, std::min(s.front()->timestamp, t1) - t0);
+  for (size_t k = 0; k + 1 < s.size(); k++) {
+    double a = std::max(s[k]->timestamp, t0), b = std::min(s[k + 1]->timestamp, t1);
+    if (b > a) {
+      step(0.5 * (s[k]->wm + s[k + 1]->wm), b - a);
+      P.n_imu++;
+    }
+  }
+  // (last sample, t1]: hold the last sample (IMU not yet delivered up to this frame)
+  if (s.back()->timestamp < t1)
+    step(s.back()->wm, t1 - std::max(s.back()->timestamp, t0));
+  Eigen::Matrix3d R_ItoC = state->_calib_IMUtoCAM.at(0)->Rot();
+  P.R_C1C0 = R_ItoC * R.transpose() * R_ItoC.transpose();
+  P.dt = t_cam - t_last;
+  P.held = s.back()->timestamp < t1 ? t1 - std::max(s.back()->timestamp, t0) : 0.0;
+  P.have = true;
+  // mode 3/4: translation from the state (last update = last frame) + SLAM landmark depths
+  if (P.mode >= 3 && initialized && std::abs(state->_timestamp - t_last) < 1e-6) {
+    const Eigen::Vector3d p_IinC = state->_calib_IMUtoCAM.at(0)->pos();
+    const Eigen::Matrix3d R_GtoI = state->_imu->Rot();
+    const Eigen::Vector3d p_IinG = state->_imu->pos();
+    const Eigen::Matrix3d R_GtoC0 = R_ItoC * R_GtoI;
+    const Eigen::Vector3d dp_C0 = R_GtoC0 * (state->_imu->vel() * P.dt);
+    P.t_C1 = -(P.R_C1C0 * dp_C0);
+    std::vector<double> iz;
+    for (auto &f : state->_features_SLAM) {
+      Eigen::Vector3d pG;
+      if (ov_type::LandmarkRepresentation::is_relative_representation(f.second->_feat_representation)) {
+        auto ac = state->_clones_IMU.find(f.second->_anchor_clone_timestamp);
+        if (f.second->_anchor_cam_id != 0 || ac == state->_clones_IMU.end())
+          continue;
+        pG = ac->second->Rot().transpose() * R_ItoC.transpose() * (f.second->get_xyz(false) - p_IinC) + ac->second->pos();
+      } else {
+        pG = f.second->get_xyz(false);
+      }
+      const Eigen::Vector3d pC = R_ItoC * (R_GtoI * (pG - p_IinG)) + p_IinC;
+      if (pC(2) > 0.1 && pC(2) < 100.0) {
+        P.invz[f.first] = 1.0 / pC(2);
+        iz.push_back(1.0 / pC(2));
+      }
+    }
+    if (!iz.empty()) {
+      std::nth_element(iz.begin(), iz.begin() + iz.size() / 2, iz.end());
+      P.invz_med = iz[iz.size() / 2];
+      P.have_t = true;
+    }
+  }
+  static const bool dbg = std::getenv("OV_GK_DEBUG") != nullptr;  // debug print only
+  if (dbg)
+    std::fprintf(stderr, "[gk] t %.4f dt %.4f n_imu %d held %.4f q_back %.4f td %.5f\n", t_cam, P.dt, P.n_imu, P.held,
+                 q.back().timestamp - t1, td);
+}
 
 void rs_correct(const VioManager *self, const ov_core::CameraData &message, std::shared_ptr<State> state,
                 std::shared_ptr<ov_core::TrackBase> track, bool initialized) {
@@ -295,6 +396,13 @@ void VioManager::feed_measurement_imu(const ov_core::ImuData &message) {
     while (!q.empty() && q.front().timestamp < message.timestamp - 1.0)
       q.pop_front();
   }
+  // scan3d ovgyro: own copy of the last ~1 s of raw IMU for the gyro-aided KLT (off = nothing stored)
+  if (ovopt::g.gyro_klt != 0) {
+    auto &q = g_gk_imu[this];
+    q.push_back(message);
+    while (!q.empty() && q.front().timestamp < message.timestamp - 1.0)
+      q.pop_front();
+  }
 
   // Push back to our initializer
   if (!is_initialized_vio) {
@@ -400,6 +508,8 @@ void VioManager::track_image_and_update(const ov_core::CameraData &message_const
   // Perform our feature tracking!
   {
     ovopt::Scope prof_scope(ovopt::S_TRACK);
+    if (ovopt::g.gyro_klt != 0)  // scan3d ovgyro: gyro rotation for the KLT start points of this frame (off = not called)
+      gk_prepare(this, message.timestamp, state, is_initialized_vio);
     trackFEATS->feed_new_camera(message);
     {  // scan3d health (ovrobust): ids tracked on cam0 after this frame (read only)
       auto ids = trackFEATS->get_last_ids();
