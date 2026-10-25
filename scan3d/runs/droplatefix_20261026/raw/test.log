@@ -1,0 +1,32 @@
+Mon Oct 26 02:01:16 KST 2026
+ 02:01:16 up 8 days, 13:37,  2 users,  load average: 3.26, 3.77, 6.04
+23279d6aa265f27f820b7f3117cffe70d6a73ec0f467d140c2110a4e41f36986  /tmp/verify_ovgyro/build_integ/ov_bridge
+83af4df9ce2fdd0a9e8f7bb2e0663caa32bd1f067bba87d038224337a9c754a2  /tmp/droplatefix/build/ov_bridge
+366e0657e31d7d3f1f3d05ee4fb9828a8c8a1ee0ac7f574f99170af3b4e7d2fa  /tmp/ovopt/raw80.bin
+== i_ref rc 0 poses 2327 | --profile rec20261025 --drop-late 0
+== i_new rc 0 poses 2327 | --profile rec20261025 --drop-late 0
+== p_new rc 0 poses 2327 | 
+== p_ref rc 0 poses 2327 | 
+ref i_ref.jsonl: poses 2327 tracking 2003
+  i_new.jsonl: poses 2327 identical 2327/2327 first_diff None [] -> IDENTICAL
+ref p_ref.jsonl: poses 2327 tracking 2003
+  p_new.jsonl: poses 2327 identical 2327/2327 first_diff None [] -> IDENTICAL
+Mon Oct 26 02:02:20 KST 2026
+== s2_old m2 maxT 45 | --drop-late-mode 0 --viop-udp 127.0.0.1:14991 --viop-log /tmp/droplatefix/t/s2_old.viop.csv | feeder3v speed 1.00: 23599 records, 1254 frames, 45.00 s, late_max 14.44 ms, late_cam_max 6.91 ms, cam late>5ms 7
+== s2_ref m2 maxT 45 | --viop-udp 127.0.0.1:14990 --viop-log /tmp/droplatefix/t/s2_ref.viop.csv | feeder3v speed 1.00: 23599 records, 1254 frames, 45.00 s, late_max 14.51 ms, late_cam_max 7.05 ms, cam late>5ms 9
+== s2_new m2 maxT 45 | --viop-udp 127.0.0.1:14992 --viop-log /tmp/droplatefix/t/s2_new.viop.csv | feeder3v speed 1.00: 23599 records, 1254 frames, 45.00 s, late_max 14.82 ms, late_cam_max 8.95 ms, cam late>5ms 11
+Mon Oct 26 02:03:07 KST 2026
+== s1_new m1 maxT 45 | --viop-udp 127.0.0.1:14992 --viop-log /tmp/droplatefix/t/s1_new.viop.csv | feeder3v speed 1.00: 23599 records, 1254 frames, 45.00 s, late_max 399.91 ms, late_cam_max 398.46 ms, cam late>5ms 30
+== s1_ref m1 maxT 45 | --viop-udp 127.0.0.1:14990 --viop-log /tmp/droplatefix/t/s1_ref.viop.csv | feeder3v speed 1.00: 23599 records, 1254 frames, 45.00 s, late_max 400.90 ms, late_cam_max 399.26 ms, cam late>5ms 29
+== s1_old m1 maxT 45 | --drop-late-mode 0 --viop-udp 127.0.0.1:14991 --viop-log /tmp/droplatefix/t/s1_old.viop.csv | feeder3v speed 1.00: 23599 records, 1254 frames, 45.00 s, late_max 403.34 ms, late_cam_max 402.20 ms, cam late>5ms 21
+Mon Oct 26 02:03:53 KST 2026
+== s0_new m0 maxT 45 | --viop-udp 127.0.0.1:14992 --viop-log /tmp/droplatefix/t/s0_new.viop.csv | feeder3v speed 1.00: 23599 records, 1254 frames, 45.00 s, late_max 17.58 ms, late_cam_max 10.77 ms, cam late>5ms 11
+== s0_ref m0 maxT 45 | --viop-udp 127.0.0.1:14990 --viop-log /tmp/droplatefix/t/s0_ref.viop.csv | feeder3v speed 1.00: 23599 records, 1254 frames, 45.00 s, late_max 17.57 ms, late_cam_max 9.94 ms, cam late>5ms 16
+== s0_old m0 maxT 45 | --drop-late-mode 0 --viop-udp 127.0.0.1:14991 --viop-log /tmp/droplatefix/t/s0_old.viop.csv | feeder3v speed 1.00: 23599 records, 1254 frames, 45.00 s, late_max 19.17 ms, late_cam_max 11.32 ms, cam late>5ms 10
+Mon Oct 26 02:04:39 KST 2026
+== f_ref_r1 m0 maxT 0 |  | feeder3v speed 1.00: 43308 records, 2327 frames, 82.37 s, late_max 15.11 ms, late_cam_max 12.87 ms, cam late>5ms 5
+== f_new_r1 m0 maxT 0 |  | feeder3v speed 1.00: 43308 records, 2327 frames, 82.38 s, late_max 27.86 ms, late_cam_max 13.89 ms, cam late>5ms 8
+Mon Oct 26 02:06:02 KST 2026
+== f_new_r2 m0 maxT 0 |  | feeder3v speed 1.00: 43308 records, 2327 frames, 82.37 s, late_max 18.49 ms, late_cam_max 15.50 ms, cam late>5ms 11
+== f_ref_r2 m0 maxT 0 |  | feeder3v speed 1.00: 43308 records, 2327 frames, 82.37 s, late_max 18.50 ms, late_cam_max 7.02 ms, cam late>5ms 5
+Mon Oct 26 02:07:26 KST 2026

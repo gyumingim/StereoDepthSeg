@@ -1,0 +1,66 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 rs_postinit=0 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol', prof log -)
+[ov_bridge] viop: udp 127.0.0.1:14990 msgs odom mount imu yaw_align 1 replay_time 0 sysid 1
+[ov_bridge] profile rec20261025: ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol' idle_spin 2 idle_spin_ms 20 drop_late 50 health 1 predict 2 hz 200 pred_thread 1 (after explicit flags)
+[ov_bridge] affinity start: (not pinned) threads 95829:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 95836:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 2 -> 2 | TBB (ver 2020.3 interface 11103) | cpus 16 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /tmp/ovopt/remap_1920x1080.bin
+[ov_bridge] ovrobust: init_still 0 | health 1 log - | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 0 (max gap 3.0 s, min feats 20) | test blank 0 windows
+[ov_bridge] affinity ready: (not pinned) threads 95829:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 95836:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] idle spin: mode 2 (pool) stripes 2 max 200 ms window 20.0 ms | pred thread (input reader thread on)
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] affinity cam300: (not pinned) threads 95829:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 95836:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 95839:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 95840:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 95845:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 6434 spun 2960 timeouts 1 spin 6.67 s | exit_us n 2959 p50 4.1 p95 304.8 p99 1900.8 max 6912.4 | window 20.0 ms period 36.45 ms blocked 2337 (5.05 s)
+[ov_bridge] health t=13.466 INIT -> OK (tracked 121 used 11 since_upd 0.00 pos_std 0.087)
+[ov_bridge] viop: new world frame (reset_counter 0)
+[ov_bridge] drop-late: frame t=24.997 403.1 ms late (> 50.0) -> skipped (#1)
+[ov_bridge] drop-late: frame t=25.030 402.8 ms late (> 50.0) -> skipped (#2)
+[ov_bridge] drop-late: frame t=25.064 404.2 ms late (> 50.0) -> skipped (#3)
+[ov_bridge] drop-late: frame t=25.097 401.6 ms late (> 50.0) -> skipped (#4)
+[ov_bridge] drop-late: frame t=25.130 402.3 ms late (> 50.0) -> skipped (#5)
+[ov_bridge] drop-late: frame t=25.164 401.9 ms late (> 50.0) -> skipped (#6)
+[ov_bridge] drop-late: frame t=25.197 401.8 ms late (> 50.0) -> skipped (#7)
+[ov_bridge] drop-late: frame t=25.231 405.3 ms late (> 50.0) -> skipped (#8)
+[ov_bridge] drop-late: frame t=25.264 403.2 ms late (> 50.0) -> skipped (#9)
+[ov_bridge] drop-late: frame t=25.297 401.4 ms late (> 50.0) -> skipped (#10)
+[ov_bridge] drop-late: frame t=25.331 412.5 ms late (> 50.0) -> skipped (#11)
+[ov_bridge] drop-late: frame t=25.364 401.5 ms late (> 50.0) -> skipped (#12)
+[ov_bridge] drop-late: frame t=25.397 403.7 ms late (> 50.0) -> skipped (#13)
+[ov_bridge] drop-late: frame t=25.431 401.7 ms late (> 50.0) -> skipped (#14)
+[ov_bridge] drop-late: frame t=25.464 403.1 ms late (> 50.0) -> skipped (#15)
+[ov_bridge] drop-late: frame t=25.498 401.8 ms late (> 50.0) -> skipped (#16)
+[ov_bridge] drop-late: frame t=25.531 403.5 ms late (> 50.0) -> skipped (#17)
+[ov_bridge] drop-late: frame t=25.564 400.2 ms late (> 50.0) -> skipped (#18)
+[ov_bridge] drop-late: frame t=25.598 400.7 ms late (> 50.0) -> skipped (#19)
+[ov_bridge] drop-late: frame t=25.631 403.7 ms late (> 50.0) -> skipped (#20)
+[ov_bridge] drop-late: frame t=28.297 401.6 ms late (> 50.0) -> skipped (#100)
+[ov_bridge] drop-late: frame t=31.630 401.7 ms late (> 50.0) -> skipped (#200)
+[ov_bridge] drop-late: frame t=34.963 402.6 ms late (> 50.0) -> skipped (#300)
+[ov_bridge] drop-late: frame t=38.296 401.2 ms late (> 50.0) -> skipped (#400)
+[ov_bridge] drop-late: frame t=41.630 407.5 ms late (> 50.0) -> skipped (#500)
+[ov_bridge] drop-late: frame t=44.963 403.3 ms late (> 50.0) -> skipped (#600)
+[ov_bridge] pred thread reader: image space waits 0
+[ov_bridge] pred thread: mode 2 hz 200 | lines 6532 (frame 330 rate 6202) snapshots 330 | compute us p50 63.6 p95 106.8 max 4040.7 | horizon ms p50 3507.2 p95 18388.5 max 20036.0 | thread cpu 0.775 s (pred) 1.352 s (reader)
+[ov_bridge] affinity end: (not pinned) threads 95829:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 95836:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 95845:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 23600 spun 11921 timeouts 2 spin 26.69 s | exit_us n 11919 p50 4.7 p95 535.3 p99 2216.7 max 14872.1 | window 20.0 ms period 33.07 ms blocked 5810 (11.82 s)
+[ov_bridge] predict: mode 2 hz 200 | lines 0 | horizon ms p50 -1.0 p95 -1.0 max -1.0
+[ov_bridge] drop-late: limit 50.0 ms | dropped 600 frames | min lag 708855525.1 ms
+[ov_bridge] viop: udp 127.0.0.1:14990 msgs 1 mount imu | sent 6532 fail 0 heartbeat 866 timesync 0 | age ms (send - predicted instant) p50 708855936.00 p95 708855936.00 max 708855936.00 | send - newest IMU receive ms p50 1.93 p95 12.07 max 402.22
+[ov_bridge] health: frames INIT 324 OK 330 DEGRADED 0 LOST 0 | transitions 2 | max LOST run 0 frames | recover state 0 full 0 | blanked 0 | init_ready frames 319
+[33m[init]: not enough feats to compute disp: 0,0 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,0 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,53 < 15
+[0m
