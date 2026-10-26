@@ -1,0 +1,220 @@
+{
+ "made": "2026-10-26 21:25:07",
+ "K_rect_fixed": [
+  [
+   652.100131343069,
+   0.0,
+   485.00164508293915
+  ],
+  [
+   0.0,
+   652.0788166569401,
+   275.8726257980659
+  ],
+  [
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "note": "calcap_calib_20261026: distortion difference in the c4f60 rectified 960x540 image (coordinator request 2026-10-26).\nFixed rectified K = current c4f60 yaml K (652.10 ...). For a rectified pixel q: ray = K_rect^-1 q -> raw pixel with lens A\n(distort + K_A) -> rectify that raw pixel with lens B (undistort with K_B, d_B, then K_rect) -> |q' - q| = where the two\nmodels put the same ray, in rectified px. A = new k12_notan fit, B = c4f60 raw lens / cal20261024d; bootstrap lenses vs\nnew = spread of the new fit computed the same way. Also: getOptimalNewCameraMatrix(alpha 0) per lens (why 659.35 vs 652.10).\nResults only; no app/config file changed.   python rectdiff.py <run dir>",
+ "groups": {
+  "centre": {
+   "n": 1,
+   "raw_r_of_points": [
+    0.005
+   ],
+   "vs_c4f60": {
+    "max": 1.661639736232135,
+    "median": 1.661639736232135
+   },
+   "vs_24d": {
+    "max": 0.603825858850911,
+    "median": 0.603825858850911
+   },
+   "boot_p95_per_point_max": 2.1585123439302834,
+   "boot_p95_per_point_median": 2.1585123439302834,
+   "boot_sd_per_point_median": 1.2056145791504742,
+   "c4f60_inside_boot_p95": [
+    true
+   ],
+   "d24_inside_boot_p95": [
+    true
+   ]
+  },
+  "r0.5": {
+   "n": 8,
+   "raw_r_of_points": [
+    0.494,
+    0.496,
+    0.489,
+    0.504,
+    0.505,
+    0.504,
+    0.489,
+    0.496
+   ],
+   "vs_c4f60": {
+    "max": 3.123540814669306,
+    "median": 2.169096384441779
+   },
+   "vs_24d": {
+    "max": 0.6819017138560286,
+    "median": 0.6549122495530515
+   },
+   "boot_p95_per_point_max": 3.124574223144215,
+   "boot_p95_per_point_median": 2.7648799711815126,
+   "boot_sd_per_point_median": 1.536366710488495,
+   "c4f60_inside_boot_p95": [
+    true,
+    true,
+    true,
+    true,
+    false,
+    true,
+    true,
+    true
+   ],
+   "d24_inside_boot_p95": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ]
+  },
+  "r0.8": {
+   "n": 8,
+   "raw_r_of_points": [
+    0.803,
+    0.751,
+    0.489,
+    0.759,
+    0.814,
+    0.759,
+    0.489,
+    0.751
+   ],
+   "vs_c4f60": {
+    "max": 7.0883696854721885,
+    "median": 2.598860579985299
+   },
+   "vs_24d": {
+    "max": 0.9211361917514536,
+    "median": 0.7734980647625387
+   },
+   "boot_p95_per_point_max": 3.7689134592911713,
+   "boot_p95_per_point_median": 3.417581159857356,
+   "boot_sd_per_point_median": 1.9095991505710699,
+   "c4f60_inside_boot_p95": [
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    true,
+    true
+   ],
+   "d24_inside_boot_p95": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ]
+  },
+  "corners": {
+   "n": 4,
+   "raw_r_of_points": [
+    1.013,
+    1.004,
+    1.014,
+    1.005
+   ],
+   "vs_c4f60": {
+    "max": 8.84183956839219,
+    "median": 6.095658025139596
+   },
+   "vs_24d": {
+    "max": 0.8310035384294241,
+    "median": 0.6926759312016195
+   },
+   "boot_p95_per_point_max": 5.386193146636871,
+   "boot_p95_per_point_median": 4.699863153882125,
+   "boot_sd_per_point_median": 2.621184037514801,
+   "c4f60_inside_boot_p95": [
+    false,
+    true,
+    false,
+    true
+   ],
+   "d24_inside_boot_p95": [
+    true,
+    true,
+    true,
+    true
+   ]
+  }
+ },
+ "optimal_new_K_alpha0_960x540": {
+  "new": [
+   [
+    659.3539878281226,
+    0.0,
+    482.34424787701516
+   ],
+   [
+    0.0,
+    658.6703077488028,
+    276.3181454202752
+   ],
+   [
+    0.0,
+    0.0,
+    1.0
+   ]
+  ],
+  "c4f60_raw": [
+   [
+    652.100131343069,
+    0.0,
+    485.00164508293915
+   ],
+   [
+    0.0,
+    652.0788166569401,
+    275.8726257980659
+   ],
+   [
+    0.0,
+    0.0,
+    1.0
+   ]
+  ],
+  "cal20261024d": [
+   [
+    658.5078681341528,
+    0.0,
+    482.3136735303636
+   ],
+   [
+    0.0,
+    658.7628154796128,
+    276.9895510139122
+   ],
+   [
+    0.0,
+    0.0,
+    1.0
+   ]
+  ]
+ },
+ "optimal_new_K_note": "alpha 0 = largest rectified view with no invalid pixels; its focal depends on the distortion at the frame edge, so equal raw fx can give different rectified fx"
+}
