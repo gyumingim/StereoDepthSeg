@@ -1,0 +1,31 @@
+T xfeatnn_640x352_float32.tflite --use_gpu=true --num_runs=30 --warmup_runs=3
+T xfeatnn_640x352_float32.tflite --use_nnapi=true --nnapi_allow_fp16=true --num_runs=30 --warmup_runs=3
+xfeat_640x352.onnx xnnpack 20 3 4
+T nnmatch_2048_float32.tflite --use_gpu=true --num_runs=30 --warmup_runs=3
+nnmatch_2048.onnx cpu 20 3 4
+T xfeatnn_640x352_float32.tflite --use_nnapi=true --nnapi_allow_fp16=true --disable_nnapi_cpu=true --num_runs=30 --warmup_runs=3
+xfeat_640x352.onnx nnapi_fp16 20 3 1
+T xfeatnn_640x352_float32.tflite --num_threads=4 --num_runs=20 --warmup_runs=3
+T xfeatnn_960x544_float32.tflite --use_nnapi=true --nnapi_allow_fp16=true --num_runs=30 --warmup_runs=3
+T xfeatnn_960x544_float32.tflite --use_gpu=true --num_runs=30 --warmup_runs=3
+lighterglue_512.onnx nnapi_fp16 10 2 1
+lighterglue_1024.onnx nnapi_fp16 10 2 1
+lighterglue_512.onnx xnnpack 10 2 4
+lighterglue_1024.onnx xnnpack 5 1 4
+T nnmatch_1024_float32.tflite --use_gpu=true --num_runs=30 --warmup_runs=3
+nnmatch_1024.onnx cpu 20 3 4
+nnmatch_4096.onnx cpu 10 2 4
+T xfeatnn_480x256_float32.tflite --use_gpu=true --num_runs=30 --warmup_runs=3
+T xfeatnn_480x256_float32.tflite --use_nnapi=true --nnapi_allow_fp16=true --num_runs=30 --warmup_runs=3
+xfeat_640x352.onnx cpu 3 1 4 /data/local/tmp/ovxfeat/in_640x352.f32 /data/local/tmp/ovxfeat/o_ort_cpu_640
+xfeat_640x352.onnx nnapi_fp16 3 1 1 /data/local/tmp/ovxfeat/in_640x352.f32 /data/local/tmp/ovxfeat/o_ort_nnapi16_640
+xfeat_640x352.onnx nnapi_nocpu 3 1 1 /data/local/tmp/ovxfeat/in_640x352.f32 /data/local/tmp/ovxfeat/o_ort_nnapinocpu_640
+T xfeatnn_640x352_float32.tflite --use_gpu=true --num_runs=3 --warmup_runs=1 --input_layer_value_files=image_norm:/data/local/tmp/ovxfeat/in_640x352_norm.f32 --output_filepath=/data/local/tmp/ovxfeat/o_tfl_gpu_640.bin
+T xfeatnn_640x352_float32.tflite --use_nnapi=true --nnapi_allow_fp16=true --num_runs=3 --warmup_runs=1 --input_layer_value_files=image_norm:/data/local/tmp/ovxfeat/in_640x352_norm.f32 --output_filepath=/data/local/tmp/ovxfeat/o_tfl_nnapi16_640.bin
+T xfeatnn_640x352_float32.tflite --num_threads=4 --num_runs=3 --warmup_runs=1 --input_layer_value_files=image_norm:/data/local/tmp/ovxfeat/in_640x352_norm.f32 --output_filepath=/data/local/tmp/ovxfeat/o_tfl_cpu_640.bin
+T xfeatnn_640x352_float32.tflite --use_nnapi=true --nnapi_allow_fp16=true --num_runs=30 --warmup_runs=3
+T xfeatnn_640x352_float32.tflite --use_gpu=true --num_runs=30 --warmup_runs=3
+T nnmatch_2048_float32.tflite --use_gpu=true --num_runs=30 --warmup_runs=3
+lighterglue_1024.onnx nnapi_fp16 10 2 1
+lighterglue_2048.onnx nnapi_fp16 5 1 1
+lighterglue_2048.onnx xnnpack 3 1 4

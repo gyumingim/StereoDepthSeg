@@ -45,6 +45,7 @@ int main(int argc, char **argv) {
   std::vector<std::vector<float>> bufs;
   std::mt19937 rng(1);
   std::uniform_real_distribution<float> U(-1.f, 1.f);
+  const std::string in_file = argc > 6 ? argv[6] : "", out_pref = argc > 7 ? argv[7] : "";  // accuracy check (raw f32)
   for (size_t i = 0; i < s.GetInputCount(); i++) {
     in_names.push_back(s.GetInputNameAllocated(i, al).get());
     auto sh = s.GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape();
@@ -55,6 +56,14 @@ int main(int argc, char **argv) {
     }
     std::vector<float> b(n);
     for (auto &x : b) x = U(rng);
+    if (i == 0 && !in_file.empty()) {
+      FILE *f = std::fopen(in_file.c_str(), "rb");
+      if (!f || std::fread(b.data(), 4, n, f) != n) {
+        std::fprintf(stderr, "cannot read %zu floats from %s\n", n, in_file.c_str());
+        return 3;
+      }
+      std::fclose(f);
+    }
     shapes.push_back(sh);
     bufs.push_back(std::move(b));
   }
@@ -72,6 +81,16 @@ int main(int argc, char **argv) {
     auto out = s.Run(Ort::RunOptions{nullptr}, inp.data(), ins.data(), ins.size(), outp.data(), outp.size());
     const double d = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - a).count();
     if (it >= warm) ms.push_back(d);
+    if (it == warm + iters - 1 && !out_pref.empty())
+      for (size_t k = 0; k < out.size(); k++) {
+        auto ti = out[k].GetTensorTypeAndShapeInfo();
+        if (ti.GetElementType() != ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT) continue;
+        FILE *f = std::fopen((out_pref + "_" + out_names[k] + ".f32").c_str(), "wb");
+        if (f) {
+          std::fwrite(out[k].GetTensorData<float>(), 4, ti.GetElementCount(), f);
+          std::fclose(f);
+        }
+      }
   }
   std::sort(ms.begin(), ms.end());
   auto pc = [&](double p) { return ms[std::min(ms.size() - 1, static_cast<size_t>(p / 100.0 * (ms.size() - 1) + 0.5))]; };

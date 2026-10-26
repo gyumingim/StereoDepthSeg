@@ -80,6 +80,8 @@ CONDS = {
     "L1kt2": _x(2, 1024, tri=1, tri_deg=2.0), "L1kt3": _x(2, 1024, tri=1, tri_deg=3.0), "N1kt3": _x(1, 1024, tri=1, tri_deg=3.0),
     "L512t3": _x(2, 512, tri=1, tri_deg=3.0), "N4kt3": _x(1, 4096, tri=1, tri_deg=3.0), "L4kFt3": _x(2, 4096, 960, 540, tri=1, tri_deg=3.0),
     "N4kFt3": _x(1, 4096, 960, 540, tri=1, tri_deg=3.0), "N2kt3": _x(1, 2048, tri=1, tri_deg=3.0),
+    # phone-budget candidate (21:40, after phone timing: XFeat 960x544 GPU 19 ms + 4 x NN(~2250 pts) on CPU)
+    "N2kFt": _x(1, 2048, 960, 540, tri=1),
     "B30": dict(fps=30.0, extra=""),
     "B30f": dict(fps=30.0, extra="--loop-cfg fast_th=10,n_feat=1000,min_inliers=20"),
     "B30g": dict(fps=30.0, extra="--loop-cfg fast_th=10,n_feat=1000,min_inliers=15,ratio=0.85"),
@@ -236,6 +238,16 @@ def run_sched(spec, par):
                 print(f"{time.strftime('%F %T')} done {n} {time.time() - t0:.0f} s {'ok' if ok else 'FAILED'}", flush=True)
         while q and len(running) < par:
             n = q.pop(0)
+            # supervisor 21:03: re-check at pop time (another scheduler may have finished it) and never start a job whose
+            # process is already running (same OUT: logs are opened with "w")
+            if (OUT / n.split("_")[2] / f"{n}.json").exists():
+                continue
+            busy = subprocess.run(["pgrep", "-f", f"ovxfeat_run.py job {n}$"], capture_output=True, text=True,
+                                  env=dict(os.environ)).stdout.strip()
+            if busy:
+                print(f"{time.strftime('%F %T')} wait {n} (already running pid {busy.split()[0]}), re-queued", flush=True)
+                q.append(n)
+                break
             (OUT / n.split("_")[2]).mkdir(parents=True, exist_ok=True)
             err = open(OUT / n.split("_")[2] / f"{n}.err", "w")
             running[n] = (subprocess.Popen(["nice", "-n", "5", PY, str(Path(__file__).resolve()), "job", n],
@@ -337,7 +349,7 @@ def score():
                     row["edge_err_cm_max"] = max((e["err_cm"] for e in ch), default=None)
             rows[f"{cond}/{name}"] = row
     json.dump(dict(made=time.strftime("%F %T"), rows=rows), open(OUT / "score.json", "w"), indent=1)
-    (RD / "score.json").write_text(json.dumps(dict(made=time.strftime("%F %T"), out=str(OUT), rows=rows), indent=1))
+    (RD / ("score.json" if OUT.name == "ate" else f"score_{OUT.name}.json")).write_text(json.dumps(dict(made=time.strftime("%F %T"), out=str(OUT), rows=rows), indent=1))
     for k, v in rows.items():
         print(k, {x: v.get(x) for x in v if x not in ("edges", "name", "rec")})
 

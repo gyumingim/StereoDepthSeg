@@ -57,7 +57,7 @@ for c in conds:
     d.update(xf_ms(c))
     res["conds"][c] = d
 json.dump(res, open(OUT / "summary.json", "w"), indent=1)
-(R.RD / "summary.json").write_text(json.dumps(res, indent=1))
+(R.RD / ("summary.json" if OUT.name == "ate" else f"summary_{OUT.name}.json")).write_text(json.dumps(res, indent=1))
 for c, d in res["conds"].items():
     a, b = d.get("l142148", {}), d.get("l142610", {})
     s = d.get("std", {})
