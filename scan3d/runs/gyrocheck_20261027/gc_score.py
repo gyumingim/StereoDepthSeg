@@ -62,7 +62,7 @@ def verdict(key, which, dedup=False):
     if dedup:  # POST HOC: phases whose (NL60, GL60) runs are identical count once; init failures listed apart
         seen, keep = set(), []
         for k in done:
-            if k in noinit:
+            if all(R_[k][c]["noinit"] for c in G.CONDS):  # both failed to init: drop (one side only = that side diverged, kept)
                 continue
             hk = (R_[k]["NL60"]["hash"], R_[k]["GL60"]["hash"])
             if hk in seen:
@@ -88,11 +88,14 @@ def verdict(key, which, dedup=False):
             dirs.append(+1 if dd < 0 else (-1 if dd > 0 else 0))
     v = "TIE"
     why = ""
-    if abs(dg - dn) >= 2:
+    import math
+    n_d = len(done)
+    div_need = max(2, math.ceil(n_d / 3)) if dedup else 2  # POST HOC 2 (supervisor 00:03 E2): ratio thresholds
+    if abs(dg - dn) >= div_need:
         v = "GYRO+" if dg < dn else "GYRO-"
         why = f"div {dn}->{dg}"
     elif len(pairs) >= 3:
-        need = 3 if len(pairs) == 3 else 4
+        need = (3 if len(pairs) == 3 else 4) if not dedup else max(3, math.ceil(2 * len(pairs) / 3))
         nb, nw = int((d < 0).sum()), int((d > 0).sum())
         med = float(np.median(d))
         if nb >= need and med <= -DELTA[which]:
@@ -107,11 +110,11 @@ def verdict(key, which, dedup=False):
     sysv = None
     if v in ("GYRO+", "GYRO-"):
         want = +1 if v == "GYRO+" else -1
-        sysv = "계통" if sum(x == want for x in dirs) >= 4 else "약함"
+        sysv = "계통" if sum(x == want for x in dirs) >= (4 if not dedup else math.ceil(2 * len(dirs) / 3)) else "약함"
     lottery = None
     if done and done[0] == "k0" and dirs:
         d0 = dirs[0]
-        lottery = (d0 != 0 and sum(x == -d0 for x in dirs[1:]) >= 2)
+        lottery = (d0 != 0 and sum(x == -d0 for x in dirs[1:]) >= (2 if not dedup else max(1, math.ceil((len(dirs) - 1) / 3))))
     tin = {c: [R_[k][c]["t_init"] for k in done] for c in G.CONDS}
     return dict(key=key, which=which, dedup=dedup, n_phase=len(done), n_distinct_all=n_distinct, noinit_phases=noinit, div_NL60=dn, div_GL60=dg, n_pairs=len(pairs),
                 d_med=round(float(np.median(d)), 4) if len(d) else None, n_gyro_better=int((d < 0).sum()),
