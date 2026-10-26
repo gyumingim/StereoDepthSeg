@@ -26,7 +26,7 @@ Three stages, two Python environments:
   ~/scanner/StereoDepthSeg/venv_ffs/bin/python dpvo_run.py prep hs:30,60;std:30,60;loop:30,60
   ~/scanner/dpvo_ext/mamba/envs/dpvo/bin/python dpvo_run.py run hs:30 --cfg base [--par 1]
   ~/scanner/StereoDepthSeg/venv_ffs/bin/python dpvo_run.py score
-OUT = /tmp/dpvo/out (env DPVO_OUT). Raw poses stay there (not committed); score.json is copied next to this file.
+OUT = ~/scanner/tmp_dpvo/out (env DPVO_OUT). Raw poses stay there (not committed); score.json is copied next to this file.
 """
 import argparse
 import gzip
@@ -42,7 +42,7 @@ import numpy as np
 
 MAIN = Path("/home/system/scanner/StereoDepthSeg/scan3d")
 RD = Path(__file__).resolve().parent
-OUT = Path(os.environ.get("DPVO_OUT", "/tmp/dpvo/out"))
+OUT = Path(os.environ.get("DPVO_OUT", "/home/system/scanner/tmp_dpvo/out"))  # /tmp wiped 10-26 (WSL crash)
 DPVO_SRC = Path("/home/system/scanner/dpvo_ext/DPVO")
 PY_FFS = "/home/system/scanner/StereoDepthSeg/venv_ffs/bin/python"
 PY_DPVO = "/home/system/scanner/dpvo_ext/mamba/envs/dpvo/bin/python"
@@ -58,8 +58,9 @@ CFGS = {"base": dict(file="config/default.yaml", opts=[]),
         "slam": dict(file="config/default.yaml", opts=["LOOP_CLOSURE", "True"]),
         "p48": dict(file="config/default.yaml", opts=["PATCHES_PER_FRAME", "48"])}
 # OpenVINS references (same cells): integ2 0.6.27 profile (gyro_klt=5) and ov60eval
-REF = {("hs", 30): ("/tmp/integ2/ate_g", "GL30"), ("hs", 60): ("/tmp/dpvo/ov", "GL60"),
-       ("std", 30): ("/tmp/ov60eval/ate", "L30"), ("std", 60): ("/tmp/integ2/ate_g", "GL60")}
+OVR = "/home/system/scanner/tmp_dpvo/ov"   # own re-run of the integ2 0.6.27 profile (ov_ref_run.py), all four cells sets
+REF = {("hs", 30): (OVR, "GL30"), ("hs", 60): (OVR, "GL60"), ("std", 30): (OVR, "GL30"), ("std", 60): (OVR, "GL60"),
+       ("loop", 30): (OVR, "GL30"), ("loop", 60): (OVR, "GL60")}
 
 
 def cells(which):
@@ -174,6 +175,7 @@ def job(name, cfgname):
     t_ns = np.asarray(c["t_ns"], np.int64)
     t0 = int(t_ns[0])
     causal, ms, t_init_ns = [], [], None
+    lc_prev, n_lc, lc_at = -1000, 0, []   # DPV-SLAM proximity loop closure: times last_global_ba moved (= loop factors added)
     torch.cuda.reset_peak_memory_stats()
     wall0 = time.time()
     err = None
@@ -192,6 +194,10 @@ def job(name, cfgname):
                 slam((int(t_ns[k]) - t0) / 1e9, image, intr)
                 torch.cuda.synchronize()
                 ms.append((time.perf_counter() - a) * 1e3)
+                lg = getattr(slam, "last_global_ba", None)
+                if lg is not None and lg != lc_prev:
+                    n_lc, lc_prev = n_lc + 1, lg
+                    lc_at.append(round((int(t_ns[k]) - t0) / 1e9, 2))
                 if slam.is_initialized and t_init_ns is None:
                     t_init_ns = int(t_ns[k])
                 if slam.is_initialized:   # after init every frame is appended as the newest (keyframe() may drop an older one)
@@ -228,7 +234,7 @@ def job(name, cfgname):
                rec=c["rec"], off=c["off"], which=c["which"], fps=c["fps"], frames_fed=len(c["rows"]), size=f"{Wc}x{Hc}",
                t_init_clip_s=round((t_init_ns - t0) / 1e9, 3) if t_init_ns else None,
                tracked_causal=sum(m["status"] == "tracking" for m in causal), tracked_final=n_final,
-               n_keyframes=int(slam.n) if slam is not None else None, error=err,
+               n_keyframes=int(slam.n) if slam is not None else None, error=err, n_loop_ba=n_lc, loop_ba_t_s=lc_at[:50],
                ms_med=round(float(np.median(st)), 2) if len(st) else None, ms_p95=round(float(np.percentile(st, 95)), 2) if len(st) else None,
                ms_max=round(float(st.max()), 2) if len(st) else None, ms_mean=round(float(st.mean()), 2) if len(st) else None,
                terminate_ms=round(term_ms, 1) if term_ms else None, wall_s=round(time.time() - wall0, 1),

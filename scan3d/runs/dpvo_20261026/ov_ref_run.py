@@ -57,8 +57,8 @@ import numpy as np
 MAIN = Path("/home/system/scanner/StereoDepthSeg/scan3d")
 WT = Path("/home/system/scanner/StereoDepthSeg-dpvo/scan3d")
 RD = WT / "runs" / "dpvo_20261026" / "ov_ref"
-OUT = Path(os.environ.get("OV60_OUT", "/tmp/dpvo/ov"))
-SRC = WT / "ov_bridge" / "build_integ2_full" / "ov_bridge"
+OUT = Path(os.environ.get("OV60_OUT", "/home/system/scanner/tmp_dpvo/ov"))  # /tmp was wiped 10-26 ~09:45 (WSL crash)
+SRC = Path("/home/system/scanner/StereoDepthSeg-integ2/scan3d/ov_bridge/build_integ2_full/ov_bridge")  # integ2 0b469ac gyro build c640f534 (= this branch base)
 PY = str(MAIN.parent / "venv_ffs" / "bin" / "python")
 sys.path.insert(0, str(MAIN / "imu_learn"))
 sys.path.insert(0, str(MAIN))
@@ -127,8 +127,8 @@ def freeze():
     dst = OUT / "bin" / f"ov_bridge_{h[:12]}"
     if not dst.exists():
         shutil.copy2(SRC, dst)
-    git = subprocess.run(["git", "-C", str(WT), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
-    dirty = subprocess.run(["git", "-C", str(WT), "status", "--short", "ov_bridge"], capture_output=True, text=True).stdout
+    git = subprocess.run(["git", "-C", str(SRC.parents[2]), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    dirty = subprocess.run(["git", "-C", str(SRC.parents[2]), "status", "--short", "ov_bridge"], capture_output=True, text=True).stdout
     json.dump(dict(src=str(SRC), sha256=h, copy=str(dst), frozen=time.strftime("%F %T"), worktree_head=git,
                    ov_bridge_dirty=[x for x in dirty.splitlines() if "build_integ2_full" not in x]),
               open(OUT / "bin" / "bridge.json", "w"), indent=1)
@@ -313,7 +313,7 @@ def score():
     _, drop, _ = hs_cells()
     hs = score_hs_std("hs", conds, gs)
     Shs, Phs = summarize(hs, conds, drop)
-    loops = {}  # integ2: HS 42 cells (+ std60 GT cells for the rec60 gyro sanity check, conds present only)
+    loops = score_loops(["GL30", "GL60"])  # dpvo: hand loops scored (start-end error)
     std = score_hs_std("std", conds, gs)
     Sstd, Pstd = summarize(std, conds, None)
     res = dict(made=time.strftime("%F %T"), protocol=__doc__, conds=CONDS, bridge=json.load(open(OUT / "bin" / "bridge.json")),
@@ -321,7 +321,7 @@ def score():
                loops=loops)
     json.dump(res, open(OUT / "score.json", "w"), indent=1, ensure_ascii=False)
     RD.mkdir(parents=True, exist_ok=True)
-    rd_score = RD / "score.json" if OUT == Path("/tmp/integ2/ate") else RD / "gyro" / "score_gyro.json"  # keep the 0.6.26 score
+    rd_score = RD / "score_ov_ref.json"
     rd_score.parent.mkdir(parents=True, exist_ok=True)
     json.dump(res, open(rd_score, "w"), indent=1, ensure_ascii=False)
     for nm, S, P in (("HS 42", Shs, Phs), ("std60 GT", Sstd, Pstd)):
