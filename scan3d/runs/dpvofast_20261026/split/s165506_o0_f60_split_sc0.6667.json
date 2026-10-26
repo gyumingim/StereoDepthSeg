@@ -1,0 +1,65 @@
+{
+ "cell": "s165506_o0_f60",
+ "tag": "split_sc0.6667",
+ "knobs": {
+  "patches": 0,
+  "win": 0,
+  "ba_it": 0,
+  "fp32": false,
+  "scale": 0.6667,
+  "stride": 1,
+  "compile": false,
+  "nosync": false
+ },
+ "size": "640x352",
+ "k_init": 300,
+ "frames": [
+  400,
+  700
+ ],
+ "n_keyframes": 31,
+ "edges_now": 36384,
+ "wall_unsynced_ms_med": 35.205,
+ "wall_unsynced_ms_mean": 35.829,
+ "wall_regiontimed_ms_mean": 36.642,
+ "regions_ms_mean": {
+  "BA(cuda_ba)": 1.719,
+  "corr(cuda_corr)": 6.055,
+  "keyframe(+motionmag)": 10.894,
+  "patchify(CNN)": 5.769,
+  "point_cloud": 0.469,
+  "reproject(lietorch)": 0.875,
+  "update_net(MLP/GRU/scatter)": 8.439,
+  "rest(python glue, indexing, cat, sync)": 2.422
+ },
+ "load": [
+  0.9892578125,
+  0.76513671875,
+  0.71533203125
+ ],
+ "made": "2026-10-26 18:21:41",
+ "prof_frames": [
+  700,
+  1000
+ ],
+ "gpu_kernel_ms_per_frame": 45.785,
+ "kernel_launches_per_frame": 1172.5,
+ "gpu_ms_by_family": {
+  "corr": 16.438,
+  "elementwise/reduce/other": 9.467,
+  "scatter": 3.404,
+  "gemm": 2.314,
+  "conv/cudnn": 0.643,
+  "BA": 0.627,
+  "lietorch": 0.079
+ },
+ "host_sync_like_calls_per_frame": {
+  "cudaMemcpyAsync": 121.73,
+  "cudaStreamSynchronize": 52.6,
+  "aten::item": 12.0,
+  "aten::_local_scalar_dense": 12.0,
+  "aten::_unique": 2.0,
+  "aten::_unique2": 2.0,
+  "cudaDeviceSynchronize": 2.0
+ }
+}

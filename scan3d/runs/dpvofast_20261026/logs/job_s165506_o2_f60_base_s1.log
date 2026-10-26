@@ -1,0 +1,11 @@
+/home/system/scanner/dpvo_ext/DPVO/dpvo/net.py:187: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  @autocast(enabled=False)
+/home/system/scanner/StereoDepthSeg-dpvofast/scan3d/runs/dpvofast_20261026/dpvofast.py:152: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+  img = torch.from_numpy(np.ascontiguousarray(mms[ci][r_])).cuda()
+/home/system/scanner/dpvo_ext/DPVO/dpvo/dpvo.py:391: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=self.cfg.MIXED_PRECISION):
+/home/system/scanner/dpvo_ext/DPVO/dpvo/dpvo.py:249: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=self.cfg.MIXED_PRECISION):
+/home/system/scanner/dpvo_ext/DPVO/dpvo/dpvo.py:332: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=True):
+{"name": "s165506_o2_f60", "cfg": "base_s1", "frames_fed": 1570, "size": "960x528", "t_init_clip_s": 2.917, "tracked_causal": 1395, "ms_med": 45.55, "ms_p95": 49.04, "error": null, "load": [1.08154296875, 1.896484375, 1.7919921875]}

@@ -1,0 +1,75 @@
+/home/system/scanner/dpvo_ext/DPVO/dpvo/net.py:187: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  @autocast(enabled=False)
+/home/system/scanner/StereoDepthSeg-dpvofast/scan3d/runs/dpvofast_20261026/dpvofast.py:152: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:203.)
+  img = torch.from_numpy(np.ascontiguousarray(mms[ci][r_])).cuda()
+/home/system/scanner/dpvo_ext/DPVO/dpvo/dpvo.py:391: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=self.cfg.MIXED_PRECISION):
+/home/system/scanner/dpvo_ext/DPVO/dpvo/dpvo.py:249: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=self.cfg.MIXED_PRECISION):
+/home/system/scanner/dpvo_ext/DPVO/dpvo/dpvo.py:332: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=True):
+{
+ "cell": "221052_o0_f60",
+ "tag": "split_sc0.6667",
+ "knobs": {
+  "patches": 0,
+  "win": 0,
+  "ba_it": 0,
+  "fp32": false,
+  "scale": 0.6667,
+  "stride": 1,
+  "compile": false,
+  "nosync": false
+ },
+ "size": "640x352",
+ "k_init": 1106,
+ "frames": [
+  1206,
+  1506
+ ],
+ "n_keyframes": 37,
+ "edges_now": 36576,
+ "wall_unsynced_ms_med": 36.002,
+ "wall_unsynced_ms_mean": 36.6,
+ "wall_regiontimed_ms_mean": 37.174,
+ "regions_ms_mean": {
+  "BA(cuda_ba)": 1.781,
+  "corr(cuda_corr)": 5.572,
+  "keyframe(+motionmag)": 11.462,
+  "patchify(CNN)": 5.975,
+  "point_cloud": 0.483,
+  "reproject(lietorch)": 0.91,
+  "update_net(MLP/GRU/scatter)": 8.462,
+  "rest(python glue, indexing, cat, sync)": 2.529
+ },
+ "load": [
+  1.46435546875,
+  1.13525390625,
+  0.91162109375
+ ],
+ "made": "2026-10-26 18:29:23",
+ "prof_frames": [
+  1506,
+  1806
+ ],
+ "gpu_kernel_ms_per_frame": 50.005,
+ "kernel_launches_per_frame": 1172.7,
+ "gpu_ms_by_family": {
+  "corr": 18.671,
+  "elementwise/reduce/other": 10.262,
+  "scatter": 3.641,
+  "gemm": 2.376,
+  "conv/cudnn": 0.647,
+  "BA": 0.626,
+  "lietorch": 0.083
+ },
+ "host_sync_like_calls_per_frame": {
+  "cudaMemcpyAsync": 120.97,
+  "cudaStreamSynchronize": 52.36,
+  "aten::item": 12.0,
+  "aten::_local_scalar_dense": 12.0,
+  "aten::_unique": 2.0,
+  "aten::_unique2": 2.0,
+  "cudaDeviceSynchronize": 2.0
+ }
+}
