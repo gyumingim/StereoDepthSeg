@@ -411,6 +411,7 @@ class OvRunner implements SensorEventListener {
         File remap = new File(cfgDir, remapName);
         if (!remap.exists()) remap = new File(dir, remapName);
         if (!remap.exists()) throw new IllegalStateException("no " + remapName + " in " + cfgDir + " or " + dir);
+        checkRemapSize(remap, new File(runDir, imucamName(cfg)));   // 0.6.29 (lens05): no silent size mismatch
 
         String lib = ctx.getApplicationInfo().nativeLibraryDir;
         List<String> cmd = new ArrayList<>();
@@ -666,6 +667,44 @@ class OvRunner implements SensorEventListener {
                                 @Override public void onConfigureFailed(CameraCaptureSession s) { status.show("configure failed"); }
                             }));
                 } catch (Exception e) { status.show("session: " + e); }
+    }
+
+    /** 0.6.29 (lens05, 2026-10-27): the remap output size must equal the cam0 resolution of the config the bridge reads, and a
+     *  v2 remap's source size must equal the camera frame W x H. Before, a missing files/ov/<cfg>/remap_WxH.bin silently fell back
+     *  to files/ov/remap_WxH.bin (640x360 output) while the config said 960x540 (wrong K in VIO), and a wrong source size made the
+     *  bridge skip the remap (ov_bridge feeds a frame unremapped when its size differs from the map source). Matching files =
+     *  no change; a mismatch stops the start with this message. Skipped when the yaml has no resolution line. */
+    /** relative_config_imucam of the run-dir estimator config (default kalibr_imucam_chain.yaml) - the file the bridge reads */
+    private static String imucamName(File cfg) throws Exception {
+        for (String line : new String(java.nio.file.Files.readAllBytes(cfg.toPath()), StandardCharsets.UTF_8).split("\n")) {
+            String t = line.trim();
+            if (t.startsWith("relative_config_imucam:")) return t.split(":", 2)[1].split("#")[0].trim().replace("\"", "");
+        }
+        return "kalibr_imucam_chain.yaml";
+    }
+
+    private void checkRemapSize(File remap, File imucam) throws Exception {
+        if (!imucam.exists()) return;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("resolution:\\s*\\[\\s*(\\d+)\\s*,\\s*(\\d+)\\s*\\]")
+                .matcher(new String(java.nio.file.Files.readAllBytes(imucam.toPath()), StandardCharsets.UTF_8));
+        if (!m.find()) return;
+        int cw = Integer.parseInt(m.group(1)), ch = Integer.parseInt(m.group(2));
+        long len = remap.length();
+        ByteBuffer hdr = ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN);
+        try (java.io.RandomAccessFile f = new java.io.RandomAccessFile(remap, "r")) {
+            f.readFully(hdr.array());
+            int mw = hdr.getInt(0), mh = hdr.getInt(4);
+            if (mw != cw || mh != ch)
+                throw new IllegalStateException("remap " + remap + " is " + mw + "x" + mh + " but " + imucam.getName() + " says " + cw + "x" + ch);
+            long body = 8L + 8L * mw * mh;
+            if (len == body + 8) {      // v2: int32 src_w, src_h at the end
+                f.seek(body);
+                f.readFully(hdr.array());
+                int sw = hdr.getInt(0), sh = hdr.getInt(4);
+                if (isMain() && (sw != W || sh != H))
+                    throw new IllegalStateException("remap " + remap + " source " + sw + "x" + sh + " != camera frame " + W + "x" + H);
+            } else if (len != body) throw new IllegalStateException("remap " + remap + ": " + len + " bytes, expected " + body + " or " + (body + 8));
+        }
     }
 
     /** Copy files/ov/<cfg>/estimator_config.yaml (+ its kalibr chains) into the run dir with the OpenVINS output paths
