@@ -215,6 +215,12 @@ class OvRunner implements SensorEventListener {
     int imuPrio = 0;                            // 0.6.19 intent imu_prio: 1 = IMU never waits behind an image write (class doc)
     int predThread = 1;                         // 0.6.19 intent pred_thread: with predict 2 -> ov_bridge --pred-thread 1
     boolean imuLog = false;                     // 0.6.19 intent imu_log: IMU delivery logs (class doc)
+    // ovbaro (2026-10-26, default off = pressure sensor not registered, bridge command unchanged): intent baro 1 = register
+    // TYPE_PRESSURE at its fastest rate (S24 LPS22DF: 80 ms), send each sample as bridge record type 7 (<qd t_ns hPa) and run
+    // ov_bridge --baro 1 --baro-log <run>/baro_log.csv; every sample also in <run>/baro.csv (t_ns,hpa). meta "baro".
+    boolean baro = false;
+    private BufferedWriter baroW;
+    private long nBaro;
     private final LinkedBlockingQueue<byte[]> imuQ = new LinkedBlockingQueue<>(65536);   // imu_prio: IMU records
     private final java.util.concurrent.Semaphore wake = new java.util.concurrent.Semaphore(0);   // imu_prio: writer wake-up
     static final int CHUNK = 65536;             // imu_prio: image chunk payload bytes
@@ -438,6 +444,7 @@ class OvRunner implements SensorEventListener {
         if (ovHealth) Collections.addAll(cmd, "--health", "1", "--health-log", new File(runDir, "health.csv").getAbsolutePath());  // ovrobust
         if (initStill) Collections.addAll(cmd, "--init-still", "1");                                                    // ovrobust
         if (recoverFrames > 0) Collections.addAll(cmd, "--recover", Integer.toString(recoverFrames));                    // ovrobust
+        if (baro) Collections.addAll(cmd, "--baro", "1", "--baro-log", new File(runDir, "baro_log.csv").getAbsolutePath());   // ovbaro
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.environment().put("LD_LIBRARY_PATH", lib);
         pb.redirectError(new File(runDir, "bridge_stderr.log"));
@@ -470,7 +477,8 @@ class OvRunner implements SensorEventListener {
                 .put("imu_prio", imuPrio).put("pred_thread", predict == 2 && predThread > 0 ? 1 : 0).put("imu_log", imuLog ? 1 : 0)
                 .put("ov_health", ovHealth ? 1 : 0).put("init_still", initStill ? 1 : 0).put("recover", recoverFrames)   // ovrobust
                 .put("profile", profile).put("viop_udp", viopUdp).put("viop_hb_hz", viopHbHz).put("viop_imu", viopImu)   // 0.6.20
-                .put("viop_hb_src", viopHbSrc);                                                                      // esp32fix
+                .put("viop_hb_src", viopHbSrc)                                                                       // esp32fix
+                .put("baro", baro ? 1 : 0);                                                                           // ovbaro
         if (!viopImu.isEmpty()) {   // 0.6.20: own sensor thread, independent of the VIO feed (class doc)
             imuTx = new ViopImuSender(ctx, viopImu, viopImuUncal, runDir);
             imuTx.start();
@@ -521,6 +529,16 @@ class OvRunner implements SensorEventListener {
         meta.put("imu", raw ? "uncalibrated types 35/16 (values 0..2)" : "calibrated types 1/4");
         sm.registerListener(this, acc, SensorManager.SENSOR_DELAY_FASTEST, ih);
         sm.registerListener(this, gyr, SensorManager.SENSOR_DELAY_FASTEST, ih);
+        if (baro) {                                                   // ovbaro: barometer on the same IMU thread
+            Sensor ps = sm.getDefaultSensor(Sensor.TYPE_PRESSURE);
+            if (ps == null) status.show("no barometer");
+            else {
+                baroW = new BufferedWriter(new FileWriter(new File(runDir, "baro.csv")), 1 << 14);
+                baroW.write("t_ns,hpa\n");
+                sm.registerListener(this, ps, SensorManager.SENSOR_DELAY_FASTEST, ih);
+                meta.put("baro_sensor", ps.getName()).put("baro_min_delay_us", ps.getMinDelay());
+            }
+        }
 
         camThread = new HandlerThread("cam");
         camThread.start();
@@ -835,6 +853,7 @@ class OvRunner implements SensorEventListener {
         synchronized (framesLock) { closeQuiet(framesW); framesW = null; }
         synchronized (posesLock) { closeQuiet(posesW); posesW = null; closeQuiet(eventsW); eventsW = null; closeQuiet(predW); predW = null; }
         closeQuiet(tempsW);
+        if (baroW != null) { try { if (imuThread != null) imuThread.join(300); } catch (InterruptedException ignored) { } closeQuiet(baroW); baroW = null; }   // ovbaro
         if (imuLog && runDir != null) {    // 0.6.19 imu_log rings (imu thread has been quit above; a late event may be torn)
             try { if (imuThread != null) imuThread.join(300); } catch (InterruptedException ignored) { }
             writeRing(new File(runDir, "imu_samples.csv"), "type,t_event_ns,t_arrive_ns", sRing, sN, 3);
@@ -847,7 +866,7 @@ class OvRunner implements SensorEventListener {
                     .put("capture_results", nResults).put("predict_lines", nPred).put("pool_dropped", poolDropped).put("queue_dropped", camDropped)
                     .put("battery_c_end", batteryTenthC() / 10.0).put("thermal_status_end", thermalStatus())
                     .put("stop_reason", stopReason).put("streamer_dropped", out.dropped)
-                    .put("chunked_images", nChunkImg).put("chunks", nChunks).put("imu_log_samples", sN).put("imu_log_writes", wN);
+                    .put("chunked_images", nChunkImg).put("baro_samples", nBaro).put("chunks", nChunks).put("imu_log_samples", sN).put("imu_log_writes", wN);
             if (runDir != null) java.nio.file.Files.write(new File(runDir, "meta.json").toPath(), meta.toString(1).getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) { android.util.Log.e("arlat", "ov meta", e); }   // meta.json last = all files complete
         android.util.Log.i("arlat", "ov stopped (" + stopReason + ") -> " + runDir);
@@ -939,6 +958,7 @@ class OvRunner implements SensorEventListener {
             sRing[i] = e.sensor.getType(); sRing[i + 1] = e.timestamp; sRing[i + 2] = SystemClock.elapsedRealtimeNanos();
             sN++;
         }
+        if (e.sensor.getType() == Sensor.TYPE_PRESSURE) { onBaro(e); return; }   // ovbaro (registered only with intent baro 1)
         if (e.sensor.getType() == accType) {
             if (!accT.isEmpty() && e.timestamp <= accT.get(accT.size() - 1)) return;
             accT.add(e.timestamp);
@@ -949,6 +969,17 @@ class OvRunner implements SensorEventListener {
                     Float.floatToIntBits(e.values[2])});
         }
         flushImu();
+    }
+
+    /** ovbaro: one pressure sample -> bridge record type 7 (<qd: t_ns, hPa) on the IMU path (same queue / ordering rules). */
+    private void onBaro(SensorEvent e) {
+        ByteBuffer rec = ByteBuffer.allocate(12 + 16).order(ByteOrder.LITTLE_ENDIAN);
+        rec.putInt(MAGIC).putInt(7).putInt(16).putLong(e.timestamp).putDouble(e.values[0]);
+        if (imuPrio > 0) { imuQ.offer(rec.array()); wake.release(); }
+        else toBridge.offer(rec.array());
+        nBaro++;
+        BufferedWriter w = baroW;
+        if (w != null) try { w.write(e.timestamp + "," + e.values[0] + "\n"); } catch (Exception ignored) { }
     }
 
     private void flushImu() {

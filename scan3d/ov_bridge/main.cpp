@@ -43,6 +43,16 @@
 //             (CHANGES results, default off; see ovpatch/gyro_klt.h)
 //             [--recover N] [--recover-max-gap S] [--recover-min-feats N] [--test-blank T0:D,..]
 //
+// ---- 2026-10-26, branch ovbaro-20261026 (default off = output and code path unchanged) ----
+// --baro 0|1: barometer-aided height. Record type 7 BARO (<qd: t_ns on the IMU clock, pressure hPa, 16 B) = one
+//   TYPE_PRESSURE sample (arlat intent baro 1). With --baro 1 every camera update is followed by EKF updates of p_z with the
+//   pressure height (2 bias states appended to the OpenVINS state, robust gates; baro.h header, runs/ovbaro_20261026).
+//   Pose lines get "baro":[used, huber, rejected, b_c, b_g, step], ready line "baro" (config), stderr summary at the end.
+//   --baro 0 (default): type-7 records are counted and ignored (stderr line at the end), nothing else changes.
+// --baro-csv FILE (TEST ONLY): t_ns,hPa rows fed as if received when the IMU time passes them (PC synthetic tests).
+// --baro-cfg K=V,.. (baro.h Cfg: sn, gm_sigma, gm_tau, rw, chi2, vz_max, settle, step_jump, reanchor, steady, temp_c,
+//   delay_ms, ground_m, max_age, b0_sigma); --baro-log FILE: one CSV row per sample (status used/huber/step_hold/...).
+//
 // ---- 2026-10-25, branch ovrobust-20261025 (all default off = output and code path unchanged) ----
 // --init-still 0|1 (NOT RECOMMENDED, 2026-10-25 offline 37/45 cells divergent): static initialization while still. Upstream OpenVINS waits for "still, then a jerk" whenever ZUPT
 //   is off (VioManagerHelper: wait_for_jerk = updaterZUPT == nullptr), so the phone has to be moved to initialize.
@@ -273,6 +283,7 @@
 #include "ovopt.h"  // ovpatch/: --ovopt flags + profiler (2026-10-25)
 #include "gyro_klt.h"  // ovpatch/: gyro-aided KLT counters (2026-10-26 ovgyro)
 #include "mav_out.h"  // --mav-udp drone output (2026-10-25, ovdrone)
+#include "baro.h"     // --baro barometer-aided height (2026-10-26, ovbaro)
 
 #include "core/VioManager.h"
 #include "core/VioManagerOptions.h"
@@ -289,7 +300,7 @@
 namespace {
 
 constexpr uint32_t kMagic = 0x4F564252u;  // "OVBR"
-enum MsgType : uint32_t { kImu = 1, kStereo = 2, kReset = 3, kQuit = 4, kChunk = 5, kChunkEnd = 6 };
+enum MsgType : uint32_t { kImu = 1, kStereo = 2, kReset = 3, kQuit = 4, kChunk = 5, kChunkEnd = 6, kBaro = 7 };
 constexpr uint32_t kEof = 0xFFFFFFF0u, kBad = 0xFFFFFFF1u;  // --pred-thread reader end markers (never on the wire)
 constexpr uint32_t kMaxPayload = 64u * 1024u * 1024u;
 
@@ -360,6 +371,10 @@ struct Args {
   int recover_min_feats = 20;
   int recover_full = 0;       // --recover-full 0|1 (full reset when the state is bad / the gap too long; default off)
   std::string test_blank;     // --test-blank T0:D,...
+  int baro = 0;               // --baro 0|1 (2026-10-26 ovbaro; 0 = off: type-7 records counted and ignored)
+  std::string baro_csv;       // --baro-csv FILE (TEST: t_ns,hPa rows released as IMU time passes them)
+  std::string baro_cfg;       // --baro-cfg K=V,.. (baro.h Cfg)
+  std::string baro_log;       // --baro-log FILE (one CSV row per sample)
 };
 
 // --health rules (header); --health-cfg upd_deg=0.2,... overrides
@@ -1232,7 +1247,57 @@ public:
       ok_ = false;
       return;
     }
+    if (a.baro && !baro_setup()) {
+      ok_ = false;
+      return;
+    }
     make_system();
+  }
+
+  // ---- --baro (2026-10-26, ovbaro; baro.h) ----
+  bool baro_setup() {
+    if (!args_.baro_cfg.empty() && !baro_.cfg.parse(args_.baro_cfg)) {
+      std::fprintf(stderr, "[ov_bridge] bad --baro-cfg %s\n", args_.baro_cfg.c_str());
+      return false;
+    }
+    if (!args_.baro_log.empty()) {
+      baro_.log = std::fopen(args_.baro_log.c_str(), "w");
+      if (!baro_.log) {
+        std::fprintf(stderr, "[ov_bridge] cannot open --baro-log %s\n", args_.baro_log.c_str());
+        return false;
+      }
+      std::fprintf(baro_.log, "t_ns,t,hpa,h,z_state,innov,sqrt_S,status,b_c,b_g,dz,step\n");
+    }
+    if (!args_.baro_csv.empty()) {
+      FILE *f = std::fopen(args_.baro_csv.c_str(), "r");
+      if (!f) {
+        std::fprintf(stderr, "[ov_bridge] cannot open --baro-csv %s\n", args_.baro_csv.c_str());
+        return false;
+      }
+      char line[256];
+      long long t;
+      double v;
+      while (std::fgets(line, sizeof(line), f))
+        if (std::sscanf(line, "%lld,%lf", &t, &v) == 2) baro_csv_.push_back({static_cast<int64_t>(t), v});
+      std::fclose(f);
+    }
+    std::fprintf(stderr, "[ov_bridge] baro: on | csv %s (%zu samples) | log %s | %s\n",
+                 args_.baro_csv.empty() ? "-" : args_.baro_csv.c_str(), baro_csv_.size(),
+                 args_.baro_log.empty() ? "-" : args_.baro_log.c_str(), baro_.cfg.describe().c_str());
+    return true;
+  }
+  void baro_rx(int64_t t_ns, double hpa) {  // a pressure sample on the IMU clock (needs the time base: dropped before)
+    if (!have_t0_) {
+      n_baro_early_++;
+      return;
+    }
+    baro_.push(t_ns, to_sec(t_ns), hpa);
+  }
+  void log_baro() const {
+    if (args_.baro) baro_.summary();
+    if (args_.baro && baro_.log) std::fflush(baro_.log);
+    if (n_baro_ignored_ || n_baro_early_)
+      std::fprintf(stderr, "[ov_bridge] baro records: ignored (--baro 0) %ld, before the first IMU %ld\n", n_baro_ignored_, n_baro_early_);
   }
 
   bool ok() const { return ok_; }
@@ -1307,6 +1372,14 @@ public:
       return true;
     case kQuit:
       return false;
+    case kBaro:  // 2026-10-26 ovbaro: <qd t_ns, hPa
+      if (buf.size() != 16) {
+        out += err_line("BARO payload must be 16 bytes");
+        return true;
+      }
+      if (args_.baro) baro_rx(rd<int64_t>(buf.data()), rd<double>(buf.data() + 8));
+      else n_baro_ignored_++;
+      return true;
     default:
       out += err_line("unknown message type " + std::to_string(type));
       return true;
@@ -1329,6 +1402,7 @@ public:
     if (args_.init_still) o << ",\"init_still\":1";                                                   // 2026-10-25 ovrobust
     if (health_on_) o << ",\"health\":" << args_.health << ",\"recover\":" << args_.recover;
     if (!blank_.empty()) o << ",\"test_blank\":" << jstr(args_.test_blank);
+    if (args_.baro) o << ",\"baro\":" << jstr(baro_.cfg.describe());                    // 2026-10-26 ovbaro
     o << "}\n";
     return o.str();
   }
@@ -1581,6 +1655,10 @@ private:
     }
     imu_hold_.push_back(m);
     newest_imu_t_ = t;
+    while (baro_csv_i_ < baro_csv_.size() && baro_csv_[baro_csv_i_].first <= t_ns) {  // --baro-csv (TEST): arrives with IMU time
+      baro_rx(baro_csv_[baro_csv_i_].first, baro_csv_[baro_csv_i_].second);
+      baro_csv_i_++;
+    }
     pump(out);
   }
 
@@ -1850,6 +1928,13 @@ private:
     }
     double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
     scan3d_gyro::add(scan3d_gyro::total, scan3d_gyro::frame_stats);  // ovgyro whole-run counters (output only)
+    if (args_.baro) {  // --baro (2026-10-26): pressure height EKF update on the state of this frame (baro.h)
+      try {
+        baro_.update(sys_->get_state(), sys_->initialized(), lost_);
+      } catch (const std::exception &e) {
+        std::fprintf(stderr, "[ov_bridge] baro exception: %s\n", e.what());
+      }
+    }
     if (plog_) {  // --prof-log row (timing only)
       bool init = sys_->initialized();
       size_t ns = init ? sys_->get_features_SLAM().size() : 0, nm = init ? sys_->get_good_features_MSCKF().size() : 0;
@@ -2313,6 +2398,11 @@ private:
       o << "]";
     }
     if (c.blank) o << ",\"blank\":true";                                            // --test-blank
+    if (args_.baro) {                                                               // --baro (2026-10-26)
+      auto pr = o.precision();
+      baro_.json(o);
+      o.precision(pr);
+    }
     if (args_.emit_features > 0 && init) {
       o << ",\"slam_pts\":[";
       size_t k = std::min(slam.size(), static_cast<size_t>(args_.emit_features));
@@ -2434,6 +2524,10 @@ private:
   uint64_t n_recover_state_ = 0, n_recover_full_ = 0, n_blanked_ = 0, h_n_ready_ = 0;
   int h_vis_back_run_ = 0;
   std::vector<std::pair<double, double>> blank_;  // --test-blank windows (s after the first camera record)
+  baro::Aid baro_;                                  // --baro (2026-10-26 ovbaro)
+  std::vector<std::pair<int64_t, double>> baro_csv_;  // --baro-csv samples (t_ns, hPa)
+  size_t baro_csv_i_ = 0;
+  long n_baro_ignored_ = 0, n_baro_early_ = 0;
   bool have_last_out_ = false, off_pending_ = false, off_active_ = false;
   Eigen::Matrix3d last_out_R_ = Eigen::Matrix3d::Identity(), off_anchor_R_ = Eigen::Matrix3d::Identity();
   Eigen::Vector3d last_out_p_ = Eigen::Vector3d::Zero(), off_anchor_p_ = Eigen::Vector3d::Zero();
@@ -2682,7 +2776,8 @@ void usage() {
                "                 [--pred-thread 0|1] [--imu-log FILE] [--profile rec20261025|rec60|none]\n"
                "                 [--mav-udp HOST:PORT | --viop-udp HOST:PORT] [--viop-hb-hz HZ] [--viop-hb-src 0|1]\n"
                "                 [--init-still 0|1] [--health 0|1] [--health-log FILE] [--health-cfg K=V,..] [--klt-stats 0|1] [--pipe 0] [--recover N]\n"
-               "                 [--recover-max-gap S] [--recover-min-feats N] [--recover-full 0|1] [--test-blank T0:D,..]\n");
+               "                 [--recover-max-gap S] [--recover-min-feats N] [--recover-full 0|1] [--test-blank T0:D,..]\n"
+               "                 [--baro 0|1] [--baro-csv FILE] [--baro-cfg K=V,..] [--baro-log FILE]\n");
 }
 
 }  // namespace
@@ -2815,6 +2910,10 @@ int main(int argc, char **argv) {
     else if (s == "--recover-min-feats") a.recover_min_feats = std::stoi(next());
     else if (s == "--recover-full") a.recover_full = std::stoi(next()) != 0 ? 1 : 0;
     else if (s == "--test-blank") a.test_blank = next();
+    else if (s == "--baro") a.baro = std::stoi(next()) != 0 ? 1 : 0;   // 2026-10-26 ovbaro
+    else if (s == "--baro-csv") a.baro_csv = next();
+    else if (s == "--baro-cfg") a.baro_cfg = next();
+    else if (s == "--baro-log") a.baro_log = next();
     else if (s == "--reinit-max-gap") a.reinit_max_gap = std::stod(next());
     else if (s == "--reinit-sigma") {  // ori_deg,pos_m,vel_m_s
       std::string v = next();
@@ -2997,6 +3096,7 @@ int main(int argc, char **argv) {
       if (g_hb_feed_out.load()) (void)g_mav.release();  // --viop-hb-src 1: keep the object alive for a detached reader
     }
     b.log_health();
+    b.log_baro();  // 2026-10-26 ovbaro
     return 0;
   }
 

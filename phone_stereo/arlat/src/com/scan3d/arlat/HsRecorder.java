@@ -98,6 +98,7 @@ class HsRecorder implements SensorEventListener {
     private long lastDelta, lastExp, lastSkew;
     int wantFps = 120;
     int evComp = 0;
+    boolean baro = false;                        // ovbaro 2026-10-26 intent hs_baro 1: TYPE_PRESSURE rows (type 6, hPa) in imu.csv
     float focusDpt = 0.5f;                       // >= 0: fixed focus at this many diopters (1/m; default 0.5 = 2 m, AF off; 2026-10-23 user decision, was 3.33);
                                                  // -1: autofocus all along; -2: autofocus for 1.5 s then lock there
     String afRegion = null;                     // intent af_region: "full" or "center:0.3" (box side as a fraction) -> CONTROL_AF_REGIONS
@@ -263,6 +264,10 @@ class HsRecorder implements SensorEventListener {
         Sensor gu = sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE_UNCALIBRATED), au = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER_UNCALIBRATED);
         if (gu != null) sm.registerListener(this, gu, SensorManager.SENSOR_DELAY_FASTEST, imuH);
         if (au != null) sm.registerListener(this, au, SensorManager.SENSOR_DELAY_FASTEST, imuH);
+        if (baro) {                                // ovbaro (default off = not registered): LPS22DF fastest = 80 ms
+            Sensor ps = sm.getDefaultSensor(Sensor.TYPE_PRESSURE);
+            if (ps != null) sm.registerListener(this, ps, SensorManager.SENSOR_DELAY_FASTEST, imuH);
+        }
 
         MediaFormat f = MediaFormat.createVideoFormat("video/avc", size.getWidth(), size.getHeight());
         f.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
@@ -819,7 +824,8 @@ class HsRecorder implements SensorEventListener {
     @Override public void onSensorChanged(SensorEvent e) {
         if (!running) return;
         int t = e.sensor.getType();                                   // Android ids: 1 acc, 4 gyro, 16 gyro raw, 35 acc raw
-        String row = (t == Sensor.TYPE_GYROSCOPE_UNCALIBRATED || t == Sensor.TYPE_ACCELEROMETER_UNCALIBRATED)
+        String row = t == Sensor.TYPE_PRESSURE ? t + "," + e.timestamp + "," + e.values[0] + "\n"   // ovbaro: one value (hPa)
+                : (t == Sensor.TYPE_GYROSCOPE_UNCALIBRATED || t == Sensor.TYPE_ACCELEROMETER_UNCALIBRATED)
                 ? t + "," + e.timestamp + "," + e.values[0] + "," + e.values[1] + "," + e.values[2]
                         + "," + e.values[3] + "," + e.values[4] + "," + e.values[5] + "\n"
                 : t + "," + e.timestamp + "," + e.values[0] + "," + e.values[1] + "," + e.values[2] + "\n";
@@ -863,7 +869,7 @@ class HsRecorder implements SensorEventListener {
                     .put("af_mode_request", afMode).put("af_region_request", afRegion == null ? "default" : afRegion).put("active_array", String.valueOf(chars.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE))).put("focus_sweep_dpt", sweepDpt == null ? "none" : floats(sweepDpt))
                     .put("focus_sweep_hold_ms", SWEEP_HOLD_MS)
                     .put("focus_locked_dpt", focusLocked).put("focus_lock_elapsed_ns", focusLockNs)
-                    .put("app_version", VERSION).put("temp_rows", nTemps).put("temp_sources", tempSources)
+                    .put("app_version", VERSION).put("hs_baro", baro ? 1 : 0).put("temp_rows", nTemps).put("temp_sources", tempSources)
                     .put("capture", capInfo).put("imu_thread", "dedicated")
                     .put("session", session).put("stream_config", streamCfg)
                     .put("pixel_array", String.valueOf(chars.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)))

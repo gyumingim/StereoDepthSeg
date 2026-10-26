@@ -168,6 +168,7 @@ public class MainActivity extends Activity {
                 hs.evComp = getIntent().getIntExtra("ev", 0);
                 hs.wantKbps = getIntent().getIntExtra("kbps", 160_000);
                 hs.focusDpt = getIntent().getFloatExtra("focus_dpt", 0.5f);
+                hs.baro = getIntent().getIntExtra("hs_baro", 0) != 0;                  // ovbaro: pressure rows in imu.csv
                 hs.afRegion = getIntent().getStringExtra("af_region");      // "full" | "center:0.3" (with af_mode)
                 hs.afMode = getIntent().getIntExtra("af_mode", -1);          // CONTROL_AF_MODE value instead of fixed focus
                 hs.focusSweep = getIntent().getStringExtra("focus_sweep");  // "0.37,3.33,1.0" dpt, each held 2 s (cycling)
@@ -264,6 +265,7 @@ public class MainActivity extends Activity {
                 ov.ovHealth = getIntent().getIntExtra("ov_health", 0) != 0;                 // ovrobust: --health 1 + health.csv
                 ov.initStill = getIntent().getIntExtra("init_still", 0) != 0;               // ovrobust: --init-still 1
                 ov.recoverFrames = Math.max(0, Math.min(1000, getIntent().getIntExtra("recover", 0)));   // ovrobust: --recover N
+                ov.baro = getIntent().getIntExtra("baro", 0) != 0;                      // ovbaro: barometer -> ov_bridge --baro 1
                 // 0.6.20 (integ): named profile = defaults for intents not given explicitly; no profile = 0.6.19 defaults
                 String prof = getIntent().getStringExtra("profile");
                 if ("rec20261025".equals(prof) || "rec60".equals(prof)) {
