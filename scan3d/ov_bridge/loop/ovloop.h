@@ -82,6 +82,12 @@ struct Cfg {
   int seq_edges = 4;           // sequential edges to the previous N keyframes
   double loop_w = 1.0;         // loop edge weight
   double huber = 0.1;
+  // weight_mode 1: residuals divided by a per-edge sigma (sequential: VIO relative accuracy grows with the distance;
+  // loop: PnP accuracy), Huber on loop edges in sigma units (huber_sig). 0 = unit weights (VINS-Mono style).
+  int weight_mode = 0;
+  double seq_sig_m = 0.002, seq_sig_rel = 0.01, seq_sig_deg = 0.05, seq_sig_deg_m = 0.5;  // sigma_t = a + rel*d, yaw = b + c*d
+  double loop_sig_m = 0.01, loop_sig_deg = 0.5;
+  double huber_sig = 2.0;
   int opt_iters = 30;
   // output smoothing of T_map_odom (published follows the target): the map-frame position of the CURRENT body moves at
   // most smooth_v m/s and the yaw at most smooth_w_deg deg/s faster than the VIO motion itself

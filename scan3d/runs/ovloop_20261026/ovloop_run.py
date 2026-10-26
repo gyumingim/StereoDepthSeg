@@ -59,6 +59,7 @@ CONDS = {
     "B30": dict(fps=30.0, extra=""),
     "B30f": dict(fps=30.0, extra="--loop-cfg fast_th=10,n_feat=1000,min_inliers=20"),
     "B30g": dict(fps=30.0, extra="--loop-cfg fast_th=10,n_feat=1000,min_inliers=15,ratio=0.85"),
+    "B30w": dict(fps=30.0, extra="--loop-cfg weight_mode=1"),
     "Q30": dict(fps=30.0, extra="", vpr="boq"),
     "S30": dict(fps=30.0, extra="", vpr="salad"),
 }

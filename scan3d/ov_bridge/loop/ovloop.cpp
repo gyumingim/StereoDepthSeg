@@ -50,7 +50,8 @@ void jv(std::ostringstream &o, const Eigen::Vector3d &v) {
 // 4-DoF relative pose residual (VINS-Mono FourDOFError form): the translation of j seen from i in i's yaw-only frame
 // (roll / pitch removed using the VIO gravity, which is observable) and the yaw difference.
 struct FourDof {
-  FourDof(const Eigen::Vector3d &dt, double dyaw, double w) : dt_(dt), dyaw_(dyaw), w_(w) {}
+  FourDof(const Eigen::Vector3d &dt, double dyaw, double w) : dt_(dt), dyaw_(dyaw), w_(w), wy_(w) {}
+  FourDof(const Eigen::Vector3d &dt, double dyaw, double wt, double wy) : dt_(dt), dyaw_(dyaw), w_(wt), wy_(wy) {}
   template <typename T> bool operator()(const T *yi, const T *ti, const T *yj, const T *tj, T *r) const {
     const T dx = tj[0] - ti[0], dy = tj[1] - ti[1], dz = tj[2] - ti[2];
     const T c = cos(yi[0]), s = sin(yi[0]);
@@ -62,11 +63,11 @@ struct FourDof {
     else if (a < T(-M_PI)) a += T(2.0 * M_PI);
     if (a > T(M_PI)) a -= T(2.0 * M_PI);
     else if (a < T(-M_PI)) a += T(2.0 * M_PI);
-    r[3] = T(w_) * a;
+    r[3] = T(wy_) * a;
     return true;
   }
   Eigen::Vector3d dt_;
-  double dyaw_, w_;
+  double dyaw_, w_, wy_;
 };
 }  // namespace
 
@@ -100,7 +101,7 @@ bool Cfg::parse(const std::string &kv, std::string &err) {
                      {"max_corr_rel", &max_corr_rel, nullptr}, {"max_corr_yaw_deg", &max_corr_yaw_deg, nullptr},
                      {"consist_kf", nullptr, &consist_kf}, {"consist_old_s", &consist_old_s, nullptr},
                      {"consist_m", &consist_m, nullptr}, {"consist_yaw_deg", &consist_yaw_deg, nullptr},
-                     {"seq_edges", nullptr, &seq_edges}, {"loop_w", &loop_w, nullptr}, {"huber", &huber, nullptr},
+                     {"seq_edges", nullptr, &seq_edges}, {"loop_w", &loop_w, nullptr}, {"huber", &huber, nullptr}, {"weight_mode", nullptr, &weight_mode}, {"seq_sig_m", &seq_sig_m, nullptr}, {"seq_sig_rel", &seq_sig_rel, nullptr}, {"seq_sig_deg", &seq_sig_deg, nullptr}, {"seq_sig_deg_m", &seq_sig_deg_m, nullptr}, {"loop_sig_m", &loop_sig_m, nullptr}, {"loop_sig_deg", &loop_sig_deg, nullptr}, {"huber_sig", &huber_sig, nullptr},
                      {"opt_iters", nullptr, &opt_iters}, {"smooth_v", &smooth_v, nullptr},
                      {"smooth_w_deg", &smooth_w_deg, nullptr}};
     bool found = false;
@@ -126,7 +127,7 @@ std::string Cfg::describe() const {
   std::ostringstream o;
   o << "kf " << kf_min_dt << "s/" << kf_trans << "m/" << kf_rot_deg << "deg max_dt " << kf_max_dt << " q " << queue_max
     << " nice " << nice << " | feat " << n_feat << " L" << levels << " fast " << fast_th << " | gap " << min_gap_s << "s/" << min_path_m << "m"
-    << "s score " << min_score << "/" << rel_score << " cand " << max_cand << " | match " << match_dist << "/" << ratio
+    << " score " << min_score << "/" << rel_score << " cand " << max_cand << " | match " << match_dist << "/" << ratio
     << " inl " << min_inliers << " pnp " << pnp_px << "px x" << pnp_iters << " rp " << max_rp_deg << "deg corr "
     << max_corr_m << "m+" << max_corr_rel << "*path yaw " << max_corr_yaw_deg << "deg | consist " << consist_kf << "kf "
     << consist_old_s << "s " << consist_m << "m " << consist_yaw_deg << "deg | graph seq " << seq_edges << " w "
@@ -827,8 +828,19 @@ void LoopCloser::optimise() {
   prob.SetParameterBlockConstant(&S.kfs[0].yaw_c);
   prob.SetParameterBlockConstant(S.kfs[0].t_c);
   for (const auto &e : S.edges) {
-    auto *cost = new ceres::AutoDiffCostFunction<FourDof, 4, 1, 3, 1, 3>(new FourDof(e.dt, e.dyaw, e.loop ? c_.loop_w : 1.0));
-    ceres::LossFunction *loss = e.loop ? new ceres::HuberLoss(c_.huber) : nullptr;
+    FourDof *f;
+    ceres::LossFunction *loss = nullptr;
+    if (c_.weight_mode == 1) {
+      const double d = e.dt.norm(), d2r = M_PI / 180.0;
+      const double st = e.loop ? c_.loop_sig_m : c_.seq_sig_m + c_.seq_sig_rel * d;
+      const double sy = (e.loop ? c_.loop_sig_deg : c_.seq_sig_deg + c_.seq_sig_deg_m * d) * d2r;
+      f = new FourDof(e.dt, e.dyaw, 1.0 / st, 1.0 / sy);
+      if (e.loop) loss = new ceres::HuberLoss(c_.huber_sig);
+    } else {
+      f = new FourDof(e.dt, e.dyaw, e.loop ? c_.loop_w : 1.0);
+      if (e.loop) loss = new ceres::HuberLoss(c_.huber);
+    }
+    auto *cost = new ceres::AutoDiffCostFunction<FourDof, 4, 1, 3, 1, 3>(f);
     prob.AddResidualBlock(cost, loss, &S.kfs[e.i].yaw_c, S.kfs[e.i].t_c, &S.kfs[e.j].yaw_c, S.kfs[e.j].t_c);
   }
   ceres::Solver::Options o;
