@@ -1,0 +1,910 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 rs_postinit=0 ekf_sparse=1 sym_inplace=1 init_gemm=0 gyro_klt=0 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse', prof log -)
+[ov_bridge] profile rec20261025: ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse' idle_spin 2 idle_spin_ms 20 drop_late 0 health 1 predict 2 hz 200 pred_thread 1 (after explicit flags)
+[ov_bridge] affinity start: (not pinned) threads 87547:ov_bridge_mine=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 2 -> 2 | TBB (ver 2020.3 interface 11103) | cpus 16 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /home/system/scanner/StereoDepthSeg/scan3d/config/phone_ov_main/c4/remap_1920x1080.bin
+[ov_bridge] ovrobust: init_still 0 | health 1 log - | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 0 (max gap 3.0 s, min feats 20) | test blank 0 windows
+[ov_bridge] loop: vocab /home/system/scanner/StereoDepthSeg-ovloop/scan3d/ov_bridge/loop/voc_k10L4.voc (k 10 L 4, 9992 words, sha d962dc5e69c5742b) | kf 0.25s/0.08m/8deg max_dt 2 q 6 nice 10 | feat 600 L3 fast 20 | gap 3s/1m score 0.015/0.25 cand 3 | match 64/0.8 inl 25 pnp 3px x200 rp 3deg corr 0.5m+0.05*path yaw 10deg | consist 3kf 4s 0.05m 1.5deg | graph seq 4 w 1 huber 0.1 it 30 | smooth 0.1m/s 3deg/s | sync 1
+[ov_bridge] affinity ready: (not pinned) threads 87547:ov_bridge_mine=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 87550:ov_bridge_mine=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] idle spin: mode 2 (pool) stripes 2 max 200 ms window 20.0 ms | pred thread (input reader thread on)
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] affinity cam300: (not pinned) threads 87547:ov_bridge_mine=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 87550:ov_bridge_mine=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 87555:ov_bridge_mine=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 87556:ov_bridge_mine=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 87562:ov_bridge_mine=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 6434 spun 0 timeouts 0 spin 0.00 s | exit_us n 0 p50 -1.0 p95 -1.0 p99 -1.0 max -1.0 | window 20.0 ms period 7.92 ms blocked 63 (0.01 s)
+[ov_bridge] health t=13.466 INIT -> OK (tracked 130 used 9 since_upd 0.00 pos_std 0.087)
+[33m[init]: not enough feats to compute disp: 0,0 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,0 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,47 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,47 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,47 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,47 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,47 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,47 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,47 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,47 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,47 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,47 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,47 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,47 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,47 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,47 < 15
+[0mblock_sparse_matrix.cc:208 Allocating values array with 18944 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 1600 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 80 # of columns: 80 max_num_nonzeros: 1412. Allocating 17268
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 1600 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 1600 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 20224 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 1680 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 84 # of columns: 84 max_num_nonzeros: 1505. Allocating 18400
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 1680 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 21504 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 1760 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 88 # of columns: 88 max_num_nonzeros: 1598. Allocating 19532
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 1760 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 22784 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 1840 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 92 # of columns: 92 max_num_nonzeros: 1691. Allocating 20664
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 1840 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 24064 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 1920 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 96 # of columns: 96 max_num_nonzeros: 1784. Allocating 21796
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 1920 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 25344 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 2000 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 100 # of columns: 100 max_num_nonzeros: 1877. Allocating 22928
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 2000 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 26624 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 2080 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 104 # of columns: 104 max_num_nonzeros: 1970. Allocating 24060
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 2080 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 27904 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 2160 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 108 # of columns: 108 max_num_nonzeros: 2063. Allocating 25192
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 2160 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 39680 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 3040 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 152 # of columns: 152 max_num_nonzeros: 2942. Allocating 35916
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 3040 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 41984 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 3200 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 160 # of columns: 160 max_num_nonzeros: 3112. Allocating 37988
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 3200 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 43520 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 3280 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 164 # of columns: 164 max_num_nonzeros: 3221. Allocating 39312
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 3280 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 45824 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 3440 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 172 # of columns: 172 max_num_nonzeros: 3391. Allocating 41384
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 3440 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 47104 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 3520 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 176 # of columns: 176 max_num_nonzeros: 3484. Allocating 42516
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 3520 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 48384 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 3600 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 180 # of columns: 180 max_num_nonzeros: 3577. Allocating 43648
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 3600 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 49664 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 3680 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 184 # of columns: 184 max_num_nonzeros: 3670. Allocating 44780
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 3680 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 50944 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 3760 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 188 # of columns: 188 max_num_nonzeros: 3763. Allocating 45912
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 3760 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 52224 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 3840 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 192 # of columns: 192 max_num_nonzeros: 3856. Allocating 47044
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 3840 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 53504 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 3920 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 196 # of columns: 196 max_num_nonzeros: 3949. Allocating 48176
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 3920 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 54784 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 4000 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 200 # of columns: 200 max_num_nonzeros: 4042. Allocating 49308
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 4000 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 56064 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 4080 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 204 # of columns: 204 max_num_nonzeros: 4135. Allocating 50440
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 4080 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 58368 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 4240 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 212 # of columns: 212 max_num_nonzeros: 4305. Allocating 52512
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 4240 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 59648 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 4320 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 216 # of columns: 216 max_num_nonzeros: 4398. Allocating 53644
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 4320 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 60928 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 4400 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 220 # of columns: 220 max_num_nonzeros: 4491. Allocating 54776
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 4400 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 62208 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 4480 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 224 # of columns: 224 max_num_nonzeros: 4584. Allocating 55908
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 4480 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 64512 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 4640 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 232 # of columns: 232 max_num_nonzeros: 4754. Allocating 57980
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 4640 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 65792 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 4720 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 236 # of columns: 236 max_num_nonzeros: 4847. Allocating 59112
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 4720 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 67328 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 4800 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 240 # of columns: 240 max_num_nonzeros: 4956. Allocating 60436
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 4800 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 68608 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 4880 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 244 # of columns: 244 max_num_nonzeros: 5049. Allocating 61568
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 4880 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 69888 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 4960 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 248 # of columns: 248 max_num_nonzeros: 5142. Allocating 62700
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 4960 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 71168 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 5040 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 252 # of columns: 252 max_num_nonzeros: 5235. Allocating 63832
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 5040 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 72448 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 5120 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 256 # of columns: 256 max_num_nonzeros: 5328. Allocating 64964
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 5120 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 74752 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 5280 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 264 # of columns: 264 max_num_nonzeros: 5498. Allocating 67036
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 5280 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 76032 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 5360 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 268 # of columns: 268 max_num_nonzeros: 5591. Allocating 68168
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 5360 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 77312 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 5440 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 272 # of columns: 272 max_num_nonzeros: 5684. Allocating 69300
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 5440 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 79616 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 5600 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 280 # of columns: 280 max_num_nonzeros: 5854. Allocating 71372
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 5600 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 80896 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 5680 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 284 # of columns: 284 max_num_nonzeros: 5947. Allocating 72504
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 5680 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 82176 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 5760 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 288 # of columns: 288 max_num_nonzeros: 6040. Allocating 73636
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 5760 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 83456 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 5840 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 292 # of columns: 292 max_num_nonzeros: 6133. Allocating 74768
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 5840 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 84736 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 5920 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 296 # of columns: 296 max_num_nonzeros: 6226. Allocating 75900
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 5920 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 86016 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 6000 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 300 # of columns: 300 max_num_nonzeros: 6319. Allocating 77032
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 6000 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 87296 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 6080 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 304 # of columns: 304 max_num_nonzeros: 6412. Allocating 78164
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 6080 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 88576 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 6160 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 308 # of columns: 308 max_num_nonzeros: 6505. Allocating 79296
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 6160 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 89856 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 6240 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 312 # of columns: 312 max_num_nonzeros: 6598. Allocating 80428
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 6240 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 91136 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 6320 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 316 # of columns: 316 max_num_nonzeros: 6691. Allocating 81560
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 6320 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 92416 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 6400 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 320 # of columns: 320 max_num_nonzeros: 6784. Allocating 82692
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 6400 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 93696 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 6480 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 324 # of columns: 324 max_num_nonzeros: 6877. Allocating 83824
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 6480 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 96256 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 6640 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 332 # of columns: 332 max_num_nonzeros: 7063. Allocating 86088
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 6640 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 97536 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 6720 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 336 # of columns: 336 max_num_nonzeros: 7156. Allocating 87220
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 6720 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 98816 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 6800 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 340 # of columns: 340 max_num_nonzeros: 7249. Allocating 88352
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 6800 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 100096 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 6880 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 344 # of columns: 344 max_num_nonzeros: 7342. Allocating 89484
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 6880 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 102400 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 7040 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 352 # of columns: 352 max_num_nonzeros: 7512. Allocating 91556
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 7040 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 105984 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 7280 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 364 # of columns: 364 max_num_nonzeros: 7775. Allocating 94760
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 7280 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 108288 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 7440 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 372 # of columns: 372 max_num_nonzeros: 7945. Allocating 96832
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 7440 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 109568 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 7520 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 376 # of columns: 376 max_num_nonzeros: 8038. Allocating 97964
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 7520 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 110848 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 7600 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 380 # of columns: 380 max_num_nonzeros: 8131. Allocating 99096
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 7600 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 113152 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 7760 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 388 # of columns: 388 max_num_nonzeros: 8301. Allocating 101168
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 7760 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 114432 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 7840 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 392 # of columns: 392 max_num_nonzeros: 8394. Allocating 102300
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 7840 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 115712 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 7920 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 396 # of columns: 396 max_num_nonzeros: 8487. Allocating 103432
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 7920 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 116992 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 8000 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 400 # of columns: 400 max_num_nonzeros: 8580. Allocating 104564
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 8000 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 118272 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 8080 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 404 # of columns: 404 max_num_nonzeros: 8673. Allocating 105696
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 8080 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 119552 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 8160 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 408 # of columns: 408 max_num_nonzeros: 8766. Allocating 106828
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 8160 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 124160 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 8480 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 424 # of columns: 424 max_num_nonzeros: 9106. Allocating 110972
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 8480 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 147200 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 10240 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 512 # of columns: 512 max_num_nonzeros: 10832. Allocating 132036
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 10240 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 160000 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 11200 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 560 # of columns: 560 max_num_nonzeros: 11788. Allocating 143700
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 11200 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 162304 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 11360 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 568 # of columns: 568 max_num_nonzeros: 11958. Allocating 145772
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 11360 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 163584 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 11440 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 572 # of columns: 572 max_num_nonzeros: 12051. Allocating 146904
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 11440 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 164864 bytes.
+block_sparse_matrix.cc:208 Allocating values array with 11520 bytes.
+compressed_row_sparse_matrix.cc:174 # of rows: 576 # of columns: 576 max_num_nonzeros: 12144. Allocating 148036
+eigensparse.cc:69 Symbolic Analysis
+  L:        0Mb
+  diag:     0Mb
+  tree:     0Mb
+  nonzeros: 0Mb
+  perm:     0Mb
+  perm^-1:  0Mb
+  TOTAL:    0Mb
+
+block_sparse_matrix.cc:208 Allocating values array with 11520 bytes.
+[ov_bridge] pred thread reader: image space waits 2313
+[ov_bridge] pred thread: mode 2 hz 200 | lines 6247 (frame 2001 rate 4246) snapshots 2003 | compute us p50 56.3 p95 106.0 max 10619.7 | horizon ms p50 122.0 p95 154.2 max 506.8 | thread cpu 0.591 s (pred) 1.216 s (reader)
+[ov_bridge] affinity end: (not pinned) threads 87547:ov_bridge_mine=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 87550:ov_bridge_mine=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 87562:ov_bridge_mine=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 43309 spun 0 timeouts 0 spin 0.00 s | exit_us n 0 p50 -1.0 p95 -1.0 p99 -1.0 max -1.0 | window 20.0 ms period 13.40 ms blocked 63 (0.01 s)
+[ov_bridge] predict: mode 2 hz 200 | lines 0 | horizon ms p50 -1.0 p95 -1.0 max -1.0
+[ov_bridge] loop: keyframes pushed 146 dropped 0 processed 146 | candidates 386 geo 386 verified 214 accepted 76 (consistency-rejected 25) | optimisations 67 | sessions 0
+[ov_bridge] loop: ms p50/p95/max per keyframe: total 29.13/56.35/74.70 tri 0.31/0.46 feat 9.22/20.42 query 0.22/0.33 geo 15.26/44.46 | VIO-thread copy 0.239/0.318/0.766 | opt 2.8/5.5/7.4 (n 67)
+[ov_bridge] health: frames INIT 324 OK 2003 DEGRADED 0 LOST 0 | transitions 2 | max LOST run 0 frames | recover state 0 full 0 | blanked 0 | init_ready frames 319

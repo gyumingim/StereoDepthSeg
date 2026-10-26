@@ -1,0 +1,34 @@
+Mon Oct 26 15:54:54 KST 2026
+1d6bceb8c3174026c3ba8569f33ba9ef2c339069dc7f47f9a544278a02e8a256  /home/system/scanner/tmp_ovloop/bin/ov_bridge_ref
+f187b3513adf77fbd389101031a3f7041b7d770ab3b86b545d83a0d34bcaea90  /home/system/scanner/tmp_ovloop/bin/ov_bridge_mine
+2d6b5cec72143e6f97f3bb01d7bb79a0d65c3a776f41f392a8592a237aaa8dd7  /home/system/scanner/StereoDepthSeg-ovloop/scan3d/ov_bridge/loop/voc_k10L4.voc
+ce1f2f0c7181fa524c80571f030050d03e531202adcd5d24146a6df9ee0c8181  /home/system/scanner/tmp_ovloop/raw80.bin
+40e05eadd6cc65d994879572373357ace45cf57f9afad18e686e71782ad5b86c  /home/system/scanner/tmp_ovloop/cfg_c4/estimator_config.yaml
+c640f5344f35c974aec7ac625fa97e38b7e7153e5d88f1a589405e4ce898f03c  /home/system/scanner/StereoDepthSeg-integ2/scan3d/ov_bridge/build_integ2_full/ov_bridge
+731308d ovloop: --loop loop closure v1 (keyframe copy in VIO thread, separate loop thread: box-BRIEF + own BoW vocab, bidirectional PnP + gravity/drift/consistency gates, 4-DoF Ceres pose graph, rate-limited T_map_odom; map fields in pose/pred lines, VIOP MAP_ODOM 0x07, MAVLink DEBUG_VECT), VPR interface (--loop-dump/--loop-vpr), BoQ/SALAD descriptor script, eval runner; default off (identity checked)
+ M ov_bridge/loop/ovloop.cpp
+ M ov_bridge/loop/ovloop.h
+== r_mine rc 0 poses 2327 | --remap /home/system/scanner/StereoDepthSeg/scan3d/config/phone_ov_main/c4/remap_1920x1080.bin --profile rec20261025 --drop-late 0
+== r_ref rc 0 poses 2327 | --remap /home/system/scanner/StereoDepthSeg/scan3d/config/phone_ov_main/c4/remap_1920x1080.bin --profile rec20261025 --drop-late 0
+== r_loop rc 0 poses 2327 | --remap /home/system/scanner/StereoDepthSeg/scan3d/config/phone_ov_main/c4/remap_1920x1080.bin --profile rec20261025 --drop-late 0 --loop 1 --loop-vocab /home/system/scanner/StereoDepthSeg-ovloop/scan3d/ov_bridge/loop/voc_k10L4.voc --loop-sync 1 --loop-log /home/system/scanner/tmp_ovloop/ident/r_loop.loop.jsonl
+== r_loopw rc 0 poses 2327 | --remap /home/system/scanner/StereoDepthSeg/scan3d/config/phone_ov_main/c4/remap_1920x1080.bin --profile rec20261025 --drop-late 0 --loop 1 --loop-vocab /home/system/scanner/StereoDepthSeg-ovloop/scan3d/ov_bridge/loop/voc_k10L4.voc --loop-sync 1 --loop-cfg weight_mode=1 --loop-log /home/system/scanner/tmp_ovloop/ident/r_loopw.loop.jsonl
+-- off vs ref (full lines)
+ref /home/system/scanner/tmp_ovloop/ident/r_ref.jsonl: poses 2327 tracking 2003 hash 64d1ea7ee20bee55 pred 6745 (excluded ['ms', 'remap_ms', 'wait_ms'])
+/home/system/scanner/tmp_ovloop/ident/r_mine.jsonl: poses 2327 identical 2327/2327 hash 64d1ea7ee20bee55 pred 6828 first_diff None [] IDENTICAL
+-- loop on vs ref (map key excluded)
+ref /home/system/scanner/tmp_ovloop/ident/r_ref.jsonl: poses 2327 tracking 2003 hash 64d1ea7ee20bee55 pred 6745 (excluded ['map', 'ms', 'remap_ms', 'wait_ms'])
+/home/system/scanner/tmp_ovloop/ident/r_loop.jsonl: poses 2327 identical 2327/2327 hash 64d1ea7ee20bee55 pred 6247 first_diff None [] IDENTICAL
+ref /home/system/scanner/tmp_ovloop/ident/r_ref.jsonl: poses 2327 tracking 2003 hash 64d1ea7ee20bee55 pred 6745 (excluded ['map', 'ms', 'remap_ms', 'wait_ms'])
+/home/system/scanner/tmp_ovloop/ident/r_loopw.jsonl: poses 2327 identical 2327/2327 hash 64d1ea7ee20bee55 pred 6015 first_diff None [] IDENTICAL
+-- map smoothness
+pose lines 2327 with map 2003, steps 2002: max map-correction speed 0.0718 m/s (limit 0.1), max yaw rate 3.006 deg/s (limit 3.0), violations 1
+pred lines 6247 with map 6247: T changed between frames 0
+VIO fields vs ref: 2327/2327 identical (poses 2327)
+pose lines 2327 with map 2003, steps 2002: max map-correction speed 0.0192 m/s (limit 0.1), max yaw rate 1.862 deg/s (limit 3.0), violations 0
+pred lines 6015 with map 6015: T changed between frames 0
+VIO fields vs ref: 2327/2327 identical (poses 2327)
+/home/system/scanner/tmp_ovloop/ident/r_loop.err:[ov_bridge] loop: ms p50/p95/max per keyframe: total 29.13/56.35/74.70 tri 0.31/0.46 feat 9.22/20.42 query 0.22/0.33 geo 15.26/44.46 | VIO-thread copy 0.239/0.318/0.766 | opt 2.8/5.5/7.4 (n 67)
+/home/system/scanner/tmp_ovloop/ident/r_loopw.err:[ov_bridge] loop: vocab /home/system/scanner/StereoDepthSeg-ovloop/scan3d/ov_bridge/loop/voc_k10L4.voc (k 10 L 4, 9992 words, sha d962dc5e69c5742b) | kf 0.25s/0.08m/8deg max_dt 2 q 6 nice 10 | feat 600 L3 fast 20 | gap 3s/1m score 0.015/0.25 cand 3 | match 64/0.8 inl 25 pnp 3px x200 rp 3deg corr 0.5m+0.05*path yaw 10deg | consist 3kf 4s 0.05m 1.5deg | graph seq 4 w 1 huber 0.1 it 30 | smooth 0.1m/s 3deg/s | sync 1
+/home/system/scanner/tmp_ovloop/ident/r_loopw.err:[ov_bridge] loop: keyframes pushed 146 dropped 0 processed 146 | candidates 386 geo 386 verified 214 accepted 76 (consistency-rejected 25) | optimisations 67 | sessions 0
+/home/system/scanner/tmp_ovloop/ident/r_loopw.err:[ov_bridge] loop: ms p50/p95/max per keyframe: total 29.10/55.18/83.91 tri 0.30/0.57 feat 9.13/16.41 query 0.23/0.42 geo 14.71/44.57 | VIO-thread copy 0.250/0.788/8.425 | opt 2.8/6.4/20.3 (n 67)
+Mon Oct 26 15:55:58 KST 2026

@@ -416,4 +416,40 @@ static inline int viop_imu_decode(const uint8_t *payload, int len, viop_imu_dec_
   return m.n;
 }
 
+/* ---- loop closure map frame (2026-10-26, branch ovloop-20261026; ov_bridge --loop 1 only) ----
+ *   0x07 VIOP_T_MAP_ODOM  44 B  phone -> drone / PC: loop-closure correction T_map_odom, frame 54 B. Sent at
+ *        --loop-out-hz (default 5 Hz) and at once after each new pose-graph optimisation. Receivers that do not know the
+ *        type ignore it (esp32fc link_task.c handles only POSE / HEARTBEAT / IMU) -> the control pose (POSE) is unchanged.
+ *        map position of the phone IMU: p_map = Rz(yaw_mo) p_w + t_mo (W axes, z up); attitude R_map = Rz(yaw_mo) R(q_wi).
+ *        The published (t_mo, yaw_mo) moves toward the optimiser target (tgt_*) rate limited (no jump in the map pose).
+ *   0  u64 t_us          frame time (phone sensor clock, us; + replay offset like POSE)
+ *   8  f32 t_mo[3]       published translation (m)
+ *  20  f32 yaw_mo        published yaw (rad)
+ *  24  f32 tgt_t[3]      optimiser target translation (m)
+ *  36  f32 tgt_yaw       target yaw (rad)
+ *  40  u16 n_loops       accepted loop edges in this W
+ *  42  u8  reset_counter as in POSE (a new W also starts a new map: T = identity)
+ *  43  u8  flags         VIOP_MOF_*
+ */
+#define VIOP_T_MAP_ODOM 0x07
+#define VIOP_MOF_VALID 0x01u      /* at least one optimisation in this W (else identity) */
+#define VIOP_MOF_CONVERGING 0x02u /* published != target (still moving toward it) */
+#if defined(_MSC_VER)
+#pragma pack(push, 1)
+#endif
+typedef struct VIOP_PACKED {
+  uint64_t t_us;
+  float t_mo[3];
+  float yaw_mo;
+  float tgt_t[3];
+  float tgt_yaw;
+  uint16_t n_loops;
+  uint8_t reset_counter;
+  uint8_t flags;
+} viop_map_odom_t;
+#if defined(_MSC_VER)
+#pragma pack(pop)
+#endif
+typedef char viop_map_odom_size_check[(sizeof(viop_map_odom_t) == 44) ? 1 : -1];
+
 #endif /* VIOP_PROTO_H */
