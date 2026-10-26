@@ -7,6 +7,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/eigen.hpp>
 #include <fstream>
+#include <atomic>  // ovswba: vins_assert_fail
 
 const double FOCAL_LENGTH = 460.0;
 const int WINDOW_SIZE = 10;
@@ -39,7 +40,7 @@ extern int ROLLING_SHUTTER;
 extern double ROW, COL;
 
 
-void readParameters(ros::NodeHandle &n);
+// ovswba 2026-10-26: readParameters(ros::NodeHandle &n) removed (globals are set by the bridge, vins_bridge.cpp)
 
 enum SIZE_PARAMETERIZATION
 {

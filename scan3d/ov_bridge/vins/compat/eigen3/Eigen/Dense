@@ -1,0 +1,4 @@
+// ovswba 2026-10-26: VINS-Mono includes <eigen3/Eigen/Dense>; forward to <Eigen/Dense> so the port builds with any
+// Eigen include layout (PC /usr/include/eigen3, Android deps include dir).
+#pragma once
+#include <Eigen/Dense>

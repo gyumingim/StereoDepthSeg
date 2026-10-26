@@ -136,4 +136,8 @@ class Estimator
     Vector3d relo_relative_t;
     Quaterniond relo_relative_q;
     double relo_relative_yaw;
+
+    // ovswba 2026-10-26: timing of the last optimization() (output only; set in estimator.cpp, read by the bridge)
+    double ovswba_solver_ms = 0.0, ovswba_margin_ms = 0.0;
+    int ovswba_iters = 0;
 };

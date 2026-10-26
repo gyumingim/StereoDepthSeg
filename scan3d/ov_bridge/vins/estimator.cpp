@@ -675,13 +675,13 @@ void Estimator::optimization()
     loss_function = new ceres::CauchyLoss(1.0);
     for (int i = 0; i < WINDOW_SIZE + 1; i++)
     {
-        ceres::LocalParameterization *local_parameterization = new PoseLocalParameterization();
+        ceres::Manifold *local_parameterization  /* ovswba: Ceres 2.2 */ = new PoseLocalParameterization();
         problem.AddParameterBlock(para_Pose[i], SIZE_POSE, local_parameterization);
         problem.AddParameterBlock(para_SpeedBias[i], SIZE_SPEEDBIAS);
     }
     for (int i = 0; i < NUM_OF_CAM; i++)
     {
-        ceres::LocalParameterization *local_parameterization = new PoseLocalParameterization();
+        ceres::Manifold *local_parameterization  /* ovswba: Ceres 2.2 */ = new PoseLocalParameterization();
         problem.AddParameterBlock(para_Ex_Pose[i], SIZE_POSE, local_parameterization);
         if (!ESTIMATE_EXTRINSIC)
         {
@@ -769,7 +769,7 @@ void Estimator::optimization()
     if(relocalization_info)
     {
         //printf("set relocalization factor! \n");
-        ceres::LocalParameterization *local_parameterization = new PoseLocalParameterization();
+        ceres::Manifold *local_parameterization  /* ovswba: Ceres 2.2 */ = new PoseLocalParameterization();
         problem.AddParameterBlock(relo_Pose, SIZE_POSE, local_parameterization);
         int retrive_feature_index = 0;
         int feature_index = -1;
@@ -819,6 +819,8 @@ void Estimator::optimization()
     //cout << summary.BriefReport() << endl;
     ROS_DEBUG("Iterations : %d", static_cast<int>(summary.iterations.size()));
     ROS_DEBUG("solver costs: %f", t_solver.toc());
+    ovswba_solver_ms = t_solver.toc();  // ovswba: timing output
+    ovswba_iters = static_cast<int>(summary.iterations.size());  // ovswba
 
     double2vector();
 
@@ -998,6 +1000,7 @@ void Estimator::optimization()
         }
     }
     ROS_DEBUG("whole marginalization costs: %f", t_whole_marginalization.toc());
+    ovswba_margin_ms = t_whole_marginalization.toc();  // ovswba: timing output
     
     ROS_DEBUG("whole time for ceres: %f", t_whole.toc());
 }
