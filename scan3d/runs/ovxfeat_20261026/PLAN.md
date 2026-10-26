@@ -53,3 +53,6 @@ integ2/dpvo 의 GL60 (gyro_klt=5 브리지, 9.14/16.54 cm) 과는 VIO 가 달라
 - LighterGlue → 고정 점 수 N (512/1024/2048) ONNX → TFLite (가능하면).
 - `benchmark_model` 로 CPU (4 스레드), GPU delegate, NNAPI (→ Samsung enn NPU) ms. N 에 따른 LighterGlue 비용 (~N²).
 - 안 되면 이유와 다음 단계를 정확히 적는다.
+
+정정 (감독 23:31 A5): 21:48 에 틀린 루프 판정 규칙을 적을 때 HS 결과 파일은 이미 40–45칸 있었다 (B60, L1kt, N1kt, B60t 등). 다만 그 시점까지
+XFeat HS 결과를 채점하거나 열어 보지 않았다 (첫 HS 채점 22:48). 즉 "결과 파일 존재 후, 채점 전" 기록이다.

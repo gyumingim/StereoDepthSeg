@@ -36,6 +36,15 @@ for fn in sys.argv[1:]:
                 r["delegate_note"] = "NNAPI rejected -> XNNPACK CPU"
             if "ERROR" in rest or "Failed" in rest:
                 r["error"] = rest.split("::")[1][:200]
+        elif rest.startswith("KF"):
+            try:
+                d = json.loads(rest.split("::", 1)[1].strip())
+            except Exception:
+                d = {}
+            r.update(tool="kf", model=f"{rest.split()[1]}+{rest.split()[2]} topk {d.get('topk')}", backend=f"cpu{d.get('threads')}",
+                     ms_p50=d.get("total_ms_p50"), ms_p95=d.get("total_ms_p95"), n=d.get("iters"), kf=d)
+            if not d:
+                r["error"] = rest[:200]
         elif rest.startswith("{"):
             try:
                 d = json.loads(rest.strip())

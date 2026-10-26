@@ -17,11 +17,12 @@ if ! mkdir $LOCK 2>/dev/null; then log "lock busy: $(cat $LOCK/owner.txt 2>/dev/
 echo "ovxfeat $(date '+%F %T') ONNX benchmark (no camera)" > $LOCK/owner.txt
 release() { if grep -q '^ovxfeat' $LOCK/owner.txt 2>/dev/null; then rm -f $LOCK/owner.txt; rmdir $LOCK; log "lock released"; fi; }
 trap release EXIT
+idle_ms() { $ADB shell "dumpsys power | grep -m1 ' lastUserActivityTime='" | sed -E 's/.*\(([0-9]+) ms ago\).*/\1/' | tr -dc '0-9'; }
 top=$($ADB shell "dumpsys activity activities | grep topResumedActivity" | head -1)
 wake=$($ADB shell "dumpsys power | grep mWakefulness=" | head -1)
 bat=$($ADB shell "dumpsys battery | grep -E '^  (AC powered|USB powered|level):'" | tr -d '\r' | tr '\n' ' ')
 log "top: $top | $wake | battery: $bat"
-case "$top" in *launcher*|*Launcher*|"") ;; *) if echo "$wake" | grep -q Awake; then log "user app in foreground and awake -> skip"; exit 5; fi;; esac
+case "$top" in *launcher*|*Launcher*|"") ;; *) if echo "$wake" | grep -q Awake; then im=$(idle_ms); if [ -z "$im" ] || [ "$im" -lt 300000 ]; then log "user app in foreground, awake, last input ${im} ms ago -> skip"; exit 5; fi; fi;; esac
 $ADB shell "mkdir -p /data/local/tmp/ovxfeat"
 for f in ort/ort_bench ort/jni/arm64-v8a/libonnxruntime.so; do $ADB push "$W\\${f//\//\\}" /data/local/tmp/ovxfeat/ > /dev/null || { log "push $f failed"; exit 6; }; done
 $ADB push "$W\\ort\\kf_bench" /data/local/tmp/ovxfeat/ > /dev/null; $ADB shell "chmod 755 /data/local/tmp/ovxfeat/kf_bench"
@@ -52,7 +53,7 @@ while read -r m be it wu th rest <&3; do
   top=$($ADB shell "dumpsys activity activities | grep topResumedActivity" | head -1)
   wake=$($ADB shell "dumpsys power | grep mWakefulness=" | head -1)
   lvl=$($ADB shell "dumpsys battery | grep -E '^  level:'" | tr -dc '0-9')
-  case "$top" in *launcher*|*Launcher*|"") ;; *) if echo "$wake" | grep -q Awake; then log "item $i: user app in foreground and awake -> pause"; exit 5; fi;; esac
+  case "$top" in *launcher*|*Launcher*|"") ;; *) if echo "$wake" | grep -q Awake; then im=$(idle_ms); if [ -z "$im" ] || [ "$im" -lt 300000 ]; then log "item $i: user active (last input ${im} ms ago) -> pause"; exit 5; fi; fi;; esac
   if [ -n "$lvl" ] && [ "$lvl" -lt 20 ]; then log "item $i: battery $lvl % < 20 -> stop"; exit 8; fi
   sleep 20
   tt=$(temps)

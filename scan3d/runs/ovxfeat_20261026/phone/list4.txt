@@ -1,0 +1,21 @@
+T xfeatnn_640x352_float32.tflite --use_gpu=true --num_runs=30 --warmup_runs=3
+T xfeatnn_640x352_float32.tflite --num_threads=4 --num_runs=20 --warmup_runs=3
+K xfeat_640x352.onnx nnmatch_1224.onnx in_640x352.f32 640 352 1024 4 20 1
+K xfeat_960x544.onnx nnmatch_2248.onnx in_960x544.f32 960 544 2048 4 20 1
+T xfeatnn_960x544_float32.tflite --use_gpu=true --num_runs=30 --warmup_runs=3
+K xfeat_640x352.onnx nnmatch_712.onnx in_640x352.f32 640 352 512 4 20 1
+K xfeat_960x544.onnx nnmatch_4296.onnx in_960x544.f32 960 544 4096 4 10 1
+K xfeat_640x352.onnx nnmatch_2248.onnx in_640x352.f32 640 352 2048 4 20 1
+xfeat_640x352.onnx cpu 3 1 4 /data/local/tmp/ovxfeat/in_640x352.f32 /data/local/tmp/ovxfeat/o_ort_cpu_640
+xfeat_640x352.onnx nnapi_fp16 3 1 1 /data/local/tmp/ovxfeat/in_640x352.f32 /data/local/tmp/ovxfeat/o_ort_nnapi16_640
+T xfeatnn_640x352_float32.tflite --use_gpu=true --num_runs=3 --warmup_runs=1 --input_layer_value_files=image_norm:/data/local/tmp/ovxfeat/in_640x352_norm.f32 --output_filepath=/data/local/tmp/ovxfeat/o_tfl_gpu_640.bin
+T xfeatnn_640x352_float32.tflite --num_threads=4 --num_runs=3 --warmup_runs=1 --input_layer_value_files=image_norm:/data/local/tmp/ovxfeat/in_640x352_norm.f32 --output_filepath=/data/local/tmp/ovxfeat/o_tfl_cpu_640.bin
+K xfeat_640x352.onnx nnmatch_2248.onnx in_640x352.f32 640 352 2048 4 20 1
+K xfeat_960x544.onnx nnmatch_4296.onnx in_960x544.f32 960 544 4096 4 10 1
+K xfeat_640x352.onnx nnmatch_712.onnx in_640x352.f32 640 352 512 4 20 1
+T xfeatnn_960x544_float32.tflite --use_gpu=true --num_runs=30 --warmup_runs=3
+K xfeat_960x544.onnx nnmatch_2248.onnx in_960x544.f32 960 544 2048 4 20 1
+K xfeat_640x352.onnx nnmatch_1224.onnx in_640x352.f32 640 352 1024 4 20 1
+T xfeatnn_640x352_float32.tflite --num_threads=4 --num_runs=20 --warmup_runs=3
+T xfeatnn_640x352_float32.tflite --use_gpu=true --num_runs=30 --warmup_runs=3
+K xfeat_960x544.onnx nnmatch_2248.onnx in_960x544.f32 960 544 2048 4 20 4
