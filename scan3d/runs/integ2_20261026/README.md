@@ -52,7 +52,7 @@
   폰 루프 스레드 35 ms/KF p50 (ovloop P1, 30 fps 재생) → 2 KF/s 면 한 코어의 약 7 % (추정, 60 fps 폰 측정 없음).
 - 앱 0.6.28: aapt vc 34 / 0.6.28-integ2-20261026, 같은 개발 인증서, assets/voc_k10L4.voc sha 2d6b5cec = 저장소 파일 (`loop60/apk_build.log`).
   APK = `scratchpad\integ2\apk\arlat_0.6.28.apk` (sha 97921f52), 되돌리기 = `scratchpad\integ2\apk\arlat_0.6.27_rollback.apk` (sha d90f7ce2, vc 33) `adb install -r -d`.
-  **설치: 대기** — 18:34·18:37 확인 때 사용자가 폰 사용 중 (Instagram / 원격 앱 화면 켜짐) → 규칙대로 미룸.
+  **설치함 18:51:51** (`adb install -r` Success; dumpsys vc 34 / 0.6.28-integ2-20261026; 카메라 `[]`, 브리지·앱 프로세스 0, 실행 안 함). 18:34–18:49 는 사용자가 폰 사용 중이라 기다림 (런처 화면 18:50 확인 뒤 설치, `loop60/install_0628.log`).
 - 되돌리기 (설치 안 바꾸고): intent `loop 0` (브리지 `--loop 0`) = 0.6.27 rec60 과 같은 VIO (위 동일성).
 - 확인 안 된 것: 폰 ARM 에서 rec60 루프 (실행 금지), 60 fps 폰 비용, 긴 비행 메모리, raw80·harness 동일성, 앱의 어휘 복사 코드 실제 실행.
 
