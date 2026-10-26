@@ -1,0 +1,22 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 rs_postinit=0 ekf_sparse=1 sym_inplace=1 init_gemm=0 gyro_klt=0 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse', prof log -)
+[ov_bridge] profile rec20261025: ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse' idle_spin 2 idle_spin_ms 20 drop_late 0 health 1 predict 2 hz 200 pred_thread 1 (after explicit flags)
+[ov_bridge] affinity start: (not pinned) threads 15753:ov_bridge_ovloo=0,1,2,3,4,5,6,7,8,9
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 2 -> 2 | TBB (ver 2021.11 interface 12110) | cpus 10 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /data/local/tmp/replay/remap_1920x1080.bin
+[ov_bridge] ovrobust: init_still 0 | health 1 log - | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 0 (max gap 3.0 s, min feats 20) | test blank 0 windows
+[ov_bridge] loop: vocab /data/local/tmp/ovloop/voc_k10L4.voc (k 10 L 4, 9992 words, sha d962dc5e69c5742b) | kf 0.25s/0.08m/8deg max_dt 2 q 6 nice 10 | feat 600 L3 fast 20 | gap 3s/1ms score 0.015/0.25 cand 3 | match 64/0.8 inl 25 pnp 3px x200 rp 3deg corr 0.5m+0.05*path yaw 10deg | consist 3kf 4s 0.05m 1.5deg | graph seq 4 w 1 huber 0.1 it 30 | smooth 0.1m/s 3deg/s | sync 0
+[ov_bridge] affinity ready: (not pinned) threads 15753:ov_bridge_ovloo=0,1,2,3,4,5,6,7,8,9 15756:ov_bridge_ovloo=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin: mode 2 (pool) stripes 2 max 200 ms window 20.0 ms | pred thread (input reader thread on)
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] affinity cam300: (not pinned) threads 15753:ov_bridge_ovloo=0,1,2,3,4,5,6,7,8,9 15756:ov_bridge_ovloo=0,1,2,3,4,5,6,7,8,9 15757:ov_bridge_ovloo=0,1,2,3,4,5,6,7,8,9 15758:ov_bridge_ovloo=0,1,2,3,4,5,6,7,8,9 15759:ov_bridge_ovloo=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 6434 spun 3200 timeouts 1 spin 7.61 s | exit_us n 3199 p50 1.6 p95 3.4 p99 10.1 max 7766.2 | window 20.0 ms period 36.76 ms blocked 1469 (3.35 s)
+[ov_bridge] health t=13.466 INIT -> OK (tracked 130 used 10 since_upd 0.00 pos_std 0.087)
+[ov_bridge] pred thread reader: image space waits 12
+[ov_bridge] pred thread: mode 2 hz 200 | lines 14983 (frame 2003 rate 12980) snapshots 2003 | compute us p50 262.7 p95 549.8 max 23862.4 | horizon ms p50 35.9 p95 57.0 max 404.6 | thread cpu 6.787 s (pred) 10.158 s (reader)
+[ov_bridge] affinity end: (not pinned) threads 15753:ov_bridge_ovloo=0,1,2,3,4,5,6,7,8,9 15756:ov_bridge_ovloo=0,1,2,3,4,5,6,7,8,9 15759:ov_bridge_ovloo=0,1,2,3,4,5,6,7,8,9 17604:ov_bridge_ovloo=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 43309 spun 23168 timeouts 1 spin 54.41 s | exit_us n 23167 p50 1.6 p95 2.8 p99 7.3 max 7766.2 | window 20.0 ms period 33.38 ms blocked 2849 (6.03 s)
+[ov_bridge] predict: mode 2 hz 200 | lines 0 | horizon ms p50 -1.0 p95 -1.0 max -1.0
+[ov_bridge] loop: keyframes pushed 146 dropped 0 processed 146 | candidates 393 geo 393 verified 194 accepted 65 (consistency-rejected 29) | optimisations 56 | sessions 0
+[ov_bridge] loop: ms p50/p95/max per keyframe: total 34.61/57.64/82.32 tri 0.41/0.89 feat 16.08/33.17 query 0.28/0.36 geo 13.32/36.59 | VIO-thread copy 0.586/0.708/0.789 | opt 5.0/6.9/8.1 (n 56)
+[ov_bridge] health: frames INIT 324 OK 2003 DEGRADED 0 LOST 0 | transitions 2 | max LOST run 0 frames | recover state 0 full 0 | blanked 0 | init_ready frames 319
