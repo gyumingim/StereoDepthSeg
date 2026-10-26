@@ -16,8 +16,26 @@ t_end = min(acc[-1, 0], gyr[-1, 0])
 # reference "level" = mean gravity direction of the last 2 s (end still; assumption: phone resting = vehicle level)
 ref = acc[acc[:, 0] > t_end - 2e9, 1:].mean(0)
 ref /= np.linalg.norm(ref)
-P = [json.loads(x) for x in gzip.open(pf, "rt") if x.strip()]
-P = [m for m in P if m.get("type", "pose") == "pose"]
+VIOP = pf.endswith(".viop.bin.gz")  # POST HOC (supervisor C5): real VIOP POSE frames from --viop-udp capture
+if VIOP:
+    import struct
+    raw = gzip.open(pf, "rb").read()
+    P, i = [], 0
+    while i + 10 <= len(raw):
+        n = int.from_bytes(raw[i:i + 2], "little"); fr = raw[i + 10:i + 10 + n]; i += 10 + n
+        if len(fr) < 10 or fr[0] != 0xA5 or fr[1] != 0x5A or fr[3] != 0x01:
+            continue
+        pl = fr[8:8 + fr[4]]
+        t_us, = struct.unpack_from("<Q", pl, 0)
+        fl, = struct.unpack_from("<H", pl, 14)
+        sd = struct.unpack_from("<3H", pl, 60)
+        vel = struct.unpack_from("<3f", pl, 28)
+        P.append(dict(t_ns=t_us * 1000, init=bool(fl & 1), status="tracking" if fl & 2 else "lost", viop_flags=fl,
+                      quality=pl[79], sd_max=max(sd) / 1000.0, sd_axes=[x / 1000.0 for x in sd], v=list(vel)))
+    P.sort(key=lambda m: m["t_ns"])
+else:
+    P = [json.loads(x) for x in gzip.open(pf, "rt") if x.strip()]
+    P = [m for m in P if m.get("type", "pose") == "pose"]
 ev = []
 grid = np.arange(t0, t_end, 10e6)
 ia = np.searchsorted(acc[:, 0], grid).clip(0, len(acc) - 1)
@@ -41,7 +59,9 @@ for m in P:
     init = bool(m.get("init"))
     lost = m.get("status") != "tracking"
     state_at.append((tm, init, lost))
-    if init:
+    if init and VIOP:
+        ev.append((tm, 0, f"P {tm} {m['viop_flags'] & 3} {m['quality']} {m['sd_max']:.5f}"))
+    elif init:
         h = m.get("h") or {}
         sd = h.get("pos_std")
         sd = float("nan") if sd is None else sd / std_div
@@ -92,5 +112,14 @@ if ok.any() and m_last is not None:
     after = (tms > m_last) & (ok == 1)
     summ["first_armable_after_motion_s"] = round(float(tms[np.argmax(after)] - m_last) / 1e3, 2) if after.any() else None
     # time of the first armable relative to put-down (motion end)
+if VIOP and m_last is not None:
+    tp = np.array([(m["t_ns"] - t0) / 1e6 for m in P if m["init"]])
+    sdm = np.array([m["sd_max"] for m in P if m["init"]])
+    vv = np.array([np.linalg.norm(m["v"]) for m in P if m["init"]])
+    e = tp > m_last
+    if e.any():
+        summ["viop_end_still"] = dict(n=int(e.sum()), sd_max_med=round(float(np.median(sdm[e])), 4), sd_max_min=round(float(sdm[e].min()), 4),
+                                      sd_max_max=round(float(sdm[e].max()), 4), speed_med=round(float(np.median(vv[e])), 3),
+                                      speed_max=round(float(vv[e].max()), 3), frac_sd_ok=round(float(np.mean(sdm[e] <= 0.15)), 3))
 json.dump(summ, open(outp + ".json", "w"), indent=1)
 print(json.dumps(summ))
