@@ -255,7 +255,11 @@ def run_sched(spec, cfgname, par):
     q = []
     for part in spec.split(";"):
         which, fpss = part.split(":")
-        q += [cell_name(r, o, which, float(f)) for f in fpss.split(",") for r, o in cells(which)]
+        offs = None
+        if "@" in which:   # e.g. hs@0:60 = offset 0 cells only (time budget)
+            which, o_ = which.split("@")
+            offs = {int(x) for x in o_.split("+")}
+        q += [cell_name(r, o, which, float(f)) for f in fpss.split(",") for r, o in cells(which) if offs is None or o in offs]
     q = [n for n in q if not (OUT / cfgname / f"{n}_{cfgname}.json").exists()]
     (OUT / cfgname).mkdir(parents=True, exist_ok=True)
     running = {}
@@ -400,7 +404,8 @@ def score():
             row = dict(name=res["name"], cfg=res["cfg"], rec=res["rec"], off=res["off"], which=res["which"], fps=fps,
                        key=res["name"].rsplit("_f", 1)[0], ms_med=res["ms_med"], ms_p95=res["ms_p95"], ms_max=res["ms_max"],
                        mem_mb=res["gpu_mem_alloc_max_mb"], mem_res_mb=res["gpu_mem_reserved_max_mb"], t_init=res["t_init_clip_s"],
-                       error=res.get("error"), load1=res["load"][0], frames=res["frames_fed"], n_kf=res["n_keyframes"])
+                       error=res.get("error"), load1=res["load"][0], frames=res["frames_fed"], n_kf=res["n_keyframes"],
+                       n_loop_ba=res.get("n_loop_ba"), loop_ba_t_s=res.get("loop_ba_t_s"))
             for kind in ("causal", "final"):
                 if res["which"] == "loop":
                     P = load_lines(OUT / res["cfg"] / f"{res['name']}_{res['cfg']}.{kind}.poses.jsonl.gz")
