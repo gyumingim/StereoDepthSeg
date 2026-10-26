@@ -72,9 +72,16 @@ if (OV_FULL_SOURCE)
     -fno-omit-frame-pointer -Wall -Wno-deprecated-declarations ${OVOPT_EXTRA_FLAGS})
   target_link_libraries(ov_full PUBLIC ${OpenCV_LIBRARIES} ${Boost_LIBRARIES} ${CERES_LIBRARIES} Threads::Threads)
 
-  add_executable(ov_bridge main.cpp)
+  # loop/ (2026-10-26 ovloop): --loop loop closure (runs only with --loop 1)
+  add_executable(ov_bridge main.cpp loop/ovloop.cpp loop/vocab.cpp loop/lc_features.cpp)
   set_target_properties(ov_bridge PROPERTIES CXX_STANDARD 17)
+  target_include_directories(ov_bridge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/loop)
   target_link_libraries(ov_bridge PRIVATE ov_full)
+  add_executable(ovloop_tool loop/ovloop_tool.cpp loop/vocab.cpp loop/lc_features.cpp)  # vocabulary training (PC)
+  set_target_properties(ovloop_tool PROPERTIES CXX_STANDARD 17)
+  target_include_directories(ovloop_tool PRIVATE ${OpenCV_INCLUDE_DIRS})
+  target_link_libraries(ovloop_tool PRIVATE ${OpenCV_LIBRARIES})
+  target_compile_options(ovloop_tool PRIVATE -O3 -Wall)
   target_compile_options(ov_bridge PRIVATE -O2 -Wall)
   set_target_properties(ov_bridge PROPERTIES BUILD_RPATH "${OV_LOCAL}/lib" INSTALL_RPATH "${OV_LOCAL}/lib")
   message(STATUS "ov_bridge: OV_FULL_SOURCE (OpenVINS ${OV_SRC} + ovpatch) | OpenCV ${OpenCV_VERSION} | Ceres ${Ceres_VERSION}")
@@ -87,12 +94,13 @@ message(STATUS "ov_msckf_lib: ${OV_MSCKF_LIB} | OpenCV ${OpenCV_VERSION} | Ceres
 # ovpatch/TrackKLT.cpp (2026-10-24, arlat 0.6.15): patched TrackKLT (KLT overlap, identical output) compiled into the
 # executable; it overrides the copy in libov_msckf_lib.so (ENABLE_EXPORTS: the library's TrackKLT vtable binds to ours).
 # ovpatch/ovopt.cpp (2026-10-25): --ovopt flag storage (only frame_nocopy / prof work in this build, main.cpp checks).
-add_executable(ov_bridge main.cpp ovpatch/TrackKLT.cpp ovpatch/ovopt.cpp)
+add_executable(ov_bridge main.cpp ovpatch/TrackKLT.cpp ovpatch/ovopt.cpp loop/ovloop.cpp loop/vocab.cpp loop/lc_features.cpp)
 set_target_properties(ov_bridge PROPERTIES ENABLE_EXPORTS ON)
 # 라이브러리 빌드와 같은 매크로여야 헤더(옵션 구조체)가 일치한다 (ovbuild: ROS 끔, ARUCO 켬)
 target_compile_definitions(ov_bridge PRIVATE ROS_AVAILABLE=0 ENABLE_ARUCO_TAGS=1)
 target_include_directories(ov_bridge PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/ovpatch
+  ${CMAKE_CURRENT_SOURCE_DIR}/loop
   "${OV_SRC}/ov_msckf/src"
   "${OV_SRC}/ov_core/src"
   "${OV_SRC}/ov_core/src/track"

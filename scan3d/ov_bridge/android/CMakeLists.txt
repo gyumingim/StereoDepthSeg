@@ -37,7 +37,7 @@ endforeach ()
 #   TrackKLT.cpp (2026-10-24, arlat 0.6.15, KLT overlap, identical output),
 #   VioManager.cpp / StateHelper.cpp / UpdaterMSCKF.cpp / UpdaterSLAM.cpp + ovopt.cpp (2026-10-25, ovopt).
 add_executable(ov_bridge
-  ../main.cpp ../ovpatch/ovopt.cpp
+  ../main.cpp ../ovpatch/ovopt.cpp ../loop/ovloop.cpp ../loop/vocab.cpp ../loop/lc_features.cpp  # loop/: --loop (2026-10-26 ovloop)
   ${S}/ov_core/src/cpi/CpiV1.cpp ${S}/ov_core/src/cpi/CpiV2.cpp ${S}/ov_core/src/sim/BsplineSE3.cpp
   ${S}/ov_core/src/track/TrackBase.cpp ${S}/ov_core/src/track/TrackAruco.cpp ${S}/ov_core/src/track/TrackDescriptor.cpp
   ../ovpatch/TrackKLT.cpp ${S}/ov_core/src/track/TrackSIM.cpp ${S}/ov_core/src/types/Landmark.cpp
@@ -55,6 +55,7 @@ add_executable(ov_bridge
 target_compile_definitions(ov_bridge PRIVATE ROS_AVAILABLE=0 ENABLE_ARUCO_TAGS=0 OVOPT_FULL=1)
 target_include_directories(ov_bridge PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../ovpatch
+  ${CMAKE_CURRENT_SOURCE_DIR}/../loop
   ${CMAKE_CURRENT_SOURCE_DIR}/shim
   ${S}/ov_msckf/src ${S}/ov_core/src ${S}/ov_init/src ${S}/ov_core/src/track
   ${DEPS}/include/eigen3 ${DEPS}/include

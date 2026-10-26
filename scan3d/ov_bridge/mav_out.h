@@ -513,6 +513,56 @@ struct Out {
                    w_I(2), sig_pos, quality, reset_counter, f_I(0), f_I(1), f_I(2));
   }
 
+  // --loop (2026-10-26 ovloop): loop-closure correction T_map_odom (W frame, z up; p_map = Rz(yaw) p_w + t), main thread.
+  // VIOP: VIOP_T_MAP_ODOM (viop_proto.h). MAVLink: two DEBUG_VECT (#250, crc extra 49) "MAPODOM" (x y z = t) and
+  // "MAPYAW" (x = yaw rad, y = target yaw rad, z = n_loops + 0.5 * converging) -> a flight controller only logs them;
+  // ODOMETRY / VISION_POSITION_ESTIMATE (control) are unchanged. MAVLink values stay in the VIO world W (not in L).
+  uint16_t map_seq = 0;
+  uint64_t n_map = 0;
+  void emit_map(const void *sys_epoch, int64_t t_ns, bool valid, bool converging, double yaw, const Eigen::Vector3d &t,
+                double tgt_yaw, const Eigen::Vector3d &tgt_t, int n_loops) {
+    std::lock_guard<std::mutex> lk(emu);  // epoch / reset_counter are written by emit() (prediction thread)
+    if (sys_epoch != epoch) return;  // the pose stream has not announced this world frame yet
+    const int64_t off = (replay_time && replay_off_ns != INT64_MAX) ? replay_off_ns : 0;
+    const uint64_t t_us = static_cast<uint64_t>(std::max<int64_t>(0, (t_ns + off) / 1000));
+    if (proto == 1) {
+      viop_map_odom_t m;
+      std::memset(&m, 0, sizeof(m));
+      m.t_us = t_us;
+      float a[3], b[3];
+      for (int i = 0; i < 3; i++) {
+        a[i] = static_cast<float>(t(i));
+        b[i] = static_cast<float>(tgt_t(i));
+      }
+      std::memcpy(m.t_mo, a, 12);
+      std::memcpy(m.tgt_t, b, 12);
+      m.yaw_mo = static_cast<float>(yaw);
+      m.tgt_yaw = static_cast<float>(tgt_yaw);
+      m.n_loops = static_cast<uint16_t>(std::max(0, std::min(65535, n_loops)));
+      m.reset_counter = reset_counter;
+      m.flags = static_cast<uint8_t>((valid ? VIOP_MOF_VALID : 0) | (converging ? VIOP_MOF_CONVERGING : 0));
+      uint8_t fr[VIOP_MAX_FRAME];
+      const int fs = viop_build(fr, VIOP_T_MAP_ODOM, VIOP_SRC_PHONE, map_seq++, &m, sizeof(m));
+      if (send_raw(fr, static_cast<size_t>(fs))) n_map++;
+      return;
+    }
+    auto dbg = [&](const char *name, float x, float y, float z) {
+      Buf p;
+      p.u64(t_us);
+      p.f32(x);
+      p.f32(y);
+      p.f32(z);
+      char nm[10] = {0};
+      std::strncpy(nm, name, sizeof(nm));
+      for (char ch : nm) p.u8(static_cast<uint8_t>(ch));
+      return send(250, 49, p.b);
+    };
+    bool ok = dbg("MAPODOM", static_cast<float>(t(0)), static_cast<float>(t(1)), static_cast<float>(t(2)));
+    ok = dbg("MAPYAW", static_cast<float>(yaw), static_cast<float>(tgt_yaw),
+             static_cast<float>(n_loops + (converging ? 0.5 : 0.0)) * (valid ? 1.0f : -1.0f)) && ok;
+    if (ok) n_map++;
+  }
+
   void report() const {
     auto q = [](std::vector<float> e, double f) {
       if (e.empty()) return -1.0;

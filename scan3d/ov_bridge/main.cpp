@@ -273,6 +273,7 @@
 #include "ovopt.h"  // ovpatch/: --ovopt flags + profiler (2026-10-25)
 #include "gyro_klt.h"  // ovpatch/: gyro-aided KLT counters (2026-10-26 ovgyro)
 #include "mav_out.h"  // --mav-udp drone output (2026-10-25, ovdrone)
+#include "ovloop.h"  // loop/: --loop loop closure (2026-10-26, ovloop)
 
 #include "core/VioManager.h"
 #include "core/VioManagerOptions.h"
@@ -281,6 +282,11 @@
 #include "types/IMU.h"
 #include "types/PoseJPL.h"
 #include "types/Vec.h"
+#include "types/Landmark.h"
+#include "feat/Feature.h"
+#include "feat/FeatureDatabase.h"
+#include "track/TrackBase.h"
+#include "cam/CamEqui.h"
 #include "utils/opencv_yaml_parse.h"
 #include "utils/print.h"
 #include "utils/quat_ops.h"
@@ -360,6 +366,14 @@ struct Args {
   int recover_min_feats = 20;
   int recover_full = 0;       // --recover-full 0|1 (full reset when the state is bad / the gap too long; default off)
   std::string test_blank;     // --test-blank T0:D,...
+  // 2026-10-26 ovloop (header): loop closure, default off = no loop code runs, outputs unchanged
+  int loop = 0;               // --loop 0|1
+  std::string loop_vocab;     // --loop-vocab FILE (vocabulary, ovloop_tool train)
+  std::string loop_cfg;       // --loop-cfg K=V,... (loop/ovloop.h Cfg)
+  std::string loop_log;       // --loop-log FILE (JSON lines per keyframe / loop / optimisation)
+  std::string loop_dump, loop_vpr;  // --loop-dump DIR / --loop-vpr FILE (offline VPR evaluation, loop/ovloop.h)
+  int loop_sync = 0;          // --loop-sync 0|1 (1 = the VIO thread waits for each keyframe: deterministic PC evaluation only)
+  double loop_out_hz = 5.0;   // --loop-out-hz HZ: VIOP MAP_ODOM / MAVLink DEBUG_VECT rate (+ at once on a new optimisation)
 };
 
 // --health rules (header); --health-cfg upd_deg=0.2,... overrides
@@ -848,6 +862,49 @@ struct CamMsg {
 // ---- --pred-thread (header; 2026-10-25) ----
 std::mutex g_out_m;  // serialises output writes of the main thread and the prediction thread (--pred-thread only)
 
+// --loop (2026-10-26 ovloop): VioManager + read access to the feature tracker (protected member). Only constructed with
+// --loop 1; no member, no override -> the filter runs exactly as VioManager.
+class VioAcc : public ov_msckf::VioManager {
+public:
+  using ov_msckf::VioManager::VioManager;
+  std::shared_ptr<ov_core::TrackBase> feats() const { return trackFEATS; }
+};
+
+// --loop: "map" object of a pose / pred line = the VIO pose in the loop-closure map frame, p_map = Rz(yaw) p + t
+// (published T_map_odom, rate limited). The VIO fields of the line are not changed.
+void map_fields(std::ostringstream &o, const ovloop::MapOdom &m, const Eigen::Matrix3d &R_ItoG, const Eigen::Vector3d &p,
+                const Eigen::Vector3d &v, const Eigen::Matrix3d *R_ItoC, const Eigen::Vector3d *p_IinC) {
+  Eigen::Matrix3d Rz;
+  Rz << std::cos(m.yaw), -std::sin(m.yaw), 0, std::sin(m.yaw), std::cos(m.yaw), 0, 0, 0, 1;
+  const Eigen::Matrix3d R = Rz * R_ItoG;
+  const Eigen::Vector3d pm = Rz * p + m.t, vm = Rz * v;
+  Eigen::Quaterniond q(R);
+  o << ",\"map\":{\"valid\":" << (m.valid ? "true" : "false") << ",\"p\":";
+  jarr(o, pm);
+  o << ",\"q\":[";
+  jnum(o, q.x()); o << ","; jnum(o, q.y()); o << ","; jnum(o, q.z()); o << ","; jnum(o, q.w());
+  o << "],\"v\":";
+  jarr(o, vm);
+  if (R_ItoC && p_IinC) {
+    Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
+    const Eigen::Matrix3d R_CtoG = R * R_ItoC->transpose();
+    T.block<3, 3>(0, 0) = R_CtoG;
+    T.block<3, 1>(0, 3) = pm - R_CtoG * (*p_IinC);
+    o << ",\"T_world_cam0\":";
+    jarr(o, T);
+  }
+  o << ",\"yaw\":";
+  jnum(o, m.yaw);
+  o << ",\"t\":";
+  jarr(o, m.t);
+  o << ",\"tgt_yaw\":";
+  jnum(o, m.tgt_yaw);
+  o << ",\"tgt_t\":";
+  jarr(o, m.tgt_t);
+  o << ",\"n_loop\":" << m.n_loop << ",\"n_kf\":" << m.n_kf << ",\"ver\":" << m.ver << ",\"conv\":" << (m.converging ? 1 : 0)
+    << ",\"session\":" << m.session << "}";
+}
+
 // copy of the filter numbers a prediction needs (made by the main thread after a frame, read by the prediction thread)
 struct PredSnap {
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -864,6 +921,8 @@ struct PredSnap {
   Eigen::Matrix<double, 9, 9> P9 = Eigen::Matrix<double, 9, 9>::Zero();
   double sigma_w = 0.0;
   int n_feat = 0;
+  bool map_on = false;  // --loop (2026-10-26 ovloop): published T_map_odom at snapshot time
+  ovloop::MapOdom map;
 };
 
 class Predictor {
@@ -1115,6 +1174,7 @@ private:
     jarr(o, T);
     o << ",\"q_GtoI_jpl\":";
     jarr(o, q_GtoI);
+    if (s.map_on) map_fields(o, s.map, R_ItoG, p_IinG, v, &s.R_ItoC, &s.p_IinC);  // --loop (2026-10-26 ovloop)
     if (stale) o << ",\"stale\":true";
     o << ",\"tb\":" << boot_ns() << "}\n";
     return o.str();
@@ -1232,6 +1292,26 @@ public:
       ok_ = false;
       return;
     }
+    if (a.loop) {  // --loop (2026-10-26 ovloop): loop-closure thread (keyframes only; never writes the filter)
+      ovloop::Cfg lc;
+      lc.vocab = a.loop_vocab;
+      lc.log = a.loop_log;
+      lc.sync = a.loop_sync;
+      lc.dump = a.loop_dump;
+      lc.vpr = a.loop_vpr;
+      std::string err;
+      if (!a.loop_cfg.empty() && !lc.parse(a.loop_cfg, err)) {
+        std::fprintf(stderr, "[ov_bridge] %s\n", err.c_str());
+        ok_ = false;
+        return;
+      }
+      loop_.reset(new ovloop::LoopCloser(lc));
+      if (!loop_->ok()) {
+        std::fprintf(stderr, "[ov_bridge] loop: %s\n", loop_->err().c_str());
+        ok_ = false;
+        return;
+      }
+    }
     make_system();
   }
 
@@ -1242,15 +1322,23 @@ public:
     shadow_.reset();
     shadow_checked_ = shadow_ok_ = false;
     if (!use_shadow_) return;
-    shadow_ = std::make_shared<ov_msckf::VioManager>(shadow_params_);
+    shadow_ = new_vio(shadow_params_);
     if (refeed)
       for (const auto &m : imu_recent_) shadow_->feed_measurement_imu(m);
   }
 
   // VioManager 새로 만들기. 붙잡아 둔 IMU(imu_hold_) 는 새 시스템에 그대로 넣을 수 있으므로 남긴다.
+  // --loop (2026-10-26 ovloop): VioAcc (= VioManager + tracker read access) only with --loop 1
+  std::shared_ptr<ov_msckf::VioManager> new_vio(ov_msckf::VioManagerOptions &p) {
+    if (loop_) return std::make_shared<VioAcc>(p);
+    return std::make_shared<ov_msckf::VioManager>(p);
+  }
+
   void make_system(ov_msckf::VioManagerOptions *p = nullptr) {  // VioManager takes a non-const reference
-    if (p) sys_ = std::make_shared<ov_msckf::VioManager>(*p);
-    else sys_ = std::make_shared<ov_msckf::VioManager>(params_);
+    const bool had_sys = sys_ != nullptr;
+    if (p) sys_ = new_vio(*p);
+    else sys_ = new_vio(params_);
+    if (loop_ && had_sys) loop_->reset_session("VIO re-initialised");  // --loop: new world frame -> new graph
     pred_pending_ = false;
     snap_dirty_ = true;  // --pred-thread: the published snapshot is stale
     make_shadow(false);
@@ -1448,6 +1536,11 @@ public:
     jarr(o, T);
     o << ",\"q_GtoI_jpl\":";
     jarr(o, q_GtoI);
+    if (loop_) {  // --loop (2026-10-26 ovloop)
+      const Eigen::Matrix3d R_ItoC = calib0->Rot();
+      const Eigen::Vector3d p_IinC = calib0->pos();
+      map_fields(o, loop_->published(), R_ItoG, p_IinG, v, &R_ItoC, &p_IinC);
+    }
     o << "}\n";
     out += o.str();
   }
@@ -1487,6 +1580,8 @@ public:
       s.sigma_w = params_.imu_noises.sigma_w;
       s.n_feat = static_cast<int>(st->_features_SLAM.size());
     }
+    s.map_on = loop_ != nullptr;  // --loop (2026-10-26 ovloop)
+    if (loop_) s.map = loop_->published();
   }
 
   void log_gyro_klt() const {  // ovgyro summary (2026-10-26): whole-run temporal KLT counters
@@ -1888,6 +1983,7 @@ private:
       on_exception("pose_line", e.what(), out);
       return;
     }
+    if (loop_) loop_after_frame(c);  // --loop (2026-10-26 ovloop): keyframe copy + map output (reads only)
     if (args_.predict > 0 && sys_->initialized()) {  // --predict: serve() emits it once the input is drained
       pred_pending_ = true;
       pred_cam_t_ns_ = c.t_ns;
@@ -2011,6 +2107,100 @@ private:
   }
 
  public:
+  // ---- --loop (2026-10-26 ovloop) ----
+  // VIO thread, after the pose line: copy a keyframe when the rule fires (reads the filter / tracker only), then the
+  // map-frame message for the drone link (VIOP MAP_ODOM or MAVLink DEBUG_VECT), rate limited.
+  void loop_after_frame(const CamMsg &c) {
+    if (!sys_->initialized() || lost_ || late_lost_ || c.data.images.empty() || c.data.images[0].empty() || c.blank) return;
+    auto st = sys_->get_state();
+    const double ts = st->_timestamp;
+    if (ts < 0.0 || !st->_clones_IMU.count(ts)) return;
+    const Eigen::Matrix3d R_ItoG = st->_imu->Rot().transpose();
+    const Eigen::Vector3d p_IinG = st->_imu->pos();
+    if (g_mav && (last_map_.ver != map_sent_ver_ ||
+                  (args_.loop_out_hz > 0.0 && c.t - map_sent_t_ >= 1.0 / args_.loop_out_hz - 1e-6))) {
+      g_mav->emit_map(sys_.get(), c.t_ns, last_map_.valid, last_map_.converging, last_map_.yaw, last_map_.t,
+                      last_map_.tgt_yaw, last_map_.tgt_t, last_map_.n_loop);
+      map_sent_ver_ = last_map_.ver;
+      map_sent_t_ = c.t;
+    }
+    if (!loop_->rule().want(ts, R_ItoG, p_IinG)) return;
+    const auto t0 = std::chrono::steady_clock::now();
+    std::unique_ptr<ovloop::KfIn> kf(new ovloop::KfIn());
+    kf->t_ns = c.t_ns;
+    kf->t = ts;
+    kf->img = c.data.images[0].clone();
+    kf->R_ItoG = R_ItoG;
+    kf->p_IinG = p_IinG;
+    auto calib0 = st->_calib_IMUtoCAM.at(0);
+    kf->R_ItoC = calib0->Rot();
+    kf->p_IinC = calib0->pos();
+    auto cam = st->_cam_intrinsics_cameras.at(0);
+    const Eigen::MatrixXd cv_ = cam->get_value();
+    kf->fx = cv_(0);
+    kf->fy = cv_(1);
+    kf->cx = cv_(2);
+    kf->cy = cv_(3);
+    for (int i = 4; i < cv_.rows(); i++) kf->dist.push_back(cv_(i));
+    kf->fisheye = std::dynamic_pointer_cast<ov_core::CamEqui>(cam) != nullptr;
+    for (const auto &cl : st->_clones_IMU) {
+      if (cl.first > ts) continue;
+      const Eigen::Matrix3d R = cl.second->Rot();  // R_GtoI
+      const Eigen::Vector3d p = cl.second->pos();
+      kf->clone_t.push_back(cl.first);
+      kf->clone_x.push_back({R(0, 0), R(0, 1), R(0, 2), R(1, 0), R(1, 1), R(1, 2), R(2, 0), R(2, 1), R(2, 2), p(0), p(1), p(2)});
+    }
+    auto tf = std::static_pointer_cast<VioAcc>(sys_)->feats();
+    auto obs = tf->get_last_obs();
+    auto ids = tf->get_last_ids();
+    auto db = tf->get_feature_database();
+    if (obs.count(0) && ids.count(0)) {
+      const auto &o0 = obs.at(0);
+      const auto &i0 = ids.at(0);
+      kf->tracks.reserve(o0.size());
+      for (size_t i = 0; i < o0.size() && i < i0.size(); i++) {
+        ovloop::TrackIn tr;
+        tr.id = i0[i];
+        tr.u = o0[i].pt.x;
+        tr.v = o0[i].pt.y;
+        auto sit = st->_features_SLAM.find(tr.id);
+        if (sit != st->_features_SLAM.end()) {  // = VioManager::retriangulate_active_tracks (SLAM part)
+          const auto &lm = sit->second;
+          Eigen::Vector3d pG = lm->get_xyz(false);
+          if (ov_type::LandmarkRepresentation::is_relative_representation(lm->_feat_representation)) {
+            if (lm->_anchor_cam_id < 0 || !st->_clones_IMU.count(lm->_anchor_clone_timestamp)) continue;
+            const Eigen::Matrix3d R_ItoCa = st->_calib_IMUtoCAM.at(lm->_anchor_cam_id)->Rot();
+            const Eigen::Vector3d p_IinCa = st->_calib_IMUtoCAM.at(lm->_anchor_cam_id)->pos();
+            const auto &an = st->_clones_IMU.at(lm->_anchor_clone_timestamp);
+            pG = an->Rot().transpose() * R_ItoCa.transpose() * (lm->get_xyz(false) - p_IinCa) + an->pos();
+          }
+          tr.slam = true;
+          tr.p_G = pG;
+        } else {
+          ov_core::Feature f;
+          if (!db->get_feature_clone(tr.id, f) || !f.timestamps.count(0) || !f.uvs_norm.count(0)) continue;
+          const auto &tt = f.timestamps.at(0);
+          const auto &un = f.uvs_norm.at(0);
+          for (size_t k = 0; k < tt.size() && k < un.size(); k++) {
+            if (tt[k] > ts) continue;
+            tr.obs_t.push_back(tt[k]);
+            tr.obs_x.push_back(un[k](0));
+            tr.obs_y.push_back(un[k](1));
+          }
+          if (tr.obs_t.size() < 3) continue;
+        }
+        kf->tracks.push_back(std::move(tr));
+      }
+    }
+    kf->cap_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+    loop_->push(std::move(kf));
+  }
+  void log_loop() {
+    if (!loop_) return;
+    loop_->finish(30.0);
+    loop_->report();
+  }
+
   void log_health() const {
     if (!health_on_) return;
     std::fprintf(stderr, "[ov_bridge] health: frames INIT %llu OK %llu DEGRADED %llu LOST %llu | transitions %llu | max LOST run %d "
@@ -2280,6 +2470,10 @@ private:
       jarr(o, p_IinC);
       o << ",\"intr0\":";                                   // 2026-10-23: cam0 intrinsics (online calib check)
       jarr(o, st->_cam_intrinsics.at(0)->value());
+      if (loop_) {  // --loop (2026-10-26 ovloop): map-frame pose; the smoothing steps once per frame (frame time)
+        last_map_ = loop_->step_output(c.t, p_IinG);
+        map_fields(o, last_map_, R_ItoG, p_IinG, v, &R_ItoC, &p_IinC);
+      }
     }
     o << ",\"dt_cam_imu\":";
     jnum(o, st->_calib_dt_CAMtoIMU->value()(0));
@@ -2449,6 +2643,11 @@ private:
   uint64_t n_late_lost_ = 0;
   uint64_t n_late_forced_ = 0, n_late_reanchor_ = 0, n_pred_stale_ = 0;
   double pred_stale_s_ = 0.0;       // --pred-stale-ms / 1000 (resolved in the constructor)
+  // --loop (2026-10-26 ovloop)
+  std::unique_ptr<ovloop::LoopCloser> loop_;
+  ovloop::MapOdom last_map_;          // published value of the latest pose line
+  uint32_t map_sent_ver_ = 0;
+  double map_sent_t_ = -1e300;
 };
 
 // 한 연결(또는 stdin) 을 끝까지 처리. 반환 false = QUIT 받음.
@@ -2682,7 +2881,8 @@ void usage() {
                "                 [--pred-thread 0|1] [--imu-log FILE] [--profile rec20261025|rec60|none]\n"
                "                 [--mav-udp HOST:PORT | --viop-udp HOST:PORT] [--viop-hb-hz HZ] [--viop-hb-src 0|1]\n"
                "                 [--init-still 0|1] [--health 0|1] [--health-log FILE] [--health-cfg K=V,..] [--klt-stats 0|1] [--pipe 0] [--recover N]\n"
-               "                 [--recover-max-gap S] [--recover-min-feats N] [--recover-full 0|1] [--test-blank T0:D,..]\n");
+               "                 [--recover-max-gap S] [--recover-min-feats N] [--recover-full 0|1] [--test-blank T0:D,..]\n"
+               "                 [--loop 0|1 --loop-vocab FILE [--loop-cfg K=V,..] [--loop-log FILE] [--loop-sync 0|1] [--loop-out-hz HZ] [--loop-dump DIR] [--loop-vpr FILE]]\n");
 }
 
 }  // namespace
@@ -2815,6 +3015,14 @@ int main(int argc, char **argv) {
     else if (s == "--recover-min-feats") a.recover_min_feats = std::stoi(next());
     else if (s == "--recover-full") a.recover_full = std::stoi(next()) != 0 ? 1 : 0;
     else if (s == "--test-blank") a.test_blank = next();
+    else if (s == "--loop") a.loop = std::stoi(next()) != 0 ? 1 : 0;               // 2026-10-26 ovloop
+    else if (s == "--loop-vocab") a.loop_vocab = next();
+    else if (s == "--loop-cfg") a.loop_cfg = next();
+    else if (s == "--loop-log") a.loop_log = next();
+    else if (s == "--loop-dump") a.loop_dump = next();
+    else if (s == "--loop-vpr") a.loop_vpr = next();
+    else if (s == "--loop-sync") a.loop_sync = std::stoi(next()) != 0 ? 1 : 0;
+    else if (s == "--loop-out-hz") a.loop_out_hz = std::max(0.0, std::stod(next()));
     else if (s == "--reinit-max-gap") a.reinit_max_gap = std::stod(next());
     else if (s == "--reinit-sigma") {  // ori_deg,pos_m,vel_m_s
       std::string v = next();
@@ -2863,6 +3071,12 @@ int main(int argc, char **argv) {
       std::fprintf(stderr, "[ov_bridge] --pipe 1 is not in this build (ovpipe-20261026 not merged: stalls / deadlock). Use --pipe 0.\n");
     return 2;
   }
+  if (a.loop && a.recover > 0) {  // 2026-10-26 ovloop: the --recover output offset and the map frame are not combined (v1)
+    std::fprintf(stderr, "[ov_bridge] --loop 1 cannot be used with --recover (v1: the map frame follows the raw VIO world)\n");
+    return 2;
+  }
+  if (!a.loop && (!a.loop_vocab.empty() || !a.loop_cfg.empty() || !a.loop_log.empty() || a.loop_sync))
+    std::fprintf(stderr, "[ov_bridge] --loop-* options ignored without --loop 1\n");
   if (!a.prof_log.empty()) ovopt::g.prof = 1;
   ovopt::g.init_still = a.init_still;  // --init-still (2026-10-25): read by ovpatch/VioManagerHelper.cpp
 #ifndef OVOPT_FULL
@@ -2989,6 +3203,7 @@ int main(int argc, char **argv) {
     b.log_drop();
     b.log_rs();
     b.log_gyro_klt();  // 2026-10-26 ovgyro
+    b.log_loop();      // 2026-10-26 ovloop (--loop 1 only)
     if (g_mav) {
       g_mav->hb_thread_stop();  // --viop-hb-src 1 (no-op otherwise)
       for (int i = 0; i < 3; i++) g_mav->hb_tick(false, false, true);  // VIOP: "stopping" heartbeats on a clean exit
