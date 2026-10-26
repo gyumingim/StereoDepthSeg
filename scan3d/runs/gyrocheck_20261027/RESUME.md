@@ -1,1 +1,1 @@
-RESUME: main 60 jobs done (score_main.json). Post-hoc chain (~/scanner/tmp_gyrocheck/chain.sh: runs s10-s50 then runv VIOP capture) was running at handback 01:1x; then: python gc_score.py; arm_prep.py <NL60V|GL60V>/l*_k0_*.viop.bin.gz for per-axis pos_std arm replay.
+DONE 03:4x: chain finished, scored (score.json), VIOP arm replay done -> README.md.
