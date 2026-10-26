@@ -43,6 +43,10 @@ struct Cfg {
   double solver_time = 0.04;   // VINS max_solver_time (s)
   int iters = 8;               // VINS max_num_iterations
   double parallax_px = 10.0;   // VINS keyframe_parallax (pixel at FOCAL_LENGTH 460)
+  int ext = 0;                 // VINS estimate_extrinsic: 0 fixed (default), 1 = optimise around the OpenVINS value
+  double focal = 460.0;        // VINS FOCAL_LENGTH (virtual focal of the pixel thresholds and sqrt_info = focal / 1.5)
+  double align_delay = 0.0;    // s of non-linear VINS before the 4-DoF alignment A is taken (0 = first solve)
+  int init = 0;                // 0 = VINS own initialisation (SfM + alignment), 1 = from the OpenVINS state (window)
   double imu_rate = 400.0;     // for noise 2 (set by the bridge from the config)
   int queue_max = 4;           // frames waiting (async); more -> the oldest is dropped (its IMU stays in the buffer)
   int nice = 10;               // VINS thread nice value
@@ -60,6 +64,7 @@ struct FrameIn {
   bool ov_valid = false;       // OpenVINS initialised and tracking at this frame
   Eigen::Matrix3d R_ItoG = Eigen::Matrix3d::Identity();
   Eigen::Vector3d p_IinG = Eigen::Vector3d::Zero();
+  Eigen::Vector3d v_IinG = Eigen::Vector3d::Zero(), bg = Eigen::Vector3d::Zero(), ba = Eigen::Vector3d::Zero();  // init=1
   double cap_ms = 0.0;
 };
 
@@ -109,6 +114,7 @@ private:
   double A_yaw_ = 0.0;
   Eigen::Vector3d A_t_ = Eigen::Vector3d::Zero();
   int vins_resets_seen_ = 0;
+  double nl_t0_ = -1.0;  // first non-linear frame time of this VINS session
   mutable std::mutex om_;
   ovloop::MapOdom out_;
   double out_last_t_ = 0.0;

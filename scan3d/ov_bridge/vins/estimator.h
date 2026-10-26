@@ -140,4 +140,9 @@ class Estimator
     // ovswba 2026-10-26: timing of the last optimization() (output only; set in estimator.cpp, read by the bridge)
     double ovswba_solver_ms = 0.0, ovswba_margin_ms = 0.0;
     int ovswba_iters = 0;
+    // ovswba 2026-10-26 (--swba-cfg init=1): initialise from the OpenVINS state instead of VINS SfM + alignment.
+    // ovswba_prior: frame time -> [q_ItoG xyzw (4), p (3), v (3), bg (3), ba (3)] of the OpenVINS filter at that frame.
+    int ovswba_init_mode = 0;  // 0 = VINS initialStructure (default, unchanged), 1 = OpenVINS prior
+    std::map<double, Eigen::Matrix<double, 16, 1>> ovswba_prior;
+    bool ovswbaInitFromPrior();
 };

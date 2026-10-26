@@ -92,13 +92,18 @@ bool Cfg::parse(const std::string &kv, std::string &err) {
     else if (k == "log_level") log_level = static_cast<int>(v);
     else if (k == "smooth_v") smooth_v = v;
     else if (k == "smooth_w_deg") smooth_w_deg = v;
+    else if (k == "ext") ext = static_cast<int>(v);
+    else if (k == "focal") focal = v;
+    else if (k == "align_delay") align_delay = v;
+    else if (k == "init") init = static_cast<int>(v);
     else {
       err = "--swba-cfg: unknown key '" + k + "'";
       return false;
     }
   }
-  if (freq <= 0.0 || iters < 1 || solver_time <= 0.0 || queue_max < 1 || (noise != 1 && noise != 2)) {
-    err = "--swba-cfg: out of range (freq > 0, iters >= 1, solver_time > 0, queue_max >= 1, noise 1|2)";
+  if (freq <= 0.0 || iters < 1 || solver_time <= 0.0 || queue_max < 1 || (noise != 1 && noise != 2) || (ext != 0 && ext != 1) || (init != 0 && init != 1) ||
+      focal <= 0.0 || align_delay < 0.0) {
+    err = "--swba-cfg: out of range (freq > 0, iters >= 1, solver_time > 0, queue_max >= 1, noise 1|2, ext 0|1, focal > 0, align_delay >= 0)";
     return false;
   }
   return true;
@@ -114,7 +119,8 @@ Runner::Runner(const Cfg &c, const Eigen::Matrix3d &R_ItoC, const Eigen::Vector3
   TIC.clear();
   RIC.push_back(R_ItoC.transpose());              // camera -> IMU rotation
   TIC.push_back(-R_ItoC.transpose() * p_IinC);    // camera origin in the IMU frame
-  ESTIMATE_EXTRINSIC = 0;
+  ESTIMATE_EXTRINSIC = c_.ext;
+  FOCAL_LENGTH = c_.focal;
   ESTIMATE_TD = 0;
   TD = 0.0;
   ROLLING_SHUTTER = 0;
@@ -144,10 +150,12 @@ Runner::Runner(const Cfg &c, const Eigen::Matrix3d &R_ItoC, const Eigen::Vector3
   if (c_.gyr_w > 0) GYR_W = c_.gyr_w;
   est().clearState();
   est().setParameter();
+  est().ovswba_init_mode = c_.init;
   if (!c_.log.empty()) log_ = std::fopen(c_.log.c_str(), "w");
   std::fprintf(stderr, "[ov_bridge] swba: VINS-Mono window %d, freq %.1f Hz, iters %d, solver %.3f s, parallax %.1f px, noise %d "
-               "(acc_n %.3g gyr_n %.3g acc_w %.3g gyr_w %.3g), g %.4f, %s\n", WINDOW_SIZE, c_.freq, NUM_ITERATIONS,
-               SOLVER_TIME, c_.parallax_px, c_.noise, ACC_N, GYR_N, ACC_W, GYR_W, g, c_.sync ? "sync (inline)" : "own thread");
+               "(acc_n %.3g gyr_n %.3g acc_w %.3g gyr_w %.3g), g %.4f, ext %d, focal %.1f, align_delay %.2f s, init %d, %s\n", WINDOW_SIZE,
+               c_.freq, NUM_ITERATIONS, SOLVER_TIME, c_.parallax_px, c_.noise, ACC_N, GYR_N, ACC_W, GYR_W, g, c_.ext, FOCAL_LENGTH,
+               c_.align_delay, c_.init, c_.sync ? "sync (inline)" : "own thread");
   if (!c_.sync) th_ = std::thread([this] { run(); });
 }
 
@@ -290,6 +298,15 @@ void Runner::process(std::vector<Imu> &imu, FrameIn &f) {
     xyz_uv_velocity << f.x[i], f.y[i], 1.0, f.u[i], f.v[i], 0.0, 0.0;  // velocity only used with ESTIMATE_TD
     image[f.id[i]].emplace_back(0, xyz_uv_velocity);
   }
+  if (c_.init == 1) {  // OpenVINS prior for this frame (kept for the window span; init=1 only)
+    if (f.ov_valid) {
+      Eigen::Matrix<double, 16, 1> x;
+      const Eigen::Quaterniond q(f.R_ItoG);
+      x << q.x(), q.y(), q.z(), q.w(), f.p_IinG, f.v_IinG, f.bg, f.ba;
+      E.ovswba_prior[f.t] = x;
+    }
+    while (!E.ovswba_prior.empty() && E.ovswba_prior.begin()->first < f.t - 30.0) E.ovswba_prior.erase(E.ovswba_prior.begin());
+  }
   std_msgs::Header header;
   header.stamp.t = f.t;
   const bool was_nl = E.solver_flag == Estimator::NON_LINEAR;
@@ -306,7 +323,10 @@ void Runner::process(std::vector<Imu> &imu, FrameIn &f) {
     std::lock_guard<std::mutex> l(om_);
     have_A_ = false;  // VINS restarted (new VINS world): realign when it is non-linear again
   }
-  if (nl && !was_nl) n_init_++;
+  if (nl && !was_nl) {
+    n_init_++;
+    nl_t0_ = f.t;
+  }
   if (nl) {
     n_nonlin_++;
     if (E.marginalization_flag == Estimator::MARGIN_OLD) n_kf_++;
@@ -341,7 +361,7 @@ void Runner::process(std::vector<Imu> &imu, FrameIn &f) {
     jv(o, E.Bas[WINDOW_SIZE]);
     o << ",\"bg\":";
     jv(o, E.Bgs[WINDOW_SIZE]);
-    if (f.ov_valid) {
+    if (f.ov_valid && f.t - nl_t0_ >= c_.align_delay - 1e-9) {
       std::lock_guard<std::mutex> l(om_);
       if (!have_A_) {  // A: VINS world -> OpenVINS world such that the target equals the published value now
         const double yp = out_.valid ? out_.yaw : 0.0;

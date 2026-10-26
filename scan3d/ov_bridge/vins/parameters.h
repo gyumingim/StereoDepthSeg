@@ -9,7 +9,7 @@
 #include <fstream>
 #include <atomic>  // ovswba: vins_assert_fail
 
-const double FOCAL_LENGTH = 460.0;
+extern double FOCAL_LENGTH;  // ovswba: was const 460.0 (default unchanged; --swba-cfg focal=)
 const int WINDOW_SIZE = 10;
 const int NUM_OF_CAM = 1;
 const int NUM_OF_F = 1000;

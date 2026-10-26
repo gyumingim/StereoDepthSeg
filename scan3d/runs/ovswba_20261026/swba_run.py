@@ -60,6 +60,14 @@ CONDS = {
     "Z60": dict(fps=60.0, args=P60),
     "W60": dict(fps=60.0, args=P60 + " " + SW, swcfg="noise=1,solver_time=1.0"),
     "W60n2": dict(fps=60.0, args=P60 + " " + SW, swcfg="noise=2,solver_time=1.0"),
+    # one-shot dev screen (PLAN.md, pre-declared 19:30): each changes ONE thing vs W60, run on the 4 dev cells only first
+    "W60e": dict(fps=60.0, args=P60 + " " + SW, swcfg="noise=1,solver_time=1.0,ext=1"),          # VINS estimate_extrinsic 1
+    "W60f": dict(fps=60.0, args=P60 + " " + SW, swcfg="noise=1,solver_time=1.0,focal=661"),      # FOCAL_LENGTH = real fx
+    "W60d": dict(fps=60.0, args=P60 + " " + SW, swcfg="noise=1,solver_time=1.0,align_delay=2"),  # align after 2 s non-linear
+    "W60q": dict(fps=60.0, args=P60 + " " + SW, swcfg="noise=1,solver_time=1.0,freq=20"),        # 20 Hz input
+    # 19:55 (after the full W60 run: VINS own init gives wrong gyro bias / velocity on HS -> raw blow-ups)
+    "W60i": dict(fps=60.0, args=P60 + " " + SW, swcfg="noise=1,solver_time=1.0,init=1"),         # init from OpenVINS
+    "W60ifd": dict(fps=60.0, args=P60 + " " + SW, swcfg="noise=1,solver_time=1.0,init=1,focal=661,align_delay=2"),  # dev winners combined
 }
 
 
@@ -76,7 +84,7 @@ def cells(which):
     if which == "loop":
         return [(r, 0) for r in LOOP]
     if which == "dev":   # pre-declared noise-choice cells (PLAN.md)
-        return [("hs_20261022_133820", 0), ("hs_20261020_224323", 0)]
+        return [("hs_20261022_133820", 0), ("hs_20261020_224323", 0), ("hs_20261020_214138", 0), ("hs_20261020_221052", 0)]
     raise ValueError(which)
 
 

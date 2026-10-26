@@ -1,5 +1,6 @@
 #include "parameters.h"
 
+double FOCAL_LENGTH = 460.0;  // ovswba: was a const in parameters.h
 double INIT_DEPTH;
 double MIN_PARALLAX;
 double ACC_N, ACC_W;

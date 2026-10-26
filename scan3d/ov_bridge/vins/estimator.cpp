@@ -162,7 +162,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
             bool result = false;
             if( ESTIMATE_EXTRINSIC != 2 && (header.stamp.toSec() - initial_timestamp) > 0.1)
             {
-               result = initialStructure();
+               result = ovswba_init_mode == 1 ? ovswbaInitFromPrior() : initialStructure();  // ovswba: init=1 prior
                initial_timestamp = header.stamp.toSec();
             }
             if(result)
@@ -1148,3 +1148,33 @@ void Estimator::setReloFrame(double _frame_stamp, int _frame_index, vector<Vecto
     }
 }
 
+
+// ovswba 2026-10-26 (not VINS-Mono): --swba-cfg init=1. Same end state as initialStructure() + visualInitialAlign()
+// (window poses / velocities / gyro bias set, preintegrations repropagated, features re-triangulated), but the window
+// states come from the OpenVINS filter at the same frame times (gravity-aligned OpenVINS world = VINS world) instead of
+// SfM + visual-inertial alignment. Returns false (VINS keeps sliding in INITIAL) unless every window frame has a prior.
+bool Estimator::ovswbaInitFromPrior()
+{
+    for (int i = 0; i <= frame_count; i++)
+        if (!ovswba_prior.count(Headers[i].stamp.toSec()))
+            return false;
+    for (int i = 0; i <= frame_count; i++)
+    {
+        const Eigen::Matrix<double, 16, 1> &x = ovswba_prior.at(Headers[i].stamp.toSec());
+        Rs[i] = Eigen::Quaterniond(x(3), x(0), x(1), x(2)).normalized().toRotationMatrix();
+        Ps[i] = x.segment<3>(4);
+        Vs[i] = x.segment<3>(7);
+        Bgs[i] = x.segment<3>(10);
+        Bas[i] = x.segment<3>(13);
+        all_image_frame[Headers[i].stamp.toSec()].is_key_frame = true;
+    }
+    for (int i = 0; i <= WINDOW_SIZE; i++)
+        pre_integrations[i]->repropagate(Bas[i], Bgs[i]);
+    VectorXd dep = f_manager.getDepthVector();
+    for (int i = 0; i < dep.size(); i++)
+        dep[i] = -1;
+    f_manager.clearDepth(dep);
+    f_manager.triangulate(Ps, tic, ric);
+    g = G;
+    return true;
+}

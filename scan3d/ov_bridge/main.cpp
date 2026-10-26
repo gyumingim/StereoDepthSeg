@@ -2246,6 +2246,9 @@ private:
     if (ov) {
       f->R_ItoG = st->_imu->Rot().transpose();
       f->p_IinG = st->_imu->pos();
+      f->v_IinG = st->_imu->vel();
+      f->bg = st->_imu->bias_g();
+      f->ba = st->_imu->bias_a();
     }
     auto tf = std::static_pointer_cast<VioAcc>(sys_)->feats();
     auto obs = tf->get_last_obs();
