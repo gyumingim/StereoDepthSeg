@@ -1,7 +1,10 @@
 // ovloop.cpp (2026-10-26, branch ovloop-20261026): see ovloop.h
 #include "ovloop.h"
 
+#include <fcntl.h>
+#include <signal.h>
 #include <sys/resource.h>
+#include <sys/wait.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
@@ -103,7 +106,8 @@ bool Cfg::parse(const std::string &kv, std::string &err) {
                      {"consist_m", &consist_m, nullptr}, {"consist_yaw_deg", &consist_yaw_deg, nullptr},
                      {"seq_edges", nullptr, &seq_edges}, {"loop_w", &loop_w, nullptr}, {"huber", &huber, nullptr}, {"weight_mode", nullptr, &weight_mode}, {"seq_sig_m", &seq_sig_m, nullptr}, {"seq_sig_rel", &seq_sig_rel, nullptr}, {"seq_sig_deg", &seq_sig_deg, nullptr}, {"seq_sig_deg_m", &seq_sig_deg_m, nullptr}, {"loop_sig_m", &loop_sig_m, nullptr}, {"loop_sig_deg", &loop_sig_deg, nullptr}, {"huber_sig", &huber_sig, nullptr},
                      {"opt_iters", nullptr, &opt_iters}, {"smooth_v", &smooth_v, nullptr},
-                     {"smooth_w_deg", &smooth_w_deg, nullptr}};
+                     {"smooth_w_deg", &smooth_w_deg, nullptr},
+                     {"xf_mode", nullptr, &xf_mode}, {"xf_tri", nullptr, &xf_tri}, {"xf_tri_deg", &xf_tri_deg, nullptr}, {"xf_tri_px", &xf_tri_px, nullptr}};
     bool found = false;
     for (const auto &d : tab)
       if (k == d.n) {
@@ -133,6 +137,7 @@ std::string Cfg::describe() const {
     << consist_old_s << "s " << consist_m << "m " << consist_yaw_deg << "deg | graph seq " << seq_edges << " w "
     << loop_w << " huber " << huber << " it " << opt_iters << " | smooth " << smooth_v << "m/s " << smooth_w_deg
     << "deg/s | sync " << sync;
+  if (!xf.empty()) o << " | xf mode " << xf_mode << " tri " << xf_tri << " (" << xf_tri_deg << "deg " << xf_tri_px << "px) cmd " << xf;
   return o.str();
 }
 
@@ -173,6 +178,14 @@ struct LoopCloser::Kf {
   cv::Mat D3;                       // their descriptors
   cv::Mat DM;                       // matching set (detected + tracked points) and their undistorted pixels
   std::vector<cv::Point2f> ptsM;
+  // --loop-xf: point list [tracks, XFeat keypoints] (undistorted pixels) and 3D (this camera frame) where known
+  std::vector<cv::Point2f> xf_und;
+  std::vector<int> xf_p3;           // -1 = no 3D, else index into xf_P3
+  std::vector<Eigen::Vector3d> xf_P3;
+  int xf_ntri = 0;                  // triangulated points (xf_tri; XFeat or, without --loop-xf, BRIEF)
+  int n2d = 0;                      // first n2d rows of DM / ptsM = detected keypoints
+  Eigen::Matrix3d R_GtoC = Eigen::Matrix3d::Identity();
+  Eigen::Vector3d p_CinG = Eigen::Vector3d::Zero();
   // pose graph (corrected)
   double yaw_c = 0.0;
   double t_c[3] = {0, 0, 0};
@@ -259,6 +272,17 @@ LoopCloser::LoopCloser(const Cfg &c) : c_(c), rule_(c_), s_(new State) {
                  c_.vpr.c_str(), vpr_.size(), vpr_dim_, c_.vpr_min);
   }
   if (!c_.dump.empty()) std::fprintf(stderr, "[ov_bridge] loop: dumping keyframes to %s\n", c_.dump.c_str());
+  if (!c_.xf.empty() || c_.xf_mode) {
+    if (c_.xf.empty() || (c_.xf_mode != 1 && c_.xf_mode != 2)) {
+      ok_ = false;
+      err_ = "--loop-xf CMD needs --loop-cfg xf_mode=1|2 (and xf_mode needs --loop-xf)";
+      return;
+    }
+    if (!xf_start(err_)) {
+      ok_ = false;
+      return;
+    }
+  }
   std::fprintf(stderr, "[ov_bridge] loop: vocab %s (k %d L %d, %d words, sha %s) | %s\n", c_.vocab.c_str(), voc_.k, voc_.L,
                voc_.n_words(), voc_.sha().c_str(), c_.describe().c_str());
   th_ = std::thread([this] { run(); });
@@ -271,6 +295,21 @@ LoopCloser::~LoopCloser() {
   }
   qcv_.notify_all();
   if (th_.joinable()) th_.join();
+  if (xf_in_ >= 0) {
+    const char qq = 'Q';
+    if (::write(xf_in_, &qq, 1) != 1) {
+    }
+    ::close(xf_in_);
+  }
+  if (xf_out_ >= 0) ::close(xf_out_);
+  if (xf_pid_ > 0) {
+    int st = 0;
+    for (int i = 0; i < 100 && waitpid(xf_pid_, &st, WNOHANG) == 0; i++) usleep(50000);
+    if (waitpid(xf_pid_, &st, WNOHANG) == 0) {
+      kill(xf_pid_, SIGKILL);
+      waitpid(xf_pid_, &st, 0);
+    }
+  }
   if (log_) std::fclose(log_);
 }
 
@@ -335,6 +374,133 @@ void LoopCloser::log_line(const std::string &s) {
   std::fflush(log_);
 }
 
+// ---------------------------------------------------------------- --loop-xf server (ovxfeat 2026-10-26)
+namespace {
+bool wr_all(int fd, const void *p, size_t n) {
+  const char *c = static_cast<const char *>(p);
+  while (n) {
+    const ssize_t k = ::write(fd, c, n);
+    if (k <= 0) {
+      if (k < 0 && errno == EINTR) continue;
+      return false;
+    }
+    c += k;
+    n -= static_cast<size_t>(k);
+  }
+  return true;
+}
+bool rd_all(int fd, void *p, size_t n) {
+  char *c = static_cast<char *>(p);
+  while (n) {
+    const ssize_t k = ::read(fd, c, n);
+    if (k <= 0) {
+      if (k < 0 && errno == EINTR) continue;
+      return false;
+    }
+    c += k;
+    n -= static_cast<size_t>(k);
+  }
+  return true;
+}
+}  // namespace
+
+bool LoopCloser::xf_start(std::string &err) {
+  int a[2], b[2];  // a: bridge -> server stdin, b: server stdout -> bridge
+  if (pipe(a) != 0 || pipe(b) != 0) {
+    err = "--loop-xf: pipe failed";
+    return false;
+  }
+  signal(SIGPIPE, SIG_IGN);
+  const pid_t pid = fork();
+  if (pid < 0) {
+    err = "--loop-xf: fork failed";
+    return false;
+  }
+  if (pid == 0) {
+    dup2(a[0], 0);
+    dup2(b[1], 1);
+    ::close(a[0]);
+    ::close(a[1]);
+    ::close(b[0]);
+    ::close(b[1]);
+    execl("/bin/sh", "sh", "-c", c_.xf.c_str(), static_cast<char *>(nullptr));
+    _exit(127);
+  }
+  ::close(a[0]);
+  ::close(b[1]);
+  xf_in_ = a[1];
+  xf_out_ = b[0];
+  xf_pid_ = pid;
+  xf_ok_ = true;
+  std::fprintf(stderr, "[ov_bridge] loop: XFeat server pid %d mode %d (%s): %s\n", static_cast<int>(pid), c_.xf_mode,
+               c_.xf_mode == 1 ? "mutual NN" : "LighterGlue", c_.xf.c_str());
+  return true;
+}
+
+bool LoopCloser::xf_feat(int64_t id, const cv::Mat &img, const std::vector<cv::Point2f> &q, std::vector<cv::Point2f> &kps,
+                         float &ms) {
+  kps.clear();
+  ms = 0.0f;
+  if (!xf_ok_) return false;
+  std::vector<char> buf;
+  auto put = [&](const void *p, size_t n) { buf.insert(buf.end(), static_cast<const char *>(p), static_cast<const char *>(p) + n); };
+  const char c = 'F';
+  const int32_t W = img.cols, H = img.rows, nq = static_cast<int32_t>(q.size());
+  put(&c, 1);
+  put(&id, 8);
+  put(&W, 4);
+  put(&H, 4);
+  for (int r = 0; r < H; r++) put(img.ptr<uint8_t>(r), static_cast<size_t>(W));
+  put(&nq, 4);
+  for (const auto &p : q) {
+    put(&p.x, 4);
+    put(&p.y, 4);
+  }
+  int32_t nk = 0;
+  if (!wr_all(xf_in_, buf.data(), buf.size()) || !rd_all(xf_out_, &nk, 4) || nk < 0 || nk > 1000000) {
+    xf_ok_ = false;
+    std::fprintf(stderr, "[ov_bridge] loop: XFeat server died (feat)\n");
+    return false;
+  }
+  std::vector<float> v(2 * static_cast<size_t>(nk));
+  if ((nk && !rd_all(xf_out_, v.data(), v.size() * 4)) || !rd_all(xf_out_, &ms, 4)) {
+    xf_ok_ = false;
+    return false;
+  }
+  for (int i = 0; i < nk; i++) kps.emplace_back(v[2 * i], v[2 * i + 1]);
+  return true;
+}
+
+bool LoopCloser::xf_match(int64_t a, int64_t b, int mode, std::vector<std::array<int, 2>> &m, float &ms) {
+  m.clear();
+  ms = 0.0f;
+  if (!xf_ok_) return false;
+  char req[21];
+  req[0] = 'M';
+  const int32_t md = mode;
+  std::memcpy(req + 1, &a, 8);
+  std::memcpy(req + 9, &b, 8);
+  std::memcpy(req + 17, &md, 4);
+  int32_t n = 0;
+  if (!wr_all(xf_in_, req, 21) || !rd_all(xf_out_, &n, 4) || n < 0 || n > 10000000) {
+    xf_ok_ = false;
+    std::fprintf(stderr, "[ov_bridge] loop: XFeat server died (match)\n");
+    return false;
+  }
+  std::vector<char> v(12 * static_cast<size_t>(n));
+  if ((n && !rd_all(xf_out_, v.data(), v.size())) || !rd_all(xf_out_, &ms, 4)) {
+    xf_ok_ = false;
+    return false;
+  }
+  for (int i = 0; i < n; i++) {
+    int32_t ia, ib;
+    std::memcpy(&ia, v.data() + 12 * i, 4);
+    std::memcpy(&ib, v.data() + 12 * i + 4, 4);
+    m.push_back({ia, ib});
+  }
+  return true;
+}
+
 // ---------------------------------------------------------------- one keyframe (loop thread)
 void LoopCloser::process(KfIn &in) {
   State &S = *s_;
@@ -377,7 +543,10 @@ void LoopCloser::process(KfIn &in) {
   for (size_t i = 0; i < in.clone_t.size(); i++) ci[in.clone_t[i]] = static_cast<int>(i);
   std::vector<Eigen::Vector3d> P3;
   std::vector<KeyPt> kp3;
-  for (const auto &tr : in.tracks) {
+  std::vector<int> tr_p3(in.tracks.size(), -1);  // --loop-xf: track index -> index into P3 (before BRIEF validity)
+  std::vector<Eigen::Vector3d> P3_all;
+  for (size_t ti = 0; ti < in.tracks.size(); ti++) {
+    const auto &tr = in.tracks[ti];
     Eigen::Vector3d pG;
     if (tr.slam) {
       pG = tr.p_G;
@@ -435,6 +604,8 @@ void LoopCloser::process(KfIn &in) {
     k.level = 0;
     P3.push_back(pc);
     kp3.push_back(k);
+    tr_p3[ti] = static_cast<int>(P3_all.size());
+    P3_all.push_back(pc);
   }
   const double ms_tri = ms_since(t1);
 
@@ -510,6 +681,102 @@ void LoopCloser::process(KfIn &in) {
   }
   kf.P3 = P3;
   kf.D3 = D3;
+  kf.R_GtoC = R_GtoC_kf;
+  kf.p_CinG = p_CinG_kf;
+  // xf_tri (ovxfeat): two-view midpoint triangulation of a match (undistorted pixels) between keyframe pv and this one
+  // with the VIO camera poses; parallax >= xf_tri_deg, depth 0.15..15 m, reprojection <= xf_tri_px in both views
+  auto tri_one = [&](const Kf &pv, const cv::Point2f &uc, const cv::Point2f &up, Eigen::Vector3d &X_out) -> bool {
+    const Eigen::Matrix3d R_pc = pv.R_GtoC * R_GtoC_kf.transpose();  // cur camera -> prev camera
+    const Eigen::Vector3d t_pc = pv.R_GtoC * (p_CinG_kf - pv.p_CinG);
+    const double cmin = std::cos(c_.xf_tri_deg * M_PI / 180.0);
+    const Eigen::Vector3d fc((uc.x - in.cx) / in.fx, (uc.y - in.cy) / in.fy, 1.0);
+    const Eigen::Vector3d fp((up.x - in.cx) / in.fx, (up.y - in.cy) / in.fy, 1.0);
+        // rays in the current camera frame: X = s * fc (cur), X = t_cp + s2 * R_cp fp (prev centre in cur frame)
+        const Eigen::Matrix3d R_cp = R_pc.transpose();
+        const Eigen::Vector3d o2 = -R_cp * t_pc, d1 = fc.normalized(), d2 = (R_cp * fp).normalized();
+        if (d1.dot(d2) > cmin) return false;  // too little parallax
+        Eigen::Matrix2d A;
+        A << d1.dot(d1), -d1.dot(d2), d1.dot(d2), -d2.dot(d2);
+        const Eigen::Vector2d bb(d1.dot(o2), d2.dot(o2));
+        if (std::fabs(A.determinant()) < 1e-12) return false;
+        const Eigen::Vector2d st = A.inverse() * bb;
+        const Eigen::Vector3d X = 0.5 * (st(0) * d1 + o2 + st(1) * d2);
+        if (!X.allFinite() || X(2) < 0.15 || X(2) > 15.0) return false;
+        const Eigen::Vector3d Xp = R_pc * X + t_pc;
+        if (Xp(2) < 0.15) return false;
+        const double e1x = (X(0) / X(2) - fc(0)) * in.fx, e1y = (X(1) / X(2) - fc(1)) * in.fy;
+        const double e2x = (Xp(0) / Xp(2) - fp(0)) * in.fx, e2y = (Xp(1) / Xp(2) - fp(1)) * in.fy;
+        const double tp2 = c_.xf_tri_px * c_.xf_tri_px;
+        if (e1x * e1x + e1y * e1y > tp2 || e2x * e2x + e2y * e2y > tp2) return false;
+    X_out = X;
+    return true;
+  };
+  float xf_ms_feat = 0.0f, xf_ms_tri = 0.0f, xf_ms_match = 0.0f;
+  int xf_nk = 0;
+  if (c_.xf_mode) {
+    std::vector<cv::Point2f> q, kps;
+    for (const auto &tr : in.tracks) q.emplace_back(tr.u, tr.v);
+    xf_feat(in.t_ns, in.img, q, kps, xf_ms_feat);
+    xf_nk = static_cast<int>(kps.size());
+    std::vector<cv::Point2f> all = q;
+    all.insert(all.end(), kps.begin(), kps.end());
+    kf.xf_und = all;
+    if (has_dist && !all.empty()) cv::undistortPoints(all, kf.xf_und, K, D, cv::noArray(), K);
+    kf.xf_P3 = P3_all;
+    kf.xf_p3.assign(all.size(), -1);
+    for (size_t i = 0; i < q.size(); i++) kf.xf_p3[i] = tr_p3[i];
+    if (c_.xf_tri && !S.kfs.empty()) {  // triangulate matches with the previous keyframe (VIO camera poses)
+      const Kf &pv = S.kfs.back();
+      std::vector<std::array<int, 2>> mm;
+      float msm = 0.0f;
+      xf_match(pv.t_ns, in.t_ns, c_.xf_mode, mm, msm);
+      xf_ms_tri = msm;
+      for (const auto &m : mm) {
+        const int ia = m[0], ib = m[1];
+        if (ib < 0 || ib >= static_cast<int>(kf.xf_p3.size()) || kf.xf_p3[ib] >= 0) continue;
+        if (ia < 0 || ia >= static_cast<int>(pv.xf_und.size())) continue;
+        Eigen::Vector3d X;
+        if (!tri_one(pv, kf.xf_und[ib], pv.xf_und[ia], X)) continue;
+        kf.xf_p3[ib] = static_cast<int>(kf.xf_P3.size());
+        kf.xf_P3.push_back(X);
+        kf.xf_ntri++;
+      }
+    }
+  }
+  kf.n2d = D2.rows;
+  if (!c_.xf_mode && c_.xf_tri && !S.kfs.empty() && D2.rows > 0) {
+    const Kf &pv = S.kfs.back();
+    std::vector<cv::Point2f> u2;
+    for (const auto &k : kp2) u2.emplace_back(k.x, k.y);
+    if (has_dist && !u2.empty()) cv::undistortPoints(std::vector<cv::Point2f>(u2), u2, K, D, cv::noArray(), K);
+    std::vector<int> best_c(pv.n2d, -1), best_d(pv.n2d, 1 << 20);  // one-to-one like pnp(): best current row per prev row
+    for (int i = 0; i < D2.rows; i++) {
+      const uint8_t *a = D2.ptr<uint8_t>(i);
+      int b1 = 1 << 20, b2 = 1 << 20, bj = -1;
+      for (int j = 0; j < pv.n2d; j++) {
+        const int d = hamming32(a, pv.DM.ptr<uint8_t>(j));
+        if (d < b1) {
+          b2 = b1;
+          b1 = d;
+          bj = j;
+        } else if (d < b2)
+          b2 = d;
+      }
+      if (bj < 0 || b1 > c_.match_dist || b1 >= c_.ratio * b2) continue;
+      if (b1 < best_d[bj]) {
+        best_d[bj] = b1;
+        best_c[bj] = i;
+      }
+    }
+    for (int j = 0; j < pv.n2d; j++) {
+      if (best_c[j] < 0) continue;
+      Eigen::Vector3d X;
+      if (!tri_one(pv, u2[best_c[j]], pv.ptsM[j], X)) continue;
+      kf.P3.push_back(X);
+      kf.D3.push_back(D2.row(best_c[j]));
+      kf.xf_ntri++;
+    }
+  }
   {  // corrected pose before the next optimisation = current correction
     const Eigen::Vector3d tc = Rz(S.corr_yaw) * kf.p_v + S.corr_t;
     kf.yaw_c = wrap(kf.yaw_v + S.corr_yaw);
@@ -560,6 +827,49 @@ void LoopCloser::process(KfIn &in) {
   if (has_dist && !pts2.empty()) cv::undistortPoints(std::vector<cv::Point2f>(pts2), pts2, K, D, cv::noArray(), K);
   // PnP of 3D points (camera frame of keyframe "obj") against 2D points of keyframe "img": X_img = R X_obj + t.
   // Own brute-force matching (ratio test, one-to-one), RANSAC (EPnP), LM refinement on the inliers, re-count.
+  auto solve = [&](const std::vector<cv::Point3f> &obj, const std::vector<cv::Point2f> &img, Eigen::Matrix3d &R,
+                   Eigen::Vector3d &t, int &n_inl, double &rms, std::string &why) {
+    cv::Mat rvec, tvec;
+    std::vector<int> inl;
+    if (!cv::solvePnPRansac(obj, img, K, cv::noArray(), rvec, tvec, false, c_.pnp_iters, static_cast<float>(c_.pnp_px), 0.99,
+                            inl, cv::SOLVEPNP_EPNP)) {
+      why = "pnp";
+      return false;
+    }
+    if (static_cast<int>(inl.size()) < c_.min_inliers) {
+      n_inl = static_cast<int>(inl.size());
+      why = "inliers";
+      return false;
+    }
+    std::vector<cv::Point3f> o2;
+    std::vector<cv::Point2f> i2;
+    for (int q : inl) {
+      o2.push_back(obj[q]);
+      i2.push_back(img[q]);
+    }
+    cv::solvePnPRefineLM(o2, i2, K, cv::noArray(), rvec, tvec);
+    std::vector<cv::Point2f> pr;
+    cv::projectPoints(obj, rvec, tvec, K, cv::noArray(), pr);
+    double e2 = 0.0;
+    for (size_t q = 0; q < obj.size(); q++) {
+      const double ex = pr[q].x - img[q].x, ey = pr[q].y - img[q].y, e = ex * ex + ey * ey;
+      if (e <= c_.pnp_px * c_.pnp_px) {
+        n_inl++;
+        e2 += e;
+      }
+    }
+    rms = n_inl ? std::sqrt(e2 / n_inl) : 0.0;
+    if (n_inl < c_.min_inliers) {
+      why = "inliers";
+      return false;
+    }
+    cv::Mat Rm;
+    cv::Rodrigues(rvec, Rm);
+    for (int r = 0; r < 3; r++)
+      for (int c = 0; c < 3; c++) R(r, c) = Rm.at<double>(r, c);
+    t = Eigen::Vector3d(tvec.at<double>(0), tvec.at<double>(1), tvec.at<double>(2));
+    return true;
+  };
   auto pnp = [&](const std::vector<Eigen::Vector3d> &P3o, const cv::Mat &D3o, const cv::Mat &Di,
                  const std::vector<cv::Point2f> &pi, Eigen::Matrix3d &R, Eigen::Vector3d &t, int &n_match, int &n_inl,
                  double &rms, std::string &why) {
@@ -604,46 +914,33 @@ void LoopCloser::process(KfIn &in) {
       obj.emplace_back(static_cast<float>(X(0)), static_cast<float>(X(1)), static_cast<float>(X(2)));
       img.push_back(pi[m_i[q]]);
     }
-    cv::Mat rvec, tvec;
-    std::vector<int> inl;
-    if (!cv::solvePnPRansac(obj, img, K, cv::noArray(), rvec, tvec, false, c_.pnp_iters, static_cast<float>(c_.pnp_px), 0.99,
-                            inl, cv::SOLVEPNP_EPNP)) {
-      why = "pnp";
+    return solve(obj, img, R, t, n_inl, rms, why);
+  };
+  // --loop-xf: correspondences from the server's matches (ia in the old list, ib in the current list); direction A uses
+  // the old keyframe's 3D, B the current one's
+  auto pnp_xf = [&](const Kf &old, const Kf &cur, const std::vector<std::array<int, 2>> &mm, bool dirA, Eigen::Matrix3d &R,
+                    Eigen::Vector3d &t, int &n_match, int &n_inl, double &rms, std::string &why) {
+    n_match = n_inl = 0;
+    rms = 0.0;
+    std::vector<cv::Point3f> obj;
+    std::vector<cv::Point2f> img;
+    const Kf &o3 = dirA ? old : cur;
+    const Kf &o2 = dirA ? cur : old;
+    for (const auto &m : mm) {
+      const int i3 = dirA ? m[0] : m[1], i2 = dirA ? m[1] : m[0];
+      if (i3 < 0 || i3 >= static_cast<int>(o3.xf_p3.size()) || i2 < 0 || i2 >= static_cast<int>(o2.xf_und.size())) continue;
+      const int k3 = o3.xf_p3[i3];
+      if (k3 < 0) continue;
+      const Eigen::Vector3d &X = o3.xf_P3[k3];
+      obj.emplace_back(static_cast<float>(X(0)), static_cast<float>(X(1)), static_cast<float>(X(2)));
+      img.push_back(o2.xf_und[i2]);
+    }
+    n_match = static_cast<int>(obj.size());
+    if (n_match < c_.min_inliers) {
+      why = "matches";
       return false;
     }
-    if (static_cast<int>(inl.size()) < c_.min_inliers) {
-      n_inl = static_cast<int>(inl.size());
-      why = "inliers";
-      return false;
-    }
-    std::vector<cv::Point3f> o2;
-    std::vector<cv::Point2f> i2;
-    for (int q : inl) {
-      o2.push_back(obj[q]);
-      i2.push_back(img[q]);
-    }
-    cv::solvePnPRefineLM(o2, i2, K, cv::noArray(), rvec, tvec);
-    std::vector<cv::Point2f> pr;
-    cv::projectPoints(obj, rvec, tvec, K, cv::noArray(), pr);
-    double e2 = 0.0;
-    for (size_t q = 0; q < obj.size(); q++) {
-      const double ex = pr[q].x - img[q].x, ey = pr[q].y - img[q].y, e = ex * ex + ey * ey;
-      if (e <= c_.pnp_px * c_.pnp_px) {
-        n_inl++;
-        e2 += e;
-      }
-    }
-    rms = n_inl ? std::sqrt(e2 / n_inl) : 0.0;
-    if (n_inl < c_.min_inliers) {
-      why = "inliers";
-      return false;
-    }
-    cv::Mat Rm;
-    cv::Rodrigues(rvec, Rm);
-    for (int r = 0; r < 3; r++)
-      for (int c = 0; c < 3; c++) R(r, c) = Rm.at<double>(r, c);
-    t = Eigen::Vector3d(tvec.at<double>(0), tvec.at<double>(1), tvec.at<double>(2));
-    return true;
+    return solve(obj, img, R, t, n_inl, rms, why);
   };
   kf.DM = DM;
   kf.ptsM = pts2;
@@ -663,7 +960,23 @@ void LoopCloser::process(KfIn &in) {
     Eigen::Vector3d t;
     int nm = 0, ni = 0;
     double rms = 0.0;
-    bool ok = pnp(old.P3, old.D3, DM, pts2, R, t, nm, ni, rms, why);
+    std::vector<std::array<int, 2>> xmm;  // --loop-xf matches (old list, current list)
+    int xf_n = -1;
+    if (c_.xf_mode) {
+      float msm = 0.0f;
+      xf_match(old.t_ns, in.t_ns, c_.xf_mode, xmm, msm);
+      xf_n = static_cast<int>(xmm.size());
+      xf_ms_match += msm;
+    }
+    auto pnpA = [&](Eigen::Matrix3d &R_, Eigen::Vector3d &t_, int &nm_, int &ni_, double &rms_, std::string &why_) {
+      return c_.xf_mode ? pnp_xf(old, kf, xmm, true, R_, t_, nm_, ni_, rms_, why_)
+                        : pnp(old.P3, old.D3, DM, pts2, R_, t_, nm_, ni_, rms_, why_);
+    };
+    auto pnpB = [&](Eigen::Matrix3d &R_, Eigen::Vector3d &t_, int &nm_, int &ni_, double &rms_, std::string &why_) {
+      return c_.xf_mode ? pnp_xf(old, kf, xmm, false, R_, t_, nm_, ni_, rms_, why_)
+                        : pnp(kf.P3, kf.D3, old.DM, old.ptsM, R_, t_, nm_, ni_, rms_, why_);
+    };
+    bool ok = pnpA(R, t, nm, ni, rms, why);
     if (ok) {  // X_cur = R X_old + t
       R_oc_C = R.transpose();
       t_oc_C = -R.transpose() * t;
@@ -672,7 +985,7 @@ void LoopCloser::process(KfIn &in) {
       std::string whyB;
       int nmB = 0, niB = 0;
       double rmsB = 0.0;
-      ok = pnp(kf.P3, kf.D3, old.DM, old.ptsM, R, t, nmB, niB, rmsB, whyB);
+      ok = pnpB(R, t, nmB, niB, rmsB, whyB);
       if (ok) {  // X_old = R X_cur + t
         R_oc_C = R;
         t_oc_C = t;
@@ -718,7 +1031,9 @@ void LoopCloser::process(KfIn &in) {
     }
     if (ci2) cj << ",";
     cj << "[" << old.idx << "," << cand[ci2].second << "," << v.n_match << "," << v.n_inl << ",\"" << (ok ? "ok" : why)
-       << "\"," << v.rp_deg << ",\"" << v.dir << "\"," << v.drift.norm() << "," << v.dyaw * 180.0 / M_PI << "," << v.rms_px << "]";
+       << "\"," << v.rp_deg << ",\"" << v.dir << "\"," << v.drift.norm() << "," << v.dyaw * 180.0 / M_PI << "," << v.rms_px;
+    if (c_.xf_mode) cj << "," << xf_n;  // --loop-xf: all matches of the pair (with or without 3D)
+    cj << "]";
     if (ok && !diag) {
       S.n_verified++;
       if (!have_best || v.n_inl > best.n_inl) {
@@ -813,7 +1128,11 @@ void LoopCloser::process(KfIn &in) {
       << ",\"n_tracks\":" << in.tracks.size() << ",\"n3d\":" << K_.P3.size() << ",\"n2d\":" << D2.rows
       << ",\"n_words\":" << K_.bow.size() << ",\"s_prev\":" << s_prev << ",\"n_db\":" << max_entry << ",\"cand\":[" << cj.str()
       << "],\"acc\":" << accept.size() << ",\"ms\":[" << in.cap_ms << "," << ms_tri << "," << ms_feat << "," << ms_query << ","
-      << ms_geo << "," << ms_opt << "," << ms_total << "]}\n";
+      << ms_geo << "," << ms_opt << "," << ms_total << "]";
+    if (c_.xf_mode || c_.xf_tri)  // --loop-xf: [XFeat keypoints, 3D points (tracks + triangulated), triangulated, server ms feat / tri-match / cand-match]
+      o << ",\"xf\":[" << xf_nk << "," << K_.xf_P3.size() << "," << K_.xf_ntri << "," << xf_ms_feat << "," << xf_ms_tri << ","
+        << xf_ms_match << "]";
+    o << "}\n";
     log_line(o.str() + lj.str());
   }
 }
