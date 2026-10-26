@@ -83,6 +83,8 @@ if (OV_FULL_SOURCE)
   target_link_libraries(ovloop_tool PRIVATE ${OpenCV_LIBRARIES})
   target_compile_options(ovloop_tool PRIVATE -O3 -Wall)
   target_compile_options(ov_bridge PRIVATE -O2 -Wall)
+  # integ2 0.6.28: last fallback vocabulary for --profile rec* (loop on) on the PC = the file in this source tree
+  target_compile_definitions(ov_bridge PRIVATE OVLOOP_SRC_VOC="${CMAKE_CURRENT_SOURCE_DIR}/loop/voc_k10L4.voc")
   set_target_properties(ov_bridge PROPERTIES BUILD_RPATH "${OV_LOCAL}/lib" INSTALL_RPATH "${OV_LOCAL}/lib")
   message(STATUS "ov_bridge: OV_FULL_SOURCE (OpenVINS ${OV_SRC} + ovpatch) | OpenCV ${OpenCV_VERSION} | Ceres ${Ceres_VERSION}")
   return()
@@ -97,7 +99,8 @@ message(STATUS "ov_msckf_lib: ${OV_MSCKF_LIB} | OpenCV ${OpenCV_VERSION} | Ceres
 add_executable(ov_bridge main.cpp ovpatch/TrackKLT.cpp ovpatch/ovopt.cpp loop/ovloop.cpp loop/vocab.cpp loop/lc_features.cpp)
 set_target_properties(ov_bridge PROPERTIES ENABLE_EXPORTS ON)
 # 라이브러리 빌드와 같은 매크로여야 헤더(옵션 구조체)가 일치한다 (ovbuild: ROS 끔, ARUCO 켬)
-target_compile_definitions(ov_bridge PRIVATE ROS_AVAILABLE=0 ENABLE_ARUCO_TAGS=1)
+target_compile_definitions(ov_bridge PRIVATE ROS_AVAILABLE=0 ENABLE_ARUCO_TAGS=1
+  OVLOOP_SRC_VOC="${CMAKE_CURRENT_SOURCE_DIR}/loop/voc_k10L4.voc")  # integ2 0.6.28: profile-loop fallback vocabulary
 target_include_directories(ov_bridge PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/ovpatch
   ${CMAKE_CURRENT_SOURCE_DIR}/loop

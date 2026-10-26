@@ -14,7 +14,10 @@ KS=${KS:-$HERE/../android/build/debug.keystore}
 rm -rf "$B"; mkdir -p "$B/classes" "$B/apk/lib/arm64-v8a"
 javac -source 8 -target 8 -classpath "$JAR:$AAR/classes.jar" -d "$B/classes" $(find "$HERE/src" -name '*.java')
 "$BT/d8" --lib "$JAR" --min-api 28 --output "$B" $(find "$B/classes" -name '*.class') "$AAR/classes.jar"
-"$BT/aapt" package -f -M "$HERE/AndroidManifest.xml" -I "$JAR" -F "$B/unsigned.apk"
+# 0.6.28 (integ2, ovloop): loop-closure vocabulary as an asset (OvRunner copies it to files/ov/); VOC overrides the source
+VOC=${VOC:-$HERE/../../scan3d/ov_bridge/loop/voc_k10L4.voc}
+mkdir -p "$B/assets"; cp "$VOC" "$B/assets/voc_k10L4.voc"
+"$BT/aapt" package -f -M "$HERE/AndroidManifest.xml" -A "$B/assets" -I "$JAR" -F "$B/unsigned.apk"
 cp "$AAR"/jni/arm64-v8a/*.so "$B/apk/lib/arm64-v8a/"
 # live OpenVINS (mode ov): the bridge executable ships as a "library" so Android extracts it executable (W^X)
 NDK=${NDK:-$HOME/android-ndk-r27c}

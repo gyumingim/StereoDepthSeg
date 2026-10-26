@@ -40,6 +40,8 @@ import java.util.Locale;
  *   intent viop_hb_src (esp32fix), ov_opt gyro_klt=N opt-in (ovgyro). calcap unchanged.
  * 0.6.27 (user 2026-10-26 morning): profiles rec20261025/rec60 ov_opt + gyro_klt=5 (ovgyro guarded mode, changes poses).
  *   Without gyro = intent ov_opt "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse" (explicit intent wins).
+ * 0.6.28 (user 2026-10-26, 60 fps only): profile rec60 + loop 1 (rec20261025 unchanged) (ovloop BoW loop closure, own thread; vocabulary shipped in
+ *   the APK assets, copied to files/ov/voc_k10L4.voc). Without loop = intent loop 0. Profile + recover N -> loop off.
  * arcore: a GL thread loops Session.update() and per new frame logs/streams
  *   {"src":"arcore","t_sensor":android camera ts,"t_frame":ARCore ts,"t_call":..,"t_out":update() return,"status":..,"p":[..],"q":[..]}
  * also written to files/arlat_<ms>.csv. Latency = t_out - t_sensor (phone clock).
@@ -266,6 +268,7 @@ public class MainActivity extends Activity {
                 ov.ovHealth = getIntent().getIntExtra("ov_health", 0) != 0;                 // ovrobust: --health 1 + health.csv
                 ov.initStill = getIntent().getIntExtra("init_still", 0) != 0;               // ovrobust: --init-still 1
                 ov.recoverFrames = Math.max(0, Math.min(1000, getIntent().getIntExtra("recover", 0)));   // ovrobust: --recover N
+                ov.loop = getIntent().getIntExtra("loop", 0) != 0 ? 1 : 0;                  // 0.6.28 (ovloop): --loop 1 (BoW loop closure)
                 // 0.6.20 (integ): named profile = defaults for intents not given explicitly; no profile = 0.6.19 defaults
                 String prof = getIntent().getStringExtra("profile");
                 if ("rec20261025".equals(prof) || "rec60".equals(prof)) {
@@ -283,7 +286,10 @@ public class MainActivity extends Activity {
                     if (!getIntent().hasExtra("predict")) ov.predict = 2;
                     if (!getIntent().hasExtra("predict_hz")) ov.predictHz = 200;
                     if (!getIntent().hasExtra("pred_thread")) ov.predThread = 1;
-                    if ("rec60".equals(prof)) {   // 0.6.22 (user 20:00): same + 60 fps C4 (config c4f60)
+                    if ("rec60".equals(prof)) {
+                        // 0.6.28 (user 2026-10-26, 60 fps only): + loop closure (VIO/control pose unchanged; adds map fields /
+                        // MAP_ODOM). rec20261025 unchanged. Not with recover N.
+                        if (!getIntent().hasExtra("loop")) ov.loop = ov.recoverFrames > 0 ? 0 : 1;   // 0.6.22 (user 20:00): same + 60 fps C4 (config c4f60)
                         if (!getIntent().hasExtra("fps")) ov.fps = 60;
                         if (!getIntent().hasExtra("ov_cfg")) ov.cfgName = "c4f60";
                         // 20 ms window > 16.7 ms frame period: spin the whole gap (0 = no window), set explicitly

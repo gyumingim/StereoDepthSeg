@@ -33,6 +33,9 @@
 //   --ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse)
 //   --idle-spin-ms 20 --drop-late 50 --health 1 --predict 2 --predict-hz 200 --pred-thread 1 (stdio only; user 19:40) (team measurements 2026-10-25, runs/integ_20261025/README.md). Applied before the
 //   other arguments, so any explicit flag overrides its part. Without --profile nothing changes.
+//   integ2 0.6.28 (user 2026-10-26, 60 fps only): profile rec60 also sets --loop 1 (rec20261025 unchanged) (BoW loop closure; VIO/control fields unchanged, adds
+//   "map" + MAP_ODOM / DEBUG_VECT). Vocabulary = --loop-vocab, else voc_k10L4.voc next to the config / one dir above /
+//   this build's source tree (PC); none found -> rc 2. --loop 0 = profile without loop; with --recover the loop is dropped.
 // --pred-thread 1 with --mav-udp / --viop-udp: the prediction thread also sends each of its predictions (frame + 1/HZ
 //   grid of IMU time) as MAVLink / VIOP POSE (before this, that combination sent nothing). The snapshot then also carries
 //   the 9x9 marginal covariance (q, p, v) and the SLAM feature count. Without --pred-thread the old main-loop path
@@ -267,6 +270,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <fstream>
 
 #include <Eigen/Eigen>
 #include <opencv2/core.hpp>
@@ -376,6 +380,7 @@ struct Args {
   std::string loop_dump, loop_vpr;  // --loop-dump DIR / --loop-vpr FILE (offline VPR evaluation, loop/ovloop.h)
   int loop_sync = 0;          // --loop-sync 0|1 (1 = the VIO thread waits for each keyframe: deterministic PC evaluation only)
   double loop_out_hz = 5.0;   // --loop-out-hz HZ: VIOP MAP_ODOM / MAVLink DEBUG_VECT rate (+ at once on a new optimisation)
+  int loop_explicit = 0;      // integ2 0.6.28: --loop given on the command line (else a --profile may have set it)
 };
 
 // --health rules (header); --health-cfg upd_deg=0.2,... overrides
@@ -2911,6 +2916,11 @@ int main(int argc, char **argv) {
       a.predict = 2;  // user 2026-10-25 19:40: 200 Hz IMU-forward prediction from the prediction thread (read only)
       a.predict_hz = 200.0;
       a.pred_thread = 1;  // dropped again below for --tcp (needs stdio)
+      // integ2 0.6.28 (user 2026-10-26, 60 fps only): rec60 + loop closure (BoW v1, own thread; VIO/control pose unchanged,
+      // adds "map" fields, VIOP MAP_ODOM 0x07, MAVLink DEBUG_VECT). rec20261025 (30 fps) unchanged. Vocabulary: --loop-vocab,
+      // else voc_k10L4.voc next to the config (or its parent dir, or this build's source tree) - resolved below.
+      // --loop 0 turns it off; dropped with --recover.
+      if (pn == "rec60") a.loop = 1;
       if (pn == "rec60") a.idle_spin_ms = 0.0;
     } else if (pn != "none") {
       std::fprintf(stderr, "[ov_bridge] unknown --profile %s (known: rec20261025, rec60, none)\n", pn.c_str());
@@ -3018,7 +3028,7 @@ int main(int argc, char **argv) {
     else if (s == "--recover-min-feats") a.recover_min_feats = std::stoi(next());
     else if (s == "--recover-full") a.recover_full = std::stoi(next()) != 0 ? 1 : 0;
     else if (s == "--test-blank") a.test_blank = next();
-    else if (s == "--loop") a.loop = std::stoi(next()) != 0 ? 1 : 0;               // 2026-10-26 ovloop
+    else if (s == "--loop") { a.loop = std::stoi(next()) != 0 ? 1 : 0; a.loop_explicit = 1; }  // 2026-10-26 ovloop
     else if (s == "--loop-vocab") a.loop_vocab = next();
     else if (s == "--loop-cfg") a.loop_cfg = next();
     else if (s == "--loop-log") a.loop_log = next();
@@ -3073,6 +3083,29 @@ int main(int argc, char **argv) {
     else
       std::fprintf(stderr, "[ov_bridge] --pipe 1 is not in this build (ovpipe-20261026 not merged: stalls / deadlock). Use --pipe 0.\n");
     return 2;
+  }
+  if (a.loop && !a.loop_explicit && a.recover > 0) {  // integ2 0.6.28: profile loop + explicit --recover -> recover wins
+    std::fprintf(stderr, "[ov_bridge] --profile %s: loop closure dropped (--recover given; v1 cannot combine them)\n", a.profile.c_str());
+    a.loop = 0;
+  }
+  if (a.loop && a.loop_vocab.empty()) {  // integ2 0.6.28: default vocabulary for the profile loop (or a bare --loop 1)
+    std::string cdir = a.config;
+    const size_t sl = cdir.find_last_of('/');
+    cdir = sl == std::string::npos ? std::string(".") : cdir.substr(0, sl);
+    std::vector<std::string> cand = {cdir + "/voc_k10L4.voc", cdir + "/../voc_k10L4.voc"};
+#ifdef OVLOOP_SRC_VOC
+    cand.push_back(OVLOOP_SRC_VOC);
+#endif
+    for (const auto &c : cand) {
+      std::ifstream f(c, std::ios::binary);
+      if (f.good()) { a.loop_vocab = c; break; }
+    }
+    if (a.loop_vocab.empty()) {
+      std::fprintf(stderr, "[ov_bridge] --loop 1%s needs a vocabulary: --loop-vocab FILE, or voc_k10L4.voc next to the config "
+                           "(%s) or one dir above; or --loop 0\n", a.loop_explicit ? "" : " (from --profile)", cdir.c_str());
+      return 2;
+    }
+    std::fprintf(stderr, "[ov_bridge] loop vocabulary (default): %s\n", a.loop_vocab.c_str());
   }
   if (a.loop && a.recover > 0) {  // 2026-10-26 ovloop: the --recover output offset and the map frame are not combined (v1)
     std::fprintf(stderr, "[ov_bridge] --loop 1 cannot be used with --recover (v1: the map frame follows the raw VIO world)\n");

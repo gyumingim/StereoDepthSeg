@@ -31,8 +31,34 @@
 - 확인 안 된 것: 폰 ARM 동일성, 라이브 카메라·빠른 손동작, 폰 시간 비용 (ovgyro: 모드 3 에서 1 ms 미만 차이는 못 봄).
 - 되돌리기: intent `ov_opt "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse"` (브리지 `--ovopt` 같은 값) = 0.6.26 프로필과 PC 비트 동일, 또는 0.6.26 APK `adb install -r -d`.
 
+## 2026-10-26 저녁: 루프 닫기 (ovloop BoW v1) 합침 + **rec60 에만** 켬 — 앱 0.6.28 (vc 34)
+- 합침: `ovloop-20261026` (0d71a86) → merge 커밋 7c02ad3 (충돌 없음, `--loop` 기본 0). 근거·평가는 `runs/ovloop_20261026/README.md`.
+- 사용자 결정 (코디네이터 경유): **60 fps 만** → `--profile rec60` 와 앱 profile `rec60` 에만 `--loop 1`. **`rec20261025` (30 fps) 는 안 바꿈.**
+- 브리지 (`main.cpp`): rec60 이 `a.loop = 1`. 어휘 = `--loop-vocab`, 없으면 설정 옆 `voc_k10L4.voc` → 한 단계 위 → (PC 빌드만) 소스 트리
+  `ov_bridge/loop/voc_k10L4.voc` (`OVLOOP_SRC_VOC`, CMakeLists); 못 찾으면 rc 2. `--loop 0` = 루프 없는 rec60. 프로필 루프 + `--recover N` → 루프만 끄고 알림
+  (직접 준 `--loop 1` + `--recover` 는 예전처럼 rc 2).
+- 앱: intent `loop` (기본 0; rec60 은 1, `recover` 가 있으면 0). 어휘는 **APK assets 에 넣음** (`build.sh` 가 `-A`, 528 KB, 압축 376 KB) →
+  실행 때 `files/ov/voc_k10L4.voc` 로 복사 (없거나 크기 다를 때만, .tmp 후 rename). 브리지에 `--loop 1 --loop-vocab <그 파일> --loop-log <run>/loop.jsonl`.
+  meta.json / perf 에 `loop`. APK 8.70 → 10.65 MB (대부분 루프 코드가 든 libov_bridge.so).
+- 동일성 (std60 board 165506·173432 × 시작 3, vio_bench 공급, 60 fps, `--pose-precision 17`, `loop60/cmp_id.txt`): 0.6.27 빌드 rec60 (O60) vs
+  0.6.28 rec60 `--loop 0` (N60) **18칸 모든 줄 동일**; vs 루프 켬 `--loop-sync 1` (R60) 와 라이브식 `--loop-sync 0` (A60) = **"map" 키 말고 모든 줄 동일**
+  (시간 키 ms/remap_ms 제외). raw80 / harness 입력은 WSL 크래시로 사라졌고 폰에서 다시 받기는 ~0.7 MB/s (4.8 GB ≈ 2 시간) + 사용자가 폰 사용 중이라 중단 → **raw80·harness 동일성은 이번에 안 함**
+  (ovloop 가 raw80 2327 에서 loop on/off VIO 필드 동일 확인한 것이 있음).
+- rec60 루프 결과 (`loop60/score_print.txt`, 각 1회, 결정적 sync): 165506 ×3 ATE VIO 1.50/1.55/1.70 → 지도 1.43/1.36/1.58 cm, 루프 에지 2+8+6 = 16 (GT 확인 16), **틀린 루프 0**
+  (최대 3.13 cm). 키프레임 49/47/47, 루프 스레드 KF 당 p50 8.3–9.1 ms (PC). 173432 은 VIO 자체가 초기화 안 됨 (예전과 같음, 루프 0).
+- 거부·대체 검사 (`loop60/refusal_checks.txt`): 설정 옆 어휘 사용 / 소스 트리 대체 / `--loop 0` / rec20261025 루프 없음 / rec60+recover → 루프 끔 / 직접 loop+recover rc 2 / 없는 어휘 rc 1.
+- ESP32 (코드 읽기): `esp32fc/main/link_task.c` `handle_phone_frame` 은 POSE·HEARTBEAT·IMU 만 처리, 0x07 은 아무 동작 없이 버림 (파서 한도 86 B > 44 B, 생존 판정에도 안 씀).
+- 메모리·CPU (추정): KF 약 30 KB (ovloop), 60 fps std60 움직일 때 약 2 KF/s → 약 3.6 MB/분, 멈춰 있으면 KF 안 생김 (0.25 s·8 cm·8° 규칙). **KF 상한 없음** → 긴 비행은 계속 늘어남.
+  폰 루프 스레드 35 ms/KF p50 (ovloop P1, 30 fps 재생) → 2 KF/s 면 한 코어의 약 7 % (추정, 60 fps 폰 측정 없음).
+- 앱 0.6.28: aapt vc 34 / 0.6.28-integ2-20261026, 같은 개발 인증서, assets/voc_k10L4.voc sha 2d6b5cec = 저장소 파일 (`loop60/apk_build.log`).
+  APK = `scratchpad\integ2pkrlat_0.6.28.apk` (sha 97921f52), 되돌리기 = `scratchpad\integ2pkrlat_0.6.27_rollback.apk` (sha d90f7ce2, vc 33) `adb install -r -d`.
+  **설치: 대기** — 18:34·18:37 확인 때 사용자가 폰 사용 중 (Instagram / 원격 앱 화면 켜짐) → 규칙대로 미룸.
+- 되돌리기 (설치 안 바꾸고): intent `loop 0` (브리지 `--loop 0`) = 0.6.27 rec60 과 같은 VIO (위 동일성).
+- 확인 안 된 것: 폰 ARM 에서 rec60 루프 (실행 금지), 60 fps 폰 비용, 긴 비행 메모리, raw80·harness 동일성, 앱의 어휘 복사 코드 실제 실행.
+
 ## 지금 프로필 (`--profile rec20261025` / `rec60`, 앱 intent `profile` 도 같음)
 `--ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse,gyro_klt=5` (gyro_klt=5 는 0.6.27 부터) `--idle-spin 2` `--idle-spin-ms 20` (rec60: 0) `--drop-late 50` (= **mode 1** 기본: cap 3, 창 3 s, pred-stale 500 ms 자동) `--health 1` `--predict 2 --predict-hz 200 --pred-thread 1`. 앱은 + `imu_prio 1`, rec60 = 60 fps + c4f60.
+- **0.6.28 부터 rec60 만 + `--loop 1`** (어휘 기본 찾기, 위 절). rec20261025 는 루프 없음.
 - **0.6.27 부터 ovopt 끝에 `,gyro_klt=5` 추가** (위 절). 넣지 않음: `par_cov` (폰에서 더 느림), `init_gemm`.
 - 옛 프로필 (integ-20261025) = 같은 프로필 + `--ovopt all_exact,ekf_gemm,qr_compress,ekf_chol` 를 직접 줌 (앱: intent `ov_opt` 같은 값). 옛 drop-late 규칙 = `--drop-late-mode 0`.
 - 선택 옵션만 (기본 꺼짐): `--viop-hb-src 1` (앱 intent `viop_hb_src 1`), ESP32 펌웨어 `openloop_cut_mode 1` (기본 0).

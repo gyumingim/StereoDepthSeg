@@ -138,7 +138,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261025-integ-0.6.22";
+    static final String VERSION = "ov-20261026-integ2-0.6.28";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";
@@ -237,6 +237,9 @@ class OvRunner implements SensorEventListener {
     boolean ovHealth = false;
     boolean initStill = false;
     int recoverFrames = 0;
+    // 0.6.28 (integ2, ovloop): intent loop 1 -> --loop 1 --loop-vocab files/ov/voc_k10L4.voc (copied from the APK assets
+    // when missing or different in size) --loop-log <run>/loop.jsonl. VIO/control pose unchanged; pose/pred lines get "map".
+    int loop = 0;
     String profile = "";                        // 0.6.20 intent profile (applied in MainActivity; recorded here)
     String viopUdp = "";                        // 0.6.20 intent viop_udp HOST:PORT -> ov_bridge --viop-udp
     int viopHbHz = 20;                          // 0.6.20 intent viop_hb_hz -> --viop-hb-hz
@@ -374,6 +377,27 @@ class OvRunner implements SensorEventListener {
 
     boolean isMain() { return "main".equals(cam); }
 
+    // 0.6.28 (ovloop): vocabulary from the APK assets (build.sh -A) -> files/ov/voc_k10L4.voc; rewritten when missing or the
+    // size differs from the asset (a vocabulary pushed by hand with the same size is kept).
+    File loopVocab(File ovDir) throws Exception {
+        final String name = "voc_k10L4.voc";
+        File voc = new File(ovDir, name);
+        long assetLen;
+        try (android.content.res.AssetFileDescriptor fd = ctx.getAssets().openFd(name)) { assetLen = fd.getLength(); }
+        catch (Exception e) { assetLen = -1; }   // compressed asset: length unknown -> count below
+        if (assetLen < 0) {
+            assetLen = 0;
+            try (InputStream in = ctx.getAssets().open(name)) { byte[] b = new byte[1 << 16]; int n; while ((n = in.read(b)) > 0) assetLen += n; }
+        }
+        if (voc.exists() && voc.length() == assetLen) return voc;
+        File tmp = new File(ovDir, name + ".tmp");
+        try (InputStream in = ctx.getAssets().open(name); OutputStream o = new FileOutputStream(tmp)) {
+            byte[] b = new byte[1 << 16]; int n; while ((n = in.read(b)) > 0) o.write(b, 0, n);
+        }
+        if (tmp.length() != assetLen || !tmp.renameTo(voc)) throw new IllegalStateException("cannot write " + voc);
+        return voc;
+    }
+
     void start() throws Exception {
         running = true;
         t0Elapsed = SystemClock.elapsedRealtimeNanos();
@@ -438,6 +462,12 @@ class OvRunner implements SensorEventListener {
         if (ovHealth) Collections.addAll(cmd, "--health", "1", "--health-log", new File(runDir, "health.csv").getAbsolutePath());  // ovrobust
         if (initStill) Collections.addAll(cmd, "--init-still", "1");                                                    // ovrobust
         if (recoverFrames > 0) Collections.addAll(cmd, "--recover", Integer.toString(recoverFrames));                    // ovrobust
+        if (loop != 0) {                                                                                                // 0.6.28 ovloop
+            if (recoverFrames > 0) throw new IllegalArgumentException("loop 1 cannot be used with recover N");
+            File voc = loopVocab(dir);
+            Collections.addAll(cmd, "--loop", "1", "--loop-vocab", voc.getAbsolutePath(),
+                    "--loop-log", new File(runDir, "loop.jsonl").getAbsolutePath());
+        }
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.environment().put("LD_LIBRARY_PATH", lib);
         pb.redirectError(new File(runDir, "bridge_stderr.log"));
@@ -470,7 +500,8 @@ class OvRunner implements SensorEventListener {
                 .put("imu_prio", imuPrio).put("pred_thread", predict == 2 && predThread > 0 ? 1 : 0).put("imu_log", imuLog ? 1 : 0)
                 .put("ov_health", ovHealth ? 1 : 0).put("init_still", initStill ? 1 : 0).put("recover", recoverFrames)   // ovrobust
                 .put("profile", profile).put("viop_udp", viopUdp).put("viop_hb_hz", viopHbHz).put("viop_imu", viopImu)   // 0.6.20
-                .put("viop_hb_src", viopHbSrc);                                                                      // esp32fix
+                .put("viop_hb_src", viopHbSrc)                                                                       // esp32fix
+                .put("loop", loop);                                                                                  // 0.6.28 ovloop
         if (!viopImu.isEmpty()) {   // 0.6.20: own sensor thread, independent of the VIO feed (class doc)
             imuTx = new ViopImuSender(ctx, viopImu, viopImuUncal, runDir);
             imuTx.start();
@@ -497,6 +528,7 @@ class OvRunner implements SensorEventListener {
         notePerf("ov_health", ovHealth ? 1 : 0);    // ovrobust
         notePerf("init_still", initStill ? 1 : 0);
         notePerf("recover", recoverFrames);
+        notePerf("loop", loop);                    // 0.6.28 ovloop
         notePerf("bridge_pid", bridgePid);
         notePerf("sdk", android.os.Build.VERSION.SDK_INT);
         writerT = new Thread(this::writer, "ov-writer");
