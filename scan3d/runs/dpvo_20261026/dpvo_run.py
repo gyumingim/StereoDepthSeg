@@ -253,7 +253,9 @@ def job(name, cfgname):
 
 def run_sched(spec, cfgname, par):
     q = []
-    for part in spec.split(";"):
+    if spec.startswith("names="):   # explicit cell list (pre-declared 60 fps subset, PLAN.md)
+        spec, q = "", spec[6:].split(",")
+    for part in filter(None, spec.split(";")):
         which, fpss = part.split(":")
         offs = None
         if "@" in which:   # e.g. hs@0:60 = offset 0 cells only (time budget)

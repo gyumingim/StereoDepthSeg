@@ -34,3 +34,13 @@ DPVO (Deep Patch Visual Odometry, princeton-vl) 와 DPV-SLAM (loop closure) 을 
 - DPVO 는 컬러 TartanAir 로 학습 → 회색 3채널 입력은 분포 밖 (영향 작을 것으로 추정).
 - HS 녹화 렌즈는 f2.22 (라이브 카메라 모드 아님). DPVO 는 비결정적일 수 있음 (CUDA, RANDOM 패치) → 시드 고정 + 일부 칸 반복.
 - OpenVINS 는 IMU 로 축척을 앎 — Sim3 비교는 DPVO 에 유리한 자. 표에 명시.
+
+## 변경 2026-10-26 17:25 (사용자 결정 via 코디네이터): 60 fps 고정 → 60 fps 부분집합만 (DPVO 결과 보기 전에 정함)
+- 이유: DPVO 가 이 PC(WSL2, RTX 5080)에서 약 90 ms/프레임 → 60 fps HS 42칸 전체는 너무 김. 남은 30 fps 실행 취소 (끝난 30 fps 32칸은 참고로만).
+- 비교 상대: OpenVINS GL60 (integ2 0.6.27 rec60 프로필, c4f60, gyro_klt=5, histogram NONE) 같은 칸.
+- 60 fps 칸 (고정 규칙, DPVO 60 fps 결과 보기 전):
+  - std60 165506 o0, o1, o2 (base + slam)
+  - 손 루프 142148, 142610 (base + slam)
+  - HS 12칸: 214550 o0/o1/o2, 131326 o0/o1/o2 (발산 잘 나는 녹화), 154320_o0, 222747_o0,
+    보통 칸 4개 = 위 4녹화와 폰 낙하 213955 를 뺀 HS 녹화 이름 정렬 순서 앞 4개의 o0: 214138_o0, 221052_o0, 221925_o0, 223815_o0 (base)
+- 순서: std base → 루프 base → std/루프 slam → HS 12칸. GPU 작업 2개 병렬.
