@@ -1,0 +1,35 @@
+made from score.json 2026-10-26 17:47:23 / ov 2026-10-26 17:02:52
+
+## hs 30 fps cfg base (n 20)  OV GL30: div 0, ate_w med 0.484, sim3 med 0.39, |scale-1| med 0.005
+  DPVO causal: div 2 ['214138_o0', '215348_o0'] fail [] | ate_w 0.85 (ow 0.85, div_ow 2) | s5: ate_w 0.963 div 1 | sim3 0.92 | |drift| 0.028 | pair ate_w n 18 d_med 0.26 dpvo better 2 | pair sim3 n 20 d_med 0.45 better 2
+  DPVO final: div 1 ['214138_o0'] fail [] | ate_w 0.517 (ow 0.517, div_ow 1) | s5: ate_w 0.76 div 1 | sim3 0.55 | |drift| 0.009 | pair ate_w n 19 d_med 0.196 dpvo better 4 | pair sim3 n 20 d_med 0.25 better 4
+  time ms med/p95 (median of cells) 85.695/127.89, mem max 1073.3 MB, load1 med 3.832
+
+## std 30 fps cfg base (n 6)  OV GL30: div 3, ate_w med 1.669, sim3 med None, |scale-1| med 0.031
+  DPVO causal: div 0 [] fail [] | ate_w 0.889 (ow 2.907, div_ow 0) | s5: ate_w 1.004 div 0 | sim3 0.89 | |drift| 0.095 | pair ate_w n 3 d_med 1.34 dpvo better 1 | pair sim3 n 0 d_med None better 0
+  DPVO final: div 0 [] fail [] | ate_w 0.805 (ow 2.573, div_ow 0) | s5: ate_w 0.883 div 0 | sim3 0.805 | |drift| 0.141 | pair ate_w n 3 d_med 1.087 dpvo better 1 | pair sim3 n 0 d_med None better 0
+  time ms med/p95 (median of cells) 88.54/146.855, mem max 835.5 MB, load1 med 12.471
+
+## std 60 fps cfg base (n 3)  OV GL60: div 0, ate_w med 1.547, sim3 med None, |scale-1| med 0.014
+  DPVO causal: div 0 [] fail [] | ate_w 0.822 (ow 0.822, div_ow 0) | s5: ate_w 0.852 div 0 | sim3 0.82 | |drift| 0.016 | pair ate_w n 3 d_med -0.678 dpvo better 3 | pair sim3 n 0 d_med None better 0
+  DPVO final: div 0 [] fail [] | ate_w 0.804 (ow 0.804, div_ow 0) | s5: ate_w 0.831 div 0 | sim3 0.8 | |drift| 0.015 | pair ate_w n 3 d_med -0.75 dpvo better 3 | pair sim3 n 0 d_med None better 0
+  time ms med/p95 (median of cells) 80.16/120.16, mem max 819.8 MB, load1 med 1.99
+
+## std 60 fps cfg slam (n 3)  OV GL60: div 0, ate_w med 1.547, sim3 med None, |scale-1| med 0.014
+  DPVO causal: div 0 [] fail [] | ate_w 2.737 (ow 2.737, div_ow 0) | s5: ate_w 5.756 div 0 | sim3 2.74 | |drift| 0.088 | pair ate_w n 3 d_med 1.237 dpvo better 1 | pair sim3 n 0 d_med None better 0
+  DPVO final: div 0 [] fail [] | ate_w 0.776 (ow 0.777, div_ow 0) | s5: ate_w 0.786 div 0 | sim3 0.78 | |drift| 0.009 | pair ate_w n 3 d_med -0.77 dpvo better 3 | pair sim3 n 0 d_med None better 0
+  time ms med/p95 (median of cells) 76.96/91.64, mem max 1209.8 MB, load1 med 2.292
+
+## loops (loop_pct = start-end / path)
+  l142148_o0 f30 base: OV 3.71 cm / 2.447 m = 1.518 % | DPVO causal 0.404 % final 0.4 % (tracked 625/883)
+  l142148_o0 f60 base: OV 9.14 cm / 2.796 m = 3.268 % | DPVO causal 1.271 % final 0.83 % (tracked 1255/1764)
+  l142148_o0 f60 slam: OV 9.14 cm / 2.796 m = 3.268 % | DPVO causal 0.526 % final 0.735 % (tracked 1255/1764)
+  l142610_o0 f30 base: OV 9.17 cm / 3.482 m = 2.634 % | DPVO causal 0.449 % final 0.442 % (tracked 701/878)
+  l142610_o0 f60 base: OV 16.54 cm / 3.178 m = 5.204 % | DPVO causal 0.654 % final 0.666 % (tracked 1402/1755)
+  l142610_o0 f60 slam: OV 16.54 cm / 3.178 m = 5.204 % | DPVO causal 1.225 % final 1.25 % (tracked 1402/1755)
+  l151646_o0 f30 base: OV None cm / None m = None % | DPVO causal 0.948 % final 0.946 % (tracked 732/911)
+  slam l142148_o0_f60: loop BA events 1
+  slam l142610_o0_f60: loop BA events 2
+  slam s165506_o0_f60: loop BA events 3
+  slam s165506_o1_f60: loop BA events 3
+  slam s165506_o2_f60: loop BA events 3
