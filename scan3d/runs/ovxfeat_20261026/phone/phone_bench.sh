@@ -24,7 +24,8 @@ log "top: $top | $wake | battery: $bat"
 case "$top" in *launcher*|*Launcher*|"") ;; *) if echo "$wake" | grep -q Awake; then log "user app in foreground and awake -> skip"; exit 5; fi;; esac
 $ADB shell "mkdir -p /data/local/tmp/ovxfeat"
 for f in ort/ort_bench ort/jni/arm64-v8a/libonnxruntime.so; do $ADB push "$W\\${f//\//\\}" /data/local/tmp/ovxfeat/ > /dev/null || { log "push $f failed"; exit 6; }; done
-for m in $(awk '$1 != "T" {print $1}' $LIST | sort -u); do
+$ADB push "$W\\ort\\kf_bench" /data/local/tmp/ovxfeat/ > /dev/null; $ADB shell "chmod 755 /data/local/tmp/ovxfeat/kf_bench"
+for m in $( (awk '$1 != "T" && $1 != "K" {print $1}' $LIST; awk '$1 == "K" {print $2; print $3}' $LIST) | sort -u); do
   $ADB push "$W\\onnx\\$m" /data/local/tmp/ovxfeat/ > /dev/null || { log "push $m failed"; exit 6; }
   [ -n "$(ls //wsl\$/Ubuntu-22.04/home/system/scanner/tmp_ovxfeat/onnx/$m.data 2>/dev/null)" ] && $ADB push "$W\\onnx\\$m.data" /data/local/tmp/ovxfeat/ > /dev/null
 done
@@ -64,7 +65,10 @@ while read -r m be it wu th rest <&3; do
     tt=$(temps); skin=$(echo "$tt" | grep -o 'SKIN=[0-9.]*' | cut -d= -f2); ap=$(echo "$tt" | grep -o 'AP=[0-9.]*' | cut -d= -f2)
   done
   if awk "BEGIN{exit !($skin >= 36 || $ap >= 45)}"; then log "still hot ($tt) -> stop"; break; fi
-  if [ "$m" = "T" ]; then
+  if [ "$m" = "K" ]; then
+    r=$($ADB shell "cd /data/local/tmp/ovxfeat && LD_LIBRARY_PATH=. timeout 120 ./kf_bench $be $it $wu $th $rest 2>&1 | tail -1" | tr -d '\r' | tr '\n' ' ')
+    r="KF $be $it $th $rest :: $r"
+  elif [ "$m" = "T" ]; then
     r=$($ADB shell "cd /data/local/tmp/ovxfeat && timeout 120 ./benchmark_model --graph=$be $it $wu $th $rest 2>&1 | grep -E 'Inference timings|Delegate|delegate|nodes|ERROR|Error|Failed|count=' | tail -8" | tr -d '\r' | tr '\n' ' ')
     r="TFL $be $it $wu $th $rest :: $r"
   else

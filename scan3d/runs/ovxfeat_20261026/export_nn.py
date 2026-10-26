@@ -22,7 +22,7 @@ class NN(nn.Module):
 def main():
     import onnxruntime as ort
     lines = []
-    for N in [512, 1024, 2048, 4096]:
+    for N in [int(x) for x in os.environ.get("NN_SIZES", "512,1024,2048,4096").split(",")]:
         d0 = torch.nn.functional.normalize(torch.randn(1, N, 64), dim=-1)
         d1 = torch.nn.functional.normalize(torch.randn(1, N, 64), dim=-1)
         fn = os.path.join(OUT, f"nnmatch_{N}.onnx")
