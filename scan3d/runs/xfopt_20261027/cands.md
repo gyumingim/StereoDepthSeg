@@ -14,3 +14,4 @@
 | X1t5 | X1 에서 xf_tri_deg 5 | b 시차 문턱 범위 (3° 가 개발에서 가장 좋음 → 위쪽 확인) | 10-27 13:10 |
 | X1t3m1 | X1t3 + xf_tri_mv 1 | b 순차: 시차 3° 고정 뒤 다중 시점 | 10-27 13:10 |
 | X1Lt3 | LighterGlue + xf_tri_deg 3 | LG 에 같은 1순위 개선 (코디네이터) | 10-27 13:10 |
+| GCHK | X1t3 + 문 전부 브리지 안에서 (inl 40, ratio 0.3, cells 10, rp 2, yaw 3, trifrac 0.9, consist_n 2) | 구현 확인용 (sim 과 같은지), 판정에 안 씀 | 10-27 13:12 |
