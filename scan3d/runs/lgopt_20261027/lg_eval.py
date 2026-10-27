@@ -16,7 +16,8 @@ import lgopt_run as XR  # noqa: E402
 RD = Path(__file__).resolve().parent
 _cells = {}
 RUN_GATES = {"FNN": dict(ratio=0.3, cells=10, rp=2.0, yaw=3.0), "FLG": dict(inl=60, ratio=0.6, rp=2.0),
-             "FLGa": dict(inl=60, rp=2.0), "FLGb": dict(inl=60, rp=2.0, max_cand=1)}       # gates inside the bridge for that run
+             "FLGa": dict(inl=60, rp=2.0), "FLGb": dict(inl=60, rp=2.0, max_cand=1),
+             "FLGc": dict(inl=40, rp=2.0, max_cand=1), "FLGd": dict(inl=40, rp=2.0, max_cand=1, kf_every=1.0, consist_kf=6)}       # gates inside the bridge for that run
 FLG_G = dict(inl=60, ratio=0.6, rp=2.0)                                # xfopt FLG gates (dev-selected, sequential)
 GRID = dict(inl=[0, 40, 60], ratio=[0.0, 0.3, 0.45, 0.6], cells=[0, 10], rp=[3.0, 2.0], yaw=[10.0, 3.0])
 BUDGET = [dict(max_cand=2), dict(max_cand=1), dict(kf_every=1.0), dict(kf_every=1.0, consist_kf=6),

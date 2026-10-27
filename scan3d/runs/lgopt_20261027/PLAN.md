@@ -67,3 +67,9 @@ L512 (점 512), LT (이전 KF 삼각측량은 NN, LG 는 루프 후보에만), L
   실제 실행 지도 ATE 짝 차 (− B60) + 손 루프 (SEEN) 수로 본다. 예산 조건 안에서 문 고르기는 3절 격자 · J 그대로.
 - kf_every 를 실제 실행으로 재려고 다리에 `xf_kf_every` (기본 0 = 기존 동작) 를 넣었다. sim 의 kf_every 와 같은 규칙 (후보가 있는 KF 만 시도로 셈).
   2차 실행 (개발 + 손): FLG (L + 다리 안 문 inl 60 · ratio 0.6 · rp 2, 지도 ATE 용) 와 FLG' 후보들. 조건은 실행 전에 conds.json 에 추가 · 커밋.
+
+## 7. 개발 결과와 FLG' (10-27 21:1x, README 표) — 새 녹화 판정 대기
+- FLG' = **FLGc**: LG 512 점, 삼각측량 NN (xf_tri_mode=1), 가지치기 항상 (--lg-prune-min −1), 조기 종료 없음, 후보 1개 (max_cand=1), 매 KF,
+  문 xf_min_inl 40 · xf_rp_deg 2 (ratio · 칸 · yaw 문 없음), 시차 3°. conds.json "FLGc" 그대로 4절 판정에 쓴다.
+- inl 40 은 손 루프 (SEEN) 를 본 뒤 고름 (3절 규칙대로면 inl 60 → 손 루프 0). 이 선택 편향은 새 녹화 판정으로만 해소된다.
+- 1초 1장 (코디네이터 기본안, FLGd) 은 손 루프 0 이라 FLG' 로 쓰지 않는다. 폰 R4 에서 FLGc 가 150 ms 를 넘으면 차선 = FLGd (흰 벽 R2 는 기대 안 함).
