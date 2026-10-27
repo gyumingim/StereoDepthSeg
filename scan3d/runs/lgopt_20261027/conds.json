@@ -1,0 +1,62 @@
+{
+ "B60": {
+  "extra": "--loop-cfg log_cand=1"
+ },
+ "FNN": {
+  "mode": 1,
+  "topk": 1024,
+  "cfg": "xf_tri_deg=3,xf_min_ratio=0.3,xf_min_cells=10,xf_rp_deg=2,xf_yaw_deg=3"
+ },
+ "L": {
+  "mode": 2,
+  "topk": 1024,
+  "cfg": "xf_tri_deg=3",
+  "why": "= xfopt X1Lt3 (FLG before its gates) on the new lens; FLG = sim gates inl 60 ratio 0.6 rp 2"
+ },
+ "Lc": {
+  "mode": 2,
+  "topk": 1024,
+  "cfg": "xf_tri_deg=3",
+  "srv": "--lg-conf 0.03",
+  "why": "LG match score (filter_threshold) 0.1 -> 0.03: more matches, gates decide"
+ },
+ "Lp": {
+  "mode": 2,
+  "topk": 1024,
+  "cfg": "xf_tri_deg=3",
+  "srv": "--lg-prune-min -1",
+  "why": "point pruning (width 0.95) always on = what a phone CPU does (PC GPU never pruned)"
+ },
+ "Lpd": {
+  "mode": 2,
+  "topk": 1024,
+  "cfg": "xf_tri_deg=3",
+  "srv": "--lg-prune-min -1 --lg-depth 0.95",
+  "why": "pruning + early exit (adaptive depth 0.95)"
+ },
+ "L512": {
+  "mode": 2,
+  "topk": 512,
+  "cfg": "xf_tri_deg=3",
+  "why": "512 XFeat keypoints"
+ },
+ "LT": {
+  "mode": 2,
+  "topk": 1024,
+  "cfg": "xf_tri_deg=3,xf_tri_mode=1",
+  "why": "triangulation with the previous KF by mutual NN, LG only for loop candidates (phone: one LG per candidate)"
+ },
+ "Lm": {
+  "mode": 2,
+  "topk": 1024,
+  "cfg": "xf_tri_deg=3,min_inliers=15",
+  "why": "PnP min inliers 25 -> 15 (white wall: many 13-20); gates re-applied offline"
+ },
+ "Lbud": {
+  "mode": 2,
+  "topk": 512,
+  "cfg": "xf_tri_deg=3,xf_tri_mode=1",
+  "srv": "--lg-prune-min -1 --lg-depth 0.95",
+  "why": "phone budget combo: 512 + NN tri + pruning + early exit"
+ }
+}

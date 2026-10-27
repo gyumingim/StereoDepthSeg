@@ -113,7 +113,8 @@ bool Cfg::parse(const std::string &kv, std::string &err) {
                      {"xf_min_inl", nullptr, &xf_min_inl}, {"xf_min_ratio", &xf_min_ratio, nullptr}, {"xf_min_cells", nullptr, &xf_min_cells},
                      {"xf_rp_deg", &xf_rp_deg, nullptr}, {"xf_yaw_deg", &xf_yaw_deg, nullptr}, {"xf_pnp_px", &xf_pnp_px, nullptr},
                      {"xf_tri_mv", nullptr, &xf_tri_mv}, {"xf_tri_rel", &xf_tri_rel, nullptr},
-                     {"xf_max_tri_frac", &xf_max_tri_frac, nullptr}, {"consist_n", nullptr, &consist_n}};
+                     {"xf_max_tri_frac", &xf_max_tri_frac, nullptr}, {"consist_n", nullptr, &consist_n},
+                     {"xf_tri_mode", nullptr, &xf_tri_mode}};
     bool found = false;
     for (const auto &d : tab)
       if (k == d.n) {
@@ -144,7 +145,7 @@ std::string Cfg::describe() const {
     << loop_w << " huber " << huber << " it " << opt_iters << " | smooth " << smooth_v << "m/s " << smooth_w_deg
     << "deg/s | sync " << sync;
   if (!xf.empty()) o << " | xf mode " << xf_mode << " tri " << xf_tri << " (" << xf_tri_deg << "deg " << xf_tri_px << "px mv "
-                     << xf_tri_mv << " rel " << xf_tri_rel << ") both " << xf_both << " pick " << xf_pick << " gates inl "
+                     << xf_tri_mv << " rel " << xf_tri_rel << " tmode " << xf_tri_mode << ") both " << xf_both << " pick " << xf_pick << " gates inl "
                      << xf_min_inl << " ratio " << xf_min_ratio << " cells " << xf_min_cells << " rp " << xf_rp_deg << " yaw "
                      << xf_yaw_deg << " px " << xf_pnp_px << " trifrac " << xf_max_tri_frac << " cmd " << xf;
   if (consist_n != 1) o << " | consist_n " << consist_n;
@@ -746,7 +747,7 @@ void LoopCloser::process(KfIn &in) {
       const Kf &pv = S.kfs.back();
       std::vector<std::array<int, 2>> mm;
       float msm = 0.0f;
-      xf_match(pv.t_ns, in.t_ns, c_.xf_mode, mm, msm);
+      xf_match(pv.t_ns, in.t_ns, c_.xf_tri_mode ? c_.xf_tri_mode : c_.xf_mode, mm, msm);
       xf_ms_tri = msm;
       if (!c_.xf_tri_mv) {
         for (const auto &m : mm) {
@@ -768,7 +769,7 @@ void LoopCloser::process(KfIn &in) {
         if (pv2) {
           std::vector<std::array<int, 2>> mm2;
           float ms2 = 0.0f;
-          xf_match(pv2->t_ns, in.t_ns, c_.xf_mode, mm2, ms2);
+          xf_match(pv2->t_ns, in.t_ns, c_.xf_tri_mode ? c_.xf_tri_mode : c_.xf_mode, mm2, ms2);
           xf_ms_tri += ms2;
           for (const auto &m : mm2)
             if (m[1] >= 0 && m[1] < nall && m[0] >= 0 && m[0] < static_cast<int>(pv2->xf_und.size())) a2[m[1]] = m[0];

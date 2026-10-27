@@ -65,6 +65,8 @@ struct Cfg {
                                //    (|X1 - X2| <= xf_tri_rel * depth); 2: keep only points triangulated from both
   double xf_tri_rel = 0.05;
   double xf_max_tri_frac = 0.0;  // XFeat path gate: reject when triangulated-3D inliers > this share of the inliers (0 = off)
+  int xf_tri_mode = 0;         // lgopt 2026-10-27: matcher for the xf_tri triangulation with the previous keyframe(s)
+                               //   (0 = xf_mode; 1 = mutual NN while loop candidates use xf_mode 2 = LighterGlue)
   int consist_n = 1;           // temporal consistency: earlier consistent verified loops needed (1 = ovloop rule)
   int diag_prev = 0;           // 1: also verify against the previous keyframe (log only, never a loop): pipeline self-test
   int sync = 0;                // --loop-sync 1: the VIO thread waits until each keyframe is processed (deterministic, PC eval only)
