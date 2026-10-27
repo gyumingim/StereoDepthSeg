@@ -112,7 +112,8 @@ bool Cfg::parse(const std::string &kv, std::string &err) {
                      {"log_cand", nullptr, &log_cand}, {"xf_both", nullptr, &xf_both}, {"xf_pick", nullptr, &xf_pick},
                      {"xf_min_inl", nullptr, &xf_min_inl}, {"xf_min_ratio", &xf_min_ratio, nullptr}, {"xf_min_cells", nullptr, &xf_min_cells},
                      {"xf_rp_deg", &xf_rp_deg, nullptr}, {"xf_yaw_deg", &xf_yaw_deg, nullptr}, {"xf_pnp_px", &xf_pnp_px, nullptr},
-                     {"xf_tri_mv", nullptr, &xf_tri_mv}, {"xf_tri_rel", &xf_tri_rel, nullptr}};
+                     {"xf_tri_mv", nullptr, &xf_tri_mv}, {"xf_tri_rel", &xf_tri_rel, nullptr},
+                     {"xf_max_tri_frac", &xf_max_tri_frac, nullptr}, {"consist_n", nullptr, &consist_n}};
     bool found = false;
     for (const auto &d : tab)
       if (k == d.n) {
@@ -145,7 +146,8 @@ std::string Cfg::describe() const {
   if (!xf.empty()) o << " | xf mode " << xf_mode << " tri " << xf_tri << " (" << xf_tri_deg << "deg " << xf_tri_px << "px mv "
                      << xf_tri_mv << " rel " << xf_tri_rel << ") both " << xf_both << " pick " << xf_pick << " gates inl "
                      << xf_min_inl << " ratio " << xf_min_ratio << " cells " << xf_min_cells << " rp " << xf_rp_deg << " yaw "
-                     << xf_yaw_deg << " px " << xf_pnp_px << " cmd " << xf;
+                     << xf_yaw_deg << " px " << xf_pnp_px << " trifrac " << xf_max_tri_frac << " cmd " << xf;
+  if (consist_n != 1) o << " | consist_n " << consist_n;
   if (log_cand) o << " | log_cand";
   return o.str();
 }
@@ -1105,6 +1107,9 @@ void LoopCloser::process(KfIn &in) {
       } else if (use_xf && c_.xf_min_cells > 0 && v.cells < c_.xf_min_cells) {
         ok = false;
         why = "xcells";
+      } else if (use_xf && c_.xf_max_tri_frac > 0 && ni > 0 && v.ntri > c_.xf_max_tri_frac * ni) {
+        ok = false;
+        why = "xtri";
       }
     }
     return ok;
@@ -1189,18 +1194,22 @@ void LoopCloser::process(KfIn &in) {
   // 5. temporal consistency
   std::vector<std::pair<int, Verified>> accept;  // (cur kf idx, loop)
   if (have_best) {
-    bool consistent = false;
+    // xfopt consist_n: at least consist_n earlier consistent loops (default 1 = ovloop rule, same order / result)
+    std::vector<State::Recent *> hits;
     for (auto &r : S.recent) {
       if (kf.idx - r.cur > c_.consist_kf) continue;
       if (std::fabs(S.kfs[r.old].t - S.kfs[best.old_idx].t) > c_.consist_old_s) continue;
       if ((r.v.drift - best.drift).norm() > c_.consist_m) continue;
       if (std::fabs(wrap(r.v.dyaw - best.dyaw)) * 180.0 / M_PI > c_.consist_yaw_deg) continue;
-      consistent = true;
-      if (!r.accepted) {
-        r.accepted = true;
-        accept.emplace_back(r.cur, r.v);
-      }
+      hits.push_back(&r);
     }
+    const bool consistent = static_cast<int>(hits.size()) >= std::max(1, c_.consist_n);
+    if (consistent)
+      for (auto *r : hits)
+        if (!r->accepted) {
+          r->accepted = true;
+          accept.emplace_back(r->cur, r->v);
+        }
     if (consistent) accept.emplace_back(kf.idx, best);
     else S.n_rej_consist++;
     S.recent.push_back({kf.idx, best.old_idx, best, consistent});
