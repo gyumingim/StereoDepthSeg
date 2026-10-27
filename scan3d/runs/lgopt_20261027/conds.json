@@ -58,5 +58,39 @@
   "cfg": "xf_tri_deg=3,xf_tri_mode=1",
   "srv": "--lg-prune-min -1 --lg-depth 0.95",
   "why": "phone budget combo: 512 + NN tri + pruning + early exit"
+ },
+ "FLG": {
+  "mode": 2,
+  "topk": 1024,
+  "cfg": "xf_tri_deg=3,xf_min_inl=60,xf_min_ratio=0.6,xf_rp_deg=2",
+  "why": "xfopt FLG on the new lens, gates in the bridge (map ATE)"
+ },
+ "FLGa": {
+  "mode": 2,
+  "topk": 1024,
+  "cfg": "xf_tri_deg=3,xf_min_inl=60,xf_rp_deg=2",
+  "srv": "--lg-prune-min -1",
+  "why": "FLG-prime accuracy pick (grid 20:2x: Lp + inl 60, ratio 0, rp 2 = J max, loosest in band), map ATE"
+ },
+ "LTp": {
+  "mode": 2,
+  "topk": 1024,
+  "cfg": "xf_tri_deg=3,xf_tri_mode=1",
+  "srv": "--lg-prune-min -1",
+  "why": "NN triangulation + phone-like pruning (LT and Lp were both good; not run together yet)"
+ },
+ "LTp512": {
+  "mode": 2,
+  "topk": 512,
+  "cfg": "xf_tri_deg=3,xf_tri_mode=1",
+  "srv": "--lg-prune-min -1",
+  "why": "same with 512 points (phone budget); early exit dropped (Lpd / Lbud lost edges and all hand loops)"
+ },
+ "FLGb": {
+  "mode": 2,
+  "topk": 1024,
+  "cfg": "xf_tri_deg=3,xf_tri_mode=1,xf_min_inl=60,xf_rp_deg=2,max_cand=1",
+  "srv": "--lg-prune-min -1",
+  "why": "phone budget candidate: NN tri + pruning + gates inl 60 rp 2 + 1 candidate (kf_every 1 s dropped: 0 hand loops in every sim), map ATE"
  }
 }
