@@ -1,0 +1,45 @@
+nncrun start args='model=lg.nnc in=lg_x13.bin out=oe_lg.bin warm=20 iters=200 reps=2' dir=/data/user/0/com.scan3d.nncprobe/files pid=4543 uid=10469
+selinux context: u:r:untrusted_app:s0:c213,c257,c512,c768
+dlopen libenn_public_api_cpp.so OK
+EnnInitialize -> 0
+meta 110 -> 0 '2.2.27'
+meta 111 -> 0 '2.2.26:3:g844124b4'
+EnnGetPreferencePerfMode -> 0 val=7
+EnnOpenModel(file, /data/user/0/com.scan3d.nncprobe/files/lg.nnc) -> 0 id=0x11bf4b000000 (21.7 ms)
+meta 120 -> 0 '27'
+meta 121 -> 0 'v2.4.11.o'
+meta 122 -> 0 'NOT SUPPORTED'
+meta 123 -> 0 'NOT SUPPORTED'
+meta 124 -> 0 'NOT SUPPORTED'
+meta 130 -> 0 'Failed'
+meta 131 -> 0 'Failed'
+meta 132 -> 0 'Failed'
+meta 133 -> 0 'Failed'
+EnnGetBuffersInfo -> 0 raw u32[0..2]=1 1 0
+BufferInfo in[0] -> 0 upd=0 n=1 w=512 h=256 c=1 size=524288 type=0 label=x_0
+BufferInfo out[0] -> 0 upd=0 n=1 w=0 h=514 c=256 size=526336 type=0 label=out_517
+EnnAllocateAllBuffers -> 0 raw 1 1 0 (1.1 ms)
+buf[0] va=0x767899d000 size=524288 offset=0
+buf[1] va=0x767891c000 size=526336 offset=0
+input file /data/user/0/com.scan3d.nncprobe/files/lg_x13.bin: 6815744 bytes = 13 frames of 524288 (rest 0)
+frame 0 exec -> 0 22153 us out[0..2]=1.00004 0 0 sum=1623.55
+frame 1 exec -> 0 23207 us out[0..2]=0.990137 0 0 sum=703.367
+frame 2 exec -> 0 20595 us out[0..2]=0.993264 0 0 sum=1364.75
+frame 3 exec -> 0 21142 us out[0..2]=0.997954 0 0 sum=1667.31
+frame 4 exec -> 0 21787 us out[0..2]=0.7968 0 0 sum=1482.92
+frame 5 exec -> 0 21292 us out[0..2]=0.993785 0 0 sum=751.519
+frame 6 exec -> 0 21396 us out[0..2]=0.977109 0 0 sum=1664.87
+frame 7 exec -> 0 21226 us out[0..2]=0 0 1.00004 sum=1301.35
+frame 8 exec -> 0 21296 us out[0..2]=0.988574 0 0 sum=458.321
+frame 9 exec -> 0 21975 us out[0..2]=0.854645 0 0 sum=1447.07
+frame 10 exec -> 0 22000 us out[0..2]=0.997433 0 0 sum=1537.01
+frame 11 exec -> 0 21389 us out[0..2]=0 0.999517 0 sum=1399.81
+frame 12 exec -> 0 21171 us out[0..2]=0.00156337 0 0 sum=-1878.81
+memcpy in 524288 B 86 us, out 526336 B 414 us
+TIMING rep 0: n=200 fails=0 p50=21447 p95=22254 min=20624 max=22516 mean=21636 us (wall 4327.4 ms)
+TIMING rep 1: n=200 fails=0 p50=21443 p95=22296 min=20450 max=22555 mean=21615 us (wall 4323.2 ms)
+EnnReleaseBuffers -> 0
+EnnCloseModel -> 0
+EnnDeinitialize -> 0
+nncrun end
+

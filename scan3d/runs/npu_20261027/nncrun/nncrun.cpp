@@ -148,6 +148,7 @@ static void xfeat_post(const float *o, std::vector<float> &K, std::vector<Kp> &k
 }
 
 #include "xfpost.h"
+#include "lgpipe.h"
 
 static void run_main(const std::string &args, const std::string &dir) {
   std::map<std::string, std::string> A;
@@ -282,6 +283,14 @@ static void run_main(const std::string &args, const std::string &dir) {
   int ntot = (int)(nin + nout);
   for (int i = 0; i < ntot; i++) L("buf[%d] va=%p size=%u offset=%u", i, bufs[i]->va, bufs[i]->size, bufs[i]->offset);
   EnnBuf *bi0 = bufs[0], *bo0 = bufs[nin];
+  if (I("lgpipe", 0)) {
+    lg_pipe(I, S, P, in, out, bi0, bo0, mid, eExec);
+    L("EnnReleaseBuffers -> %d", eRelBufs(bufs, ntot));
+    L("EnnCloseModel -> %d", eClose(mid));
+    L("EnnDeinitialize -> %d", eDeinit());
+    L("nncrun end");
+    return;
+  }
   if (I("pipe", 0)) {
     // keyframe cost: in = gray float [0,1] frames 1x352x640; passes over all frames; pass 0 = first exec per frame
     std::vector<char> gd;
@@ -293,7 +302,7 @@ static void run_main(const std::string &args, const std::string &dir) {
       L("pipe: %zu gray frames, passes=%d (frames=%zu each), in buf %u out buf %u", nf, passes, nf, bi0->size, bo0->size);
       // ch=1|3 from the input buffer size; fp16 output (2 bytes/elem) converted to float in the "out" stage
       const int ch = bi0->size == (uint32_t)(PH * PW * 4) ? 1 : 3;
-      const size_t nout_el = (size_t)130 * Ph * Pw;
+      const size_t nout_el = (size_t)I("oc", 130) * Ph * Pw;  // oc=129 for the post-in-model xpsoft output
       const bool o16 = bo0->size == nout_el * 2;
       L("pipe: input channels %d, output %s", ch, o16 ? "fp16" : "fp32");
       std::vector<float> outv(nout_el), K, desc, Pb;
@@ -337,7 +346,7 @@ static void run_main(const std::string &args, const std::string &dir) {
           double b = now_us();
           int rr = eExec(mid, 0);
           double c = now_us();
-          if (postv != 2) {
+          if (postv != 2 && postv != 4) {
             if (o16) {
               const __fp16 *h16 = (const __fp16 *)bo0->va;
               for (size_t j = 0; j < nout_el; j++) outv[j] = (float)h16[j];
@@ -346,7 +355,10 @@ static void run_main(const std::string &args, const std::string &dir) {
             }
           }
           double d = now_us();
-          if (postv == 0) {
+          if (postv == 4) {  // xpsoft layout: feats 0-63 | softmax probs 64-127 | sigmoid heat 128, read in place
+            if (o16) post_soft((const __fp16 *)bo0->va, K, cand, kp, desc, 1024, pt);
+            else post_soft((const float *)bo0->va, K, cand, kp, desc, 1024, pt);
+          } else if (postv == 0) {
             xfeat_post(outv.data(), K, kp, desc, 1024);
           } else if (postv == 1) {
             post_v1(outv.data(), Pb, K, cand, kp, desc, 1024, pt);

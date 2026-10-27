@@ -151,3 +151,32 @@ top-k 269 / 334, 기술자 265 / 292. -> **exp 를 쓰는 softmax 가 후처리�
 | xfeat3ch_postnms.onnx | 1x128x44x80 = 기술자 64 / 점수 셀 64 | + DepthToSpace(8), MaxPool 5x5, Equal, Greater, And, Cast, SpaceToDepth(8), Mul | 점수>0 top-k, 기술자 | 집합 13/13, 순서 12/13, 기술자 동일 |
 - 순서 차이 1 장 = 순위 866/867 맞바뀜 (ORT softmax 와 numpy 의 ulp 차이). NMS 는 기존 5x5 그대로 (3x3 로 바꾸면 결과가 달라짐).
 - NPU 가 Equal/And/Cast/DepthToSpace 를 받는지는 모름 -> postsoft 가 안전한 첫 시도 (확률은 fp16 이 되므로 NPU 결과는 다시 재야 함).
+
+## 7차 (01:46~01:50): LighterGlue NPU n3t256_a16 + XFeat xpsoft (softmax 모델 안)
+조건(모든 항목): Awake, AC 충전 95 %, SKIN 30.4~30.9, AP 31.0~33.2. 폰 .nnc md5 = PC (md5_*_batch9.txt).
+
+### XFeat xpsoft vs xfpmc (같은 세션, 13 장 x 10 패스, 2회)
+| 판 | 배치 (logcat) | EnnExecute p50/p95 2회 | 키프레임 반복 총 p50/p95 2회 | 첫 실행 패스 p50/p95 | 후처리 p50 | 겹침 vs PC fp32 | cos |
+|---|---|---|---|---|---|---|---|
+| xfpmc | CAST hw1 / ENN_NPU hw4 / CAST hw1 | (5차 1695/1692) | 4865/5160, 4994/5437 | 5095/6188, 5230/6811 | 2715, 2834 | 99.7 % | 1.0000 |
+| **xpsoft** | CAST hw1 / **ENN_UNIFIED_DEVICE hw16 (NpuUserDriver + DspUserDriver, softmax = DSP)** / CAST hw1 | 2297/2739, 2302/2763 | **3804/3968, 3829/3897** | 4099/7407, 3856/5257 | 1187, 1189 | 99.6 % (99.2~) | 1.0000 |
+- 키프레임 1.06~1.17 ms 줄음 (NPU+DSP 0.45~0.5 ms 늘고 CPU 후처리 1.55~1.65 ms 줄음). 후처리 단계: 펼침 0.27, NMS 0.55, top-k 0.11, 기술자 0.25 ms.
+- 골든 SNR inf (비트 같음). C++ post_soft vs PC 후처리(같은 폰 출력): 집합 13/13, 순서 11/13.
+- xpsoft vs xfpmc 키포인트 집합: 13 장 중 2 장만 완전히 같음 (같은 픽셀 겹침 중앙 99.9 %) - 확률이 fp16 이 되어 경계 점이 바뀜.
+  PC fp32 대비 겹침은 99.6 % vs 99.7 % 로 거의 같음.
+
+### LighterGlue n3t256_a16 (3층, 256 점, int16 활성, 실보정 40 쌍)
+입력: lgev512 13 평가 쌍 (평가 녹화 프레임 + 30 프레임 뒤, 보정 40 쌍과 다른 녹화), XFeat fp32 앞 256 점. 기준 = 원래 LighterGlue
+fp32 6 층 exact GELU, 같은 256 점 (kornia 와 13/13 쌍 100 % 일치, lg_prep_info.json).
+| 항목 | 값 |
+|---|---|
+| 배치 (logcat) | QUANTIZE hw1 / ENN_NPU hw4 / DEQUANTIZE hw1 / RESHAPE hw1 -> **CPU 섞임 = 입출력 양자화·reshape 3 연산** (컴파일 표의 CU 연산 MUL/Softmax/GeLU/SQRT/DIV/SUM 은 NPU 부분그래프 안, DSP·GPU 드라이버 0) |
+| 골든 SNR | 41.25 dB (원격 41.2) |
+| EnnExecute p50/p95 (200 x 2) | 21447/22254, 21443/22296 us (원격 20.5 ms) |
+| 실비용 (위치부호+패킹 C++, NPU, 후처리 C++), 13 쌍 x 5 패스 x 2회 | 총 p50/p95 24518/25405, 24832/25518 / 24730/27377, 24606/25323 us; 패킹 0.24, NPU 21.3~21.6, 후처리 3.0 ms |
+| 짝 일치율 (ref 짝 중 NPU 도 낸 비율) | 중앙 100 %, 평균 98.3 %, 최소 88.3 % (쌍 12, 짝 77 개 저질감 쌍) |
+| 같은 3층 판 PC fp32 | 중앙 100 %, 최소 88.3 % -> 손실은 층 줄임 탓, NPU 양자화 손실은 거의 없음 |
+| 짝 수 중앙 (ref / NPU / PC 3층) | 191 / 195 / 195 |
+| F-RANSAC 1px 인라이어 중앙 (ref / NPU / PC 3층) | 178 / 186 / 181, NPU/ref 비 중앙 1.015 |
+| 폰 C++ 파이프라인 짝 = NPU 출력 PC 후처리 | 12/13 쌍 동일 (1 쌍 경계 차이) |
+- 후처리 3.0 ms (256x256 점수 행렬 f64 log + 양방향 argmax) 는 줄일 여지 있음 (f32, 행 argmax 를 log 전에 등).

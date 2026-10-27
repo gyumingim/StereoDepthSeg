@@ -242,3 +242,67 @@ static void post_v2(const T *o, std::vector<float> &K, std::vector<std::vector<C
   t.topk += d - c_;
   t.desc += e_ - d;
 }
+
+// xpsoft (post-in-model softmax) layout: feats 0-63 | softmax probs (dustbin dropped) 64-127 | sigmoid(heat) 128.
+// Same rules as acc_lib: K = shuffle(probs), 5x5 NMS, K > 0.05, score = K * heat (multiply), top-k (score desc, index asc).
+template <typename T>
+static void post_soft(const T *o, std::vector<float> &K, std::vector<Cand> &cand, std::vector<Kp> &kp,
+                      std::vector<float> &desc, int topn, PostT &t) {
+  const int hw = Ph * Pw;
+  K.resize(PH * PW);
+  double a = now_us();
+  for (int c = 0; c < 64; c++) {
+    const T *pc = o + (64 + c) * hw;
+    for (int cy = 0; cy < Ph; cy++) {
+      float *row = &K[(cy * 8 + c / 8) * PW + c % 8];
+      for (int cx = 0; cx < Pw; cx++) row[cx * 8] = (float)pc[cy * Pw + cx];
+    }
+  }
+  double b = now_us();
+  cand.clear();
+  for (int y = 0; y < PH; y++) {
+    const float *rowk = &K[y * PW];
+    for (int x = 0; x < PW; x++) {
+      float v = rowk[x];
+      if (v <= 0.05f) continue;
+      bool mx = true;
+      int ya = std::max(0, y - 2), yb = std::min(PH - 1, y + 2), xa = std::max(0, x - 2), xb = std::min(PW - 1, x + 2);
+      for (int yy = ya; yy <= yb && mx; yy++) {
+        const float *r2 = &K[yy * PW];
+        for (int xx = xa; xx <= xb; xx++)
+          if (r2[xx] > v) {
+            mx = false;
+            break;
+          }
+      }
+      if (!mx) continue;
+      cand.push_back({v * (float)o[128 * hw + (y / 8) * Pw + x / 8], y * PW + x});
+    }
+  }
+  double c_ = now_us();
+  size_t n = std::min<size_t>(topn, cand.size());
+  if (cand.size() > n) std::nth_element(cand.begin(), cand.begin() + n, cand.end(), cand_less);
+  std::sort(cand.begin(), cand.begin() + n, cand_less);
+  cand.resize(n);
+  double d = now_us();
+  kp.resize(n);
+  desc.resize(n * 64);
+  for (size_t i = 0; i < n; i++) {
+    int x = cand[i].idx % PW, y = cand[i].idx / PW;
+    kp[i] = {cand[i].s, x, y};
+    int c0 = (y / 8) * Pw + x / 8;
+    float ss = 0, *dd = &desc[i * 64];
+    for (int c = 0; c < 64; c++) {
+      float v = (float)o[c * hw + c0];
+      dd[c] = v;
+      ss += v * v;
+    }
+    float r = 1.f / std::sqrt(std::max(ss, 1e-12f));
+    for (int c = 0; c < 64; c++) dd[c] *= r;
+  }
+  double e_ = now_us();
+  t.shuf += b - a;
+  t.nms += c_ - b;
+  t.topk += d - c_;
+  t.desc += e_ - d;
+}
