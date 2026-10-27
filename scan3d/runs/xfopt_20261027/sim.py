@@ -119,7 +119,7 @@ def simulate(c, gates):
                 best = ch
         accept = []
         if best is not None:
-            consistent = False
+            hits = []
             for r in recent:
                 if k["idx"] - r[0] > g["consist_kf"]:
                     continue
@@ -129,11 +129,13 @@ def simulate(c, gates):
                     continue
                 if abs(wrap(r[2]["dyaw"] - best["dyaw"])) * 180 / math.pi > g["consist_yaw_deg"]:
                     continue
-                consistent = True
-                if not r[3]:
-                    r[3] = True
-                    accept.append((r[0], r[2]))
+                hits.append(r)
+            consistent = len(hits) >= g["consist_n"]
             if consistent:
+                for r in hits:
+                    if not r[3]:
+                        r[3] = True
+                        accept.append((r[0], r[2]))
                 accept.append((k["idx"], best))
             recent.append([k["idx"], best["o"], best, consistent])
         recent = [r for r in recent if k["idx"] - r[0] <= g["consist_kf"]]

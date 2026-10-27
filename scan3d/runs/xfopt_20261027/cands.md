@@ -7,3 +7,6 @@
 | X1 | XFeat NN 1k, 640x360, xf_tri 1° 2 px (= ovxfeat N1kt) + xf_both=1 · log_cand=1 | 출발점 (BRIEF · XFeat 두 경로 후보 자세 모두 기록 → 문 / 하이브리드 오프라인 재현) | 10-27 12:40 |
 | X1n | X1 에서 xf_tri 0 (= N1k) | 삼각측량 없이 | 10-27 12:40 |
 | X1L | X1 에서 LighterGlue (= L1kt) | LG 비교 | 10-27 12:40 |
+| X1t3 | X1 에서 xf_tri_deg 3 (시차 문턱) | 1순위 b: 3D 점 질 | 10-27 12:50 |
+| X1m1 | X1 에서 xf_tri_mv 1 (앞 KF 2개, 두 시점 다 있으면 5 % 안 일치) | 1순위 b | 10-27 12:50 |
+| X1m2 | X1 에서 xf_tri_mv 2 (두 시점 모두 삼각측량된 점만) | 1순위 b | 10-27 12:50 |
