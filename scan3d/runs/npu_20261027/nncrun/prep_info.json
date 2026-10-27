@@ -1,0 +1,50 @@
+{
+ "made": "2026-10-27 22:08:37",
+ "onnx": "/mnt/c/Users/a3162/scan3d_handoff/npu_results/a2_xfeat3ch_cat1out_e2400/xfeat_backbone_3ch_noadd_op13_cat1out.onnx",
+ "onnx_input": "image",
+ "golden_in_stats": [
+  3.73286752619606e-07,
+  0.9999966025352478,
+  0.4998152256011963,
+  0.2887195944786072
+ ],
+ "eval_in_stats": [
+  -4.793435096740723,
+  10.644503593444824,
+  -1.4805293346853432e-07,
+  0.9994332194328308
+ ],
+ "eval_share_abs_gt_1": 0.2311786358173077,
+ "pc_onnx_vs_aistudio_golden_snr_db": 28.670131413609965,
+ "orig_check": {
+  "orig_outputs": [
+   "feats",
+   "keypoints",
+   "heatmap"
+  ],
+  "orig_shapes": [
+   [
+    1,
+    64,
+    44,
+    80
+   ],
+   [
+    1,
+    65,
+    44,
+    80
+   ],
+   [
+    1,
+    1,
+    44,
+    80
+   ]
+  ],
+  "feats_maxabs": 2.0503997802734375e-05,
+  "kpts_maxabs": 1.8596649169921875e-05,
+  "heat_raw_vs_orig_maxabs": 6.853458404541016,
+  "sigmoid_heat_vs_orig_maxabs": 1.4901161193847656e-06
+ }
+}

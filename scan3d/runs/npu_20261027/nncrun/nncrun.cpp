@@ -1,0 +1,313 @@
+// nncrun 2026-10-27: run an Exynos AI Studio .nnc model on the phone through the device's public vendor library
+// libenn_public_api_cpp.so (listed in /vendor/etc/public.libraries.txt), loaded with dlopen inside an app process
+// (untrusted_app). Own code: the function names are the C++ symbols exported by the phone library (llvm-nm -D,
+// namespace enn::api); argument lists follow the public ExecuTorch (BSD) / LiteRT (Apache-2.0) ENN loaders and the
+// mangled names. No Samsung header or binary is copied into this project. No CPU fallback path exists in this code:
+// the only compute call is EnnExecuteModel on the precompiled NNC.
+// args (space separated key=value): model=PATH in=PATH (N frames concatenated, raw input-buffer bytes) out=PATH
+//   warm=N iters=N reps=N perf=MODE(-1 = do not set) open=file|mem msg=0|1 frames=N(max frames to run)
+#include <android/log.h>
+#include <dlfcn.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#include <algorithm>
+#include <chrono>
+#include <cstdarg>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <map>
+#include <sstream>
+#include <string>
+#include <vector>
+#ifdef NNCRUN_JNI
+#include <jni.h>
+#endif
+
+static std::string g_out;
+static FILE *g_f = nullptr;
+static void L(const char *fmt, ...) {
+  char b[2048];
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(b, sizeof b, fmt, ap);
+  va_end(ap);
+  __android_log_print(ANDROID_LOG_INFO, "nncrun", "%s", b);
+#ifndef NNCRUN_JNI
+  std::printf("%s\n", b);
+#endif
+  if (g_f) {
+    std::fprintf(g_f, "%s\n", b);
+    std::fflush(g_f);
+  }
+  g_out += b;
+  g_out += "\n";
+}
+
+// minimal own declarations (layouts as in the public loaders; NumberOfBuffersInfo / EnnBufferInfo read defensively)
+struct EnnBuf {
+  void *va;
+  uint32_t size;
+  uint32_t offset;
+};
+typedef int (*fn_v)();
+typedef int (*fn_open)(const char *, uint64_t *);
+typedef int (*fn_openmem)(const char *, uint32_t, uint64_t *);
+typedef int (*fn_id)(uint64_t);
+typedef int (*fn_alloc)(uint64_t, EnnBuf ***, void *, int, bool);
+typedef int (*fn_relbufs)(EnnBuf **, int);
+typedef int (*fn_getbufsinfo)(void *, uint64_t);
+typedef int (*fn_getbufinfo)(void *, uint64_t, int, uint32_t);
+typedef int (*fn_exec)(uint64_t, int);
+typedef int (*fn_u32)(uint32_t);
+typedef int (*fn_pu32)(uint32_t *);
+typedef int (*fn_meta)(int, uint64_t, char *);
+
+static double now_us() {
+  return std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+static bool read_file(const std::string &p, std::vector<char> &d) {
+  FILE *f = std::fopen(p.c_str(), "rb");
+  if (!f) return false;
+  std::fseek(f, 0, SEEK_END);
+  long n = std::ftell(f);
+  std::fseek(f, 0, SEEK_SET);
+  d.resize(n);
+  size_t r = std::fread(d.data(), 1, n, f);
+  std::fclose(f);
+  return (long)r == n;
+}
+static double pct(std::vector<double> v, double q) {
+  if (v.empty()) return 0;
+  std::sort(v.begin(), v.end());
+  size_t i = (size_t)std::min<double>(v.size() - 1, q * (v.size() - 1) + 0.5);
+  return v[i];
+}
+
+static void run_main(const std::string &args, const std::string &dir) {
+  std::map<std::string, std::string> A;
+  {
+    std::istringstream is(args);
+    std::string t;
+    while (is >> t) {
+      auto e = t.find('=');
+      if (e != std::string::npos) A[t.substr(0, e)] = t.substr(e + 1);
+    }
+  }
+  auto S = [&](const char *k, const char *d) { return A.count(k) ? A[k] : std::string(d); };
+  auto I = [&](const char *k, int d) { return A.count(k) ? std::atoi(A[k].c_str()) : d; };
+  auto P = [&](const std::string &p) { return (p.empty() || p[0] == '/') ? p : dir + "/" + p; };
+  std::string model = P(S("model", "model.nnc")), in = P(S("in", "")), out = P(S("out", "")),
+              logp = P(S("log", "nncrun_log.txt"));
+  int warm = I("warm", 30), iters = I("iters", 200), reps = I("reps", 2), perf = I("perf", -1),
+      msg = I("msg", 0), maxfr = I("frames", 1000);
+  std::string openm = S("open", "file");
+  g_f = std::fopen(logp.c_str(), "w");
+  L("nncrun start args='%s' dir=%s pid=%d uid=%d", args.c_str(), dir.c_str(), getpid(), getuid());
+  {
+    char ctx[256] = {0};
+    int fd = open("/proc/self/attr/current", O_RDONLY);
+    if (fd >= 0) {
+      read(fd, ctx, sizeof ctx - 1);
+      close(fd);
+    }
+    L("selinux context: %s", ctx);
+  }
+  void *h = dlopen("libenn_public_api_cpp.so", RTLD_NOW | RTLD_LOCAL);
+  if (!h) {
+    L("ERROR dlopen libenn_public_api_cpp.so: %s", dlerror());
+    return;
+  }
+  L("dlopen libenn_public_api_cpp.so OK");
+#define SYM(var, type, name)                            \
+  type var = (type)dlsym(h, name);                      \
+  if (!var) {                                           \
+    L("ERROR dlsym %s: %s", name, dlerror());          \
+    return;                                             \
+  }
+  SYM(eInit, fn_v, "_ZN3enn3api13EnnInitializeEv");
+  SYM(eDeinit, fn_v, "_ZN3enn3api15EnnDeinitializeEv");
+  SYM(eOpen, fn_open, "_ZN3enn3api12EnnOpenModelEPKcPm");
+  SYM(eOpenMem, fn_openmem, "_ZN3enn3api22EnnOpenModelFromMemoryEPKcjPm");
+  SYM(eClose, fn_id, "_ZN3enn3api13EnnCloseModelEm");
+  SYM(eAlloc, fn_alloc, "_ZN3enn3api21EnnAllocateAllBuffersEmPPP10_ennBufferP20_NumberOfBuffersInfoib");
+  SYM(eRelBufs, fn_relbufs, "_ZN3enn3api17EnnReleaseBuffersEPP10_ennBufferi");
+  SYM(eGetBufsInfo, fn_getbufsinfo, "_ZN3enn3api17EnnGetBuffersInfoEP20_NumberOfBuffersInfom");
+  SYM(eGetBufInfo, fn_getbufinfo, "_ZN3enn3api23EnnGetBufferInfoByIndexEP14_ennBufferInfom14_enn_buf_dir_ej");
+  SYM(eExec, fn_exec, "_ZN3enn3api15EnnExecuteModelEmi");
+  SYM(eSetPerf, fn_u32, "_ZN3enn3api24EnnSetPreferencePerfModeEj");
+  SYM(eGetPerf, fn_pu32, "_ZN3enn3api24EnnGetPreferencePerfModeEPj");
+  SYM(eMeta, fn_meta, "_ZN3enn3api14EnnGetMetaInfoE19_enn_meta_type_id_emPc");
+  SYM(eMsgOn, fn_v, "_ZN3enn3api21EnnSetExecMsgAlwaysOnEv");
+  int r = eInit();
+  L("EnnInitialize -> %d", r);
+  if (r != 0) return;
+  char ms[512];
+  for (int id : {110, 111}) {
+    memset(ms, 0, sizeof ms);
+    int rr = eMeta(id, 0, ms);
+    L("meta %d -> %d '%s'", id, rr, ms);
+  }
+  if (msg) L("EnnSetExecMsgAlwaysOn -> %d", eMsgOn());
+  if (perf >= 0) L("EnnSetPreferencePerfMode(%d) -> %d", perf, eSetPerf((uint32_t)perf));
+  uint32_t pm = 999;
+  L("EnnGetPreferencePerfMode -> %d val=%u", eGetPerf(&pm), pm);
+
+  uint64_t mid = 0;
+  std::vector<char> mdata;
+  double t0 = now_us();
+  if (openm == "mem") {
+    if (!read_file(model, mdata)) {
+      L("ERROR read model %s", model.c_str());
+      eDeinit();
+      return;
+    }
+    r = eOpenMem(mdata.data(), (uint32_t)mdata.size(), &mid);
+  } else {
+    r = eOpen(model.c_str(), &mid);
+  }
+  L("EnnOpenModel(%s, %s) -> %d id=0x%llx (%.1f ms)", openm.c_str(), model.c_str(), r, (unsigned long long)mid,
+    (now_us() - t0) / 1000);
+  if (r != 0) {
+    eDeinit();
+    return;
+  }
+  for (int id : {120, 121, 122, 123, 124, 130, 131, 132, 133}) {
+    memset(ms, 0, sizeof ms);
+    int rr = eMeta(id, mid, ms);
+    L("meta %d -> %d '%s'", id, rr, ms);
+  }
+  unsigned char nbi[32];
+  memset(nbi, 0, sizeof nbi);
+  r = eGetBufsInfo(nbi, mid);
+  uint32_t a0, a1, a2;
+  memcpy(&a0, nbi, 4);
+  memcpy(&a1, nbi + 4, 4);
+  memcpy(&a2, nbi + 8, 4);
+  L("EnnGetBuffersInfo -> %d raw u32[0..2]=%u %u %u", r, a0, a1, a2);
+  uint32_t nin = a0, nout = a1 ? a1 : a2;
+  for (int dirn = 0; dirn < 2; dirn++) {
+    uint32_t n = dirn == 0 ? nin : nout;
+    for (uint32_t i = 0; i < n; i++) {
+      unsigned char bi[64];
+      memset(bi, 0, sizeof bi);
+      int rr = eGetBufInfo(bi, mid, dirn, i);
+      uint32_t u[7];
+      memcpy(u, bi + 4, sizeof u);
+      const char *lab = nullptr;
+      memcpy(&lab, bi + 32, sizeof lab);
+      L("BufferInfo %s[%u] -> %d upd=%d n=%u w=%u h=%u c=%u size=%u type=%u label=%s", dirn ? "out" : "in", i, rr,
+        (int)bi[0], u[0], u[1], u[2], u[3], u[4], u[5], lab ? lab : "(null)");
+    }
+  }
+  EnnBuf **bufs = nullptr;
+  unsigned char nbi2[32];
+  memset(nbi2, 0, sizeof nbi2);
+  t0 = now_us();
+  r = eAlloc(mid, &bufs, nbi2, 0, true);
+  memcpy(&a0, nbi2, 4);
+  memcpy(&a1, nbi2 + 4, 4);
+  memcpy(&a2, nbi2 + 8, 4);
+  L("EnnAllocateAllBuffers -> %d raw %u %u %u (%.1f ms)", r, a0, a1, a2, (now_us() - t0) / 1000);
+  if (r != 0 || !bufs) {
+    eClose(mid);
+    eDeinit();
+    return;
+  }
+  int ntot = (int)(nin + nout);
+  for (int i = 0; i < ntot; i++) L("buf[%d] va=%p size=%u offset=%u", i, bufs[i]->va, bufs[i]->size, bufs[i]->offset);
+  EnnBuf *bi0 = bufs[0], *bo0 = bufs[nin];
+  std::vector<char> ind;
+  if (!in.empty() && read_file(in, ind)) {
+    size_t fs = bi0->size;
+    size_t nf = ind.size() / fs;
+    L("input file %s: %zu bytes = %zu frames of %zu (rest %zu)", in.c_str(), ind.size(), nf, fs, ind.size() % fs);
+    FILE *fo = out.empty() ? nullptr : std::fopen(out.c_str(), "wb");
+    for (size_t k = 0; k < nf && (int)k < maxfr; k++) {
+      memcpy(bi0->va, ind.data() + k * fs, fs);
+      double a = now_us();
+      int rr = eExec(mid, 0);
+      double b = now_us();
+      if (fo) std::fwrite(bo0->va, 1, bo0->size, fo);
+      const float *o = (const float *)bo0->va;
+      double s = 0;
+      for (uint32_t j = 0; j < bo0->size / 4; j++) s += o[j];
+      L("frame %zu exec -> %d %.0f us out[0..2]=%g %g %g sum=%g", k, rr, b - a, o[0], o[1], o[2], s);
+      if (rr != 0) break;
+    }
+    if (fo) std::fclose(fo);
+    memcpy(bi0->va, ind.data(), fs);  // timing runs use frame 0
+  } else {
+    L("no input file (%s) -> timing on zero-filled buffer", in.c_str());
+    memset(bi0->va, 0, bi0->size);
+  }
+  // copy cost (what an app pays for float in/out, measured once each)
+  {
+    std::vector<char> tmp(bi0->size);
+    double a = now_us();
+    memcpy(bi0->va, ind.empty() ? tmp.data() : ind.data(), bi0->size);
+    double b = now_us();
+    std::vector<char> tmp2(bo0->size);
+    memcpy(tmp2.data(), bo0->va, bo0->size);
+    double c = now_us();
+    L("memcpy in %u B %.0f us, out %u B %.0f us", bi0->size, b - a, bo0->size, c - b);
+  }
+  for (int w = 0; w < warm; w++) {
+    int rr = eExec(mid, 0);
+    if (rr) {
+      L("warmup exec fail %d", rr);
+      break;
+    }
+  }
+  for (int rp = 0; rp < reps; rp++) {
+    std::vector<double> t;
+    int fails = 0;
+    double a0t = now_us();
+    for (int it = 0; it < iters; it++) {
+      double a = now_us();
+      int rr = eExec(mid, 0);
+      double b = now_us();
+      if (rr) fails++;
+      t.push_back(b - a);
+    }
+    double tot = now_us() - a0t;
+    double mean = 0;
+    for (double x : t) mean += x;
+    mean /= std::max<size_t>(1, t.size());
+    L("TIMING rep %d: n=%d fails=%d p50=%.0f p95=%.0f min=%.0f max=%.0f mean=%.0f us (wall %.1f ms)", rp, iters, fails,
+      pct(t, 0.5), pct(t, 0.95), pct(t, 0.0), pct(t, 1.0), mean, tot / 1000);
+  }
+  L("EnnReleaseBuffers -> %d", eRelBufs(bufs, ntot));
+  L("EnnCloseModel -> %d", eClose(mid));
+  L("EnnDeinitialize -> %d", eDeinit());
+  L("nncrun end");
+}
+
+#ifdef NNCRUN_JNI
+extern "C" JNIEXPORT jstring JNICALL Java_com_scan3d_nncprobe_Probe_run(JNIEnv *env, jclass, jstring a, jstring d) {
+  const char *as = env->GetStringUTFChars(a, nullptr);
+  const char *ds = env->GetStringUTFChars(d, nullptr);
+  g_out.clear();
+  run_main(as, ds);
+  if (g_f) {
+    std::fclose(g_f);
+    g_f = nullptr;
+  }
+  env->ReleaseStringUTFChars(a, as);
+  env->ReleaseStringUTFChars(d, ds);
+  return env->NewStringUTF(g_out.c_str());
+}
+#else
+int main(int argc, char **argv) {
+  std::string a;
+  for (int i = 1; i < argc; i++) {
+    a += argv[i];
+    a += " ";
+  }
+  run_main(a, ".");
+  return 0;
+}
+#endif
