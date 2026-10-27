@@ -1,0 +1,92 @@
+{
+ "made": "2026-10-28 01:00:09",
+ "base": "/mnt/c/Users/a3162/scan3d_handoff/npu_results/lab_realcalib_xfeat3ch/xfeat_backbone_3ch_noadd_op13_cat1out.onnx",
+ "frames": 13,
+ "xfeat3ch_postnms": {
+  "file": "/home/system/scanner/tmp_npu/postonnx/xfeat3ch_postnms.onnx",
+  "out": [
+   "out128"
+  ],
+  "shape": [
+   1,
+   128,
+   44,
+   80
+  ],
+  "same_set_frames": 13,
+  "same_order_frames": 12,
+  "feats_identical_frames": 13,
+  "n_kp": [
+   1024,
+   1024,
+   1024,
+   1024,
+   1024,
+   1024,
+   1024,
+   1024,
+   1024,
+   1024,
+   1024,
+   1024,
+   1024
+  ],
+  "post_ops": [
+   "And",
+   "Cast",
+   "Concat",
+   "Constant",
+   "Conv",
+   "DepthToSpace",
+   "Equal",
+   "Greater",
+   "MaxPool",
+   "Mul",
+   "Relu",
+   "Sigmoid",
+   "Slice",
+   "Softmax",
+   "SpaceToDepth"
+  ]
+ },
+ "xfeat3ch_postsoft": {
+  "file": "/home/system/scanner/tmp_npu/postonnx/xfeat3ch_postsoft.onnx",
+  "out": [
+   "out129"
+  ],
+  "shape": [
+   1,
+   129,
+   44,
+   80
+  ],
+  "same_set_frames": 13,
+  "same_order_frames": 12,
+  "feats_identical_frames": 13,
+  "n_kp": [
+   1024,
+   1024,
+   1024,
+   1024,
+   1024,
+   1024,
+   1024,
+   1024,
+   1024,
+   1024,
+   1024,
+   1024,
+   1024
+  ],
+  "post_ops": [
+   "Concat",
+   "Constant",
+   "Conv",
+   "Relu",
+   "Resize",
+   "Sigmoid",
+   "Slice",
+   "Softmax"
+  ]
+ }
+}

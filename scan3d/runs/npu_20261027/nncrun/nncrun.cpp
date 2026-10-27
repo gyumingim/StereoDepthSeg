@@ -147,6 +147,8 @@ static void xfeat_post(const float *o, std::vector<float> &K, std::vector<Kp> &k
   }
 }
 
+#include "xfpost.h"
+
 static void run_main(const std::string &args, const std::string &dir) {
   std::map<std::string, std::string> A;
   {
@@ -294,11 +296,28 @@ static void run_main(const std::string &args, const std::string &dir) {
       const size_t nout_el = (size_t)130 * Ph * Pw;
       const bool o16 = bo0->size == nout_el * 2;
       L("pipe: input channels %d, output %s", ch, o16 ? "fp16" : "fp32");
-      std::vector<float> outv(nout_el), K, desc;
+      std::vector<float> outv(nout_el), K, desc, Pb;
       std::vector<Kp> kp;
+      std::vector<Cand> cand;
+      std::vector<std::vector<Cand>> cands;
+      // post=0: original xfeat_post (after memcpy/convert), 1: post_v1 stage-timed (after memcpy/convert),
+      // 2: post_v2 on the ENN output buffer directly (no memcpy), threads=N, cpus=a,b (affinity, optional)
+      const int postv = I("post", 0), nthr = I("threads", 1);
+      std::vector<int> cpus;
+      {
+        std::string cs = S("cpus", "");
+        std::istringstream is(cs);
+        std::string t;
+        while (std::getline(is, t, ',')) cpus.push_back(std::atoi(t.c_str()));
+      }
+      Pool pool;
+      g_skip = I("skip", 0) != 0;
+      pool.start(postv == 2 ? nthr : 1, cpus);
+      L("pipe: post=%d threads=%d cpus=%s", postv, pool.n, S("cpus", "-").c_str());
       FILE *fk = out.empty() ? nullptr : std::fopen(out.c_str(), "wb");
       for (int ps = 0; ps < passes; ps++) {
         std::vector<double> tn, tx, to, tp, tt;
+        PostT pt;
         for (size_t k = 0; k < nf; k++) {
           const float *g = (const float *)(gd.data() + k * fs);
           double a = now_us();
@@ -318,14 +337,24 @@ static void run_main(const std::string &args, const std::string &dir) {
           double b = now_us();
           int rr = eExec(mid, 0);
           double c = now_us();
-          if (o16) {
-            const __fp16 *h16 = (const __fp16 *)bo0->va;
-            for (size_t j = 0; j < nout_el; j++) outv[j] = (float)h16[j];
-          } else {
-            memcpy(outv.data(), bo0->va, nout_el * 4);
+          if (postv != 2) {
+            if (o16) {
+              const __fp16 *h16 = (const __fp16 *)bo0->va;
+              for (size_t j = 0; j < nout_el; j++) outv[j] = (float)h16[j];
+            } else {
+              memcpy(outv.data(), bo0->va, nout_el * 4);
+            }
           }
           double d = now_us();
-          xfeat_post(outv.data(), K, kp, desc, 1024);
+          if (postv == 0) {
+            xfeat_post(outv.data(), K, kp, desc, 1024);
+          } else if (postv == 1) {
+            post_v1(outv.data(), Pb, K, cand, kp, desc, 1024, pt);
+          } else if (o16) {
+            post_v2((const __fp16 *)bo0->va, K, cands, cand, kp, desc, 1024, pool, pt);
+          } else {
+            post_v2((const float *)bo0->va, K, cands, cand, kp, desc, 1024, pool, pt);
+          }
           double e = now_us();
           if (rr) L("pipe exec fail %d", rr);
           tn.push_back(b - a);
@@ -351,6 +380,13 @@ static void run_main(const std::string &args, const std::string &dir) {
           "post p50 %.0f p95 %.0f us",
           ps, tt.size(), pct(tt, .5), pct(tt, .95), pct(tn, .5), pct(tx, .5), pct(tx, .95), pct(to, .5), pct(tp, .5),
           pct(tp, .95));
+        if (postv) {
+          double nn = (double)nf;
+          L("POSTSTAGES pass %d mean us: softmax %.0f shuffle %.0f nms+score %.0f topk %.0f desc %.0f%s", ps, pt.soft / nn,
+            pt.shuf / nn, pt.nms / nn, pt.topk / nn, pt.desc / nn, postv == 2 ? " (v2: softmax = fused softmax+shuffle)" : "");
+          if (g_skip) L("SKIP pass %d skipped cells per frame %.0f of %d", ps, g_skipped.load() / nn, Ph * Pw);
+          g_skipped = 0;
+        }
       }
       if (fk) std::fclose(fk);
     }

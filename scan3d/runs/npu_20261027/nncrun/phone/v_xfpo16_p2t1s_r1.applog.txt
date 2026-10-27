@@ -1,0 +1,73 @@
+nncrun start args='model=xfpo16.nnc in=gray13.bin out=kv_xfpo16_p2t1s_r1.bin pipe=1 passes=10 post=2 threads=1 skip=1' dir=/data/user/0/com.scan3d.nncprobe/files pid=26032 uid=10465
+selinux context: u:r:untrusted_app:s0:c209,c257,c512,c768
+dlopen libenn_public_api_cpp.so OK
+EnnInitialize -> 0
+meta 110 -> 0 '2.2.27'
+meta 111 -> 0 '2.2.26:3:g844124b4'
+EnnGetPreferencePerfMode -> 0 val=7
+EnnOpenModel(file, /data/user/0/com.scan3d.nncprobe/files/xfpo16.nnc) -> 0 id=0x65b040000000 (19.5 ms)
+meta 120 -> 0 '27'
+meta 121 -> 0 'v2.4.11.o'
+meta 122 -> 0 'NOT SUPPORTED'
+meta 123 -> 0 'NOT SUPPORTED'
+meta 124 -> 0 'NOT SUPPORTED'
+meta 130 -> 0 'Failed'
+meta 131 -> 0 'Failed'
+meta 132 -> 0 'Failed'
+meta 133 -> 0 'Failed'
+EnnGetBuffersInfo -> 0 raw u32[0..2]=1 1 0
+BufferInfo in[0] -> 0 upd=0 n=1 w=640 h=352 c=3 size=2703360 type=0 label=image_0
+BufferInfo out[0] -> 0 upd=0 n=1 w=80 h=44 c=130 size=915200 type=1 label=out130_58
+EnnAllocateAllBuffers -> 0 raw 1 1 0 (1.1 ms)
+buf[0] va=0x75e1978000 size=2703360 offset=0
+buf[1] va=0x75e1898000 size=915200 offset=0
+pipe: 13 gray frames, passes=10 (frames=13 each), in buf 2703360 out buf 915200
+pipe: input channels 3, output fp16
+pipe: post=2 threads=1 cpus=-
+pipe pass0 frame 0: norm+in 374 exec 3585 out 0 post 3709 total 7668 us, kp=1024
+pipe pass0 frame 1: norm+in 346 exec 3074 out 0 post 3138 total 6558 us, kp=1024
+pipe pass0 frame 2: norm+in 306 exec 3046 out 0 post 3340 total 6691 us, kp=1024
+pipe pass0 frame 3: norm+in 300 exec 3097 out 0 post 3204 total 6602 us, kp=1024
+pipe pass0 frame 4: norm+in 304 exec 2314 out 0 post 2771 total 5389 us, kp=1024
+pipe pass0 frame 5: norm+in 291 exec 3493 out 0 post 3244 total 7028 us, kp=1024
+pipe pass0 frame 6: norm+in 296 exec 1934 out 0 post 3273 total 5504 us, kp=1024
+pipe pass0 frame 7: norm+in 304 exec 3378 out 0 post 3133 total 6816 us, kp=1024
+pipe pass0 frame 8: norm+in 300 exec 2003 out 0 post 3257 total 5560 us, kp=1024
+pipe pass0 frame 9: norm+in 303 exec 2189 out 0 post 3286 total 5778 us, kp=1024
+pipe pass0 frame 10: norm+in 294 exec 2031 out 0 post 3039 total 5364 us, kp=1024
+pipe pass0 frame 11: norm+in 331 exec 2002 out 0 post 3139 total 5472 us, kp=1024
+pipe pass0 frame 12: norm+in 294 exec 1929 out 0 post 3338 total 5561 us, kp=1024
+PIPE pass 0 n=13 total p50=5778 p95=7028 | norm+in p50 303 | exec p50 2314 p95 3493 | out memcpy p50 0 | post p50 3244 p95 3340 us
+POSTSTAGES pass 0 mean us: softmax 2238 shuffle 0 nms+score 603 topk 130 desc 222 (v2: softmax = fused softmax+shuffle)
+SKIP pass 0 skipped cells per frame 142 of 3520
+PIPE pass 1 n=13 total p50=5386 p95=5558 | norm+in p50 313 | exec p50 1912 p95 2027 | out memcpy p50 0 | post p50 3155 p95 3282 us
+POSTSTAGES pass 1 mean us: softmax 2250 shuffle 0 nms+score 587 topk 119 desc 215 (v2: softmax = fused softmax+shuffle)
+SKIP pass 1 skipped cells per frame 142 of 3520
+PIPE pass 2 n=13 total p50=5598 p95=7531 | norm+in p50 344 | exec p50 2100 p95 2762 | out memcpy p50 0 | post p50 3082 p95 5136 us
+POSTSTAGES pass 2 mean us: softmax 2127 shuffle 0 nms+score 763 topk 167 desc 285 (v2: softmax = fused softmax+shuffle)
+SKIP pass 2 skipped cells per frame 142 of 3520
+PIPE pass 3 n=13 total p50=5512 p95=7503 | norm+in p50 355 | exec p50 2006 p95 4252 | out memcpy p50 0 | post p50 3108 p95 3249 us
+POSTSTAGES pass 3 mean us: softmax 2162 shuffle 0 nms+score 574 topk 116 desc 220 (v2: softmax = fused softmax+shuffle)
+SKIP pass 3 skipped cells per frame 142 of 3520
+PIPE pass 4 n=13 total p50=5884 p95=7583 | norm+in p50 306 | exec p50 2089 p95 3696 | out memcpy p50 0 | post p50 3192 p95 3703 us
+POSTSTAGES pass 4 mean us: softmax 2377 shuffle 0 nms+score 581 topk 167 desc 259 (v2: softmax = fused softmax+shuffle)
+SKIP pass 4 skipped cells per frame 142 of 3520
+PIPE pass 5 n=13 total p50=5571 p95=6611 | norm+in p50 315 | exec p50 2009 p95 2486 | out memcpy p50 0 | post p50 3088 p95 3289 us
+POSTSTAGES pass 5 mean us: softmax 2158 shuffle 0 nms+score 622 topk 147 desc 243 (v2: softmax = fused softmax+shuffle)
+SKIP pass 5 skipped cells per frame 142 of 3520
+PIPE pass 6 n=13 total p50=5404 p95=6099 | norm+in p50 320 | exec p50 2026 p95 2406 | out memcpy p50 0 | post p50 3043 p95 3240 us
+POSTSTAGES pass 6 mean us: softmax 2125 shuffle 0 nms+score 618 topk 114 desc 215 (v2: softmax = fused softmax+shuffle)
+SKIP pass 6 skipped cells per frame 142 of 3520
+PIPE pass 7 n=13 total p50=5360 p95=5689 | norm+in p50 323 | exec p50 1921 p95 2051 | out memcpy p50 0 | post p50 3097 p95 3255 us
+POSTSTAGES pass 7 mean us: softmax 2170 shuffle 0 nms+score 571 topk 169 desc 217 (v2: softmax = fused softmax+shuffle)
+SKIP pass 7 skipped cells per frame 142 of 3520
+PIPE pass 8 n=13 total p50=5890 p95=8811 | norm+in p50 334 | exec p50 2296 p95 4092 | out memcpy p50 0 | post p50 3127 p95 3686 us
+POSTSTAGES pass 8 mean us: softmax 2308 shuffle 0 nms+score 684 topk 139 desc 265 (v2: softmax = fused softmax+shuffle)
+SKIP pass 8 skipped cells per frame 142 of 3520
+PIPE pass 9 n=13 total p50=5538 p95=8152 | norm+in p50 314 | exec p50 2041 p95 3431 | out memcpy p50 0 | post p50 3092 p95 3257 us
+POSTSTAGES pass 9 mean us: softmax 2591 shuffle 0 nms+score 617 topk 117 desc 214 (v2: softmax = fused softmax+shuffle)
+SKIP pass 9 skipped cells per frame 142 of 3520
+EnnReleaseBuffers -> 0
+EnnCloseModel -> 0
+EnnDeinitialize -> 0
+nncrun end
