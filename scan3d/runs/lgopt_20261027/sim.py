@@ -42,7 +42,7 @@ class Cell:
         self.kfs = [x for x in L if x.get("type") == "kf"]
         self.loops = [x for x in L if x.get("type") == "loop"]
         self.G = None
-        if gt and self.res.get("ol_set") != "loop":
+        if gt and self.res.get("ol_set") not in ("loop", "hand"):
             poses = [json.loads(x) for x in gzip.open(d / f"{name}.poses.jsonl.gz", "rt")]
             self.G = XR.GT(self.res, self.res["rec"], poses)
         self._err = {}

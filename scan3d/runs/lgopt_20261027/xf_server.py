@@ -182,8 +182,7 @@ def main():
                             lg.net.conf.depth_confidence = o.lg_depth
                             if o.lg_prune_min is not None:
                                 lg.net.pruning_keypoint_thresholds = {k: o.lg_prune_min for k in lg.net.pruning_keypoint_thresholds}
-                            sys.stderr.write(f"[xf_server] LG width {o.lg_width} depth {o.lg_depth} prune_min {lg.net.pruning_min_kpts(dev)} filter {o.lg_conf}
-")
+                            sys.stderr.write(f"[xf_server] LG width {o.lg_width} depth {o.lg_depth} prune_min {lg.net.pruning_min_kpts(dev)} filter {o.lg_conf}\n")
                         WA, HA = A["size"]
                         WB, HB = B["size"]
                         out = lg({"keypoints0": A["pts"][None].float(), "keypoints1": B["pts"][None].float(),
