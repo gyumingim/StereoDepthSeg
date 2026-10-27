@@ -61,7 +61,8 @@ remap 좌표 = K_rect⁻¹q 를 새 렌즈로 투영한 값과 최대 0.016 px (
 ## 4. 폰 (설치)
 - 순서 (`phone_install.sh`): 폰 잠금(`scratchpad/team/phone_lock.d`) → 옛 세트를 `files/ov/bak_f222_20261024/` 로 **이동**(지우지 않음) → 새 세트 push → sha 확인 → 0.6.29 설치.
   조건: 화면 꺼짐 또는 런처 앞, 카메라 클라이언트 [], SKIN < 36 °C, ov_bridge/앱 프로세스 0. 카메라·앱은 켜지 않음.
-- 결과: (아래 install 로그 참조, 이 칸은 설치 후 갱신)
+- 결과 (`install.log`): 08:44–09:13 사용자가 폰을 써서 대기 → 09:13 화면 꺼짐(Dozing)·카메라 []·SKIN 34.9·프로세스 0 → 옛 20개 항목을 `bak_f222_20261024/` 로 이동,
+  새 세트 67개 파일 push (c4_nc05 포함), 폰 sha = 3절 새 값과 같음, **09:14:35 0.6.29 설치 성공** (versionCode 35, versionName 0.6.29-lens05-20261027 확인). 카메라·앱은 켜지 않음. 폰 실주행은 아직 안 함.
 - 바꾸지 않은 것 (목록): `files/ov/` 바로 아래 `estimator_config.yaml` / `kalibr_*.yaml` / `lens0u_remap.bin` (2026-10-18, **렌즈 2 = 다른 카메라** 640×480, 0.5 dpt 보드 보정 없음),
   `run_*` 기록, `live_stream*.bin`. PC 쪽 기본 렌즈 표 `lens_calib.DEFAULT_LENS` (벤치용, 앱 아님)도 그대로.
 - 롤백:
