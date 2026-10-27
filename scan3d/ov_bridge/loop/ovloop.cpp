@@ -114,7 +114,7 @@ bool Cfg::parse(const std::string &kv, std::string &err) {
                      {"xf_rp_deg", &xf_rp_deg, nullptr}, {"xf_yaw_deg", &xf_yaw_deg, nullptr}, {"xf_pnp_px", &xf_pnp_px, nullptr},
                      {"xf_tri_mv", nullptr, &xf_tri_mv}, {"xf_tri_rel", &xf_tri_rel, nullptr},
                      {"xf_max_tri_frac", &xf_max_tri_frac, nullptr}, {"consist_n", nullptr, &consist_n},
-                     {"xf_tri_mode", nullptr, &xf_tri_mode}};
+                     {"xf_tri_mode", nullptr, &xf_tri_mode}, {"xf_kf_every", &xf_kf_every, nullptr}};
     bool found = false;
     for (const auto &d : tab)
       if (k == d.n) {
@@ -239,6 +239,7 @@ struct LoopCloser::State {
     bool accepted;
   };
   std::deque<Recent> recent;  // verified loops of the last keyframes
+  double last_try = -1e9;     // lgopt xf_kf_every: time of the last keyframe whose candidates were verified
   double corr_yaw = 0.0;      // current target correction (applied to new keyframes before the next optimisation)
   Eigen::Vector3d corr_t = Eigen::Vector3d::Zero();
   int n_loop = 0;
@@ -527,6 +528,7 @@ void LoopCloser::process(KfIn &in) {
     S.edges.clear();
     S.db.clear();
     S.recent.clear();
+    S.last_try = -1e9;
     S.corr_yaw = 0.0;
     S.corr_t.setZero();
     S.n_loop = 0;
@@ -864,6 +866,10 @@ void LoopCloser::process(KfIn &in) {
     if (static_cast<int>(cand.size()) >= c_.max_cand || x.second < thr) break;
     if (kf.path - S.kfs[x.first].path < c_.min_path_m) continue;
     cand.push_back(x);
+  }
+  if (c_.xf_kf_every > 0.0 && !cand.empty()) {  // lgopt: phone budget, verify candidates at most every xf_kf_every s
+    if (in.t - S.last_try < c_.xf_kf_every) cand.clear();
+    else S.last_try = in.t;
   }
   S.n_cand += cand.size();
   const double ms_query = ms_since(t1);
