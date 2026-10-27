@@ -26,6 +26,8 @@ find_package(Boost REQUIRED COMPONENTS system filesystem thread date_time)
 find_package(Ceres REQUIRED)
 find_package(Threads REQUIRED)
 
+# vins/ (2026-10-26 ovswba): VINS-Mono estimator port (GPL-3, HKUST-Aerial-Robotics/VINS-Mono 90dabb5) for --swba
+set(OVSWBA_SRC vins/vins_bridge.cpp vins/estimator.cpp vins/feature_manager.cpp vins/parameters.cpp vins/utility/utility.cpp vins/factor/marginalization_factor.cpp vins/factor/pose_local_parameterization.cpp vins/factor/projection_factor.cpp vins/factor/projection_td_factor.cpp vins/initial/initial_aligment.cpp vins/initial/initial_ex_rotation.cpp vins/initial/initial_sfm.cpp vins/initial/solve_5pts.cpp)
 if (OV_FULL_SOURCE)
   # Same source list as android/CMakeLists.txt; patched copies from ovpatch/ replace the upstream files. The OpenVINS
   # part gets the flags of the libov_msckf_lib.so build (ovbuild flags.make), the bridge keeps its own -O2.
@@ -73,9 +75,11 @@ if (OV_FULL_SOURCE)
   target_link_libraries(ov_full PUBLIC ${OpenCV_LIBRARIES} ${Boost_LIBRARIES} ${CERES_LIBRARIES} Threads::Threads)
 
   # loop/ (2026-10-26 ovloop): --loop loop closure (runs only with --loop 1)
-  add_executable(ov_bridge main.cpp loop/ovloop.cpp loop/vocab.cpp loop/lc_features.cpp)
+  # vins/ (2026-10-26 ovswba): VINS-Mono estimator port, --swba (runs only with --swba 1); vins/compat = ROS stand-ins
+  add_executable(ov_bridge main.cpp loop/ovloop.cpp loop/vocab.cpp loop/lc_features.cpp ${OVSWBA_SRC})
   set_target_properties(ov_bridge PROPERTIES CXX_STANDARD 17)
-  target_include_directories(ov_bridge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/loop)
+  target_include_directories(ov_bridge PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/loop ${CMAKE_CURRENT_SOURCE_DIR}/vins
+    ${CMAKE_CURRENT_SOURCE_DIR}/vins/compat)
   target_link_libraries(ov_bridge PRIVATE ov_full)
   add_executable(ovloop_tool loop/ovloop_tool.cpp loop/vocab.cpp loop/lc_features.cpp)  # vocabulary training (PC)
   set_target_properties(ovloop_tool PROPERTIES CXX_STANDARD 17)
@@ -96,7 +100,8 @@ message(STATUS "ov_msckf_lib: ${OV_MSCKF_LIB} | OpenCV ${OpenCV_VERSION} | Ceres
 # ovpatch/TrackKLT.cpp (2026-10-24, arlat 0.6.15): patched TrackKLT (KLT overlap, identical output) compiled into the
 # executable; it overrides the copy in libov_msckf_lib.so (ENABLE_EXPORTS: the library's TrackKLT vtable binds to ours).
 # ovpatch/ovopt.cpp (2026-10-25): --ovopt flag storage (only frame_nocopy / prof work in this build, main.cpp checks).
-add_executable(ov_bridge main.cpp ovpatch/TrackKLT.cpp ovpatch/ovopt.cpp loop/ovloop.cpp loop/vocab.cpp loop/lc_features.cpp)
+add_executable(ov_bridge main.cpp ovpatch/TrackKLT.cpp ovpatch/ovopt.cpp loop/ovloop.cpp loop/vocab.cpp loop/lc_features.cpp
+  ${OVSWBA_SRC})  # vins/: --swba (2026-10-26 ovswba)
 set_target_properties(ov_bridge PROPERTIES ENABLE_EXPORTS ON)
 # 라이브러리 빌드와 같은 매크로여야 헤더(옵션 구조체)가 일치한다 (ovbuild: ROS 끔, ARUCO 켬)
 target_compile_definitions(ov_bridge PRIVATE ROS_AVAILABLE=0 ENABLE_ARUCO_TAGS=1
@@ -104,6 +109,8 @@ target_compile_definitions(ov_bridge PRIVATE ROS_AVAILABLE=0 ENABLE_ARUCO_TAGS=1
 target_include_directories(ov_bridge PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/ovpatch
   ${CMAKE_CURRENT_SOURCE_DIR}/loop
+  ${CMAKE_CURRENT_SOURCE_DIR}/vins
+  ${CMAKE_CURRENT_SOURCE_DIR}/vins/compat
   "${OV_SRC}/ov_msckf/src"
   "${OV_SRC}/ov_core/src"
   "${OV_SRC}/ov_core/src/track"

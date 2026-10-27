@@ -280,6 +280,7 @@
 #include "gyro_klt.h"  // ovpatch/: gyro-aided KLT counters (2026-10-26 ovgyro)
 #include "mav_out.h"  // --mav-udp drone output (2026-10-25, ovdrone)
 #include "ovloop.h"  // loop/: --loop loop closure (2026-10-26, ovloop)
+#include "vins_bridge.h"  // vins/: --swba VINS-Mono sliding-window estimator next to OpenVINS (2026-10-26, ovswba)
 
 #include "core/VioManager.h"
 #include "core/VioManagerOptions.h"
@@ -381,6 +382,11 @@ struct Args {
   int loop_sync = 0;          // --loop-sync 0|1 (1 = the VIO thread waits for each keyframe: deterministic PC evaluation only)
   double loop_out_hz = 5.0;   // --loop-out-hz HZ: VIOP MAP_ODOM / MAVLink DEBUG_VECT rate (+ at once on a new optimisation)
   int loop_explicit = 0;      // integ2 0.6.28: --loop given on the command line (else a --profile may have set it)
+  // 2026-10-26 ovswba: VINS-Mono sliding-window BA next to OpenVINS, default off = no VINS code runs, outputs unchanged
+  int swba = 0;               // --swba 0|1
+  std::string swba_cfg;       // --swba-cfg K=V,... (vins/vins_bridge.h Cfg)
+  std::string swba_log;       // --swba-log FILE (JSON line per VINS frame)
+  int swba_sync = 0;          // --swba-sync 0|1 (1 = VINS runs inline in the VIO thread: deterministic PC evaluation only)
 };
 
 // --health rules (header); --health-cfg upd_deg=0.2,... overrides
@@ -880,13 +886,14 @@ public:
 // --loop: "map" object of a pose / pred line = the VIO pose in the loop-closure map frame, p_map = Rz(yaw) p + t
 // (published T_map_odom, rate limited). The VIO fields of the line are not changed.
 void map_fields(std::ostringstream &o, const ovloop::MapOdom &m, const Eigen::Matrix3d &R_ItoG, const Eigen::Vector3d &p,
-                const Eigen::Vector3d &v, const Eigen::Matrix3d *R_ItoC, const Eigen::Vector3d *p_IinC) {
+                const Eigen::Vector3d &v, const Eigen::Matrix3d *R_ItoC, const Eigen::Vector3d *p_IinC,
+                const char *key = "map") {  // ovswba 2026-10-26: key "swba" = the --swba corrected pose (same fields)
   Eigen::Matrix3d Rz;
   Rz << std::cos(m.yaw), -std::sin(m.yaw), 0, std::sin(m.yaw), std::cos(m.yaw), 0, 0, 0, 1;
   const Eigen::Matrix3d R = Rz * R_ItoG;
   const Eigen::Vector3d pm = Rz * p + m.t, vm = Rz * v;
   Eigen::Quaterniond q(R);
-  o << ",\"map\":{\"valid\":" << (m.valid ? "true" : "false") << ",\"p\":";
+  o << ",\"" << key << "\":{\"valid\":" << (m.valid ? "true" : "false") << ",\"p\":";
   jarr(o, pm);
   o << ",\"q\":[";
   jnum(o, q.x()); o << ","; jnum(o, q.y()); o << ","; jnum(o, q.z()); o << ","; jnum(o, q.w());
@@ -1319,7 +1326,25 @@ public:
         return;
       }
     }
+    if (a.swba) {  // --swba (2026-10-26 ovswba): config first (make_system uses swba_on_ to build VioAcc)
+      std::string err;
+      if (!a.swba_cfg.empty() && !swba_cfg_.parse(a.swba_cfg, err)) {
+        std::fprintf(stderr, "[ov_bridge] %s\n", err.c_str());
+        ok_ = false;
+        return;
+      }
+      swba_cfg_.log = a.swba_log;
+      swba_cfg_.sync = a.swba_sync;
+      swba_on_ = true;
+    }
     make_system();
+    if (swba_on_) {  // --swba: VINS-Mono runner (extrinsics = the filter's camera 0 calibration at start, OpenVINS noises)
+      auto st = sys_->get_state();
+      auto calib0 = st->_calib_IMUtoCAM.at(0);
+      swba_.reset(new ovswba::Runner(swba_cfg_, calib0->Rot(), calib0->pos(), params_.imu_noises.sigma_a,
+                                     params_.imu_noises.sigma_ab, params_.imu_noises.sigma_w, params_.imu_noises.sigma_wb,
+                                     params_.gravity_mag));
+    }
   }
 
   bool ok() const { return ok_; }
@@ -1337,7 +1362,7 @@ public:
   // VioManager 새로 만들기. 붙잡아 둔 IMU(imu_hold_) 는 새 시스템에 그대로 넣을 수 있으므로 남긴다.
   // --loop (2026-10-26 ovloop): VioAcc (= VioManager + tracker read access) only with --loop 1
   std::shared_ptr<ov_msckf::VioManager> new_vio(ov_msckf::VioManagerOptions &p) {
-    if (loop_) return std::make_shared<VioAcc>(p);
+    if (loop_ || swba_on_) return std::make_shared<VioAcc>(p);  // ovswba: --swba reads the tracker too
     return std::make_shared<ov_msckf::VioManager>(p);
   }
 
@@ -1346,6 +1371,7 @@ public:
     if (p) sys_ = new_vio(*p);
     else sys_ = new_vio(params_);
     if (loop_ && had_sys) loop_->reset_session("VIO re-initialised");  // --loop: new world frame -> new graph
+    if (swba_ && had_sys) swba_->reset_session("VIO re-initialised");  // --swba: new OpenVINS world -> realign
     pred_pending_ = false;
     snap_dirty_ = true;  // --pred-thread: the published snapshot is stale
     make_shadow(false);
@@ -1808,6 +1834,7 @@ private:
           }
         }
         last_imu_t_ = m.timestamp;
+        if (swba_) swba_->push_imu(m.timestamp, m.am, m.wm);  // --swba (ovswba): the same samples the filter got
         imu_recent_.push_back(m);  // 상태 주입 재시작 때 새 VioManager 에 다시 넣을 최근 IMU (2 s)
         while (!imu_recent_.empty() && imu_recent_.front().timestamp < m.timestamp - 2.0) imu_recent_.pop_front();
         continue;
@@ -1991,6 +2018,7 @@ private:
       return;
     }
     if (loop_) loop_after_frame(c);  // --loop (2026-10-26 ovloop): keyframe copy + map output (reads only)
+    if (swba_) swba_after_frame(c);  // --swba (2026-10-26 ovswba): VINS frame copy (reads only)
     if (args_.predict > 0 && sys_->initialized()) {  // --predict: serve() emits it once the input is drained
       pred_pending_ = true;
       pred_cam_t_ns_ = c.t_ns;
@@ -2201,6 +2229,56 @@ private:
     }
     kf->cap_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
     loop_->push(std::move(kf));
+  }
+  // ---- --swba (2026-10-26 ovswba) ----
+  // VIO thread, after the pose line: every ~1/freq s copy the tracker's current points (undistorted) + the filter pose
+  void swba_after_frame(const CamMsg &c) {
+    if (c.data.images.empty() || c.data.images[0].empty() || c.blank) return;
+    auto st = sys_->get_state();
+    const bool ov = sys_->initialized() && !lost_ && !late_lost_ && st->_timestamp >= 0.0;
+    const double t = ov ? st->_timestamp : c.t + st->_calib_dt_CAMtoIMU->value()(0);
+    if (!swba_->want_frame(t)) return;
+    const auto t0 = std::chrono::steady_clock::now();
+    std::unique_ptr<ovswba::FrameIn> f(new ovswba::FrameIn());
+    f->t = t;
+    f->t_ns = c.t_ns;
+    f->ov_valid = ov;
+    if (ov) {
+      f->R_ItoG = st->_imu->Rot().transpose();
+      f->p_IinG = st->_imu->pos();
+      f->v_IinG = st->_imu->vel();
+      f->bg = st->_imu->bias_g();
+      f->ba = st->_imu->bias_a();
+    }
+    auto tf = std::static_pointer_cast<VioAcc>(sys_)->feats();
+    auto obs = tf->get_last_obs();
+    auto ids = tf->get_last_ids();
+    auto cam = st->_cam_intrinsics_cameras.at(0);
+    if (obs.count(0) && ids.count(0)) {
+      const auto &o0 = obs.at(0);
+      const auto &i0 = ids.at(0);
+      const size_t n = std::min(o0.size(), i0.size());
+      f->id.reserve(n);
+      f->x.reserve(n);
+      f->y.reserve(n);
+      f->u.reserve(n);
+      f->v.reserve(n);
+      for (size_t i = 0; i < n; i++) {
+        const cv::Point2f un = cam->undistort_cv(o0[i].pt);
+        f->id.push_back(static_cast<int>(i0[i]));
+        f->x.push_back(un.x);
+        f->y.push_back(un.y);
+        f->u.push_back(o0[i].pt.x);
+        f->v.push_back(o0[i].pt.y);
+      }
+    }
+    f->cap_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+    swba_->push_frame(std::move(f));
+  }
+  void log_swba() {
+    if (!swba_) return;
+    swba_->finish(30.0);
+    swba_->report();
   }
   void log_loop() {
     if (!loop_) return;
@@ -2481,6 +2559,10 @@ private:
         last_map_ = loop_->step_output(c.t, p_IinG);
         map_fields(o, last_map_, R_ItoG, p_IinG, v, &R_ItoC, &p_IinC);
       }
+      if (swba_) {  // --swba (2026-10-26 ovswba): VINS-corrected pose (same limiter / fields as "map"), frame time steps
+        last_swba_ = swba_->step_output(c.t, p_IinG);
+        map_fields(o, last_swba_, R_ItoG, p_IinG, v, &R_ItoC, &p_IinC, "swba");
+      }
     }
     o << ",\"dt_cam_imu\":";
     jnum(o, st->_calib_dt_CAMtoIMU->value()(0));
@@ -2655,6 +2737,11 @@ private:
   ovloop::MapOdom last_map_;          // published value of the latest pose line
   uint32_t map_sent_ver_ = 0;
   double map_sent_t_ = -1e300;
+  // --swba (2026-10-26 ovswba)
+  bool swba_on_ = false;
+  ovswba::Cfg swba_cfg_;
+  std::unique_ptr<ovswba::Runner> swba_;
+  ovloop::MapOdom last_swba_;
 };
 
 // 한 연결(또는 stdin) 을 끝까지 처리. 반환 false = QUIT 받음.
@@ -2889,7 +2976,8 @@ void usage() {
                "                 [--mav-udp HOST:PORT | --viop-udp HOST:PORT] [--viop-hb-hz HZ] [--viop-hb-src 0|1]\n"
                "                 [--init-still 0|1] [--health 0|1] [--health-log FILE] [--health-cfg K=V,..] [--klt-stats 0|1] [--pipe 0] [--recover N]\n"
                "                 [--recover-max-gap S] [--recover-min-feats N] [--recover-full 0|1] [--test-blank T0:D,..]\n"
-               "                 [--loop 0|1 --loop-vocab FILE [--loop-cfg K=V,..] [--loop-log FILE] [--loop-sync 0|1] [--loop-out-hz HZ] [--loop-dump DIR] [--loop-vpr FILE]]\n");
+               "                 [--loop 0|1 --loop-vocab FILE [--loop-cfg K=V,..] [--loop-log FILE] [--loop-sync 0|1] [--loop-out-hz HZ] [--loop-dump DIR] [--loop-vpr FILE]]\n"
+               "                 [--swba 0|1 [--swba-cfg K=V,..] [--swba-log FILE] [--swba-sync 0|1]]  (VINS-Mono window BA, vins/vins_bridge.h)\n");
 }
 
 }  // namespace
@@ -3036,6 +3124,10 @@ int main(int argc, char **argv) {
     else if (s == "--loop-vpr") a.loop_vpr = next();
     else if (s == "--loop-sync") a.loop_sync = std::stoi(next()) != 0 ? 1 : 0;
     else if (s == "--loop-out-hz") a.loop_out_hz = std::max(0.0, std::stod(next()));
+    else if (s == "--swba") a.swba = std::stoi(next()) != 0 ? 1 : 0;  // 2026-10-26 ovswba
+    else if (s == "--swba-cfg") a.swba_cfg = next();
+    else if (s == "--swba-log") a.swba_log = next();
+    else if (s == "--swba-sync") a.swba_sync = std::stoi(next()) != 0 ? 1 : 0;
     else if (s == "--reinit-max-gap") a.reinit_max_gap = std::stod(next());
     else if (s == "--reinit-sigma") {  // ori_deg,pos_m,vel_m_s
       std::string v = next();
@@ -3240,6 +3332,7 @@ int main(int argc, char **argv) {
     b.log_rs();
     b.log_gyro_klt();  // 2026-10-26 ovgyro
     b.log_loop();      // 2026-10-26 ovloop (--loop 1 only)
+    b.log_swba();      // 2026-10-26 ovswba (--swba 1 only)
     if (g_mav) {
       g_mav->hb_thread_stop();  // --viop-hb-src 1 (no-op otherwise)
       for (int i = 0; i < 3; i++) g_mav->hb_tick(false, false, true);  // VIOP: "stopping" heartbeats on a clean exit
