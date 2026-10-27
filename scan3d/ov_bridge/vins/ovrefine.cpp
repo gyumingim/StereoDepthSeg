@@ -42,14 +42,24 @@ public:
     Eigen::Matrix<double, 15, 15> C;
     for (int a = 0; a < 5; a++)
       for (int b = 0; b < 5; b++) C.block<3, 3>(3 * a, 3 * b) = s.P.block<3, 3>(map_[a], map_[b]);
+    // 15:36 fix: the first version inverted C and took an LLT of the inverse; that failed numerically for every window
+    // with prior_scale 4 (all R10p4 windows "unusable"; probable cause: an eigenvalue of C slightly below 0 that the
+    // fixed +1e-12 no longer covered after scaling). Now: eigen-decomposition C = V D V^T, eigenvalues clamped at 0 and
+    // + 1e-12 (= the old C + 1e-12 I whenever that was positive definite), L = D^-1/2 V^T -> L^T L = (C + 1e-12 I)^-1.
     C = 0.5 * (C + C.transpose()) * scale;
-    C.diagonal().array() += 1e-12;
-    const Eigen::Matrix<double, 15, 15> I = C.inverse();
-    Eigen::LLT<Eigen::Matrix<double, 15, 15>> llt(0.5 * (I + I.transpose()));
-    L_ = llt.matrixL().transpose();  // L^T L = I
-    ok_ = llt.info() == Eigen::Success && L_.allFinite();
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 15, 15>> es(C);
+    ok_ = es.info() == Eigen::Success;
+    Eigen::Matrix<double, 15, 1> d = es.eigenvalues();
+    n_neg_ = 0;
+    for (int i = 0; i < 15; i++) {
+      if (d(i) < 0.0) n_neg_++;
+      d(i) = 1.0 / std::sqrt(std::max(d(i), 0.0) + 1e-12);
+    }
+    L_ = d.asDiagonal() * es.eigenvectors().transpose();
+    ok_ = ok_ && L_.allFinite();
   }
   bool ok() const { return ok_; }
+  int n_neg() const { return n_neg_; }
   bool Evaluate(double const *const *x, double *res, double **J) const override {
     const Eigen::Vector3d p(x[0][0], x[0][1], x[0][2]);
     const Eigen::Quaterniond q(x[0][6], x[0][3], x[0][4], x[0][5]);
@@ -87,6 +97,7 @@ private:
   Eigen::Vector3d v0_, ba0_, bg0_;
   Eigen::Matrix<double, 15, 15> L_;
   bool ok_ = false;
+  int n_neg_ = 0;
 };
 
 }  // namespace
@@ -313,6 +324,7 @@ void Refiner::solve() {
   int n_res_img = 0;
   std::vector<ceres::ResidualBlockId> grp[3];  // prior, IMU, image (diagnostic costs with --refine-log)
   double gc0[3] = {0, 0, 0}, gc1[3] = {0, 0, 0}, imu_r[3] = {0, 0, 0};
+  int prior_neg = -1;  // negative eigenvalues of the OpenVINS prior covariance (clamped)
   if (static_cast<int>(feats.size()) < c_.min_feat) reason = 3;
   for (int i = 1; i < n && reason < 0; i++)
     if (!win_[i]->pre || win_[i]->pre->sum_dt <= 0.0) reason = 7;
@@ -326,6 +338,7 @@ void Refiner::solve() {
     prob.AddParameterBlock(ex.data(), 7, new PoseLocalParameterization());
     prob.SetParameterBlockConstant(ex.data());
     auto *pf = new PriorFactor(*win_[0], c_.prior_scale);
+    prior_neg = pf->n_neg();
     if (!pf->ok()) {
       delete pf;
       reason = 0;
@@ -410,12 +423,12 @@ void Refiner::solve() {
                  "{\"type\":\"win\",\"t_ns\":%lld,\"t\":%.6f,\"n\":%d,\"feat\":%zu,\"tri_fail\":%d,\"res_img\":%d,\"cost0\":%.6g,\"cost1\":%.6g,"
                  "\"it\":%zu,\"term\":%d,\"dp_mm\":%.4f,\"dth_deg\":%.5f,\"ok\":%d,\"why\":\"%s\",\"ms\":%.3f,\"solve_ms\":%.3f,"
                  "\"p_ref\":[%.6f,%.6f,%.6f],\"p_ov\":[%.6f,%.6f,%.6f],\"n_ok\":%llu,\"n_rej\":%llu,"
-                 "\"gc0\":[%.4g,%.4g,%.4g],\"gc1\":[%.4g,%.4g,%.4g],\"imu_r0\":[%.4g,%.4g,%.4g]}\n",
+                 "\"gc0\":[%.4g,%.4g,%.4g],\"gc1\":[%.4g,%.4g,%.4g],\"imu_r0\":[%.4g,%.4g,%.4g],\"prior_neg\":%d}\n",
                  static_cast<long long>(L.t_ns), L.t, n, feats.size(), n_tri_fail, n_res_img, sum.initial_cost, sum.final_cost,
                  sum.iterations.size(), static_cast<int>(sum.termination_type), dp * 1000.0, dth, reason < 0 ? 1 : 0,
                  reason < 0 ? "" : kRej[reason], ms, ms_solve, p_ref(0), p_ref(1), p_ref(2), L.p(0), L.p(1), L.p(2),
                  static_cast<unsigned long long>(n_ok_), static_cast<unsigned long long>(n_rej_), gc0[0], gc0[1], gc0[2], gc1[0],
-                 gc1[1], gc1[2], imu_r[0], imu_r[1], imu_r[2]);
+                 gc1[1], gc1[2], imu_r[0], imu_r[1], imu_r[2], prior_neg);
   }
 }
 
