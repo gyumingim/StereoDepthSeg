@@ -1,0 +1,46 @@
+{
+ "made": "2026-10-27 22:43:36",
+ "x_range": [
+  -4.793435096740723,
+  10.644503593444824
+ ],
+ "c3": {
+  "onnx": "c3_xfeat3ch_fold_m5p11_e2400/xfeat_3ch_cat1out_fold_m5p11.onnx",
+  "input": "image_u",
+  "lo": -5.0,
+  "hi": 11.0,
+  "u_range": [
+   0.012910306453704834,
+   0.9777814745903015
+  ],
+  "share_u_lt0": 0.0,
+  "share_u_gt1": 0.0,
+  "pc_fp32_onnx_vs_ref_snr_db": 115.69980095357204
+ },
+ "c4": {
+  "onnx": "c4_xfeat3ch_fold_m3p8_e2400/xfeat_3ch_cat1out_fold_m3p8.onnx",
+  "input": "image_u",
+  "lo": -3.0,
+  "hi": 8.0,
+  "u_range": [
+   -0.16303955018520355,
+   1.2404093742370605
+  ],
+  "share_u_lt0": 0.0032441679414335666,
+  "share_u_gt1": 0.0006207659527972028,
+  "pc_fp32_onnx_vs_ref_snr_db": 118.09604922219782
+ },
+ "a3": {
+  "onnx": "a3_xfeat1ch_cat1out_e2400/xfeat_backbone_noadd_op13_cat1out.onnx",
+  "input": "image",
+  "lo": null,
+  "hi": null,
+  "u_range": [
+   -4.793435096740723,
+   10.644503593444824
+  ],
+  "share_u_lt0": 0.5341107135052447,
+  "share_u_gt1": 0.10761274857954546,
+  "pc_fp32_onnx_vs_ref_snr_db": 127.3235044225626
+ }
+}
