@@ -15,5 +15,5 @@
 | X1t3m1 | X1t3 + xf_tri_mv 1 | b 순차: 시차 3° 고정 뒤 다중 시점 | 10-27 13:10 |
 | X1Lt3 | LighterGlue + xf_tri_deg 3 | LG 에 같은 1순위 개선 (코디네이터) | 10-27 13:10 |
 | GCHK | X1t3 + 문 전부 브리지 안에서 (inl 40, ratio 0.3, cells 10, rp 2, yaw 3, trifrac 0.9, consist_n 2) | 구현 확인용 (sim 과 같은지), 판정에 안 씀 | 10-27 13:12 |
-| **FNN** | X1t3 (NN 1k 640, 시차 3°) + 문 ratio 0.3 · cells 10 · rp 2° · yaw 3° (브리지 안), XFeat 결과만 | 개발 선택 규칙 1위 (good 2642 vs B60 1675, 틀림 0/0, 2.5° 1 ≤ 2) | 10-27 14:2x |
-| **FLG** | X1Lt3 (LG 1k, 시차 3°) + 문 inl 60 · ratio 0.6 · rp 2° | LG 최종 (good 2453, 틀림 0, 2.5° 0) — 코디네이터: LG 는 같은 시험만 | 10-27 14:2x |
+| **FNN** | X1t3 (NN 1k 640, 시차 3°) + 문 ratio 0.3 · cells 10 · rp 2° · yaw 3° (브리지 안), XFeat 결과만 | 개발 선택 규칙 1위 (good 2642 vs B60 1675, 틀림 0/0, 2.5° 1 ≤ 2) | 10-27 13:3x |
+| **FLG** | X1Lt3 (LG 1k, 시차 3°) + 문 inl 60 · ratio 0.6 · rp 2° | LG 최종 (good 2453, 틀림 0, 2.5° 0) — 코디네이터: LG 는 같은 시험만 | 10-27 13:3x |
