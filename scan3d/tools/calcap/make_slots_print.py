@@ -101,7 +101,8 @@ def build():
     S.append(slot("MC", "M", "C", turn=-30, lean=30))
     S.append(slot("MC", "M", "C", turn=20, roll=45))
     # M-EK: 4 edges + 4 corners at 30 deg (8)
-    for p, ax, a in (("L", "turn", 30), ("R", "turn", -30), ("T", "lean", -30), ("B", "lean", 30)):
+    # inner side (towards the image centre) nearer, same as the M-EK corners (audit 10-27: T/B signs were flipped)
+    for p, ax, a in (("L", "turn", 30), ("R", "turn", -30), ("T", "lean", 30), ("B", "lean", -30)):
         S.append(slot("MEK", "M", p, **{ax: a}))
     for p in ("TL", "TR", "BL", "BR"):
         sx = -1 if "L" in p else 1

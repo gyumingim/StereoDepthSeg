@@ -224,6 +224,15 @@ def new_set():
 
 
 def load_set(d):
+    # lenskit 10-27: refuse to continue a set with other boards / slot list than it was started with
+    sj = os.path.join(d, "set.json")
+    if os.path.exists(sj):
+        j = json.load(open(sj, encoding="utf-8"))
+        old_b = j.get("boards")
+        old_s = os.path.basename(j.get("slots_file") or "")
+        if (old_b is not None and old_b != [b.name for b in BOARDS]) or old_s != os.path.basename(A.slots or ""):
+            sys.exit(f"--set {d}: set.json boards {old_b} / slots '{old_s}' differ from this run "
+                     f"({[b.name for b in BOARDS]} / '{os.path.basename(A.slots or '')}') - give the same --boards --slots")
     with lock:
         state["set_dir"] = d
         captures.clear()

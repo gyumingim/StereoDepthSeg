@@ -1,39 +1,39 @@
-lenskit_run 2026-10-27 10:30:30  A=/home/system/scanner/tmp_lenskit/synsag  B=/home/system/scanner/tmp_lenskit/synsag2  G=none  board=board_print_A1_12x9  app_focus=0.5  out=/home/system/scanner/tmp_lenskit/runsag
-git 0236df5 lenskit-20261027
+lenskit_run 2026-10-27 10:48:46  A=/home/system/scanner/tmp_lenskit/synsag  B=/home/system/scanner/tmp_lenskit/synsag2  G=none  board=board_print_A1_12x9  app_focus=0.5  out=/home/system/scanner/tmp_lenskit/runsag
+git ed65c95 lenskit-20261027
 == 1. OpenCV (calcap_calib)
-   반반 나누기 60회: 중앙값 |dfx| 0.055 % |dcx| 0.162 |dcy| 0.148 px · 통과 fx 1.0 pp 1.0 둘다 1.0 (|dfx| <= 0.3 %, |dcx|,|dcy| <= 3.0 px)
-   표준편차 fx fy cx cy [0.066, 0.066, 0.034, 0.036] · 지금 기본값(cal20261024d) 대비 {'dfx_pct': np.float64(0.312), 'dcx': np.float64(1.88), 'dcy': np.float64(-0.88)}
-   그룹별 fx: near<1.15m 1290.26 (34칸), far>=1.15m 1289.54 (21칸), tilt<=25 - (3칸), tilt>25 1290.19 (52칸)
+   반반 나누기 60회: 중앙값 |dfx| 0.056 % |dcx| 0.169 |dcy| 0.149 px · 통과 fx 1.0 pp 1.0 둘다 1.0 (|dfx| <= 0.3 %, |dcx|,|dcy| <= 3.0 px)
+   표준편차 fx fy cx cy [0.067, 0.066, 0.034, 0.036] · 지금 기본값(cal20261024d) 대비 {'dfx_pct': np.float64(0.311), 'dcx': np.float64(1.88), 'dcy': np.float64(-0.88)}
+   그룹별 fx: near<1.15m 1290.26 (34칸), far>=1.15m 1289.44 (21칸), tilt<=25 - (3칸), tilt>25 1290.18 (52칸)
    덮은 정도: {'fine_frac': 0.858, 'r_max': 0.99, 'r_p90': 0.628, 'x_range': [18, 1911], 'y_range': [7, 1069]}
-[k1k2p] fx 1290.16 fy 1292.06 cx 967.03 cy 550.47 k [0.086781, -0.069382] · rms 0.1364 px · 사진 110 (버림 0)
-   한 칸 빼기(LOPO): fx [1290.04, 1290.33] cx [966.83, 967.25] cy [550.15, 550.54] · 시험오차 0.1388 px
-   반반 나누기 60회: 중앙값 |dfx| 0.058 % |dcx| 0.874 |dcy| 0.705 px · 통과 fx 1.0 pp 0.98 둘다 0.98 (|dfx| <= 0.3 %, |dcx|,|dcy| <= 3.0 px)
-   표준편차 fx fy cx cy [0.064, 0.064, 0.101, 0.094] · 지금 기본값(cal20261024d) 대비 {'dfx_pct': np.float64(0.31), 'dcx': np.float64(1.9), 'dcy': np.float64(-3.96)}
-   그룹별 fx: near<1.15m 1290.24 (34칸), far>=1.15m 1289.55 (21칸), tilt<=25 - (3칸), tilt>25 1290.17 (52칸)
+[k1k2p] fx 1290.15 fy 1292.05 cx 967.03 cy 550.47 k [0.086784, -0.069388] · rms 0.1373 px · 사진 110 (버림 0)
+   한 칸 빼기(LOPO): fx [1290.03, 1290.31] cx [966.83, 967.25] cy [550.14, 550.54] · 시험오차 0.1387 px
+   반반 나누기 60회: 중앙값 |dfx| 0.06 % |dcx| 0.846 |dcy| 0.688 px · 통과 fx 1.0 pp 0.98 둘다 0.98 (|dfx| <= 0.3 %, |dcx|,|dcy| <= 3.0 px)
+   표준편차 fx fy cx cy [0.065, 0.064, 0.102, 0.094] · 지금 기본값(cal20261024d) 대비 {'dfx_pct': np.float64(0.309), 'dcx': np.float64(1.9), 'dcy': np.float64(-3.96)}
+   그룹별 fx: near<1.15m 1290.24 (34칸), far>=1.15m 1289.44 (21칸), tilt<=25 - (3칸), tilt>25 1290.15 (52칸)
    덮은 정도: {'fine_frac': 0.858, 'r_max': 0.99, 'r_p90': 0.628, 'x_range': [18, 1911], 'y_range': [7, 1069]}
 판정(k12_notan): 반복성 통과. 이 값은 config/lens 에 자동으로 넣지 않음 (사람이 확인 후 결정).
 결과: /home/system/scanner/tmp_lenskit/synsag/calib
-   반반 나누기 60회: 중앙값 |dfx| 0.06 % |dcx| 0.13 |dcy| 0.179 px · 통과 fx 1.0 pp 1.0 둘다 1.0 (|dfx| <= 0.3 %, |dcx|,|dcy| <= 3.0 px)
-   표준편차 fx fy cx cy [0.066, 0.066, 0.034, 0.036] · 지금 기본값(cal20261024d) 대비 {'dfx_pct': np.float64(0.316), 'dcx': np.float64(2.1), 'dcy': np.float64(-0.88)}
-   그룹별 fx: near<1.15m 1290.26 (34칸), far>=1.15m 1290.22 (21칸), tilt<=25 - (3칸), tilt>25 1290.23 (52칸)
+   반반 나누기 60회: 중앙값 |dfx| 0.055 % |dcx| 0.128 |dcy| 0.178 px · 통과 fx 1.0 pp 1.0 둘다 1.0 (|dfx| <= 0.3 %, |dcx|,|dcy| <= 3.0 px)
+   표준편차 fx fy cx cy [0.067, 0.066, 0.034, 0.037] · 지금 기본값(cal20261024d) 대비 {'dfx_pct': np.float64(0.315), 'dcx': np.float64(2.1), 'dcy': np.float64(-0.87)}
+   그룹별 fx: near<1.15m 1290.26 (34칸), far>=1.15m 1290.37 (21칸), tilt<=25 - (3칸), tilt>25 1290.22 (52칸)
    덮은 정도: {'fine_frac': 0.854, 'r_max': 0.987, 'r_p90': 0.625, 'x_range': [29, 1909], 'y_range': [8, 1070]}
-[k1k2p] fx 1290.24 fy 1292.2 cx 966.56 cy 550.29 k [0.08702, -0.069649] · rms 0.1359 px · 사진 110 (버림 0)
-   한 칸 빼기(LOPO): fx [1290.1, 1290.39] cx [966.33, 966.76] cy [549.99, 550.35] · 시험오차 0.1369 px
-   반반 나누기 60회: 중앙값 |dfx| 0.046 % |dcx| 0.754 |dcy| 0.524 px · 통과 fx 1.0 pp 1.0 둘다 1.0 (|dfx| <= 0.3 %, |dcx|,|dcy| <= 3.0 px)
-   표준편차 fx fy cx cy [0.064, 0.064, 0.104, 0.094] · 지금 기본값(cal20261024d) 대비 {'dfx_pct': np.float64(0.316), 'dcx': np.float64(1.43), 'dcy': np.float64(-4.14)}
-   그룹별 fx: near<1.15m 1290.27 (34칸), far>=1.15m 1290.13 (21칸), tilt<=25 - (3칸), tilt>25 1290.23 (52칸)
+[k1k2p] fx 1290.23 fy 1292.2 cx 966.56 cy 550.27 k [0.087011, -0.069638] · rms 0.137 px · 사진 110 (버림 0)
+   한 칸 빼기(LOPO): fx [1290.1, 1290.39] cx [966.33, 966.77] cy [549.97, 550.33] · 시험오차 0.1368 px
+   반반 나누기 60회: 중앙값 |dfx| 0.051 % |dcx| 0.745 |dcy| 0.498 px · 통과 fx 1.0 pp 1.0 둘다 1.0 (|dfx| <= 0.3 %, |dcx|,|dcy| <= 3.0 px)
+   표준편차 fx fy cx cy [0.064, 0.064, 0.104, 0.095] · 지금 기본값(cal20261024d) 대비 {'dfx_pct': np.float64(0.315), 'dcx': np.float64(1.43), 'dcy': np.float64(-4.16)}
+   그룹별 fx: near<1.15m 1290.27 (34칸), far>=1.15m 1290.34 (21칸), tilt<=25 - (3칸), tilt>25 1290.23 (52칸)
    덮은 정도: {'fine_frac': 0.854, 'r_max': 0.987, 'r_p90': 0.625, 'x_range': [29, 1909], 'y_range': [8, 1070]}
 판정(k12_notan): 반복성 통과. 이 값은 config/lens 에 자동으로 넣지 않음 (사람이 확인 후 결정).
 결과: /home/system/scanner/tmp_lenskit/synsag2/calib
-   반반 나누기 60회: 중앙값 |dfx| 0.033 % |dcx| 0.11 |dcy| 0.111 px · 통과 fx 1.0 pp 1.0 둘다 1.0 (|dfx| <= 0.3 %, |dcx|,|dcy| <= 3.0 px)
-   표준편차 fx fy cx cy [0.047, 0.047, 0.024, 0.026] · 지금 기본값(cal20261024d) 대비 {'dfx_pct': np.float64(0.313), 'dcx': np.float64(1.99), 'dcy': np.float64(-0.88)}
-   그룹별 fx: near<1.15m 1290.26 (68칸), far>=1.15m 1289.87 (42칸), tilt<=25 1290.2 (6칸), tilt>25 1290.21 (104칸)
+   반반 나누기 60회: 중앙값 |dfx| 0.032 % |dcx| 0.116 |dcy| 0.115 px · 통과 fx 1.0 pp 1.0 둘다 1.0 (|dfx| <= 0.3 %, |dcx|,|dcy| <= 3.0 px)
+   표준편차 fx fy cx cy [0.047, 0.047, 0.024, 0.026] · 지금 기본값(cal20261024d) 대비 {'dfx_pct': np.float64(0.313), 'dcx': np.float64(1.99), 'dcy': np.float64(-0.87)}
+   그룹별 fx: near<1.15m 1290.26 (68칸), far>=1.15m 1289.9 (42칸), tilt<=25 1290.2 (6칸), tilt>25 1290.2 (104칸)
    덮은 정도: {'fine_frac': 0.891, 'r_max': 0.99, 'r_p90': 0.627, 'x_range': [18, 1911], 'y_range': [7, 1070]}
-[k1k2p] fx 1290.2 fy 1292.12 cx 966.81 cy 550.38 k [0.086902, -0.069515] · rms 0.1363 px · 사진 220 (버림 0)
-   한 칸 빼기(LOPO): fx [1290.13, 1290.28] cx [966.69, 966.92] cy [550.24, 550.42] · 시험오차 0.1341 px
-   반반 나누기 60회: 중앙값 |dfx| 0.044 % |dcx| 0.525 |dcy| 0.413 px · 통과 fx 1.0 pp 1.0 둘다 1.0 (|dfx| <= 0.3 %, |dcx|,|dcy| <= 3.0 px)
-   표준편차 fx fy cx cy [0.045, 0.045, 0.073, 0.066] · 지금 기본값(cal20261024d) 대비 {'dfx_pct': np.float64(0.313), 'dcx': np.float64(1.68), 'dcy': np.float64(-4.05)}
-   그룹별 fx: near<1.15m 1290.25 (68칸), far>=1.15m 1289.84 (42칸), tilt<=25 1290.53 (6칸), tilt>25 1290.2 (104칸)
+[k1k2p] fx 1290.19 fy 1292.12 cx 966.81 cy 550.37 k [0.086899, -0.069512] · rms 0.1373 px · 사진 220 (버림 0)
+   한 칸 빼기(LOPO): fx [1290.13, 1290.27] cx [966.7, 966.92] cy [550.23, 550.4] · 시험오차 0.1339 px
+   반반 나누기 60회: 중앙값 |dfx| 0.045 % |dcx| 0.528 |dcy| 0.418 px · 통과 fx 1.0 pp 1.0 둘다 1.0 (|dfx| <= 0.3 %, |dcx|,|dcy| <= 3.0 px)
+   표준편차 fx fy cx cy [0.046, 0.045, 0.073, 0.067] · 지금 기본값(cal20261024d) 대비 {'dfx_pct': np.float64(0.312), 'dcx': np.float64(1.68), 'dcy': np.float64(-4.06)}
+   그룹별 fx: near<1.15m 1290.25 (68칸), far>=1.15m 1289.89 (42칸), tilt<=25 1290.53 (6칸), tilt>25 1290.19 (104칸)
    덮은 정도: {'fine_frac': 0.891, 'r_max': 0.99, 'r_p90': 0.627, 'x_range': [18, 1911], 'y_range': [7, 1070]}
 판정(k12_notan): 반복성 통과. 이 값은 config/lens 에 자동으로 넣지 않음 (사람이 확인 후 결정).
 결과: /home/system/scanner/tmp_lenskit/synsag/calib
@@ -41,66 +41,63 @@ git 0236df5 lenskit-20261027
 A: 110 images, 55 poses, 9676 corners -> /home/system/scanner/tmp_lenskit/runsag
 B: 110 images, 55 poses, 9676 corners -> /home/system/scanner/tmp_lenskit/runsag
 == 3. mrcal + criteria C1-C8
-[A] 사진 110 자세 55 · RMS 0.1346 px · 이상치 0.24 % · fx 1289.94 cx 967.03 cy 550.47 · 휨 x/y [0.0127, 0.0213] mm · 불확실성(자세당 1장) 가운데 0.032 r0.8 0.096 px
-[B] 사진 110 자세 55 · RMS 0.1351 px · 이상치 0.00 % · fx 1289.85 cx 966.56 cy 550.29 · 휨 x/y [0.0321, 0.0431] mm · 불확실성(자세당 1장) 가운데 0.032 r0.8 0.097 px
-[AB] 사진 220 자세 110 · RMS 0.1346 px · 이상치 0.19 % · fx 1289.89 cx 966.80 cy 550.38 · 휨 x/y [0.0216, 0.0309] mm · 불확실성(자세당 1장) 가운데 0.022 r0.8 0.068 px
-mrcal.c(5365): Threw out some outliers (have a total of 39 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 49 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 55 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 60 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 68 now); going again
+[A] 사진 110 자세 55 · RMS 0.1356 px · 이상치 0.23 % · fx 1289.94 cx 967.03 cy 550.47 · 휨 x/y [0.0125, 0.0207] mm · 불확실성(자세당 1장) 가운데 0.032 r0.8 0.096 px
+[B] 사진 110 자세 55 · RMS 0.1363 px · 이상치 0.00 % · fx 1289.86 cx 966.56 cy 550.28 · 휨 x/y [0.0313, 0.042] mm · 불확실성(자세당 1장) 가운데 0.032 r0.8 0.097 px
+[AB] 사진 220 자세 110 · RMS 0.1368 px · 이상치 0.00 % · fx 1289.90 cx 966.81 cy 550.37 · 휨 x/y [0.0244, 0.0338] mm · 불확실성(자세당 1장) 가운데 0.022 r0.8 0.069 px
+mrcal.c(5365): Threw out some outliers (have a total of 36 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 42 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 48 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 56 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 51 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 51 now); going again
 mrcal.c(5365): Threw out some outliers (have a total of 56 now); going again
 mrcal.c(5365): Threw out some outliers (have a total of 53 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 58 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 57 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 20 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 11 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 10 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 9 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 60 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 55 now); going again
 mrcal.c(5365): Threw out some outliers (have a total of 17 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 10 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 8 now); going again
 mrcal.c(5365): Threw out some outliers (have a total of 37 now); going again
 mrcal.c(5365): Threw out some outliers (have a total of 10 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 16 now); going again
 mrcal.c(5365): Threw out some outliers (have a total of 10 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 9 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 39 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 61 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 10 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 40 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 64 now); going again
 mrcal.c(5365): Threw out some outliers (have a total of 9 now); going again
 mrcal.c(5365): Threw out some outliers (have a total of 6 now); going again
 mrcal.c(5365): Threw out some outliers (have a total of 11 now); going again
 mrcal.c(5365): Threw out some outliers (have a total of 6 now); going again
 mrcal.c(5365): Threw out some outliers (have a total of 8 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 19 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 32 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 32 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 44 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 31 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 54 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 45 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 49 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 42 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 40 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 26 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 31 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 31 now); going again
-mrcal.c(5365): Threw out some outliers (have a total of 29 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 12 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 16 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 23 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 25 now); going again
 mrcal.c(5365): Threw out some outliers (have a total of 38 now); going again
-C1 FAIL   {"A": {"rms": 0.1346, "outlier": 0.0024, "corner_mean": 0.102}, "B": {"rms": 0.1351, "outlier": 0.0, "corner_mean": 0.1048}}
+mrcal.c(5365): Threw out some outliers (have a total of 19 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 45 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 37 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 33 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 4 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 24 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 17 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 24 now); going again
+mrcal.c(5365): Threw out some outliers (have a total of 37 now); going again
+C1 FAIL   {"A": {"rms": 0.1356, "outlier": 0.0023, "corner_mean": 0.1062}, "B": {"rms": 0.1363, "outlier": 0.0, "corner_mean": 0.1062}}
      기준: RMS <= 0.25 px, outliers <= 3 %, per-corner mean residual <= 0.05 px
 C2 PASS   {"A": {"centre": 0.032, "r08": 0.096}, "B": {"centre": 0.032, "r08": 0.097}}
      기준: uncertainty (one still per pose) centre <= 0.2 px, r0.8 <= 0.5 px
-C3 PASS   {"centre": {"diff_max": 0.003, "unc_sum": 0.063, "ratio_max": 0.05}, "r0.5": {"diff_max": 0.069, "unc_sum": 0.116, "ratio_max": 0.59}, "r0.8": {"diff_max": 0.17, "unc_sum": 0.192, "ratio_max": 0.88}}
+C3 PASS   {"centre": {"diff_max": 0.003, "unc_sum": 0.063, "ratio_max": 0.05}, "r0.5": {"diff_max": 0.067, "unc_sum": 0.116, "ratio_max": 0.58}, "r0.8": {"diff_max": 0.168, "unc_sum": 0.193, "ratio_max": 0.87}}
      기준: A vs B (rotation fit) <= uA + uB at centre / r0.5 / r0.8 and r0.8 <= 1.0 px; ratio > 2 = look further
-C4 PASS   {"dfx_pct": 0.0067, "boot": {"A": {"n": 30, "sd_fx_pct": 0.0214, "sd_cx": 0.613, "sd_cy": 0.532}, "B": {"n": 30, "sd_fx_pct": 0.0201, "sd_cx": 0.488, "sd_cy": 0.461}}, "k12_notan_pp_A_minus_B": {"dcx": -0.22, "dcy": 0.0}}
+C4 PASS   {"dfx_pct": 0.006, "boot": {"A": {"n": 30, "sd_fx_pct": 0.0211, "sd_cx": 0.616, "sd_cy": 0.53}, "B": {"n": 30, "sd_fx_pct": 0.02, "sd_cx": 0.498, "sd_cy": 0.46}}, "k12_notan_pp_A_minus_B": {"dcx": -0.22, "dcy": -0.01}}
      기준: |fx_A - fx_B| <= 0.15 %, bootstrap sd(fx) <= 0.15 % per set, k12_notan principal point A-B <= 2 px
-C5 PASS   {"measured_flatness_mm": 0.05, "sets": {"A": {"warp_mm_x_y": [0.0127, 0.0213], "fx_warp_vs_nowarp_pct": 0.013}, "B": {"warp_mm_x_y": [0.0321, 0.0431], "fx_warp_vs_nowarp_pct": 0.0297}}}
+C5 PASS   {"measured_flatness_mm": 0.05, "sets": {"A": {"warp_mm_x_y": [0.0125, 0.0207], "fx_warp_vs_nowarp_pct": 0.0128}, "B": {"warp_mm_x_y": [0.0313, 0.042], "fx_warp_vs_nowarp_pct": 0.0291}}}
      기준: flatness (straightedge) <= 0.1 mm, |mrcal warp| within +-0.1 mm of it, fx warp vs no warp <= 0.1 %
-C6 FAIL   {"A": {"frac_min": 0.116, "frac_med": 0.862, "n": 6}, "B": {"frac_min": 0.104, "frac_med": 0.287, "n": 6}}
+C6 FAIL   {"A": {"frac_min": 0.142, "frac_med": 0.848, "n": 6}, "B": {"frac_min": 0.107, "frac_med": 0.302, "n": 6}}
      기준: halves (one still per pose): diff <= 2 sqrt(u1^2 + u2^2) on >= 70 % of grid points r <= 0.8 (every split)
-C7 PASS   {"near": {"fx": 1289.85, "cx": 966.992, "cy": 550.532, "n_poses": 68, "sd_fx": 0.14, "sd_cy": 0.381}, "far": {"fx": 1289.949, "cx": 965.185, "cy": 549.115, "n_poses": 42, "sd_fx": 0.233, "sd_cy": 0.398}, "dfx": -0.099, "limit_2sd": 0.544, "dsplit_m": 1.15, "below_half_C4": true, "accept_small": false}
+C7 PASS   {"near": {"fx": 1289.85, "cx": 967.008, "cy": 550.533, "n_poses": 68, "sd_fx": 0.141, "sd_cy": 0.383}, "far": {"fx": 1290.011, "cx": 965.128, "cy": 549.089, "n_poses": 42, "sd_fx": 0.288, "sd_cy": 0.385}, "dfx": -0.161, "limit_2sd": 0.641, "dsplit_m": 1.15, "below_half_C4": true, "accept_small": false}
      기준: near vs far |dfx| <= 2 sd (pose bootstrap); set G (optional) |dfx| <= 0.1 %, |dpp| <= 2 px · 세트 G 없음 (선택) - 거리 부분만 판정
-C8 FAIL   {"plus": {"fx": 1290.188, "cx": 967.098, "cy": 552.507, "n_poses": 36, "sd_fx": 0.087, "sd_cy": 0.178}, "minus": {"fx": 1290.005, "cx": 967.175, "cy": 553.028, "n_poses": 36, "sd_fx": 0.088, "sd_cy": 0.095}, "dfx": 0.183, "dcy": -0.521, "limit_fx": 0.247, "limit_cy": 0.404, "below_half_C4": true, "accept_small": false}
+C8 PASS   {"plus": {"fx": 1290.106, "cx": 967.094, "cy": 552.722, "n_poses": 36, "sd_fx": 0.089, "sd_cy": 0.173}, "minus": {"fx": 1290.014, "cx": 967.173, "cy": 553.025, "n_poses": 36, "sd_fx": 0.086, "sd_cy": 0.091}, "dfx": 0.092, "dcy": -0.303, "limit_fx": 0.248, "limit_cy": 0.391, "below_half_C4": true, "accept_small": false}
      기준: lean+ vs lean- |dfx|, |dcy| <= 2 sd (pose bootstrap), >= 10 poses each
-참고: OpenCV k12_notan(A+B) 대 mrcal OPENCV4+휨(A+B) 광선 차이 {'centre': 0.008, 'r0.5': 0.259, 'r0.8': 0.632}
+참고: OpenCV k12_notan(A+B) 대 mrcal OPENCV4+휨(A+B) 광선 차이 {'centre': 0.008, 'r0.5': 0.252, 'r0.8': 0.618}
 판정: 통과 못 함 → 앱 렌즈 파일 만들지 않음 (보드·촬영을 의심, VIO 로 고르지 않음)
 RESULT: FAIL (criteria) - no app lens made. /home/system/scanner/tmp_lenskit/runsag/criteria_ko.txt

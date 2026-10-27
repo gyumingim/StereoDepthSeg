@@ -9,8 +9,8 @@
   다시 그려서(PyMuPDF 4 px/mm) OpenCV 로 검출: 88/88 모서리, 위치 오차 최대 0.007 mm, 배율 오차 < 0.005 % (3장 모두).
 - calcap 이 새 보드·칸 목록을 **플래그로만** 쓴다. 플래그 없으면 예전과 같다 (옛 slots.py 와 400 자세·26 400 fills·13 200 hints·66 외곽선 비교에서 차이 0).
 - 칸 목록 55개(거리 ≥ 0.9 m), 계산 한 번에(`lenskit_run.sh`): OpenCV k1k2 + mrcal(휨 2축) + C1–C8 판정 + 통과 시 lens05 생성기로 앱 렌즈 세트 (설치 안 함).
-- 합성 시험: 평평한 보드는 참값을 fx −0.009 %, 주점 0.01 px 로 되찾고, 앱 세트 생성까지 끝까지 돈다. 0.5 mm 처지는 보드(기울기 부호마다 반대)는 **FAIL** (C1 모서리 무늬, C6).
-- 주의 (이번에 새로 안 것): **C7·C8 (README 규칙 "≤ 2 sd") 은 평평한 합성 보드에서도 FAIL** 이다 (fx 0.23 px = 0.018 %, cy 0.55 px 차이; 잡음이 작아 sd 가 0.02–0.1 px 라서).
+- 합성 시험: 평평한 보드는 참값을 fx −0.009 %, 주점 0.01 px 로 되찾고, 앱 세트 생성까지 끝까지 돈다. 0.5 mm 처지는 보드(기울기 부호마다 반대)는 **FAIL** (C1 모서리 무늬, C6). **C5·C8 은 이 처짐을 못 잡았다** (C8 은 처짐 시험에서 PASS).
+- 주의 (이번에 새로 안 것): **C7·C8 (README 규칙 "≤ 2 sd") 은 평평한 합성 보드에서도 FAIL** 이다 (fx 0.32 px = 0.025 %, cy 0.59 px 차이; 잡음이 작아 sd 가 0.02–0.1 px 라서).
   합성 렌더링(흐림·보간)의 작은 검출 치우침이 통계적으로 보이는 것으로 본다(추정). 실제 데이터도 그럴 수 있다.
   그래서 `--accept-small` (차이가 C4 허용치의 절반 = fx 0.075 %, cy 1 px 보다 작으면 통과) 를 **선택 플래그**로 넣었다. 기본은 README 규칙 그대로(엄격). 쓸지는 사람이 정하고, 쓰면 결과·렌즈 파일에 기록된다.
 
@@ -56,6 +56,7 @@ README N6 (0.6 m) 은 N-R (0.9–1.15 m, 판 돌림 많은 자세) 로 바꿨다
 ```
 python \\wsl.localhost\Ubuntu-22.04\home\system\scanner\StereoDepthSeg-lenskit\scan3d\tools\calcap\calcap_server.py --boards board_print_A1_12x9 --slots \\wsl.localhost\Ubuntu-22.04\home\system\scanner\StereoDepthSeg-lenskit\scan3d\config\calcap_slots\print_A1_55.json --frames 3
 ```
+- 이어 찍기: 같은 명령 끝에 `--set <세트 폴더>` (보드·칸 설정이 다르면 서버가 멈춤).
 - `--frames` 는 3–5 (서버가 3 미만을 3 으로 올림; 재확인 조건이 "3장 이상"). README 는 2장이면 충분하다고 했으나 서버 기본 동작은 바꾸지 않았다.
 - 세트 A 1일차, 세트 B 2일차(또는 앱 재시작 + 폰을 받침에서 떼었다 다시 달기). 세트 G(선택): 폰을 세로/거꾸로, 10자세.
 - 앞 서버는 20 분 최대·5 분 무촬영 자동 정지 (폰 열 보호). 55칸은 한 번에 안 끝날 수 있다 → 식힌 뒤 `--set <세트 폴더>` 로 이어 찍기.
@@ -87,10 +88,13 @@ bash scan3d/tools/calcap/lenskit_run.sh <세트A> <세트B> [--g <세트G>] [--o
 | 시험 | C1 | C2 | C3 | C4 | C5 | C6 | C7 | C8 | 결과 |
 |---|---|---|---|---|---|---|---|---|---|
 | 평판 A·B (seed 1·2), `--flatness-mm 0.05 --accept-small` | PASS | PASS | PASS | PASS | PASS | PASS | PASS* | PASS* | 앱 세트 생성 (fx 1289.93 대 참 1290.04, cx 967.14 대 967.13, k1 0.0865 대 0.0865) |
-| 같은 평판, 엄격(기본) | PASS | PASS | PASS | PASS | 판정 불가 (평면도 없음) | PASS | FAIL (0.23 > 0.13 px) | FAIL (cy 0.55 > 0.30 px) | 불통과 |
-| 처짐 0.5 mm (상하 부호마다 반대), `--flatness-mm 0.05` | FAIL (모서리 무늬 0.10 px) | PASS | PASS | PASS | PASS | FAIL | PASS | FAIL | 불통과 |
+| 같은 평판, 엄격(기본), `--flatness-mm 0.05` (`synthetic/run2strict`) | PASS | PASS | PASS | PASS | PASS | PASS | FAIL (0.32 > 0.13 px) | FAIL (cy 0.59 > 0.26 px) | 불통과 |
+| 처짐 0.5 mm (상하 부호마다 반대), `--flatness-mm 0.05` (`synthetic/runsag`) | FAIL (모서리 무늬 0.106 px) | PASS | PASS | PASS | PASS | FAIL (최소 0.11–0.14) | PASS | PASS | 불통과 |
 
-\* `--accept-small` 때문에 통과. 처짐 시험에서 mrcal 휨은 0.01–0.04 mm 로 거의 0 이다 (부호가 반대인 처짐이 평균되어 사라짐 — lenscal 검증 지적 그대로). 그래서 C5 는 못 잡고 C1·C6 이 잡았다.
+\* `--accept-small` 때문에 통과. 평면도를 안 적으면 C5 = 판정 불가 → 불통과.
+처짐 시험에서 mrcal 휨은 0.01–0.04 mm 로 거의 0 이다 (부호가 반대인 처짐이 평균되어 사라짐 — lenscal 검증 지적 그대로). **C5·C8 은 못 잡고 C1·C6 만 잡았다.**
+C8 은 휨을 켠 부분집합 풀이라, 각 부분집합이 자기 휨으로 처짐을 흡수한다(추정). 평판에서도 C8 cy 0.59 px 차이가 나는 원인은 밝히지 못했다 (렌더링 치우침, 추정).
+(10-27 감사 뒤 다시 돌린 값: 칸 목록 MEK-T/B 부호 수정 후 합성 세트를 새로 만들어 세 시험 모두 다시 실행.)
 
 ## 6. 초점 검사 (`check_lens_focus.py`) 와 앱 쪽 제안
 - 렌즈 파일에 `focus_dpt`(사진 메타데이터 측정 중앙값), `focus_dpt_measured_range`, `focus_dpt_app`, `size` 를 적는다.
@@ -103,4 +107,9 @@ bash scan3d/tools/calcap/lenskit_run.sh <세트A> <세트B> [--g <세트G>] [--o
 - 가정: 인쇄소가 100 % 로 찍는다 (막대·자로 확인해야 함). 심도 0.9 m 시작은 추정. 원 격자는 원근 치우침이 있어 비권장 (지원만). 비대칭 원 격자는 mrcal 이 못 받아 OpenCV 만 됨.
 - mrcal 은 칸 간격 하나만 받는다: 자로 잰 가로·세로 배율이 0.05 % 넘게 다르면 경고만 하고 OpenCV 쪽에만 반영된다.
 - 발견: mrcal corners 캐시에서 빠진 모서리를 `- - -` 로 쓰면 그 줄이 "이 사진에 보드 없음" 으로 읽혀 개수가 틀어진다 → `0 0 -` 로 씀. (lenscal 데이터는 사진마다 모서리 8개가 모두 있어 영향 없음: A 132장 1056점, B 217장 1736점 = ×8.)
+- 독립 감사 (10-27, 읽기 전용, `scratchpad/team/lenskit_audit/`): 주장 6개 중 4 맞음, 2 일부 틀림/보충. 고친 것:
+  - MEK 가장자리 T/B 기울기 부호가 L/R·귀퉁이와 반대였음 → 모두 "안쪽 끝이 가까움" 으로 통일 (T lean +30, B lean −30), 합성 시험 다시 실행.
+  - C8 이 처짐을 잡았다고 읽히던 표 → 고침 (위).
+  - `--set` 이어 찍기 때 `--boards`/`--slots` 를 빠뜨리면 기본 33칸으로 돌아가던 것 → 서버가 set.json 과 다르면 멈춤 (옛 세트는 boards 같고 slots 없음이라 그대로 이어짐).
+  - 남긴 것 (사람 판단): C6 한계 2√(u1²+u2²) 해석 (C3 의 합 규칙보다 느슨함); C8·세트 G 주점 비교에 mrcal OPENCV4(p1 p2 자유) 주점을 씀 (C4 처럼 k12_notan 이 더 일관됨); C7 분할 1.15 m 한 점(원 기준 ≤ 0.8 대 ≥ 1 m, 간격 없음 → 검출력 약함); `--flatness-mm` 은 실제 실행에서도 막히지 않음 (기록만 됨).
 - 남은 일: 인쇄·판 부착·평면도/자 측정 → 세트 A·B 촬영 → `lenskit_run.sh`. `--accept-small` 사용 여부는 결과를 보고 사람이 정한다.
