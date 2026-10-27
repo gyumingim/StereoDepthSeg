@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
@@ -85,6 +86,65 @@ static double pct(std::vector<double> v, double q) {
   std::sort(v.begin(), v.end());
   size_t i = (size_t)std::min<double>(v.size() - 1, q * (v.size() - 1) + 0.5);
   return v[i];
+}
+
+// ---- keyframe pipeline (pipe=1): gray [0,1] float 352x640 -> per-image normalise -> 3ch into ENN input buffer ->
+// EnnExecuteModel -> memcpy output -> XFeat post on CPU (same as acc_lib.py: softmax 65, drop dustbin, pixel-shuffle 8,
+// 5x5 NMS, thr 0.05, score = K * sigmoid(heat logit) at the cell, top 1024, 64-d desc at the nearest 1/8 cell, L2 norm)
+static const int PH = 352, PW = 640, Ph = 44, Pw = 80;
+struct Kp {
+  float s;
+  int x, y;
+};
+static void xfeat_post(const float *o, std::vector<float> &K, std::vector<Kp> &kp, std::vector<float> &desc, int topn) {
+  const int hw = Ph * Pw;
+  K.assign(PH * PW, 0.f);
+  for (int cy = 0; cy < Ph; cy++)
+    for (int cx = 0; cx < Pw; cx++) {
+      int c0 = cy * Pw + cx;
+      float m = -1e30f;
+      for (int c = 0; c < 65; c++) m = std::max(m, o[(64 + c) * hw + c0]);
+      float e[65], s = 0;
+      for (int c = 0; c < 65; c++) {
+        e[c] = std::exp(o[(64 + c) * hw + c0] - m);
+        s += e[c];
+      }
+      for (int c = 0; c < 64; c++) K[(cy * 8 + c / 8) * PW + cx * 8 + c % 8] = e[c] / s;
+    }
+  kp.clear();
+  for (int y = 0; y < PH; y++)
+    for (int x = 0; x < PW; x++) {
+      float v = K[y * PW + x];
+      if (v <= 0.05f) continue;
+      bool mx = true;
+      for (int dy = -2; dy <= 2 && mx; dy++)
+        for (int dx = -2; dx <= 2; dx++) {
+          int yy = y + dy, xx = x + dx;
+          if (yy < 0 || xx < 0 || yy >= PH || xx >= PW) continue;
+          if (K[yy * PW + xx] > v) {
+            mx = false;
+            break;
+          }
+        }
+      if (!mx) continue;
+      float hl = o[129 * hw + (y / 8) * Pw + x / 8];
+      kp.push_back({v / (1.f + std::exp(-hl)), x, y});
+    }
+  size_t n = std::min<size_t>(topn, kp.size());
+  std::partial_sort(kp.begin(), kp.begin() + n, kp.end(), [](const Kp &a, const Kp &b) { return a.s > b.s; });
+  kp.resize(n);
+  desc.assign(n * 64, 0.f);
+  for (size_t i = 0; i < n; i++) {
+    int c0 = (kp[i].y / 8) * Pw + kp[i].x / 8;
+    float ss = 0;
+    for (int c = 0; c < 64; c++) {
+      float v = o[c * hw + c0];
+      desc[i * 64 + c] = v;
+      ss += v * v;
+    }
+    float r = 1.f / std::sqrt(std::max(ss, 1e-12f));
+    for (int c = 0; c < 64; c++) desc[i * 64 + c] *= r;
+  }
 }
 
 static void run_main(const std::string &args, const std::string &dir) {
@@ -220,6 +280,74 @@ static void run_main(const std::string &args, const std::string &dir) {
   int ntot = (int)(nin + nout);
   for (int i = 0; i < ntot; i++) L("buf[%d] va=%p size=%u offset=%u", i, bufs[i]->va, bufs[i]->size, bufs[i]->offset);
   EnnBuf *bi0 = bufs[0], *bo0 = bufs[nin];
+  if (I("pipe", 0)) {
+    // keyframe cost: in = gray float [0,1] frames 1x352x640; passes over all frames; pass 0 = first exec per frame
+    std::vector<char> gd;
+    if (!read_file(in, gd)) {
+      L("ERROR read %s", in.c_str());
+    } else {
+      size_t fs = PH * PW * 4, nf = gd.size() / fs;
+      int passes = I("passes", 10);
+      L("pipe: %zu gray frames, passes=%d (frames=%zu each), in buf %u out buf %u", nf, passes, nf, bi0->size, bo0->size);
+      std::vector<float> outv(bo0->size / 4), K, desc;
+      std::vector<Kp> kp;
+      FILE *fk = out.empty() ? nullptr : std::fopen(out.c_str(), "wb");
+      for (int ps = 0; ps < passes; ps++) {
+        std::vector<double> tn, tx, to, tp, tt;
+        for (size_t k = 0; k < nf; k++) {
+          const float *g = (const float *)(gd.data() + k * fs);
+          double a = now_us();
+          double s = 0, s2 = 0;
+          for (int i = 0; i < PH * PW; i++) {
+            s += g[i];
+            s2 += (double)g[i] * g[i];
+          }
+          double mean = s / (PH * PW), var = s2 / (PH * PW) - mean * mean;
+          float r = (float)(1.0 / std::sqrt(var + 1e-5)), mf = (float)mean;
+          float *dst = (float *)bi0->va;
+          for (int i = 0; i < PH * PW; i++) dst[i] = (g[i] - mf) * r;
+          memcpy(dst + PH * PW, dst, PH * PW * 4);
+          memcpy(dst + 2 * PH * PW, dst, PH * PW * 4);
+          double b = now_us();
+          int rr = eExec(mid, 0);
+          double c = now_us();
+          memcpy(outv.data(), bo0->va, bo0->size);
+          double d = now_us();
+          xfeat_post(outv.data(), K, kp, desc, 1024);
+          double e = now_us();
+          if (rr) L("pipe exec fail %d", rr);
+          tn.push_back(b - a);
+          tx.push_back(c - b);
+          to.push_back(d - c);
+          tp.push_back(e - d);
+          tt.push_back(e - a);
+          if (ps == 0) {
+            L("pipe pass0 frame %zu: norm+in %.0f exec %.0f out %.0f post %.0f total %.0f us, kp=%zu", k, b - a, c - b,
+              d - c, e - d, e - a, kp.size());
+            if (fk) {
+              int32_t n = (int32_t)kp.size();
+              std::fwrite(&n, 4, 1, fk);
+              for (auto &q : kp) {
+                int32_t xy[2] = {q.x, q.y};
+                std::fwrite(xy, 4, 2, fk);
+              }
+              std::fwrite(desc.data(), 4, desc.size(), fk);
+            }
+          }
+        }
+        L("PIPE pass %d n=%zu total p50=%.0f p95=%.0f | norm+in p50 %.0f | exec p50 %.0f p95 %.0f | out memcpy p50 %.0f | "
+          "post p50 %.0f p95 %.0f us",
+          ps, tt.size(), pct(tt, .5), pct(tt, .95), pct(tn, .5), pct(tx, .5), pct(tx, .95), pct(to, .5), pct(tp, .5),
+          pct(tp, .95));
+      }
+      if (fk) std::fclose(fk);
+    }
+    L("EnnReleaseBuffers -> %d", eRelBufs(bufs, ntot));
+    L("EnnCloseModel -> %d", eClose(mid));
+    L("EnnDeinitialize -> %d", eDeinit());
+    L("nncrun end");
+    return;
+  }
   std::vector<char> ind;
   if (!in.empty() && read_file(in, ind)) {
     size_t fs = bi0->size;
