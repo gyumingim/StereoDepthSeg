@@ -59,6 +59,7 @@ CONDS = {
     "R10p4": R("prior_scale=4"),
     "R10q": R("prior_scale=0.25"),
     "R10m2": R("min_obs=2"),
+    "R30f30": R("n=30,freq=30"),   # PLAN 4 addition (14:10, before the dev grid): 1 s window at 30 Hz (uses 3x the frames)
     "RX0": R("dp_max=0"),          # test (c): every window rejected -> ref == VIO
 }
 

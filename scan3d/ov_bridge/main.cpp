@@ -281,6 +281,7 @@
 #include "mav_out.h"  // --mav-udp drone output (2026-10-25, ovdrone)
 #include "ovloop.h"  // loop/: --loop loop closure (2026-10-26, ovloop)
 #include "vins_bridge.h"  // vins/: --swba VINS-Mono sliding-window estimator next to OpenVINS (2026-10-26, ovswba)
+#include "ovrefine.h"     // vins/: --refine OpenVINS-anchored window refinement (2026-10-27, ovrefine)
 
 #include "core/VioManager.h"
 #include "core/VioManagerOptions.h"
@@ -387,6 +388,10 @@ struct Args {
   std::string swba_cfg;       // --swba-cfg K=V,... (vins/vins_bridge.h Cfg)
   std::string swba_log;       // --swba-log FILE (JSON line per VINS frame)
   int swba_sync = 0;          // --swba-sync 0|1 (1 = VINS runs inline in the VIO thread: deterministic PC evaluation only)
+  // 2026-10-27 ovrefine: refine the last N OpenVINS snapshots (VINS factors + OpenVINS prior), output "ref" only; default off
+  int refine = 0;             // --refine 0|1
+  std::string refine_cfg;     // --refine-cfg K=V,... (vins/ovrefine.h Cfg)
+  std::string refine_log;     // --refine-log FILE (JSON line per window)
 };
 
 // --health rules (header); --health-cfg upd_deg=0.2,... overrides
@@ -1337,7 +1342,26 @@ public:
       swba_cfg_.sync = a.swba_sync;
       swba_on_ = true;
     }
+    if (a.refine) {  // --refine (2026-10-27 ovrefine): config first (make_system uses refine_on_ to build VioAcc)
+      std::string err;
+      if (!a.refine_cfg.empty() && !refine_cfg_.parse(a.refine_cfg, err)) {
+        std::fprintf(stderr, "[ov_bridge] %s\n", err.c_str());
+        ok_ = false;
+        return;
+      }
+      if (swba_on_ || a.recover > 0) {  // VINS globals are shared with --swba; --recover offsets the output frame
+        std::fprintf(stderr, "[ov_bridge] --refine cannot be combined with --swba or --recover\n");
+        ok_ = false;
+        return;
+      }
+      refine_cfg_.log = a.refine_log;
+      if (refine_cfg_.sigma_px <= 0.0) refine_cfg_.sigma_px = params_.msckf_options.sigma_pix;
+      refine_on_ = true;
+    }
     make_system();
+    if (refine_on_)
+      refine_.reset(new ovrefine::Refiner(refine_cfg_, params_.imu_noises.sigma_a, params_.imu_noises.sigma_ab,
+                                          params_.imu_noises.sigma_w, params_.imu_noises.sigma_wb, params_.gravity_mag));
     if (swba_on_) {  // --swba: VINS-Mono runner (extrinsics = the filter's camera 0 calibration at start, OpenVINS noises)
       auto st = sys_->get_state();
       auto calib0 = st->_calib_IMUtoCAM.at(0);
@@ -1362,7 +1386,7 @@ public:
   // VioManager 새로 만들기. 붙잡아 둔 IMU(imu_hold_) 는 새 시스템에 그대로 넣을 수 있으므로 남긴다.
   // --loop (2026-10-26 ovloop): VioAcc (= VioManager + tracker read access) only with --loop 1
   std::shared_ptr<ov_msckf::VioManager> new_vio(ov_msckf::VioManagerOptions &p) {
-    if (loop_ || swba_on_) return std::make_shared<VioAcc>(p);  // ovswba: --swba reads the tracker too
+    if (loop_ || swba_on_ || refine_on_) return std::make_shared<VioAcc>(p);  // ovswba / ovrefine read the tracker too
     return std::make_shared<ov_msckf::VioManager>(p);
   }
 
@@ -1372,6 +1396,7 @@ public:
     else sys_ = new_vio(params_);
     if (loop_ && had_sys) loop_->reset_session("VIO re-initialised");  // --loop: new world frame -> new graph
     if (swba_ && had_sys) swba_->reset_session("VIO re-initialised");  // --swba: new OpenVINS world -> realign
+    if (refine_ && had_sys) refine_->reset("VIO re-initialised");     // --refine: new OpenVINS world -> empty window
     pred_pending_ = false;
     snap_dirty_ = true;  // --pred-thread: the published snapshot is stale
     make_shadow(false);
@@ -1835,6 +1860,7 @@ private:
         }
         last_imu_t_ = m.timestamp;
         if (swba_) swba_->push_imu(m.timestamp, m.am, m.wm);  // --swba (ovswba): the same samples the filter got
+        if (refine_) refine_->push_imu(m.timestamp, m.am, m.wm);  // --refine (ovrefine): same samples
         imu_recent_.push_back(m);  // 상태 주입 재시작 때 새 VioManager 에 다시 넣을 최근 IMU (2 s)
         while (!imu_recent_.empty() && imu_recent_.front().timestamp < m.timestamp - 2.0) imu_recent_.pop_front();
         continue;
@@ -2008,6 +2034,7 @@ private:
         std::fprintf(stderr, "[ov_bridge] health exception: %s\n", e.what());
       }
     }
+    if (refine_) refine_before_pose(c);  // --refine (2026-10-27 ovrefine): snapshot + window solve (reads only)
     try {
       std::string pl = pose_line(c, ms);
       if (gate_tag && !pl.empty() && pl.back() == '\n' && pl.size() > 2 && pl[pl.size() - 2] == '}')
@@ -2229,6 +2256,75 @@ private:
     }
     kf->cap_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
     loop_->push(std::move(kf));
+  }
+  // ---- --refine (2026-10-27 ovrefine) ----
+  // VIO thread, before the pose line: every 1/freq s copy the OpenVINS state + IMU marginal covariance + the tracker's
+  // current points (undistorted with the OpenVINS camera model) and solve the window inline. Reads only.
+  void refine_before_pose(const CamMsg &c) {
+    if (c.data.images.empty() || c.data.images[0].empty() || c.blank) return;
+    auto st = sys_->get_state();
+    const bool ov = sys_->initialized() && !lost_ && !late_lost_ && st->_timestamp >= 0.0;
+    if (!ov) {
+      refine_->reset("ov not tracking");
+      return;
+    }
+    const double t = st->_timestamp;
+    if (!refine_->want(t)) return;
+    std::unique_ptr<ovrefine::Snap> s(new ovrefine::Snap());
+    s->t = t;
+    s->t_ns = c.t_ns;
+    s->R = st->_imu->Rot().transpose();
+    s->p = st->_imu->pos();
+    s->v = st->_imu->vel();
+    s->bg = st->_imu->bias_g();
+    s->ba = st->_imu->bias_a();
+    std::vector<std::shared_ptr<ov_type::Type>> vars = {st->_imu};
+    const Eigen::MatrixXd P = ov_msckf::StateHelper::get_marginal_covariance(st, vars);
+    if (P.rows() == 15 && P.cols() == 15) s->P = P;
+    auto calib0 = st->_calib_IMUtoCAM.at(0);
+    s->R_ItoC = calib0->Rot();
+    s->p_IinC = calib0->pos();
+    s->fx = st->_cam_intrinsics.at(0)->value()(0);
+    auto tf = std::static_pointer_cast<VioAcc>(sys_)->feats();
+    auto obs = tf->get_last_obs();
+    auto ids = tf->get_last_ids();
+    auto cam = st->_cam_intrinsics_cameras.at(0);
+    if (obs.count(0) && ids.count(0)) {
+      const auto &o0 = obs.at(0);
+      const auto &i0 = ids.at(0);
+      const size_t n = std::min(o0.size(), i0.size());
+      for (size_t i = 0; i < n; i++) {
+        const cv::Point2f un = cam->undistort_cv(o0[i].pt);
+        s->id.push_back(static_cast<int>(i0[i]));
+        s->x.push_back(un.x);
+        s->y.push_back(un.y);
+      }
+    }
+    refine_->add(std::move(s));
+  }
+  // pose line "ref": the VIO pose with the newest accepted window correction (= VIO pose when none is active)
+  void ref_fields(std::ostringstream &o, const Eigen::Matrix3d &R_ItoG, const Eigen::Vector3d &p, const Eigen::Vector3d &v,
+                  const Eigen::Matrix3d &R_ItoC, const Eigen::Vector3d &p_IinC) {
+    const ovrefine::Out &r = refine_->out();
+    const Eigen::Matrix3d R = r.valid ? Eigen::Matrix3d(r.dR * R_ItoG) : R_ItoG;
+    const Eigen::Vector3d pr = r.valid ? Eigen::Vector3d(r.dR * p + r.dt) : p, vr = r.valid ? Eigen::Vector3d(r.dR * v) : v;
+    const Eigen::Quaterniond q(R);
+    o << ",\"ref\":{\"valid\":" << (r.valid ? "true" : "false") << ",\"p\":";
+    jarr(o, pr);
+    o << ",\"q\":[";
+    jnum(o, q.x()); o << ","; jnum(o, q.y()); o << ","; jnum(o, q.z()); o << ","; jnum(o, q.w());
+    o << "],\"v\":";
+    jarr(o, vr);
+    Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
+    const Eigen::Matrix3d R_CtoG = R * R_ItoC.transpose();
+    T.block<3, 3>(0, 0) = R_CtoG;
+    T.block<3, 1>(0, 3) = pr - R_CtoG * p_IinC;
+    o << ",\"T_world_cam0\":";
+    jarr(o, T);
+    o << ",\"n_win\":" << refine_->n_win() << ",\"n_ok\":" << refine_->n_ok() << ",\"n_rej\":" << refine_->n_rej() << "}";
+  }
+  void log_refine() {
+    if (refine_) refine_->report();
   }
   // ---- --swba (2026-10-26 ovswba) ----
   // VIO thread, after the pose line: every ~1/freq s copy the tracker's current points (undistorted) + the filter pose
@@ -2563,6 +2659,7 @@ private:
         last_swba_ = swba_->step_output(c.t, p_IinG);
         map_fields(o, last_swba_, R_ItoG, p_IinG, v, &R_ItoC, &p_IinC, "swba");
       }
+      if (refine_) ref_fields(o, R_ItoG, p_IinG, v, R_ItoC, p_IinC);  // --refine (2026-10-27 ovrefine): "ref" pose
     }
     o << ",\"dt_cam_imu\":";
     jnum(o, st->_calib_dt_CAMtoIMU->value()(0));
@@ -2742,6 +2839,10 @@ private:
   ovswba::Cfg swba_cfg_;
   std::unique_ptr<ovswba::Runner> swba_;
   ovloop::MapOdom last_swba_;
+  // --refine (2026-10-27 ovrefine)
+  bool refine_on_ = false;
+  ovrefine::Cfg refine_cfg_;
+  std::unique_ptr<ovrefine::Refiner> refine_;
 };
 
 // 한 연결(또는 stdin) 을 끝까지 처리. 반환 false = QUIT 받음.
@@ -2977,7 +3078,8 @@ void usage() {
                "                 [--init-still 0|1] [--health 0|1] [--health-log FILE] [--health-cfg K=V,..] [--klt-stats 0|1] [--pipe 0] [--recover N]\n"
                "                 [--recover-max-gap S] [--recover-min-feats N] [--recover-full 0|1] [--test-blank T0:D,..]\n"
                "                 [--loop 0|1 --loop-vocab FILE [--loop-cfg K=V,..] [--loop-log FILE] [--loop-sync 0|1] [--loop-out-hz HZ] [--loop-dump DIR] [--loop-vpr FILE]]\n"
-               "                 [--swba 0|1 [--swba-cfg K=V,..] [--swba-log FILE] [--swba-sync 0|1]]  (VINS-Mono window BA, vins/vins_bridge.h)\n");
+               "                 [--swba 0|1 [--swba-cfg K=V,..] [--swba-log FILE] [--swba-sync 0|1]]  (VINS-Mono window BA, vins/vins_bridge.h)\n"
+               "                 [--refine 0|1 [--refine-cfg K=V,..] [--refine-log FILE]]  (OpenVINS-anchored window refinement, vins/ovrefine.h)\n");
 }
 
 }  // namespace
@@ -3128,6 +3230,9 @@ int main(int argc, char **argv) {
     else if (s == "--swba-cfg") a.swba_cfg = next();
     else if (s == "--swba-log") a.swba_log = next();
     else if (s == "--swba-sync") a.swba_sync = std::stoi(next()) != 0 ? 1 : 0;
+    else if (s == "--refine") a.refine = std::stoi(next()) != 0 ? 1 : 0;  // 2026-10-27 ovrefine
+    else if (s == "--refine-cfg") a.refine_cfg = next();
+    else if (s == "--refine-log") a.refine_log = next();
     else if (s == "--reinit-max-gap") a.reinit_max_gap = std::stod(next());
     else if (s == "--reinit-sigma") {  // ori_deg,pos_m,vel_m_s
       std::string v = next();
@@ -3333,6 +3438,7 @@ int main(int argc, char **argv) {
     b.log_gyro_klt();  // 2026-10-26 ovgyro
     b.log_loop();      // 2026-10-26 ovloop (--loop 1 only)
     b.log_swba();      // 2026-10-26 ovswba (--swba 1 only)
+    b.log_refine();    // 2026-10-27 ovrefine (--refine 1 only)
     if (g_mav) {
       g_mav->hb_thread_stop();  // --viop-hb-src 1 (no-op otherwise)
       for (int i = 0; i < 3; i++) g_mav->hb_tick(false, false, true);  // VIOP: "stopping" heartbeats on a clean exit

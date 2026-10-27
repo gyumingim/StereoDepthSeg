@@ -27,7 +27,7 @@ find_package(Ceres REQUIRED)
 find_package(Threads REQUIRED)
 
 # vins/ (2026-10-26 ovswba): VINS-Mono estimator port (GPL-3, HKUST-Aerial-Robotics/VINS-Mono 90dabb5) for --swba
-set(OVSWBA_SRC vins/vins_bridge.cpp vins/estimator.cpp vins/feature_manager.cpp vins/parameters.cpp vins/utility/utility.cpp vins/factor/marginalization_factor.cpp vins/factor/pose_local_parameterization.cpp vins/factor/projection_factor.cpp vins/factor/projection_td_factor.cpp vins/initial/initial_aligment.cpp vins/initial/initial_ex_rotation.cpp vins/initial/initial_sfm.cpp vins/initial/solve_5pts.cpp)
+set(OVSWBA_SRC vins/ovrefine.cpp vins/vins_bridge.cpp vins/estimator.cpp vins/feature_manager.cpp vins/parameters.cpp vins/utility/utility.cpp vins/factor/marginalization_factor.cpp vins/factor/pose_local_parameterization.cpp vins/factor/projection_factor.cpp vins/factor/projection_td_factor.cpp vins/initial/initial_aligment.cpp vins/initial/initial_ex_rotation.cpp vins/initial/initial_sfm.cpp vins/initial/solve_5pts.cpp)
 if (OV_FULL_SOURCE)
   # Same source list as android/CMakeLists.txt; patched copies from ovpatch/ replace the upstream files. The OpenVINS
   # part gets the flags of the libov_msckf_lib.so build (ovbuild flags.make), the bridge keeps its own -O2.

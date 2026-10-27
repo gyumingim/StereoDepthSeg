@@ -38,7 +38,7 @@ endforeach ()
 #   VioManager.cpp / StateHelper.cpp / UpdaterMSCKF.cpp / UpdaterSLAM.cpp + ovopt.cpp (2026-10-25, ovopt).
 add_executable(ov_bridge
   ../main.cpp ../ovpatch/ovopt.cpp ../loop/ovloop.cpp ../loop/vocab.cpp ../loop/lc_features.cpp  # loop/: --loop (2026-10-26 ovloop)
-  ../vins/vins_bridge.cpp ../vins/estimator.cpp ../vins/feature_manager.cpp ../vins/parameters.cpp ../vins/utility/utility.cpp ../vins/factor/marginalization_factor.cpp ../vins/factor/pose_local_parameterization.cpp ../vins/factor/projection_factor.cpp ../vins/factor/projection_td_factor.cpp ../vins/initial/initial_aligment.cpp ../vins/initial/initial_ex_rotation.cpp ../vins/initial/initial_sfm.cpp ../vins/initial/solve_5pts.cpp  # vins/: --swba (2026-10-26 ovswba, VINS-Mono port)
+  ../vins/ovrefine.cpp ../vins/vins_bridge.cpp ../vins/estimator.cpp ../vins/feature_manager.cpp ../vins/parameters.cpp ../vins/utility/utility.cpp ../vins/factor/marginalization_factor.cpp ../vins/factor/pose_local_parameterization.cpp ../vins/factor/projection_factor.cpp ../vins/factor/projection_td_factor.cpp ../vins/initial/initial_aligment.cpp ../vins/initial/initial_ex_rotation.cpp ../vins/initial/initial_sfm.cpp ../vins/initial/solve_5pts.cpp  # vins/: --swba (2026-10-26 ovswba, VINS-Mono port)
   ${S}/ov_core/src/cpi/CpiV1.cpp ${S}/ov_core/src/cpi/CpiV2.cpp ${S}/ov_core/src/sim/BsplineSE3.cpp
   ${S}/ov_core/src/track/TrackBase.cpp ${S}/ov_core/src/track/TrackAruco.cpp ${S}/ov_core/src/track/TrackDescriptor.cpp
   ../ovpatch/TrackKLT.cpp ${S}/ov_core/src/track/TrackSIM.cpp ${S}/ov_core/src/types/Landmark.cpp
