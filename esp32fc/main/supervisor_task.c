@@ -4,7 +4,7 @@
  *  - second path for the physical kill switch (motors stop even if the control task is stuck);
  *  - battery voltage at 50 Hz (ADC is too slow for the 1 kHz loop).
  * The ESP-IDF task watchdog (1 s, panic -> reboot, outputs then stop) is the last line behind this.
- * NOT COMPILED (ESP-IDF not installed). */
+ * Compiled with ESP-IDF v5.5.6 (fcarm 2026-10-27, 0 warnings); NOT HARDWARE-TESTED. */
 #include "board.h"
 #include "esp_task_wdt.h"
 #include "esp_timer.h"

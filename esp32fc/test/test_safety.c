@@ -1233,6 +1233,224 @@ static void t_core(void) {
   CHECK(n == 28 && viop_check(fr, n) == 0);
 }
 
+/* ------------------------------------------------------------------ fcarm 2026-10-27: arm hardening options */
+typedef struct {
+  fs_t fs;
+  uint32_t t;
+  uint16_t pseq, hseq;
+  float speed;   /* VIO |v| sent with every pose */
+  float gyro;    /* rad/s */
+  float acc_amp; /* accel noise amplitude around g */
+  uint32_t rng;
+} ah_t;
+
+static void ah_init(ah_t *a, const fs_config_t *c) {
+  memset(a, 0, sizeof(*a));
+  a->t = 1000;
+  a->rng = 7;
+  fs_init(&a->fs, c, a->t);
+}
+
+/* 10 ms control cycles with pose (every cycle), heartbeat (every 5th), PC link, fresh battery */
+static void ah_run(ah_t *a, int ms) {
+  for (int k = 0; k < ms; k += 10) {
+    a->t += 10;
+    fs_pose_info_t p = {.seq = ++a->pseq, .flags = VIOP_F_VALID | VIOP_F_TRACKING, .quality = 90, .pos_std_max_m = 0.05f,
+                        .speed_mps = a->speed};
+    fs_on_pose(&a->fs, a->t, &p);
+    if (a->t % 50 == 0) fs_on_heartbeat(&a->fs, a->t, ++a->hseq, VIOP_HB_TRACKING, 0);
+    fs_on_link(&a->fs, a->t);
+    a->rng = a->rng * 1103515245u + 12345u;
+    float nz = ((float)((a->rng >> 9) & 0xffff) / 65535.0f) * 2.0f - 1.0f;
+    fs_input_t in;
+    memset(&in, 0, sizeof in);
+    in.now_ms = a->t;
+    in.dt_s = 0.01f;
+    in.imu_ok = in.acc_ok = true;
+    in.gyro_norm_rps = a->gyro;
+    in.acc_norm = FC_G + a->acc_amp * nz;
+    in.batt_valid = true;
+    in.batt_v = 16.4f;
+    fs_output_t out;
+    fs_step(&a->fs, &in, &out);
+  }
+}
+
+/* would ARM be accepted now? (probe on a copy; *bits = reject reason) */
+static bool ah_probe(ah_t *a, uint32_t *bits) {
+  fs_t c = a->fs;
+  bool ok = fs_command(&c, a->t, FS_CMD_ARM);
+  fs_event_t e;
+  *bits = 0;
+  while (fs_pop_event(&c, &e))
+    if (e.code == FS_EV_ARM_REJECT) *bits = e.reason;
+  return ok;
+}
+
+static void t_arm_hardening(void) {
+  g_test = "arm_hardening_defaults";
+  fs_config_t c;
+  fs_config_default(&c);
+  CHECK(c.arm_gyro_max_rps == 0.2f && c.arm_acc_var_max < 0 && c.arm_acc_dev_max < 0);
+  CHECK(c.arm_still_ms == 0 && c.arm_vio_speed_max == 0.0f && c.arm_vio_speed_hold_ms == 0);
+  ah_t a;
+  uint32_t b;
+  /* defaults = former behaviour: gyro limit 0.2, no still time, VIO speed ignored */
+  ah_init(&a, &c);
+  a.gyro = 1.0f;
+  ah_run(&a, 500);
+  CHECK(!ah_probe(&a, &b) && (b & FS_B_MOVING));
+  a.gyro = 0.19f;
+  a.speed = 5.0f; /* VIO says 5 m/s while still: ignored by default */
+  ah_run(&a, 10);
+  CHECK(ah_probe(&a, &b)); /* armable the first still cycle (no still time) */
+  a.gyro = 0.21f;
+  ah_run(&a, 10);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_MOVING);
+  a.gyro = 0.0f;
+  a.acc_amp = 3.0f; /* noisy accelerometer: variance above touch_acc_var 0.5 */
+  ah_run(&a, 300);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_MOVING);
+  a.acc_amp = 0.0f;
+  ah_run(&a, 1000);
+  CHECK(ah_probe(&a, &b));
+  a.speed = NAN; /* unknown speed: ignored by default */
+  ah_run(&a, 10);
+  CHECK(ah_probe(&a, &b));
+
+  g_test = "arm_hardening_gyro_accvar";
+  fs_config_default(&c);
+  c.arm_gyro_max_rps = 0.05f;
+  ah_init(&a, &c);
+  a.gyro = 0.08f;
+  ah_run(&a, 500);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_MOVING);
+  a.gyro = 0.04f;
+  ah_run(&a, 10);
+  CHECK(ah_probe(&a, &b));
+  /* the same limit gates CLEAR_KILL */
+  fs_command(&a.fs, a.t, FS_CMD_KILL);
+  a.gyro = 0.08f;
+  ah_run(&a, 1500);
+  CHECK(!fs_command(&a.fs, a.t, FS_CMD_CLEAR_KILL) && a.fs.state == FS_KILLED);
+  a.gyro = 0.04f;
+  ah_run(&a, 10);
+  CHECK(fs_command(&a.fs, a.t, FS_CMD_CLEAR_KILL) && a.fs.state == FS_DISARMED);
+  fs_config_default(&c);
+  c.arm_acc_var_max = 0.001f; /* stricter accelerometer limit than touch_acc_var */
+  ah_init(&a, &c);
+  a.acc_amp = 0.3f; /* variance ~0.03: passes 0.5, fails 0.001 */
+  ah_run(&a, 1000);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_MOVING);
+  fs_config_default(&c);
+  ah_init(&a, &c);
+  a.acc_amp = 0.3f;
+  ah_run(&a, 1000);
+  CHECK(ah_probe(&a, &b));
+  fs_config_default(&c);
+  c.arm_acc_dev_max = 0.1f; /* | mean - g | limit */
+  ah_init(&a, &c);
+  a.acc_amp = 0.0f;
+  ah_run(&a, 300);
+  CHECK(ah_probe(&a, &b));
+  a.fs.acc_mean = FC_G + 0.5f; /* white-box: EMA mean off by 0.5 m/s^2 */
+  CHECK(!ah_probe(&a, &b) && b == FS_B_MOVING);
+
+  g_test = "arm_hardening_still_time";
+  fs_config_default(&c);
+  c.arm_still_ms = 1000;
+  ah_init(&a, &c);
+  a.gyro = 1.0f;
+  ah_run(&a, 500);
+  CHECK(!ah_probe(&a, &b) && (b & FS_B_MOVING) && (b & FS_B_NOT_STILL));
+  a.gyro = 0.0f;
+  ah_run(&a, 500);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_NOT_STILL); /* only the new bit */
+  ah_run(&a, 490);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_NOT_STILL); /* 990 ms */
+  ah_run(&a, 20);
+  CHECK(ah_probe(&a, &b)); /* >= 1000 ms */
+  a.gyro = 0.3f; /* one moving cycle restarts the count */
+  ah_run(&a, 10);
+  a.gyro = 0.0f;
+  ah_run(&a, 900);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_NOT_STILL);
+  ah_run(&a, 110);
+  CHECK(ah_probe(&a, &b));
+  CHECK(fs_command(&a.fs, a.t, FS_CMD_ARM) && a.fs.state == FS_ARMED_IDLE);
+  /* the still timer also follows the configurable gyro limit */
+  fs_config_default(&c);
+  c.arm_still_ms = 500;
+  c.arm_gyro_max_rps = 0.05f;
+  ah_init(&a, &c);
+  a.gyro = 0.1f; /* below the old 0.2, above the new 0.05 */
+  ah_run(&a, 1000);
+  CHECK(!ah_probe(&a, &b) && (b & FS_B_NOT_STILL) && (b & FS_B_MOVING));
+  a.gyro = 0.01f;
+  ah_run(&a, 510);
+  CHECK(ah_probe(&a, &b));
+
+  g_test = "arm_hardening_vio_speed";
+  fs_config_default(&c);
+  c.arm_vio_speed_max = 0.3f;
+  ah_init(&a, &c);
+  a.speed = 0.5f; /* IMU still, VIO moving: refused */
+  ah_run(&a, 500);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_VIO_SPEED);
+  a.speed = 0.1f;
+  ah_run(&a, 10);
+  CHECK(ah_probe(&a, &b)); /* hold 0: only the last pose counts */
+  a.speed = NAN;
+  ah_run(&a, 10);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_VIO_SPEED); /* unknown refuses */
+  a.speed = 0.3f;
+  ah_run(&a, 10);
+  CHECK(ah_probe(&a, &b)); /* limit inclusive */
+  fs_config_default(&c);
+  c.arm_vio_speed_max = 0.3f;
+  ah_init(&a, &c);
+  CHECK(!ah_probe(&a, &b) && (b & FS_B_NO_INPUT)); /* nothing yet */
+  ah_run(&a, 300);
+  CHECK(ah_probe(&a, &b));
+  fs_config_default(&c);
+  c.arm_vio_speed_max = 0.3f;
+  c.arm_vio_speed_hold_ms = 500;
+  ah_init(&a, &c);
+  ah_run(&a, 300);
+  CHECK(ah_probe(&a, &b));
+  a.speed = 1.0f;
+  ah_run(&a, 10); /* one fast pose */
+  a.speed = 0.05f;
+  ah_run(&a, 400);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_VIO_SPEED); /* still inside the 500 ms window */
+  ah_run(&a, 110);
+  CHECK(ah_probe(&a, &b));
+  /* a fast pose that is not good (std too large) still counts for the window */
+  {
+    fs_pose_info_t p = {.seq = ++a.pseq, .flags = VIOP_F_VALID | VIOP_F_TRACKING, .quality = 10, .pos_std_max_m = 1.0f,
+                        .speed_mps = 2.0f};
+    fs_on_pose(&a.fs, a.t, &p);
+  }
+  ah_run(&a, 100);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_VIO_SPEED);
+  /* VIOP glue: speed = |v_w| */
+  viop_pose_t vp;
+  memset(&vp, 0, sizeof vp);
+  vp.v_w[0] = 3.0f;
+  vp.v_w[1] = -4.0f;
+  fs_pose_info_t pi;
+  fs_pose_info_from_viop(&vp, 1, &pi);
+  CHECK(fabsf(pi.speed_mps - 5.0f) < 1e-5f);
+  /* both new checks together: both bits */
+  fs_config_default(&c);
+  c.arm_vio_speed_max = 0.3f;
+  c.arm_still_ms = 1000;
+  ah_init(&a, &c);
+  a.speed = 1.0f;
+  ah_run(&a, 300);
+  CHECK(!ah_probe(&a, &b) && b == (FS_B_NOT_STILL | FS_B_VIO_SPEED));
+}
+
 int main(void) {
   t_transition_table();
   t_arm_rules();
@@ -1257,6 +1475,7 @@ int main(void) {
   t_phone_imu();
   t_openloop_cut();
   t_core();
+  t_arm_hardening();
   g_test = "no_illegal_transitions";
   CHECK(g_illegal == 0);
   printf("%s: %d checks, %d failed\n", g_fail ? "FAILED" : "ALL PASS", g_checks, g_fail);

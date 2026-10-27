@@ -1,6 +1,6 @@
 /* motor_out.c — default: standard PWM (1000-2000 us, FC_PWM_HZ 50..490, LEDC) for ordinary ESCs; options:
  * OneShot125 (LEDC) or DShot600/300 (RMT, 4 TX channels = 4 motors).
- * NOT COMPILED / NOT HARDWARE-TESTED (ESP-IDF not installed on the build PC). Written against ESP-IDF v5.2+ APIs. */
+ * Compiled with ESP-IDF v5.5.6 for PWM / OneShot125 / DShot600 (fcarm 2026-10-27, 0 warnings); NOT HARDWARE-TESTED. */
 #include "motor_out.h"
 
 #include <string.h>

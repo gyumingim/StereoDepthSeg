@@ -3,6 +3,8 @@
 #define FS_VIOP_H
 
 #include "fc_safety.h"
+#include <math.h>
+
 #include "viop_proto.h"
 
 /* fc_safety.c hard-codes these values (to stay independent of the protocol header): keep them in sync */
@@ -22,6 +24,7 @@ static inline void fs_pose_info_from_viop(const viop_pose_t *p, uint16_t frame_s
   o->reset_counter = p->reset_counter;
   o->pos_std_max_m = (float)m * 1e-3f;
   o->send_delay_us = p->send_delay_us;
+  o->speed_mps = sqrtf(p->v_w[0] * p->v_w[0] + p->v_w[1] * p->v_w[1] + p->v_w[2] * p->v_w[2]);
 }
 
 static inline void fs_event_to_viop(const fs_event_t *e, viop_fc_event_t *o) {

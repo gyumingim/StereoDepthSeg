@@ -2,7 +2,7 @@
  * FC_POS_HZ. Phone pose (IMU-forward-predicted VIO) -> NED position/velocity, extrapolated to "now" with the velocity
  * over the measured age -> cascaded P / PI controller -> roll, pitch, collective setpoint for the control task.
  * During LAND_VIO (FS_CTRL_LAND_HOLD_XY) it holds the x,y of the land start; the collective then comes from fc_safety.
- * NOT COMPILED (ESP-IDF not installed). */
+ * Compiled with ESP-IDF v5.5.6 (fcarm 2026-10-27, 0 warnings); NOT HARDWARE-TESTED. */
 #include <math.h>
 #include <string.h>
 

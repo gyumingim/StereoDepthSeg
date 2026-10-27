@@ -106,6 +106,8 @@ typedef enum { FS_HOVER_NONE = 0, FS_HOVER_THIS_FLIGHT = 1, FS_HOVER_PREV_FLIGHT
 #define FS_B_OVERRUN (1u << 11)
 #define FS_B_PHONE_DISC (1u << 12)
 #define FS_B_TOO_SOON (1u << 13)
+#define FS_B_NOT_STILL (1u << 14)  /* arm_still_ms > 0: IMU not still long enough (fcarm 2026-10-27) */
+#define FS_B_VIO_SPEED (1u << 15)  /* arm_vio_speed_max > 0: VIO speed too high / unknown (fcarm 2026-10-27) */
 
 /* event codes */
 enum {
@@ -155,6 +157,16 @@ typedef struct {
   float arm_tilt_max_deg;
   float thr_arm_max;            /* collective request must be below this to arm / clear kill */
   bool require_pose_to_arm, require_hb_to_arm, require_link_to_arm;
+  /* fcarm 2026-10-27 — arm hardening. Every default = the behaviour before (the user decides the values; evidence:
+   * scan3d/runs/fcarm_20261027/README.md). "IMU still" = gyro <= arm_gyro_max_rps AND accel EMA variance <= var limit
+   * AND | accel EMA mean - g | <= dev limit = the MOVING rule (ARM and CLEAR_KILL). */
+  float arm_gyro_max_rps;         /* MOVING rule gyro limit, rad/s (default 0.2 = the former hard-coded value) */
+  float arm_acc_var_max;          /* MOVING rule accel variance limit; < 0 (default) = touch_acc_var as before */
+  float arm_acc_dev_max;          /* MOVING rule | |f| - g | limit; < 0 (default) = touch_acc_dev as before */
+  uint32_t arm_still_ms;          /* > 0: ARM needs the IMU still this long without a break (FS_B_NOT_STILL); 0 = off */
+  float arm_vio_speed_max;        /* > 0: ARM needs the last valid pose |v| <= this, m/s (unknown / NaN refuses)
+                                     (FS_B_VIO_SPEED); 0 = off (default) */
+  uint32_t arm_vio_speed_hold_ms; /* with arm_vio_speed_max: no valid pose faster than the limit in this window either */
   uint32_t idle_disarm_ms;      /* ARMED_IDLE without takeoff for this long -> DISARMED */
   uint32_t kill_clear_min_ms;
   float thr_takeoff;            /* collective above this in ARMED_IDLE -> FLYING */
@@ -210,6 +222,7 @@ typedef struct {
   uint8_t reset_counter;
   float pos_std_max_m;
   uint32_t send_delay_us;
+  float speed_mps;              /* |v_w| (VIO velocity norm), m/s; only read by arm_vio_speed_max (fcarm) */
 } fs_pose_info_t;
 
 /* control-loop snapshot, every cycle */
@@ -261,6 +274,12 @@ typedef struct {
   bool pose_seen, pose_seq_seen, pose_lost_flag, pose_reset_flag;
   uint32_t t_pose_ok_ms;
   uint16_t pose_seq;
+  /* arm hardening (fcarm 2026-10-27) */
+  float pose_speed;              /* |v| of the last valid pose (NaN before any) */
+  bool vio_fast_seen;            /* a valid pose faster than arm_vio_speed_max was seen ... */
+  uint32_t t_vio_fast_ms;        /* ... last at this time */
+  bool still_run;                /* IMU still (MOVING rule) in the last control cycle ... */
+  uint32_t t_still_ms;           /* ... continuously since this time */
   uint8_t pose_reset_counter;
   /* phone heartbeat */
   bool hb_seen, hb_lost_flag, hb_seq_stalled, phone_disconnected;

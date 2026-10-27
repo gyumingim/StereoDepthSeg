@@ -1,6 +1,6 @@
 /* link_task.c — core 0: USB CDC from the phone (TinyUSB device; the phone is the USB host via OTG) and ESP-NOW to the
  * PC-side ESP32. Parses VIOP frames, forwards safety inputs to the control task (queue), publishes the newest pose,
- * sends safety events + 20 Hz status to the PC. NOT COMPILED (ESP-IDF not installed). */
+ * sends safety events + 20 Hz status to the PC. Compiled with ESP-IDF v5.5.6 (fcarm 2026-10-27, 0 warnings); NOT HARDWARE-TESTED. */
 #include <math.h>
 #include <string.h>
 
@@ -28,7 +28,9 @@ static viop_stream_t s_usb_stream; /* touched only from the TinyUSB task (rx cal
 static const uint8_t k_pc_mac[6] = FC_PC_PEER_MAC;
 static uint16_t s_tx_seq_ev, s_tx_seq_st;
 static uint32_t s_pose_seq_local;
+#if FC_IMU_SOURCE == FC_IMU_PHONE /* fcarm: only the phone-IMU build uses it (IDF -Wunused-variable otherwise) */
 static uint32_t s_imu_drops; /* IMU queue full (control task not keeping up) */
+#endif
 
 /* ---------------- phone (USB CDC) ---------------- */
 

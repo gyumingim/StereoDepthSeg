@@ -1,4 +1,4 @@
-/* main.c — esp32fc entry point: init order, task layout, shared data. NOT COMPILED (ESP-IDF not installed). */
+/* main.c — esp32fc entry point: init order, task layout, shared data. Compiled with ESP-IDF v5.5.6 (fcarm 2026-10-27); NOT HARDWARE-TESTED. */
 #include <string.h>
 
 #include "board.h"

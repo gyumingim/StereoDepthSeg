@@ -1,6 +1,6 @@
 # esp32fc — ESP32-S3 비행 제어 펌웨어 (모터 정지 · 비상착륙 포함)
 
-브랜치 `esp32fc-20261025` (ovopt-20261025 0fcf53a에서 분기), 2026-10-25. **보드에 올려 보거나 IDF로 빌드해 본 적은 없습니다.**
+브랜치 `esp32fc-20261025` (ovopt-20261025 0fcf53a에서 분기), 2026-10-25. **보드에 올려 본 적은 없습니다.** ESP-IDF v5.5.6 실제 빌드는 fcarm 2026-10-27 에 처음 했습니다 (4가지 변형 모두 성공, 경고 0; `scan3d/runs/fcarm_20261027/README.md`).
 
 ## 한국어 요약 (결론 먼저)
 
@@ -23,8 +23,9 @@
      - 예전 방식(`openloop_cut_mode = 0`): 착지 후 약 1.7 s 동안 hover의 98 % 추력으로 돌았고, 기록값이 3 % 높으면 하강이 멈춰 공중에서 모터가 꺼졌습니다(시뮬레이션 1.6 m 높이).
   - **폰 IMU가 끊기면 VIO·IMU 단계가 둘 다 불가능하므로 바로 OPENLOOP으로 갑니다.** `imu_fail_kill` 설정을 켜면 대신 KILL합니다.
   - 단계는 내려가기만 하고, 착륙 중 비행으로 돌아가지 않습니다.
-- **PC 단위시험: 573개 검사 모두 통과** (esp32fix 2026-10-26; 이전 389개) (gcc, ASan/UBSan, 시뮬레이션). 검사 대상: 폰 IMU 끊김 → OPENLOOP, IMU 지터 처리, PWM 출력 한계.
-- **ESP-IDF 미설치**: `idf.py build`는 해 보지 못했습니다. IDF 스텁으로 문법 검사만 했고, PWM/OneShot/DShot × 폰/로컬 IMU 6가지 조합 모두 통과했습니다.
+- **PC 단위시험: 610개 검사 모두 통과** (fcarm 2026-10-27 arm 보강 +37; esp32fix 573, 그 전 389) (gcc, ASan/UBSan, 시뮬레이션). 검사 대상: 폰 IMU 끊김 → OPENLOOP, IMU 지터 처리, PWM 출력 한계.
+- **ESP-IDF 실제 빌드 (fcarm 2026-10-27)**: WSL 에 ESP-IDF v5.5.6 설치 → `idf.py build` 성공. 기본(PWM·폰 IMU) · OneShot125 · DShot600 · 로컬 IMU 4가지 변형, 펌웨어 경고 0 (로컬 IMU 변형의 미사용 변수 경고 1개는 고침). 앱 이미지 0xbfd40 = 785 KB (1 MB 앱 파티션의 75 %). 보드에는 아직 안 올렸습니다.
+- **arm 보강 옵션 (fcarm 2026-10-27, 기본 꺼짐 = 예전 동작)**: `arm_still_ms` (정지 유지 시간), `arm_gyro_max_rps` · `arm_acc_var_max` · `arm_acc_dev_max` (MOVING 문턱), `arm_vio_speed_max` · `arm_vio_speed_hold_ms` (IMU 정지인데 VIO 가 움직이면 거부). PC 검사 610개 통과. 추천값과 근거: `scan3d/runs/fcarm_20261027/README.md`.
 
 ### ⚠ 안전 위험: 비행 제어기에 독립 IMU가 없음 (사용자에게)
 
@@ -72,7 +73,7 @@ How the firmware gets fast, deterministic control:
 ```
 esp32fc/
   CMakeLists.txt, sdkconfig.defaults
-  main/            ESP-IDF app (NOT compiled with IDF yet)
+  main/            ESP-IDF app (built with ESP-IDF v5.5.6, fcarm 2026-10-27; not on hardware yet)
     fc_config.h      all hardware assumptions / user decisions (IMU source, PWM, frame, pins, battery, phone mount)
     main.c           init order (motors first = stop pulse), queues (fs inbox, events, phone IMU samples), tasks
     ctrl_task.c      event-driven inner loop on phone IMU samples -> Mahony -> fs_step -> control per mode -> outputs
@@ -150,7 +151,7 @@ States: `DISARMED, ARMED_IDLE, FLYING, EMERG_LAND, KILLED`. Anything not in this
 
 ## 4. PC unit tests (all pass)
 
-`make -C esp32fc/test` builds with gcc 11.4 in WSL, `-Wall -Wextra -Werror -fsanitize=address,undefined`. Result: **573 checks, 0 failed** (esp32fix 2026-10-26; 389 before). Raw logs: `scan3d/runs/esp32fix_20261026/test_*.log` (earlier: `scan3d/runs/esp32fc_20261025/test_safety_run.log`).
+`make -C esp32fc/test` builds with gcc 11.4 in WSL, `-Wall -Wextra -Werror -fsanitize=address,undefined`. Result: **610 checks, 0 failed** (fcarm 2026-10-27: +37 arm-hardening checks; esp32fix 2026-10-26: 573; 389 before). Raw logs: `scan3d/runs/esp32fix_20261026/test_*.log` (earlier: `scan3d/runs/esp32fc_20261025/test_safety_run.log`).
 
 The sim is a 1 kHz 1-D vertical model: thrust ∝ cmd² (matches the open-loop model), ground contact with an impact spike, per-motor trims. It feeds phone pose 200 Hz, heartbeat 20 Hz and PC heartbeat 10 Hz.
 
@@ -173,7 +174,7 @@ Results printed by the tests (sim, 1 run each):
 - Trade-off (sim): impact speed at 1 m rises from 0.80 to 1.24 m/s (descent 0.6 m/s + end ramp) in exchange for ~1.1 s less spinning on the ground at near-hover thrust.
 - **Takeoff record:** 0.7 % below the true hover.
 
-`make -C esp32fc/test syntax`: all `main/*.c` compile `-fsyntax-only -Werror` for PWM / OneShot125 / DShot600 × phone / local IMU. **The stubs are written from memory of the IDF v5.2 API (추정); this is not an IDF build.**
+`make -C esp32fc/test syntax`: all `main/*.c` compile `-fsyntax-only -Werror` for PWM / OneShot125 / DShot600 × phone / local IMU. **The stubs are written from memory of the IDF v5.2 API (추정); this is not an IDF build.** A real `idf.py build` (ESP-IDF v5.5.6) was done in fcarm 2026-10-27: all 4 variants build, 0 firmware warnings.
 
 ## 5. Timing and latency (ESP32-S3 @ 240 MHz — all 추정, not measured)
 
@@ -255,7 +256,7 @@ An independent read-only reviewer found 14 issues. The reproduced ones are fixed
 ## Build
 
 - PC tests (works now): in WSL, `make -C esp32fc/test` and `make -C esp32fc/test syntax`.
-- Firmware (ESP-IDF ≥ 5.2, **not installed on this PC**):
+- Firmware (ESP-IDF ≥ 5.2; v5.5.6 installed in WSL `~/esp/esp-idf` since fcarm 2026-10-27, builds with 0 warnings):
 
   ```
   . $IDF_PATH/export.sh

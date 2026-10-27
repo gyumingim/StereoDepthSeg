@@ -1,4 +1,4 @@
-/* board.c — NOT COMPILED / NOT HARDWARE-TESTED (ESP-IDF v5.2+ APIs). */
+/* board.c — compiled with ESP-IDF v5.5.6 (fcarm 2026-10-27); NOT HARDWARE-TESTED. */
 #include "board.h"
 
 #include <string.h>

@@ -65,6 +65,12 @@ void fs_config_default(fs_config_t *c) {
   c->require_pose_to_arm = true;
   c->require_hb_to_arm = true;
   c->require_link_to_arm = true;
+  c->arm_gyro_max_rps = 0.2f;      /* fcarm: all arm-hardening defaults = former behaviour */
+  c->arm_acc_var_max = -1.0f;
+  c->arm_acc_dev_max = -1.0f;
+  c->arm_still_ms = 0;
+  c->arm_vio_speed_max = 0.0f;
+  c->arm_vio_speed_hold_ms = 0;
   c->idle_disarm_ms = 5000;
   c->kill_clear_min_ms = 1000;
   c->thr_takeoff = 0.15f;
@@ -206,6 +212,7 @@ void fs_init(fs_t *fs, const fs_config_t *cfg, uint32_t now_ms) {
   fs->acc_mean = G0;
   fs->hover_ema = fs->cfg.hover_thr_default;
   fs->phone_disconnected = false;
+  fs->pose_speed = NAN;
 }
 
 /* ---------------- input messages ---------------- */
@@ -233,6 +240,13 @@ void fs_on_pose(fs_t *fs, uint32_t now_ms, const fs_pose_info_t *p) {
   fs->rc_seen = true;
   bool valid = (p->flags & PF_VALID) != 0, tracking = (p->flags & PF_TRACKING) != 0;
   fs->pose_lost_flag = !valid || p->quality == 0;
+  if (valid) { /* arm hardening: VIO speed of every valid pose (good or not) */
+    fs->pose_speed = p->speed_mps;
+    if (fs->cfg.arm_vio_speed_max > 0.0f && !(p->speed_mps <= fs->cfg.arm_vio_speed_max)) {
+      fs->vio_fast_seen = true;
+      fs->t_vio_fast_ms = now_ms;
+    }
+  }
   bool good = valid && tracking && p->quality > 0 && p->pos_std_max_m <= fs->cfg.pose_std_max_m &&
               p->pos_std_max_m == p->pos_std_max_m && p->send_delay_us <= fs->cfg.pose_max_delay_us;
   if (good) {
@@ -271,6 +285,17 @@ void fs_on_link(fs_t *fs, uint32_t now_ms) {
 
 /* ---------------- commands ---------------- */
 
+/* MOVING rule on the accelerometer: quiet AND ~1 g (rules out free fall / being carried); limits configurable (fcarm) */
+static bool acc_quiet(const fs_t *fs, const fs_input_t *in) {
+  float vmax = fs->cfg.arm_acc_var_max >= 0.0f ? fs->cfg.arm_acc_var_max : fs->cfg.touch_acc_var;
+  float dmax = fs->cfg.arm_acc_dev_max >= 0.0f ? fs->cfg.arm_acc_dev_max : fs->cfg.touch_acc_dev;
+  return in->acc_ok && fs->acc_var <= vmax && fabsf(fs->acc_mean - G0) <= dmax;
+}
+/* IMU still by the MOVING rule (gyro + accelerometer); used for arming and for the still-time requirement */
+static bool imu_still(const fs_t *fs, const fs_input_t *in) {
+  return in->imu_ok && in->gyro_norm_rps <= fs->cfg.arm_gyro_max_rps && acc_quiet(fs, in);
+}
+
 static uint32_t ground_blocks(const fs_t *fs) {
   uint32_t b = 0;
   const fs_input_t *in = &fs->last;
@@ -279,11 +304,10 @@ static uint32_t ground_blocks(const fs_t *fs) {
   if (!in->imu_ok) b |= FS_B_IMU;
   else {
     if (!(tilt_rad(in) <= fs->cfg.arm_tilt_max_deg * DEG2RAD)) b |= FS_B_TILT;
-    if (!(in->gyro_norm_rps <= 0.2f)) b |= FS_B_MOVING;
+    if (!(in->gyro_norm_rps <= fs->cfg.arm_gyro_max_rps)) b |= FS_B_MOVING; /* NaN limit / rate blocks */
   }
   /* resting on the ground: quiet accelerometer AND ~1 g (rules out free fall / being carried) */
-  if (!in->acc_ok || !(fs->acc_var <= fs->cfg.touch_acc_var) || !(fabsf(fs->acc_mean - G0) <= fs->cfg.touch_acc_dev))
-    b |= FS_B_MOVING;
+  if (!acc_quiet(fs, in)) b |= FS_B_MOVING;
   if (!(in->thr_cmd <= fs->cfg.thr_arm_max)) b |= FS_B_THR; /* NaN blocks too */
   return b;
 }
@@ -301,6 +325,14 @@ static uint32_t arm_blocks(const fs_t *fs) {
       b |= FS_B_BATT;
   }
   if (fs->overrun_bucket > fs->cfg.overrun_land_level / 2) b |= FS_B_OVERRUN;
+  /* fcarm 2026-10-27 (both off by default): still long enough, and VIO not moving while the IMU is still */
+  if (fs->cfg.arm_still_ms > 0 && fs->have_input &&
+      (!fs->still_run || elapsed(fs->now_ms, fs->t_still_ms) < fs->cfg.arm_still_ms))
+    b |= FS_B_NOT_STILL;
+  if (fs->cfg.arm_vio_speed_max > 0.0f &&
+      (!(fs->pose_speed <= fs->cfg.arm_vio_speed_max) ||
+       (fs->vio_fast_seen && elapsed(fs->now_ms, fs->t_vio_fast_ms) < fs->cfg.arm_vio_speed_hold_ms)))
+    b |= FS_B_VIO_SPEED;
   return b;
 }
 
@@ -667,6 +699,10 @@ void fs_step(fs_t *fs, const fs_input_t *in_raw, fs_output_t *out) {
 
   fs->last = *in;
   fs->last.dt_s = dt;
+  /* arm hardening: how long the IMU has been still without a break (MOVING rule, this cycle's statistics) */
+  if (imu_still(fs, in)) {
+    if (!fs->still_run) { fs->still_run = true; fs->t_still_ms = in->now_ms; }
+  } else fs->still_run = false;
   /* last known height (for the open-loop cut time): while not landing, or while landing on VIO */
   if (in->height_valid && in->vz_vio_valid && (fs->state != FS_EMERG_LAND || fs->tier == FS_TIER_VIO)) {
     fs->last_height = in->height_m;
