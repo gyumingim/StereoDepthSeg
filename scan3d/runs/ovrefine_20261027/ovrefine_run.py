@@ -61,6 +61,7 @@ CONDS = {
     "R10m2": R("min_obs=2"),
     "R30f30": R("n=30,freq=30"),   # PLAN 4 addition (14:10, before the dev grid): 1 s window at 30 Hz (uses 3x the frames)
     "R10v": R(),                   # 15:36: = R10 on the prior-fix build (check: the fix leaves R10 practically unchanged)
+    "R10w": R("log_win=1"),        # 16:10 POST-HOC (after the dev verdict, dev cells only, not a verdict): = R10 + window-state log
     "RX0": R("dp_max=0"),          # test (c): every window rejected -> ref == VIO
 }
 

@@ -136,6 +136,7 @@ bool Cfg::parse(const std::string &kv, std::string &err) {
     else if (k == "max_depth") max_depth = v;
     else if (k == "init_px") init_px = v;
     else if (k == "noise") noise = static_cast<int>(v);
+    else if (k == "log_win") log_win = static_cast<int>(v);
     else {
       err = "--refine-cfg: unknown key '" + k + "'";
       return false;
@@ -429,6 +430,18 @@ void Refiner::solve() {
                  reason < 0 ? "" : kRej[reason], ms, ms_solve, p_ref(0), p_ref(1), p_ref(2), L.p(0), L.p(1), L.p(2),
                  static_cast<unsigned long long>(n_ok_), static_cast<unsigned long long>(n_rej_), gc0[0], gc0[1], gc0[2], gc1[0],
                  gc1[1], gc1[2], imu_r[0], imu_r[1], imu_r[2], prior_neg);
+    if (c_.log_win) {  // 16:10 post-hoc diagnostic (log only): every window state, refined and OpenVINS, solved windows only
+      std::fprintf(log_, "{\"type\":\"wst\",\"t_ns\":%lld,\"ok\":%d,\"solved\":%d,\"s\":[", static_cast<long long>(L.t_ns), reason < 0 ? 1 : 0,
+                   sum.iterations.empty() ? 0 : 1);
+      for (int i = 0; i < n; i++) {
+        const Snap &s = *win_[i];
+        const Eigen::Quaterniond qo(s.R);
+        std::fprintf(log_, "%s[%lld,%.7f,%.7f,%.7f,%.9f,%.9f,%.9f,%.9f,%.7f,%.7f,%.7f,%.9f,%.9f,%.9f,%.9f]", i ? "," : "",
+                     static_cast<long long>(s.t_ns), pose[i][0], pose[i][1], pose[i][2], pose[i][3], pose[i][4], pose[i][5], pose[i][6],
+                     s.p(0), s.p(1), s.p(2), qo.x(), qo.y(), qo.z(), qo.w());
+      }
+      std::fprintf(log_, "]}\n");
+    }
   }
 }
 

@@ -36,6 +36,7 @@ struct Cfg {
   double max_gap = 0.5;       // snapshot gap (s) that empties the window
   double min_depth = 0.1, max_depth = 40.0, init_px = 3.0;  // triangulation checks (m, m, px)
   int noise = 2;              // 2 = OpenVINS densities * sqrt(IMU rate) (same noise), 1 = VINS EuRoC values
+  int log_win = 0;            // 1 = also log every window state (refined + OpenVINS; post-hoc diagnostic, log only)
   double imu_rate = 400.0;    // set by the bridge (noise 2)
   bool parse(const std::string &kv, std::string &err);
 };
