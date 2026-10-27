@@ -57,6 +57,7 @@ async function poll(){
   else if(s.phase!=='촬영 중') t=s.phase+'…';
   else t=(s.match?'✔ 맞음 — 그대로! ':'목표: '+s.target+' · '+s.hint)+(p?'   | 거리 '+p.dist.toFixed(2)+' m · 기울기 '+Math.round(p.tilt)+'° (turn '+Math.round(p.turn)+', lean '+Math.round(p.lean)+')':'   | 보드 안 보임');
   $('top').textContent=t;
+  if(s.hide_board) $('b').style.display='none';   /* lenskit: printed board in use - never show the laptop board */
   $('top').classList.toggle('ok',!!(s.running&&s.match)); $('bot').classList.toggle('ok',!!(s.running&&s.match));
   $('bt').textContent='채운 칸 '+s.n_ok+'/'+s.n_total+' · 남은 '+left+(s.last_capture?' · 방금: '+s.last_capture:'')+(s.phone_stat&&s.phone_stat.temps?' · 폰 SKIN '+s.phone_stat.temps.skin_c+'°C':'')+(s.phone_stat?' · '+(s.phone_stat.fps_measured||0).toFixed(1)+' fps':'');
   $('prog').style.width=(100*s.n_ok/s.n_total)+'%';

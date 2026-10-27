@@ -55,6 +55,9 @@ ap.add_argument("--set", default="", help="continue an existing set folder (its 
 ap.add_argument("--lens", default=os.path.join(S3D, "config", "lens", "std_1920x1080_f0.50_cal20261024d.json"),
                 help="lens used ONLY for live pose guidance / slot checks (not the result)")
 ap.add_argument("--charuco-dir", default=os.path.join(S3D, "config", "charuco"))
+ap.add_argument("--boards", default="board_laptop_5x3,board_laptop_6x4",
+                help="comma list of board json names in --charuco-dir (lenskit: board_print_A1_12x9 for the printed board)")
+ap.add_argument("--slots", default="", help="slot file (config/calcap_slots/*.json) instead of the 33 built-in laptop slots")
 ap.add_argument("--frames", type=int, default=4, help="stills per slot (3-5)")
 ap.add_argument("--fps", type=int, default=10)
 ap.add_argument("--idle-s", type=int, default=300)
@@ -77,12 +80,15 @@ A.frames = max(3, min(5, A.frames))
 APP = "com.scan3d.arlat"
 REMOTE_ROOT = "/sdcard/Android/data/com.scan3d.arlat/files/calcap"
 K_FULL, DIST = SL.load_lens(A.lens)
-BOARDS = SL.load_boards(A.charuco_dir)
+BOARDS = SL.load_boards(A.charuco_dir, A.boards)
+if A.slots:                                   # lenskit 2026-10-27: printed-board slot list (default: built-in 33 slots)
+    SL.use_slots(SL.load_slot_file(A.slots)[0])
+PRINTED = any(b.name != "board_laptop_5x3" and b.name.startswith("board_print") for b in BOARDS)
 LOCK_OWNER = "calcap-server (lens capture)"
 
 state = dict(running=False, phase="대기", msg="", set_dir="", beep=0, beep_msg="", match="", target="", hint="",
              pose=None, n_ok=0, n_total=len(SL.SLOTS), phone_stat=None, log=[], session=None, captured_frames=0,
-             last_capture="", stop_reason="", camera_off_check="")
+             last_capture="", stop_reason="", camera_off_check="", hide_board=PRINTED)
 slot_state = {s["id"]: "missing" for s in SL.SLOTS}       # missing | pending | ok
 captures = []                                             # verified + rejected capture records (captures.json)
 latest_prev = {"jpg": None, "t": 0}
@@ -209,7 +215,8 @@ def new_set():
         for k in slot_state:
             slot_state[k] = "missing"
     json.dump(dict(made=time.strftime("%Y-%m-%d %H:%M:%S"), slots=SL.SLOTS, lens_for_guidance=A.lens,
-                   boards=[b.name for b in BOARDS], frames_per_slot=A.frames, fps=A.fps,
+                   boards=[b.name for b in BOARDS], board_specs={b.name: b.spec for b in BOARDS}, slots_file=A.slots,
+                   frames_per_slot=A.frames, fps=A.fps,
                    note="stills = raw Y of the VIO stream (1920x1080 YUV, TEMPLATE_RECORD, focus 0.5, 2 ms, ISO auto once)"),
               open(os.path.join(d, "set.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     save_captures()

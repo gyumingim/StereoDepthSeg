@@ -93,7 +93,8 @@ def coverage(views):
                 y_range=[round(float(pts[:, 1].min())), round(float(pts[:, 1].max()))])
 
 
-def run_model(views, caps, model, rng, n_split=30):
+def run_model(views, caps, model, rng, n_split=30, dsplit=None):
+    dsplit = SL.DSPLIT if dsplit is None else dsplit
     t0 = time.time()
     rms, K, d, rv, tv = fit(views, model)
     per = np.array([view_err(v, K, d, a, b) for v, a, b in zip(views, rv, tv)])
@@ -132,8 +133,8 @@ def run_model(views, caps, model, rng, n_split=30):
     pass_pp = (np.maximum(hv[:, 1], hv[:, 2]) <= PP_TOL_PX) if len(hv) else np.zeros(0, bool)
     # groups: fx when only that group is used (small groups -> less certain)
     groups = {}
-    for gname, sel in ((f"near<{SL.DSPLIT}m", lambda v: v["dist"] is not None and v["dist"] < SL.DSPLIT),
-                       (f"far>={SL.DSPLIT}m", lambda v: v["dist"] is not None and v["dist"] >= SL.DSPLIT),
+    for gname, sel in ((f"near<{dsplit}m", lambda v: v["dist"] is not None and v["dist"] < dsplit),
+                       (f"far>={dsplit}m", lambda v: v["dist"] is not None and v["dist"] >= dsplit),
                        ("tilt<=25", lambda v: v["tilt"] is not None and v["tilt"] <= 25),
                        ("tilt>25", lambda v: v["tilt"] is not None and v["tilt"] > 25)):
         g = [v for v in vs if sel(v)]
@@ -172,6 +173,10 @@ def main():
     ap.add_argument("--tag", default=time.strftime("%Y%m%d_%H%M%S"))
     ap.add_argument("--true-lens", default="", help="dry test: compare with the lens the fake phone rendered with")
     ap.add_argument("--splits", type=int, default=30)
+    ap.add_argument("--boards", default="board_laptop_5x3,board_laptop_6x4", help="lenskit: e.g. board_print_A1_12x9")
+    ap.add_argument("--charuco-dir", default=os.path.join(S3D, "config", "charuco"))
+    ap.add_argument("--dsplit", type=float, default=None, help="near/far split for the group fits (default slots.DSPLIT 0.70 m)")
+    ap.add_argument("--focus-dpt", type=float, default=0.5, help="focus written into the lens candidate")
     a = ap.parse_args()
     out = os.path.join(a.sets[0], "calib")
     os.makedirs(out, exist_ok=True)
@@ -179,7 +184,7 @@ def main():
 
     def log(s):
         print(s, flush=True); lines.append(s)
-    boards = SL.load_boards(os.path.join(S3D, "config", "charuco"))
+    boards = SL.load_boards(a.charuco_dir, a.boards)
     gK, gd = SL.load_lens(DEFAULT)
     views, caps = load_views(a.sets, boards, gK, gd, log)
     log(f"입력: 세트 {len(a.sets)}개, 캡처 {len(caps)}개, 사진 {len(views)}장 (모서리 {sum(len(v['ids']) for v in views)}개)")
@@ -193,7 +198,7 @@ def main():
                default_lens=DEFAULT, models={})
     dK, dd = SL.load_lens(DEFAULT)
     for m in a.models:
-        r = run_model(views, caps, m, rng, a.splits)
+        r = run_model(views, caps, m, rng, a.splits, a.dsplit)
         res["models"][m] = r
         Lz = r["lens"]
         r["vs_default"] = dict(dfx_pct=round((Lz["fx"] - dK[0, 0]) / dK[0, 0] * 100, 3), dcx=round(Lz["cx"] - dK[0, 2], 2),
@@ -218,7 +223,7 @@ def main():
     log(f"판정({main_m}): {verdict}. 이 값은 config/lens 에 자동으로 넣지 않음 (사람이 확인 후 결정).")
     res["verdict"] = verdict
     json.dump(res, open(os.path.join(out, f"calib_{a.tag}.json"), "w"), indent=1, default=lambda o: o.tolist() if hasattr(o, "tolist") else str(o))
-    cand = dict(K=r["K"], dist=(r["dist"] + [0.0] * 5)[:5], focus_dpt=0.5, model="k1k2p (radtan; p1 p2 k3 = 0 for k12_notan)", fit=main_m, rms_px=r["rms_px"],
+    cand = dict(K=r["K"], dist=(r["dist"] + [0.0] * 5)[:5], focus_dpt=a.focus_dpt, size=[W, H], boards=[b.name for b in boards], model="k1k2p (radtan; p1 p2 k3 = 0 for k12_notan)", fit=main_m, rms_px=r["rms_px"],
                 n_views=r["n_views"], n_captures=r["n_caps"], status="candidate (calcap, not installed)", verdict=verdict,
                 source=res["sets"], made=res["made"],
                 stream="std60/VIO 1920x1080 YUV, TEMPLATE_RECORD, focus 0.5 dpt, 2 ms, ISO auto once (calcap stills at 10 fps)")

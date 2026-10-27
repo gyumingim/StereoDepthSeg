@@ -1,0 +1,2168 @@
+{
+ "name": "print_A1_55",
+ "made": "2026-10-27 10:13:18",
+ "board": "board_print_A1_12x9",
+ "lens_for_check": "/home/system/scanner/StereoDepthSeg-lenskit/scan3d/config/lens/std_1920x1080_f0.50_cal20261024d.json",
+ "n": 55,
+ "groups": {
+  "NC": 12,
+  "NE": 8,
+  "NK": 8,
+  "MC": 8,
+  "MEK": 8,
+  "F": 5,
+  "NR": 6
+ },
+ "counts": {
+  "lean_plus": 18,
+  "lean_minus": 18,
+  "diagonal": 18,
+  "roll_abs_values": [
+   0.0,
+   30,
+   45,
+   90
+  ]
+ },
+ "note": "Printed-board lens calibration slots (lenskit 2026-10-27). Source lenscal_20261027 README section 2; distance >= 0.9 m (0.5 dpt focus, depth of field estimate); board on a support, phone on a tripod. Use: calcap_server.py --slots <this> --boards board_print_A1_12x9 (A2 / A3: same file, the board covers less of the frame, more poses may fail the corner coverage).",
+ "unfillable": [],
+ "slots": [
+  {
+   "id": "NC-C-t+45l+0",
+   "kind": "G",
+   "group": "NC",
+   "pos": "C",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    33.0,
+    57.0
+   ],
+   "lean": [
+    -12.0,
+    12.0
+   ],
+   "target": {
+    "turn": 45,
+    "lean": 0.0,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NC · 가운데 · 0.90–1.15 m · 오른쪽 끝이 가깝게 45°",
+   "check": {
+    "visible_corners": 88,
+    "turn": 45.0,
+    "lean": -0.0,
+    "roll": 0.0,
+    "tilt": 45.0,
+    "dist": 1.0,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "NC-C-t+0l+45",
+   "kind": "G",
+   "group": "NC",
+   "pos": "C",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -12.0,
+    12.0
+   ],
+   "lean": [
+    33.0,
+    57.0
+   ],
+   "target": {
+    "turn": 0.0,
+    "lean": 45,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NC · 가운데 · 0.90–1.15 m · 아래쪽 끝이 가깝게 45°",
+   "check": {
+    "visible_corners": 88,
+    "turn": -0.0,
+    "lean": 45.0,
+    "roll": 0.0,
+    "tilt": 45.0,
+    "dist": 1.0,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "NC-C-t-45l+0",
+   "kind": "G",
+   "group": "NC",
+   "pos": "C",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -57.0,
+    -33.0
+   ],
+   "lean": [
+    -12.0,
+    12.0
+   ],
+   "target": {
+    "turn": -45,
+    "lean": 0.0,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NC · 가운데 · 0.90–1.15 m · 왼쪽 끝이 가깝게 45°",
+   "check": {
+    "visible_corners": 88,
+    "turn": -45.0,
+    "lean": -0.0,
+    "roll": -0.0,
+    "tilt": 45.0,
+    "dist": 1.0,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "NC-C-t+0l-45",
+   "kind": "G",
+   "group": "NC",
+   "pos": "C",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -12.0,
+    12.0
+   ],
+   "lean": [
+    -57.0,
+    -33.0
+   ],
+   "target": {
+    "turn": 0.0,
+    "lean": -45,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NC · 가운데 · 0.90–1.15 m · 위쪽 끝이 가깝게 45°",
+   "check": {
+    "visible_corners": 88,
+    "turn": 0.0,
+    "lean": -45.0,
+    "roll": 0.0,
+    "tilt": 45.0,
+    "dist": 1.0,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "NC-C-t+35l+35",
+   "kind": "G",
+   "group": "NC",
+   "pos": "C",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    23.0,
+    47.0
+   ],
+   "lean": [
+    23.0,
+    47.0
+   ],
+   "target": {
+    "turn": 35,
+    "lean": 35,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NC · 가운데 · 0.90–1.15 m · 오른쪽 끝이 가깝게 35° + 아래쪽 끝이 가깝게 35°",
+   "check": {
+    "visible_corners": 88,
+    "turn": 35.0,
+    "lean": 35.0,
+    "roll": 0.0,
+    "tilt": 44.7,
+    "dist": 1.0,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "NC-C-t+35l-35",
+   "kind": "G",
+   "group": "NC",
+   "pos": "C",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    23.0,
+    47.0
+   ],
+   "lean": [
+    -47.0,
+    -23.0
+   ],
+   "target": {
+    "turn": 35,
+    "lean": -35,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NC · 가운데 · 0.90–1.15 m · 오른쪽 끝이 가깝게 35° + 위쪽 끝이 가깝게 35°",
+   "check": {
+    "visible_corners": 88,
+    "turn": 35.0,
+    "lean": -35.0,
+    "roll": -0.0,
+    "tilt": 44.7,
+    "dist": 1.0,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "NC-C-t-35l+35",
+   "kind": "G",
+   "group": "NC",
+   "pos": "C",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -47.0,
+    -23.0
+   ],
+   "lean": [
+    23.0,
+    47.0
+   ],
+   "target": {
+    "turn": -35,
+    "lean": 35,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NC · 가운데 · 0.90–1.15 m · 왼쪽 끝이 가깝게 35° + 아래쪽 끝이 가깝게 35°",
+   "check": {
+    "visible_corners": 88,
+    "turn": -35.0,
+    "lean": 35.0,
+    "roll": -0.0,
+    "tilt": 44.7,
+    "dist": 1.0,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "NC-C-t-35l-35",
+   "kind": "G",
+   "group": "NC",
+   "pos": "C",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -47.0,
+    -23.0
+   ],
+   "lean": [
+    -47.0,
+    -23.0
+   ],
+   "target": {
+    "turn": -35,
+    "lean": -35,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NC · 가운데 · 0.90–1.15 m · 왼쪽 끝이 가깝게 35° + 위쪽 끝이 가깝게 35°",
+   "check": {
+    "visible_corners": 88,
+    "turn": -35.0,
+    "lean": -35.0,
+    "roll": 0.0,
+    "tilt": 44.7,
+    "dist": 1.0,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "NC-C-t+45l+0r+90",
+   "kind": "G",
+   "group": "NC",
+   "pos": "C",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    33.0,
+    57.0
+   ],
+   "lean": [
+    -12.0,
+    12.0
+   ],
+   "target": {
+    "turn": 45,
+    "lean": 0.0,
+    "roll": 90,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll_abs": [
+    68.0,
+    90.0
+   ],
+   "label": "NC · 가운데 · 0.90–1.15 m · 오른쪽 끝이 가깝게 45° · 판을 90° 시계 방향으로 돌림",
+   "check": {
+    "visible_corners": 88,
+    "turn": 45.0,
+    "lean": 0.0,
+    "roll": -90.0,
+    "tilt": 45.0,
+    "dist": 1.0,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "NC-C-t-45l+0r+90",
+   "kind": "G",
+   "group": "NC",
+   "pos": "C",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -57.0,
+    -33.0
+   ],
+   "lean": [
+    -12.0,
+    12.0
+   ],
+   "target": {
+    "turn": -45,
+    "lean": 0.0,
+    "roll": 90,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll_abs": [
+    68.0,
+    90.0
+   ],
+   "label": "NC · 가운데 · 0.90–1.15 m · 왼쪽 끝이 가깝게 45° · 판을 90° 시계 방향으로 돌림",
+   "check": {
+    "visible_corners": 88,
+    "turn": -45.0,
+    "lean": -0.0,
+    "roll": -90.0,
+    "tilt": 45.0,
+    "dist": 1.0,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "NC-C-t+0l+40r+30",
+   "kind": "G",
+   "group": "NC",
+   "pos": "C",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -12.0,
+    12.0
+   ],
+   "lean": [
+    28.0,
+    52.0
+   ],
+   "target": {
+    "turn": 0.0,
+    "lean": 40,
+    "roll": 30,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll": [
+    18.0,
+    42.0
+   ],
+   "label": "NC · 가운데 · 0.90–1.15 m · 아래쪽 끝이 가깝게 40° · 판을 30° 시계 방향으로 돌림",
+   "check": {
+    "visible_corners": 88,
+    "turn": -0.0,
+    "lean": 40.0,
+    "roll": 30.0,
+    "tilt": 40.0,
+    "dist": 1.0,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "NC-C-t+0l-40r-30",
+   "kind": "G",
+   "group": "NC",
+   "pos": "C",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -12.0,
+    12.0
+   ],
+   "lean": [
+    -52.0,
+    -28.0
+   ],
+   "target": {
+    "turn": 0.0,
+    "lean": -40,
+    "roll": -30,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll": [
+    -42.0,
+    -18.0
+   ],
+   "label": "NC · 가운데 · 0.90–1.15 m · 위쪽 끝이 가깝게 40° · 판을 30° 반시계 방향으로 돌림",
+   "check": {
+    "visible_corners": 88,
+    "turn": 0.0,
+    "lean": -40.0,
+    "roll": -30.0,
+    "tilt": 40.0,
+    "dist": 1.0,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "NE-L-t+35l+0",
+   "kind": "G",
+   "group": "NE",
+   "pos": "L",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    23.0,
+    47.0
+   ],
+   "lean": [
+    -12.0,
+    12.0
+   ],
+   "target": {
+    "turn": 35,
+    "lean": 0.0,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NE · 왼쪽 가장자리 · 0.90–1.15 m · 오른쪽 끝이 가깝게 35°",
+   "check": {
+    "visible_corners": 88,
+    "turn": 35.0,
+    "lean": 0.0,
+    "roll": -0.0,
+    "tilt": 35.0,
+    "dist": 1.0,
+    "pos": "L"
+   }
+  },
+  {
+   "id": "NE-L-t-35l+0",
+   "kind": "G",
+   "group": "NE",
+   "pos": "L",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -47.0,
+    -23.0
+   ],
+   "lean": [
+    -12.0,
+    12.0
+   ],
+   "target": {
+    "turn": -35,
+    "lean": 0.0,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NE · 왼쪽 가장자리 · 0.90–1.15 m · 왼쪽 끝이 가깝게 35°",
+   "check": {
+    "visible_corners": 88,
+    "turn": -35.0,
+    "lean": -0.0,
+    "roll": -0.0,
+    "tilt": 35.0,
+    "dist": 1.0,
+    "pos": "L"
+   }
+  },
+  {
+   "id": "NE-R-t+35l+0",
+   "kind": "G",
+   "group": "NE",
+   "pos": "R",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    23.0,
+    47.0
+   ],
+   "lean": [
+    -12.0,
+    12.0
+   ],
+   "target": {
+    "turn": 35,
+    "lean": 0.0,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NE · 오른쪽 가장자리 · 0.90–1.15 m · 오른쪽 끝이 가깝게 35°",
+   "check": {
+    "visible_corners": 88,
+    "turn": 35.0,
+    "lean": 0.0,
+    "roll": -0.0,
+    "tilt": 35.0,
+    "dist": 1.0,
+    "pos": "R"
+   }
+  },
+  {
+   "id": "NE-R-t-35l+0",
+   "kind": "G",
+   "group": "NE",
+   "pos": "R",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -47.0,
+    -23.0
+   ],
+   "lean": [
+    -12.0,
+    12.0
+   ],
+   "target": {
+    "turn": -35,
+    "lean": 0.0,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NE · 오른쪽 가장자리 · 0.90–1.15 m · 왼쪽 끝이 가깝게 35°",
+   "check": {
+    "visible_corners": 88,
+    "turn": -35.0,
+    "lean": 0.0,
+    "roll": 0.0,
+    "tilt": 35.0,
+    "dist": 1.0,
+    "pos": "R"
+   }
+  },
+  {
+   "id": "NE-T-t+0l+35",
+   "kind": "G",
+   "group": "NE",
+   "pos": "T",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -12.0,
+    12.0
+   ],
+   "lean": [
+    23.0,
+    47.0
+   ],
+   "target": {
+    "turn": 0.0,
+    "lean": 35,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NE · 위 가장자리 · 0.90–1.15 m · 아래쪽 끝이 가깝게 35°",
+   "check": {
+    "visible_corners": 88,
+    "turn": 0.0,
+    "lean": 35.0,
+    "roll": -0.0,
+    "tilt": 35.0,
+    "dist": 1.0,
+    "pos": "T"
+   }
+  },
+  {
+   "id": "NE-T-t+0l-35",
+   "kind": "G",
+   "group": "NE",
+   "pos": "T",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -12.0,
+    12.0
+   ],
+   "lean": [
+    -47.0,
+    -23.0
+   ],
+   "target": {
+    "turn": 0.0,
+    "lean": -35,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 100
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NE · 위 가장자리 · 0.90–1.15 m · 위쪽 끝이 가깝게 35°",
+   "check": {
+    "visible_corners": 88,
+    "turn": -0.0,
+    "lean": -35.0,
+    "roll": -0.0,
+    "tilt": 35.0,
+    "dist": 1.0,
+    "pos": "T"
+   }
+  },
+  {
+   "id": "NE-B-t+0l+35",
+   "kind": "G",
+   "group": "NE",
+   "pos": "B",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -12.0,
+    12.0
+   ],
+   "lean": [
+    23.0,
+    47.0
+   ],
+   "target": {
+    "turn": 0.0,
+    "lean": 35,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 100
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NE · 아래 가장자리 · 0.90–1.15 m · 아래쪽 끝이 가깝게 35°",
+   "check": {
+    "visible_corners": 88,
+    "turn": 0.0,
+    "lean": 35.0,
+    "roll": -0.0,
+    "tilt": 35.0,
+    "dist": 1.0,
+    "pos": "B"
+   }
+  },
+  {
+   "id": "NE-B-t+0l-35",
+   "kind": "G",
+   "group": "NE",
+   "pos": "B",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -12.0,
+    12.0
+   ],
+   "lean": [
+    -47.0,
+    -23.0
+   ],
+   "target": {
+    "turn": 0.0,
+    "lean": -35,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NE · 아래 가장자리 · 0.90–1.15 m · 위쪽 끝이 가깝게 35°",
+   "check": {
+    "visible_corners": 88,
+    "turn": 0.0,
+    "lean": -35.0,
+    "roll": -0.0,
+    "tilt": 35.0,
+    "dist": 1.0,
+    "pos": "B"
+   }
+  },
+  {
+   "id": "NK-TL-t-21l-21",
+   "kind": "G",
+   "group": "NK",
+   "pos": "TL",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -33.0,
+    -9.0
+   ],
+   "lean": [
+    -33.0,
+    -9.0
+   ],
+   "target": {
+    "turn": -21,
+    "lean": -21,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 0
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NK · 왼쪽 위 귀퉁이 · 0.90–1.15 m · 왼쪽 끝이 가깝게 21° + 위쪽 끝이 가깝게 21°",
+   "check": {
+    "visible_corners": 87,
+    "turn": -21.0,
+    "lean": -21.0,
+    "roll": 0.0,
+    "tilt": 28.5,
+    "dist": 1.0,
+    "pos": "TL"
+   }
+  },
+  {
+   "id": "NK-TL-t+21l+21",
+   "kind": "G",
+   "group": "NK",
+   "pos": "TL",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    9.0,
+    33.0
+   ],
+   "lean": [
+    9.0,
+    33.0
+   ],
+   "target": {
+    "turn": 21,
+    "lean": 21,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 40
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NK · 왼쪽 위 귀퉁이 · 0.90–1.15 m · 오른쪽 끝이 가깝게 21° + 아래쪽 끝이 가깝게 21°",
+   "check": {
+    "visible_corners": 88,
+    "turn": 21.0,
+    "lean": 21.0,
+    "roll": -0.0,
+    "tilt": 28.5,
+    "dist": 1.0,
+    "pos": "TL"
+   }
+  },
+  {
+   "id": "NK-TR-t+21l-21",
+   "kind": "G",
+   "group": "NK",
+   "pos": "TR",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    9.0,
+    33.0
+   ],
+   "lean": [
+    -33.0,
+    -9.0
+   ],
+   "target": {
+    "turn": 21,
+    "lean": -21,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 0
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NK · 오른쪽 위 귀퉁이 · 0.90–1.15 m · 오른쪽 끝이 가깝게 21° + 위쪽 끝이 가깝게 21°",
+   "check": {
+    "visible_corners": 87,
+    "turn": 21.0,
+    "lean": -21.0,
+    "roll": 0.0,
+    "tilt": 28.5,
+    "dist": 1.0,
+    "pos": "TR"
+   }
+  },
+  {
+   "id": "NK-TR-t-21l+21",
+   "kind": "G",
+   "group": "NK",
+   "pos": "TR",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -33.0,
+    -9.0
+   ],
+   "lean": [
+    9.0,
+    33.0
+   ],
+   "target": {
+    "turn": -21,
+    "lean": 21,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 40
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NK · 오른쪽 위 귀퉁이 · 0.90–1.15 m · 왼쪽 끝이 가깝게 21° + 아래쪽 끝이 가깝게 21°",
+   "check": {
+    "visible_corners": 88,
+    "turn": -21.0,
+    "lean": 21.0,
+    "roll": 0.0,
+    "tilt": 28.5,
+    "dist": 1.0,
+    "pos": "TR"
+   }
+  },
+  {
+   "id": "NK-BL-t-21l+21",
+   "kind": "G",
+   "group": "NK",
+   "pos": "BL",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -33.0,
+    -9.0
+   ],
+   "lean": [
+    9.0,
+    33.0
+   ],
+   "target": {
+    "turn": -21,
+    "lean": 21,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 0
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NK · 왼쪽 아래 귀퉁이 · 0.90–1.15 m · 왼쪽 끝이 가깝게 21° + 아래쪽 끝이 가깝게 21°",
+   "check": {
+    "visible_corners": 87,
+    "turn": -21.0,
+    "lean": 21.0,
+    "roll": 0.0,
+    "tilt": 28.5,
+    "dist": 1.0,
+    "pos": "BL"
+   }
+  },
+  {
+   "id": "NK-BL-t+21l-21",
+   "kind": "G",
+   "group": "NK",
+   "pos": "BL",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    9.0,
+    33.0
+   ],
+   "lean": [
+    -33.0,
+    -9.0
+   ],
+   "target": {
+    "turn": 21,
+    "lean": -21,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 40
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NK · 왼쪽 아래 귀퉁이 · 0.90–1.15 m · 오른쪽 끝이 가깝게 21° + 위쪽 끝이 가깝게 21°",
+   "check": {
+    "visible_corners": 88,
+    "turn": 21.0,
+    "lean": -21.0,
+    "roll": -0.0,
+    "tilt": 28.5,
+    "dist": 1.0,
+    "pos": "BL"
+   }
+  },
+  {
+   "id": "NK-BR-t+21l+21",
+   "kind": "G",
+   "group": "NK",
+   "pos": "BR",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    9.0,
+    33.0
+   ],
+   "lean": [
+    9.0,
+    33.0
+   ],
+   "target": {
+    "turn": 21,
+    "lean": 21,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 0
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NK · 오른쪽 아래 귀퉁이 · 0.90–1.15 m · 오른쪽 끝이 가깝게 21° + 아래쪽 끝이 가깝게 21°",
+   "check": {
+    "visible_corners": 87,
+    "turn": 21.0,
+    "lean": 21.0,
+    "roll": -0.0,
+    "tilt": 28.5,
+    "dist": 1.0,
+    "pos": "BR"
+   }
+  },
+  {
+   "id": "NK-BR-t-21l-21",
+   "kind": "G",
+   "group": "NK",
+   "pos": "BR",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -33.0,
+    -9.0
+   ],
+   "lean": [
+    -33.0,
+    -9.0
+   ],
+   "target": {
+    "turn": -21,
+    "lean": -21,
+    "roll": 0.0,
+    "dist": 1.0,
+    "goal_gap": 40
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "NK · 오른쪽 아래 귀퉁이 · 0.90–1.15 m · 왼쪽 끝이 가깝게 21° + 위쪽 끝이 가깝게 21°",
+   "check": {
+    "visible_corners": 88,
+    "turn": -21.0,
+    "lean": -21.0,
+    "roll": -0.0,
+    "tilt": 28.5,
+    "dist": 1.0,
+    "pos": "BR"
+   }
+  },
+  {
+   "id": "MC-C-t+0l+0",
+   "kind": "G",
+   "group": "MC",
+   "pos": "C",
+   "dist": [
+    1.15,
+    1.5
+   ],
+   "target": {
+    "turn": 0.0,
+    "lean": 0.0,
+    "roll": 0.0,
+    "dist": 1.3,
+    "goal_gap": 150
+   },
+   "tilt": [
+    0.0,
+    12.0
+   ],
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "MC · 가운데 · 1.15–1.50 m · 정면",
+   "check": {
+    "visible_corners": 88,
+    "turn": 0.0,
+    "lean": -0.0,
+    "roll": 0.0,
+    "tilt": 0.0,
+    "dist": 1.3,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "MC-C-t+40l+0",
+   "kind": "G",
+   "group": "MC",
+   "pos": "C",
+   "dist": [
+    1.15,
+    1.5
+   ],
+   "turn": [
+    28.0,
+    52.0
+   ],
+   "lean": [
+    -12.0,
+    12.0
+   ],
+   "target": {
+    "turn": 40,
+    "lean": 0.0,
+    "roll": 0.0,
+    "dist": 1.3,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "MC · 가운데 · 1.15–1.50 m · 오른쪽 끝이 가깝게 40°",
+   "check": {
+    "visible_corners": 88,
+    "turn": 40.0,
+    "lean": -0.0,
+    "roll": 0.0,
+    "tilt": 40.0,
+    "dist": 1.3,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "MC-C-t+0l+40",
+   "kind": "G",
+   "group": "MC",
+   "pos": "C",
+   "dist": [
+    1.15,
+    1.5
+   ],
+   "turn": [
+    -12.0,
+    12.0
+   ],
+   "lean": [
+    28.0,
+    52.0
+   ],
+   "target": {
+    "turn": 0.0,
+    "lean": 40,
+    "roll": 0.0,
+    "dist": 1.3,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "MC · 가운데 · 1.15–1.50 m · 아래쪽 끝이 가깝게 40°",
+   "check": {
+    "visible_corners": 88,
+    "turn": 0.0,
+    "lean": 40.0,
+    "roll": 0.0,
+    "tilt": 40.0,
+    "dist": 1.3,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "MC-C-t-40l+0",
+   "kind": "G",
+   "group": "MC",
+   "pos": "C",
+   "dist": [
+    1.15,
+    1.5
+   ],
+   "turn": [
+    -52.0,
+    -28.0
+   ],
+   "lean": [
+    -12.0,
+    12.0
+   ],
+   "target": {
+    "turn": -40,
+    "lean": 0.0,
+    "roll": 0.0,
+    "dist": 1.3,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "MC · 가운데 · 1.15–1.50 m · 왼쪽 끝이 가깝게 40°",
+   "check": {
+    "visible_corners": 88,
+    "turn": -40.0,
+    "lean": -0.0,
+    "roll": 0.0,
+    "tilt": 40.0,
+    "dist": 1.3,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "MC-C-t+0l-40",
+   "kind": "G",
+   "group": "MC",
+   "pos": "C",
+   "dist": [
+    1.15,
+    1.5
+   ],
+   "turn": [
+    -12.0,
+    12.0
+   ],
+   "lean": [
+    -52.0,
+    -28.0
+   ],
+   "target": {
+    "turn": 0.0,
+    "lean": -40,
+    "roll": 0.0,
+    "dist": 1.3,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "MC · 가운데 · 1.15–1.50 m · 위쪽 끝이 가깝게 40°",
+   "check": {
+    "visible_corners": 88,
+    "turn": -0.0,
+    "lean": -40.0,
+    "roll": 0.0,
+    "tilt": 40.0,
+    "dist": 1.3,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "MC-C-t+30l-30",
+   "kind": "G",
+   "group": "MC",
+   "pos": "C",
+   "dist": [
+    1.15,
+    1.5
+   ],
+   "turn": [
+    18.0,
+    42.0
+   ],
+   "lean": [
+    -42.0,
+    -18.0
+   ],
+   "target": {
+    "turn": 30,
+    "lean": -30,
+    "roll": 0.0,
+    "dist": 1.3,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "MC · 가운데 · 1.15–1.50 m · 오른쪽 끝이 가깝게 30° + 위쪽 끝이 가깝게 30°",
+   "check": {
+    "visible_corners": 88,
+    "turn": 30.0,
+    "lean": -30.0,
+    "roll": 0.0,
+    "tilt": 39.2,
+    "dist": 1.3,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "MC-C-t-30l+30",
+   "kind": "G",
+   "group": "MC",
+   "pos": "C",
+   "dist": [
+    1.15,
+    1.5
+   ],
+   "turn": [
+    -42.0,
+    -18.0
+   ],
+   "lean": [
+    18.0,
+    42.0
+   ],
+   "target": {
+    "turn": -30,
+    "lean": 30,
+    "roll": 0.0,
+    "dist": 1.3,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "MC · 가운데 · 1.15–1.50 m · 왼쪽 끝이 가깝게 30° + 아래쪽 끝이 가깝게 30°",
+   "check": {
+    "visible_corners": 88,
+    "turn": -30.0,
+    "lean": 30.0,
+    "roll": 0.0,
+    "tilt": 39.2,
+    "dist": 1.3,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "MC-C-t+20l+0r+45",
+   "kind": "G",
+   "group": "MC",
+   "pos": "C",
+   "dist": [
+    1.15,
+    1.5
+   ],
+   "turn": [
+    8.0,
+    32.0
+   ],
+   "lean": [
+    -12.0,
+    12.0
+   ],
+   "target": {
+    "turn": 20,
+    "lean": 0.0,
+    "roll": 45,
+    "dist": 1.3,
+    "goal_gap": 150
+   },
+   "roll": [
+    33.0,
+    57.0
+   ],
+   "label": "MC · 가운데 · 1.15–1.50 m · 오른쪽 끝이 가깝게 20° · 판을 45° 시계 방향으로 돌림",
+   "check": {
+    "visible_corners": 88,
+    "turn": 20.0,
+    "lean": 0.0,
+    "roll": 45.0,
+    "tilt": 20.0,
+    "dist": 1.3,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "MEK-L-t+30l+0",
+   "kind": "G",
+   "group": "MEK",
+   "pos": "L",
+   "dist": [
+    1.15,
+    1.5
+   ],
+   "turn": [
+    18.0,
+    42.0
+   ],
+   "lean": [
+    -12.0,
+    12.0
+   ],
+   "target": {
+    "turn": 30,
+    "lean": 0.0,
+    "roll": 0.0,
+    "dist": 1.3,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "MEK · 왼쪽 가장자리 · 1.15–1.50 m · 오른쪽 끝이 가깝게 30°",
+   "check": {
+    "visible_corners": 88,
+    "turn": 30.0,
+    "lean": 0.0,
+    "roll": -0.0,
+    "tilt": 30.0,
+    "dist": 1.3,
+    "pos": "L"
+   }
+  },
+  {
+   "id": "MEK-R-t-30l+0",
+   "kind": "G",
+   "group": "MEK",
+   "pos": "R",
+   "dist": [
+    1.15,
+    1.5
+   ],
+   "turn": [
+    -42.0,
+    -18.0
+   ],
+   "lean": [
+    -12.0,
+    12.0
+   ],
+   "target": {
+    "turn": -30,
+    "lean": 0.0,
+    "roll": 0.0,
+    "dist": 1.3,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "MEK · 오른쪽 가장자리 · 1.15–1.50 m · 왼쪽 끝이 가깝게 30°",
+   "check": {
+    "visible_corners": 88,
+    "turn": -30.0,
+    "lean": 0.0,
+    "roll": 0.0,
+    "tilt": 30.0,
+    "dist": 1.3,
+    "pos": "R"
+   }
+  },
+  {
+   "id": "MEK-T-t+0l-30",
+   "kind": "G",
+   "group": "MEK",
+   "pos": "T",
+   "dist": [
+    1.15,
+    1.5
+   ],
+   "turn": [
+    -12.0,
+    12.0
+   ],
+   "lean": [
+    -42.0,
+    -18.0
+   ],
+   "target": {
+    "turn": 0.0,
+    "lean": -30,
+    "roll": 0.0,
+    "dist": 1.3,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "MEK · 위 가장자리 · 1.15–1.50 m · 위쪽 끝이 가깝게 30°",
+   "check": {
+    "visible_corners": 88,
+    "turn": -0.0,
+    "lean": -30.0,
+    "roll": -0.0,
+    "tilt": 30.0,
+    "dist": 1.3,
+    "pos": "T"
+   }
+  },
+  {
+   "id": "MEK-B-t+0l+30",
+   "kind": "G",
+   "group": "MEK",
+   "pos": "B",
+   "dist": [
+    1.15,
+    1.5
+   ],
+   "turn": [
+    -12.0,
+    12.0
+   ],
+   "lean": [
+    18.0,
+    42.0
+   ],
+   "target": {
+    "turn": 0.0,
+    "lean": 30,
+    "roll": 0.0,
+    "dist": 1.3,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "MEK · 아래 가장자리 · 1.15–1.50 m · 아래쪽 끝이 가깝게 30°",
+   "check": {
+    "visible_corners": 88,
+    "turn": 0.0,
+    "lean": 30.0,
+    "roll": -0.0,
+    "tilt": 30.0,
+    "dist": 1.3,
+    "pos": "B"
+   }
+  },
+  {
+   "id": "MEK-TL-t+21l+21",
+   "kind": "G",
+   "group": "MEK",
+   "pos": "TL",
+   "dist": [
+    1.15,
+    1.5
+   ],
+   "turn": [
+    9.0,
+    33.0
+   ],
+   "lean": [
+    9.0,
+    33.0
+   ],
+   "target": {
+    "turn": 21,
+    "lean": 21,
+    "roll": 0.0,
+    "dist": 1.3,
+    "goal_gap": 100
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "MEK · 왼쪽 위 귀퉁이 · 1.15–1.50 m · 오른쪽 끝이 가깝게 21° + 아래쪽 끝이 가깝게 21°",
+   "check": {
+    "visible_corners": 88,
+    "turn": 21.0,
+    "lean": 21.0,
+    "roll": -0.0,
+    "tilt": 28.5,
+    "dist": 1.3,
+    "pos": "TL"
+   }
+  },
+  {
+   "id": "MEK-TR-t-21l+21",
+   "kind": "G",
+   "group": "MEK",
+   "pos": "TR",
+   "dist": [
+    1.15,
+    1.5
+   ],
+   "turn": [
+    -33.0,
+    -9.0
+   ],
+   "lean": [
+    9.0,
+    33.0
+   ],
+   "target": {
+    "turn": -21,
+    "lean": 21,
+    "roll": 0.0,
+    "dist": 1.3,
+    "goal_gap": 100
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "MEK · 오른쪽 위 귀퉁이 · 1.15–1.50 m · 왼쪽 끝이 가깝게 21° + 아래쪽 끝이 가깝게 21°",
+   "check": {
+    "visible_corners": 88,
+    "turn": -21.0,
+    "lean": 21.0,
+    "roll": 0.0,
+    "tilt": 28.5,
+    "dist": 1.3,
+    "pos": "TR"
+   }
+  },
+  {
+   "id": "MEK-BL-t+21l-21",
+   "kind": "G",
+   "group": "MEK",
+   "pos": "BL",
+   "dist": [
+    1.15,
+    1.5
+   ],
+   "turn": [
+    9.0,
+    33.0
+   ],
+   "lean": [
+    -33.0,
+    -9.0
+   ],
+   "target": {
+    "turn": 21,
+    "lean": -21,
+    "roll": 0.0,
+    "dist": 1.3,
+    "goal_gap": 100
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "MEK · 왼쪽 아래 귀퉁이 · 1.15–1.50 m · 오른쪽 끝이 가깝게 21° + 위쪽 끝이 가깝게 21°",
+   "check": {
+    "visible_corners": 88,
+    "turn": 21.0,
+    "lean": -21.0,
+    "roll": -0.0,
+    "tilt": 28.5,
+    "dist": 1.3,
+    "pos": "BL"
+   }
+  },
+  {
+   "id": "MEK-BR-t-21l-21",
+   "kind": "G",
+   "group": "MEK",
+   "pos": "BR",
+   "dist": [
+    1.15,
+    1.5
+   ],
+   "turn": [
+    -33.0,
+    -9.0
+   ],
+   "lean": [
+    -33.0,
+    -9.0
+   ],
+   "target": {
+    "turn": -21,
+    "lean": -21,
+    "roll": 0.0,
+    "dist": 1.3,
+    "goal_gap": 100
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "MEK · 오른쪽 아래 귀퉁이 · 1.15–1.50 m · 왼쪽 끝이 가깝게 21° + 위쪽 끝이 가깝게 21°",
+   "check": {
+    "visible_corners": 88,
+    "turn": -21.0,
+    "lean": -21.0,
+    "roll": 0.0,
+    "tilt": 28.5,
+    "dist": 1.3,
+    "pos": "BR"
+   }
+  },
+  {
+   "id": "F-C-t+0l+0",
+   "kind": "G",
+   "group": "F",
+   "pos": "C",
+   "dist": [
+    1.6,
+    2.1
+   ],
+   "target": {
+    "turn": 0.0,
+    "lean": 0.0,
+    "roll": 0.0,
+    "dist": 1.8,
+    "goal_gap": 150
+   },
+   "tilt": [
+    0.0,
+    12.0
+   ],
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "F · 가운데 · 1.60–2.10 m · 정면",
+   "check": {
+    "visible_corners": 88,
+    "turn": 0.0,
+    "lean": -0.0,
+    "roll": 0.0,
+    "tilt": 0.0,
+    "dist": 1.8,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "F-C-t+35l+0",
+   "kind": "G",
+   "group": "F",
+   "pos": "C",
+   "dist": [
+    1.6,
+    2.1
+   ],
+   "turn": [
+    23.0,
+    47.0
+   ],
+   "lean": [
+    -12.0,
+    12.0
+   ],
+   "target": {
+    "turn": 35,
+    "lean": 0.0,
+    "roll": 0.0,
+    "dist": 1.8,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "F · 가운데 · 1.60–2.10 m · 오른쪽 끝이 가깝게 35°",
+   "check": {
+    "visible_corners": 88,
+    "turn": 35.0,
+    "lean": -0.0,
+    "roll": 0.0,
+    "tilt": 35.0,
+    "dist": 1.8,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "F-C-t+0l+35",
+   "kind": "G",
+   "group": "F",
+   "pos": "C",
+   "dist": [
+    1.6,
+    2.1
+   ],
+   "turn": [
+    -12.0,
+    12.0
+   ],
+   "lean": [
+    23.0,
+    47.0
+   ],
+   "target": {
+    "turn": 0.0,
+    "lean": 35,
+    "roll": 0.0,
+    "dist": 1.8,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "F · 가운데 · 1.60–2.10 m · 아래쪽 끝이 가깝게 35°",
+   "check": {
+    "visible_corners": 88,
+    "turn": -0.0,
+    "lean": 35.0,
+    "roll": 0.0,
+    "tilt": 35.0,
+    "dist": 1.8,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "F-C-t-35l+0",
+   "kind": "G",
+   "group": "F",
+   "pos": "C",
+   "dist": [
+    1.6,
+    2.1
+   ],
+   "turn": [
+    -47.0,
+    -23.0
+   ],
+   "lean": [
+    -12.0,
+    12.0
+   ],
+   "target": {
+    "turn": -35,
+    "lean": 0.0,
+    "roll": 0.0,
+    "dist": 1.8,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "F · 가운데 · 1.60–2.10 m · 왼쪽 끝이 가깝게 35°",
+   "check": {
+    "visible_corners": 88,
+    "turn": -35.0,
+    "lean": 0.0,
+    "roll": 0.0,
+    "tilt": 35.0,
+    "dist": 1.8,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "F-C-t+0l-35",
+   "kind": "G",
+   "group": "F",
+   "pos": "C",
+   "dist": [
+    1.6,
+    2.1
+   ],
+   "turn": [
+    -12.0,
+    12.0
+   ],
+   "lean": [
+    -47.0,
+    -23.0
+   ],
+   "target": {
+    "turn": 0.0,
+    "lean": -35,
+    "roll": 0.0,
+    "dist": 1.8,
+    "goal_gap": 150
+   },
+   "roll": [
+    -20.0,
+    20.0
+   ],
+   "label": "F · 가운데 · 1.60–2.10 m · 위쪽 끝이 가깝게 35°",
+   "check": {
+    "visible_corners": 88,
+    "turn": -0.0,
+    "lean": -35.0,
+    "roll": 0.0,
+    "tilt": 35.0,
+    "dist": 1.8,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "NR-C-t+0l+45r+90",
+   "kind": "G",
+   "group": "NR",
+   "pos": "C",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -12.0,
+    12.0
+   ],
+   "lean": [
+    33.0,
+    57.0
+   ],
+   "target": {
+    "turn": 0.0,
+    "lean": 45,
+    "roll": 90,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll_abs": [
+    68.0,
+    90.0
+   ],
+   "label": "NR · 가운데 · 0.90–1.15 m · 아래쪽 끝이 가깝게 45° · 판을 90° 시계 방향으로 돌림",
+   "check": {
+    "visible_corners": 88,
+    "turn": -0.0,
+    "lean": 45.0,
+    "roll": -90.0,
+    "tilt": 45.0,
+    "dist": 1.0,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "NR-C-t+0l-45r+90",
+   "kind": "G",
+   "group": "NR",
+   "pos": "C",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -12.0,
+    12.0
+   ],
+   "lean": [
+    -57.0,
+    -33.0
+   ],
+   "target": {
+    "turn": 0.0,
+    "lean": -45,
+    "roll": 90,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll_abs": [
+    68.0,
+    90.0
+   ],
+   "label": "NR · 가운데 · 0.90–1.15 m · 위쪽 끝이 가깝게 45° · 판을 90° 시계 방향으로 돌림",
+   "check": {
+    "visible_corners": 88,
+    "turn": -0.0,
+    "lean": -45.0,
+    "roll": -90.0,
+    "tilt": 45.0,
+    "dist": 1.0,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "NR-C-t+45l+0r+45",
+   "kind": "G",
+   "group": "NR",
+   "pos": "C",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    33.0,
+    57.0
+   ],
+   "lean": [
+    -12.0,
+    12.0
+   ],
+   "target": {
+    "turn": 45,
+    "lean": 0.0,
+    "roll": 45,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll": [
+    33.0,
+    57.0
+   ],
+   "label": "NR · 가운데 · 0.90–1.15 m · 오른쪽 끝이 가깝게 45° · 판을 45° 시계 방향으로 돌림",
+   "check": {
+    "visible_corners": 88,
+    "turn": 45.0,
+    "lean": 0.0,
+    "roll": 45.0,
+    "tilt": 45.0,
+    "dist": 1.0,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "NR-C-t-45l+0r+45",
+   "kind": "G",
+   "group": "NR",
+   "pos": "C",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -57.0,
+    -33.0
+   ],
+   "lean": [
+    -12.0,
+    12.0
+   ],
+   "target": {
+    "turn": -45,
+    "lean": 0.0,
+    "roll": 45,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll": [
+    33.0,
+    57.0
+   ],
+   "label": "NR · 가운데 · 0.90–1.15 m · 왼쪽 끝이 가깝게 45° · 판을 45° 시계 방향으로 돌림",
+   "check": {
+    "visible_corners": 88,
+    "turn": -45.0,
+    "lean": 0.0,
+    "roll": 45.0,
+    "tilt": 45.0,
+    "dist": 1.0,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "NR-C-t+0l+45r-45",
+   "kind": "G",
+   "group": "NR",
+   "pos": "C",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -12.0,
+    12.0
+   ],
+   "lean": [
+    33.0,
+    57.0
+   ],
+   "target": {
+    "turn": 0.0,
+    "lean": 45,
+    "roll": -45,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll": [
+    -57.0,
+    -33.0
+   ],
+   "label": "NR · 가운데 · 0.90–1.15 m · 아래쪽 끝이 가깝게 45° · 판을 45° 반시계 방향으로 돌림",
+   "check": {
+    "visible_corners": 88,
+    "turn": 0.0,
+    "lean": 45.0,
+    "roll": -45.0,
+    "tilt": 45.0,
+    "dist": 1.0,
+    "pos": "C"
+   }
+  },
+  {
+   "id": "NR-C-t+0l-45r-45",
+   "kind": "G",
+   "group": "NR",
+   "pos": "C",
+   "dist": [
+    0.9,
+    1.15
+   ],
+   "turn": [
+    -12.0,
+    12.0
+   ],
+   "lean": [
+    -57.0,
+    -33.0
+   ],
+   "target": {
+    "turn": 0.0,
+    "lean": -45,
+    "roll": -45,
+    "dist": 1.0,
+    "goal_gap": 150
+   },
+   "roll": [
+    -57.0,
+    -33.0
+   ],
+   "label": "NR · 가운데 · 0.90–1.15 m · 위쪽 끝이 가깝게 45° · 판을 45° 반시계 방향으로 돌림",
+   "check": {
+    "visible_corners": 88,
+    "turn": 0.0,
+    "lean": -45.0,
+    "roll": -45.0,
+    "tilt": 45.0,
+    "dist": 1.0,
+    "pos": "C"
+   }
+  }
+ ]
+}
