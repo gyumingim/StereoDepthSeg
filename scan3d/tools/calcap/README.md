@@ -45,3 +45,9 @@ cd ~/scanner/StereoDepthSeg-calcap
 ## 앱
 arlat 0.6.24-calcap-20261025 (vc 30; 0.6.23 = vc 29 smoke-tested), `--es mode calcap` (기본 동작은 그대로). 인텐트: fps(10), exp_us(2000), focus_dpt(0.5), port(8811),
 idle_s(300), max_s(1200), max_skin_c(40, 더 낮게만), max_ap_c(50, 더 낮게만). PC 와는 TCP 8811 (PREV/CAP/STAT/MSG/OVL/IMG/STOP; IMG 는 옛 앱용, 서버는 `--send-img` 때만 보냄).
+
+## 인쇄 보드 (lenskit, 2026-10-27)
+- 플래그 없으면 위 동작 그대로. 인쇄 A1 ChArUco 로 찍을 때: `calcap_server.py --boards board_print_A1_12x9 --slots <...>\scan3d\config\calcap_slots\print_A1_55.json --frames 3`
+  (55칸, 0.9–2.1 m, 판은 받침에 고정·폰은 삼각대, 노트북 화면의 보드 그림은 자동으로 숨김).
+- 계산 한 번에: `bash scan3d/tools/calcap/lenskit_run.sh <세트A> <세트B>` (OpenCV + mrcal 휨 2축 + 합격 기준 C1–C8 + 통과 시 앱 렌즈 세트, 설치 안 함).
+- 자세한 내용·시험 결과: `scan3d/runs/lenskit_20261027/README.md`. 사용자 안내: `C:\Users\a3162\scan3d_handoff\changes_0620\lens_shoot_guide.html`.

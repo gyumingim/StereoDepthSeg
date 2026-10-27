@@ -1,0 +1,77 @@
+{
+ "K": [
+  [
+   1289.9327922759287,
+   0.0,
+   967.1412070831451
+  ],
+  [
+   0.0,
+   1291.7997626622246,
+   552.9234108473337
+  ],
+  [
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "dist": [
+  0.08650392316034737,
+  -0.0693123480378167,
+  0.0,
+  0.0,
+  0.0
+ ],
+ "focus_dpt": 0.5,
+ "focus_dpt_measured_range": [
+  0.5,
+  0.5
+ ],
+ "focus_dpt_app": 0.5,
+ "size": [
+  1920,
+  1080
+ ],
+ "model": "k1k2p",
+ "fit": "k12_notan",
+ "fit_note": "OpenCV calibrateCamera, k1 k2 free, p1 p2 k3 fixed 0 (OpenVINS radtan compatible), sets A+B together",
+ "rms_px": 0.0412,
+ "n_views": 219,
+ "n_poses": 110,
+ "criteria": "C1-C8 all PASS (runs/lenscal_20261027 README section 3)",
+ "criteria_file": "/home/system/scanner/tmp_lenskit/run2/criteria.json",
+ "criteria_sha256": "47b6fc26a59861a7a68dfee8c340a3a3ea9a8787fee7817865e07a46452f3ae0",
+ "criteria_flags": {
+  "accept_small": true,
+  "flatness_source": "--flatness-mm override (test)"
+ },
+ "mrcal_AB": {
+  "fx": 1289.942104808339,
+  "fy": 1291.80738096126,
+  "cx": 967.1660614249937,
+  "cy": 552.9105030751166,
+  "dist": [
+   0.08650762312608415,
+   -0.06931145283861312,
+   -4.17601754851903e-06,
+   7.003418259524996e-06
+  ]
+ },
+ "warp_mm": [
+  -0.0007,
+  -0.0003
+ ],
+ "sets": {
+  "A": [
+   "/home/system/scanner/tmp_lenskit/syn1"
+  ],
+  "B": [
+   "/home/system/scanner/tmp_lenskit/syn2"
+  ]
+ },
+ "board": "board_print_A1_12x9",
+ "status": "candidate (printed board, passed C1-C8) - NOT installed",
+ "status_note": "Chosen from board calibration only, never from VIO error. Installing = human decision.",
+ "made": "2026-10-27 10:29:57"
+}

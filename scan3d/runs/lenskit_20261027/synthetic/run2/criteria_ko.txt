@@ -1,0 +1,21 @@
+[A] 사진 110 자세 55 · RMS 0.0391 px · 이상치 0.54 % · fx 1289.93 cx 967.18 cy 552.91 · 휨 x/y [-0.0006, -0.0008] mm · 불확실성(자세당 1장) 가운데 0.009 r0.8 0.028 px
+[B] 사진 110 자세 55 · RMS 0.0409 px · 이상치 0.50 % · fx 1289.95 cx 967.15 cy 552.90 · 휨 x/y [-0.0007, 0.0002] mm · 불확실성(자세당 1장) 가운데 0.010 r0.8 0.029 px
+[AB] 사진 220 자세 110 · RMS 0.0399 px · 이상치 0.53 % · fx 1289.94 cx 967.17 cy 552.91 · 휨 x/y [-0.0007, -0.0003] mm · 불확실성(자세당 1장) 가운데 0.007 r0.8 0.020 px
+C1 PASS   {"A": {"rms": 0.0391, "outlier": 0.0054, "corner_mean": 0.0105}, "B": {"rms": 0.0409, "outlier": 0.005, "corner_mean": 0.0113}}
+     기준: RMS <= 0.25 px, outliers <= 3 %, per-corner mean residual <= 0.05 px
+C2 PASS   {"A": {"centre": 0.009, "r08": 0.028}, "B": {"centre": 0.01, "r08": 0.029}}
+     기준: uncertainty (one still per pose) centre <= 0.2 px, r0.8 <= 0.5 px
+C3 PASS   {"centre": {"diff_max": 0.001, "unc_sum": 0.019, "ratio_max": 0.03}, "r0.5": {"diff_max": 0.009, "unc_sum": 0.034, "ratio_max": 0.28}, "r0.8": {"diff_max": 0.022, "unc_sum": 0.057, "ratio_max": 0.38}}
+     기준: A vs B (rotation fit) <= uA + uB at centre / r0.5 / r0.8 and r0.8 <= 1.0 px; ratio > 2 = look further
+C4 PASS   {"dfx_pct": 0.0022, "boot": {"A": {"n": 30, "sd_fx_pct": 0.0025, "sd_cx": 0.045, "sd_cy": 0.043}, "B": {"n": 30, "sd_fx_pct": 0.0022, "sd_cx": 0.033, "sd_cy": 0.038}}, "k12_notan_pp_A_minus_B": {"dcx": 0.01, "dcy": 0.01}}
+     기준: |fx_A - fx_B| <= 0.15 %, bootstrap sd(fx) <= 0.15 % per set, k12_notan principal point A-B <= 2 px
+C5 PASS   {"measured_flatness_mm": 0.05, "sets": {"A": {"warp_mm_x_y": [-0.0006, -0.0008], "fx_warp_vs_nowarp_pct": 0.0005}, "B": {"warp_mm_x_y": [-0.0007, 0.0002], "fx_warp_vs_nowarp_pct": 0.0003}}}
+     기준: flatness (straightedge) <= 0.1 mm, |mrcal warp| within +-0.1 mm of it, fx warp vs no warp <= 0.1 %
+C6 PASS   {"A": {"frac_min": 1.0, "frac_med": 1.0, "n": 6}, "B": {"frac_min": 1.0, "frac_med": 1.0, "n": 6}}
+     기준: halves (one still per pose): diff <= 2 sqrt(u1^2 + u2^2) on >= 70 % of grid points r <= 0.8 (every split)
+C7 PASS   {"near": {"fx": 1289.919, "cx": 967.164, "cy": 552.926, "n_poses": 68, "sd_fx": 0.024, "sd_cy": 0.026}, "far": {"fx": 1290.149, "cx": 967.135, "cy": 552.807, "n_poses": 42, "sd_fx": 0.06, "sd_cy": 0.068}, "dfx": -0.23, "limit_2sd": 0.129, "dsplit_m": 1.15, "below_half_C4": true, "accept_small": true}
+     기준: near vs far |dfx| <= 2 sd (pose bootstrap); set G (optional) |dfx| <= 0.1 %, |dpp| <= 2 px · 세트 G 없음 (선택) - 거리 부분만 판정
+C8 PASS   {"plus": {"fx": 1290.251, "cx": 967.123, "cy": 552.542, "n_poses": 36, "sd_fx": 0.08, "sd_cy": 0.13}, "minus": {"fx": 1290.113, "cx": 967.219, "cy": 553.088, "n_poses": 36, "sd_fx": 0.068, "sd_cy": 0.07}, "dfx": 0.138, "dcy": -0.546, "limit_fx": 0.21, "limit_cy": 0.295, "below_half_C4": true, "accept_small": true}
+     기준: lean+ vs lean- |dfx|, |dcy| <= 2 sd (pose bootstrap), >= 10 poses each
+참고: OpenCV k12_notan(A+B) 대 mrcal OPENCV4+휨(A+B) 광선 차이 {'centre': 0.001, 'r0.5': 0.005, 'r0.8': 0.01}
+판정: C1–C8 모두 통과
