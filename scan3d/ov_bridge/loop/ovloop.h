@@ -51,6 +51,19 @@ struct Cfg {
   int xf_tri = 0;              // 1: triangulate XFeat matches with the previous keyframe (VIO poses) -> more 3D points
   double xf_tri_deg = 1.0;     // minimum parallax for xf_tri
   double xf_tri_px = 2.0;      // reprojection bound (px) for xf_tri
+  // xfopt 2026-10-27 (all default off = ovxfeat behaviour unchanged)
+  int log_cand = 0;            // 1: log every verification path result with its pose ("cx" in the kf line; decisions unchanged)
+  int xf_both = 0;             // 1 (with xf_mode): also run the box-BRIEF path for each candidate (logged)
+  int xf_pick = 0;             // 0: XFeat result; 1: hybrid = box-BRIEF result when it passes, else XFeat
+  int xf_min_inl = 0;          // XFeat path gates (0 = off / the shared value): inliers, inliers / matches, 8x6 grid cells,
+  double xf_min_ratio = 0.0;   //   roll-pitch bound (deg), yaw correction bound (deg), PnP RANSAC threshold (px)
+  int xf_min_cells = 0;
+  double xf_rp_deg = 0.0;
+  double xf_yaw_deg = 0.0;
+  double xf_pnp_px = 0.0;
+  int xf_tri_mv = 0;           // 1: also triangulate with the keyframe before the previous one; a point seen from both must agree
+                               //    (|X1 - X2| <= xf_tri_rel * depth); 2: keep only points triangulated from both
+  double xf_tri_rel = 0.05;
   int diag_prev = 0;           // 1: also verify against the previous keyframe (log only, never a loop): pipeline self-test
   int sync = 0;                // --loop-sync 1: the VIO thread waits until each keyframe is processed (deterministic, PC eval only)
   // keyframe rule (VIO thread)
