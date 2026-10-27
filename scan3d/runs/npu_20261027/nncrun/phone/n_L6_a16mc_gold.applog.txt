@@ -1,0 +1,31 @@
+nncrun start args='model=L6_a16mc.nnc in=g_L6_a16mc.bin out=og_L6_a16mc.bin warm=3 iters=10 reps=1' dir=/data/user/0/com.scan3d.nncprobe/files pid=13418 uid=10471
+selinux context: u:r:untrusted_app:s0:c215,c257,c512,c768
+dlopen libenn_public_api_cpp.so OK
+EnnInitialize -> 0
+meta 110 -> 0 '2.2.27'
+meta 111 -> 0 '2.2.26:3:g844124b4'
+EnnGetPreferencePerfMode -> 0 val=7
+EnnOpenModel(file, /data/user/0/com.scan3d.nncprobe/files/L6_a16mc.nnc) -> 0 id=0x346a01000000 (26.1 ms)
+meta 120 -> 0 '27'
+meta 121 -> 0 'v2.4.11.o'
+meta 122 -> 0 'NOT SUPPORTED'
+meta 123 -> 0 'NOT SUPPORTED'
+meta 124 -> 0 'NOT SUPPORTED'
+meta 130 -> 0 'Failed'
+meta 131 -> 0 'Failed'
+meta 132 -> 0 'Failed'
+meta 133 -> 0 'Failed'
+EnnGetBuffersInfo -> 0 raw u32[0..2]=1 1 0
+BufferInfo in[0] -> 0 upd=0 n=1 w=512 h=512 c=1 size=1048576 type=0 label=x_0
+BufferInfo out[0] -> 0 upd=0 n=1 w=0 h=1026 c=512 size=2101248 type=0 label=out_1009
+EnnAllocateAllBuffers -> 0 raw 1 1 0 (1.7 ms)
+buf[0] va=0x7958a1b000 size=1048576 offset=0
+buf[1] va=0x78c9e30000 size=2101248 offset=0
+input file /data/user/0/com.scan3d.nncprobe/files/g_L6_a16mc.bin: 1048576 bytes = 1 frames of 1048576 (rest 0)
+frame 0 exec -> 0 14505 us out[0..2]=0.999865 0 0 sum=2581.78
+memcpy in 1048576 B 204 us, out 2101248 B 1430 us
+TIMING rep 0: n=10 fails=0 p50=14606 p95=14964 min=14557 max=14964 mean=14650 us (wall 146.5 ms)
+EnnReleaseBuffers -> 0
+EnnCloseModel -> 0
+EnnDeinitialize -> 0
+nncrun end

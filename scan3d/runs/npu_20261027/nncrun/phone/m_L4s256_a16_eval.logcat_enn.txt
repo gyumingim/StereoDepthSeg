@@ -1,0 +1,50 @@
+10-28 07:39:44.345 23648 23648 I AconfigPackage: com.android.hardware.input is mapped to system
+10-28 07:39:44.345 23648 23648 I AconfigPackage: com.android.input.flags is mapped to system
+10-28 07:39:44.346 23648 23648 I AconfigPackage: android.view.inputmethod is mapped to system
+10-28 07:39:44.442 23659 23659 D nativeloader: Configuring clns-9 for other apk /data/app/~~_yjWsInY6aZA6wGycyDwBw==/com.scan3d.nncprobe-pIZuRvkkU8empgkd0ylWSg==/base.apk. target_sdk_version=34, uses_libraries=libenn_public_api_cpp.so, library_path=/data/app/~~_yjWsInY6aZA6wGycyDwBw==/com.scan3d.nncprobe-pIZuRvkkU8empgkd0ylWSg==/lib/arm64:/data/app/~~_yjWsInY6aZA6wGycyDwBw==/com.scan3d.nncprobe-pIZuRvkkU8empgkd0ylWSg==/base.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand:/data/user/0/com.scan3d.nncprobe
+10-28 07:39:44.452 23659 23659 D nativeloader: Load /data/app/~~_yjWsInY6aZA6wGycyDwBw==/com.scan3d.nncprobe-pIZuRvkkU8empgkd0ylWSg==/lib/arm64/libnncrun.so using class loader ns clns-9 (caller=/data/app/~~_yjWsInY6aZA6wGycyDwBw==/com.scan3d.nncprobe-pIZuRvkkU8empgkd0ylWSg==/base.apk): ok
+10-28 07:39:44.484 23659 23673 I nncrun  : nncrun start args='model=L4s256_a16.nnc in=lg_x13.bin out=oe_L4s256_a16.bin warm=20 iters=200 reps=2' dir=/data/user/0/com.scan3d.nncprobe/files pid=23659 uid=10471
+10-28 07:39:44.485 23659 23673 I nncrun  : selinux context: u:r:untrusted_app:s0:c215,c257,c512,c768
+10-28 07:39:44.493 23659 23673 I nncrun  : dlopen libenn_public_api_cpp.so OK
+10-28 07:39:44.493 23659 23673 I ENN_FRAMEWORK: 2.2.27: * ENN Trace OFF
+10-28 07:39:44.564 23675 23675 I AidlLazyServiceRegistrar: Registering service vendor.samsung_slsi.hardware.enn_aidl.IEnnInterfaceAidl/default
+10-28 07:39:44.565 23675 23675 I AidlLazyServiceRegistrar: Process has 1 (of 1 available) client(s) in use after notification vendor.samsung_slsi.hardware.enn_aidl.IEnnInterfaceAidl/default has clients: 1
+10-28 07:39:44.567 23659 23673 I DMABUFHEAPS: Using DMA-BUF heap named: system
+10-28 07:39:44.567 23659 23673 I DMABUFHEAPS: Using DMA-BUF heap named: system-uncached
+10-28 07:39:44.567 23675 23675 I ENN_FRAMEWORK: 2.2.27: * [enn_aidl] Link monitor is set(23659)
+10-28 07:39:44.567 23675 23675 I ENN_FRAMEWORK: 2.2.27: * [enn_aidl] Wake Up Monitor thread.. 
+10-28 07:39:44.567 23675 23675 I ENN_FRAMEWORK: 2.2.27: * Set SOC name as 9945
+10-28 07:39:44.569 23675 23675 W ENN_FRAMEWORK: 2.2.27:   Adjust invalid mo_scen_id from 2 to 1
+10-28 07:39:44.570 23675 23675 I DMABUFHEAPS: Using DMA-BUF heap named: system
+10-28 07:39:44.570 23675 23675 I ENN_FRAMEWORK: 2.2.27: * GpuUserDriver::Initialize started
+10-28 07:39:44.570 23675 23675 I ENN_FRAMEWORK: 2.2.27: * ENN Trace OFF
+10-28 07:39:44.570 23675 23675 I ENN_FRAMEWORK: 2.2.27: * (+) Engine::EngineImpl::init->(0x5C6B)
+10-28 07:39:44.570 23675 23675 I ENN_FRAMEWORK: 2.2.27: * A ClientProcess(ID: 0x5C6B00000000) is created.
+10-28 07:39:44.570 23675 23675 I ENN_FRAMEWORK: 2.2.27: * ClientProcess(ID: 0x5C6B00000000) is added: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+10-28 07:39:44.570 23675 23675 I ENN_FRAMEWORK: 2.2.27: * (-) Engine::EngineImpl::init->(0x5C6B)
+10-28 07:39:44.570 23675 23676 I ENN_FRAMEWORK: 2.2.27: * [ENN SERVICE] pid(23659): ref_cnt(1), status(0)
+10-28 07:39:44.570 23659 23673 I ENN_FRAMEWORK: 2.2.27: * Context(0x7958ce4a78) ref_cnt(0x7958ce4a78)=1, Commit [2.2.26:3:g844124b4], Version [2.2.27], AIDL , created context.
+10-28 07:39:44.570 23659 23673 I ENN_FRAMEWORK: 2.2.27: * Initialized, set handler with signal 53
+10-28 07:39:44.570 23659 23673 I nncrun  : EnnInitialize -> 0
+10-28 07:39:44.570 23659 23673 I nncrun  : meta 110 -> 0 '2.2.27'
+10-28 07:39:44.570 23659 23673 I nncrun  : meta 111 -> 0 '2.2.26:3:g844124b4'
+10-28 07:39:44.570 23659 23673 I nncrun  : EnnGetPreferencePerfMode -> 0 val=7
+10-28 07:39:44.570 23659 23673 I ENN_FRAMEWORK: 2.2.27: * Model File: /data/user/0/com.scan3d.nncprobe/files/L4s256_a16.nnc load start
+10-28 07:39:44.570 23659 23673 I ENN_FRAMEWORK: 2.2.27: * FileDescriptorBufferReader fd(97) (size: 0 offset: 0)
+10-28 07:39:44.570 23659 23673 I ENN_FRAMEWORK: 2.2.27: * Pref: (0,0,0) (1,7,0) (2,0,0) 
+10-28 07:39:44.571 23675 23678 I ENN_FRAMEWORK: 2.2.27: * [SUBMITTED] (0x890001,2592000) (0x880002,4206000) (0x880003,533000) 
+10-28 07:39:44.572 23659 23673 I ENN_FRAMEWORK: 2.2.27: * EnnOpenFile() file load start : /data/user/0/com.scan3d.nncprobe/files/L4s256_a16.nnc
+10-28 07:39:44.574 23659 23673 I ENN_FRAMEWORK: 2.2.27: * EnnOpenFile() file load ended : /data/user/0/com.scan3d.nncprobe/files/L4s256_a16.nnc
+10-28 07:39:44.574 23675 23678 I ENN_FRAMEWORK: 2.2.27: * (+) Engine::EngineImpl::open_model
+10-28 07:39:44.575 23675 23678 E ENN_FRAMEWORK: 2.2.27:   Not Supported model type : 0
+10-28 07:39:44.575 23675 23678 E ENN_FRAMEWORK: 2.2.27:   open_model() failed: Can't parse unsupported type !!(vendor/samsung_slsi/exynos/enn/source/src/model/parser/parser.cc:57)
+10-28 07:39:44.575 23659 23673 I nncrun  : EnnOpenModel(file, /data/user/0/com.scan3d.nncprobe/files/L4s256_a16.nnc) -> 1 id=0x0 (4.4 ms)
+10-28 07:39:44.575 23659 23673 I ENN_FRAMEWORK: 2.2.27: * Context(0x7958ce4a78) ref_cnt(0x7958ce4a78)=0 , will delete context.. force_deinit(0)
+10-28 07:39:44.575 23675 23678 I BpBinder: onLastStrongRef automatically unlinking death recipients: vendor.samsung_slsi.hardware.enn_aidl.IEnnCallbackAidl
+10-28 07:39:44.575 23675 23678 I ENN_FRAMEWORK: 2.2.27: * (+) Engine::EngineImpl::deinit->(0x5C6B)
+10-28 07:39:44.575 23675 23678 I ENN_FRAMEWORK: 2.2.27: * A ClientProcess(ID: 0x5C6B00000000) is released.
+10-28 07:39:44.576 23675 23678 I ENN_FRAMEWORK: 2.2.27: * ClientProcess(0x5C6B00000000) is released: ClientProcess[0], Model[0], ExecutableModel[0], ExecuteRequest[0]
+10-28 07:39:44.576 23675 23678 I ENN_FRAMEWORK: 2.2.27: * (-) Engine::EngineImpl::deinit->(0x5C6B)
+10-28 07:39:44.576 23659 23673 I BpBinder: onLastStrongRef automatically unlinking death recipients: vendor.samsung_slsi.hardware.enn_aidl.IEnnInterfaceAidl
+10-28 07:39:44.576 23659 23673 I ENN_FRAMEWORK: 2.2.27: * EnnDeinitialize
+10-28 07:39:44.576 23659 23673 I nncrun  : DONE

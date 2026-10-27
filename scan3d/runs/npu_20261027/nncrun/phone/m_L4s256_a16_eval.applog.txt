@@ -1,0 +1,8 @@
+nncrun start args='model=L4s256_a16.nnc in=lg_x13.bin out=oe_L4s256_a16.bin warm=20 iters=200 reps=2' dir=/data/user/0/com.scan3d.nncprobe/files pid=23659 uid=10471
+selinux context: u:r:untrusted_app:s0:c215,c257,c512,c768
+dlopen libenn_public_api_cpp.so OK
+EnnInitialize -> 0
+meta 110 -> 0 '2.2.27'
+meta 111 -> 0 '2.2.26:3:g844124b4'
+EnnGetPreferencePerfMode -> 0 val=7
+EnnOpenModel(file, /data/user/0/com.scan3d.nncprobe/files/L4s256_a16.nnc) -> 1 id=0x0 (4.4 ms)

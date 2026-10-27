@@ -1,0 +1,46 @@
+nncrun start args='model=L6_a16.nnc in=lg_pairs13_n512.bin out=ml_L6_a16_r1.bin lgpipe=1 lgn=512 passes=5 wr=lg_wr.bin' dir=/data/user/0/com.scan3d.nncprobe/files pid=9626 uid=10471
+selinux context: u:r:untrusted_app:s0:c215,c257,c512,c768
+dlopen libenn_public_api_cpp.so OK
+EnnInitialize -> 0
+meta 110 -> 0 '2.2.27'
+meta 111 -> 0 '2.2.26:3:g844124b4'
+EnnGetPreferencePerfMode -> 0 val=7
+EnnOpenModel(file, /data/user/0/com.scan3d.nncprobe/files/L6_a16.nnc) -> 0 id=0x259a50000000 (24.0 ms)
+meta 120 -> 0 '27'
+meta 121 -> 0 'v2.4.11.o'
+meta 122 -> 0 'NOT SUPPORTED'
+meta 123 -> 0 'NOT SUPPORTED'
+meta 124 -> 0 'NOT SUPPORTED'
+meta 130 -> 0 'Failed'
+meta 131 -> 0 'Failed'
+meta 132 -> 0 'Failed'
+meta 133 -> 0 'Failed'
+EnnGetBuffersInfo -> 0 raw u32[0..2]=1 1 0
+BufferInfo in[0] -> 0 upd=0 n=1 w=512 h=512 c=1 size=1048576 type=0 label=x_0
+BufferInfo out[0] -> 0 upd=0 n=1 w=0 h=1026 c=512 size=2101248 type=0 label=out_1009
+EnnAllocateAllBuffers -> 0 raw 1 1 0 (1.8 ms)
+buf[0] va=0x767890c000 size=1048576 offset=0
+buf[1] va=0x75dd725000 size=2101248 offset=0
+lg_pipe: N=512 pairs=13 in buf 1048576 out buf 2101248
+lg pass0 pair 0: pack 517 exec 44665 post 12137 total 57319 us matches 395
+lg pass0 pair 1: pack 475 exec 45480 post 12127 total 58082 us matches 358
+lg pass0 pair 2: pack 693 exec 46120 post 13379 total 60192 us matches 306
+lg pass0 pair 3: pack 471 exec 46849 post 12071 total 59391 us matches 350
+lg pass0 pair 4: pack 531 exec 44651 post 12762 total 57944 us matches 375
+lg pass0 pair 5: pack 447 exec 44549 post 13043 total 58040 us matches 288
+lg pass0 pair 6: pack 480 exec 44584 post 12067 total 57131 us matches 392
+lg pass0 pair 7: pack 446 exec 44535 post 12817 total 57797 us matches 408
+lg pass0 pair 8: pack 610 exec 44752 post 12786 total 58149 us matches 333
+lg pass0 pair 9: pack 483 exec 44613 post 12688 total 57784 us matches 395
+lg pass0 pair 10: pack 578 exec 45088 post 12804 total 58470 us matches 382
+lg pass0 pair 11: pack 449 exec 44559 post 13080 total 58088 us matches 396
+lg pass0 pair 12: pack 486 exec 44577 post 12563 total 57625 us matches 172
+LGPIPE pass 0 n=13 total p50=58040 p95=59391 | pack p50 483 | exec p50 44651 p95 46120 | post p50 12762 p95 13080 us
+LGPIPE pass 1 n=13 total p50=57592 p95=58287 | pack p50 467 | exec p50 44573 p95 44708 | post p50 12521 p95 13015 us
+LGPIPE pass 2 n=13 total p50=57820 p95=58381 | pack p50 466 | exec p50 44583 p95 44939 | post p50 12683 p95 13388 us
+LGPIPE pass 3 n=13 total p50=57371 p95=57959 | pack p50 465 | exec p50 44588 p95 44733 | post p50 12293 p95 12779 us
+LGPIPE pass 4 n=13 total p50=57665 p95=58322 | pack p50 469 | exec p50 44592 p95 45049 | post p50 12583 p95 13092 us
+EnnReleaseBuffers -> 0
+EnnCloseModel -> 0
+EnnDeinitialize -> 0
+nncrun end

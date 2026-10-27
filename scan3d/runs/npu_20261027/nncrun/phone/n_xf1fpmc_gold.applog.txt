@@ -1,0 +1,31 @@
+nncrun start args='model=xf1fpmc.nnc in=g_xf1fpmc.bin out=og_xf1fpmc.bin warm=5 iters=10 reps=1' dir=/data/user/0/com.scan3d.nncprobe/files pid=15214 uid=10471
+selinux context: u:r:untrusted_app:s0:c215,c257,c512,c768
+dlopen libenn_public_api_cpp.so OK
+EnnInitialize -> 0
+meta 110 -> 0 '2.2.27'
+meta 111 -> 0 '2.2.26:3:g844124b4'
+EnnGetPreferencePerfMode -> 0 val=7
+EnnOpenModel(file, /data/user/0/com.scan3d.nncprobe/files/xf1fpmc.nnc) -> 0 id=0x3b6e01000000 (19.9 ms)
+meta 120 -> 0 '27'
+meta 121 -> 0 'v2.4.11.o'
+meta 122 -> 0 'NOT SUPPORTED'
+meta 123 -> 0 'NOT SUPPORTED'
+meta 124 -> 0 'NOT SUPPORTED'
+meta 130 -> 0 'Failed'
+meta 131 -> 0 'Failed'
+meta 132 -> 0 'Failed'
+meta 133 -> 0 'Failed'
+EnnGetBuffersInfo -> 0 raw u32[0..2]=1 1 0
+BufferInfo in[0] -> 0 upd=0 n=1 w=640 h=352 c=1 size=901120 type=0 label=image_0
+BufferInfo out[0] -> 0 upd=0 n=1 w=80 h=44 c=130 size=1830400 type=0 label=out130_57
+EnnAllocateAllBuffers -> 0 raw 1 1 0 (1.0 ms)
+buf[0] va=0x79589ab000 size=901120 offset=0
+buf[1] va=0x78c3300000 size=1830400 offset=0
+input file /data/user/0/com.scan3d.nncprobe/files/g_xf1fpmc.bin: 901120 bytes = 1 frames of 901120 (rest 0)
+frame 0 exec -> 0 3201 us out[0..2]=2.2832 2.2207 2.57227 sum=-572031
+memcpy in 901120 B 38 us, out 1830400 B 781 us
+TIMING rep 0: n=10 fails=0 p50=1472 p95=1536 min=1458 max=1536 mean=1481 us (wall 14.8 ms)
+EnnReleaseBuffers -> 0
+EnnCloseModel -> 0
+EnnDeinitialize -> 0
+nncrun end

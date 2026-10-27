@@ -1,0 +1,31 @@
+nncrun start args='model=xpnmsr.nnc in=g_xpnmsr.bin out=og_xpnmsr.bin warm=5 iters=10 reps=1' dir=/data/user/0/com.scan3d.nncprobe/files pid=15584 uid=10471
+selinux context: u:r:untrusted_app:s0:c215,c257,c512,c768
+dlopen libenn_public_api_cpp.so OK
+EnnInitialize -> 0
+meta 110 -> 0 '2.2.27'
+meta 111 -> 0 '2.2.26:3:g844124b4'
+EnnGetPreferencePerfMode -> 0 val=7
+EnnOpenModel(file, /data/user/0/com.scan3d.nncprobe/files/xpnmsr.nnc) -> 0 id=0x3ce001000000 (22.5 ms)
+meta 120 -> 0 '27'
+meta 121 -> 0 'v2.4.11.o'
+meta 122 -> 0 'NOT SUPPORTED'
+meta 123 -> 0 'NOT SUPPORTED'
+meta 124 -> 0 'NOT SUPPORTED'
+meta 130 -> 0 'Failed'
+meta 131 -> 0 'Failed'
+meta 132 -> 0 'Failed'
+meta 133 -> 0 'Failed'
+EnnGetBuffersInfo -> 0 raw u32[0..2]=1 1 0
+BufferInfo in[0] -> 0 upd=0 n=1 w=640 h=352 c=3 size=2703360 type=0 label=image_0
+BufferInfo out[0] -> 0 upd=0 n=1 w=80 h=44 c=128 size=1802240 type=0 label=out128_80
+EnnAllocateAllBuffers -> 0 raw 1 1 0 (25.0 ms)
+buf[0] va=0x78cc13b000 size=2703360 offset=0
+buf[1] va=0x7958959000 size=1802240 offset=0
+input file /data/user/0/com.scan3d.nncprobe/files/g_xpnmsr.bin: 2703360 bytes = 1 frames of 2703360 (rest 0)
+frame 0 exec -> 0 7812 us out[0..2]=2.16211 2.1543 2.37305 sum=12525.7
+memcpy in 2703360 B 147 us, out 1802240 B 688 us
+TIMING rep 0: n=10 fails=0 p50=5108 p95=5483 min=4947 max=5483 mean=5158 us (wall 51.6 ms)
+EnnReleaseBuffers -> 0
+EnnCloseModel -> 0
+EnnDeinitialize -> 0
+nncrun end
