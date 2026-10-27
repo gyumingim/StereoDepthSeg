@@ -43,6 +43,14 @@ struct Cfg {
   std::string vpr;             // --loop-vpr FILE: precomputed global descriptors per keyframe t_ns (offline PC
                                // evaluation): candidates = cosine similarity instead of BoW (verification unchanged)
   double vpr_min = 0.5;        // cosine similarity lower bound for a VPR candidate
+  // ovxfeat 2026-10-26 (user decision: XFeat + LighterGlue in the geometric verification). --loop-xf "CMD" starts a
+  // feature / matching server (runs/ovxfeat_20261026/xf_server.py, PC prototype) as a child process; candidates stay
+  // BoW (or VPR). xf_mode 1 = XFeat mutual nearest neighbour, 2 = LighterGlue. "" / xf_mode 0 = box-BRIEF (unchanged).
+  std::string xf;
+  int xf_mode = 0;
+  int xf_tri = 0;              // 1: triangulate XFeat matches with the previous keyframe (VIO poses) -> more 3D points
+  double xf_tri_deg = 1.0;     // minimum parallax for xf_tri
+  double xf_tri_px = 2.0;      // reprojection bound (px) for xf_tri
   int diag_prev = 0;           // 1: also verify against the previous keyframe (log only, never a loop): pipeline self-test
   int sync = 0;                // --loop-sync 1: the VIO thread waits until each keyframe is processed (deterministic, PC eval only)
   // keyframe rule (VIO thread)
@@ -178,6 +186,13 @@ private:
   bool verify(const Kf &cur, const Kf &old, Verified &out, std::string &why);
   void optimise();
   void log_line(const std::string &s);
+  // --loop-xf server (loop thread only)
+  bool xf_start(std::string &err);
+  bool xf_feat(int64_t id, const cv::Mat &img, const std::vector<cv::Point2f> &q, std::vector<cv::Point2f> &kps, float &ms);
+  bool xf_match(int64_t a, int64_t b, int mode, std::vector<std::array<int, 2>> &m, float &ms);
+  int xf_in_ = -1, xf_out_ = -1;  // write to server stdin / read from its stdout
+  int xf_pid_ = -1;
+  bool xf_ok_ = false;
 
   Cfg c_;
   bool ok_ = true;

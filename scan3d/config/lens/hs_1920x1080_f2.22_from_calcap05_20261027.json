@@ -1,0 +1,48 @@
+{
+ "K": [
+  [
+   1303.9534019031926,
+   0.0,
+   965.1913776194923
+  ],
+  [
+   0.0,
+   1304.1451266410245,
+   553.2190412909164
+  ],
+  [
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "dist": [
+  0.0903282798837528,
+  -0.07916687305524923,
+  0.0,
+  0.0,
+  0.0
+ ],
+ "focus_dpt": 2.22,
+ "model": "k1k2p",
+ "fit": "k12_notan",
+ "fit_note": "k1 k2 free, p1 p2 k3 fixed 0 (OpenVINS radtan compatible). Values copied unchanged from the calcap board fit.",
+ "rms_px": 0.191,
+ "n_views": 132,
+ "n_poses": 33,
+ "size": [
+  1920,
+  1080
+ ],
+ "status": "xfopt-20261027 PC eval only (HS 2.22 dpt recordings): lens05 app lens moved to 2.22 dpt by the measured focus scale",
+ "status_note": "derived from config/lens/std_1920x1080_f0.50_calcap20261026.json (sha256 21b5f334c1bc210b): fx, fy x 1.01376 = 1 + 0.0080 x (2.22 - 0.5) (docs/focus_scale_20261022.md); principal point and distortion unchanged = ASSUMPTION (not measured). Made 2026-10-27 12:24:29.",
+ "uncertainty": "fx +-4.7 px (0.36 %, capture bootstrap) + systematic -0.96..+0.36 % (board flatness); pp +-1.7 px",
+ "source": "config/lens/std_1920x1080_f0.50_calcap20261026.json",
+ "source_sha256": "af5f27aa9208d13a391ee26782e746a4dcbc1239b11316bdd3d47eff74165c79",
+ "source_run": "scan3d/runs/calcap_calib_20261026 (branch calcap-20261025), set ~/scanner/StereoDepthSeg/scan3d/recordings/calcap_20261025_214000 (132 stills, 33 poses)",
+ "cross_check": "lenscal_20261027: set B (independent recordings) scores this lens 0.155 px vs its own fit 0.145 px",
+ "stream": "std60/VIO 1920x1080 YUV, TEMPLATE_RECORD, focus 0.5 dpt, 2 ms, ISO auto once (calcap stills at 10 fps)",
+ "board": "board_laptop_5x3.json",
+ "fit_made": "2026-10-26 21:00:05",
+ "made": "2026-10-27 08:37:42"
+}
