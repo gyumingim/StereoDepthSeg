@@ -22,7 +22,9 @@ static void lg_pipe(FI &I, FS &S, FP &P, const std::string &in, const std::strin
   }
   FILE *fm = out.empty() ? nullptr : std::fopen(out.c_str(), "wb");
   int passes = I("passes", 10);
-  std::vector<double> sc(N * N), rmax(N);
+  std::vector<double> sc(N * N), rmax(N), l1v(N);
+  const int lgpost = I("lgpost", 1);
+  L("lg_pipe: lgpost=%d", lgpost);
   std::vector<int> m0(N), m1(N);
   for (int pss = 0; pss < passes; pss++) {
     std::vector<double> tk, tx, tp, tt;
@@ -48,11 +50,22 @@ static void lg_pipe(FI &I, FS &S, FP &P, const std::string &in, const std::strin
       double c = now_us();
       const float *o = (const float *)bo->va;
       const int R = 2 * N + 2;
-      for (int i = 0; i < N; i++) {
-        double l0 = logsig(o[i * R + 2 * N]);
-        for (int j = 0; j < N; j++) {
-          float pp = o[i * R + j] * o[j * R + N + i];
-          sc[i * N + j] = std::log(std::max((double)pp, 1e-30)) + l0 + logsig(o[j * R + 2 * N + 1]);
+      if (lgpost == 2) {  // same values, logsig(z1_j) computed once per column instead of N times
+        for (int j = 0; j < N; j++) l1v[j] = logsig(o[j * R + 2 * N + 1]);
+        for (int i = 0; i < N; i++) {
+          double l0 = logsig(o[i * R + 2 * N]);
+          for (int j = 0; j < N; j++) {
+            float pp = o[i * R + j] * o[j * R + N + i];
+            sc[i * N + j] = std::log(std::max((double)pp, 1e-30)) + l0 + l1v[j];
+          }
+        }
+      } else {
+        for (int i = 0; i < N; i++) {
+          double l0 = logsig(o[i * R + 2 * N]);
+          for (int j = 0; j < N; j++) {
+            float pp = o[i * R + j] * o[j * R + N + i];
+            sc[i * N + j] = std::log(std::max((double)pp, 1e-30)) + l0 + logsig(o[j * R + 2 * N + 1]);
+          }
         }
       }
       for (int i = 0; i < N; i++) {

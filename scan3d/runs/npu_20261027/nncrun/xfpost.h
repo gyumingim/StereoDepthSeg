@@ -306,3 +306,45 @@ static void post_soft(const T *o, std::vector<float> &K, std::vector<Cand> &cand
   t.topk += d - c_;
   t.desc += e_ - d;
 }
+
+// xpnms (NMS inside the model) layout: feats 0-63 | score cells 64-127 (channel c of cell (cy,cx) = pixel
+// (cy*8 + c/8, cx*8 + c%8)); CPU: candidates = score > 0, top-k (score desc, raster index asc), desc at the cell + L2.
+template <typename T>
+static void post_nms(const T *o, std::vector<Cand> &cand, std::vector<Kp> &kp, std::vector<float> &desc, int topn,
+                     PostT &t) {
+  const int hw = Ph * Pw;
+  double a = now_us();
+  cand.clear();
+  for (int c = 0; c < 64; c++) {
+    const T *pc = o + (64 + c) * hw;
+    for (int c0 = 0; c0 < hw; c0++) {
+      float s = (float)pc[c0];
+      if (s > 0.f) cand.push_back({s, ((c0 / Pw) * 8 + c / 8) * PW + (c0 % Pw) * 8 + c % 8});
+    }
+  }
+  double b = now_us();
+  size_t n = std::min<size_t>(topn, cand.size());
+  if (cand.size() > n) std::nth_element(cand.begin(), cand.begin() + n, cand.end(), cand_less);
+  std::sort(cand.begin(), cand.begin() + n, cand_less);
+  cand.resize(n);
+  double c_ = now_us();
+  kp.resize(n);
+  desc.resize(n * 64);
+  for (size_t i = 0; i < n; i++) {
+    int x = cand[i].idx % PW, y = cand[i].idx / PW;
+    kp[i] = {cand[i].s, x, y};
+    int c0 = (y / 8) * Pw + x / 8;
+    float ss = 0, *dd = &desc[i * 64];
+    for (int c = 0; c < 64; c++) {
+      float v = (float)o[c * hw + c0];
+      dd[c] = v;
+      ss += v * v;
+    }
+    float r = 1.f / std::sqrt(std::max(ss, 1e-12f));
+    for (int c = 0; c < 64; c++) dd[c] *= r;
+  }
+  double d = now_us();
+  t.nms += b - a;
+  t.topk += c_ - b;
+  t.desc += d - c_;
+}

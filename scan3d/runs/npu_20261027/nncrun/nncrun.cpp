@@ -346,7 +346,7 @@ static void run_main(const std::string &args, const std::string &dir) {
           double b = now_us();
           int rr = eExec(mid, 0);
           double c = now_us();
-          if (postv != 2 && postv != 4) {
+          if (postv != 2 && postv != 4 && postv != 5) {
             if (o16) {
               const __fp16 *h16 = (const __fp16 *)bo0->va;
               for (size_t j = 0; j < nout_el; j++) outv[j] = (float)h16[j];
@@ -355,7 +355,10 @@ static void run_main(const std::string &args, const std::string &dir) {
             }
           }
           double d = now_us();
-          if (postv == 4) {  // xpsoft layout: feats 0-63 | softmax probs 64-127 | sigmoid heat 128, read in place
+          if (postv == 5) {  // xpnms layout (oc=128)
+            if (o16) post_nms((const __fp16 *)bo0->va, cand, kp, desc, 1024, pt);
+            else post_nms((const float *)bo0->va, cand, kp, desc, 1024, pt);
+          } else if (postv == 4) {  // xpsoft layout: feats 0-63 | softmax probs 64-127 | sigmoid heat 128, read in place
             if (o16) post_soft((const __fp16 *)bo0->va, K, cand, kp, desc, 1024, pt);
             else post_soft((const float *)bo0->va, K, cand, kp, desc, 1024, pt);
           } else if (postv == 0) {
