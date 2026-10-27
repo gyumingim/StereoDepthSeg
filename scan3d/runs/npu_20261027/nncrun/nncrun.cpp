@@ -289,7 +289,12 @@ static void run_main(const std::string &args, const std::string &dir) {
       size_t fs = PH * PW * 4, nf = gd.size() / fs;
       int passes = I("passes", 10);
       L("pipe: %zu gray frames, passes=%d (frames=%zu each), in buf %u out buf %u", nf, passes, nf, bi0->size, bo0->size);
-      std::vector<float> outv(bo0->size / 4), K, desc;
+      // ch=1|3 from the input buffer size; fp16 output (2 bytes/elem) converted to float in the "out" stage
+      const int ch = bi0->size == (uint32_t)(PH * PW * 4) ? 1 : 3;
+      const size_t nout_el = (size_t)130 * Ph * Pw;
+      const bool o16 = bo0->size == nout_el * 2;
+      L("pipe: input channels %d, output %s", ch, o16 ? "fp16" : "fp32");
+      std::vector<float> outv(nout_el), K, desc;
       std::vector<Kp> kp;
       FILE *fk = out.empty() ? nullptr : std::fopen(out.c_str(), "wb");
       for (int ps = 0; ps < passes; ps++) {
@@ -306,12 +311,19 @@ static void run_main(const std::string &args, const std::string &dir) {
           float r = (float)(1.0 / std::sqrt(var + 1e-5)), mf = (float)mean;
           float *dst = (float *)bi0->va;
           for (int i = 0; i < PH * PW; i++) dst[i] = (g[i] - mf) * r;
-          memcpy(dst + PH * PW, dst, PH * PW * 4);
-          memcpy(dst + 2 * PH * PW, dst, PH * PW * 4);
+          if (ch == 3) {
+            memcpy(dst + PH * PW, dst, PH * PW * 4);
+            memcpy(dst + 2 * PH * PW, dst, PH * PW * 4);
+          }
           double b = now_us();
           int rr = eExec(mid, 0);
           double c = now_us();
-          memcpy(outv.data(), bo0->va, bo0->size);
+          if (o16) {
+            const __fp16 *h16 = (const __fp16 *)bo0->va;
+            for (size_t j = 0; j < nout_el; j++) outv[j] = (float)h16[j];
+          } else {
+            memcpy(outv.data(), bo0->va, nout_el * 4);
+          }
           double d = now_us();
           xfeat_post(outv.data(), K, kp, desc, 1024);
           double e = now_us();

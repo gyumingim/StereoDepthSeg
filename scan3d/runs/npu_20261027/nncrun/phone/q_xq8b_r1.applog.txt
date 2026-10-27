@@ -1,0 +1,52 @@
+nncrun start args='model=xq8b.nnc in=gray13.bin out=kp_xq8b_r1.bin pipe=1 passes=10' dir=/data/user/0/com.scan3d.nncprobe/files pid=17280 uid=10464
+selinux context: u:r:untrusted_app:s0:c208,c257,c512,c768
+dlopen libenn_public_api_cpp.so OK
+EnnInitialize -> 0
+meta 110 -> 0 '2.2.27'
+meta 111 -> 0 '2.2.26:3:g844124b4'
+EnnGetPreferencePerfMode -> 0 val=7
+EnnOpenModel(file, /data/user/0/com.scan3d.nncprobe/files/xq8b.nnc) -> 0 id=0x438012000000 (18.9 ms)
+meta 120 -> 0 '27'
+meta 121 -> 0 'v2.4.11.o'
+meta 122 -> 0 'NOT SUPPORTED'
+meta 123 -> 0 'NOT SUPPORTED'
+meta 124 -> 0 'NOT SUPPORTED'
+meta 130 -> 0 'Failed'
+meta 131 -> 0 'Failed'
+meta 132 -> 0 'Failed'
+meta 133 -> 0 'Failed'
+EnnGetBuffersInfo -> 0 raw u32[0..2]=1 1 0
+BufferInfo in[0] -> 0 upd=0 n=1 w=640 h=352 c=3 size=2703360 type=0 label=image_0
+BufferInfo out[0] -> 0 upd=0 n=1 w=80 h=44 c=130 size=1830400 type=0 label=out130_58
+EnnAllocateAllBuffers -> 0 raw 1 1 0 (1.3 ms)
+buf[0] va=0x75e07ba000 size=2703360 offset=0
+buf[1] va=0x75e05fb000 size=1830400 offset=0
+pipe: 13 gray frames, passes=10 (frames=13 each), in buf 2703360 out buf 1830400
+pipe: input channels 3, output fp32
+pipe pass0 frame 0: norm+in 341 exec 3935 out 77 post 3589 total 7942 us, kp=1024
+pipe pass0 frame 1: norm+in 314 exec 3482 out 75 post 2911 total 6782 us, kp=1024
+pipe pass0 frame 2: norm+in 310 exec 3181 out 81 post 2920 total 6492 us, kp=1024
+pipe pass0 frame 3: norm+in 334 exec 3178 out 78 post 2932 total 6522 us, kp=1024
+pipe pass0 frame 4: norm+in 303 exec 2314 out 68 post 2754 total 5439 us, kp=1024
+pipe pass0 frame 5: norm+in 320 exec 2309 out 70 post 3029 total 5727 us, kp=1024
+pipe pass0 frame 6: norm+in 304 exec 2118 out 67 post 3025 total 5514 us, kp=1024
+pipe pass0 frame 7: norm+in 306 exec 2169 out 76 post 2939 total 5490 us, kp=1024
+pipe pass0 frame 8: norm+in 304 exec 2266 out 76 post 2889 total 5536 us, kp=1024
+pipe pass0 frame 9: norm+in 336 exec 2089 out 66 post 3053 total 5544 us, kp=1024
+pipe pass0 frame 10: norm+in 307 exec 2151 out 78 post 2861 total 5397 us, kp=1024
+pipe pass0 frame 11: norm+in 317 exec 2183 out 78 post 2936 total 5515 us, kp=1024
+pipe pass0 frame 12: norm+in 303 exec 2684 out 74 post 2970 total 6031 us, kp=1024
+PIPE pass 0 n=13 total p50=5544 p95=6782 | norm+in p50 310 | exec p50 2309 p95 3482 | out memcpy p50 76 | post p50 2936 p95 3053 us
+PIPE pass 1 n=13 total p50=5386 p95=5570 | norm+in p50 304 | exec p50 2105 p95 2140 | out memcpy p50 77 | post p50 2900 p95 3018 us
+PIPE pass 2 n=13 total p50=5583 p95=7951 | norm+in p50 312 | exec p50 2186 p95 3971 | out memcpy p50 82 | post p50 2921 p95 3729 us
+PIPE pass 3 n=13 total p50=5440 p95=6468 | norm+in p50 310 | exec p50 2147 p95 2693 | out memcpy p50 78 | post p50 2894 p95 3338 us
+PIPE pass 4 n=13 total p50=5429 p95=6935 | norm+in p50 317 | exec p50 2117 p95 2678 | out memcpy p50 85 | post p50 2903 p95 3723 us
+PIPE pass 5 n=13 total p50=5476 p95=6075 | norm+in p50 322 | exec p50 2131 p95 2669 | out memcpy p50 91 | post p50 2863 p95 2997 us
+PIPE pass 6 n=13 total p50=5542 p95=6132 | norm+in p50 323 | exec p50 2153 p95 2734 | out memcpy p50 88 | post p50 2844 p95 3588 us
+PIPE pass 7 n=13 total p50=5435 p95=7945 | norm+in p50 317 | exec p50 2158 p95 2635 | out memcpy p50 85 | post p50 2904 p95 3067 us
+PIPE pass 8 n=13 total p50=5536 p95=6441 | norm+in p50 323 | exec p50 2156 p95 2766 | out memcpy p50 87 | post p50 2845 p95 3008 us
+PIPE pass 9 n=13 total p50=5438 p95=6039 | norm+in p50 316 | exec p50 2137 p95 2669 | out memcpy p50 77 | post p50 2884 p95 3221 us
+EnnReleaseBuffers -> 0
+EnnCloseModel -> 0
+EnnDeinitialize -> 0
+nncrun end

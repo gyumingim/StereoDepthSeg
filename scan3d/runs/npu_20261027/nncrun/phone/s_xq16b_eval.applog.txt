@@ -1,0 +1,44 @@
+nncrun start args='model=xq16b.nnc in=eval3ch.bin out=oe_xq16b.bin warm=50 iters=200 reps=2' dir=/data/user/0/com.scan3d.nncprobe/files pid=17611 uid=10464
+selinux context: u:r:untrusted_app:s0:c208,c257,c512,c768
+dlopen libenn_public_api_cpp.so OK
+EnnInitialize -> 0
+meta 110 -> 0 '2.2.27'
+meta 111 -> 0 '2.2.26:3:g844124b4'
+EnnGetPreferencePerfMode -> 0 val=7
+EnnOpenModel(file, /data/user/0/com.scan3d.nncprobe/files/xq16b.nnc) -> 0 id=0x44cb15000000 (19.9 ms)
+meta 120 -> 0 '27'
+meta 121 -> 0 'v2.4.11.o'
+meta 122 -> 0 'NOT SUPPORTED'
+meta 123 -> 0 'NOT SUPPORTED'
+meta 124 -> 0 'NOT SUPPORTED'
+meta 130 -> 0 'Failed'
+meta 131 -> 0 'Failed'
+meta 132 -> 0 'Failed'
+meta 133 -> 0 'Failed'
+EnnGetBuffersInfo -> 0 raw u32[0..2]=1 1 0
+BufferInfo in[0] -> 0 upd=0 n=1 w=640 h=352 c=3 size=2703360 type=0 label=image_0
+BufferInfo out[0] -> 0 upd=0 n=1 w=80 h=44 c=130 size=1830400 type=0 label=out130_58
+EnnAllocateAllBuffers -> 0 raw 1 1 0 (1.2 ms)
+buf[0] va=0x75e2a27000 size=2703360 offset=0
+buf[1] va=0x75e2868000 size=1830400 offset=0
+input file /data/user/0/com.scan3d.nncprobe/files/eval3ch.bin: 35143680 bytes = 13 frames of 2703360 (rest 0)
+frame 0 exec -> 0 5165 us out[0..2]=1.71104 1.69432 2.04723 sum=-785379
+frame 1 exec -> 0 4890 us out[0..2]=1.63745 1.80303 2.80658 sum=-781601
+frame 2 exec -> 0 4952 us out[0..2]=2.1526 1.96527 2.2379 sum=-763675
+frame 3 exec -> 0 4969 us out[0..2]=2.217 1.98785 2.13337 sum=-756768
+frame 4 exec -> 0 4806 us out[0..2]=2.10577 1.59898 1.86241 sum=-714572
+frame 5 exec -> 0 3308 us out[0..2]=1.2168 2.13755 2.37004 sum=-778599
+frame 6 exec -> 0 4808 us out[0..2]=2.34327 2.06061 2.32488 sum=-784327
+frame 7 exec -> 0 3191 us out[0..2]=1.88415 1.85321 2.38091 sum=-778325
+frame 8 exec -> 0 3174 us out[0..2]=2.17351 2.00876 1.97196 sum=-790173
+frame 9 exec -> 0 3163 us out[0..2]=2.48962 2.3784 2.63681 sum=-792758
+frame 10 exec -> 0 3205 us out[0..2]=1.62741 1.93349 2.83167 sum=-770217
+frame 11 exec -> 0 3213 us out[0..2]=2.23539 2.49882 2.68699 sum=-765604
+frame 12 exec -> 0 3189 us out[0..2]=2.11748 1.82979 2.24961 sum=-784331
+memcpy in 2703360 B 155 us, out 1830400 B 747 us
+TIMING rep 0: n=200 fails=0 p50=3201 p95=3472 min=3114 max=3541 mean=3233 us (wall 646.7 ms)
+TIMING rep 1: n=200 fails=0 p50=3189 p95=3363 min=3038 max=3634 mean=3207 us (wall 641.5 ms)
+EnnReleaseBuffers -> 0
+EnnCloseModel -> 0
+EnnDeinitialize -> 0
+nncrun end
