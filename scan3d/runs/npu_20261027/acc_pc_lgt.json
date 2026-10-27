@@ -1,0 +1,43 @@
+{
+ "made": "2026-10-27 20:40:23",
+ "inputs": "eval_640x352_norm.npy (13 frames), lgev512_* (13 pairs)",
+ "xfeat": {},
+ "lgt512": {
+  "lgct_512_dynamic_range_quant": {
+   "agree_mean": 0.9764981153721431,
+   "agree_min": 0.9090909090909091,
+   "ref_matches_mean": 351.0,
+   "test_matches_mean": 350.6923076923077
+  },
+  "lgct_512_float16": {
+   "agree_mean": 1.0,
+   "agree_min": 1.0,
+   "ref_matches_mean": 351.0,
+   "test_matches_mean": 351.15384615384613
+  },
+  "lgct_512_float32": {
+   "agree_mean": 1.0,
+   "agree_min": 1.0,
+   "ref_matches_mean": 351.0,
+   "test_matches_mean": 351.15384615384613
+  },
+  "lgct_512_full_integer_quant": {
+   "agree_mean": 0.23960440523578946,
+   "agree_min": 0.06818181818181818,
+   "ref_matches_mean": 351.0,
+   "test_matches_mean": 90.6923076923077
+  },
+  "lgct_512_full_integer_quant_with_int16_act": {
+   "error": "SquaredDifference only supports FLOAT32 and INT32 now, got 7.Node number 72 (SQUARED_DIFFERENCE) failed to invoke."
+  },
+  "lgct_512_integer_quant": {
+   "agree_mean": 0.23960440523578946,
+   "agree_min": 0.06818181818181818,
+   "ref_matches_mean": 351.0,
+   "test_matches_mean": 90.6923076923077
+  },
+  "lgct_512_integer_quant_with_int16_act": {
+   "error": "SquaredDifference only supports FLOAT32 and INT32 now, got 7.Node number 76 (SQUARED_DIFFERENCE) failed to invoke."
+  }
+ }
+}

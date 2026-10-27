@@ -1,0 +1,54 @@
+2026-10-27 21:17:54 item 1 [xf_int8_enn_probe] before[AP=39.9 SKIN=36.6 ] after[AP=39.9 SKIN=36.6 ] bat=ACpowered:false,USBpowered:false,level:78, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.brave.browser/com.google.android.app last_input=29573ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | ERROR: Disallowed CPU fallback detected.
+    | ERROR: Benchmarking failed.
+    L I/tflite  (27568): Log parameter values verbosely: [0]
+    L I/tflite  (27568): Min num runs: [1]
+    L I/tflite  (27568): Min runs duration (seconds): [0]
+    L I/tflite  (27568): Num threads: [1]
+    L I/tflite  (27568): Min warmup runs: [0]
+    L I/tflite  (27568): Graph: [xfeatnn_640x352_full_integer_quant.tflite]
+    L I/tflite  (27568): Signature to run: []
+    L I/tflite  (27568): Require full delegation: [1]
+    L I/tflite  (27568): #threads used for CPU inference: [1]
+    L I/tflite  (27568): Use NNAPI: [1]
+    L I/tflite  (27568): NNAPI accelerator name: [enn]
+    L W/benchmark_model(27568): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+    L I/Manager (27568): Found interface enn (version = E0.0.1)
+    L I/tflite  (27568): NNAPI accelerators available: [enn,nnapi-reference]
+    L I/tflite  (27568): Disable NNAPI cpu: [1]
+    L I/tflite  (27568): Use xnnpack: [0]
+    L I/tflite  (27568): Loaded model xfeatnn_640x352_full_integer_quant.tflite
+    L I/tflite  (27568): Initialized TensorFlow Lite runtime.
+    L I/tflite  (27568): Created TensorFlow Lite delegate for NNAPI.
+    L I/tflite  (27568): NNAPI delegate created.
+    L W/tflite  (27568): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    L I/TypeManager(27568): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+    L W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+    L E/tflite  (27568): Disallowed CPU fallback detected.
+    L E/tflite  (27568): Benchmarking failed.
+2026-10-27 21:17:58 WARNING bench process still running
+2026-10-27 21:17:58 camera: Active Camera Clients: [] 
+2026-10-27 21:17:58 list done
+2026-10-27 21:17:59 lock released

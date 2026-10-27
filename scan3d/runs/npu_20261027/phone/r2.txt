@@ -1,0 +1,1265 @@
+2026-10-27 20:35:53 item 1 [p_add_f32_enn] before[AP=40.8 SKIN=36.8 ] after[AP=43.3 SKIN=37.0 ] bat=ACpowered:false,USBpowered:false,level:90, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=1610ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Allow fp16 in NNAPI: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteNnapiDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: Explicitly applied NNAPI delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=226 first=7349 curr=1930 min=1765 max=7349 avg=2089.59 std=418 p5=1829 median=2040 p95=2483
+    | INFO: count=473 first=2335 curr=1762 min=1703 max=5280 avg=1993.76 std=284 p5=1754 median=1932 p95=2371
+    | INFO: Inference timings in us: Init: 155775, First inference: 7349, Warmup (avg): 2089.59, Inference (avg): 1993.76
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:167: mmap_fd, vInfo.addr=0x7a2d9e6000, size=901120
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:201: getVirtualAddressOnPool(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] loadSharedMem:82: loadSharedMem(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:177: Execution Done.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:197: Loading data from 0x7a2b80c000 to 0x7a2d9e6000 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:204:  Not Apply postProcessOnOutputs!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:40: ~BufferInfoOnExecute(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:50: ~BufferInfoOnExecute(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] executeBaseOnNNAgent:240: executeBaseOnNNAgent(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] execute:128: execute(-)
+    L I/tflite  (23333): count=473 first=2335 curr=1762 min=1703 max=5280 avg=1993.76 std=284 p5=1754 median=1932 p95=2371
+    L I/tflite  (23333): Inference timings in us: Init: 155775, First inference: 7349, Warmup (avg): 2089.59, Inference (avg): 1993.76
+    L I/tflite  (23333): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (23333): Memory footprint delta from the start of the tool (MB): init=2.41016 overall=9.37891
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:87: ~EnnPreparedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:299: closeModel(+) modelId is 33554432
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:200: uennFreeBuffers(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:216: uennFreeBuffers(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:267: freeMemory(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:280: buffer info. addr : 0xb400007cddc530f0, size : 8192 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:291: freeMemory(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:114: uennCloseModel() is called with modelId : 33554432
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel : 0x7BA102000000(+)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (+) Engine::EngineImpl::close_model->(0x7BA102000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x7BA102000002) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecutableModel(ID: 0x7BA102000002) from a Model(ID : 0x7BA102000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * + Unload Model(ID:0x0x7BA102000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::CloseSubGraph started
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA102000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA102000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA102000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA102000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA102000000) (-)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+2026-10-27 20:36:22 item 2 [p_add_i8_enn] before[AP=42.8 SKIN=37.3 ] after[AP=43.6 SKIN=37.3 ] bat=ACpowered:false,USBpowered:false,level:90, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.twitter.android/com.x.android.main.M last_input=120ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteNnapiDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: Explicitly applied NNAPI delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=459 first=2633 curr=1598 min=849 max=2633 avg=1070.69 std=178 p5=890 median=1024 p95=1416
+    | INFO: count=957 first=1304 curr=1149 min=848 max=4838 avg=1025.8 std=186 p5=885 median=993 p95=1275
+    | INFO: Inference timings in us: Init: 84931, First inference: 2633, Warmup (avg): 1070.69, Inference (avg): 1025.8
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:167: mmap_fd, vInfo.addr=0x7a2db30000, size=225280
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:201: getVirtualAddressOnPool(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] loadSharedMem:82: loadSharedMem(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:177: Execution Done.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:197: Loading data from 0x7a2b8fd000 to 0x7a2db30000 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:204:  Not Apply postProcessOnOutputs!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:40: ~BufferInfoOnExecute(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:50: ~BufferInfoOnExecute(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] executeBaseOnNNAgent:240: executeBaseOnNNAgent(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] execute:128: execute(-)
+    L I/tflite  (23755): count=957 first=1304 curr=1149 min=848 max=4838 avg=1025.8 std=186 p5=885 median=993 p95=1275
+    L I/tflite  (23755): Inference timings in us: Init: 84931, First inference: 2633, Warmup (avg): 1070.69, Inference (avg): 1025.8
+    L I/tflite  (23755): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (23755): Memory footprint delta from the start of the tool (MB): init=2.64844 overall=4.54297
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:87: ~EnnPreparedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:299: closeModel(+) modelId is 50331648
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:200: uennFreeBuffers(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:216: uennFreeBuffers(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:267: freeMemory(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:280: buffer info. addr : 0xb400007cddbad010, size : 8192 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:291: freeMemory(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:114: uennCloseModel() is called with modelId : 50331648
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel : 0x7BA103000000(+)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (+) Engine::EngineImpl::close_model->(0x7BA103000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x7BA103000003) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecutableModel(ID: 0x7BA103000003) from a Model(ID : 0x7BA103000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * + Unload Model(ID:0x0x7BA103000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::CloseSubGraph started
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA103000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA103000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA103000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA103000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA103000000) (-)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+2026-10-27 20:36:50 item 3 [p_avgpool4_f32_enn] before[AP=43.6 SKIN=37.3 ] after[AP=39.8 SKIN=37.0 ] bat=ACpowered:false,USBpowered:false,level:89, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=3029ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Allow fp16 in NNAPI: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteNnapiDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: Explicitly applied NNAPI delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=439 first=3903 curr=1153 min=925 max=3903 avg=1101.32 std=197 p5=945 median=1068 p95=1380
+    | INFO: count=807 first=1350 curr=1249 min=957 max=2005 avg=1196.44 std=143 p5=1003 median=1202 p95=1432
+    | INFO: Inference timings in us: Init: 62091, First inference: 3903, Warmup (avg): 1101.32, Inference (avg): 1196.44
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:134: getVirtualAddressOnPool(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:167: mmap_fd, vInfo.addr=0x7d400e2000, size=56320
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:201: getVirtualAddressOnPool(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] loadSharedMem:82: loadSharedMem(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:177: Execution Done.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:197: Loading data from 0x7d4120a000 to 0x7d400e2000 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:204:  Not Apply postProcessOnOutputs!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:40: ~BufferInfoOnExecute(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:50: ~BufferInfoOnExecute(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] executeBaseOnNNAgent:240: executeBaseOnNNAgent(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] execute:128: execute(-)
+    L I/tflite  (24046): count=807 first=1350 curr=1249 min=957 max=2005 avg=1196.44 std=143 p5=1003 median=1202 p95=1432
+    L I/tflite  (24046): Inference timings in us: Init: 62091, First inference: 3903, Warmup (avg): 1101.32, Inference (avg): 1196.44
+    L I/tflite  (24046): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (24046): Memory footprint delta from the start of the tool (MB): init=3.04297 overall=5.87891
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:87: ~EnnPreparedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:299: closeModel(+) modelId is 67108864
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:200: uennFreeBuffers(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:216: uennFreeBuffers(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:267: freeMemory(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:280: buffer info. addr : 0xb400007cddc5fd50, size : 8192 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:291: freeMemory(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:114: uennCloseModel() is called with modelId : 67108864
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel : 0x7BA104000000(+)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (+) Engine::EngineImpl::close_model->(0x7BA104000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x7BA104000004) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecutableModel(ID: 0x7BA104000004) from a Model(ID : 0x7BA104000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * + Unload Model(ID:0x0x7BA104000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::CloseSubGraph started
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA104000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA104000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA104000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA104000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA104000000) (-)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+2026-10-27 20:37:24 item 4 [p_avgpool4_i8_enn] before[AP=39.8 SKIN=37.0 ] after[AP=41.2 SKIN=36.9 ] bat=ACpowered:false,USBpowered:false,level:89, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=31424ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteNnapiDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: Explicitly applied NNAPI delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=675 first=2250 curr=739 min=637 max=4279 avg=732.487 std=164 p5=674 median=708 p95=833
+    | INFO: count=1343 first=868 curr=747 min=651 max=4663 avg=735.055 std=122 p5=675 median=717 p95=859
+    | INFO: Inference timings in us: Init: 57915, First inference: 2250, Warmup (avg): 732.487, Inference (avg): 735.055
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:134: getVirtualAddressOnPool(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:167: mmap_fd, vInfo.addr=0x7d41a75000, size=14080
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:201: getVirtualAddressOnPool(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] loadSharedMem:82: loadSharedMem(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:177: Execution Done.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:197: Loading data from 0x7d419fd000 to 0x7d41a75000 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:204:  Not Apply postProcessOnOutputs!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:40: ~BufferInfoOnExecute(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:50: ~BufferInfoOnExecute(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] executeBaseOnNNAgent:240: executeBaseOnNNAgent(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] execute:128: execute(-)
+    L I/tflite  (24196): count=1343 first=868 curr=747 min=651 max=4663 avg=735.055 std=122 p5=675 median=717 p95=859
+    L I/tflite  (24196): Inference timings in us: Init: 57915, First inference: 2250, Warmup (avg): 732.487, Inference (avg): 735.055
+    L I/tflite  (24196): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (24196): Memory footprint delta from the start of the tool (MB): init=3.43359 overall=4.26953
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:87: ~EnnPreparedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:299: closeModel(+) modelId is 83886080
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:200: uennFreeBuffers(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:216: uennFreeBuffers(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:267: freeMemory(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:280: buffer info. addr : 0xb400007cddc5db40, size : 8192 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:291: freeMemory(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:114: uennCloseModel() is called with modelId : 83886080
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel : 0x7BA105000000(+)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (+) Engine::EngineImpl::close_model->(0x7BA105000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x7BA105000005) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecutableModel(ID: 0x7BA105000005) from a Model(ID : 0x7BA105000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * + Unload Model(ID:0x0x7BA105000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::CloseSubGraph started
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA105000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA105000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA105000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA105000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA105000000) (-)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+2026-10-27 20:37:34 item 5 [p_bmm_f32_enn] before[AP=40.0 SKIN=36.9 ] after[AP=40.0 SKIN=36.9 ] bat=ACpowered:false,USBpowered:false,level:89, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=16944ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Allow fp16 in NNAPI: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    | INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+    | VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: count=674 first=2687 curr=739 min=721 max=2687 avg=736.125 std=100 p5=722 median=723 p95=748
+    | INFO: count=1361 first=729 curr=745 min=721 max=1006 avg=728.248 std=18 p5=722 median=723 p95=748
+    | INFO: Inference timings in us: Init: 11004, First inference: 2687, Warmup (avg): 736.125, Inference (avg): 728.248
+    L I/tflite  (24598): NNAPI accelerator name: [enn]
+    L W/benchmark_model(24598): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+    L I/Manager (24598): Found interface enn (version = E0.0.1)
+    L I/tflite  (24598): NNAPI accelerators available: [enn,nnapi-reference]
+    L I/tflite  (24598): Disable NNAPI cpu: [1]
+    L I/tflite  (24598): Allow fp16 in NNAPI: [1]
+    L I/tflite  (24598): Loaded model probes/p_bmm_f32.tflite
+    L I/tflite  (24598): Initialized TensorFlow Lite runtime.
+    L I/tflite  (24598): Created TensorFlow Lite delegate for NNAPI.
+    L I/tflite  (24598): NNAPI delegate created.
+    L W/tflite  (24598): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    L I/TypeManager(24598): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+    L W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+    L I/tflite  (24598): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    L I/tflite  (24598): Created TensorFlow Lite XNNPACK delegate for CPU.
+    L I/tflite  (24598): Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+    L I/tflite  (24598): The input model file size (MB): 0.000764
+    L I/tflite  (24598): Initialized session in 11.004ms.
+    L I/tflite  (24598): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (24598): count=674 first=2687 curr=739 min=721 max=2687 avg=736.125 std=100 p5=722 median=723 p95=748
+    L I/tflite  (24598): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (24598): count=1361 first=729 curr=745 min=721 max=1006 avg=728.248 std=18 p5=722 median=723 p95=748
+    L I/tflite  (24598): Inference timings in us: Init: 11004, First inference: 2687, Warmup (avg): 736.125, Inference (avg): 728.248
+    L I/tflite  (24598): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (24598): Memory footprint delta from the start of the tool (MB): init=3.63672 overall=5.55078
+2026-10-27 20:37:43 item 6 [p_bmm_i8_enn] before[AP=41.2 SKIN=36.8 ] after[AP=41.2 SKIN=36.8 ] bat=ACpowered:false,USBpowered:false,level:89, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=6697ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    | INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+    | INFO: count=556 first=1707 curr=890 min=889 max=1707 avg=897.71 std=48 p5=890 median=890 p95=912
+    | INFO: count=1116 first=891 curr=891 min=889 max=1010 avg=894.609 std=9 p5=890 median=890 p95=911
+    | INFO: Inference timings in us: Init: 2656, First inference: 1707, Warmup (avg): 897.71, Inference (avg): 894.609
+    L I/tflite  (24776): #threads used for CPU inference: [1]
+    L I/tflite  (24776): Use NNAPI: [1]
+    L I/tflite  (24776): NNAPI accelerator name: [enn]
+    L W/benchmark_model(24776): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+    L I/Manager (24776): Found interface enn (version = E0.0.1)
+    L I/tflite  (24776): NNAPI accelerators available: [enn,nnapi-reference]
+    L I/tflite  (24776): Disable NNAPI cpu: [1]
+    L I/tflite  (24776): Loaded model probes/p_bmm_i8.tflite
+    L I/tflite  (24776): Initialized TensorFlow Lite runtime.
+    L I/tflite  (24776): Created TensorFlow Lite delegate for NNAPI.
+    L I/tflite  (24776): NNAPI delegate created.
+    L W/tflite  (24776): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    L I/TypeManager(24776): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+    L W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+    L I/tflite  (24776): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    L I/tflite  (24776): Created TensorFlow Lite XNNPACK delegate for CPU.
+    L I/tflite  (24776): The input model file size (MB): 0.00096
+    L I/tflite  (24776): Initialized session in 2.656ms.
+    L I/tflite  (24776): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (24776): count=556 first=1707 curr=890 min=889 max=1707 avg=897.71 std=48 p5=890 median=890 p95=912
+    L I/tflite  (24776): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (24776): count=1116 first=891 curr=891 min=889 max=1010 avg=894.609 std=9 p5=890 median=890 p95=911
+    L I/tflite  (24776): Inference timings in us: Init: 2656, First inference: 1707, Warmup (avg): 897.71, Inference (avg): 894.609
+    L I/tflite  (24776): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (24776): Memory footprint delta from the start of the tool (MB): init=3.21875 overall=4.25
+2026-10-27 20:38:02 item 7 [p_conv1_f32_enn] before[AP=40.5 SKIN=36.7 ] after[AP=41.2 SKIN=36.8 ] bat=ACpowered:false,USBpowered:false,level:89, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=5797ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Allow fp16 in NNAPI: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteNnapiDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: Explicitly applied NNAPI delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=260 first=4494 curr=2123 min=1507 max=5750 avg=1868.31 std=328 p5=1621 median=1829 p95=2123
+    | INFO: count=540 first=4449 curr=1755 min=1429 max=5146 avg=1799.95 std=284 p5=1493 median=1802 p95=2126
+    | INFO: Inference timings in us: Init: 137285, First inference: 4494, Warmup (avg): 1868.31, Inference (avg): 1799.95
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:291: freeMemory(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:114: uennCloseModel() is called with modelId : 100663296
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel : 0x7BA106000000(+)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (+) Engine::EngineImpl::close_model->(0x7BA106000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x7BA106000006) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecutableModel(ID: 0x7BA106000006) from a Model(ID : 0x7BA106000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * + Unload Model(ID:0x0x7BA106000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::CloseSubGraph started
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA106000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA106000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA106000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA106000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA106000000) (-)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+    L I/CustomViewRuleData(25501): load ViewGenerateRule id = DIGITAL_CLOCK / rule = [ViewGenerateRule|<(Integer)viewID = 2131368392><(Float)viewX = 0.5><(Float)viewY = -240.5><(Float)viewZ = 0.0><(Float)viewRotation = 0.0><(Float)viewRotateX = 0.0><(Float)viewRotateY = 0.0><(Float)viewRotateZ = 0.0><(Float)viewTranslationX = 0.0><(Float)viewTranslationY = 0.0><(Float)viewTranslationZ = 0.0><(Float)viewScaleX = 1.3566571><(Float)viewScaleY = 1.3566571><(Float)viewPivotX = 0.5><(Float)viewPivotY = 0.5><(Float)viewAlpha = 1.0><(Integer)viewWidth = 0><(Integer)viewHeight = 0><(Integer)viewVisibility = 0><(Integer)viewBackgroundColor = 0><(Float)viewDeviceDensityRate = 1.0><(Float)viewUserDensityRate = 1.0><(Integer)viewType = 2><(String)viewTag = DIGITAL_CLOCK><(String)resourceName = ><(Float)savedDeviceDensity = 3.0><(String)extra = ><(String)fontFilePath = ><(Integer)contentViewId = 0><(Float)grayLevel = 115.0><(String)variationSettings = ><(Integer)imageFrameIndex = 0>]
+    L I/CustomClockFaceBaseModel(25501): getAttribute rules = [[ViewTimeRule|<(Integer)viewID = 2131368052><(Integer)timeFormatType = 0>], [ViewTimeRule|<(Integer)viewID = 2131368072><(Integer)timeFormatType = 1>], [ViewTimeRule|<(Integer)viewID = 2131368056><(Integer)timeFormatType = 2>], [ViewTimeRule|<(Integer)viewID = 2131368036><(Integer)timeFormatType = 3>], [ViewTimeRule|<(Integer)viewID = 2131368051><(Integer)timeFormatType = 4>], [ViewTextPropertyRule|<(Integer)viewID = 2131368052><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1308622847><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368072><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1308622847><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368056><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1308622847><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368051><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1308622847><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368076><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1308622847><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368077><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1308622847><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368036><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1308622847><(Boolean)allCaps = false>], [ViewGenerateRule|<(Integer)viewID = 2131368396><(Float)viewX = 0.5><(Float)viewY = -240.5><(Float)viewZ = 0.0><(Float)viewRotation = 0.0><(Float)viewRotateX = 0.0><(Float)viewRotateY = 0.0><(Float)viewRotateZ = 0.0><(Float)viewTranslationX = 0.0><(Float)viewTranslationY = 0.0><(Float)viewTranslationZ = 0.0><(Float)viewScaleX = 1.3566571><(Float)viewScaleY = 1.3566571><(Float)viewPivotX = 0.5><(Float)viewPivotY = 0.5><(Float)viewAlpha = 1.0><(Integer)viewWidth = 0><(Integer)viewHeight = 0><(Integer)viewVisibility = 0><(Integer)viewBackgroundColor = 0><(Float)viewDeviceDensityRate = 1.0><(Float)viewUserDensityRate = 1.0><(Integer)viewType = 2><(String)viewTag = DIGITAL_CLOCK><(String)resourceName = ><(Float)savedDeviceDensity = 3.0><(String)extra = ><(String)fontFilePath = fonts/ClockFacePressBold.ttf><(Integer)contentViewId = 2131368396><(Float)grayLevel = 115.0><(String)variationSettings = ><(Integer)imageFrameIndex = 0>], [ViewRotationRule|<(Integer)viewID = 2131368054><(Float)rotatePerMin = 0.5><(Float)baseRotate = 360.0>], [ViewRotationRule|<(Integer)viewID = 2131368069><(Float)rotatePerMin = 6.0><(Float)baseRotate = 360.0>]]
+    L I/ClockFaceCustomView_LOCK_SCREEN_2131427359@504( 2253): customScale = 1.3654971 / DeviceDensityRate = 3.0
+    L I/CustomViewRuleData(25501): load ViewGenerateRule id = DIGITAL_CLOCK / rule = [ViewGenerateRule|<(Integer)viewID = 2131368392><(Float)viewX = 0.5><(Float)viewY = -240.5><(Float)viewZ = 0.0><(Float)viewRotation = 0.0><(Float)viewRotateX = 0.0><(Float)viewRotateY = 0.0><(Float)viewRotateZ = 0.0><(Float)viewTranslationX = 0.0><(Float)viewTranslationY = 0.0><(Float)viewTranslationZ = 0.0><(Float)viewScaleX = 1.3566571><(Float)viewScaleY = 1.3566571><(Float)viewPivotX = 0.5><(Float)viewPivotY = 0.5><(Float)viewAlpha = 1.0><(Integer)viewWidth = 0><(Integer)viewHeight = 0><(Integer)viewVisibility = 0><(Integer)viewBackgroundColor = 0><(Float)viewDeviceDensityRate = 1.0><(Float)viewUserDensityRate = 1.0><(Integer)viewType = 2><(String)viewTag = DIGITAL_CLOCK><(String)resourceName = ><(Float)savedDeviceDensity = 3.0><(String)extra = ><(String)fontFilePath = ><(Integer)contentViewId = 0><(Float)grayLevel = 115.0><(String)variationSettings = ><(Integer)imageFrameIndex = 0>]
+    L I/CustomClockFaceBaseModel(25501): getAttribute rules = [[ViewTimeRule|<(Integer)viewID = 2131368052><(Integer)timeFormatType = 0>], [ViewTimeRule|<(Integer)viewID = 2131368072><(Integer)timeFormatType = 1>], [ViewTimeRule|<(Integer)viewID = 2131368056><(Integer)timeFormatType = 2>], [ViewTimeRule|<(Integer)viewID = 2131368036><(Integer)timeFormatType = 3>], [ViewTimeRule|<(Integer)viewID = 2131368051><(Integer)timeFormatType = 4>], [ViewTextPropertyRule|<(Integer)viewID = 2131368052><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368072><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368056><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368051><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368076><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368077><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368036><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = false>], [ViewGenerateRule|<(Integer)viewID = 2131368396><(Float)viewX = 0.5><(Float)viewY = -240.5><(Float)viewZ = 0.0><(Float)viewRotation = 0.0><(Float)viewRotateX = 0.0><(Float)viewRotateY = 0.0><(Float)viewRotateZ = 0.0><(Float)viewTranslationX = 0.0><(Float)viewTranslationY = 0.0><(Float)viewTranslationZ = 0.0><(Float)viewScaleX = 1.3566571><(Float)viewScaleY = 1.3566571><(Float)viewPivotX = 0.5><(Float)viewPivotY = 0.5><(Float)viewAlpha = 1.0><(Integer)viewWidth = 0><(Integer)viewHeight = 0><(Integer)viewVisibility = 0><(Integer)viewBackgroundColor = 0><(Float)viewDeviceDensityRate = 1.0><(Float)viewUserDensityRate = 1.0><(Integer)viewType = 2><(String)viewTag = DIGITAL_CLOCK><(String)resourceName = ><(Float)savedDeviceDensity = 3.0><(String)extra = ><(String)fontFilePath = fonts/ClockFacePressBold.ttf><(Integer)contentViewId = 2131368396><(Float)grayLevel = 115.0><(String)variationSettings = ><(Integer)imageFrameIndex = 0>], [ViewRotationRule|<(Integer)viewID = 2131368054><(Float)rotatePerMin = 0.5><(Float)baseRotate = 360.0>], [ViewRotationRule|<(Integer)viewID = 2131368069><(Float)rotatePerMin = 6.0><(Float)baseRotate = 360.0>]]
+    L I/ClockFaceCustomView_LOCK_SCREEN_2131427359@504( 2253): customScale = 1.3654971 / DeviceDensityRate = 3.0
+    L D/AodData[8.0.6]:LockScreenRemoteItemStoreImpl@79355808( 2253): onChangedEnv: SingleDisplay:Portrait:AodOnly::1080.0x2340.0
+    L D/LockscreenNotificationIconsOnlyController( 2253): mWakefulnessObserver onStartedGoingToSleep 
+    L D/LockScreenNotiIconCoordinator( 2253): onExpansionReset
+    L D/LockscreenNotificationManager( 2253): BarState updated : 1
+    L D/NavBarStateManager( 2253): NavBarStates(0) supportLargeCoverScreenNavBar: false
+    L D/NavBarStateManager( 2253): NavBarStates(0) supportLargeCoverScreenNavBar: false
+    L D/NavBarStateManager( 2253): NavBarStates(0) supportLargeCoverScreenNavBar: false
+    L D/NavBarStateManager( 2253): NavBarStates(0) supportLargeCoverScreenNavBar: false
+    L D/NavBarStateManager( 2253): NavBarStates(0) supportLargeCoverScreenNavBar: false
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L D/LockScreenNotiIconCoordinator( 2253): onExpansionReset
+    L I/CustomViewRuleData(25501): load ViewGenerateRule id = DIGITAL_CLOCK / rule = [ViewGenerateRule|<(Integer)viewID = 2131368392><(Float)viewX = 0.5><(Float)viewY = -240.5><(Float)viewZ = 0.0><(Float)viewRotation = 0.0><(Float)viewRotateX = 0.0><(Float)viewRotateY = 0.0><(Float)viewRotateZ = 0.0><(Float)viewTranslationX = 0.0><(Float)viewTranslationY = 0.0><(Float)viewTranslationZ = 0.0><(Float)viewScaleX = 1.3566571><(Float)viewScaleY = 1.3566571><(Float)viewPivotX = 0.5><(Float)viewPivotY = 0.5><(Float)viewAlpha = 1.0><(Integer)viewWidth = 0><(Integer)viewHeight = 0><(Integer)viewVisibility = 0><(Integer)viewBackgroundColor = 0><(Float)viewDeviceDensityRate = 1.0><(Float)viewUserDensityRate = 1.0><(Integer)viewType = 2><(String)viewTag = DIGITAL_CLOCK><(String)resourceName = ><(Float)savedDeviceDensity = 3.0><(String)extra = ><(String)fontFilePath = ><(Integer)contentViewId = 0><(Float)grayLevel = 115.0><(String)variationSettings = ><(Integer)imageFrameIndex = 0>]
+    L I/CustomClockFaceBaseModel(25501): getAttribute rules = [[ViewTimeRule|<(Integer)viewID = 2131368052><(Integer)timeFormatType = 0>], [ViewTimeRule|<(Integer)viewID = 2131368072><(Integer)timeFormatType = 1>], [ViewTimeRule|<(Integer)viewID = 2131368056><(Integer)timeFormatType = 2>], [ViewTimeRule|<(Integer)viewID = 2131368036><(Integer)timeFormatType = 3>], [ViewTimeRule|<(Integer)viewID = 2131368051><(Integer)timeFormatType = 4>], [ViewTextPropertyRule|<(Integer)viewID = 2131368052><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368072><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368056><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368051><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368076><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368077><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368036><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = false>], [ViewGenerateRule|<(Integer)viewID = 2131368396><(Float)viewX = 0.5><(Float)viewY = -240.5><(Float)viewZ = 0.0><(Float)viewRotation = 0.0><(Float)viewRotateX = 0.0><(Float)viewRotateY = 0.0><(Float)viewRotateZ = 0.0><(Float)viewTranslationX = 0.0><(Float)viewTranslationY = 0.0><(Float)viewTranslationZ = 0.0><(Float)viewScaleX = 1.3566571><(Float)viewScaleY = 1.3566571><(Float)viewPivotX = 0.5><(Float)viewPivotY = 0.5><(Float)viewAlpha = 1.0><(Integer)viewWidth = 0><(Integer)viewHeight = 0><(Integer)viewVisibility = 0><(Integer)viewBackgroundColor = 0><(Float)viewDeviceDensityRate = 1.0><(Float)viewUserDensityRate = 1.0><(Integer)viewType = 2><(String)viewTag = DIGITAL_CLOCK><(String)resourceName = ><(Float)savedDeviceDensity = 3.0><(String)extra = ><(String)fontFilePath = fonts/ClockFacePressBold.ttf><(Integer)contentViewId = 2131368396><(Float)grayLevel = 115.0><(String)variationSettings = ><(Integer)imageFrameIndex = 0>], [ViewRotationRule|<(Integer)viewID = 2131368054><(Float)rotatePerMin = 0.5><(Float)baseRotate = 360.0>], [ViewRotationRule|<(Integer)viewID = 2131368069><(Float)rotatePerMin = 6.0><(Float)baseRotate = 360.0>]]
+    L I/ClockFaceCustomView_LOCK_SCREEN_2131427359@453( 2253): customScale = 1.3654971 / DeviceDensityRate = 3.0
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+2026-10-27 20:38:16 item 8 [p_conv1_i8_enn] before[AP=41.2 SKIN=36.8 ] after[AP=39.3 SKIN=36.6 ] bat=ACpowered:false,USBpowered:false,level:89, lowpower=0 mWakefulness=Dozing USER_ACTIVE_RULE_OFF top= last_input=24023ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    | INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+    | VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: count=3753 first=185 curr=129 min=128 max=1502 avg=129.803 std=22 p5=128 median=129 p95=129
+    | INFO: count=6498 first=130 curr=733 min=128 max=15433 avg=149.917 std=213 p5=128 median=129 p95=230
+    | INFO: Inference timings in us: Init: 13052, First inference: 185, Warmup (avg): 129.803, Inference (avg): 149.917
+    L I/CustomClockFaceBaseModel(25501): getAttribute rules = [[ViewTimeRule|<(Integer)viewID = 2131368052><(Integer)timeFormatType = 0>], [ViewTimeRule|<(Integer)viewID = 2131368072><(Integer)timeFormatType = 1>], [ViewTimeRule|<(Integer)viewID = 2131368056><(Integer)timeFormatType = 2>], [ViewTimeRule|<(Integer)viewID = 2131368036><(Integer)timeFormatType = 3>], [ViewTimeRule|<(Integer)viewID = 2131368051><(Integer)timeFormatType = 4>], [ViewTextPropertyRule|<(Integer)viewID = 2131368052><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368072><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368056><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368051><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368076><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368077><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368036><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1711276032><(Boolean)allCaps = false>], [ViewGenerateRule|<(Integer)viewID = 2131368396><(Float)viewX = 0.5><(Float)viewY = -240.5><(Float)viewZ = 0.0><(Float)viewRotation = 0.0><(Float)viewRotateX = 0.0><(Float)viewRotateY = 0.0><(Float)viewRotateZ = 0.0><(Float)viewTranslationX = 0.0><(Float)viewTranslationY = 0.0><(Float)viewTranslationZ = 0.0><(Float)viewScaleX = 1.3566571><(Float)viewScaleY = 1.3566571><(Float)viewPivotX = 0.5><(Float)viewPivotY = 0.5><(Float)viewAlpha = 1.0><(Integer)viewWidth = 0><(Integer)viewHeight = 0><(Integer)viewVisibility = 0><(Integer)viewBackgroundColor = 0><(Float)viewDeviceDensityRate = 1.0><(Float)viewUserDensityRate = 1.0><(Integer)viewType = 2><(String)viewTag = DIGITAL_CLOCK><(String)resourceName = ><(Float)savedDeviceDensity = 3.0><(String)extra = ><(String)fontFilePath = fonts/ClockFacePressBold.ttf><(Integer)contentViewId = 2131368396><(Float)grayLevel = 115.0><(String)variationSettings = ><(Integer)imageFrameIndex = 0>], [ViewRotationRule|<(Integer)viewID = 2131368054><(Float)rotatePerMin = 0.5><(Float)baseRotate = 360.0>], [ViewRotationRule|<(Integer)viewID = 2131368069><(Float)rotatePerMin = 6.0><(Float)baseRotate = 360.0>]]
+    L I/ClockFaceCustomView_LOCK_SCREEN_2131427359@453( 2253): customScale = 1.3654971 / DeviceDensityRate = 3.0
+    L D/AodData[8.0.6]:LockScreenRemoteItemStoreImpl@79355808( 2253): onChangedEnv: SingleDisplay:Portrait:AodOnly::1080.0x2340.0
+    L D/LockscreenNotificationIconsOnlyController( 2253): mWakefulnessObserver onStartedGoingToSleep 
+    L I/SAMSUNGWALLET[KR]( 5191): [CloController] TOKEN_NET_GET_PARTNERS. tokenNetGetPartnersRequest.
+    L D/LockScreenNotiIconCoordinator( 2253): onExpansionReset
+    L I/CustomViewRuleData(25501): load ViewGenerateRule id = DIGITAL_CLOCK / rule = [ViewGenerateRule|<(Integer)viewID = 2131368392><(Float)viewX = 0.5><(Float)viewY = -240.5><(Float)viewZ = 0.0><(Float)viewRotation = 0.0><(Float)viewRotateX = 0.0><(Float)viewRotateY = 0.0><(Float)viewRotateZ = 0.0><(Float)viewTranslationX = 0.0><(Float)viewTranslationY = 0.0><(Float)viewTranslationZ = 0.0><(Float)viewScaleX = 1.3566571><(Float)viewScaleY = 1.3566571><(Float)viewPivotX = 0.5><(Float)viewPivotY = 0.5><(Float)viewAlpha = 1.0><(Integer)viewWidth = 0><(Integer)viewHeight = 0><(Integer)viewVisibility = 0><(Integer)viewBackgroundColor = 0><(Float)viewDeviceDensityRate = 1.0><(Float)viewUserDensityRate = 1.0><(Integer)viewType = 2><(String)viewTag = DIGITAL_CLOCK><(String)resourceName = ><(Float)savedDeviceDensity = 3.0><(String)extra = ><(String)fontFilePath = ><(Integer)contentViewId = 0><(Float)grayLevel = 115.0><(String)variationSettings = ><(Integer)imageFrameIndex = 0>]
+    L I/CustomClockFaceBaseModel(25501): getAttribute rules = [[ViewTimeRule|<(Integer)viewID = 2131368052><(Integer)timeFormatType = 0>], [ViewTimeRule|<(Integer)viewID = 2131368072><(Integer)timeFormatType = 1>], [ViewTimeRule|<(Integer)viewID = 2131368056><(Integer)timeFormatType = 2>], [ViewTimeRule|<(Integer)viewID = 2131368036><(Integer)timeFormatType = 3>], [ViewTimeRule|<(Integer)viewID = 2131368051><(Integer)timeFormatType = 4>], [ViewTextPropertyRule|<(Integer)viewID = 2131368052><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1308622847><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368072><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1308622847><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368056><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1308622847><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368051><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1308622847><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368076><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1308622847><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368077><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1308622847><(Boolean)allCaps = true>], [ViewTextPropertyRule|<(Integer)viewID = 2131368036><(Float)shadowRadius = 2.0><(Float)shadowDx = 0.0><(Float)shadowDy = 2.0><(Integer)shadowColor = 1308622847><(Boolean)allCaps = false>], [ViewGenerateRule|<(Integer)viewID = 2131368396><(Float)viewX = 0.5><(Float)viewY = -240.5><(Float)viewZ = 0.0><(Float)viewRotation = 0.0><(Float)viewRotateX = 0.0><(Float)viewRotateY = 0.0><(Float)viewRotateZ = 0.0><(Float)viewTranslationX = 0.0><(Float)viewTranslationY = 0.0><(Float)viewTranslationZ = 0.0><(Float)viewScaleX = 1.3566571><(Float)viewScaleY = 1.3566571><(Float)viewPivotX = 0.5><(Float)viewPivotY = 0.5><(Float)viewAlpha = 1.0><(Integer)viewWidth = 0><(Integer)viewHeight = 0><(Integer)viewVisibility = 0><(Integer)viewBackgroundColor = 0><(Float)viewDeviceDensityRate = 1.0><(Float)viewUserDensityRate = 1.0><(Integer)viewType = 2><(String)viewTag = DIGITAL_CLOCK><(String)resourceName = ><(Float)savedDeviceDensity = 3.0><(String)extra = ><(String)fontFilePath = fonts/ClockFacePressBold.ttf><(Integer)contentViewId = 2131368396><(Float)grayLevel = 115.0><(String)variationSettings = ><(Integer)imageFrameIndex = 0>], [ViewRotationRule|<(Integer)viewID = 2131368054><(Float)rotatePerMin = 0.5><(Float)baseRotate = 360.0>], [ViewRotationRule|<(Integer)viewID = 2131368069><(Float)rotatePerMin = 6.0><(Float)baseRotate = 360.0>]]
+    L I/ClockFaceCustomView_LOCK_SCREEN_2131427359@453( 2253): customScale = 1.3654971 / DeviceDensityRate = 3.0
+    L D/AodData[8.0.6]:LockScreenRemoteItemStoreImpl@79355808( 2253): onChangedEnv: SingleDisplay:Portrait:LockScreenOnly::1080.0x2340.0
+    L D/LockscreenNotificationIconsOnlyController( 2253): mWakefulnessObserver onFinishedWakingUp 
+    L D/OpenNetworkQos[4.00]( 1275): updateBssidNoInternet: mBssidNoInternet = false
+    L D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+    L D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 23 23 
+    L D/NavBarStateManager( 2253): NavBarStates(0) supportLargeCoverScreenNavBar: false
+    L D/NavBarStateManager( 2253): NavBarStates(0) supportLargeCoverScreenNavBar: false
+    L D/NavBarStateManager( 2253): NavBarStates(0) supportLargeCoverScreenNavBar: false
+    L D/NavBarStateManager( 2253): NavBarStates(0) supportLargeCoverScreenNavBar: false
+    L D/NavBarStateManager( 2253): NavBarStates(0) supportLargeCoverScreenNavBar: false
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L D/NavBarStateManager( 2253): NavBarStates(0) supportLargeCoverScreenNavBar: false
+    L D/NavBarStateManager( 2253): NavBarStates(0) supportLargeCoverScreenNavBar: false
+    L D/NavBarStateManager( 2253): NavBarStates(0) supportLargeCoverScreenNavBar: false
+    L D/NavBarStateManager( 2253): NavBarStates(0) supportLargeCoverScreenNavBar: false
+    L D/NavBarStateManager( 2253): NavBarStates(0) supportLargeCoverScreenNavBar: false
+    L D/LockScreenNotiIconCoordinator( 2253): onExpansionFinished
+    L D/LockscreenNotificationManager( 2253): BarState updated : 0
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 23 23 
+    L D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+2026-10-27 20:38:20 item 9: hot (AP=47.5 SKIN=37.4 ) -> wait 60 s
+2026-10-27 20:39:33 item 9 [p_conv3_f32_enn] before[AP=45.4 SKIN=37.6 ] after[AP=45.5 SKIN=37.7 ] bat=ACpowered:false,USBpowered:false,level:88, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=221ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Allow fp16 in NNAPI: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteNnapiDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: Explicitly applied NNAPI delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=236 first=7256 curr=2176 min=1783 max=7256 avg=2065.11 std=405 p5=1851 median=2009 p95=2295
+    | INFO: count=442 first=5843 curr=2301 min=1736 max=5906 avg=2202.01 std=501 p5=1818 median=2079 p95=2852
+    | INFO: Inference timings in us: Init: 539038, First inference: 7256, Warmup (avg): 2065.11, Inference (avg): 2202.01
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:50: ~BufferInfoOnExecute(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] executeBaseOnNNAgent:240: executeBaseOnNNAgent(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] execute:128: execute(-)
+    L I/tflite  (28095): count=442 first=5843 curr=2301 min=1736 max=5906 avg=2202.01 std=501 p5=1818 median=2079 p95=2852
+    L I/tflite  (28095): Inference timings in us: Init: 539038, First inference: 7256, Warmup (avg): 2065.11, Inference (avg): 2202.01
+    L I/tflite  (28095): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (28095): Memory footprint delta from the start of the tool (MB): init=3.57422 overall=7.26562
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:87: ~EnnPreparedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:299: closeModel(+) modelId is 117440512
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:200: uennFreeBuffers(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:216: uennFreeBuffers(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:267: freeMemory(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:280: buffer info. addr : 0xb400007b4dcc5080, size : 163840 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:291: freeMemory(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:114: uennCloseModel() is called with modelId : 117440512
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel : 0x7BA107000000(+)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (+) Engine::EngineImpl::close_model->(0x7BA107000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x7BA107000007) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecutableModel(ID: 0x7BA107000007) from a Model(ID : 0x7BA107000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * + Unload Model(ID:0x0x7BA107000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::CloseSubGraph started
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA107000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA107000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA107000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA107000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA107000000) (-)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+    L D/OpenNetworkQos[4.00]( 1275): updateBssidLatestDnsResultType - result: 0
+    L D/OpenNetworkQos[4.00]( 1275): updateBssidNoInternet: mBssidNoInternet = false
+    L D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+    L D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 23 23 
+    L D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 23 23 
+    L D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+2026-10-27 20:39:43 item 10 [p_conv3_i8_enn] before[AP=41.7 SKIN=37.4 ] after[AP=41.7 SKIN=37.4 ] bat=ACpowered:false,USBpowered:false,level:88, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=4436ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    | INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+    | VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: count=729 first=2934 curr=674 min=673 max=2934 avg=683.151 std=86 p5=674 median=674 p95=694
+    | INFO: count=1467 first=697 curr=674 min=673 max=850 avg=678.261 std=9 p5=674 median=674 p95=696
+    | INFO: Inference timings in us: Init: 13072, First inference: 2934, Warmup (avg): 683.151, Inference (avg): 678.261
+    L I/tflite  (28435): Use NNAPI: [1]
+    L I/tflite  (28435): NNAPI accelerator name: [enn]
+    L W/benchmark_model(28435): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+    L I/Manager (28435): Found interface enn (version = E0.0.1)
+    L I/tflite  (28435): NNAPI accelerators available: [enn,nnapi-reference]
+    L I/tflite  (28435): Disable NNAPI cpu: [1]
+    L I/tflite  (28435): Loaded model probes/p_conv3_i8.tflite
+    L I/tflite  (28435): Initialized TensorFlow Lite runtime.
+    L I/tflite  (28435): Created TensorFlow Lite delegate for NNAPI.
+    L I/tflite  (28435): NNAPI delegate created.
+    L W/tflite  (28435): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    L I/TypeManager(28435): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+    L W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+    L I/tflite  (28435): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    L I/tflite  (28435): Created TensorFlow Lite XNNPACK delegate for CPU.
+    L I/tflite  (28435): Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+    L I/tflite  (28435): The input model file size (MB): 0.039752
+    L I/tflite  (28435): Initialized session in 13.072ms.
+    L I/tflite  (28435): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (28435): count=729 first=2934 curr=674 min=673 max=2934 avg=683.151 std=86 p5=674 median=674 p95=694
+    L I/tflite  (28435): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (28435): count=1467 first=697 curr=674 min=673 max=850 avg=678.261 std=9 p5=674 median=674 p95=696
+    L I/tflite  (28435): Inference timings in us: Init: 13072, First inference: 2934, Warmup (avg): 683.151, Inference (avg): 678.261
+    L I/tflite  (28435): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (28435): Memory footprint delta from the start of the tool (MB): init=4.01172 overall=4.80469
+2026-10-27 20:39:56 item 11 [p_conv3c1_f32_enn] before[AP=41.7 SKIN=37.4 ] after[AP=40.6 SKIN=37.1 ] bat=ACpowered:false,USBpowered:false,level:88, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.sec.android.app.launcher/.activities last_input=553ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Allow fp16 in NNAPI: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteNnapiDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: Explicitly applied NNAPI delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=71 first=14836 curr=7670 min=3780 max=20512 avg=6982.94 std=2793 p5=4047 median=6243 p95=13727
+    | INFO: count=138 first=7571 curr=8012 min=3654 max=80208 avg=7184.37 std=7459 p5=3876 median=5416 p95=17320
+    | INFO: Inference timings in us: Init: 630812, First inference: 14836, Warmup (avg): 6982.94, Inference (avg): 7184.37
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:134: getVirtualAddressOnPool(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:167: mmap_fd, vInfo.addr=0x7a2c236000, size=3604480
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:201: getVirtualAddressOnPool(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] loadSharedMem:82: loadSharedMem(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:177: Execution Done.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:197: Loading data from 0x7a2b1e1000 to 0x7a2c236000 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:204:  Not Apply postProcessOnOutputs!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:40: ~BufferInfoOnExecute(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:50: ~BufferInfoOnExecute(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] executeBaseOnNNAgent:240: executeBaseOnNNAgent(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] execute:128: execute(-)
+    L I/tflite  (28667): count=138 first=7571 curr=8012 min=3654 max=80208 avg=7184.37 std=7459 p5=3876 median=5416 p95=17320
+    L I/tflite  (28667): Inference timings in us: Init: 630812, First inference: 14836, Warmup (avg): 6982.94, Inference (avg): 7184.37
+    L I/tflite  (28667): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (28667): Memory footprint delta from the start of the tool (MB): init=3.41406 overall=12.7812
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:87: ~EnnPreparedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:299: closeModel(+) modelId is 134217728
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:200: uennFreeBuffers(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:216: uennFreeBuffers(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:267: freeMemory(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:280: buffer info. addr : 0xb400007c0dcc0490, size : 16384 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:291: freeMemory(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:114: uennCloseModel() is called with modelId : 134217728
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel : 0x7BA108000000(+)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (+) Engine::EngineImpl::close_model->(0x7BA108000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x7BA108000008) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecutableModel(ID: 0x7BA108000008) from a Model(ID : 0x7BA108000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * + Unload Model(ID:0x0x7BA108000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::CloseSubGraph started
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA108000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA108000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA108000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA108000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA108000000) (-)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+2026-10-27 20:40:00 item 12: hot (AP=50.2 SKIN=38.0 ) -> wait 60 s
+2026-10-27 20:41:11 item 12 [p_conv3c1_i8_enn] before[AP=40.6 SKIN=37.4 ] after[AP=40.0 SKIN=37.2 ] bat=ACpowered:false,USBpowered:false,level:88, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=11801ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    | INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+    | VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: count=183 first=6159 curr=2662 min=2635 max=6159 avg=2725.19 std=340 p5=2640 median=2662 p95=2880
+    | INFO: count=374 first=2643 curr=2664 min=2635 max=3222 avg=2667.39 std=60 p5=2638 median=2661 p95=2693
+    | INFO: Inference timings in us: Init: 46167, First inference: 6159, Warmup (avg): 2725.19, Inference (avg): 2667.39
+    L I/tflite  (30389): Use NNAPI: [1]
+    L I/tflite  (30389): NNAPI accelerator name: [enn]
+    L W/benchmark_model(30389): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+    L I/Manager (30389): Found interface enn (version = E0.0.1)
+    L I/tflite  (30389): NNAPI accelerators available: [enn,nnapi-reference]
+    L I/tflite  (30389): Disable NNAPI cpu: [1]
+    L I/tflite  (30389): Loaded model probes/p_conv3c1_i8.tflite
+    L I/tflite  (30389): Initialized TensorFlow Lite runtime.
+    L I/tflite  (30389): Created TensorFlow Lite delegate for NNAPI.
+    L I/tflite  (30389): NNAPI delegate created.
+    L W/tflite  (30389): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    L I/TypeManager(30389): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+    L W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+    L I/tflite  (30389): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    L I/tflite  (30389): Created TensorFlow Lite XNNPACK delegate for CPU.
+    L I/tflite  (30389): Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+    L I/tflite  (30389): The input model file size (MB): 0.00124
+    L I/tflite  (30389): Initialized session in 46.167ms.
+    L I/tflite  (30389): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (30389): count=183 first=6159 curr=2662 min=2635 max=6159 avg=2725.19 std=340 p5=2640 median=2662 p95=2880
+    L I/tflite  (30389): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (30389): count=374 first=2643 curr=2664 min=2635 max=3222 avg=2667.39 std=60 p5=2638 median=2661 p95=2693
+    L I/tflite  (30389): Inference timings in us: Init: 46167, First inference: 6159, Warmup (avg): 2725.19, Inference (avg): 2667.39
+    L I/tflite  (30389): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (30389): Memory footprint delta from the start of the tool (MB): init=19.1406 overall=20.457
+2026-10-27 20:41:27 item 13 [p_conv3s2_f32_enn] before[AP=40.0 SKIN=37.2 ] after[AP=41.9 SKIN=37.2 ] bat=ACpowered:false,USBpowered:false,level:88, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=1296ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Allow fp16 in NNAPI: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteNnapiDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: Explicitly applied NNAPI delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=188 first=6891 curr=2508 min=2052 max=6891 avg=2528.14 std=414 p5=2193 median=2465 p95=3010
+    | INFO: count=385 first=6118 curr=4523 min=1972 max=6383 avg=2472.25 std=467 p5=2095 median=2366 p95=3102
+    | INFO: Inference timings in us: Init: 371266, First inference: 6891, Warmup (avg): 2528.14, Inference (avg): 2472.25
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:167: mmap_fd, vInfo.addr=0x7a2cb58000, size=901120
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:201: getVirtualAddressOnPool(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] loadSharedMem:82: loadSharedMem(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:177: Execution Done.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:197: Loading data from 0x7a2d72f000 to 0x7a2cb58000 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:204:  Not Apply postProcessOnOutputs!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:40: ~BufferInfoOnExecute(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:50: ~BufferInfoOnExecute(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] executeBaseOnNNAgent:240: executeBaseOnNNAgent(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] execute:128: execute(-)
+    L I/tflite  (30525): count=385 first=6118 curr=4523 min=1972 max=6383 avg=2472.25 std=467 p5=2095 median=2366 p95=3102
+    L I/tflite  (30525): Inference timings in us: Init: 371266, First inference: 6891, Warmup (avg): 2528.14, Inference (avg): 2472.25
+    L I/tflite  (30525): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (30525): Memory footprint delta from the start of the tool (MB): init=3.4375 overall=9.88281
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:87: ~EnnPreparedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:299: closeModel(+) modelId is 150994944
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:200: uennFreeBuffers(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:216: uennFreeBuffers(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:267: freeMemory(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:280: buffer info. addr : 0xb400007acdd6b140, size : 90112 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:291: freeMemory(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:114: uennCloseModel() is called with modelId : 150994944
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel : 0x7BA109000000(+)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (+) Engine::EngineImpl::close_model->(0x7BA109000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x7BA109000009) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecutableModel(ID: 0x7BA109000009) from a Model(ID : 0x7BA109000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * + Unload Model(ID:0x0x7BA109000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::CloseSubGraph started
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA109000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA109000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA109000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA109000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA109000000) (-)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+    L D/NavBarStateManager( 2253): NavBarStates(0) supportLargeCoverScreenNavBar: false
+2026-10-27 20:41:37 item 14 [p_conv3s2_i8_enn] before[AP=41.9 SKIN=37.2 ] after[AP=42.2 SKIN=37.0 ] bat=ACpowered:false,USBpowered:false,level:88, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=2008ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    | INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+    | VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: count=1306 first=454 curr=373 min=372 max=1387 avg=376.224 std=36 p5=372 median=373 p95=387
+    | INFO: count=2622 first=375 curr=373 min=372 max=594 avg=374.676 std=7 p5=372 median=373 p95=387
+    | INFO: Inference timings in us: Init: 4039, First inference: 454, Warmup (avg): 376.224, Inference (avg): 374.676
+    L I/tflite  (30859): Use NNAPI: [1]
+    L I/tflite  (30859): NNAPI accelerator name: [enn]
+    L W/benchmark_model(30859): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+    L I/Manager (30859): Found interface enn (version = E0.0.1)
+    L I/tflite  (30859): NNAPI accelerators available: [enn,nnapi-reference]
+    L I/tflite  (30859): Disable NNAPI cpu: [1]
+    L I/tflite  (30859): Loaded model probes/p_conv3s2_i8.tflite
+    L I/tflite  (30859): Initialized TensorFlow Lite runtime.
+    L I/tflite  (30859): Created TensorFlow Lite delegate for NNAPI.
+    L I/tflite  (30859): NNAPI delegate created.
+    L W/tflite  (30859): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    L I/TypeManager(30859): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+    L W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+    L I/tflite  (30859): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    L I/tflite  (30859): Created TensorFlow Lite XNNPACK delegate for CPU.
+    L I/tflite  (30859): Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+    L I/tflite  (30859): The input model file size (MB): 0.021312
+    L I/tflite  (30859): Initialized session in 4.039ms.
+    L I/tflite  (30859): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (30859): count=1306 first=454 curr=373 min=372 max=1387 avg=376.224 std=36 p5=372 median=373 p95=387
+    L I/tflite  (30859): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (30859): count=2622 first=375 curr=373 min=372 max=594 avg=374.676 std=7 p5=372 median=373 p95=387
+    L I/tflite  (30859): Inference timings in us: Init: 4039, First inference: 454, Warmup (avg): 376.224, Inference (avg): 374.676
+    L I/tflite  (30859): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (30859): Memory footprint delta from the start of the tool (MB): init=4.01562 overall=5.24609
+2026-10-27 20:42:00 item 15 [p_fc2d_f32_enn] before[AP=42.2 SKIN=37.0 ] after[AP=39.9 SKIN=36.9 ] bat=ACpowered:false,USBpowered:false,level:88, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=678ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Allow fp16 in NNAPI: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteNnapiDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: Explicitly applied NNAPI delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=487 first=4482 curr=976 min=804 max=4482 avg=1017.06 std=209 p5=874 median=981 p95=1229
+    | INFO: count=951 first=1139 curr=1024 min=806 max=4346 avg=1041.81 std=221 p5=885 median=993 p95=1339
+    | INFO: Inference timings in us: Init: 182777, First inference: 4482, Warmup (avg): 1017.06, Inference (avg): 1041.81
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:201: getVirtualAddressOnPool(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] loadSharedMem:82: loadSharedMem(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:177: Execution Done.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:197: Loading data from 0x7a2d7db000 to 0x7a2dadd000 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:204:  Not Apply postProcessOnOutputs!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:40: ~BufferInfoOnExecute(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:50: ~BufferInfoOnExecute(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] executeBaseOnNNAgent:240: executeBaseOnNNAgent(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] execute:128: execute(-)
+    L I/tflite  (31056): count=951 first=1139 curr=1024 min=806 max=4346 avg=1041.81 std=221 p5=885 median=993 p95=1339
+    L I/tflite  (31056): Inference timings in us: Init: 182777, First inference: 4482, Warmup (avg): 1017.06, Inference (avg): 1041.81
+    L I/tflite  (31056): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (31056): Memory footprint delta from the start of the tool (MB): init=3.57812 overall=4.5625
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:87: ~EnnPreparedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:299: closeModel(+) modelId is 167772160
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:200: uennFreeBuffers(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:216: uennFreeBuffers(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:267: freeMemory(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:280: buffer info. addr : 0xb400007c4dc1a080, size : 53248 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:291: freeMemory(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:114: uennCloseModel() is called with modelId : 167772160
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel : 0x7BA10A000000(+)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (+) Engine::EngineImpl::close_model->(0x7BA10A000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x7BA10A00000A) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecutableModel(ID: 0x7BA10A00000A) from a Model(ID : 0x7BA10A000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * + Unload Model(ID:0x0x7BA10A000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::CloseSubGraph started
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA10A000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA10A000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA10A000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA10A000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA10A000000) (-)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+2026-10-27 20:42:07 item 16 [p_fc2d_i8_enn] before[AP=39.9 SKIN=36.9 ] after[AP=39.0 SKIN=36.6 ] bat=ACpowered:false,USBpowered:false,level:88, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=17812ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | ERROR: NN API returned error ANEURALNETWORKS_BAD_DATA at line 1132 while adding operation.
+    | ERROR: Restored original execution plan after delegate application failure.
+    | ERROR: Failed to apply NNAPI delegate.
+    | ERROR: Benchmarking failed.
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=probes/p_fc2d_i8.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true  2>&1'
+    L I/tflite  (31394): STARTING!
+    L I/tflite  (31394): Log parameter values verbosely: [0]
+    L I/tflite  (31394): Min num runs: [10]
+    L I/tflite  (31394): Num threads: [1]
+    L I/tflite  (31394): Min warmup runs: [3]
+    L I/tflite  (31394): Graph: [probes/p_fc2d_i8.tflite]
+    L I/tflite  (31394): Signature to run: []
+    L I/tflite  (31394): #threads used for CPU inference: [1]
+    L I/tflite  (31394): Use NNAPI: [1]
+    L I/tflite  (31394): NNAPI accelerator name: [enn]
+    L W/benchmark_model(31394): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+    L I/Manager (31394): Found interface enn (version = E0.0.1)
+    L I/tflite  (31394): NNAPI accelerators available: [enn,nnapi-reference]
+    L I/tflite  (31394): Disable NNAPI cpu: [1]
+    L I/tflite  (31394): Loaded model probes/p_fc2d_i8.tflite
+    L I/tflite  (31394): Initialized TensorFlow Lite runtime.
+    L I/tflite  (31394): Created TensorFlow Lite delegate for NNAPI.
+    L I/tflite  (31394): NNAPI delegate created.
+    L W/tflite  (31394): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    L I/TypeManager(31394): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+    L E/OperationValidationUtils(31394): NN_RET_CHECK failed (packages/modules/NeuralNetworks/common/types/src/OperationsValidationUtils.cpp:38): type == expectedTypes[i] Invalid input tensor type TENSOR_QUANT8_SYMM_PER_CHANNEL for input 1, expected TENSOR_QUANT8_ASYMM_SIGNED
+    L E/ModelBuilder(31394): Invalid Operation: NN_RET_CHECK failed (packages/modules/NeuralNetworks/common/types/operations/src/FullyConnected.cpp:120): validateInputTypes(context, inExpectedTypes) 
+    L E/tflite  (31394): NN API returned error ANEURALNETWORKS_BAD_DATA at line 1132 while adding operation.
+    L E/tflite  (31394): Restored original execution plan after delegate application failure.
+    L E/tflite  (31394): Failed to apply NNAPI delegate.
+    L E/tflite  (31394): Benchmarking failed.
+2026-10-27 20:42:32 item 17 [p_fc_f32_enn] before[AP=39.0 SKIN=36.6 ] after[AP=38.4 SKIN=36.2 ] bat=ACpowered:false,USBpowered:false,level:88, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=25476ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Allow fp16 in NNAPI: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteNnapiDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: Explicitly applied NNAPI delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=509 first=2178 curr=871 min=792 max=2178 avg=972.399 std=103 p5=862 median=953 p95=1151
+    | INFO: count=1031 first=1101 curr=925 min=817 max=4623 avg=960.218 std=146 p5=853 median=931 p95=1126
+    | INFO: Inference timings in us: Init: 17603, First inference: 2178, Warmup (avg): 972.399, Inference (avg): 960.218
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:204:  Not Apply postProcessOnOutputs!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:40: ~BufferInfoOnExecute(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:50: ~BufferInfoOnExecute(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] executeBaseOnNNAgent:240: executeBaseOnNNAgent(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] execute:128: execute(-)
+    L I/tflite  (31492): count=1031 first=1101 curr=925 min=817 max=4623 avg=960.218 std=146 p5=853 median=931 p95=1126
+    L I/tflite  (31492): Inference timings in us: Init: 17603, First inference: 2178, Warmup (avg): 972.399, Inference (avg): 960.218
+    L I/tflite  (31492): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (31492): Memory footprint delta from the start of the tool (MB): init=3.64453 overall=4.64453
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:87: ~EnnPreparedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:299: closeModel(+) modelId is 184549376
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:200: uennFreeBuffers(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:216: uennFreeBuffers(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:267: freeMemory(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:280: buffer info. addr : 0xb400007c4dc5a0c0, size : 57344 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:291: freeMemory(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:114: uennCloseModel() is called with modelId : 184549376
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel : 0x7BA10B000000(+)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (+) Engine::EngineImpl::close_model->(0x7BA10B000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x7BA10B00000B) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecutableModel(ID: 0x7BA10B00000B) from a Model(ID : 0x7BA10B000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * + Unload Model(ID:0x0x7BA10B000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::CloseSubGraph started
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA10B000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA10B000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA10B000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA10B000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA10B000000) (-)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+    L D/OpenNetworkQos[4.00]( 1275): updateBssidLatestDnsResultType - result: 0
+    L D/OpenNetworkQos[4.00]( 1275): updateBssidNoInternet: mBssidNoInternet = false
+    L D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+    L D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 23 23 
+    L D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 23 23 
+    L D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+2026-10-27 20:42:39 item 18 [p_fc_i8_enn] before[AP=38.4 SKIN=36.2 ] after[AP=37.6 SKIN=36.0 ] bat=ACpowered:false,USBpowered:false,level:87, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=49961ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | ERROR: NN API returned error ANEURALNETWORKS_BAD_DATA at line 1132 while adding operation.
+    | ERROR: Restored original execution plan after delegate application failure.
+    | ERROR: Failed to apply NNAPI delegate.
+    | ERROR: Benchmarking failed.
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=probes/p_fc_i8.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true  2>&1'
+    L I/tflite  (31715): STARTING!
+    L I/tflite  (31715): Log parameter values verbosely: [0]
+    L I/tflite  (31715): Min num runs: [10]
+    L I/tflite  (31715): Num threads: [1]
+    L I/tflite  (31715): Min warmup runs: [3]
+    L I/tflite  (31715): Graph: [probes/p_fc_i8.tflite]
+    L I/tflite  (31715): Signature to run: []
+    L I/tflite  (31715): #threads used for CPU inference: [1]
+    L I/tflite  (31715): Use NNAPI: [1]
+    L I/tflite  (31715): NNAPI accelerator name: [enn]
+    L W/benchmark_model(31715): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+    L I/Manager (31715): Found interface enn (version = E0.0.1)
+    L I/tflite  (31715): NNAPI accelerators available: [enn,nnapi-reference]
+    L I/tflite  (31715): Disable NNAPI cpu: [1]
+    L I/tflite  (31715): Loaded model probes/p_fc_i8.tflite
+    L I/tflite  (31715): Initialized TensorFlow Lite runtime.
+    L I/tflite  (31715): Created TensorFlow Lite delegate for NNAPI.
+    L I/tflite  (31715): NNAPI delegate created.
+    L W/tflite  (31715): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    L I/TypeManager(31715): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+    L E/OperationValidationUtils(31715): NN_RET_CHECK failed (packages/modules/NeuralNetworks/common/types/src/OperationsValidationUtils.cpp:38): type == expectedTypes[i] Invalid input tensor type TENSOR_QUANT8_SYMM_PER_CHANNEL for input 1, expected TENSOR_QUANT8_ASYMM_SIGNED
+    L E/ModelBuilder(31715): Invalid Operation: NN_RET_CHECK failed (packages/modules/NeuralNetworks/common/types/operations/src/FullyConnected.cpp:120): validateInputTypes(context, inExpectedTypes) 
+    L E/tflite  (31715): NN API returned error ANEURALNETWORKS_BAD_DATA at line 1132 while adding operation.
+    L E/tflite  (31715): Restored original execution plan after delegate application failure.
+    L E/tflite  (31715): Failed to apply NNAPI delegate.
+    L E/tflite  (31715): Benchmarking failed.
+2026-10-27 20:42:49 item 19 [p_gelu_tanh_f32_enn] before[AP=37.6 SKIN=36.0 ] after[AP=37.6 SKIN=35.7 ] bat=ACpowered:false,USBpowered:false,level:87, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=57560ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Allow fp16 in NNAPI: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    | INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+    | INFO: count=4116 first=204 curr=114 min=114 max=1312 avg=115.68 std=19 p5=114 median=115 p95=115
+    | INFO: count=8268 first=116 curr=115 min=114 max=386 avg=115.167 std=6 p5=114 median=115 p95=115
+    | INFO: Inference timings in us: Init: 1190, First inference: 204, Warmup (avg): 115.68, Inference (avg): 115.167
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=probes/p_gelu_tanh_f32.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_allow_fp16=true 2>&1'
+    L I/tflite  (31782): STARTING!
+    L I/tflite  (31782): Log parameter values verbosely: [0]
+    L I/tflite  (31782): Min num runs: [10]
+    L I/tflite  (31782): Num threads: [1]
+    L I/tflite  (31782): Min warmup runs: [3]
+    L I/tflite  (31782): Graph: [probes/p_gelu_tanh_f32.tflite]
+    L I/tflite  (31782): Signature to run: []
+    L I/tflite  (31782): #threads used for CPU inference: [1]
+    L I/tflite  (31782): Use NNAPI: [1]
+    L I/tflite  (31782): NNAPI accelerator name: [enn]
+    L W/benchmark_model(31782): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+    L I/Manager (31782): Found interface enn (version = E0.0.1)
+    L I/tflite  (31782): NNAPI accelerators available: [enn,nnapi-reference]
+    L I/tflite  (31782): Disable NNAPI cpu: [1]
+    L I/tflite  (31782): Allow fp16 in NNAPI: [1]
+    L I/tflite  (31782): Loaded model probes/p_gelu_tanh_f32.tflite
+    L I/tflite  (31782): Initialized TensorFlow Lite runtime.
+    L I/tflite  (31782): Created TensorFlow Lite delegate for NNAPI.
+    L I/tflite  (31782): NNAPI delegate created.
+    L I/tflite  (31782): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    L I/tflite  (31782): Created TensorFlow Lite XNNPACK delegate for CPU.
+    L I/tflite  (31782): The input model file size (MB): 0.000692
+    L I/tflite  (31782): Initialized session in 1.19ms.
+    L I/tflite  (31782): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (31782): count=4116 first=204 curr=114 min=114 max=1312 avg=115.68 std=19 p5=114 median=115 p95=115
+    L I/tflite  (31782): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (31782): count=8268 first=116 curr=115 min=114 max=386 avg=115.167 std=6 p5=114 median=115 p95=115
+    L I/tflite  (31782): Inference timings in us: Init: 1190, First inference: 204, Warmup (avg): 115.68, Inference (avg): 115.167
+    L I/tflite  (31782): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (31782): Memory footprint delta from the start of the tool (MB): init=2.85938 overall=4.29688
+2026-10-27 20:42:58 item 20 [p_gelu_tanh_i8_enn] before[AP=37.6 SKIN=35.7 ] after[AP=39.1 SKIN=35.7 ] bat=ACpowered:false,USBpowered:false,level:87, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=66620ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    | INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+    | INFO: count=37780 first=13 curr=11 min=11 max=572 avg=11.7375 std=3 p5=11 median=12 p95=12
+    | INFO: count=75814 first=12 curr=12 min=11 max=97 avg=11.719 std=1 p5=11 median=12 p95=12
+    | INFO: Inference timings in us: Init: 1322, First inference: 13, Warmup (avg): 11.7375, Inference (avg): 11.719
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=probes/p_gelu_tanh_i8.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true  2>&1'
+    L I/tflite  (32249): STARTING!
+    L I/tflite  (32249): Log parameter values verbosely: [0]
+    L I/tflite  (32249): Min num runs: [10]
+    L I/tflite  (32249): Num threads: [1]
+    L I/tflite  (32249): Min warmup runs: [3]
+    L I/tflite  (32249): Graph: [probes/p_gelu_tanh_i8.tflite]
+    L I/tflite  (32249): Signature to run: []
+    L I/tflite  (32249): #threads used for CPU inference: [1]
+    L I/tflite  (32249): Use NNAPI: [1]
+    L I/tflite  (32249): NNAPI accelerator name: [enn]
+    L W/benchmark_model(32249): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+    L I/Manager (32249): Found interface enn (version = E0.0.1)
+    L I/tflite  (32249): NNAPI accelerators available: [enn,nnapi-reference]
+    L I/tflite  (32249): Disable NNAPI cpu: [1]
+    L I/tflite  (32249): Loaded model probes/p_gelu_tanh_i8.tflite
+    L I/tflite  (32249): Initialized TensorFlow Lite runtime.
+    L I/tflite  (32249): Created TensorFlow Lite delegate for NNAPI.
+    L I/tflite  (32249): NNAPI delegate created.
+    L I/tflite  (32249): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    L I/tflite  (32249): Created TensorFlow Lite XNNPACK delegate for CPU.
+    L I/tflite  (32249): The input model file size (MB): 0.000848
+    L I/tflite  (32249): Initialized session in 1.322ms.
+    L I/tflite  (32249): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (32249): count=37780 first=13 curr=11 min=11 max=572 avg=11.7375 std=3 p5=11 median=12 p95=12
+    L I/tflite  (32249): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (32249): count=75814 first=12 curr=12 min=11 max=97 avg=11.719 std=1 p5=11 median=12 p95=12
+    L I/tflite  (32249): Inference timings in us: Init: 1322, First inference: 13, Warmup (avg): 11.7375, Inference (avg): 11.719
+    L I/tflite  (32249): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (32249): Memory footprint delta from the start of the tool (MB): init=2.83594 overall=5.21875
+2026-10-27 20:43:23 item 21 [p_mean_f32_enn] before[AP=39.1 SKIN=35.7 ] after[AP=37.8 SKIN=35.5 ] bat=ACpowered:false,USBpowered:false,level:87, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=75897ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Allow fp16 in NNAPI: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteNnapiDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: Explicitly applied NNAPI delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=543 first=2357 curr=920 min=747 max=2357 avg=901.753 std=129 p5=779 median=877 p95=1127
+    | INFO: count=1112 first=1141 curr=817 min=707 max=15526 avg=880.969 std=461 p5=757 median=840 p95=1040
+    | INFO: Inference timings in us: Init: 15486, First inference: 2357, Warmup (avg): 901.753, Inference (avg): 880.969
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:201: getVirtualAddressOnPool(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] loadSharedMem:82: loadSharedMem(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:177: Execution Done.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:197: Loading data from 0x7d41213000 to 0x7d41a7b000 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:204:  Not Apply postProcessOnOutputs!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:40: ~BufferInfoOnExecute(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:50: ~BufferInfoOnExecute(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] executeBaseOnNNAgent:240: executeBaseOnNNAgent(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] execute:128: execute(-)
+    L I/tflite  (32311): count=1112 first=1141 curr=817 min=707 max=15526 avg=880.969 std=461 p5=757 median=840 p95=1040
+    L I/tflite  (32311): Inference timings in us: Init: 15486, First inference: 2357, Warmup (avg): 901.753, Inference (avg): 880.969
+    L I/tflite  (32311): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (32311): Memory footprint delta from the start of the tool (MB): init=3.50391 overall=4.87891
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:87: ~EnnPreparedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:299: closeModel(+) modelId is 201326592
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:200: uennFreeBuffers(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:216: uennFreeBuffers(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:267: freeMemory(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:280: buffer info. addr : 0xb400007abdc39db0, size : 12288 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:291: freeMemory(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:114: uennCloseModel() is called with modelId : 201326592
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel : 0x7BA10C000000(+)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (+) Engine::EngineImpl::close_model->(0x7BA10C000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x7BA10C00000C) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecutableModel(ID: 0x7BA10C00000C) from a Model(ID : 0x7BA10C000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * + Unload Model(ID:0x0x7BA10C000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::CloseSubGraph started
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA10C000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA10C000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA10C000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA10C000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA10C000000) (-)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+    L D/nativeloader(32338): InitLlndkLibrariesProduct: libEGL.so:libGLESv1_CM.so:libGLESv2.so:libGLESv3.so:libRS.so:libandroid_net.so:libapexsupport.so:libavf.so:libbinder_ndk.so:libc.so:libcgrouprc.so:libclang_rt.asan-aarch64-android.so:libclang_rt.hwasan-aarch64-android.so:libcom.android.tethering.connectivity_native.so:libdl.so:libft2.so:liblog.so:libm.so:libmediandk.so:libnativewindow.so:libneuralnetworks.so:libselinux.so:libsync.so:libvendorsupport.so:libvndksupport.so:libvulkan.so
+    L I/tflite  (32338): Initialized TensorFlow Lite runtime.
+2026-10-27 20:44:09 item 22 [p_mean_i8_enn] before[AP=37.3 SKIN=35.4 ] after[AP=39.8 SKIN=36.4 ] bat=ACpowered:false,USBpowered:false,level:87, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.sec.android.app.launcher/.activities last_input=219ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteNnapiDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: Explicitly applied NNAPI delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=629 first=2276 curr=739 min=587 max=4015 avg=789.426 std=252 p5=616 median=740 p95=1115
+    | INFO: count=641 first=1157 curr=2426 min=630 max=18422 avg=1548.75 std=1731 p5=703 median=917 p95=4716
+    | INFO: Inference timings in us: Init: 73481, First inference: 2276, Warmup (avg): 789.426, Inference (avg): 1548.75
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecutableModel(ID: 0x7BA10D00000D) from a Model(ID : 0x7BA10D000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * + Unload Model(ID:0x0x7BA10D000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::CloseSubGraph started
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA10D000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA10D000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA10D000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA10D000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA10D000000) (-)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L I/MediaOngoingActivity( 2253): updateOngoingActivity data: OngoingActivityData(mNotiID=0|com.android.systemui|12030705|null|10052, mPendingIntent=PendingIntent{8c392e6: android.os.BinderProxy@a6658f4}, mNowbarPendingIntentOnSubScreen=null, mChipIcon=Icon(typ=RESOURCE pkg=com.brave.browser id=0x7f0902a9), mExpandedChipView=null, mChipBackground=-7336192, mPrimaryActionIndex=-1, mActionType=-1, mActions=null, mActionBgColors=null, mCardIcon=Icon(typ=RESOURCE pkg=com.brave.browser id=0x7f0902a9), mCardIconBg=-7336192, mPrimaryInfo=, mSecondaryInfo=, mCustomExpandedCardView=null, mSubScreenCustomExpandedCardView=null, mNeedMarquee=true, mExpandedChipText=YouTube, mChronometerView=null, mChronometerPosition=0, mChronometerTag=, mProgress=-1, mProgressMax=0, mProgressIndeterminate=false, mFirstIcon=null, mSecondIcon=null, mOngoingCollapsedView=null, mOngoingOAExpandView=null, mOngoingENRExpandView=null, mOngoingSubScreenExpandView=null, mOngoingNowbarView=null, mOngoingSubScreenNowbarView=null, mCustomNowBarView=null, mSubScreenCustomNowBarView=null, mProgressSegments=[], mProgressSegmentIcon=null, mProgressColor=0, mDescription=, mSecondaryInfoIcon=null, mNowbarIcon=null, mNowbarPrimaryInfo=null, mNowbarSecondaryInfo=null, mUserId=0, mAppName=YouTube, mWhen=1793101429629, mAppIcon=null, mPackageName=com.brave.browser, mNotificationEntry=com.android.systemui.statusbar.notification.collection.NotificationEntry@5afbd41, mStyle=1, mNowbarChronometerPosition=0, mIsMediaOngoingData=true, mAodRemoteAppName=, mAodRemoteAppIcon=null, mAodRemoteAppPendingIntent=null, mNowbarExtraData=null, mDismissRequested=false)
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/MediaOngoingActivity( 2253): updateOngoingActivity data: OngoingActivityData(mNotiID=0|com.android.systemui|12030705|null|10052, mPendingIntent=PendingIntent{8c392e6: android.os.BinderProxy@a6658f4}, mNowbarPendingIntentOnSubScreen=null, mChipIcon=Icon(typ=RESOURCE pkg=com.brave.browser id=0x7f0902a9), mExpandedChipView=null, mChipBackground=-7336192, mPrimaryActionIndex=-1, mActionType=-1, mActions=null, mActionBgColors=null, mCardIcon=Icon(typ=RESOURCE pkg=com.brave.browser id=0x7f0902a9), mCardIconBg=-7336192, mPrimaryInfo=, mSecondaryInfo=, mCustomExpandedCardView=null, mSubScreenCustomExpandedCardView=null, mNeedMarquee=true, mExpandedChipText=YouTube, mChronometerView=null, mChronometerPosition=0, mChronometerTag=, mProgress=-1, mProgressMax=0, mProgressIndeterminate=false, mFirstIcon=null, mSecondIcon=null, mOngoingCollapsedView=null, mOngoingOAExpandView=null, mOngoingENRExpandView=null, mOngoingSubScreenExpandView=null, mOngoingNowbarView=null, mOngoingSubScreenNowbarView=null, mCustomNowBarView=null, mSubScreenCustomNowBarView=null, mProgressSegments=[], mProgressSegmentIcon=null, mProgressColor=0, mDescription=, mSecondaryInfoIcon=null, mNowbarIcon=null, mNowbarPrimaryInfo=null, mNowbarSecondaryInfo=null, mUserId=0, mAppName=YouTube, mWhen=1793101429768, mAppIcon=null, mPackageName=com.brave.browser, mNotificationEntry=com.android.systemui.statusbar.notification.collection.NotificationEntry@5afbd41, mStyle=1, mNowbarChronometerPosition=0, mIsMediaOngoingData=true, mAodRemoteAppName=, mAodRemoteAppIcon=null, mAodRemoteAppPendingIntent=null, mNowbarExtraData=null, mDismissRequested=false)
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L D/{OngoingActivityDataHelper}( 2253): onAsyncInflationFinished. oa DATA: OngoingActivityData(mNotiID=0|com.android.systemui|12030705|null|10052, mPendingIntent=PendingIntent{8c392e6: android.os.BinderProxy@a6658f4}, mNowbarPendingIntentOnSubScreen=null, mChipIcon=Icon(typ=RESOURCE pkg=com.brave.browser id=0x7f0902a9), mExpandedChipView=null, mChipBackground=-7336192, mPrimaryActionIndex=-1, mActionType=-1, mActions=null, mActionBgColors=null, mCardIcon=Icon(typ=RESOURCE pkg=com.brave.browser id=0x7f0902a9), mCardIconBg=-7336192, mPrimaryInfo=, mSecondaryInfo=, mCustomExpandedCardView=null, mSubScreenCustomExpandedCardView=null, mNeedMarquee=true, mExpandedChipText=YouTube, mChronometerView=null, mChronometerPosition=0, mChronometerTag=, mProgress=-1, mProgressMax=0, mProgressIndeterminate=false, mFirstIcon=null, mSecondIcon=null, mOngoingCollapsedView=null, mOngoingOAExpandView=null, mOngoingENRExpandView=null, mOngoingSubScreenExpandView=null, mOngoingNowbarView=null, mOngoingSubScreenNowbarView=null, mCustomNowBarView=null, mSubScreenCustomNowBarView=null, mProgressSegments=[], mProgressSegmentIcon=null, mProgressColor=0, mDescription=, mSecondaryInfoIcon=null, mNowbarIcon=null, mNowbarPrimaryInfo=null, mNowbarSecondaryInfo=null, mUserId=0, mAppName=YouTube, mWhen=1793101429768, mAppIcon=null, mPackageName=com.brave.browser, mNotificationEntry=com.android.systemui.statusbar.notification.collection.NotificationEntry@5afbd41, mStyle=1, mNowbarChronometerPosition=0, mIsMediaOngoingData=true, mAodRemoteAppName=, mAodRemoteAppIcon=null, mAodRemoteAppPendingIntent=null, mNowbarExtraData=null, mDismissRequested=false)
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+2026-10-27 20:44:19 item 23 [p_pad_f32_enn] before[AP=39.8 SKIN=36.4 ] after[AP=39.0 SKIN=36.0 ] bat=ACpowered:false,USBpowered:false,level:87, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.brave.browser/com.google.android.app last_input=26684ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Allow fp16 in NNAPI: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    | INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+    | VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: count=5573 first=1811 curr=59 min=58 max=1811 avg=66.5512 std=33 p5=59 median=65 p95=90
+    | INFO: count=12499 first=61 curr=59 min=58 max=286 avg=59.5356 std=4 p5=58 median=59 p95=61
+    | INFO: Inference timings in us: Init: 42752, First inference: 1811, Warmup (avg): 66.5512, Inference (avg): 59.5356
+    L I/tflite  ( 3145): NNAPI accelerator name: [enn]
+    L W/benchmark_model( 3145): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+    L I/Manager ( 3145): Found interface enn (version = E0.0.1)
+    L I/tflite  ( 3145): NNAPI accelerators available: [enn,nnapi-reference]
+    L I/tflite  ( 3145): Disable NNAPI cpu: [1]
+    L I/tflite  ( 3145): Allow fp16 in NNAPI: [1]
+    L I/tflite  ( 3145): Loaded model probes/p_pad_f32.tflite
+    L I/tflite  ( 3145): Initialized TensorFlow Lite runtime.
+    L I/tflite  ( 3145): Created TensorFlow Lite delegate for NNAPI.
+    L I/tflite  ( 3145): NNAPI delegate created.
+    L W/tflite  ( 3145): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    L I/TypeManager( 3145): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+    L W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+    L I/tflite  ( 3145): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    L I/tflite  ( 3145): Created TensorFlow Lite XNNPACK delegate for CPU.
+    L I/tflite  ( 3145): Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+    L I/tflite  ( 3145): The input model file size (MB): 0.000836
+    L I/tflite  ( 3145): Initialized session in 42.752ms.
+    L I/tflite  ( 3145): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  ( 3145): count=5573 first=1811 curr=59 min=58 max=1811 avg=66.5512 std=33 p5=59 median=65 p95=90
+    L I/tflite  ( 3145): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  ( 3145): count=12499 first=61 curr=59 min=58 max=286 avg=59.5356 std=4 p5=58 median=59 p95=61
+    L I/tflite  ( 3145): Inference timings in us: Init: 42752, First inference: 1811, Warmup (avg): 66.5512, Inference (avg): 59.5356
+    L I/tflite  ( 3145): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  ( 3145): Memory footprint delta from the start of the tool (MB): init=3.20312 overall=6.53516
+2026-10-27 20:44:28 item 24 [p_pad_i8_enn] before[AP=39.0 SKIN=36.0 ] after[AP=38.7 SKIN=35.8 ] bat=ACpowered:false,USBpowered:false,level:87, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.brave.browser/com.google.android.app last_input=36331ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    | INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+    | VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: count=13023 first=102 curr=33 min=32 max=1956 avg=33.76 std=18 p5=33 median=33 p95=34
+    | INFO: count=26583 first=35 curr=32 min=31 max=114 avg=33.0691 std=2 p5=31 median=33 p95=34
+    | INFO: Inference timings in us: Init: 3051, First inference: 102, Warmup (avg): 33.76, Inference (avg): 33.0691
+    L I/tflite  ( 3291): Use NNAPI: [1]
+    L I/tflite  ( 3291): NNAPI accelerator name: [enn]
+    L W/benchmark_model( 3291): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+    L I/Manager ( 3291): Found interface enn (version = E0.0.1)
+    L I/tflite  ( 3291): NNAPI accelerators available: [enn,nnapi-reference]
+    L I/tflite  ( 3291): Disable NNAPI cpu: [1]
+    L I/tflite  ( 3291): Loaded model probes/p_pad_i8.tflite
+    L I/tflite  ( 3291): Initialized TensorFlow Lite runtime.
+    L I/tflite  ( 3291): Created TensorFlow Lite delegate for NNAPI.
+    L I/tflite  ( 3291): NNAPI delegate created.
+    L W/tflite  ( 3291): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    L I/TypeManager( 3291): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+    L W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+    L I/tflite  ( 3291): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    L I/tflite  ( 3291): Created TensorFlow Lite XNNPACK delegate for CPU.
+    L I/tflite  ( 3291): Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+    L I/tflite  ( 3291): The input model file size (MB): 0.000968
+    L I/tflite  ( 3291): Initialized session in 3.051ms.
+    L I/tflite  ( 3291): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  ( 3291): count=13023 first=102 curr=33 min=32 max=1956 avg=33.76 std=18 p5=33 median=33 p95=34
+    L I/tflite  ( 3291): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  ( 3291): count=26583 first=35 curr=32 min=31 max=114 avg=33.0691 std=2 p5=31 median=33 p95=34
+    L I/tflite  ( 3291): Inference timings in us: Init: 3051, First inference: 102, Warmup (avg): 33.76, Inference (avg): 33.0691
+    L I/tflite  ( 3291): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  ( 3291): Memory footprint delta from the start of the tool (MB): init=3.26562 overall=4.76562
+2026-10-27 20:44:32 lock released

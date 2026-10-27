@@ -1,0 +1,491 @@
+2026-10-27 20:16:19 item 1: user active (top=com.brave.browser/com.google.android.apps.chrome.Main t697} last_input=31362ms) -> wait 120 s
+2026-10-27 20:18:20 item 1: user active (top=com.brave.browser/com.google.android.apps.chrome.Main t697} last_input=23585ms) -> wait 120 s
+2026-10-27 20:20:21 item 1: user active (top=com.brave.browser/com.google.android.apps.chrome.Main t697} last_input=763ms) -> wait 120 s
+2026-10-27 20:21:03 item 1: hot (AP=42.0 SKIN=36.7 ) -> wait 60 s
+2026-10-27 20:22:03 item 1: hot (AP=39.8 SKIN=36.2 ) -> wait 60 s
+2026-10-27 20:23:04 item 1: hot (AP=42.0 SKIN=37.4 ) -> wait 60 s
+2026-10-27 20:24:04 item 1: hot (AP=42.4 SKIN=37.1 ) -> wait 60 s
+2026-10-27 20:25:05 item 1: hot (AP=48.8 SKIN=38.2 ) -> wait 60 s
+2026-10-27 20:26:05 item 1: hot (AP=47.3 SKIN=39.5 ) -> wait 60 s
+2026-10-27 20:27:06 item 1: hot (AP=46.2 SKIN=39.2 ) -> wait 60 s
+2026-10-27 20:28:07 item 1: hot (AP=45.0 SKIN=39.1 ) -> wait 60 s
+2026-10-27 20:29:07 item 1: hot (AP=47.4 SKIN=39.2 ) -> wait 60 s
+2026-10-27 20:30:08 item 1: hot (AP=43.0 SKIN=39.0 ) -> wait 60 s
+2026-10-27 20:31:09 item 1: hot (AP=42.4 SKIN=39.1 ) -> wait 60 s
+2026-10-27 20:31:24 lock released
+2026-10-27 20:31:32 restart: quick pass, start gate relaxed to SKIN<40 AP<46 (user ordered run now; phone warm from user use) - timings = reference
+2026-10-27 20:31:37 item 1 [probe_devices] before[AP=45.4 SKIN=38.9 ] after[AP=43.0 SKIN=38.8 ] bat=ACpowered:false,USBpowered:false,level:91, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=403ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI accelerator name: [NOPE]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | ERROR: Could not find the specified NNAPI accelerator: NOPE. Must be one of: {enn,nnapi-reference}.
+    | ERROR: Restored original execution plan after delegate application failure.
+    | ERROR: Failed to apply NNAPI delegate.
+    | ERROR: Benchmarking failed.
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=xfeatnn_640x352_integer_quant.tflite --use_nnapi=true --nnapi_accelerator_name=NOPE --num_runs=1 --warmup_runs=0 2>&1'
+    L I/tflite  (19783): STARTING!
+    L I/tflite  (19783): Log parameter values verbosely: [0]
+    L I/tflite  (19783): Min num runs: [1]
+    L I/tflite  (19783): Min warmup runs: [0]
+    L I/tflite  (19783): Graph: [xfeatnn_640x352_integer_quant.tflite]
+    L I/tflite  (19783): Signature to run: []
+    L I/tflite  (19783): Use NNAPI: [1]
+    L I/tflite  (19783): NNAPI accelerator name: [NOPE]
+    L W/benchmark_model(19783): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+    L I/Manager (19783): Found interface enn (version = E0.0.1)
+    L I/tflite  (19783): NNAPI accelerators available: [enn,nnapi-reference]
+    L I/tflite  (19783): Loaded model xfeatnn_640x352_integer_quant.tflite
+    L I/tflite  (19783): Initialized TensorFlow Lite runtime.
+    L I/tflite  (19783): Created TensorFlow Lite delegate for NNAPI.
+    L I/tflite  (19783): NNAPI delegate created.
+    L E/tflite  (19783): Could not find the specified NNAPI accelerator: NOPE. Must be one of: {enn,nnapi-reference}.
+    L E/tflite  (19783): Restored original execution plan after delegate application failure.
+    L E/tflite  (19783): Failed to apply NNAPI delegate.
+    L E/tflite  (19783): Benchmarking failed.
+2026-10-27 20:31:58 item 2 [xf_int8_enn] before[AP=42.4 SKIN=38.6 ] after[AP=42.1 SKIN=38.4 ] bat=ACpowered:false,USBpowered:false,level:91, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=2834ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI execution preference: [sustained_speed]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    | INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+    | VERBOSE: Replacing 43 out of 44 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 3 partitions for subgraph 0.
+    | INFO: count=36 first=26042 curr=13430 min=13410 max=26042 avg=13893.1 std=2084 p5=13423 median=13457 p95=15602
+    | INFO: count=75 first=13584 curr=13434 min=13401 max=13685 avg=13467.4 std=67 p5=13415 median=13442 p95=13612
+    | INFO: Inference timings in us: Init: 75954, First inference: 26042, Warmup (avg): 13893.1, Inference (avg): 13467.4
+    L I/tflite  (20236): NNAPI execution preference: [sustained_speed]
+    L I/tflite  (20236): NNAPI accelerator name: [enn]
+    L W/benchmark_model(20236): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+    L I/Manager (20236): Found interface enn (version = E0.0.1)
+    L I/tflite  (20236): NNAPI accelerators available: [enn,nnapi-reference]
+    L I/tflite  (20236): Disable NNAPI cpu: [1]
+    L I/tflite  (20236): Loaded model xfeatnn_640x352_integer_quant.tflite
+    L I/tflite  (20236): Initialized TensorFlow Lite runtime.
+    L I/tflite  (20236): Created TensorFlow Lite delegate for NNAPI.
+    L I/tflite  (20236): NNAPI delegate created.
+    L W/tflite  (20236): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    L I/TypeManager(20236): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+    L W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+    L I/tflite  (20236): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    L I/tflite  (20236): Created TensorFlow Lite XNNPACK delegate for CPU.
+    L I/tflite  (20236): Replacing 43 out of 44 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 3 partitions for subgraph 0.
+    L I/tflite  (20236): The input model file size (MB): 0.723816
+    L I/tflite  (20236): Initialized session in 75.954ms.
+    L I/tflite  (20236): Running benchmark for at least 5 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (20236): count=36 first=26042 curr=13430 min=13410 max=26042 avg=13893.1 std=2084 p5=13423 median=13457 p95=15602
+    L I/tflite  (20236): Running benchmark for at least 30 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (20236): count=75 first=13584 curr=13434 min=13401 max=13685 avg=13467.4 std=67 p5=13415 median=13442 p95=13612
+    L I/tflite  (20236): Inference timings in us: Init: 75954, First inference: 26042, Warmup (avg): 13893.1, Inference (avg): 13467.4
+    L I/tflite  (20236): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (20236): Memory footprint delta from the start of the tool (MB): init=36.875 overall=40.8477
+2026-10-27 20:32:18 item 3 [xf_int16act_enn] before[AP=41.0 SKIN=38.3 ] after[AP=40.2 SKIN=37.9 ] bat=ACpowered:false,USBpowered:false,level:90, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=23854ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI execution preference: [sustained_speed]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | ERROR: Failed to add NN API tensor: type INT64 is not supported.
+    | ERROR: Restored original execution plan after delegate application failure.
+    | ERROR: Failed to apply NNAPI delegate.
+    | ERROR: Benchmarking failed.
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --num_threads=1 --warmup_runs=5 --num_runs=30 --graph=xfeatnn_640x352_integer_quant_with_int16_act.tflite --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_execution_preference=sustained_speed 2>&1'
+    L I/tflite  (20411): STARTING!
+    L I/tflite  (20411): Log parameter values verbosely: [0]
+    L I/tflite  (20411): Min num runs: [30]
+    L I/tflite  (20411): Num threads: [1]
+    L I/tflite  (20411): Min warmup runs: [5]
+    L I/tflite  (20411): Graph: [xfeatnn_640x352_integer_quant_with_int16_act.tflite]
+    L I/tflite  (20411): Signature to run: []
+    L I/tflite  (20411): #threads used for CPU inference: [1]
+    L I/tflite  (20411): Use NNAPI: [1]
+    L I/tflite  (20411): NNAPI execution preference: [sustained_speed]
+    L I/tflite  (20411): NNAPI accelerator name: [enn]
+    L W/benchmark_model(20411): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+    L I/Manager (20411): Found interface enn (version = E0.0.1)
+    L I/tflite  (20411): NNAPI accelerators available: [enn,nnapi-reference]
+    L I/tflite  (20411): Disable NNAPI cpu: [1]
+    L I/tflite  (20411): Loaded model xfeatnn_640x352_integer_quant_with_int16_act.tflite
+    L I/tflite  (20411): Initialized TensorFlow Lite runtime.
+    L I/tflite  (20411): Created TensorFlow Lite delegate for NNAPI.
+    L I/tflite  (20411): NNAPI delegate created.
+    L W/tflite  (20411): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    L I/TypeManager(20411): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+    L E/tflite  (20411): Failed to add NN API tensor: type INT64 is not supported.
+    L E/tflite  (20411): Restored original execution plan after delegate application failure.
+    L E/tflite  (20411): Failed to apply NNAPI delegate.
+    L E/tflite  (20411): Benchmarking failed.
+2026-10-27 20:32:37 item 4 [lg512_dyn_enn] before[AP=40.0 SKIN=37.8 ] after[AP=39.8 SKIN=37.6 ] bat=ACpowered:false,USBpowered:false,level:90, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=43180ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI execution preference: [sustained_speed]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | ERROR: Select TensorFlow op(s), included in the given model, is(are) not supported by this interpreter. Make sure you apply/link the Flex delegate before inference. For the Android, it can be resolved by adding "org.tensorflow:tensorflow-lite-select-tf-ops" dependency. See instructions: https://www.tensorflow.org/lite/guide/ops_select
+    | ERROR: Node number 55 (FlexErf) failed to prepare.
+    | ERROR: Failed to apply NNAPI delegate.
+    | ERROR: Benchmarking failed.
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --num_threads=1 --warmup_runs=5 --num_runs=30 --graph=lgc_512_dynamic_range_quant.tflite --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_execution_preference=sustained_speed 2>&1'
+    L I/tflite  (20602): STARTING!
+    L I/tflite  (20602): Log parameter values verbosely: [0]
+    L I/tflite  (20602): Min num runs: [30]
+    L I/tflite  (20602): Num threads: [1]
+    L I/tflite  (20602): Min warmup runs: [5]
+    L I/tflite  (20602): Graph: [lgc_512_dynamic_range_quant.tflite]
+    L I/tflite  (20602): Signature to run: []
+    L I/tflite  (20602): #threads used for CPU inference: [1]
+    L I/tflite  (20602): Use NNAPI: [1]
+    L I/tflite  (20602): NNAPI execution preference: [sustained_speed]
+    L I/tflite  (20602): NNAPI accelerator name: [enn]
+    L W/benchmark_model(20602): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+    L I/Manager (20602): Found interface enn (version = E0.0.1)
+    L I/tflite  (20602): NNAPI accelerators available: [enn,nnapi-reference]
+    L I/tflite  (20602): Disable NNAPI cpu: [1]
+    L I/tflite  (20602): Loaded model lgc_512_dynamic_range_quant.tflite
+    L I/tflite  (20602): Initialized TensorFlow Lite runtime.
+    L I/tflite  (20602): Created TensorFlow Lite delegate for NNAPI.
+    L I/tflite  (20602): NNAPI delegate created.
+    L E/tflite  (20602): Select TensorFlow op(s), included in the given model, is(are) not supported by this interpreter. Make sure you apply/link the Flex delegate before inference. For the Android, it can be resolved by adding "org.tensorflow:tensorflow-lite-select-tf-ops" dependency. See instructions: https://www.tensorflow.org/lite/guide/ops_select
+    L E/tflite  (20602): Node number 55 (FlexErf) failed to prepare.
+    L E/tflite  (20602): Failed to apply NNAPI delegate.
+    L E/tflite  (20602): Benchmarking failed.
+2026-10-27 20:33:00 item 5 [xf_int8io_enn] before[AP=42.0 SKIN=37.7 ] after[AP=43.5 SKIN=37.8 ] bat=ACpowered:false,USBpowered:false,level:90, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.twitter.android/com.x.android.main.M last_input=331ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI execution preference: [sustained_speed]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    | INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+    | VERBOSE: Replacing 39 out of 40 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 2 partitions for subgraph 0.
+    | INFO: count=37 first=14455 curr=13712 min=13366 max=14455 avg=13536.3 std=198 p5=13374 median=13473 p95=13878
+    | INFO: count=72 first=13675 curr=14545 min=13506 max=16282 avg=13993.3 std=492 p5=13579 median=13808 p95=14886
+    | INFO: Inference timings in us: Init: 41103, First inference: 14455, Warmup (avg): 13536.3, Inference (avg): 13993.3
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+    L I/Manager (21261): Found interface enn (version = E0.0.1)
+    L I/tflite  (21261): NNAPI accelerators available: [enn,nnapi-reference]
+    L I/tflite  (21261): Disable NNAPI cpu: [1]
+    L I/tflite  (21261): Loaded model xfeatnn_640x352_full_integer_quant.tflite
+    L I/tflite  (21261): Initialized TensorFlow Lite runtime.
+    L I/tflite  (21261): Created TensorFlow Lite delegate for NNAPI.
+    L I/tflite  (21261): NNAPI delegate created.
+    L W/tflite  (21261): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    L I/TypeManager(21261): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+    L W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+    L I/tflite  (21261): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    L I/tflite  (21261): Created TensorFlow Lite XNNPACK delegate for CPU.
+    L I/tflite  (21261): Replacing 39 out of 40 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 2 partitions for subgraph 0.
+    L I/tflite  (21261): The input model file size (MB): 0.72328
+    L I/tflite  (21261): Initialized session in 41.103ms.
+    L I/tflite  (21261): Running benchmark for at least 5 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (21261): count=37 first=14455 curr=13712 min=13366 max=14455 avg=13536.3 std=198 p5=13374 median=13473 p95=13878
+    L I/tflite  (21261): Running benchmark for at least 30 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (21261): count=72 first=13675 curr=14545 min=13506 max=16282 avg=13993.3 std=492 p5=13579 median=13808 p95=14886
+    L I/tflite  (21261): Inference timings in us: Init: 41103, First inference: 14455, Warmup (avg): 13536.3, Inference (avg): 13993.3
+    L I/tflite  (21261): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (21261): Memory footprint delta from the start of the tool (MB): init=37.8633 overall=38.9609
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+2026-10-27 20:33:21 item 6 [xf_fp32_enn_fp16] before[AP=42.8 SKIN=38.0 ] after[AP=40.9 SKIN=37.8 ] bat=ACpowered:false,USBpowered:false,level:90, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=14366ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI execution preference: [sustained_speed]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Allow fp16 in NNAPI: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    | INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+    | VERBOSE: Replacing 40 out of 40 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: count=16 first=34384 curr=35271 min=32178 max=35271 avg=32626.1 std=857 p5=32178 median=32305 p95=35271
+    | INFO: count=32 first=32151 curr=32084 min=32080 max=32525 avg=32203.1 std=116 p5=32082 median=32139 p95=32387
+    | INFO: Inference timings in us: Init: 31746, First inference: 34384, Warmup (avg): 32626.1, Inference (avg): 32203.1
+    L I/tflite  (21631): NNAPI accelerator name: [enn]
+    L W/benchmark_model(21631): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+    L I/Manager (21631): Found interface enn (version = E0.0.1)
+    L I/tflite  (21631): NNAPI accelerators available: [enn,nnapi-reference]
+    L I/tflite  (21631): Disable NNAPI cpu: [1]
+    L I/tflite  (21631): Allow fp16 in NNAPI: [1]
+    L I/tflite  (21631): Loaded model xfeatnn_640x352_float32.tflite
+    L I/tflite  (21631): Initialized TensorFlow Lite runtime.
+    L I/tflite  (21631): Created TensorFlow Lite delegate for NNAPI.
+    L I/tflite  (21631): NNAPI delegate created.
+    L W/tflite  (21631): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    L I/TypeManager(21631): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+    L W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+    L I/tflite  (21631): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+    L I/tflite  (21631): Created TensorFlow Lite XNNPACK delegate for CPU.
+    L I/tflite  (21631): Replacing 40 out of 40 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+    L I/tflite  (21631): The input model file size (MB): 2.66817
+    L I/tflite  (21631): Initialized session in 31.746ms.
+    L I/tflite  (21631): Running benchmark for at least 5 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (21631): count=16 first=34384 curr=35271 min=32178 max=35271 avg=32626.1 std=857 p5=32178 median=32305 p95=35271
+    L I/tflite  (21631): Running benchmark for at least 30 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (21631): count=32 first=32151 curr=32084 min=32080 max=32525 avg=32203.1 std=116 p5=32082 median=32139 p95=32387
+    L I/tflite  (21631): Inference timings in us: Init: 31746, First inference: 34384, Warmup (avg): 32626.1, Inference (avg): 32203.1
+    L I/tflite  (21631): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (21631): Memory footprint delta from the start of the tool (MB): init=46.2656 overall=49.7734
+2026-10-27 20:33:40 item 7 [lg512_int8_enn] before[AP=39.6 SKIN=37.4 ] after[AP=39.6 SKIN=37.4 ] bat=ACpowered:false,USBpowered:false,level:90, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=35556ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI execution preference: [sustained_speed]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | ERROR: Select TensorFlow op(s), included in the given model, is(are) not supported by this interpreter. Make sure you apply/link the Flex delegate before inference. For the Android, it can be resolved by adding "org.tensorflow:tensorflow-lite-select-tf-ops" dependency. See instructions: https://www.tensorflow.org/lite/guide/ops_select
+    | ERROR: Node number 84 (FlexErf) failed to prepare.
+    | ERROR: Failed to apply NNAPI delegate.
+    | ERROR: Benchmarking failed.
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --num_threads=1 --warmup_runs=5 --num_runs=30 --graph=lgc_512_integer_quant.tflite --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_execution_preference=sustained_speed 2>&1'
+    L I/tflite  (21713): STARTING!
+    L I/tflite  (21713): Log parameter values verbosely: [0]
+    L I/tflite  (21713): Min num runs: [30]
+    L I/tflite  (21713): Num threads: [1]
+    L I/tflite  (21713): Min warmup runs: [5]
+    L I/tflite  (21713): Graph: [lgc_512_integer_quant.tflite]
+    L I/tflite  (21713): Signature to run: []
+    L I/tflite  (21713): #threads used for CPU inference: [1]
+    L I/tflite  (21713): Use NNAPI: [1]
+    L I/tflite  (21713): NNAPI execution preference: [sustained_speed]
+    L I/tflite  (21713): NNAPI accelerator name: [enn]
+    L W/benchmark_model(21713): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+    L I/Manager (21713): Found interface enn (version = E0.0.1)
+    L I/tflite  (21713): NNAPI accelerators available: [enn,nnapi-reference]
+    L I/tflite  (21713): Disable NNAPI cpu: [1]
+    L I/tflite  (21713): Loaded model lgc_512_integer_quant.tflite
+    L I/tflite  (21713): Initialized TensorFlow Lite runtime.
+    L I/tflite  (21713): Created TensorFlow Lite delegate for NNAPI.
+    L I/tflite  (21713): NNAPI delegate created.
+    L E/tflite  (21713): Select TensorFlow op(s), included in the given model, is(are) not supported by this interpreter. Make sure you apply/link the Flex delegate before inference. For the Android, it can be resolved by adding "org.tensorflow:tensorflow-lite-select-tf-ops" dependency. See instructions: https://www.tensorflow.org/lite/guide/ops_select
+    L E/tflite  (21713): Node number 84 (FlexErf) failed to prepare.
+    L E/tflite  (21713): Failed to apply NNAPI delegate.
+    L E/tflite  (21713): Benchmarking failed.
+2026-10-27 20:34:00 item 8 [lg512_fp32_enn_fp16] before[AP=38.6 SKIN=36.8 ] after[AP=38.6 SKIN=36.8 ] bat=ACpowered:false,USBpowered:false,level:90, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=54880ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI execution preference: [sustained_speed]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Allow fp16 in NNAPI: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | ERROR: Select TensorFlow op(s), included in the given model, is(are) not supported by this interpreter. Make sure you apply/link the Flex delegate before inference. For the Android, it can be resolved by adding "org.tensorflow:tensorflow-lite-select-tf-ops" dependency. See instructions: https://www.tensorflow.org/lite/guide/ops_select
+    | ERROR: Node number 55 (FlexErf) failed to prepare.
+    | ERROR: Failed to apply NNAPI delegate.
+    | ERROR: Benchmarking failed.
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --num_threads=1 --warmup_runs=5 --num_runs=30 --graph=lgc_512_float32.tflite --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_execution_preference=sustained_speed --nnapi_allow_fp16=true 2>&1'
+    L I/tflite  (21810): STARTING!
+    L I/tflite  (21810): Log parameter values verbosely: [0]
+    L I/tflite  (21810): Min num runs: [30]
+    L I/tflite  (21810): Num threads: [1]
+    L I/tflite  (21810): Min warmup runs: [5]
+    L I/tflite  (21810): Graph: [lgc_512_float32.tflite]
+    L I/tflite  (21810): Signature to run: []
+    L I/tflite  (21810): #threads used for CPU inference: [1]
+    L I/tflite  (21810): Use NNAPI: [1]
+    L I/tflite  (21810): NNAPI execution preference: [sustained_speed]
+    L I/tflite  (21810): NNAPI accelerator name: [enn]
+    L W/benchmark_model(21810): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+    L I/Manager (21810): Found interface enn (version = E0.0.1)
+    L I/tflite  (21810): NNAPI accelerators available: [enn,nnapi-reference]
+    L I/tflite  (21810): Disable NNAPI cpu: [1]
+    L I/tflite  (21810): Allow fp16 in NNAPI: [1]
+    L I/tflite  (21810): Loaded model lgc_512_float32.tflite
+    L I/tflite  (21810): Initialized TensorFlow Lite runtime.
+    L I/tflite  (21810): Created TensorFlow Lite delegate for NNAPI.
+    L I/tflite  (21810): NNAPI delegate created.
+    L E/tflite  (21810): Select TensorFlow op(s), included in the given model, is(are) not supported by this interpreter. Make sure you apply/link the Flex delegate before inference. For the Android, it can be resolved by adding "org.tensorflow:tensorflow-lite-select-tf-ops" dependency. See instructions: https://www.tensorflow.org/lite/guide/ops_select
+    L E/tflite  (21810): Node number 55 (FlexErf) failed to prepare.
+    L E/tflite  (21810): Failed to apply NNAPI delegate.
+    L E/tflite  (21810): Benchmarking failed.
+2026-10-27 20:34:22 item 9 [xf_fp32_gpu] before[AP=38.5 SKIN=36.6 ] after[AP=38.1 SKIN=36.4 ] bat=ACpowered:false,USBpowered:false,level:90, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=74191ms
+    | INFO: Created TensorFlow Lite delegate for GPU.
+    | INFO: GPU delegate created.
+    | VERBOSE: Replacing 40 out of 40 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    | INFO: Created 1 GPU delegate kernels.
+    | INFO: Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=50 first=15800 curr=9730 min=8013 max=15800 avg=9836.28 std=1421 p5=8262 median=9699 p95=11718
+    | INFO: count=111 first=8367 curr=8425 min=5793 max=12635 avg=8709.93 std=1133 p5=6263 median=8827 p95=10470
+    | INFO: Inference timings in us: Init: 1850655, First inference: 15800, Warmup (avg): 9836.28, Inference (avg): 8709.93
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --num_threads=1 --warmup_runs=5 --num_runs=30 --graph=xfeatnn_640x352_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true 2>&1'
+    L I/tflite  (21932): STARTING!
+    L I/tflite  (21932): Log parameter values verbosely: [0]
+    L I/tflite  (21932): Min num runs: [30]
+    L I/tflite  (21932): Num threads: [1]
+    L I/tflite  (21932): Min warmup runs: [5]
+    L I/tflite  (21932): Graph: [xfeatnn_640x352_float32.tflite]
+    L I/tflite  (21932): Signature to run: []
+    L I/tflite  (21932): #threads used for CPU inference: [1]
+    L I/tflite  (21932): Use gpu: [1]
+    L I/tflite  (21932): Allow lower precision in gpu: [1]
+    L I/tflite  (21932): Loaded model xfeatnn_640x352_float32.tflite
+    L I/tflite  (21932): Initialized TensorFlow Lite runtime.
+    L I/tflite  (21932): Created TensorFlow Lite delegate for GPU.
+    L I/tflite  (21932): GPU delegate created.
+    L I/tflite  (21932): Loaded OpenCL library with dlopen.
+    L I/tflite  (21932): Replacing 40 out of 40 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    L I/tflite  (21932): Initialized OpenCL-based API.
+    L I/tflite  (21932): Created 1 GPU delegate kernels.
+    L I/tflite  (21932): Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    L I/tflite  (21932): The input model file size (MB): 2.66817
+    L I/tflite  (21932): Initialized session in 1850.65ms.
+    L I/tflite  (21932): Running benchmark for at least 5 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (21932): count=50 first=15800 curr=9730 min=8013 max=15800 avg=9836.28 std=1421 p5=8262 median=9699 p95=11718
+    L I/tflite  (21932): Running benchmark for at least 30 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (21932): count=111 first=8367 curr=8425 min=5793 max=12635 avg=8709.93 std=1133 p5=6263 median=8827 p95=10470
+    L I/tflite  (21932): Inference timings in us: Init: 1850655, First inference: 15800, Warmup (avg): 9836.28, Inference (avg): 8709.93
+    L I/tflite  (21932): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (21932): Memory footprint delta from the start of the tool (MB): init=91.3906 overall=91.3906
+2026-10-27 20:34:41 item 10 [lg512_fp32_gpu] before[AP=39.2 SKIN=36.4 ] after[AP=39.2 SKIN=36.4 ] bat=ACpowered:false,USBpowered:false,level:90, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=708ms
+    | INFO: Created TensorFlow Lite delegate for GPU.
+    | INFO: GPU delegate created.
+    | ERROR: Select TensorFlow op(s), included in the given model, is(are) not supported by this interpreter. Make sure you apply/link the Flex delegate before inference. For the Android, it can be resolved by adding "org.tensorflow:tensorflow-lite-select-tf-ops" dependency. See instructions: https://www.tensorflow.org/lite/guide/ops_select
+    | ERROR: Node number 55 (FlexErf) failed to prepare.
+    | ERROR: Failed to apply GPU delegate.
+    | ERROR: Benchmarking failed.
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --num_threads=1 --warmup_runs=5 --num_runs=30 --graph=lgc_512_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true 2>&1'
+    L I/tflite  (22293): STARTING!
+    L I/tflite  (22293): Log parameter values verbosely: [0]
+    L I/tflite  (22293): Min num runs: [30]
+    L I/tflite  (22293): Num threads: [1]
+    L I/tflite  (22293): Min warmup runs: [5]
+    L I/tflite  (22293): Graph: [lgc_512_float32.tflite]
+    L I/tflite  (22293): Signature to run: []
+    L I/tflite  (22293): #threads used for CPU inference: [1]
+    L I/tflite  (22293): Use gpu: [1]
+    L I/tflite  (22293): Allow lower precision in gpu: [1]
+    L I/tflite  (22293): Loaded model lgc_512_float32.tflite
+    L I/tflite  (22293): Initialized TensorFlow Lite runtime.
+    L I/tflite  (22293): Created TensorFlow Lite delegate for GPU.
+    L I/tflite  (22293): GPU delegate created.
+    L E/tflite  (22293): Select TensorFlow op(s), included in the given model, is(are) not supported by this interpreter. Make sure you apply/link the Flex delegate before inference. For the Android, it can be resolved by adding "org.tensorflow:tensorflow-lite-select-tf-ops" dependency. See instructions: https://www.tensorflow.org/lite/guide/ops_select
+    L E/tflite  (22293): Node number 55 (FlexErf) failed to prepare.
+    L E/tflite  (22293): Failed to apply GPU delegate.
+    L E/tflite  (22293): Benchmarking failed.
+2026-10-27 20:35:05 item 11 [xf_int8_gpu] before[AP=40.2 SKIN=36.4 ] after[AP=40.2 SKIN=36.4 ] bat=ACpowered:false,USBpowered:false,level:90, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.kakao.talk/.activity.adaptive.main.A last_input=432ms
+    | INFO: Created TensorFlow Lite delegate for GPU.
+    | INFO: GPU delegate created.
+    | VERBOSE: Replacing 44 out of 44 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    | INFO: Created 1 GPU delegate kernels.
+    | INFO: Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=64 first=13945 curr=7598 min=5517 max=18383 avg=7742.55 std=2095 p5=5961 median=7235 p95=12429
+    | INFO: count=125 first=6752 curr=10890 min=5588 max=12571 avg=7904.79 std=1245 p5=6351 median=7634 p95=10324
+    | INFO: Inference timings in us: Init: 2312482, First inference: 13945, Warmup (avg): 7742.55, Inference (avg): 7904.79
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --num_threads=1 --warmup_runs=5 --num_runs=30 --graph=xfeatnn_640x352_integer_quant.tflite --use_gpu=true 2>&1'
+    L I/tflite  (22726): STARTING!
+    L I/tflite  (22726): Log parameter values verbosely: [0]
+    L I/tflite  (22726): Min num runs: [30]
+    L I/tflite  (22726): Num threads: [1]
+    L I/tflite  (22726): Min warmup runs: [5]
+    L I/tflite  (22726): Graph: [xfeatnn_640x352_integer_quant.tflite]
+    L I/tflite  (22726): Signature to run: []
+    L I/tflite  (22726): #threads used for CPU inference: [1]
+    L I/tflite  (22726): Use gpu: [1]
+    L I/tflite  (22726): Loaded model xfeatnn_640x352_integer_quant.tflite
+    L I/tflite  (22726): Initialized TensorFlow Lite runtime.
+    L I/tflite  (22726): Created TensorFlow Lite delegate for GPU.
+    L I/tflite  (22726): GPU delegate created.
+    L I/tflite  (22726): Loaded OpenCL library with dlopen.
+    L I/tflite  (22726): Replacing 44 out of 44 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    L I/tflite  (22726): Initialized OpenCL-based API.
+    L I/tflite  (22726): Created 1 GPU delegate kernels.
+    L I/tflite  (22726): Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    L I/tflite  (22726): The input model file size (MB): 0.723816
+    L I/tflite  (22726): Initialized session in 2312.48ms.
+    L I/tflite  (22726): Running benchmark for at least 5 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (22726): count=64 first=13945 curr=7598 min=5517 max=18383 avg=7742.55 std=2095 p5=5961 median=7235 p95=12429
+    L I/tflite  (22726): Running benchmark for at least 30 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (22726): count=125 first=6752 curr=10890 min=5588 max=12571 avg=7904.79 std=1245 p5=6351 median=7634 p95=10324
+    L I/tflite  (22726): Inference timings in us: Init: 2312482, First inference: 13945, Warmup (avg): 7742.55, Inference (avg): 7904.79
+    L I/tflite  (22726): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (22726): Memory footprint delta from the start of the tool (MB): init=95.0391 overall=95.0391
+2026-10-27 20:35:21 WARNING bench process still running
+2026-10-27 20:35:22 camera: Active Camera Clients: [] 
+2026-10-27 20:35:22 list done
+2026-10-27 20:35:22 lock released

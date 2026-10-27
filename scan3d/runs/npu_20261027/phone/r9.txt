@@ -1,0 +1,216 @@
+2026-10-27 21:21:55 item 1 [lgt1024_gpu32_acc0] before[AP=33.6 SKIN=33.1 ] after[AP=33.6 SKIN=33.1 ] bat=ACpowered:false,USBpowered:false,level:78, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.brave.browser/com.google.android.app last_input=220876ms
+    | INFO: Created TensorFlow Lite delegate for GPU.
+    | INFO: GPU delegate created.
+    | VERBOSE: Replacing 892 out of 892 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    | INFO: Created 1 GPU delegate kernels.
+    | INFO: Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=7 first=75228 curr=75850 min=72017 max=78066 avg=75488.3 std=1691 p5=72017 median=75850 p95=78066
+    | INFO: count=1 curr=78230 p5=78230 median=78230 p95=78230
+    | INFO: Inference timings in us: Init: 888499, First inference: 75228, Warmup (avg): 75488.3, Inference (avg): 78230
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=lgct_1024_float32.tflite --input_layer=kpts0,kpts1,desc0,desc1 --input_layer_shape=1,1024,2:1,1024,2:1,1024,64:1,1024,64 --use_gpu=true --gpu_precision_loss_allowed=false --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=kpts0:in/lg1024_0_kpts0.f32,kpts1:in/lg1024_0_kpts1.f32,desc0:in/lg1024_0_desc0.f32,desc1:in/lg1024_0_desc1.f32 --output_filepath=out/lg1024_gpu32_0.bin 2>&1'
+    L I/tflite  (29190): STARTING!
+    L I/tflite  (29190): Log parameter values verbosely: [0]
+    L I/tflite  (29190): Min num runs: [1]
+    L I/tflite  (29190): Min runs duration (seconds): [0]
+    L I/tflite  (29190): Num threads: [1]
+    L I/tflite  (29190): Min warmup runs: [1]
+    L I/tflite  (29190): Graph: [lgct_1024_float32.tflite]
+    L I/tflite  (29190): Signature to run: []
+    L I/tflite  (29190): Input layers: [kpts0,kpts1,desc0,desc1]
+    L I/tflite  (29190): Input shapes: [1,1024,2:1,1024,2:1,1024,64:1,1024,64]
+    L I/tflite  (29190): Input value files: [kpts0:in/lg1024_0_kpts0.f32,kpts1:in/lg1024_0_kpts1.f32,desc0:in/lg1024_0_desc0.f32,desc1:in/lg1024_0_desc1.f32]
+    L I/tflite  (29190): Require full delegation: [1]
+    L I/tflite  (29190): File path to export outputs layer to: [out/lg1024_gpu32_0.bin]
+    L I/tflite  (29190): #threads used for CPU inference: [1]
+    L I/tflite  (29190): Use gpu: [1]
+    L I/tflite  (29190): Allow lower precision in gpu: [0]
+    L I/tflite  (29190): Loaded model lgct_1024_float32.tflite
+    L I/tflite  (29190): Initialized TensorFlow Lite runtime.
+    L I/tflite  (29190): Created TensorFlow Lite delegate for GPU.
+    L I/tflite  (29190): GPU delegate created.
+    L I/tflite  (29190): Loaded OpenCL library with dlopen.
+    L I/tflite  (29190): Replacing 892 out of 892 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    L I/tflite  (29190): Initialized OpenCL-based API.
+    L I/tflite  (29190): Created 1 GPU delegate kernels.
+    L I/tflite  (29190): Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    L I/tflite  (29190): The input model file size (MB): 4.47004
+    L I/tflite  (29190): Initialized session in 888.499ms.
+    L I/tflite  (29190): Running benchmark for at least 1 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (29190): count=7 first=75228 curr=75850 min=72017 max=78066 avg=75488.3 std=1691 p5=72017 median=75850 p95=78066
+    L I/tflite  (29190): Running benchmark for at least 1 iterations and at least 0 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (29190): count=1 curr=78230 p5=78230 median=78230 p95=78230
+    L I/tflite  (29190): Inference timings in us: Init: 888499, First inference: 75228, Warmup (avg): 75488.3, Inference (avg): 78230
+    L I/tflite  (29190): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (29190): Memory footprint delta from the start of the tool (MB): init=117.977 overall=121.332
+2026-10-27 21:22:05 item 2 [lgt1024_gpu32_acc5] before[AP=34.2 SKIN=33.1 ] after[AP=34.2 SKIN=33.1 ] bat=ACpowered:false,USBpowered:false,level:78, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.brave.browser/com.google.android.app last_input=230801ms
+    | INFO: Created TensorFlow Lite delegate for GPU.
+    | INFO: GPU delegate created.
+    | VERBOSE: Replacing 892 out of 892 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    | INFO: Created 1 GPU delegate kernels.
+    | INFO: Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=7 first=80196 curr=74565 min=72712 max=80196 avg=76699.6 std=2387 p5=72712 median=76672 p95=80196
+    | INFO: count=1 curr=76367 p5=76367 median=76367 p95=76367
+    | INFO: Inference timings in us: Init: 893400, First inference: 80196, Warmup (avg): 76699.6, Inference (avg): 76367
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=lgct_1024_float32.tflite --input_layer=kpts0,kpts1,desc0,desc1 --input_layer_shape=1,1024,2:1,1024,2:1,1024,64:1,1024,64 --use_gpu=true --gpu_precision_loss_allowed=false --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=kpts0:in/lg1024_5_kpts0.f32,kpts1:in/lg1024_5_kpts1.f32,desc0:in/lg1024_5_desc0.f32,desc1:in/lg1024_5_desc1.f32 --output_filepath=out/lg1024_gpu32_5.bin 2>&1'
+    L I/tflite  (29281): STARTING!
+    L I/tflite  (29281): Log parameter values verbosely: [0]
+    L I/tflite  (29281): Min num runs: [1]
+    L I/tflite  (29281): Min runs duration (seconds): [0]
+    L I/tflite  (29281): Num threads: [1]
+    L I/tflite  (29281): Min warmup runs: [1]
+    L I/tflite  (29281): Graph: [lgct_1024_float32.tflite]
+    L I/tflite  (29281): Signature to run: []
+    L I/tflite  (29281): Input layers: [kpts0,kpts1,desc0,desc1]
+    L I/tflite  (29281): Input shapes: [1,1024,2:1,1024,2:1,1024,64:1,1024,64]
+    L I/tflite  (29281): Input value files: [kpts0:in/lg1024_5_kpts0.f32,kpts1:in/lg1024_5_kpts1.f32,desc0:in/lg1024_5_desc0.f32,desc1:in/lg1024_5_desc1.f32]
+    L I/tflite  (29281): Require full delegation: [1]
+    L I/tflite  (29281): File path to export outputs layer to: [out/lg1024_gpu32_5.bin]
+    L I/tflite  (29281): #threads used for CPU inference: [1]
+    L I/tflite  (29281): Use gpu: [1]
+    L I/tflite  (29281): Allow lower precision in gpu: [0]
+    L I/tflite  (29281): Loaded model lgct_1024_float32.tflite
+    L I/tflite  (29281): Initialized TensorFlow Lite runtime.
+    L I/tflite  (29281): Created TensorFlow Lite delegate for GPU.
+    L I/tflite  (29281): GPU delegate created.
+    L I/tflite  (29281): Loaded OpenCL library with dlopen.
+    L I/tflite  (29281): Replacing 892 out of 892 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    L I/tflite  (29281): Initialized OpenCL-based API.
+    L I/tflite  (29281): Created 1 GPU delegate kernels.
+    L I/tflite  (29281): Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    L I/tflite  (29281): The input model file size (MB): 4.47004
+    L I/tflite  (29281): Initialized session in 893.4ms.
+    L I/tflite  (29281): Running benchmark for at least 1 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (29281): count=7 first=80196 curr=74565 min=72712 max=80196 avg=76699.6 std=2387 p5=72712 median=76672 p95=80196
+    L I/tflite  (29281): Running benchmark for at least 1 iterations and at least 0 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (29281): count=1 curr=76367 p5=76367 median=76367 p95=76367
+    L I/tflite  (29281): Inference timings in us: Init: 893400, First inference: 80196, Warmup (avg): 76699.6, Inference (avg): 76367
+    L I/tflite  (29281): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (29281): Memory footprint delta from the start of the tool (MB): init=118.195 overall=121.598
+2026-10-27 21:22:15 item 3 [lgt1024_gpu32_acc12] before[AP=34.3 SKIN=33.1 ] after[AP=34.3 SKIN=33.1 ] bat=ACpowered:false,USBpowered:false,level:78, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.brave.browser/com.google.android.app last_input=241109ms
+    | INFO: Created TensorFlow Lite delegate for GPU.
+    | INFO: GPU delegate created.
+    | VERBOSE: Replacing 892 out of 892 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    | INFO: Created 1 GPU delegate kernels.
+    | INFO: Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=7 first=72085 curr=78704 min=72085 max=78704 avg=75880.6 std=2087 p5=72085 median=76763 p95=78704
+    | INFO: count=1 curr=75973 p5=75973 median=75973 p95=75973
+    | INFO: Inference timings in us: Init: 898658, First inference: 72085, Warmup (avg): 75880.6, Inference (avg): 75973
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=lgct_1024_float32.tflite --input_layer=kpts0,kpts1,desc0,desc1 --input_layer_shape=1,1024,2:1,1024,2:1,1024,64:1,1024,64 --use_gpu=true --gpu_precision_loss_allowed=false --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=kpts0:in/lg1024_12_kpts0.f32,kpts1:in/lg1024_12_kpts1.f32,desc0:in/lg1024_12_desc0.f32,desc1:in/lg1024_12_desc1.f32 --output_filepath=out/lg1024_gpu32_12.bin 2>&1'
+    L I/tflite  (29391): STARTING!
+    L I/tflite  (29391): Log parameter values verbosely: [0]
+    L I/tflite  (29391): Min num runs: [1]
+    L I/tflite  (29391): Min runs duration (seconds): [0]
+    L I/tflite  (29391): Num threads: [1]
+    L I/tflite  (29391): Min warmup runs: [1]
+    L I/tflite  (29391): Graph: [lgct_1024_float32.tflite]
+    L I/tflite  (29391): Signature to run: []
+    L I/tflite  (29391): Input layers: [kpts0,kpts1,desc0,desc1]
+    L I/tflite  (29391): Input shapes: [1,1024,2:1,1024,2:1,1024,64:1,1024,64]
+    L I/tflite  (29391): Input value files: [kpts0:in/lg1024_12_kpts0.f32,kpts1:in/lg1024_12_kpts1.f32,desc0:in/lg1024_12_desc0.f32,desc1:in/lg1024_12_desc1.f32]
+    L I/tflite  (29391): Require full delegation: [1]
+    L I/tflite  (29391): File path to export outputs layer to: [out/lg1024_gpu32_12.bin]
+    L I/tflite  (29391): #threads used for CPU inference: [1]
+    L I/tflite  (29391): Use gpu: [1]
+    L I/tflite  (29391): Allow lower precision in gpu: [0]
+    L I/tflite  (29391): Loaded model lgct_1024_float32.tflite
+    L I/tflite  (29391): Initialized TensorFlow Lite runtime.
+    L I/tflite  (29391): Created TensorFlow Lite delegate for GPU.
+    L I/tflite  (29391): GPU delegate created.
+    L I/tflite  (29391): Loaded OpenCL library with dlopen.
+    L I/tflite  (29391): Replacing 892 out of 892 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    L I/tflite  (29391): Initialized OpenCL-based API.
+    L I/tflite  (29391): Created 1 GPU delegate kernels.
+    L I/tflite  (29391): Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    L I/tflite  (29391): The input model file size (MB): 4.47004
+    L I/tflite  (29391): Initialized session in 898.658ms.
+    L I/tflite  (29391): Running benchmark for at least 1 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (29391): count=7 first=72085 curr=78704 min=72085 max=78704 avg=75880.6 std=2087 p5=72085 median=76763 p95=78704
+    L I/tflite  (29391): Running benchmark for at least 1 iterations and at least 0 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (29391): count=1 curr=75973 p5=75973 median=75973 p95=75973
+    L I/tflite  (29391): Inference timings in us: Init: 898658, First inference: 72085, Warmup (avg): 75880.6, Inference (avg): 75973
+    L I/tflite  (29391): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (29391): Memory footprint delta from the start of the tool (MB): init=117.906 overall=121.238
+2026-10-27 21:22:28 item 4 [lgt1024_gpu32_tA] before[AP=34.6 SKIN=33.1 ] after[AP=34.6 SKIN=33.1 ] bat=ACpowered:false,USBpowered:false,level:78, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.brave.browser/com.google.android.app last_input=251496ms
+    | INFO: Created TensorFlow Lite delegate for GPU.
+    | INFO: GPU delegate created.
+    | VERBOSE: Replacing 892 out of 892 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    | INFO: Created 1 GPU delegate kernels.
+    | INFO: Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=7 first=75970 curr=75519 min=75519 max=78766 avg=76882.6 std=1228 p5=75519 median=76042 p95=78766
+    | INFO: count=30 first=80634 curr=80695 min=68742 max=92428 avg=79192.4 std=4404 p5=69048 median=79662 p95=85858
+    | INFO: Inference timings in us: Init: 899609, First inference: 75970, Warmup (avg): 76882.6, Inference (avg): 79192.4
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=lgct_1024_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=false --require_full_delegation=true --num_threads=1 --warmup_runs=5 --num_runs=30 --min_secs=0 2>&1'
+    L I/tflite  (29479): STARTING!
+    L I/tflite  (29479): Log parameter values verbosely: [0]
+    L I/tflite  (29479): Min num runs: [30]
+    L I/tflite  (29479): Min runs duration (seconds): [0]
+    L I/tflite  (29479): Num threads: [1]
+    L I/tflite  (29479): Min warmup runs: [5]
+    L I/tflite  (29479): Graph: [lgct_1024_float32.tflite]
+    L I/tflite  (29479): Signature to run: []
+    L I/tflite  (29479): Require full delegation: [1]
+    L I/tflite  (29479): #threads used for CPU inference: [1]
+    L I/tflite  (29479): Use gpu: [1]
+    L I/tflite  (29479): Allow lower precision in gpu: [0]
+    L I/tflite  (29479): Loaded model lgct_1024_float32.tflite
+    L I/tflite  (29479): Initialized TensorFlow Lite runtime.
+    L I/tflite  (29479): Created TensorFlow Lite delegate for GPU.
+    L I/tflite  (29479): GPU delegate created.
+    L I/tflite  (29479): Loaded OpenCL library with dlopen.
+    L I/tflite  (29479): Replacing 892 out of 892 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    L I/tflite  (29479): Initialized OpenCL-based API.
+    L I/tflite  (29479): Created 1 GPU delegate kernels.
+    L I/tflite  (29479): Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    L I/tflite  (29479): The input model file size (MB): 4.47004
+    L I/tflite  (29479): Initialized session in 899.609ms.
+    L I/tflite  (29479): Running benchmark for at least 5 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (29479): count=7 first=75970 curr=75519 min=75519 max=78766 avg=76882.6 std=1228 p5=75519 median=76042 p95=78766
+    L I/tflite  (29479): Running benchmark for at least 30 iterations and at least 0 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (29479): count=30 first=80634 curr=80695 min=68742 max=92428 avg=79192.4 std=4404 p5=69048 median=79662 p95=85858
+    L I/tflite  (29479): Inference timings in us: Init: 899609, First inference: 75970, Warmup (avg): 76882.6, Inference (avg): 79192.4
+    L I/tflite  (29479): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (29479): Memory footprint delta from the start of the tool (MB): init=118.121 overall=121.352
+2026-10-27 21:22:40 item 5 [lgt512_gpu32_tA] before[AP=35.7 SKIN=33.2 ] after[AP=36.2 SKIN=33.1 ] bat=ACpowered:false,USBpowered:false,level:78, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.brave.browser/com.google.android.app last_input=264343ms
+    | INFO: Created TensorFlow Lite delegate for GPU.
+    | INFO: GPU delegate created.
+    | VERBOSE: Replacing 907 out of 907 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    | INFO: Created 1 GPU delegate kernels.
+    | INFO: Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=13 first=44649 curr=39428 min=34582 max=44649 avg=38588 std=2667 p5=34582 median=38353 p95=44649
+    | INFO: count=50 first=40310 curr=41740 min=37288 max=45385 avg=41240.6 std=1691 p5=38020 median=41355 p95=43878
+    | INFO: Inference timings in us: Init: 927347, First inference: 44649, Warmup (avg): 38588, Inference (avg): 41240.6
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=lgct_512_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=false --require_full_delegation=true --num_threads=1 --warmup_runs=5 --num_runs=50 --min_secs=0 2>&1'
+    L I/tflite  (29555): STARTING!
+    L I/tflite  (29555): Log parameter values verbosely: [0]
+    L I/tflite  (29555): Min num runs: [50]
+    L I/tflite  (29555): Min runs duration (seconds): [0]
+    L I/tflite  (29555): Num threads: [1]
+    L I/tflite  (29555): Min warmup runs: [5]
+    L I/tflite  (29555): Graph: [lgct_512_float32.tflite]
+    L I/tflite  (29555): Signature to run: []
+    L I/tflite  (29555): Require full delegation: [1]
+    L I/tflite  (29555): #threads used for CPU inference: [1]
+    L I/tflite  (29555): Use gpu: [1]
+    L I/tflite  (29555): Allow lower precision in gpu: [0]
+    L I/tflite  (29555): Loaded model lgct_512_float32.tflite
+    L I/tflite  (29555): Initialized TensorFlow Lite runtime.
+    L I/tflite  (29555): Created TensorFlow Lite delegate for GPU.
+    L I/tflite  (29555): GPU delegate created.
+    L I/tflite  (29555): Loaded OpenCL library with dlopen.
+    L I/tflite  (29555): Replacing 907 out of 907 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    L I/tflite  (29555): Initialized OpenCL-based API.
+    L I/tflite  (29555): Created 1 GPU delegate kernels.
+    L I/tflite  (29555): Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    L I/tflite  (29555): The input model file size (MB): 4.47233
+    L I/tflite  (29555): Initialized session in 927.347ms.
+    L I/tflite  (29555): Running benchmark for at least 5 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (29555): count=13 first=44649 curr=39428 min=34582 max=44649 avg=38588 std=2667 p5=34582 median=38353 p95=44649
+    L I/tflite  (29555): Running benchmark for at least 50 iterations and at least 0 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (29555): count=50 first=40310 curr=41740 min=37288 max=45385 avg=41240.6 std=1691 p5=38020 median=41355 p95=43878
+    L I/tflite  (29555): Inference timings in us: Init: 927347, First inference: 44649, Warmup (avg): 38588, Inference (avg): 41240.6
+    L I/tflite  (29555): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (29555): Memory footprint delta from the start of the tool (MB): init=118.035 overall=118.223
+2026-10-27 21:22:46 WARNING bench process still running
+2026-10-27 21:22:46 camera: Active Camera Clients: [] 
+2026-10-27 21:22:46 list done
+2026-10-27 21:22:47 lock released

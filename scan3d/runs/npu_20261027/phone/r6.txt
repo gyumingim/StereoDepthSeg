@@ -1,0 +1,90 @@
+2026-10-27 21:17:19 item 1 [shell_chain] before[AP=42.5 SKIN=37.0 ] after[AP=42.5 SKIN=37.0 ] bat=ACpowered:false,USBpowered:false,level:79, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.brave.browser/com.google.android.app last_input=2558ms
+    | DEVICE 0 name=enn version=E0.0.1 type=4 (1 other 2 cpu 3 gpu 4 accelerator) feature_level=1000008
+    | DEVICE 1 name=nnapi-reference version=S921NKSSECZCH type=2 (1 other 2 cpu 3 gpu 4 accelerator) feature_level=1000008
+    | DLOPEN libenn_public_api_cpp.so -> OK 
+    | DLOPEN libenn_user.samsung_slsi.so -> OK 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennExecuteModel:95: uennExecuteModel(+)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::ExecuteSubGraph started(v2.2.26:3:g844124b4)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennExecuteModel:103: uennExecuteModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] loadSharedMem:62: loadSharedMem(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:134: getVirtualAddressOnPool(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:178: ashmem, vInfo.addr=0x7a2c8a8000, size=450560
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:201: getVirtualAddressOnPool(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] loadSharedMem:82: loadSharedMem(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:177: Execution Done.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:197: Loading data from 0x7a1fdd2000 to 0x7a2c8a8000 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:204:  Not Apply postProcessOnOutputs!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:40: ~BufferInfoOnExecute(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:50: ~BufferInfoOnExecute(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] executeBaseOnNNAgent:240: executeBaseOnNNAgent(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] execute:128: execute(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:87: ~EnnPreparedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:299: closeModel(+) modelId is 872415232
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:200: uennFreeBuffers(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:216: uennFreeBuffers(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:267: freeMemory(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:280: buffer info. addr : 0xb400007ccdfe2120, size : 253952 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:291: freeMemory(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:114: uennCloseModel() is called with modelId : 872415232
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel : 0x7BA134000000(+)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (+) Engine::EngineImpl::close_model->(0x7BA134000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x7BA134000034) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecutableModel(ID: 0x7BA134000034) from a Model(ID : 0x7BA134000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * + Unload Model(ID:0x0x7BA134000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::CloseSubGraph started
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA134000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA134000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA134000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA134000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA134000000) (-)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+2026-10-27 21:17:30 item 2 [app_chain] before[AP=42.0 SKIN=36.9 ] after[AP=41.9 SKIN=36.9 ] bat=ACpowered:false,USBpowered:false,level:79, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.brave.browser/com.google.android.app last_input=3365ms
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:201: getVirtualAddressOnPool(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] loadSharedMem:82: loadSharedMem(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:177: Execution Done.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:197: Loading data from 0x7a1fdd2000 to 0x7a2c8a8000 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:204:  Not Apply postProcessOnOutputs!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:40: ~BufferInfoOnExecute(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:50: ~BufferInfoOnExecute(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] executeBaseOnNNAgent:240: executeBaseOnNNAgent(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] execute:128: execute(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:87: ~EnnPreparedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:299: closeModel(+) modelId is 889192448
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:200: uennFreeBuffers(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:216: uennFreeBuffers(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:267: freeMemory(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:280: buffer info. addr : 0xb400007ccdce2060, size : 253952 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:291: freeMemory(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:114: uennCloseModel() is called with modelId : 889192448
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel : 0x7BA135000000(+)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (+) Engine::EngineImpl::close_model->(0x7BA135000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x7BA135000035) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecutableModel(ID: 0x7BA135000035) from a Model(ID : 0x7BA135000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * + Unload Model(ID:0x0x7BA135000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::CloseSubGraph started
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA135000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA135000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA135000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA135000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA135000000) (-)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+    L D/OpenNetworkQos[4.00]( 1275): updateBssidLatestDnsResultType - result: 0
+    L D/OpenNetworkQos[4.00]( 1275): updateBssidNoInternet: mBssidNoInternet = false
+    L D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+    L D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 26 
+    L D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 26 
+    L D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+2026-10-27 21:17:36 WARNING bench process still running
+2026-10-27 21:17:36 camera: Active Camera Clients: [] 
+2026-10-27 21:17:36 list done
+2026-10-27 21:17:36 lock released

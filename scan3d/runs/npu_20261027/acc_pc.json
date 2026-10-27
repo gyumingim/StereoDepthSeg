@@ -1,0 +1,86 @@
+{
+ "made": "2026-10-27 20:10:47",
+ "inputs": "eval_640x352_norm.npy (13 frames), lgev512_* (13 pairs)",
+ "xfeat": {
+  "xfeatnn_640x352_dynamic_range_quant": {
+   "overlap_mean": 0.8608022836538461,
+   "overlap_min": 0.7890625,
+   "cos_med_mean": 0.9986627927193275,
+   "cos_min": 0.9657980799674988
+  },
+  "xfeatnn_640x352_float16": {
+   "overlap_mean": 0.9977463942307693,
+   "overlap_min": 0.9951171875,
+   "cos_med_mean": 0.9999994085385249,
+   "cos_min": 0.9999774694442749
+  },
+  "xfeatnn_640x352_float32": {
+   "overlap_mean": 1.0,
+   "overlap_min": 1.0,
+   "cos_med_mean": 1.0,
+   "cos_min": 0.9999997019767761
+  },
+  "xfeatnn_640x352_full_integer_quant": {
+   "overlap_mean": 0.7400090144230769,
+   "overlap_min": 0.705078125,
+   "cos_med_mean": 0.994041805083935,
+   "cos_min": 0.8621622323989868
+  },
+  "xfeatnn_640x352_full_integer_quant_with_int16_act": {
+   "overlap_mean": 0.08901742788461539,
+   "overlap_min": 0.046875,
+   "cos_med_mean": 0.6384896773558396,
+   "cos_min": 0.20432570576667786
+  },
+  "xfeatnn_640x352_integer_quant": {
+   "overlap_mean": 0.7400090144230769,
+   "overlap_min": 0.705078125,
+   "cos_med_mean": 0.994041805083935,
+   "cos_min": 0.8621622323989868
+  },
+  "xfeatnn_640x352_integer_quant_with_int16_act": {
+   "overlap_mean": 0.9169170673076923,
+   "overlap_min": 0.8623046875,
+   "cos_med_mean": 0.9993778696426978,
+   "cos_min": 0.9886525869369507
+  }
+ },
+ "lg512": {
+  "lgc_512_dynamic_range_quant": {
+   "agree_mean": 0.9743061548361059,
+   "agree_min": 0.8920454545454546,
+   "ref_matches_mean": 351.0,
+   "test_matches_mean": 350.46153846153845
+  },
+  "lgc_512_float16": {
+   "agree_mean": 1.0,
+   "agree_min": 1.0,
+   "ref_matches_mean": 351.0,
+   "test_matches_mean": 351.0769230769231
+  },
+  "lgc_512_float32": {
+   "agree_mean": 1.0,
+   "agree_min": 1.0,
+   "ref_matches_mean": 351.0,
+   "test_matches_mean": 351.0
+  },
+  "lgc_512_full_integer_quant": {
+   "agree_mean": 0.23274739546461778,
+   "agree_min": 0.08387096774193549,
+   "ref_matches_mean": 351.0,
+   "test_matches_mean": 86.6923076923077
+  },
+  "lgc_512_full_integer_quant_with_int16_act": {
+   "error": "SquaredDifference only supports FLOAT32 and INT32 now, got 7.Node number 72 (SQUARED_DIFFERENCE) failed to invoke."
+  },
+  "lgc_512_integer_quant": {
+   "agree_mean": 0.23274739546461778,
+   "agree_min": 0.08387096774193549,
+   "ref_matches_mean": 351.0,
+   "test_matches_mean": 86.6923076923077
+  },
+  "lgc_512_integer_quant_with_int16_act": {
+   "error": "SquaredDifference only supports FLOAT32 and INT32 now, got 7.Node number 76 (SQUARED_DIFFERENCE) failed to invoke."
+  }
+ }
+}

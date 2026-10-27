@@ -1,0 +1,4 @@
+shell_all_sustained	./npuprobe_shell all pref=sustained
+app_all_sustained	am start -S -W -n com.scan3d.npuprobe/.Main --es args 'all pref=sustained' >/dev/null; sleep 40; am force-stop com.scan3d.npuprobe
+shell_conv_fast	./npuprobe_shell conv3_s8 conv3_u8 conv3_f16 big_conv3_s8 pref=fast
+app_conv_fast	am start -S -W -n com.scan3d.npuprobe/.Main --es args 'conv3_s8 conv3_u8 conv3_f16 big_conv3_s8 pref=fast' >/dev/null; sleep 20; am force-stop com.scan3d.npuprobe

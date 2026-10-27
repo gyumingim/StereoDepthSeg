@@ -1,0 +1,243 @@
+== item 1 [shell_all_sustained] 21:04:09
+npuprobe start args='all pref=sustained ' out=./npuprobe_out.txt
+DEVICE 0 name=enn version=E0.0.1 type=4 (1 other 2 cpu 3 gpu 4 accelerator) feature_level=1000008
+DEVICE 1 name=nnapi-reference version=S921NKSSECZCH type=2 (1 other 2 cpu 3 gpu 4 accelerator) feature_level=1000008
+DLOPEN libenn_public_api_cpp.so -> OK 
+  dlsym EnnInitialize found
+  dlsym EnnDeinitialize found
+  dlsym EnnOpenModel found
+  dlsym EnnExecuteModel found
+  dlsym EnnGetVersion -
+DLOPEN libenn_user.samsung_slsi.so -> OK 
+  dlsym EnnInitialize found
+  dlsym EnnDeinitialize found
+  dlsym EnnOpenModel found
+  dlsym EnnExecuteModel found
+  dlsym EnnGetVersion -
+DLOPEN libeden_rt_stub.edensdk.samsung.so -> OK 
+  dlsym EnnInitialize -
+  dlsym EnnDeinitialize -
+  dlsym EnnOpenModel -
+  dlsym EnnExecuteModel -
+  dlsym EnnGetVersion -
+pref=2 probes=23
+RESULT conv3_f32 supported=1 (rc 0) compile_rc=0 finish_rc=0 compile_ms=515.5 exec_rc=0 p50_ms=3.333 p95_ms=4.117
+RESULT conv3_f16 supported=1 (rc 0) compile_rc=0 finish_rc=0 compile_ms=16.4 exec_rc=0 p50_ms=2.407 p95_ms=2.987
+RESULT conv3_s8 supported=0 (rc 0) compile_rc=0 finish_rc=4 compile_ms=13.9 exec_rc=-1 p50_ms=-1.000 p95_ms=-1.000
+RESULT conv3_u8 supported=0 (rc 0) compile_rc=0 finish_rc=4 compile_ms=8.0 exec_rc=-1 p50_ms=-1.000 p95_ms=-1.000
+RESULT conv3_s8pc supported=0 (rc 0) compile_rc=0 finish_rc=4 compile_ms=0.9 exec_rc=-1 p50_ms=-1.000 p95_ms=-1.000
+RESULT conv1_f32 supported=1 (rc 0) compile_rc=0 finish_rc=0 compile_ms=122.0 exec_rc=0 p50_ms=2.928 p95_ms=3.710
+RESULT conv1_f16 supported=1 (rc 0) compile_rc=0 finish_rc=0 compile_ms=91.0 exec_rc=0 p50_ms=2.025 p95_ms=2.333
+RESULT conv1_s8 supported=0 (rc 0) compile_rc=0 finish_rc=4 compile_ms=13.2 exec_rc=-1 p50_ms=-1.000 p95_ms=-1.000
+RESULT conv1_u8 supported=0 (rc 0) compile_rc=0 finish_rc=4 compile_ms=7.1 exec_rc=-1 p50_ms=-1.000 p95_ms=-1.000
+RESULT conv1_s8pc supported=0 (rc 0) compile_rc=0 finish_rc=4 compile_ms=1.4 exec_rc=-1 p50_ms=-1.000 p95_ms=-1.000
+RESULT fc_f32 supported=1 (rc 0) compile_rc=0 finish_rc=0 compile_ms=174.3 exec_rc=0 p50_ms=1.327 p95_ms=1.571
+RESULT fc_f16 supported=1 (rc 0) compile_rc=0 finish_rc=0 compile_ms=8.6 exec_rc=0 p50_ms=1.158 p95_ms=2.139
+RESULT fc_s8 supported=1 (rc 0) compile_rc=0 finish_rc=0 compile_ms=11.9 exec_rc=0 p50_ms=1.079 p95_ms=1.930
+RESULT fc_u8 supported=1 (rc 0) compile_rc=0 finish_rc=0 compile_ms=12.3 exec_rc=0 p50_ms=1.036 p95_ms=1.340
+RESULT add_f32 supported=1 (rc 0) compile_rc=0 finish_rc=0 compile_ms=42.0 exec_rc=0 p50_ms=4.051 p95_ms=6.383
+RESULT add_f16 supported=1 (rc 0) compile_rc=0 finish_rc=0 compile_ms=6.4 exec_rc=0 p50_ms=2.458 p95_ms=2.974
+RESULT add_s8 supported=1 (rc 0) compile_rc=0 finish_rc=0 compile_ms=10.9 exec_rc=0 p50_ms=1.754 p95_ms=2.135
+RESULT add_u8 supported=1 (rc 0) compile_rc=0 finish_rc=0 compile_ms=7.4 exec_rc=0 p50_ms=1.731 p95_ms=2.259
+RESULT big_conv3_f32 supported=1 (rc 0) compile_rc=0 finish_rc=0 compile_ms=17.1 exec_rc=0 p50_ms=19.090 p95_ms=20.204
+RESULT big_conv3_f16 supported=1 (rc 0) compile_rc=0 finish_rc=0 compile_ms=9.0 exec_rc=0 p50_ms=10.364 p95_ms=10.709
+RESULT big_conv3_s8 supported=0 (rc 0) compile_rc=0 finish_rc=4 compile_ms=8.6 exec_rc=-1 p50_ms=-1.000 p95_ms=-1.000
+RESULT big_conv3_u8 supported=0 (rc 0) compile_rc=0 finish_rc=4 compile_ms=7.1 exec_rc=-1 p50_ms=-1.000 p95_ms=-1.000
+RESULT big_conv3_s8pc supported=0 (rc 0) compile_rc=0 finish_rc=4 compile_ms=0.5 exec_rc=-1 p50_ms=-1.000 p95_ms=-1.000
+npuprobe end
+-- logcat
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+D/OpenNetworkQos[4.00]( 1275): updateBssidLatestDnsResultType - result: 0
+D/OpenNetworkQos[4.00]( 1275): updateBssidNoInternet: mBssidNoInternet = false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 26 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 26 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+== item 2 [app_all_sustained] 21:05:19
+
+-- logcat
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+I/npuprobe(18110): DEVICE 0 name=enn version=E0.0.1 type=4 (1 other 2 cpu 3 gpu 4 accelerator) feature_level=1000008
+I/npuprobe(18110): DEVICE 1 name=nnapi-reference version=S921NKSSECZCH type=2 (1 other 2 cpu 3 gpu 4 accelerator) feature_level=1000008
+I/npuprobe(18110): DLOPEN libenn_public_api_cpp.so -> OK 
+I/npuprobe(18110):   dlsym EnnInitialize found
+I/npuprobe(18110):   dlsym EnnDeinitialize found
+I/npuprobe(18110):   dlsym EnnOpenModel found
+I/npuprobe(18110):   dlsym EnnExecuteModel found
+I/npuprobe(18110):   dlsym EnnGetVersion -
+I/npuprobe(18110): DLOPEN libenn_user.samsung_slsi.so -> OK 
+I/npuprobe(18110):   dlsym EnnInitialize found
+I/npuprobe(18110):   dlsym EnnDeinitialize found
+I/npuprobe(18110):   dlsym EnnOpenModel found
+I/npuprobe(18110):   dlsym EnnExecuteModel found
+I/npuprobe(18110):   dlsym EnnGetVersion -
+I/npuprobe(18110): DLOPEN libeden_rt_stub.edensdk.samsung.so -> OK 
+I/npuprobe(18110):   dlsym EnnInitialize -
+I/npuprobe(18110):   dlsym EnnDeinitialize -
+I/npuprobe(18110):   dlsym EnnOpenModel -
+I/npuprobe(18110):   dlsym EnnExecuteModel -
+I/npuprobe(18110):   dlsym EnnGetVersion -
+W/Finsky  ( 3958): [2] STU: Failed to get storage stats for package 'com.google.android.neuralnetworks' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+W/Auth    (16769): bqvg: Long live credential not available.
+W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+W/Auth    (16769): bqvg: Long live credential not available.
+W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+W/Finsky  ( 3958): [2] STU: Failed to get storage stats for package 'com.google.android.neuralnetworks' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+W/Auth    (16769): bqvg: Long live credential not available.
+W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+D/OpenNetworkQos[4.00]( 1275): updateBssidLatestDnsResultType - result: 0
+D/OpenNetworkQos[4.00]( 1275): updateBssidNoInternet: mBssidNoInternet = false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 26 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 26 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+== item 3 [shell_conv_fast] 21:05:29
+npuprobe start args='conv3_s8 conv3_u8 conv3_f16 big_conv3_s8 pref=fast ' out=./npuprobe_out.txt
+DEVICE 0 name=enn version=E0.0.1 type=4 (1 other 2 cpu 3 gpu 4 accelerator) feature_level=1000008
+DEVICE 1 name=nnapi-reference version=S921NKSSECZCH type=2 (1 other 2 cpu 3 gpu 4 accelerator) feature_level=1000008
+DLOPEN libenn_public_api_cpp.so -> OK 
+  dlsym EnnInitialize found
+  dlsym EnnDeinitialize found
+  dlsym EnnOpenModel found
+  dlsym EnnExecuteModel found
+  dlsym EnnGetVersion -
+DLOPEN libenn_user.samsung_slsi.so -> OK 
+  dlsym EnnInitialize found
+  dlsym EnnDeinitialize found
+  dlsym EnnOpenModel found
+  dlsym EnnExecuteModel found
+  dlsym EnnGetVersion -
+DLOPEN libeden_rt_stub.edensdk.samsung.so -> OK 
+  dlsym EnnInitialize -
+  dlsym EnnDeinitialize -
+  dlsym EnnOpenModel -
+  dlsym EnnExecuteModel -
+  dlsym EnnGetVersion -
+pref=1 probes=4
+RESULT conv3_s8 supported=0 (rc 0) compile_rc=0 finish_rc=4 compile_ms=8.6 exec_rc=-1 p50_ms=-1.000 p95_ms=-1.000
+RESULT conv3_u8 supported=0 (rc 0) compile_rc=0 finish_rc=4 compile_ms=8.3 exec_rc=-1 p50_ms=-1.000 p95_ms=-1.000
+RESULT conv3_f16 supported=1 (rc 0) compile_rc=0 finish_rc=0 compile_ms=20.3 exec_rc=0 p50_ms=2.018 p95_ms=2.353
+RESULT big_conv3_s8 supported=0 (rc 0) compile_rc=0 finish_rc=4 compile_ms=7.7 exec_rc=-1 p50_ms=-1.000 p95_ms=-1.000
+npuprobe end
+-- logcat
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:280: buffer info. addr : 0xb400007acdd9b160, size : 90112 
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:291: freeMemory(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:114: uennCloseModel() is called with modelId : 805306368
+I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel : 0x7BA130000000(+)
+I/ENN_FRAMEWORK(31649): 2.2.27: * (+) Engine::EngineImpl::close_model->(0x7BA130000000)
+I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x7BA130000030) is released.
+I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecutableModel(ID: 0x7BA130000030) from a Model(ID : 0x7BA130000000) is released.
+I/ENN_FRAMEWORK(31649): 2.2.27: * + Unload Model(ID:0x0x7BA130000000) Accelerator(2)
+I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::CloseSubGraph started
+I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA130000000) Accelerator(2)
+I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA130000000) is released.
+I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA130000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA130000000)
+I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA130000000) (-)
+I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+== item 4 [app_conv_fast] 21:06:02
+
+-- logcat
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+I/npuprobe(19258): DEVICE 0 name=enn version=E0.0.1 type=4 (1 other 2 cpu 3 gpu 4 accelerator) feature_level=1000008
+I/npuprobe(19258): DEVICE 1 name=nnapi-reference version=S921NKSSECZCH type=2 (1 other 2 cpu 3 gpu 4 accelerator) feature_level=1000008
+I/npuprobe(19258): DLOPEN libenn_public_api_cpp.so -> OK 
+I/npuprobe(19258):   dlsym EnnInitialize found
+I/npuprobe(19258):   dlsym EnnDeinitialize found
+I/npuprobe(19258):   dlsym EnnOpenModel found
+I/npuprobe(19258):   dlsym EnnExecuteModel found
+I/npuprobe(19258):   dlsym EnnGetVersion -
+I/npuprobe(19258): DLOPEN libenn_user.samsung_slsi.so -> OK 
+I/npuprobe(19258):   dlsym EnnInitialize found
+I/npuprobe(19258):   dlsym EnnDeinitialize found
+I/npuprobe(19258):   dlsym EnnOpenModel found
+I/npuprobe(19258):   dlsym EnnExecuteModel found
+I/npuprobe(19258):   dlsym EnnGetVersion -
+I/npuprobe(19258): DLOPEN libeden_rt_stub.edensdk.samsung.so -> OK 
+I/npuprobe(19258):   dlsym EnnInitialize -
+I/npuprobe(19258):   dlsym EnnDeinitialize -
+I/npuprobe(19258):   dlsym EnnOpenModel -
+I/npuprobe(19258):   dlsym EnnExecuteModel -
+I/npuprobe(19258):   dlsym EnnGetVersion -

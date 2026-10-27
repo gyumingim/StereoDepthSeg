@@ -1,0 +1,446 @@
+2026-10-27 21:10:47 item 1 [mnq_u8_enn_fast] before[AP=38.4 SKIN=35.5 ] after[AP=38.2 SKIN=35.5 ] bat=ACpowered:false,USBpowered:false,level:80, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.twitter.android/com.x.android.main.M last_input=5842ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI execution preference: [fast_single_answer]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | VERBOSE: Replacing 31 out of 31 node(s) with delegate (TfLiteNnapiDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: Explicitly applied NNAPI delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=32 first=102133 curr=13105 min=12568 max=102133 avg=15839.5 std=15500 p5=12731 median=12987 p95=13719
+    | INFO: count=77 first=13377 curr=12900 min=12249 max=13803 avg=12999.6 std=238 p5=12631 median=12987 p95=13453
+    | INFO: Inference timings in us: Init: 1222605, First inference: 102133, Warmup (avg): 15839.5, Inference (avg): 12999.6
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:134: getVirtualAddressOnPool(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:167: mmap_fd, vInfo.addr=0x7d41a77000, size=1024
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:201: getVirtualAddressOnPool(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] loadSharedMem:82: loadSharedMem(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:177: Execution Done.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:197: Loading data from 0x7d3fcc8000 to 0x7d41a77000 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:204:  Not Apply postProcessOnOutputs!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:40: ~BufferInfoOnExecute(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:50: ~BufferInfoOnExecute(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] executeBaseOnNNAgent:240: executeBaseOnNNAgent(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] execute:128: execute(-)
+    L I/tflite  (22219): count=77 first=13377 curr=12900 min=12249 max=13803 avg=12999.6 std=238 p5=12631 median=12987 p95=13453
+    L I/tflite  (22219): Inference timings in us: Init: 1222605, First inference: 102133, Warmup (avg): 15839.5, Inference (avg): 12999.6
+    L I/tflite  (22219): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (22219): Memory footprint delta from the start of the tool (MB): init=11.0898 overall=11.6094
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:87: ~EnnPreparedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:299: closeModel(+) modelId is 838860800
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:200: uennFreeBuffers(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:216: uennFreeBuffers(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:267: freeMemory(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:280: buffer info. addr : 0xb400007a1ffec000, size : 4456448 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:291: freeMemory(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:114: uennCloseModel() is called with modelId : 838860800
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel : 0x7BA132000000(+)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (+) Engine::EngineImpl::close_model->(0x7BA132000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x7BA132000032) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecutableModel(ID: 0x7BA132000032) from a Model(ID : 0x7BA132000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * + Unload Model(ID:0x0x7BA132000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::CloseSubGraph started
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA132000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA132000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA132000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA132000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA132000000) (-)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+2026-10-27 21:11:05 item 2 [mnq_u8_enn_sust] before[AP=38.4 SKIN=35.5 ] after[AP=39.1 SKIN=35.6 ] bat=ACpowered:false,USBpowered:false,level:80, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.twitter.android/com.x.android.main.M last_input=1749ms
+    | INFO: Use NNAPI: [1]
+    | INFO: NNAPI execution preference: [sustained_speed]
+    | INFO: NNAPI accelerator name: [enn]
+    | INFO: NNAPI accelerators available: [enn,nnapi-reference]
+    | INFO: Disable NNAPI cpu: [1]
+    | INFO: Created TensorFlow Lite delegate for NNAPI.
+    | INFO: NNAPI delegate created.
+    | WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+    | VERBOSE: Replacing 31 out of 31 node(s) with delegate (TfLiteNnapiDelegate) node, yielding 1 partitions for subgraph 0.
+    | INFO: Explicitly applied NNAPI delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=38 first=14594 curr=12943 min=12586 max=14905 avg=13189.6 std=504 p5=12636 median=13055 p95=14594
+    | INFO: count=77 first=13845 curr=12537 min=12140 max=16004 avg=13015.3 std=563 p5=12308 median=12928 p95=13845
+    | INFO: Inference timings in us: Init: 106310, First inference: 14594, Warmup (avg): 13189.6, Inference (avg): 13015.3
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] loadSharedMem:82: loadSharedMem(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:177: Execution Done.
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:197: Loading data from 0x7d41a78000 to 0x7d41a76000 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:204:  Not Apply postProcessOnOutputs!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:40: ~BufferInfoOnExecute(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:50: ~BufferInfoOnExecute(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] executeBaseOnNNAgent:240: executeBaseOnNNAgent(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] execute:128: execute(-)
+    L I/tflite  (22447): count=77 first=13845 curr=12537 min=12140 max=16004 avg=13015.3 std=563 p5=12308 median=12928 p95=13845
+    L I/tflite  (22447): Inference timings in us: Init: 106310, First inference: 14594, Warmup (avg): 13189.6, Inference (avg): 13015.3
+    L I/tflite  (22447): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (22447): Memory footprint delta from the start of the tool (MB): init=11.9453 overall=12.6562
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:87: ~EnnPreparedModel(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:299: closeModel(+) modelId is 855638016
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:200: uennFreeBuffers(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:216: uennFreeBuffers(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:267: freeMemory(+)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:280: buffer info. addr : 0xb400007a1ffec000, size : 4456448 
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:291: freeMemory(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:114: uennCloseModel() is called with modelId : 855638016
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel : 0x7BA133000000(+)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (+) Engine::EngineImpl::close_model->(0x7BA133000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x7BA133000033) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecutableModel(ID: 0x7BA133000033) from a Model(ID : 0x7BA133000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * + Unload Model(ID:0x0x7BA133000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::CloseSubGraph started
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA133000000) Accelerator(2)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA133000000) is released.
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA133000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA133000000)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA133000000) (-)
+    L I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+    L D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+    L W/Finsky  ( 3958): [2] STU: Failed to get storage stats for package 'com.google.android.neuralnetworks' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+    L W/Auth    (16769): bqvg: Long live credential not available.
+    L W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+2026-10-27 21:11:22 item 3 [xf_gpu_tA] before[AP=39.4 SKIN=35.8 ] after[AP=38.4 SKIN=35.5 ] bat=ACpowered:false,USBpowered:false,level:80, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.twitter.android/com.x.android.main.M last_input=10842ms
+    | INFO: Created TensorFlow Lite delegate for GPU.
+    | INFO: GPU delegate created.
+    | VERBOSE: Replacing 40 out of 40 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    | INFO: Created 1 GPU delegate kernels.
+    | INFO: Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=55 first=18119 curr=8230 min=6672 max=18119 avg=8906.98 std=1827 p5=7050 median=8435 p95=11855
+    | INFO: count=100 first=8893 curr=5401 min=5050 max=15545 avg=7633.47 std=1454 p5=5558 median=7747 p95=9574
+    | INFO: Inference timings in us: Init: 1604903, First inference: 18119, Warmup (avg): 8906.98, Inference (avg): 7633.47
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=xfeatnn_640x352_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=10 --num_runs=100 --min_secs=0 2>&1'
+    L I/tflite  (22609): STARTING!
+    L I/tflite  (22609): Log parameter values verbosely: [0]
+    L I/tflite  (22609): Min num runs: [100]
+    L I/tflite  (22609): Min runs duration (seconds): [0]
+    L I/tflite  (22609): Num threads: [1]
+    L I/tflite  (22609): Min warmup runs: [10]
+    L I/tflite  (22609): Graph: [xfeatnn_640x352_float32.tflite]
+    L I/tflite  (22609): Signature to run: []
+    L I/tflite  (22609): Require full delegation: [1]
+    L I/tflite  (22609): #threads used for CPU inference: [1]
+    L I/tflite  (22609): Use gpu: [1]
+    L I/tflite  (22609): Allow lower precision in gpu: [1]
+    L I/tflite  (22609): Loaded model xfeatnn_640x352_float32.tflite
+    L I/tflite  (22609): Initialized TensorFlow Lite runtime.
+    L I/tflite  (22609): Created TensorFlow Lite delegate for GPU.
+    L I/tflite  (22609): GPU delegate created.
+    L I/tflite  (22609): Loaded OpenCL library with dlopen.
+    L I/tflite  (22609): Replacing 40 out of 40 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    L I/tflite  (22609): Initialized OpenCL-based API.
+    L I/tflite  (22609): Created 1 GPU delegate kernels.
+    L I/tflite  (22609): Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    L I/tflite  (22609): The input model file size (MB): 2.66817
+    L I/tflite  (22609): Initialized session in 1604.9ms.
+    L I/tflite  (22609): Running benchmark for at least 10 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (22609): count=55 first=18119 curr=8230 min=6672 max=18119 avg=8906.98 std=1827 p5=7050 median=8435 p95=11855
+    L I/tflite  (22609): Running benchmark for at least 100 iterations and at least 0 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (22609): count=100 first=8893 curr=5401 min=5050 max=15545 avg=7633.47 std=1454 p5=5558 median=7747 p95=9574
+    L I/tflite  (22609): Inference timings in us: Init: 1604903, First inference: 18119, Warmup (avg): 8906.98, Inference (avg): 7633.47
+    L I/tflite  (22609): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (22609): Memory footprint delta from the start of the tool (MB): init=91.8281 overall=91.8281
+2026-10-27 21:11:41 item 4 [lgt512_gpu_tA] before[AP=38.4 SKIN=35.6 ] after[AP=42.9 SKIN=35.8 ] bat=ACpowered:false,USBpowered:false,level:80, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.twitter.android/com.x.android.main.M last_input=202ms
+    | INFO: Created TensorFlow Lite delegate for GPU.
+    | INFO: GPU delegate created.
+    | VERBOSE: Replacing 907 out of 907 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    | INFO: Created 1 GPU delegate kernels.
+    | INFO: Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=18 first=28814 curr=29213 min=25786 max=31490 avg=28260.1 std=1750 p5=25786 median=28522 p95=31490
+    | INFO: count=100 first=35737 curr=32883 min=24168 max=38031 avg=29808.3 std=2856 p5=25236 median=29913 p95=34658
+    | INFO: Inference timings in us: Init: 1120385, First inference: 28814, Warmup (avg): 28260.1, Inference (avg): 29808.3
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=lgct_512_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=10 --num_runs=100 --min_secs=0 2>&1'
+    L I/tflite  (22736): STARTING!
+    L I/tflite  (22736): Log parameter values verbosely: [0]
+    L I/tflite  (22736): Min num runs: [100]
+    L I/tflite  (22736): Min runs duration (seconds): [0]
+    L I/tflite  (22736): Num threads: [1]
+    L I/tflite  (22736): Min warmup runs: [10]
+    L I/tflite  (22736): Graph: [lgct_512_float32.tflite]
+    L I/tflite  (22736): Signature to run: []
+    L I/tflite  (22736): Require full delegation: [1]
+    L I/tflite  (22736): #threads used for CPU inference: [1]
+    L I/tflite  (22736): Use gpu: [1]
+    L I/tflite  (22736): Allow lower precision in gpu: [1]
+    L I/tflite  (22736): Loaded model lgct_512_float32.tflite
+    L I/tflite  (22736): Initialized TensorFlow Lite runtime.
+    L I/tflite  (22736): Created TensorFlow Lite delegate for GPU.
+    L I/tflite  (22736): GPU delegate created.
+    L I/tflite  (22736): Loaded OpenCL library with dlopen.
+    L I/tflite  (22736): Replacing 907 out of 907 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    L I/tflite  (22736): Initialized OpenCL-based API.
+    L I/tflite  (22736): Created 1 GPU delegate kernels.
+    L I/tflite  (22736): Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    L I/tflite  (22736): The input model file size (MB): 4.47233
+    L I/tflite  (22736): Initialized session in 1120.38ms.
+    L I/tflite  (22736): Running benchmark for at least 10 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (22736): count=18 first=28814 curr=29213 min=25786 max=31490 avg=28260.1 std=1750 p5=25786 median=28522 p95=31490
+    L I/tflite  (22736): Running benchmark for at least 100 iterations and at least 0 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (22736): count=100 first=35737 curr=32883 min=24168 max=38031 avg=29808.3 std=2856 p5=25236 median=29913 p95=34658
+    L I/tflite  (22736): Inference timings in us: Init: 1120385, First inference: 28814, Warmup (avg): 28260.1, Inference (avg): 29808.3
+    L I/tflite  (22736): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (22736): Memory footprint delta from the start of the tool (MB): init=109.562 overall=109.75
+2026-10-27 21:12:01 item 5 [lgt1024_gpu_tA] before[AP=40.2 SKIN=36.0 ] after[AP=40.8 SKIN=36.0 ] bat=ACpowered:false,USBpowered:false,level:80, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.twitter.android/com.x.android.main.M last_input=76ms
+    | INFO: Created TensorFlow Lite delegate for GPU.
+    | INFO: GPU delegate created.
+    | VERBOSE: Replacing 892 out of 892 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    | INFO: Created 1 GPU delegate kernels.
+    | INFO: Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=9 first=64678 curr=62491 min=58007 max=64678 avg=61514.3 std=1985 p5=58007 median=61910 p95=64678
+    | INFO: count=50 first=63518 curr=57186 min=45914 max=67313 avg=60969.7 std=4092 p5=52276 median=61816 p95=66142
+    | INFO: Inference timings in us: Init: 1135505, First inference: 64678, Warmup (avg): 61514.3, Inference (avg): 60969.7
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=lgct_1024_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=5 --num_runs=50 --min_secs=0 2>&1'
+    L I/tflite  (22951): STARTING!
+    L I/tflite  (22951): Log parameter values verbosely: [0]
+    L I/tflite  (22951): Min num runs: [50]
+    L I/tflite  (22951): Min runs duration (seconds): [0]
+    L I/tflite  (22951): Num threads: [1]
+    L I/tflite  (22951): Min warmup runs: [5]
+    L I/tflite  (22951): Graph: [lgct_1024_float32.tflite]
+    L I/tflite  (22951): Signature to run: []
+    L I/tflite  (22951): Require full delegation: [1]
+    L I/tflite  (22951): #threads used for CPU inference: [1]
+    L I/tflite  (22951): Use gpu: [1]
+    L I/tflite  (22951): Allow lower precision in gpu: [1]
+    L I/tflite  (22951): Loaded model lgct_1024_float32.tflite
+    L I/tflite  (22951): Initialized TensorFlow Lite runtime.
+    L I/tflite  (22951): Created TensorFlow Lite delegate for GPU.
+    L I/tflite  (22951): GPU delegate created.
+    L I/tflite  (22951): Loaded OpenCL library with dlopen.
+    L I/tflite  (22951): Replacing 892 out of 892 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    L I/tflite  (22951): Initialized OpenCL-based API.
+    L I/tflite  (22951): Created 1 GPU delegate kernels.
+    L I/tflite  (22951): Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    L I/tflite  (22951): The input model file size (MB): 4.47004
+    L I/tflite  (22951): Initialized session in 1135.51ms.
+    L I/tflite  (22951): Running benchmark for at least 5 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (22951): count=9 first=64678 curr=62491 min=58007 max=64678 avg=61514.3 std=1985 p5=58007 median=61910 p95=64678
+    L I/tflite  (22951): Running benchmark for at least 50 iterations and at least 0 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (22951): count=50 first=63518 curr=57186 min=45914 max=67313 avg=60969.7 std=4092 p5=52276 median=61816 p95=66142
+    L I/tflite  (22951): Inference timings in us: Init: 1135505, First inference: 64678, Warmup (avg): 61514.3, Inference (avg): 60969.7
+    L I/tflite  (22951): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (22951): Memory footprint delta from the start of the tool (MB): init=112.547 overall=116.086
+2026-10-27 21:12:18 item 6 [xf_gpu_tB] before[AP=38.9 SKIN=35.9 ] after[AP=38.9 SKIN=35.9 ] bat=ACpowered:false,USBpowered:false,level:80, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.twitter.android/com.x.android.main.M last_input=2277ms
+    | INFO: Created TensorFlow Lite delegate for GPU.
+    | INFO: GPU delegate created.
+    | VERBOSE: Replacing 40 out of 40 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    | INFO: Created 1 GPU delegate kernels.
+    | INFO: Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=46 first=18631 curr=10265 min=8715 max=18631 avg=10887.4 std=1813 p5=8913 median=10265 p95=13310
+    | INFO: count=100 first=9892 curr=10532 min=7703 max=11770 avg=9900.62 std=797 p5=8292 median=9982 p95=11282
+    | INFO: Inference timings in us: Init: 1566540, First inference: 18631, Warmup (avg): 10887.4, Inference (avg): 9900.62
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=xfeatnn_640x352_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=10 --num_runs=100 --min_secs=0 2>&1'
+    L I/tflite  (23179): STARTING!
+    L I/tflite  (23179): Log parameter values verbosely: [0]
+    L I/tflite  (23179): Min num runs: [100]
+    L I/tflite  (23179): Min runs duration (seconds): [0]
+    L I/tflite  (23179): Num threads: [1]
+    L I/tflite  (23179): Min warmup runs: [10]
+    L I/tflite  (23179): Graph: [xfeatnn_640x352_float32.tflite]
+    L I/tflite  (23179): Signature to run: []
+    L I/tflite  (23179): Require full delegation: [1]
+    L I/tflite  (23179): #threads used for CPU inference: [1]
+    L I/tflite  (23179): Use gpu: [1]
+    L I/tflite  (23179): Allow lower precision in gpu: [1]
+    L I/tflite  (23179): Loaded model xfeatnn_640x352_float32.tflite
+    L I/tflite  (23179): Initialized TensorFlow Lite runtime.
+    L I/tflite  (23179): Created TensorFlow Lite delegate for GPU.
+    L I/tflite  (23179): GPU delegate created.
+    L I/tflite  (23179): Loaded OpenCL library with dlopen.
+    L I/tflite  (23179): Replacing 40 out of 40 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    L I/tflite  (23179): Initialized OpenCL-based API.
+    L I/tflite  (23179): Created 1 GPU delegate kernels.
+    L I/tflite  (23179): Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    L I/tflite  (23179): The input model file size (MB): 2.66817
+    L I/tflite  (23179): Initialized session in 1566.54ms.
+    L I/tflite  (23179): Running benchmark for at least 10 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (23179): count=46 first=18631 curr=10265 min=8715 max=18631 avg=10887.4 std=1813 p5=8913 median=10265 p95=13310
+    L I/tflite  (23179): Running benchmark for at least 100 iterations and at least 0 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (23179): count=100 first=9892 curr=10532 min=7703 max=11770 avg=9900.62 std=797 p5=8292 median=9982 p95=11282
+    L I/tflite  (23179): Inference timings in us: Init: 1566540, First inference: 18631, Warmup (avg): 10887.4, Inference (avg): 9900.62
+    L I/tflite  (23179): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (23179): Memory footprint delta from the start of the tool (MB): init=92.2383 overall=92.2383
+2026-10-27 21:12:36 item 7 [lgt512_gpu_tB] before[AP=39.9 SKIN=35.9 ] after[AP=39.4 SKIN=35.9 ] bat=ACpowered:false,USBpowered:false,level:80, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.twitter.android/com.x.android.main.M last_input=4709ms
+    | INFO: Created TensorFlow Lite delegate for GPU.
+    | INFO: GPU delegate created.
+    | VERBOSE: Replacing 907 out of 907 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    | INFO: Created 1 GPU delegate kernels.
+    | INFO: Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=18 first=43751 curr=28925 min=26111 max=43751 avg=28904.3 std=3741 p5=26111 median=28477 p95=43751
+    | INFO: count=100 first=30950 curr=29304 min=24911 max=35721 avg=29837.8 std=2081 p5=27124 median=29571 p95=33959
+    | INFO: Inference timings in us: Init: 1063314, First inference: 43751, Warmup (avg): 28904.3, Inference (avg): 29837.8
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=lgct_512_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=10 --num_runs=100 --min_secs=0 2>&1'
+    L I/tflite  (23402): STARTING!
+    L I/tflite  (23402): Log parameter values verbosely: [0]
+    L I/tflite  (23402): Min num runs: [100]
+    L I/tflite  (23402): Min runs duration (seconds): [0]
+    L I/tflite  (23402): Num threads: [1]
+    L I/tflite  (23402): Min warmup runs: [10]
+    L I/tflite  (23402): Graph: [lgct_512_float32.tflite]
+    L I/tflite  (23402): Signature to run: []
+    L I/tflite  (23402): Require full delegation: [1]
+    L I/tflite  (23402): #threads used for CPU inference: [1]
+    L I/tflite  (23402): Use gpu: [1]
+    L I/tflite  (23402): Allow lower precision in gpu: [1]
+    L I/tflite  (23402): Loaded model lgct_512_float32.tflite
+    L I/tflite  (23402): Initialized TensorFlow Lite runtime.
+    L I/tflite  (23402): Created TensorFlow Lite delegate for GPU.
+    L I/tflite  (23402): GPU delegate created.
+    L I/tflite  (23402): Loaded OpenCL library with dlopen.
+    L I/tflite  (23402): Replacing 907 out of 907 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    L I/tflite  (23402): Initialized OpenCL-based API.
+    L I/tflite  (23402): Created 1 GPU delegate kernels.
+    L I/tflite  (23402): Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    L I/tflite  (23402): The input model file size (MB): 4.47233
+    L I/tflite  (23402): Initialized session in 1063.31ms.
+    L I/tflite  (23402): Running benchmark for at least 10 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (23402): count=18 first=43751 curr=28925 min=26111 max=43751 avg=28904.3 std=3741 p5=26111 median=28477 p95=43751
+    L I/tflite  (23402): Running benchmark for at least 100 iterations and at least 0 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (23402): count=100 first=30950 curr=29304 min=24911 max=35721 avg=29837.8 std=2081 p5=27124 median=29571 p95=33959
+    L I/tflite  (23402): Inference timings in us: Init: 1063314, First inference: 43751, Warmup (avg): 28904.3, Inference (avg): 29837.8
+    L I/tflite  (23402): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (23402): Memory footprint delta from the start of the tool (MB): init=109.543 overall=109.543
+2026-10-27 21:12:57 item 8 [lgt1024_gpu_tB] before[AP=41.5 SKIN=36.1 ] after[AP=42.1 SKIN=36.3 ] bat=ACpowered:false,USBpowered:false,level:80, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.twitter.android/com.x.android.main.M last_input=55ms
+    | INFO: Created TensorFlow Lite delegate for GPU.
+    | INFO: GPU delegate created.
+    | VERBOSE: Replacing 892 out of 892 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    | INFO: Created 1 GPU delegate kernels.
+    | INFO: Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    | INFO: count=11 first=60018 curr=42290 min=40781 max=60018 avg=47967.6 std=5974 p5=40781 median=46533 p95=60018
+    | INFO: count=50 first=40298 curr=47944 min=37557 max=118911 avg=52382.3 std=14766 p5=39798 median=48382 p95=80246
+    | INFO: Inference timings in us: Init: 1112593, First inference: 60018, Warmup (avg): 47967.6, Inference (avg): 52382.3
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=lgct_1024_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=5 --num_runs=50 --min_secs=0 2>&1'
+    L I/tflite  (23767): STARTING!
+    L I/tflite  (23767): Log parameter values verbosely: [0]
+    L I/tflite  (23767): Min num runs: [50]
+    L I/tflite  (23767): Min runs duration (seconds): [0]
+    L I/tflite  (23767): Num threads: [1]
+    L I/tflite  (23767): Min warmup runs: [5]
+    L I/tflite  (23767): Graph: [lgct_1024_float32.tflite]
+    L I/tflite  (23767): Signature to run: []
+    L I/tflite  (23767): Require full delegation: [1]
+    L I/tflite  (23767): #threads used for CPU inference: [1]
+    L I/tflite  (23767): Use gpu: [1]
+    L I/tflite  (23767): Allow lower precision in gpu: [1]
+    L I/tflite  (23767): Loaded model lgct_1024_float32.tflite
+    L I/tflite  (23767): Initialized TensorFlow Lite runtime.
+    L I/tflite  (23767): Created TensorFlow Lite delegate for GPU.
+    L I/tflite  (23767): GPU delegate created.
+    L I/tflite  (23767): Loaded OpenCL library with dlopen.
+    L I/tflite  (23767): Replacing 892 out of 892 node(s) with delegate (TfLiteGpuDelegateV2) node, yielding 1 partitions for subgraph 0.
+    L I/tflite  (23767): Initialized OpenCL-based API.
+    L I/tflite  (23767): Created 1 GPU delegate kernels.
+    L I/tflite  (23767): Explicitly applied GPU delegate, and the model graph will be completely executed by the delegate.
+    L I/tflite  (23767): The input model file size (MB): 4.47004
+    L I/tflite  (23767): Initialized session in 1112.59ms.
+    L I/tflite  (23767): Running benchmark for at least 5 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (23767): count=11 first=60018 curr=42290 min=40781 max=60018 avg=47967.6 std=5974 p5=40781 median=46533 p95=60018
+    L I/tflite  (23767): Running benchmark for at least 50 iterations and at least 0 seconds but terminate if exceeding 150 seconds.
+    L I/tflite  (23767): count=50 first=40298 curr=47944 min=37557 max=118911 avg=52382.3 std=14766 p5=39798 median=48382 p95=80246
+    L I/tflite  (23767): Inference timings in us: Init: 1112593, First inference: 60018, Warmup (avg): 47967.6, Inference (avg): 52382.3
+    L I/tflite  (23767): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+    L I/tflite  (23767): Memory footprint delta from the start of the tool (MB): init=109.152 overall=112.641
+    L W/Finsky  ( 3958): [2] STU: Failed to get storage stats for package 'com.google.android.neuralnetworks' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+2026-10-27 21:13:07 STOP: too hot before item 9 (AP=51.5 SKIN=37.7 )
+2026-10-27 21:13:08 lock released
+2026-10-27 21:13:53 item 9 [xf_gpu_acc0] before[AP=43.2 SKIN=37.2 ] after[AP=43.2 SKIN=37.2 ] bat=ACpowered:false,USBpowered:false,level:80, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.brave.browser/com.google.android.app last_input=48ms
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=xfeatnn_640x352_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=image_norm:in/xin_0.f32 --output_filepath=out/xf_gpu_0.bin 2>&1'
+    L I/tflite  (25086): STARTING!
+    L E/tflite  (25086): Cannot find the corresponding input_layer name(image_norm) in --input_layer as 
+    L F/DEBUG   (25089): Cmdline: ./benchmark_model --graph=xfeatnn_640x352_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=image_norm:in/xin_0.f32 --output_filepath=out/xf_gpu_0.bin
+2026-10-27 21:14:05 item 10 [lgt512_gpu_acc0] before[AP=42.9 SKIN=37.2 ] after[AP=42.9 SKIN=37.2 ] bat=ACpowered:false,USBpowered:false,level:79, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.brave.browser/com.google.android.app last_input=28ms
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=lgct_512_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=kpts0:in/lg512_0_kpts0.f32,kpts1:in/lg512_0_kpts1.f32,desc0:in/lg512_0_desc0.f32,desc1:in/lg512_0_desc1.f32 --output_filepath=out/lg512_gpu_0.bin 2>&1'
+    L I/tflite  (25163): STARTING!
+    L E/tflite  (25163): Cannot find the corresponding input_layer name(kpts0) in --input_layer as 
+    L F/DEBUG   (25166): Cmdline: ./benchmark_model --graph=lgct_512_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=kpts0:in/lg512_0_kpts0.f32,kpts1:in/lg512_0_kpts1.f32,desc0:in/lg512_0_desc0.f32,desc1:in/lg512_0_desc1.f32 --output_filepath=out/lg512_gpu_0.bin
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+2026-10-27 21:14:16 item 11 [lgt1024_gpu_acc0] before[AP=43.3 SKIN=37.3 ] after[AP=43.3 SKIN=37.3 ] bat=ACpowered:false,USBpowered:false,level:79, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.brave.browser/com.google.android.app last_input=104ms
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=lgct_1024_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=kpts0:in/lg1024_0_kpts0.f32,kpts1:in/lg1024_0_kpts1.f32,desc0:in/lg1024_0_desc0.f32,desc1:in/lg1024_0_desc1.f32 --output_filepath=out/lg1024_gpu_0.bin 2>&1'
+    L I/tflite  (25308): STARTING!
+    L E/tflite  (25308): Cannot find the corresponding input_layer name(kpts0) in --input_layer as 
+    L F/DEBUG   (25312): Cmdline: ./benchmark_model --graph=lgct_1024_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=kpts0:in/lg1024_0_kpts0.f32,kpts1:in/lg1024_0_kpts1.f32,desc0:in/lg1024_0_desc0.f32,desc1:in/lg1024_0_desc1.f32 --output_filepath=out/lg1024_gpu_0.bin
+2026-10-27 21:14:28 item 12 [xf_gpu_acc5] before[AP=42.7 SKIN=37.2 ] after[AP=42.7 SKIN=37.2 ] bat=ACpowered:false,USBpowered:false,level:79, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.brave.browser/com.google.android.app last_input=355ms
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=xfeatnn_640x352_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=image_norm:in/xin_5.f32 --output_filepath=out/xf_gpu_5.bin 2>&1'
+    L I/tflite  (25390): STARTING!
+    L E/tflite  (25390): Cannot find the corresponding input_layer name(image_norm) in --input_layer as 
+    L F/DEBUG   (25393): Cmdline: ./benchmark_model --graph=xfeatnn_640x352_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=image_norm:in/xin_5.f32 --output_filepath=out/xf_gpu_5.bin
+2026-10-27 21:14:39 item 13 [lgt512_gpu_acc5] before[AP=42.3 SKIN=37.2 ] after[AP=43.0 SKIN=37.2 ] bat=ACpowered:false,USBpowered:false,level:79, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.brave.browser/com.google.android.app last_input=133ms
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=lgct_512_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=kpts0:in/lg512_5_kpts0.f32,kpts1:in/lg512_5_kpts1.f32,desc0:in/lg512_5_desc0.f32,desc1:in/lg512_5_desc1.f32 --output_filepath=out/lg512_gpu_5.bin 2>&1'
+    L I/tflite  (25495): STARTING!
+    L E/tflite  (25495): Cannot find the corresponding input_layer name(kpts0) in --input_layer as 
+    L F/DEBUG   (25498): Cmdline: ./benchmark_model --graph=lgct_512_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=kpts0:in/lg512_5_kpts0.f32,kpts1:in/lg512_5_kpts1.f32,desc0:in/lg512_5_desc0.f32,desc1:in/lg512_5_desc1.f32 --output_filepath=out/lg512_gpu_5.bin
+2026-10-27 21:14:51 item 14 [lgt1024_gpu_acc5] before[AP=43.0 SKIN=37.2 ] after[AP=41.4 SKIN=37.1 ] bat=ACpowered:false,USBpowered:false,level:79, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.brave.browser/com.google.android.app last_input=166ms
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=lgct_1024_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=kpts0:in/lg1024_5_kpts0.f32,kpts1:in/lg1024_5_kpts1.f32,desc0:in/lg1024_5_desc0.f32,desc1:in/lg1024_5_desc1.f32 --output_filepath=out/lg1024_gpu_5.bin 2>&1'
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/tflite  (25579): STARTING!
+    L E/tflite  (25579): Cannot find the corresponding input_layer name(kpts0) in --input_layer as 
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+    L F/DEBUG   (25582): Cmdline: ./benchmark_model --graph=lgct_1024_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=kpts0:in/lg1024_5_kpts0.f32,kpts1:in/lg1024_5_kpts1.f32,desc0:in/lg1024_5_desc0.f32,desc1:in/lg1024_5_desc1.f32 --output_filepath=out/lg1024_gpu_5.bin
+    L D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+    L I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+2026-10-27 21:15:02 item 15 [xf_gpu_acc12] before[AP=40.5 SKIN=36.9 ] after[AP=40.5 SKIN=36.9 ] bat=ACpowered:false,USBpowered:false,level:79, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.brave.browser/com.google.android.app last_input=30ms
+    L W/Auth    (16769): bqvg: Long live credential not available.
+    L W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+    L W/Auth    (16769): bqvg: Long live credential not available.
+    L W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+    L W/Auth    (16769): bqvg: Long live credential not available.
+    L W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+    L W/Auth    (16769): bqvg: Long live credential not available.
+    L W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+    L W/Auth    (16769): bqvg: Long live credential not available.
+    L W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=xfeatnn_640x352_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=image_norm:in/xin_12.f32 --output_filepath=out/xf_gpu_12.bin 2>&1'
+    L W/Auth    (16769): bqvg: Long live credential not available.
+    L W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+    L W/Auth    (16769): bqvg: Long live credential not available.
+    L W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+    L W/Auth    (16769): bqvg: Long live credential not available.
+    L W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+    L W/Auth    (16769): bqvg: Long live credential not available.
+    L W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+    L W/Auth    (16769): bqvg: Long live credential not available.
+    L W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+    L I/tflite  (25732): STARTING!
+    L E/tflite  (25732): Cannot find the corresponding input_layer name(image_norm) in --input_layer as 
+    L W/Auth    (16769): bqvg: Long live credential not available.
+    L W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+    L W/Auth    (16769): bqvg: Long live credential not available.
+    L W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+    L W/Auth    (16769): bqvg: Long live credential not available.
+    L W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+    L W/Auth    (16769): bqvg: Long live credential not available.
+    L W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+    L W/Auth    (16769): bqvg: Long live credential not available.
+    L W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+    L W/Auth    (16769): bqvg: Long live credential not available.
+    L W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+    L W/Auth    (16769): bqvg: Long live credential not available.
+    L W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+    L F/DEBUG   (25738): Cmdline: ./benchmark_model --graph=xfeatnn_640x352_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=image_norm:in/xin_12.f32 --output_filepath=out/xf_gpu_12.bin
+    L W/Auth    (16769): bqvg: Long live credential not available.
+    L W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+2026-10-27 21:15:14 item 16 [lgt512_gpu_acc12] before[AP=40.3 SKIN=36.9 ] after[AP=40.3 SKIN=36.9 ] bat=ACpowered:false,USBpowered:false,level:79, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.brave.browser/com.google.android.app last_input=648ms
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=lgct_512_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=kpts0:in/lg512_12_kpts0.f32,kpts1:in/lg512_12_kpts1.f32,desc0:in/lg512_12_desc0.f32,desc1:in/lg512_12_desc1.f32 --output_filepath=out/lg512_gpu_12.bin 2>&1'
+    L I/tflite  (25871): STARTING!
+    L E/tflite  (25871): Cannot find the corresponding input_layer name(kpts0) in --input_layer as 
+    L F/DEBUG   (25874): Cmdline: ./benchmark_model --graph=lgct_512_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=kpts0:in/lg512_12_kpts0.f32,kpts1:in/lg512_12_kpts1.f32,desc0:in/lg512_12_desc0.f32,desc1:in/lg512_12_desc1.f32 --output_filepath=out/lg512_gpu_12.bin
+    L W/Auth    (16769): bqvg: Long live credential not available.
+    L W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+2026-10-27 21:15:25 item 17 [lgt1024_gpu_acc12] before[AP=42.4 SKIN=37.0 ] after[AP=42.4 SKIN=37.0 ] bat=ACpowered:false,USBpowered:false,level:79, lowpower=0 mWakefulness=Awake USER_ACTIVE_RULE_OFF top=com.brave.browser/com.google.android.app last_input=1925ms
+    L I/adbd    (24792): adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=lgct_1024_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=kpts0:in/lg1024_12_kpts0.f32,kpts1:in/lg1024_12_kpts1.f32,desc0:in/lg1024_12_desc0.f32,desc1:in/lg1024_12_desc1.f32 --output_filepath=out/lg1024_gpu_12.bin 2>&1'
+    L I/tflite  (26070): STARTING!
+    L E/tflite  (26070): Cannot find the corresponding input_layer name(kpts0) in --input_layer as 
+    L F/DEBUG   (26074): Cmdline: ./benchmark_model --graph=lgct_1024_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true --require_full_delegation=true --num_threads=1 --warmup_runs=1 --num_runs=1 --min_secs=0 --input_layer_value_files=kpts0:in/lg1024_12_kpts0.f32,kpts1:in/lg1024_12_kpts1.f32,desc0:in/lg1024_12_desc0.f32,desc1:in/lg1024_12_desc1.f32 --output_filepath=out/lg1024_gpu_12.bin
+2026-10-27 21:15:34 WARNING bench process still running
+2026-10-27 21:15:34 camera: Active Camera Clients: [] 
+2026-10-27 21:15:34 list done
+2026-10-27 21:15:34 lock released

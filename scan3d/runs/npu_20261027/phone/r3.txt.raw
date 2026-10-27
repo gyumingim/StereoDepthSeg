@@ -1,0 +1,1746 @@
+== item 1 [q_add_i8pt_enn] 20:49:10
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_add_i8pt.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_add_i8pt.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteNnapiDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: Explicitly applied NNAPI delegate, and the model graph will be completely executed by the delegate.
+INFO: The input model file size (MB): 0.000944
+INFO: Initialized session in 114.771ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=462 first=10308 curr=935 min=841 max=10308 avg=1063.78 std=445 p5=893 median=1025 p95=1240
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=957 first=1043 curr=1079 min=821 max=4837 avg=1025.75 std=205 p5=881 median=1006 p95=1187
+
+INFO: Inference timings in us: Init: 114771, First inference: 10308, Warmup (avg): 1063.78, Inference (avg): 1025.75
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=3.45312 overall=5.23047
+-- logcat
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] loadSharedMem:82: loadSharedMem(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:177: Execution Done.
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:197: Loading data from 0x7a2cbab000 to 0x7a2d89b000 
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:204:  Not Apply postProcessOnOutputs!
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:40: ~BufferInfoOnExecute(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:50: ~BufferInfoOnExecute(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] executeBaseOnNNAgent:240: executeBaseOnNNAgent(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] execute:128: execute(-)
+I/tflite  ( 5988): count=957 first=1043 curr=1079 min=821 max=4837 avg=1025.75 std=205 p5=881 median=1006 p95=1187
+I/tflite  ( 5988): Inference timings in us: Init: 114771, First inference: 10308, Warmup (avg): 1063.78, Inference (avg): 1025.75
+I/tflite  ( 5988): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+I/tflite  ( 5988): Memory footprint delta from the start of the tool (MB): init=3.45312 overall=5.23047
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:87: ~EnnPreparedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:299: closeModel(+) modelId is 234881024
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:200: uennFreeBuffers(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:216: uennFreeBuffers(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:267: freeMemory(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:280: buffer info. addr : 0xb400007cddc6ebc0, size : 8192 
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:291: freeMemory(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:114: uennCloseModel() is called with modelId : 234881024
+I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel : 0x7BA10E000000(+)
+I/ENN_FRAMEWORK(31649): 2.2.27: * (+) Engine::EngineImpl::close_model->(0x7BA10E000000)
+I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x7BA10E00000E) is released.
+I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecutableModel(ID: 0x7BA10E00000E) from a Model(ID : 0x7BA10E000000) is released.
+I/ENN_FRAMEWORK(31649): 2.2.27: * + Unload Model(ID:0x0x7BA10E000000) Accelerator(2)
+I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::CloseSubGraph started
+I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA10E000000) Accelerator(2)
+I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA10E000000) is released.
+I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA10E000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA10E000000)
+I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA10E000000) (-)
+I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+I/enno    (28903): (REDACTED) HDM event received: %s
+I/enno    (28903): (REDACTED) HDM event received: %s
+== item 2 [q_add_i8ptf_enn] 20:49:18
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_add_i8ptf.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_add_i8ptf.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+VERBOSE: Replacing 4 out of 4 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: The input model file size (MB): 0.001384
+INFO: Initialized session in 5.396ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=2847 first=1220 curr=138 min=137 max=1220 avg=140.308 std=22 p5=137 median=138 p95=144
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=5765 first=140 curr=140 min=137 max=397 avg=139.86 std=8 p5=137 median=138 p95=144
+
+INFO: Inference timings in us: Init: 5396, First inference: 1220, Warmup (avg): 140.308, Inference (avg): 139.86
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=4.07812 overall=8.78125
+-- logcat
+I/tflite  ( 6308): Use NNAPI: [1]
+I/tflite  ( 6308): NNAPI accelerator name: [enn]
+W/benchmark_model( 6308): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+I/Manager ( 6308): Found interface enn (version = E0.0.1)
+I/tflite  ( 6308): NNAPI accelerators available: [enn,nnapi-reference]
+I/tflite  ( 6308): Disable NNAPI cpu: [1]
+I/tflite  ( 6308): Loaded model probes2/q_add_i8ptf.tflite
+I/tflite  ( 6308): Initialized TensorFlow Lite runtime.
+I/tflite  ( 6308): Created TensorFlow Lite delegate for NNAPI.
+I/tflite  ( 6308): NNAPI delegate created.
+W/tflite  ( 6308): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+I/TypeManager( 6308): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+I/tflite  ( 6308): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+I/tflite  ( 6308): Created TensorFlow Lite XNNPACK delegate for CPU.
+I/tflite  ( 6308): Replacing 4 out of 4 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+I/tflite  ( 6308): The input model file size (MB): 0.001384
+I/tflite  ( 6308): Initialized session in 5.396ms.
+I/tflite  ( 6308): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 6308): count=2847 first=1220 curr=138 min=137 max=1220 avg=140.308 std=22 p5=137 median=138 p95=144
+I/tflite  ( 6308): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 6308): count=5765 first=140 curr=140 min=137 max=397 avg=139.86 std=8 p5=137 median=138 p95=144
+I/tflite  ( 6308): Inference timings in us: Init: 5396, First inference: 1220, Warmup (avg): 140.308, Inference (avg): 139.86
+I/tflite  ( 6308): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+I/tflite  ( 6308): Memory footprint delta from the start of the tool (MB): init=4.07812 overall=8.78125
+== item 3 [q_add_u8_enn] 20:49:54
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_add_u8.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_add_u8.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteNnapiDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: Explicitly applied NNAPI delegate, and the model graph will be completely executed by the delegate.
+INFO: The input model file size (MB): 0.000856
+INFO: Initialized session in 256.099ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=473 first=2074 curr=989 min=817 max=2460 avg=1037.11 std=156 p5=886 median=1002 p95=1239
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=916 first=1201 curr=955 min=813 max=4053 avg=1069.69 std=224 p5=890 median=1036 p95=1309
+
+INFO: Inference timings in us: Init: 256099, First inference: 2074, Warmup (avg): 1037.11, Inference (avg): 1069.69
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=3.39062 overall=5.38281
+-- logcat
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+W/Auth    (16769): bqvg: Long live credential not available.
+W/Auth    (16769): [RequestTokenManager] Message is Long live credential not available. [CONTEXT service_id=343 ]
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 23 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 23 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+== item 4 [q_conv1_i8pt_enn] 20:50:03
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_conv1_i8pt.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_conv1_i8pt.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: The input model file size (MB): 0.005464
+INFO: Initialized session in 79.151ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=3698 first=2999 curr=129 min=128 max=2999 avg=131.788 std=47 p5=128 median=129 p95=149
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=7548 first=131 curr=128 min=128 max=166 avg=129.119 std=1 p5=128 median=129 p95=129
+
+INFO: Inference timings in us: Init: 79151, First inference: 2999, Warmup (avg): 131.788, Inference (avg): 129.119
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=3.36328 overall=4.46094
+-- logcat
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+I/Manager ( 7191): Found interface enn (version = E0.0.1)
+I/tflite  ( 7191): NNAPI accelerators available: [enn,nnapi-reference]
+I/tflite  ( 7191): Disable NNAPI cpu: [1]
+I/tflite  ( 7191): Loaded model probes2/q_conv1_i8pt.tflite
+I/tflite  ( 7191): Initialized TensorFlow Lite runtime.
+I/tflite  ( 7191): Created TensorFlow Lite delegate for NNAPI.
+I/tflite  ( 7191): NNAPI delegate created.
+W/tflite  ( 7191): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+I/TypeManager( 7191): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+I/tflite  ( 7191): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+I/tflite  ( 7191): Created TensorFlow Lite XNNPACK delegate for CPU.
+I/tflite  ( 7191): Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+I/tflite  ( 7191): The input model file size (MB): 0.005464
+I/tflite  ( 7191): Initialized session in 79.151ms.
+I/tflite  ( 7191): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 7191): count=3698 first=2999 curr=129 min=128 max=2999 avg=131.788 std=47 p5=128 median=129 p95=149
+I/tflite  ( 7191): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+D/OpenNetworkQos[4.00]( 1275): updateBssidNoInternet: mBssidNoInternet = false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 23 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 23 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+I/tflite  ( 7191): count=7548 first=131 curr=128 min=128 max=166 avg=129.119 std=1 p5=128 median=129 p95=129
+I/tflite  ( 7191): Inference timings in us: Init: 79151, First inference: 2999, Warmup (avg): 131.788, Inference (avg): 129.119
+I/tflite  ( 7191): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+I/tflite  ( 7191): Memory footprint delta from the start of the tool (MB): init=3.36328 overall=4.46094
+== item 5 [q_conv1_i8ptf_enn] 20:50:12
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_conv1_i8ptf.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_conv1_i8ptf.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+VERBOSE: Replacing 3 out of 3 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: The input model file size (MB): 0.005792
+INFO: Initialized session in 3.89ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=2494 first=561 curr=182 min=181 max=1476 avg=184.385 std=29 p5=182 median=182 p95=191
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=5018 first=188 curr=182 min=181 max=478 avg=183.389 std=9 p5=182 median=182 p95=189
+
+INFO: Inference timings in us: Init: 3890, First inference: 561, Warmup (avg): 184.385, Inference (avg): 183.389
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=2.875 overall=5.92969
+-- logcat
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+W/benchmark_model( 7554): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+I/Manager ( 7554): Found interface enn (version = E0.0.1)
+I/tflite  ( 7554): NNAPI accelerators available: [enn,nnapi-reference]
+I/tflite  ( 7554): Disable NNAPI cpu: [1]
+I/tflite  ( 7554): Loaded model probes2/q_conv1_i8ptf.tflite
+I/tflite  ( 7554): Initialized TensorFlow Lite runtime.
+I/tflite  ( 7554): Created TensorFlow Lite delegate for NNAPI.
+I/tflite  ( 7554): NNAPI delegate created.
+W/tflite  ( 7554): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+I/TypeManager( 7554): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+I/tflite  ( 7554): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+I/tflite  ( 7554): Created TensorFlow Lite XNNPACK delegate for CPU.
+I/tflite  ( 7554): Replacing 3 out of 3 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+I/tflite  ( 7554): The input model file size (MB): 0.005792
+I/tflite  ( 7554): Initialized session in 3.89ms.
+I/tflite  ( 7554): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 7554): count=2494 first=561 curr=182 min=181 max=1476 avg=184.385 std=29 p5=182 median=182 p95=191
+I/tflite  ( 7554): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 7554): count=5018 first=188 curr=182 min=181 max=478 avg=183.389 std=9 p5=182 median=182 p95=189
+I/tflite  ( 7554): Inference timings in us: Init: 3890, First inference: 561, Warmup (avg): 184.385, Inference (avg): 183.389
+I/tflite  ( 7554): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+I/tflite  ( 7554): Memory footprint delta from the start of the tool (MB): init=2.875 overall=5.92969
+== item 6 [q_conv1_u8_enn] 20:50:20
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_conv1_u8.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_conv1_u8.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: The input model file size (MB): 0.005384
+INFO: Initialized session in 14.348ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=648 first=850 curr=765 min=764 max=1207 avg=769.198 std=19 p5=764 median=765 p95=785
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=1296 first=766 curr=765 min=764 max=910 avg=768.266 std=8 p5=764 median=765 p95=782
+
+INFO: Inference timings in us: Init: 14348, First inference: 850, Warmup (avg): 769.198, Inference (avg): 768.266
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=3.07031 overall=4.14453
+-- logcat
+I/tflite  ( 7707): Use NNAPI: [1]
+I/tflite  ( 7707): NNAPI accelerator name: [enn]
+W/benchmark_model( 7707): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+I/Manager ( 7707): Found interface enn (version = E0.0.1)
+I/tflite  ( 7707): NNAPI accelerators available: [enn,nnapi-reference]
+I/tflite  ( 7707): Disable NNAPI cpu: [1]
+I/tflite  ( 7707): Loaded model probes2/q_conv1_u8.tflite
+I/tflite  ( 7707): Initialized TensorFlow Lite runtime.
+I/tflite  ( 7707): Created TensorFlow Lite delegate for NNAPI.
+I/tflite  ( 7707): NNAPI delegate created.
+W/tflite  ( 7707): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+I/TypeManager( 7707): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+I/tflite  ( 7707): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+I/tflite  ( 7707): Created TensorFlow Lite XNNPACK delegate for CPU.
+I/tflite  ( 7707): Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+I/tflite  ( 7707): The input model file size (MB): 0.005384
+I/tflite  ( 7707): Initialized session in 14.348ms.
+I/tflite  ( 7707): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 7707): count=648 first=850 curr=765 min=764 max=1207 avg=769.198 std=19 p5=764 median=765 p95=785
+I/tflite  ( 7707): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 7707): count=1296 first=766 curr=765 min=764 max=910 avg=768.266 std=8 p5=764 median=765 p95=782
+I/tflite  ( 7707): Inference timings in us: Init: 14348, First inference: 850, Warmup (avg): 769.198, Inference (avg): 768.266
+I/tflite  ( 7707): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+I/tflite  ( 7707): Memory footprint delta from the start of the tool (MB): init=3.07031 overall=4.14453
+== item 7 [q_conv3_i8pt_enn] 20:50:28
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_conv3_i8pt.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_conv3_i8pt.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: The input model file size (MB): 0.038232
+INFO: Initialized session in 22.798ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=761 first=725 curr=650 min=650 max=767 avg=653.506 std=9 p5=650 median=650 p95=669
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=1524 first=652 curr=651 min=650 max=765 avg=653.192 std=8 p5=650 median=650 p95=666
+
+INFO: Inference timings in us: Init: 22798, First inference: 725, Warmup (avg): 653.506, Inference (avg): 653.192
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=3.80859 overall=4.65234
+-- logcat
+I/tflite  ( 7776): Use NNAPI: [1]
+I/tflite  ( 7776): NNAPI accelerator name: [enn]
+W/benchmark_model( 7776): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+I/Manager ( 7776): Found interface enn (version = E0.0.1)
+I/tflite  ( 7776): NNAPI accelerators available: [enn,nnapi-reference]
+I/tflite  ( 7776): Disable NNAPI cpu: [1]
+I/tflite  ( 7776): Loaded model probes2/q_conv3_i8pt.tflite
+I/tflite  ( 7776): Initialized TensorFlow Lite runtime.
+I/tflite  ( 7776): Created TensorFlow Lite delegate for NNAPI.
+I/tflite  ( 7776): NNAPI delegate created.
+W/tflite  ( 7776): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+I/TypeManager( 7776): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+I/tflite  ( 7776): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+I/tflite  ( 7776): Created TensorFlow Lite XNNPACK delegate for CPU.
+I/tflite  ( 7776): Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+I/tflite  ( 7776): The input model file size (MB): 0.038232
+I/tflite  ( 7776): Initialized session in 22.798ms.
+I/tflite  ( 7776): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 7776): count=761 first=725 curr=650 min=650 max=767 avg=653.506 std=9 p5=650 median=650 p95=669
+I/tflite  ( 7776): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 7776): count=1524 first=652 curr=651 min=650 max=765 avg=653.192 std=8 p5=650 median=650 p95=666
+I/tflite  ( 7776): Inference timings in us: Init: 22798, First inference: 725, Warmup (avg): 653.506, Inference (avg): 653.192
+I/tflite  ( 7776): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+I/tflite  ( 7776): Memory footprint delta from the start of the tool (MB): init=3.80859 overall=4.65234
+== item 8 [q_conv3_i8ptf_enn] 20:50:36
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_conv3_i8ptf.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_conv3_i8ptf.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+VERBOSE: Replacing 3 out of 3 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: The input model file size (MB): 0.03856
+INFO: Initialized session in 4.923ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=685 first=1002 curr=703 min=703 max=1729 avg=712.061 std=46 p5=703 median=704 p95=731
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=1377 first=709 curr=704 min=703 max=999 avg=709.316 std=20 p5=703 median=704 p95=728
+
+INFO: Inference timings in us: Init: 4923, First inference: 1002, Warmup (avg): 712.061, Inference (avg): 709.316
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=4.32812 overall=7.1875
+-- logcat
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+I/Manager ( 7878): Found interface enn (version = E0.0.1)
+I/tflite  ( 7878): NNAPI accelerators available: [enn,nnapi-reference]
+I/tflite  ( 7878): Disable NNAPI cpu: [1]
+I/tflite  ( 7878): Loaded model probes2/q_conv3_i8ptf.tflite
+I/tflite  ( 7878): Initialized TensorFlow Lite runtime.
+I/tflite  ( 7878): Created TensorFlow Lite delegate for NNAPI.
+I/tflite  ( 7878): NNAPI delegate created.
+W/tflite  ( 7878): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+I/TypeManager( 7878): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+I/tflite  ( 7878): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+I/tflite  ( 7878): Created TensorFlow Lite XNNPACK delegate for CPU.
+I/tflite  ( 7878): Replacing 3 out of 3 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+I/tflite  ( 7878): The input model file size (MB): 0.03856
+I/tflite  ( 7878): Initialized session in 4.923ms.
+I/tflite  ( 7878): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+D/OpenNetworkQos[4.00]( 1275): updateBssidNoInternet: mBssidNoInternet = false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 23 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 23 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+I/tflite  ( 7878): count=685 first=1002 curr=703 min=703 max=1729 avg=712.061 std=46 p5=703 median=704 p95=731
+I/tflite  ( 7878): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 7878): count=1377 first=709 curr=704 min=703 max=999 avg=709.316 std=20 p5=703 median=704 p95=728
+I/tflite  ( 7878): Inference timings in us: Init: 4923, First inference: 1002, Warmup (avg): 712.061, Inference (avg): 709.316
+I/tflite  ( 7878): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+I/tflite  ( 7878): Memory footprint delta from the start of the tool (MB): init=4.32812 overall=7.1875
+== item 9 [q_conv3_u8_enn] 20:50:44
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_conv3_u8.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_conv3_u8.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: The input model file size (MB): 0.038152
+INFO: Initialized session in 14.085ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=75 first=7978 curr=6661 min=6641 max=7978 avg=6669.07 std=153 p5=6641 median=6649 p95=6677
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=150 first=6666 curr=6662 min=6645 max=9626 avg=6684.39 std=241 p5=6646 median=6662 p95=6692
+
+INFO: Inference timings in us: Init: 14085, First inference: 7978, Warmup (avg): 6669.07, Inference (avg): 6684.39
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=3.72656 overall=4.52344
+-- logcat
+I/tflite  ( 7965): Use NNAPI: [1]
+I/tflite  ( 7965): NNAPI accelerator name: [enn]
+W/benchmark_model( 7965): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+I/Manager ( 7965): Found interface enn (version = E0.0.1)
+I/tflite  ( 7965): NNAPI accelerators available: [enn,nnapi-reference]
+I/tflite  ( 7965): Disable NNAPI cpu: [1]
+I/tflite  ( 7965): Loaded model probes2/q_conv3_u8.tflite
+I/tflite  ( 7965): Initialized TensorFlow Lite runtime.
+I/tflite  ( 7965): Created TensorFlow Lite delegate for NNAPI.
+I/tflite  ( 7965): NNAPI delegate created.
+W/tflite  ( 7965): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+I/TypeManager( 7965): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+I/tflite  ( 7965): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+I/tflite  ( 7965): Created TensorFlow Lite XNNPACK delegate for CPU.
+I/tflite  ( 7965): Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+I/tflite  ( 7965): The input model file size (MB): 0.038152
+I/tflite  ( 7965): Initialized session in 14.085ms.
+I/tflite  ( 7965): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 7965): count=75 first=7978 curr=6661 min=6641 max=7978 avg=6669.07 std=153 p5=6641 median=6649 p95=6677
+I/tflite  ( 7965): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 7965): count=150 first=6666 curr=6662 min=6645 max=9626 avg=6684.39 std=241 p5=6646 median=6662 p95=6692
+I/tflite  ( 7965): Inference timings in us: Init: 14085, First inference: 7978, Warmup (avg): 6669.07, Inference (avg): 6684.39
+I/tflite  ( 7965): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+I/tflite  ( 7965): Memory footprint delta from the start of the tool (MB): init=3.72656 overall=4.52344
+== item 10 [q_fc2d_i8pt_enn] 20:51:14
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_fc2d_i8pt.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_fc2d_i8pt.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteNnapiDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: Explicitly applied NNAPI delegate, and the model graph will be completely executed by the delegate.
+INFO: The input model file size (MB): 0.010664
+INFO: Initialized session in 203.945ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=635 first=2502 curr=817 min=612 max=10154 avg=784.918 std=447 p5=655 median=733 p95=935
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=1362 first=1053 curr=687 min=611 max=4502 avg=731.47 std=143 p5=650 median=706 p95=873
+
+INFO: Inference timings in us: Init: 203945, First inference: 2502, Warmup (avg): 784.918, Inference (avg): 731.47
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=3.21484 overall=4
+-- logcat
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:267: freeMemory(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:280: buffer info. addr : 0xb400007b2dbf51c0, size : 28672 
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:291: freeMemory(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:114: uennCloseModel() is called with modelId : 268435456
+I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel : 0x7BA110000000(+)
+I/ENN_FRAMEWORK(31649): 2.2.27: * (+) Engine::EngineImpl::close_model->(0x7BA110000000)
+I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x7BA110000010) is released.
+I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecutableModel(ID: 0x7BA110000010) from a Model(ID : 0x7BA110000000) is released.
+I/ENN_FRAMEWORK(31649): 2.2.27: * + Unload Model(ID:0x0x7BA110000000) Accelerator(2)
+I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::CloseSubGraph started
+I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA110000000) Accelerator(2)
+I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA110000000) is released.
+I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA110000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA110000000)
+I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA110000000) (-)
+I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/OpenNetworkQos[4.00]( 1275): updateBssidNoInternet: mBssidNoInternet = false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 23 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 23 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/OpenNetworkQos[4.00]( 1275): updateBssidNoInternet: mBssidNoInternet = false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 23 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 23 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/OpenNetworkQos[4.00]( 1275): updateBssidNoInternet: mBssidNoInternet = false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 23 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 23 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+== item 11 [q_fc2d_i8ptf_enn] 20:51:22
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_fc2d_i8ptf.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_fc2d_i8ptf.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+VERBOSE: Replacing 3 out of 3 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: The input model file size (MB): 0.010976
+INFO: Initialized session in 3.756ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=10005 first=115 curr=46 min=46 max=972 avg=47.0406 std=11 p5=46 median=47 p95=47
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=20096 first=48 curr=47 min=46 max=188 avg=46.8325 std=2 p5=46 median=47 p95=47
+
+INFO: Inference timings in us: Init: 3756, First inference: 115, Warmup (avg): 47.0406, Inference (avg): 46.8325
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=3.94141 overall=5.21094
+-- logcat
+I/tflite  ( 8360): Use NNAPI: [1]
+I/tflite  ( 8360): NNAPI accelerator name: [enn]
+W/benchmark_model( 8360): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+I/Manager ( 8360): Found interface enn (version = E0.0.1)
+I/tflite  ( 8360): NNAPI accelerators available: [enn,nnapi-reference]
+I/tflite  ( 8360): Disable NNAPI cpu: [1]
+I/tflite  ( 8360): Loaded model probes2/q_fc2d_i8ptf.tflite
+I/tflite  ( 8360): Initialized TensorFlow Lite runtime.
+I/tflite  ( 8360): Created TensorFlow Lite delegate for NNAPI.
+I/tflite  ( 8360): NNAPI delegate created.
+W/tflite  ( 8360): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+I/TypeManager( 8360): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+I/tflite  ( 8360): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+I/tflite  ( 8360): Created TensorFlow Lite XNNPACK delegate for CPU.
+I/tflite  ( 8360): Replacing 3 out of 3 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+I/tflite  ( 8360): The input model file size (MB): 0.010976
+I/tflite  ( 8360): Initialized session in 3.756ms.
+I/tflite  ( 8360): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 8360): count=10005 first=115 curr=46 min=46 max=972 avg=47.0406 std=11 p5=46 median=47 p95=47
+I/tflite  ( 8360): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 8360): count=20096 first=48 curr=47 min=46 max=188 avg=46.8325 std=2 p5=46 median=47 p95=47
+I/tflite  ( 8360): Inference timings in us: Init: 3756, First inference: 115, Warmup (avg): 47.0406, Inference (avg): 46.8325
+I/tflite  ( 8360): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+I/tflite  ( 8360): Memory footprint delta from the start of the tool (MB): init=3.94141 overall=5.21094
+== item 12 [q_fc2d_u8_enn] 20:51:52
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_fc2d_u8.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_fc2d_u8.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteNnapiDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: Explicitly applied NNAPI delegate, and the model graph will be completely executed by the delegate.
+INFO: The input model file size (MB): 0.010576
+INFO: Initialized session in 190.376ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=678 first=1265 curr=1496 min=608 max=4549 avg=735.09 std=211 p5=641 median=694 p95=887
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=1283 first=3961 curr=755 min=585 max=4613 avg=776.329 std=265 p5=641 median=717 p95=970
+
+INFO: Inference timings in us: Init: 190376, First inference: 1265, Warmup (avg): 735.09, Inference (avg): 776.329
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=3.5625 overall=3.94922
+-- logcat
+I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA111000000) Accelerator(2)
+I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA111000000) is released.
+I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA111000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA111000000)
+I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA111000000) (-)
+I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+D/OpenNetworkQos[4.00]( 1275): updateBssidLatestDnsResultType - result: 0
+D/OpenNetworkQos[4.00]( 1275): updateBssidNoInternet: mBssidNoInternet = false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 23 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 23 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 26 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 26 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/OpenNetworkQos[4.00]( 1275): updateBssidNoInternet: mBssidNoInternet = false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 26 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 26 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/OpenNetworkQos[4.00]( 1275): updateBssidNoInternet: mBssidNoInternet = false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 26 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 26 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/OpenNetworkQos[4.00]( 1275): updateBssidNoInternet: mBssidNoInternet = false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 26 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 26 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+== item 13 [q_pad_i8pt_enn] 20:52:01
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_pad_i8pt.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_pad_i8pt.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: The input model file size (MB): 0.000968
+INFO: Initialized session in 2.738ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=18045 first=105 curr=24 min=23 max=1001 avg=24.3589 std=9 p5=24 median=24 p95=25
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=36222 first=25 curr=24 min=23 max=233 avg=24.2699 std=1 p5=24 median=24 p95=25
+
+INFO: Inference timings in us: Init: 2738, First inference: 105, Warmup (avg): 24.3589, Inference (avg): 24.2699
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=3.31641 overall=4.92578
+-- logcat
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+I/Manager ( 8855): Found interface enn (version = E0.0.1)
+I/tflite  ( 8855): NNAPI accelerators available: [enn,nnapi-reference]
+I/tflite  ( 8855): Disable NNAPI cpu: [1]
+I/tflite  ( 8855): Loaded model probes2/q_pad_i8pt.tflite
+I/tflite  ( 8855): Initialized TensorFlow Lite runtime.
+I/tflite  ( 8855): Created TensorFlow Lite delegate for NNAPI.
+I/tflite  ( 8855): NNAPI delegate created.
+W/tflite  ( 8855): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+I/TypeManager( 8855): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+I/tflite  ( 8855): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+I/tflite  ( 8855): Created TensorFlow Lite XNNPACK delegate for CPU.
+I/tflite  ( 8855): Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+I/tflite  ( 8855): The input model file size (MB): 0.000968
+I/tflite  ( 8855): Initialized session in 2.738ms.
+I/tflite  ( 8855): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 8855): count=18045 first=105 curr=24 min=23 max=1001 avg=24.3589 std=9 p5=24 median=24 p95=25
+I/tflite  ( 8855): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+I/tflite  ( 8855): count=36222 first=25 curr=24 min=23 max=233 avg=24.2699 std=1 p5=24 median=24 p95=25
+I/tflite  ( 8855): Inference timings in us: Init: 2738, First inference: 105, Warmup (avg): 24.3589, Inference (avg): 24.2699
+I/tflite  ( 8855): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+I/tflite  ( 8855): Memory footprint delta from the start of the tool (MB): init=3.31641 overall=4.92578
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+== item 14 [q_pad_i8ptf_enn] 20:52:09
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_pad_i8ptf.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_pad_i8ptf.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+VERBOSE: Replacing 3 out of 3 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: The input model file size (MB): 0.001296
+INFO: Initialized session in 3.155ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=5128 first=610 curr=80 min=78 max=1265 avg=81.3175 std=24 p5=79 median=79 p95=82
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=10410 first=84 curr=79 min=78 max=425 avg=80.096 std=7 p5=79 median=79 p95=82
+
+INFO: Inference timings in us: Init: 3155, First inference: 610, Warmup (avg): 81.3175, Inference (avg): 80.096
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=2.71094 overall=5.80078
+-- logcat
+I/tflite  ( 8967): Use NNAPI: [1]
+I/tflite  ( 8967): NNAPI accelerator name: [enn]
+W/benchmark_model( 8967): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+I/Manager ( 8967): Found interface enn (version = E0.0.1)
+I/tflite  ( 8967): NNAPI accelerators available: [enn,nnapi-reference]
+I/tflite  ( 8967): Disable NNAPI cpu: [1]
+I/tflite  ( 8967): Loaded model probes2/q_pad_i8ptf.tflite
+I/tflite  ( 8967): Initialized TensorFlow Lite runtime.
+I/tflite  ( 8967): Created TensorFlow Lite delegate for NNAPI.
+I/tflite  ( 8967): NNAPI delegate created.
+W/tflite  ( 8967): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+I/TypeManager( 8967): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+I/tflite  ( 8967): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+I/tflite  ( 8967): Created TensorFlow Lite XNNPACK delegate for CPU.
+I/tflite  ( 8967): Replacing 3 out of 3 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+I/tflite  ( 8967): The input model file size (MB): 0.001296
+I/tflite  ( 8967): Initialized session in 3.155ms.
+I/tflite  ( 8967): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 8967): count=5128 first=610 curr=80 min=78 max=1265 avg=81.3175 std=24 p5=79 median=79 p95=82
+I/tflite  ( 8967): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 8967): count=10410 first=84 curr=79 min=78 max=425 avg=80.096 std=7 p5=79 median=79 p95=82
+I/tflite  ( 8967): Inference timings in us: Init: 3155, First inference: 610, Warmup (avg): 81.3175, Inference (avg): 80.096
+I/tflite  ( 8967): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+I/tflite  ( 8967): Memory footprint delta from the start of the tool (MB): init=2.71094 overall=5.80078
+== item 15 [q_pad_u8_enn] 20:52:18
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_pad_u8.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_pad_u8.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+VERBOSE: Replacing 2 out of 2 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: The input model file size (MB): 0.001064
+INFO: Initialized session in 3.523ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=11218 first=105 curr=41 min=40 max=1257 avg=41.2303 std=12 p5=40 median=41 p95=41
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=22514 first=42 curr=41 min=40 max=197 avg=41.1002 std=2 p5=40 median=41 p95=41
+
+INFO: Inference timings in us: Init: 3523, First inference: 105, Warmup (avg): 41.2303, Inference (avg): 41.1002
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=2.67969 overall=4.3125
+-- logcat
+I/tflite  ( 9074): Use NNAPI: [1]
+I/tflite  ( 9074): NNAPI accelerator name: [enn]
+W/benchmark_model( 9074): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+I/Manager ( 9074): Found interface enn (version = E0.0.1)
+I/tflite  ( 9074): NNAPI accelerators available: [enn,nnapi-reference]
+I/tflite  ( 9074): Disable NNAPI cpu: [1]
+I/tflite  ( 9074): Loaded model probes2/q_pad_u8.tflite
+I/tflite  ( 9074): Initialized TensorFlow Lite runtime.
+I/tflite  ( 9074): Created TensorFlow Lite delegate for NNAPI.
+I/tflite  ( 9074): NNAPI delegate created.
+W/tflite  ( 9074): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+I/TypeManager( 9074): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+I/tflite  ( 9074): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+I/tflite  ( 9074): Created TensorFlow Lite XNNPACK delegate for CPU.
+I/tflite  ( 9074): Replacing 2 out of 2 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+I/tflite  ( 9074): The input model file size (MB): 0.001064
+I/tflite  ( 9074): Initialized session in 3.523ms.
+I/tflite  ( 9074): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 9074): count=11218 first=105 curr=41 min=40 max=1257 avg=41.2303 std=12 p5=40 median=41 p95=41
+I/tflite  ( 9074): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 9074): count=22514 first=42 curr=41 min=40 max=197 avg=41.1002 std=2 p5=40 median=41 p95=41
+I/tflite  ( 9074): Inference timings in us: Init: 3523, First inference: 105, Warmup (avg): 41.2303, Inference (avg): 41.1002
+I/tflite  ( 9074): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+I/tflite  ( 9074): Memory footprint delta from the start of the tool (MB): init=2.67969 overall=4.3125
+== item 16 [q_resize_i8pt_enn] 20:52:47
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_resize_i8pt.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_resize_i8pt.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteNnapiDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: Explicitly applied NNAPI delegate, and the model graph will be completely executed by the delegate.
+INFO: The input model file size (MB): 0.00096
+INFO: Initialized session in 72.496ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=506 first=3645 curr=1074 min=783 max=3645 avg=986.206 std=170 p5=846 median=956 p95=1203
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=1002 first=1114 curr=959 min=815 max=4637 avg=994.011 std=192 p5=859 median=967 p95=1186
+
+INFO: Inference timings in us: Init: 72496, First inference: 3645, Warmup (avg): 986.206, Inference (avg): 994.011
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=2.29688 overall=3.02734
+-- logcat
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/OpenNetworkQos[4.00]( 1275): updateBssidLatestDnsResultType - result: 0
+D/OpenNetworkQos[4.00]( 1275): updateBssidNoInternet: mBssidNoInternet = false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 26 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 26 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/OpenNetworkQos[4.00]( 1275): updateBssidNoInternet: mBssidNoInternet = false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 26 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 26 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+== item 17 [q_resize_i8ptf_enn] 20:52:56
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_resize_i8ptf.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_resize_i8ptf.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+VERBOSE: Replacing 3 out of 3 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: The input model file size (MB): 0.001288
+INFO: Initialized session in 3.795ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=4412 first=459 curr=134 min=108 max=2072 avg=109.939 std=30 p5=109 median=109 p95=111
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=8857 first=115 curr=109 min=108 max=466 avg=109.532 std=5 p5=109 median=109 p95=110
+
+INFO: Inference timings in us: Init: 3795, First inference: 459, Warmup (avg): 109.939, Inference (avg): 109.532
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=2.94531 overall=4.55078
+-- logcat
+I/tflite  ( 9506): Use NNAPI: [1]
+I/tflite  ( 9506): NNAPI accelerator name: [enn]
+W/benchmark_model( 9506): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+I/Manager ( 9506): Found interface enn (version = E0.0.1)
+I/tflite  ( 9506): NNAPI accelerators available: [enn,nnapi-reference]
+I/tflite  ( 9506): Disable NNAPI cpu: [1]
+I/tflite  ( 9506): Loaded model probes2/q_resize_i8ptf.tflite
+I/tflite  ( 9506): Initialized TensorFlow Lite runtime.
+I/tflite  ( 9506): Created TensorFlow Lite delegate for NNAPI.
+I/tflite  ( 9506): NNAPI delegate created.
+W/tflite  ( 9506): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+I/TypeManager( 9506): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+I/tflite  ( 9506): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+I/tflite  ( 9506): Created TensorFlow Lite XNNPACK delegate for CPU.
+I/tflite  ( 9506): Replacing 3 out of 3 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+I/tflite  ( 9506): The input model file size (MB): 0.001288
+I/tflite  ( 9506): Initialized session in 3.795ms.
+I/tflite  ( 9506): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 9506): count=4412 first=459 curr=134 min=108 max=2072 avg=109.939 std=30 p5=109 median=109 p95=111
+I/tflite  ( 9506): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 9506): count=8857 first=115 curr=109 min=108 max=466 avg=109.532 std=5 p5=109 median=109 p95=110
+I/tflite  ( 9506): Inference timings in us: Init: 3795, First inference: 459, Warmup (avg): 109.939, Inference (avg): 109.532
+I/tflite  ( 9506): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+I/tflite  ( 9506): Memory footprint delta from the start of the tool (MB): init=2.94531 overall=4.55078
+== item 18 [q_resize_u8_enn] 20:53:04
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_resize_u8.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_resize_u8.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+VERBOSE: Replacing 2 out of 2 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: The input model file size (MB): 0.001064
+INFO: Initialized session in 3.46ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=6140 first=157 curr=80 min=79 max=1154 avg=80.4822 std=15 p5=80 median=80 p95=80
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=12311 first=81 curr=80 min=79 max=315 avg=80.2941 std=3 p5=80 median=80 p95=80
+
+INFO: Inference timings in us: Init: 3460, First inference: 157, Warmup (avg): 80.4822, Inference (avg): 80.2941
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=2.80859 overall=3.37891
+-- logcat
+I/tflite  ( 9630): Use NNAPI: [1]
+I/tflite  ( 9630): NNAPI accelerator name: [enn]
+W/benchmark_model( 9630): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+I/Manager ( 9630): Found interface enn (version = E0.0.1)
+I/tflite  ( 9630): NNAPI accelerators available: [enn,nnapi-reference]
+I/tflite  ( 9630): Disable NNAPI cpu: [1]
+I/tflite  ( 9630): Loaded model probes2/q_resize_u8.tflite
+I/tflite  ( 9630): Initialized TensorFlow Lite runtime.
+I/tflite  ( 9630): Created TensorFlow Lite delegate for NNAPI.
+I/tflite  ( 9630): NNAPI delegate created.
+W/tflite  ( 9630): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+I/TypeManager( 9630): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+I/tflite  ( 9630): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+I/tflite  ( 9630): Created TensorFlow Lite XNNPACK delegate for CPU.
+I/tflite  ( 9630): Replacing 2 out of 2 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+I/tflite  ( 9630): The input model file size (MB): 0.001064
+I/tflite  ( 9630): Initialized session in 3.46ms.
+I/tflite  ( 9630): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 9630): count=6140 first=157 curr=80 min=79 max=1154 avg=80.4822 std=15 p5=80 median=80 p95=80
+I/tflite  ( 9630): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 9630): count=12311 first=81 curr=80 min=79 max=315 avg=80.2941 std=3 p5=80 median=80 p95=80
+I/tflite  ( 9630): Inference timings in us: Init: 3460, First inference: 157, Warmup (avg): 80.4822, Inference (avg): 80.2941
+I/tflite  ( 9630): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+I/tflite  ( 9630): Memory footprint delta from the start of the tool (MB): init=2.80859 overall=3.37891
+== item 19 [q_s2d8_i8pt_enn] 20:53:13
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_s2d8_i8pt.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_s2d8_i8pt.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: The input model file size (MB): 0.005464
+INFO: Initialized session in 27.049ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=732 first=2089 curr=709 min=673 max=2089 avg=679.452 std=53 p5=674 median=674 p95=687
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=1467 first=700 curr=675 min=673 max=906 avg=678.104 std=14 p5=674 median=675 p95=692
+
+INFO: Inference timings in us: Init: 27049, First inference: 2089, Warmup (avg): 679.452, Inference (avg): 678.104
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=4.21875 overall=5.00391
+-- logcat
+I/tflite  ( 9733): Use NNAPI: [1]
+I/tflite  ( 9733): NNAPI accelerator name: [enn]
+W/benchmark_model( 9733): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+I/Manager ( 9733): Found interface enn (version = E0.0.1)
+I/tflite  ( 9733): NNAPI accelerators available: [enn,nnapi-reference]
+I/tflite  ( 9733): Disable NNAPI cpu: [1]
+I/tflite  ( 9733): Loaded model probes2/q_s2d8_i8pt.tflite
+I/tflite  ( 9733): Initialized TensorFlow Lite runtime.
+I/tflite  ( 9733): Created TensorFlow Lite delegate for NNAPI.
+I/tflite  ( 9733): NNAPI delegate created.
+W/tflite  ( 9733): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+I/TypeManager( 9733): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+I/tflite  ( 9733): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+I/tflite  ( 9733): Created TensorFlow Lite XNNPACK delegate for CPU.
+I/tflite  ( 9733): Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+I/tflite  ( 9733): The input model file size (MB): 0.005464
+I/tflite  ( 9733): Initialized session in 27.049ms.
+I/tflite  ( 9733): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 9733): count=732 first=2089 curr=709 min=673 max=2089 avg=679.452 std=53 p5=674 median=674 p95=687
+I/tflite  ( 9733): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+I/tflite  ( 9733): count=1467 first=700 curr=675 min=673 max=906 avg=678.104 std=14 p5=674 median=675 p95=692
+I/tflite  ( 9733): Inference timings in us: Init: 27049, First inference: 2089, Warmup (avg): 679.452, Inference (avg): 678.104
+I/tflite  ( 9733): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+I/tflite  ( 9733): Memory footprint delta from the start of the tool (MB): init=4.21875 overall=5.00391
+== item 20 [q_s2d8_i8ptf_enn] 20:53:22
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_s2d8_i8ptf.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_s2d8_i8ptf.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+VERBOSE: Replacing 3 out of 3 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: The input model file size (MB): 0.005792
+INFO: Initialized session in 4.84ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=660 first=1153 curr=731 min=728 max=2019 avg=737.318 std=56 p5=728 median=730 p95=754
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=1318 first=738 curr=730 min=727 max=965 avg=737.427 std=14 p5=729 median=732 p95=762
+
+INFO: Inference timings in us: Init: 4840, First inference: 1153, Warmup (avg): 737.318, Inference (avg): 737.427
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=4.73438 overall=7.54297
+-- logcat
+I/tflite  (10066): Use NNAPI: [1]
+I/tflite  (10066): NNAPI accelerator name: [enn]
+W/benchmark_model(10066): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+I/Manager (10066): Found interface enn (version = E0.0.1)
+I/tflite  (10066): NNAPI accelerators available: [enn,nnapi-reference]
+I/tflite  (10066): Disable NNAPI cpu: [1]
+I/tflite  (10066): Loaded model probes2/q_s2d8_i8ptf.tflite
+I/tflite  (10066): Initialized TensorFlow Lite runtime.
+I/tflite  (10066): Created TensorFlow Lite delegate for NNAPI.
+I/tflite  (10066): NNAPI delegate created.
+W/tflite  (10066): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+I/TypeManager(10066): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+I/tflite  (10066): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+I/tflite  (10066): Created TensorFlow Lite XNNPACK delegate for CPU.
+I/tflite  (10066): Replacing 3 out of 3 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+I/tflite  (10066): The input model file size (MB): 0.005792
+I/tflite  (10066): Initialized session in 4.84ms.
+I/tflite  (10066): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+I/tflite  (10066): count=660 first=1153 curr=731 min=728 max=2019 avg=737.318 std=56 p5=728 median=730 p95=754
+I/tflite  (10066): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+I/tflite  (10066): count=1318 first=738 curr=730 min=727 max=965 avg=737.427 std=14 p5=729 median=732 p95=762
+I/tflite  (10066): Inference timings in us: Init: 4840, First inference: 1153, Warmup (avg): 737.318, Inference (avg): 737.427
+I/tflite  (10066): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+I/tflite  (10066): Memory footprint delta from the start of the tool (MB): init=4.73438 overall=7.54297
+== item 21 [q_s2d8_u8_enn] 20:53:30
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_s2d8_u8.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_s2d8_u8.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: The input model file size (MB): 0.005392
+INFO: Initialized session in 14.939ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=472 first=1134 curr=1052 min=1051 max=1214 avg=1056.49 std=12 p5=1051 median=1052 p95=1071
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=941 first=1055 curr=1052 min=1051 max=1294 avg=1058.88 std=17 p5=1051 median=1052 p95=1078
+
+INFO: Inference timings in us: Init: 14939, First inference: 1134, Warmup (avg): 1056.49, Inference (avg): 1058.88
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=5.23828 overall=6.01172
+-- logcat
+I/tflite  (10281): Use NNAPI: [1]
+I/tflite  (10281): NNAPI accelerator name: [enn]
+W/benchmark_model(10281): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+I/Manager (10281): Found interface enn (version = E0.0.1)
+I/tflite  (10281): NNAPI accelerators available: [enn,nnapi-reference]
+I/tflite  (10281): Disable NNAPI cpu: [1]
+I/tflite  (10281): Loaded model probes2/q_s2d8_u8.tflite
+I/tflite  (10281): Initialized TensorFlow Lite runtime.
+I/tflite  (10281): Created TensorFlow Lite delegate for NNAPI.
+I/tflite  (10281): NNAPI delegate created.
+W/tflite  (10281): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+I/TypeManager(10281): Failed to read /vendor/etc/nnapi_extensions_app_allowlist ; No app allowlisted for vendor extensions use.
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+I/tflite  (10281): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+I/tflite  (10281): Created TensorFlow Lite XNNPACK delegate for CPU.
+I/tflite  (10281): Replacing 1 out of 1 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+I/tflite  (10281): The input model file size (MB): 0.005392
+I/tflite  (10281): Initialized session in 14.939ms.
+I/tflite  (10281): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+I/tflite  (10281): count=472 first=1134 curr=1052 min=1051 max=1214 avg=1056.49 std=12 p5=1051 median=1052 p95=1071
+I/tflite  (10281): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+I/tflite  (10281): count=941 first=1055 curr=1052 min=1051 max=1294 avg=1058.88 std=17 p5=1051 median=1052 p95=1078
+I/tflite  (10281): Inference timings in us: Init: 14939, First inference: 1134, Warmup (avg): 1056.49, Inference (avg): 1058.88
+I/tflite  (10281): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+I/tflite  (10281): Memory footprint delta from the start of the tool (MB): init=5.23828 overall=6.01172
+== item 22 [q_sigmoid_i8pt_enn] 20:54:03
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_sigmoid_i8pt.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_sigmoid_i8pt.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+VERBOSE: Replacing 1 out of 1 node(s) with delegate (TfLiteNnapiDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: Explicitly applied NNAPI delegate, and the model graph will be completely executed by the delegate.
+INFO: The input model file size (MB): 0.000832
+INFO: Initialized session in 87.188ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=820 first=2317 curr=582 min=509 max=2317 avg=608.976 std=99 p5=548 median=590 p95=721
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=1658 first=763 curr=544 min=497 max=5197 avg=602.288 std=181 p5=536 median=580 p95=707
+
+INFO: Inference timings in us: Init: 87188, First inference: 2317, Warmup (avg): 608.976, Inference (avg): 602.288
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=2.82031 overall=3.70312
+-- logcat
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:134: getVirtualAddressOnPool(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:167: mmap_fd, vInfo.addr=0x7d41a7a000, size=3520
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ModelUtils] getVirtualAddressOnPool:201: getVirtualAddressOnPool(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] loadSharedMem:82: loadSharedMem(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:177: Execution Done.
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:197: Loading data from 0x7d3fdff000 to 0x7d41a7a000 
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::ExecutionScheduler] requestOneExecutionInAsyncBase:204:  Not Apply postProcessOnOutputs!
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:40: ~BufferInfoOnExecute(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:47: Unmap Vitual Address..Done!
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::BufferInfoOnExecute] ~BufferInfoOnExecute:50: ~BufferInfoOnExecute(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] executeBaseOnNNAgent:240: executeBaseOnNNAgent(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] execute:128: execute(-)
+I/tflite  (10385): count=1658 first=763 curr=544 min=497 max=5197 avg=602.288 std=181 p5=536 median=580 p95=707
+I/tflite  (10385): Inference timings in us: Init: 87188, First inference: 2317, Warmup (avg): 608.976, Inference (avg): 602.288
+I/tflite  (10385): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+I/tflite  (10385): Memory footprint delta from the start of the tool (MB): init=2.82031 overall=3.70312
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:87: ~EnnPreparedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:299: closeModel(+) modelId is 318767104
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:200: uennFreeBuffers(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennFreeBuffers:216: uennFreeBuffers(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:267: freeMemory(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:280: buffer info. addr : 0xb400007cddc5fd50, size : 8192 
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] freeMemory:291: freeMemory(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:114: uennCloseModel() is called with modelId : 318767104
+I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel : 0x7BA113000000(+)
+I/ENN_FRAMEWORK(31649): 2.2.27: * (+) Engine::EngineImpl::close_model->(0x7BA113000000)
+I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x7BA113000013) is released.
+I/ENN_FRAMEWORK(31649): 2.2.27: * An ExecutableModel(ID: 0x7BA113000013) from a Model(ID : 0x7BA113000000) is released.
+I/ENN_FRAMEWORK(31649): 2.2.27: * + Unload Model(ID:0x0x7BA113000000) Accelerator(2)
+I/ENN_FRAMEWORK(31649): 2.2.27: * GpuUserDriver::CloseSubGraph started
+I/ENN_FRAMEWORK(31649): 2.2.27: * - Unload Model(ID:0x0x7BA113000000) Accelerator(2)
+I/ENN_FRAMEWORK(31649): 2.2.27: * A Model(ID: 0x7BA113000000) is released.
+I/ENN_FRAMEWORK(31649): 2.2.27: * Model(0x7BA113000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+I/ENN_FRAMEWORK(31649): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x7BA113000000)
+I/ENN_FRAMEWORK(31649): 2.2.27: * EnnCloseModel Success(0x7BA113000000) (-)
+I/ENN_FRAMEWORK(31649): 2.2.27: * -------------------- Model container :   0 --------------------
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::UEnnServiceDelegatorLib] uennCloseModel:122: uennCloseModel(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] closeModel:305: closeModel(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnPreparedModel] ~EnnPreparedModel:92: ~EnnPreparedModel(-)
+== item 23 [q_sigmoid_i8ptf_enn] 20:54:12
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_sigmoid_i8ptf.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_sigmoid_i8ptf.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+VERBOSE: Replacing 3 out of 3 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: The input model file size (MB): 0.001144
+INFO: Initialized session in 4.548ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=273965 first=67 curr=2 min=1 max=1492 avg=1.55916 std=2 p5=1 median=2 p95=2
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=550476 first=6 curr=2 min=1 max=62 avg=1.55253 std=0 p5=1 median=2 p95=2
+
+INFO: Inference timings in us: Init: 4548, First inference: 67, Warmup (avg): 1.55916, Inference (avg): 1.55253
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=3.23438 overall=14.5508
+-- logcat
+I/tflite  (10560): Loaded model probes2/q_sigmoid_i8ptf.tflite
+I/tflite  (10560): Initialized TensorFlow Lite runtime.
+I/tflite  (10560): Created TensorFlow Lite delegate for NNAPI.
+I/tflite  (10560): NNAPI delegate created.
+W/tflite  (10560): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+I/tflite  (10560): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+I/tflite  (10560): Created TensorFlow Lite XNNPACK delegate for CPU.
+I/tflite  (10560): Replacing 3 out of 3 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+I/tflite  (10560): The input model file size (MB): 0.001144
+I/tflite  (10560): Initialized session in 4.548ms.
+I/tflite  (10560): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+I/tflite  (10560): count=273965 first=67 curr=2 min=1 max=1492 avg=1.55916 std=2 p5=1 median=2 p95=2
+I/tflite  (10560): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+D/SubscreenNotificationListCoordinator( 2253): onAfterRenderList() isSubScreen = false, pluginLockMode = 0, doNotShowOnCover = false
+I/LockscreenNotificationIconsOnlyController( 2253): onNotificationInfoUpdated 0
+I/tflite  (10560): count=550476 first=6 curr=2 min=1 max=62 avg=1.55253 std=0 p5=1 median=2 p95=2
+I/tflite  (10560): Inference timings in us: Init: 4548, First inference: 67, Warmup (avg): 1.55916, Inference (avg): 1.55253
+I/tflite  (10560): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+I/tflite  (10560): Memory footprint delta from the start of the tool (MB): init=3.23438 overall=14.5508
+== item 24 [q_sigmoid_u8_enn] 20:54:20
+INFO: STARTING!
+INFO: Log parameter values verbosely: [0]
+INFO: Min num runs: [10]
+INFO: Num threads: [1]
+INFO: Min warmup runs: [3]
+INFO: Graph: [probes2/q_sigmoid_u8.tflite]
+INFO: Signature to run: []
+INFO: #threads used for CPU inference: [1]
+INFO: Use NNAPI: [1]
+INFO: NNAPI accelerator name: [enn]
+INFO: NNAPI accelerators available: [enn,nnapi-reference]
+INFO: Disable NNAPI cpu: [1]
+INFO: Loaded model probes2/q_sigmoid_u8.tflite
+INFO: Initialized TensorFlow Lite runtime.
+INFO: Created TensorFlow Lite delegate for NNAPI.
+INFO: NNAPI delegate created.
+WARNING: NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+INFO: Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+VERBOSE: Replacing 2 out of 2 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+INFO: The input model file size (MB): 0.000912
+INFO: Initialized session in 3.712ms.
+INFO: Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+INFO: count=453464 first=9 curr=1 min=0 max=123 avg=0.960515 std=0 p5=1 median=1 p95=1
+
+INFO: Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+INFO: count=909159 first=7 curr=1 min=0 max=184 avg=0.96187 std=0 p5=1 median=1 p95=1
+
+INFO: Inference timings in us: Init: 3712, First inference: 9, Warmup (avg): 0.960515, Inference (avg): 0.96187
+INFO: Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+INFO: Memory footprint delta from the start of the tool (MB): init=3.23047 overall=21.3477
+-- logcat
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+I/Manager (10699): Found interface enn (version = E0.0.1)
+I/tflite  (10699): NNAPI accelerators available: [enn,nnapi-reference]
+I/tflite  (10699): Disable NNAPI cpu: [1]
+I/tflite  (10699): Loaded model probes2/q_sigmoid_u8.tflite
+I/tflite  (10699): Initialized TensorFlow Lite runtime.
+I/tflite  (10699): Created TensorFlow Lite delegate for NNAPI.
+I/tflite  (10699): NNAPI delegate created.
+W/tflite  (10699): NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+W/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+D/ENN     (31649): [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+I/tflite  (10699): Though NNAPI delegate is explicitly applied, the model graph will not be executed by the delegate.
+I/tflite  (10699): Created TensorFlow Lite XNNPACK delegate for CPU.
+I/tflite  (10699): Replacing 2 out of 2 node(s) with delegate (TfLiteXNNPackDelegate) node, yielding 1 partitions for subgraph 0.
+I/tflite  (10699): The input model file size (MB): 0.000912
+I/tflite  (10699): Initialized session in 3.712ms.
+I/tflite  (10699): Running benchmark for at least 3 iterations and at least 0.5 seconds but terminate if exceeding 150 seconds.
+D/OpenNetworkQos[4.00]( 1275): updateBssidNoInternet: mBssidNoInternet = false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 26 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosScores: 26 26 26 
+D/OpenNetworkQos[4.00]( 1275): getOpenNetworkQosNoInternetStatus: false
+I/tflite  (10699): count=453464 first=9 curr=1 min=0 max=123 avg=0.960515 std=0 p5=1 median=1 p95=1
+I/tflite  (10699): Running benchmark for at least 10 iterations and at least 1 seconds but terminate if exceeding 150 seconds.
+I/tflite  (10699): count=909159 first=7 curr=1 min=0 max=184 avg=0.96187 std=0 p5=1 median=1 p95=1
+I/tflite  (10699): Inference timings in us: Init: 3712, First inference: 9, Warmup (avg): 0.960515, Inference (avg): 0.96187
+I/tflite  (10699): Note: as the benchmark tool itself affects memory footprint, the following is only APPROXIMATE to the actual memory footprint of the model at runtime. Take the information at your discretion.
+I/tflite  (10699): Memory footprint delta from the start of the tool (MB): init=3.23047 overall=21.3477

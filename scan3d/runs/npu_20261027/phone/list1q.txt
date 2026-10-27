@@ -1,0 +1,11 @@
+probe_devices	./benchmark_model --graph=xfeatnn_640x352_integer_quant.tflite --use_nnapi=true --nnapi_accelerator_name=NOPE --num_runs=1 --warmup_runs=0
+xf_int8_enn	./benchmark_model --num_threads=1 --warmup_runs=5 --num_runs=30 --graph=xfeatnn_640x352_integer_quant.tflite --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_execution_preference=sustained_speed
+xf_int16act_enn	./benchmark_model --num_threads=1 --warmup_runs=5 --num_runs=30 --graph=xfeatnn_640x352_integer_quant_with_int16_act.tflite --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_execution_preference=sustained_speed
+lg512_dyn_enn	./benchmark_model --num_threads=1 --warmup_runs=5 --num_runs=30 --graph=lgc_512_dynamic_range_quant.tflite --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_execution_preference=sustained_speed
+xf_int8io_enn	./benchmark_model --num_threads=1 --warmup_runs=5 --num_runs=30 --graph=xfeatnn_640x352_full_integer_quant.tflite --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_execution_preference=sustained_speed
+xf_fp32_enn_fp16	./benchmark_model --num_threads=1 --warmup_runs=5 --num_runs=30 --graph=xfeatnn_640x352_float32.tflite --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_execution_preference=sustained_speed --nnapi_allow_fp16=true
+lg512_int8_enn	./benchmark_model --num_threads=1 --warmup_runs=5 --num_runs=30 --graph=lgc_512_integer_quant.tflite --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_execution_preference=sustained_speed
+lg512_fp32_enn_fp16	./benchmark_model --num_threads=1 --warmup_runs=5 --num_runs=30 --graph=lgc_512_float32.tflite --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_execution_preference=sustained_speed --nnapi_allow_fp16=true
+xf_fp32_gpu	./benchmark_model --num_threads=1 --warmup_runs=5 --num_runs=30 --graph=xfeatnn_640x352_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true
+lg512_fp32_gpu	./benchmark_model --num_threads=1 --warmup_runs=5 --num_runs=30 --graph=lgc_512_float32.tflite --use_gpu=true --gpu_precision_loss_allowed=true
+xf_int8_gpu	./benchmark_model --num_threads=1 --warmup_runs=5 --num_runs=30 --graph=xfeatnn_640x352_integer_quant.tflite --use_gpu=true

@@ -1,0 +1,45 @@
+== item 1 [xf_int8_enn_probe] full logcat (read-only)
+10-27 21:17:53.258 24792 24792 I adbd    : adbd service requested 'shell,v2,TERM=xterm-256color,raw:cd /data/local/tmp/npu && LD_LIBRARY_PATH=. timeout 180 ./benchmark_model --graph=xfeatnn_640x352_full_integer_quant.tflite --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --require_full_delegation=true --use_xnnpack=false --num_threads=1 --warmup_runs=0 --num_runs=1 --min_secs=0 2>&1'
+10-27 21:17:53.374 27568 27568 I tflite  : STARTING!
+10-27 21:17:53.377 27568 27568 I tflite  : Log parameter values verbosely: [0]
+10-27 21:17:53.377 27568 27568 I tflite  : Min num runs: [1]
+10-27 21:17:53.377 27568 27568 I tflite  : Min runs duration (seconds): [0]
+10-27 21:17:53.377 27568 27568 I tflite  : Num threads: [1]
+10-27 21:17:53.377 27568 27568 I tflite  : Min warmup runs: [0]
+10-27 21:17:53.377 27568 27568 I tflite  : Graph: [xfeatnn_640x352_full_integer_quant.tflite]
+10-27 21:17:53.377 27568 27568 I tflite  : Signature to run: []
+10-27 21:17:53.378 27568 27568 I tflite  : Require full delegation: [1]
+10-27 21:17:53.378 27568 27568 I tflite  : #threads used for CPU inference: [1]
+10-27 21:17:53.378 27568 27568 I tflite  : Use NNAPI: [1]
+10-27 21:17:53.378 27568 27568 I tflite  : NNAPI accelerator name: [enn]
+10-27 21:17:53.515 27568 27568 W benchmark_model: Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: android.hardware.neuralnetworks.IDevice/enn
+10-27 21:17:53.516 31649 31649 D ENN     : [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getVersionString:77: getVersionString(+)
+10-27 21:17:53.516 31649 31649 D ENN     : [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:104: getSupportedExtensions(+)
+10-27 21:17:53.516 31649 31649 D ENN     : [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedExtensions:106: getSupportedExtensions(-)
+10-27 21:17:53.516 31649 31649 D ENN     : [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:111: getCapabilities(+)
+10-27 21:17:53.516 31649 31649 D ENN     : [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getCapabilities:113: getCapabilities(-)
+10-27 21:17:53.517 27568 27568 I tflite  : NNAPI accelerators available: [enn,nnapi-reference]
+10-27 21:17:53.518 27568 27568 I tflite  : Disable NNAPI cpu: [1]
+10-27 21:17:53.518 27568 27568 I tflite  : Use xnnpack: [0]
+10-27 21:17:53.521 27568 27568 I tflite  : Loaded model xfeatnn_640x352_full_integer_quant.tflite
+10-27 21:17:53.527 27568 27568 I tflite  : Initialized TensorFlow Lite runtime.
+10-27 21:17:53.528 27568 27568 I tflite  : Created TensorFlow Lite delegate for NNAPI.
+10-27 21:17:53.528 27568 27568 I tflite  : NNAPI delegate created.
+10-27 21:17:53.529 27568 27568 W tflite  : NNAPI SL driver did not implement SL_ANeuralNetworksDiagnostic_registerCallbacks!
+10-27 21:17:53.532 31649 31649 D ENN     : [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:129: getSupportedOperations(+)
+10-27 21:17:53.532 31649 31649 D ENN     : [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:381: getSupportedOperations(+)
+10-27 21:17:53.533 31649 31649 D ENN     : [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkSupportedModel:412: checkSupportedModel(+)
+10-27 21:17:53.533 31649 31649 D ENN     : [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkDimensions:754: checkDimensions(+)
+10-27 21:17:53.533 31649 31649 D ENN     : [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:835: checkGraph(+)
+10-27 21:17:53.533 31649 31649 D ENN     : [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] checkGraph:879: checkGraph(-)
+10-27 21:17:53.533 31649 31649 D ENN     : [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:173: getSupportedOperations(+)
+10-27 21:17:53.533 31649 31649 I [GRAPHGEN]    : opSize = 40
+10-27 21:17:53.533 31649 31649 I [GRAPHGEN]    : Supported model mainly run on CPU_GPU, current device' soc_name is 9945
+10-27 21:17:53.533 31649 31649 I [GRAPHGEN]    : opSize = 40
+10-27 21:17:53.535 31649 31649 I [GRAPHGEN]    : exception lifetime is not supported
+10-27 21:17:53.535 31649 31649 W ENN     : [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:198: Operation Not Supported
+10-27 21:17:53.535 31649 31649 D ENN     : [Exynos][ENN][v1.7.2-2][EnnDriver::GraphGenManager] getSupportedOperations:208: getSupportedOperations(-)
+10-27 21:17:53.535 31649 31649 D ENN     : [Exynos][ENN][v1.7.2-2][EnnDriver::NNAgent] getSupportedOperations:400: getSupportedOperations(-)
+10-27 21:17:53.535 31649 31649 D ENN     : [Exynos][ENN][v1.7.2-2][EnnDriver::EnnDriver] getSupportedOperations:141: getSupportedOperations(-)
+10-27 21:17:53.536 27568 27568 E tflite  : Disallowed CPU fallback detected.
+10-27 21:17:53.536 27568 27568 E tflite  : Benchmarking failed.

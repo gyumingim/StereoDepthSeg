@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- npu 2026-10-27: minimal NNAPI probe app (own code only, no permissions, NO activity / no UI: runs only through
+     'am instrument' inside the app process = untrusted_app domain). Uninstall after the NPU study. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.scan3d.npuprobe" android:versionCode="2" android:versionName="2">
+  <uses-sdk android:minSdkVersion="29" android:targetSdkVersion="34"/>
+  <application android:label="npuprobe" android:extractNativeLibs="true" android:hasCode="true">
+    <uses-native-library android:name="libenn_public_api_cpp.so" android:required="false"/>
+    <uses-native-library android:name="libenn_user.samsung_slsi.so" android:required="false"/>
+    <uses-native-library android:name="libeden_rt_stub.edensdk.samsung.so" android:required="false"/>
+  </application>
+  <instrumentation android:name=".Probe" android:targetPackage="com.scan3d.npuprobe" android:label="npuprobe"/>
+</manifest>

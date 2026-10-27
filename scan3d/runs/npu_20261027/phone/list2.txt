@@ -1,0 +1,32 @@
+p_add_f32_enn	./benchmark_model --graph=probes/p_add_f32.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_allow_fp16=true
+p_add_i8_enn	./benchmark_model --graph=probes/p_add_i8.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true 
+p_avgpool4_f32_enn	./benchmark_model --graph=probes/p_avgpool4_f32.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_allow_fp16=true
+p_avgpool4_i8_enn	./benchmark_model --graph=probes/p_avgpool4_i8.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true 
+p_bmm_f32_enn	./benchmark_model --graph=probes/p_bmm_f32.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_allow_fp16=true
+p_bmm_i8_enn	./benchmark_model --graph=probes/p_bmm_i8.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true 
+p_conv1_f32_enn	./benchmark_model --graph=probes/p_conv1_f32.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_allow_fp16=true
+p_conv1_i8_enn	./benchmark_model --graph=probes/p_conv1_i8.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true 
+p_conv3_f32_enn	./benchmark_model --graph=probes/p_conv3_f32.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_allow_fp16=true
+p_conv3_i8_enn	./benchmark_model --graph=probes/p_conv3_i8.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true 
+p_conv3c1_f32_enn	./benchmark_model --graph=probes/p_conv3c1_f32.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_allow_fp16=true
+p_conv3c1_i8_enn	./benchmark_model --graph=probes/p_conv3c1_i8.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true 
+p_conv3s2_f32_enn	./benchmark_model --graph=probes/p_conv3s2_f32.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_allow_fp16=true
+p_conv3s2_i8_enn	./benchmark_model --graph=probes/p_conv3s2_i8.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true 
+p_fc2d_f32_enn	./benchmark_model --graph=probes/p_fc2d_f32.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_allow_fp16=true
+p_fc2d_i8_enn	./benchmark_model --graph=probes/p_fc2d_i8.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true 
+p_fc_f32_enn	./benchmark_model --graph=probes/p_fc_f32.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_allow_fp16=true
+p_fc_i8_enn	./benchmark_model --graph=probes/p_fc_i8.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true 
+p_gelu_tanh_f32_enn	./benchmark_model --graph=probes/p_gelu_tanh_f32.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_allow_fp16=true
+p_gelu_tanh_i8_enn	./benchmark_model --graph=probes/p_gelu_tanh_i8.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true 
+p_mean_f32_enn	./benchmark_model --graph=probes/p_mean_f32.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_allow_fp16=true
+p_mean_i8_enn	./benchmark_model --graph=probes/p_mean_i8.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true 
+p_pad_f32_enn	./benchmark_model --graph=probes/p_pad_f32.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_allow_fp16=true
+p_pad_i8_enn	./benchmark_model --graph=probes/p_pad_i8.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true 
+p_resize_f32_enn	./benchmark_model --graph=probes/p_resize_f32.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_allow_fp16=true
+p_resize_i8_enn	./benchmark_model --graph=probes/p_resize_i8.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true 
+p_s2d8_f32_enn	./benchmark_model --graph=probes/p_s2d8_f32.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_allow_fp16=true
+p_s2d8_i8_enn	./benchmark_model --graph=probes/p_s2d8_i8.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true 
+p_sigmoid_f32_enn	./benchmark_model --graph=probes/p_sigmoid_f32.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_allow_fp16=true
+p_sigmoid_i8_enn	./benchmark_model --graph=probes/p_sigmoid_i8.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true 
+p_softmax_f32_enn	./benchmark_model --graph=probes/p_softmax_f32.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true --nnapi_allow_fp16=true
+p_softmax_i8_enn	./benchmark_model --graph=probes/p_softmax_i8.tflite --num_threads=1 --warmup_runs=3 --num_runs=10 --use_nnapi=true --nnapi_accelerator_name=enn --disable_nnapi_cpu=true 
