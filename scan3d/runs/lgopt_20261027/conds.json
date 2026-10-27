@@ -92,5 +92,19 @@
   "cfg": "xf_tri_deg=3,xf_tri_mode=1,xf_min_inl=60,xf_rp_deg=2,max_cand=1",
   "srv": "--lg-prune-min -1",
   "why": "phone budget candidate: NN tri + pruning + gates inl 60 rp 2 + 1 candidate (kf_every 1 s dropped: 0 hand loops in every sim), map ATE"
+ },
+ "FLGc": {
+  "mode": 2,
+  "topk": 512,
+  "cfg": "xf_tri_deg=3,xf_tri_mode=1,xf_min_inl=40,xf_rp_deg=2,max_cand=1",
+  "srv": "--lg-prune-min -1",
+  "why": "phone FLG-prime candidate (picked 20:5x AFTER seeing hand loops = SEEN data; grid J rule chose inl 60 = 0 hand loops): 512 + NN tri + pruning + inl 40 rp 2 + 1 candidate, every KF"
+ },
+ "FLGd": {
+  "mode": 2,
+  "topk": 512,
+  "cfg": "xf_tri_deg=3,xf_tri_mode=1,xf_min_inl=40,xf_rp_deg=2,max_cand=1,xf_kf_every=1,consist_kf=6",
+  "srv": "--lg-prune-min -1",
+  "why": "coordinator phone default (512, 1 KF per s, 1 candidate) with FLGc gates; also checks bridge xf_kf_every == sim kf_every"
  }
 }
