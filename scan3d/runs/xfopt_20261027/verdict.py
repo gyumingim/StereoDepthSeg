@@ -80,10 +80,22 @@ for c in [x for x in TC if x != "B60"]:
         key = (pb[k]["rec"], pb[k].get("init_t_ns"), pb[k].get("pose0_sha"))
         seen.setdefault(key, []).append(k)
     d["duplicate_offset_cells"] = [v for v in seen.values() if len(v) > 1]
+    # PLAN 4: duplicate offset cells (same init time + first pose) count once -> the verdict uses the deduplicated pool
+    keep = sorted(v[0] for v in seen.values())
+    pcd = {k: pc[k] for k in keep}
+    pbd = {k: pb[k] for k in keep}
+    c1, f1 = edge_counts(pcd)
+    c2, f2 = edge_counts(pbd)
+    dd = [pcd[k]["map_ate_cm"] - pbd[k]["map_ate_cm"] for k in keep
+          if pcd[k].get("map_ate_cm") is not None and pbd[k].get("map_ate_cm") is not None]
+    d["dedup"] = dict(cells=len(keep), R1=dict(checked=c1, false=f1, B60_checked=c2, B60_false=f2, passed=f1 <= f2),
+                      R3=dict(n=len(dd), median_diff_cm=float(np.median(dd)) if dd else None,
+                              passed=bool(dd) and float(np.median(dd)) <= 0.02),
+                      sens={f"{deg}deg": [edge_counts(pcd, deg)[1], edge_counts(pbd, deg)[1]] for deg in (2.0, 2.5, 3.5)})
     kms = [r["kf_ms_p50_p95"][0] for r in pc.values() if r.get("kf_ms_p50_p95")]
     d["pc_kf_ms_p50_median"] = float(np.median(kms)) if kms else None
-    d["R1_R3_pass"] = bool(d["R1"]["passed"] and d["R3"]["passed"] and d["R2"]["passed"] is not False)
+    d["R1_R3_pass"] = bool(d["dedup"]["R1"]["passed"] and d["dedup"]["R3"]["passed"] and d["R2"]["passed"] is not False)
     out["conds"][c] = d
 json.dump(out, open(RD / "verdict.json", "w"), indent=1)
 for c, d in out["conds"].items():
-    print(c, "R1", d["R1"], "\n  R2", d["R2"]["passed"], d["R2"]["per"], "\n  R3", d["R3"], "\n  sens", d["sens"], "\n  dup", d["duplicate_offset_cells"])
+    print(c, "PASS R1-R3:", d["R1_R3_pass"], "dedup", d["dedup"], "\n  R1", d["R1"], "\n  R2", d["R2"]["passed"], d["R2"]["per"], "\n  R3", d["R3"], "\n  sens", d["sens"], "\n  dup", d["duplicate_offset_cells"])
