@@ -1,0 +1,27 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 rs_postinit=0 ekf_sparse=1 sym_inplace=1 init_gemm=0 gyro_klt=5 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse,gyro_klt=5', prof log -)
+[ov_bridge] drop-late 50 ms mode 1 cap 3 win 3.00 s | pred-stale 500 ms
+[ov_bridge] affinity start: (not pinned) threads 2751:libov_bridge.so=0,1,2,3,4,5,6,7,8,9
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 0 -> 2 | TBB (ver 2021.11 interface 12110) | cpus 10 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /storage/emulated/0/Android/data/com.scan3d.arlat/files/ov/c4f60/remap_1920x1080.bin
+[ov_bridge] ovrobust: init_still 0 | health 1 log /storage/emulated/0/Android/data/com.scan3d.arlat/files/ov/run_20261028_230622_main60_c4f60/health.csv | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 0 (max gap 3.0 s, min feats 20) | test blank 0 windows
+[ov_bridge] loop: vocab /storage/emulated/0/Android/data/com.scan3d.arlat/files/ov/voc_k10L4.voc (k 10 L 4, 9992 words, sha d962dc5e69c5742b) | kf 0.25s/0.08m/8deg max_dt 2 q 6 nice 10 | feat 600 L3 fast 20 | gap 3s/1m score 0.015/0.25 cand 3 | match 64/0.8 inl 25 pnp 3px x200 rp 3deg corr 0.5m+0.05*path yaw 10deg | consist 3kf 4s 0.05m 1.5deg | graph seq 4 w 1 huber 0.1 it 30 | smooth 0.1m/s 3deg/s | sync 0
+[ov_bridge] affinity ready: (not pinned) threads 2751:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 2812:libov_bridge.so=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin: mode 2 (pool) stripes 2 max 200 ms | pred thread (input reader thread on)
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] affinity cam300: (not pinned) threads 2751:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 2812:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 2813:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 2814:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 2836:libov_bridge.so=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 3619 spun 2928 timeouts 1 spin 5.67 s | exit_us n 2927 p50 1.3 p95 1.7 p99 2.5 max 358.5
+[ov_bridge] health t=12.772 INIT -> OK (tracked 153 used 0 since_upd 0.00 pos_std 0.101)
+[ov_bridge] pred thread reader: image space waits 0
+[ov_bridge] pred thread: mode 2 hz 200 | lines 4960 (frame 1126 rate 3834) snapshots 1126 | compute us p50 49.5 p95 65.9 max 142.9 | horizon ms p50 26.4 p95 38.8 max 405.4 | thread cpu 0.752 s (pred) 2.944 s (reader)
+[ov_bridge] pred thread stale (--pred-stale-ms): 0 lines marked lost
+[ov_bridge] affinity end: (not pinned) threads 2751:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 2812:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 2836:libov_bridge.so=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 17771 spun 8268 timeouts 2 spin 15.72 s | exit_us n 8266 p50 1.4 p95 2.5 p99 3.5 max 2332.7
+[ov_bridge] predict: mode 2 hz 200 | lines 0 | horizon ms p50 -1.0 p95 -1.0 max -1.0
+[ov_bridge] drop-late: limit 50.0 ms | dropped 0 frames | min lag 6.2 ms
+[ov_bridge] drop-late mode 1: cap 3 win 3.00 s | forced 0 | re-anchors 0 | late-lost 0 | max late run 0 frames | pred stale 500 ms (main-loop stale preds 0)
+[ov_bridge] gyro_klt mode 5: frames 1768 (no rotation 0) | pts in 242086 LK ok 241828 (99.89 %) kept 241089 (99.59 %) | fallback 0/0 | predicted shift px mean 4.583 max 29.69
+[ov_bridge] gyro_klt mode 5: LK result - start px mean 0.553 | LK result - old px mean 4.607 (n 241828) | guards: capped pts 0, translation refused frames 4
+[ov_bridge] loop: keyframes pushed 54 dropped 0 processed 54 | candidates 116 geo 116 verified 76 accepted 33 (consistency-rejected 5) | optimisations 30 | sessions 0
+[ov_bridge] loop: ms p50/p95/max per keyframe: total 20.02/27.11/28.43 tri 0.34/0.47 feat 13.64/16.29 query 0.24/0.36 geo 3.81/8.40 | VIO-thread copy 0.778/0.979/1.099 | opt 2.1/3.4/3.7 (n 30)
+[ov_bridge] health: frames INIT 643 OK 1126 DEGRADED 0 LOST 0 | transitions 2 | max LOST run 0 frames | recover state 0 full 0 | blanked 0 | init_ready frames 637

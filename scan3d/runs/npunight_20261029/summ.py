@@ -18,13 +18,16 @@ for d in sorted(glob.glob(os.path.join(H, "phone", "*"))):
     s = json.load(open(sp))
     n = s.get("npu") or {}
     m = re.search(r"SKIN ([0-9.]+) AP ([0-9.]+)", st)
+    tp = os.path.join(d, "temps_pc.txt")
+    apl = [float(x.group(1)) for x in re.finditer(r"AP ([0-9.]+)", open(tp).read())] if os.path.isfile(tp) else []
+    skl = [float(x.group(1)) for x in re.finditer(r"SKIN ([0-9.]+)", open(tp).read())] if os.path.isfile(tp) else []
     rows.append(dict(tag=t, rec=s.get("rec"), npu=rm.get("npu_loop"), extras=rm.get("extras", ""), valid=s.get("valid"),
                      vio_ate=s["vio"].get("ate_cm"), map_ate=s["map"].get("ate_cm"), map_end=s["map"].get("end_cm"),
                      vio_end=s["vio"].get("end_cm"), loops=s["loop"]["n_loop"], correct=s["loop"]["n_loop_correct"], loop_gt=s["loop"]["n_loop_gt"],
                      kf=s["loop"]["n_kf"], ms50=s["vio_ms_p50"], ms95=s["vio_ms_p95"], msmax=s["vio_ms_max"],
                      kf_drop=s.get("kf_pushed_dropped"), late5=(s.get("meta") or {}).get("replay_late_over5ms"),
                      stop=(s.get("meta") or {}).get("stop_reason"), skin0=float(m.group(1)) if m else None, ap0=float(m.group(2)) if m else None,
-                     ap_max=n.get("ap_max"), skin_max=n.get("skin_max"),
+                     ap_max=n.get("ap_max"), skin_max=n.get("skin_max"), ap_max_pc=max(apl, default=None), skin_max_pc=max(skl, default=None),
                      F_prep=n.get("F_prep_ms_p50"), F_npu=n.get("F_npu_ms_p50"), F_post=n.get("F_post_q_ms_p50"), F_tot=n.get("F_tot_ms_p50"),
                      M1_post=n.get("M1_post_ms_p50"), M2_pack=n.get("M2_pack_ms_p50"), M2_npu=n.get("M2_npu_ms_p50"), M2_post=n.get("M2_post_ms_p50"),
                      M1_n=n.get("M1_n_p50"), M2_n=n.get("M2_n_p50"), nF=n.get("n_F"), nM2=n.get("n_M2"), cpus=(s.get("meta") or {}).get("npu_cpus")))

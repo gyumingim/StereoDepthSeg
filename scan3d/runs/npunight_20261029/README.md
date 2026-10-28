@@ -96,3 +96,8 @@
 - 기본 npu_opts `nn_fast=1,lg_post=3,prep_fast=1`, npu_perf 1, npu_cpus 자동 (다리 고정 없을 때) 7,8. intent 값이 있으면 그 값. npu_loop 0 경로는 그대로.
 - 확인 계획: 0.6.36 설치 → 165506 D1a (npu 1, 추가 인자 없음), D0 (npu 0), D1b. 기대: D1 = S5 와 같은 루프·ATE·시간대, D0 = B run 과 같은 값.
 - 롤백: 0.6.35d (`arlat_0.6.35d_npunight.apk`) 또는 0.6.34 (`appnpu/apk`), 같은 인증서.
+
+## D (0.6.36 설치, 23:20–23:24, 3 run 유효)
+- D1a / D1b (npu 1, 추가 인자 없음): cpus 7,8, opts 3 개 켜짐, perf 1 → XFeat 총 10.0 / 10.5 ms, 상호 NN 6.2 / 6.3, LG 총 16.8 / 16.7 ms, 지도 ATE 1.838, 루프 8/8 (S5 와 같음).
+- D0 (npu 0): 지도 ATE 1.906, 루프 6 = B run 과 같음.
+- **폰에는 0.6.36 (vc 45) 이 설치된 채로 둠.** 아침 보고: `C:\Users\a3162\scan3d_handoff\changes_0620\npu_night_20261029.html` (사본 이 폴더).

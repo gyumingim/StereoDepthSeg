@@ -1,0 +1,28 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 rs_postinit=0 ekf_sparse=1 sym_inplace=1 init_gemm=0 gyro_klt=5 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse,gyro_klt=5', prof log -)
+[ov_bridge] drop-late 50 ms mode 1 cap 3 win 3.00 s | pred-stale 500 ms
+[ov_bridge] affinity start: (not pinned) threads 8644:libov_bridge.so=0,1,2,3,4,5,6,7,8,9
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 0 -> 2 | TBB (ver 2021.11 interface 12110) | cpus 10 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /storage/emulated/0/Android/data/com.scan3d.arlat/files/ov/c4f60/remap_1920x1080.bin
+[ov_bridge] ovrobust: init_still 0 | health 1 log /storage/emulated/0/Android/data/com.scan3d.arlat/files/ov/run_20261028_231241_main60_c4f60/health.csv | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 0 (max gap 3.0 s, min feats 20) | test blank 0 windows
+[ov_bridge] loop: XFeat server unix:@scan3d_xfnpu_8558 connected, mode 2 (LighterGlue), timeout 3000 ms
+[ov_bridge] loop: vocab /storage/emulated/0/Android/data/com.scan3d.arlat/files/ov/voc_k10L4.voc (k 10 L 4, 9992 words, sha d962dc5e69c5742b) | kf 0.25s/0.08m/8deg max_dt 2 q 6 nice 10 | feat 600 L3 fast 20 | gap 3s/1m score 0.015/0.25 cand 1 | match 64/0.8 inl 25 pnp 3px x200 rp 3deg corr 0.5m+0.05*path yaw 10deg | consist 3kf 4s 0.05m 1.5deg | graph seq 4 w 1 huber 0.1 it 30 | smooth 0.1m/s 3deg/s | sync 0 | xf mode 2 tri 1 (3deg 2px mv 0 rel 0.05 tmode 1) both 0 pick 0 gates inl 40 ratio 0 cells 0 rp 2 yaw 0 px 0 trifrac 0 cmd unix:@scan3d_xfnpu_8558
+[ov_bridge] affinity ready: (not pinned) threads 8644:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 8682:libov_bridge.so=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin: mode 2 (pool) stripes 2 max 200 ms | pred thread (input reader thread on)
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] health t=2.660 INIT -> OK (tracked 140 used 1 since_upd 0.00 pos_std 0.094)
+[ov_bridge] affinity cam300: (not pinned) threads 8644:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 8682:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 8683:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 8684:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 8685:libov_bridge.so=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 3391 spun 2122 timeouts 1 spin 4.24 s | exit_us n 2121 p50 1.4 p95 1.8 p99 3.0 max 79.4
+[ov_bridge] pred thread reader: image space waits 0
+[ov_bridge] pred thread: mode 2 hz 200 | lines 7461 (frame 1711 rate 5750) snapshots 1711 | compute us p50 48.9 p95 67.4 max 304.0 | horizon ms p50 25.5 p95 38.3 max 404.4 | thread cpu 0.954 s (pred) 3.093 s (reader)
+[ov_bridge] pred thread stale (--pred-stale-ms): 0 lines marked lost
+[ov_bridge] affinity end: (not pinned) threads 8644:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 8682:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 8685:libov_bridge.so=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 17596 spun 5542 timeouts 2 spin 10.42 s | exit_us n 5540 p50 1.4 p95 2.6 p99 4.1 max 79.4
+[ov_bridge] predict: mode 2 hz 200 | lines 0 | horizon ms p50 -1.0 p95 -1.0 max -1.0
+[ov_bridge] drop-late: limit 50.0 ms | dropped 0 frames | min lag 6.2 ms
+[ov_bridge] drop-late mode 1: cap 3 win 3.00 s | forced 0 | re-anchors 0 | late-lost 0 | max late run 0 frames | pred stale 500 ms (main-loop stale preds 0)
+[ov_bridge] gyro_klt mode 5: frames 1798 (no rotation 0) | pts in 326192 LK ok 325094 (99.66 %) kept 323857 (99.28 %) | fallback 0/0 | predicted shift px mean 7.117 max 43.26
+[ov_bridge] gyro_klt mode 5: LK result - start px mean 0.627 | LK result - old px mean 7.218 (n 325094) | guards: capped pts 0, translation refused frames 4
+[ov_bridge] loop: keyframes pushed 81 dropped 0 processed 81 | candidates 70 geo 70 verified 40 accepted 31 (consistency-rejected 16) | optimisations 24 | sessions 0
+[ov_bridge] loop: ms p50/p95/max per keyframe: total 198.03/213.56/221.75 tri 0.33/0.52 feat 139.54/153.68 query 0.30/0.40 geo 54.90/63.81 | VIO-thread copy 0.743/1.056/1.182 | opt 1.5/3.7/4.9 (n 24)
+[ov_bridge] health: frames INIT 88 OK 1711 DEGRADED 0 LOST 0 | transitions 2 | max LOST run 0 frames | recover state 0 full 0 | blanked 0 | init_ready frames 81

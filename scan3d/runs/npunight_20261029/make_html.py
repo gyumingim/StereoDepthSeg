@@ -42,10 +42,10 @@ for rec in ("165506", "213341", "214550", "221925", "223815"):
             continue
         ab.append([rec, k, "NPU" if r.get("npu") == 1 else "BRIEF", f(r.get("valid")), f(r.get("map_ate")), f(r.get("vio_ate")),
                    f(r.get("map_end")), f"{r.get('correct', '–')}/{r.get('loop_gt', '–')}/{r.get('loops', '–')}", f"{f(r.get('ms50'),1)} / {f(r.get('ms95'),1)}",
-                   f"{f(r.get('ap0'),1)} → {f(r.get('ap_max'),1)}"])
+                   f"{f(r.get('ap0'),1)} → {f(r.get('ap_max_pc'),1)}"])
 dec = [[k, html.escape(v)] for k, v in S["decision"].items()] + [[k + " (추가, 탐색)", html.escape(v)] for k, v in S.get("decision_extra", {}).items()]
 sp = []
-for t in ("T0d_smoke", "S1a", "S1b", "S2a", "S2b", "S3a", "S3b", "S4a", "S4b"):
+for t in ("165506_A1", "165506_A2", "S1a", "S1b", "S2a", "S2b", "S3a", "S3b", "S4a", "S4b", "S5a", "S5b", "D1a", "D1b", "D0"):
     r = next((x for x in rows if x["tag"] == t), None)
     if not r:
         continue
@@ -66,7 +66,7 @@ h1{{font-size:1.5rem;margin:.2em 0}}h2{{font-size:1.15rem;margin:0 0 8px}}.sub{{
 .warn{{background:var(--softw);border-radius:10px;padding:8px 12px;font-size:.92rem}}.tag{{background:var(--softw);color:var(--warn);font-size:.78rem;padding:1px 8px;border-radius:999px;font-weight:600}}
 .tw{{overflow-x:auto}}table{{border-collapse:collapse;font-size:.85rem;width:100%;font-variant-numeric:tabular-nums}}th,td{{border-bottom:1px solid var(--line);padding:4px 6px;text-align:left;white-space:nowrap}}th{{color:var(--sub);font-weight:600}}
 li{{margin:4px 0}}code{{font-size:.85em}}</style></head><body><div class="wrap">
-<p class="sub">scan3d · NPU 밤 (10-28 21:09 → 10-29 아침) · 앱 0.6.35d · 만든 시각 {time.strftime('%F %H:%M')}</p>
+<p class="sub">scan3d · NPU 밤 (10-28 21:09 → 10-29 아침) · 앱 0.6.35d (A/B·S) / 0.6.36 (D) · 만든 시각 {time.strftime('%F %H:%M')}</p>
 <h1>카메라 없이 폰에서 녹화를 다시 넣어 본 NPU 루프 시험 <span class="tag">전부 미검증</span></h1>
 <p class="warn">모든 숫자는 혼자 잰 값이고 독립 검토 전입니다 (미검증). 각 조건 2 회뿐이라 결론은 <b>추정</b>입니다.</p>
 <section><h2>결론</h2><ul>{li(N['conclusion'])}</ul></section>
