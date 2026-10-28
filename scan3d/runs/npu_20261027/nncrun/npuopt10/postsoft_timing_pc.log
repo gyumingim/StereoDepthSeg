@@ -1,0 +1,13 @@
+2026-10-28 18:14:37
+x86_64
+16
+g++ -O2 -std=c++17, 1 thread, 13 live frames x 20, ymax 540; off = official raw130 (torch), soft = ONNX fp32 out129; xfpost_soft.h v2 (channel-major, kp/desc bytes identical to v1)
+post_off 960x544 n=260 p50 5861 us p95 6050 | mean soft 3423 nms 1406 topk 198 desc 827 us
+post_soft 960x544 n=260 p50 2980 us p95 3085 | mean soft 716 nms 1426 topk 196 desc 624 us
+post_soft 960x544 n=260 p50 2989 us p95 3125 | mean soft 722 nms 1438 topk 197 desc 630 us
+post_off 960x544 n=260 p50 5801 us p95 5983 | mean soft 3389 nms 1392 topk 195 desc 827 us
+post_soft 960x544 n=260 p50 3002 us p95 3167 | mean soft 726 nms 1449 topk 200 desc 626 us
+post_soft 960x544 n=260 p50 2974 us p95 3080 | mean soft 712 nms 1432 topk 196 desc 623 us
+post_off 960x544 n=260 p50 5832 us p95 6056 | mean soft 3422 nms 1395 topk 196 desc 825 us
+post_soft 960x544 n=260 p50 3015 us p95 3179 | mean soft 724 nms 1453 topk 201 desc 632 us
+post_soft 960x544 n=260 p50 2978 us p95 3113 | mean soft 713 nms 1428 topk 197 desc 628 us

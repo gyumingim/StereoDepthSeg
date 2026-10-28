@@ -379,3 +379,33 @@ SKIN 약 5 °C 높음 -> 시간 비교 시 "따뜻한 폰"). 사용자 지시 06
 - 판단: 정확성 합격이고 (원격 NPU + PC 후처리) 합이 x960fpmc(+post_off) 보다 작으면 "다음 폰 측정 후보". 아니면 "이득 없음". 폰에서 재기 전 값은 미검증.
 
 ## 12차 사전 기준 (lgpost 10-28 저녁): LighterGlue 짝 결정을 모델 안으로 (L6p 512 / L6pm768 마스크) - 규칙은 `lgpost/README.md` (측정 전 커밋)
+
+## 11차 결과 (npuopt 10-28 18:08~18:35, 폰 없음: PC + Exynos Lab + 웹 NNC Profiler). 파일 `npuopt10/` (사전 기준 = 커밋 d9e58f2 18:08:19)
+- ONNX (`mk960soft.py`, `mk960soft_info.json`): `xf960_3ch_postsoft.onnx` md5 71ae4f68…, `xf960_1ch_postsoft.onnx` md5 1a1119c4…, 단일 입력 `image` / 단일 출력 `out129` 1x129x68x120.
+  ORT 출력 vs 원래 960 ONNX + numpy softmax/sigmoid 최대 차 5.4e-7 (13 장). 파일: `C:\Users\a3162\scan3d_handoff\npu_upload\xf960soft\`.
+- **정확성 (사전 규칙) 합격**: ONNX fp32 + C++ post_soft vs 공식 torch (13 라이브 프레임, y >= 540 제외) 3ch·1ch 모두 겹침 중앙/최소 100 %/100 %,
+  cos 중앙 1.0000 (`score960soft.json`). 같은 채점에서 기존 C++ post_off 도 100 % (대조).
+- Lab 컴파일 (fp16, multicore, Gen-6, random db): **x960psmc nnc 2,596,864 B, x960p1mc 2,560,000 B**. 배치 = CPU Cast 4 / CU Sigmoid 2 / **DSP Softmax 2**
+  (640 xpsoft 와 같음, `x960psmc_hw_ops.txt`). nnc·골든: `C:\Users\a3162\scan3d_handoff\npu_results\xf960soft\`. Lab 서버는 npuopt 가 켜고 18:18 정지.
+  Lab 에 올린 것 = 위 ONNX 2 개뿐 (사용자 영상 없음).
+- 골든 (Lab fp16 시뮬, 랜덤 [0,1) 입력 1장) vs PC fp32 (`gold_snr.json`, `gold11.py`): SNR feats 58.5 / prob 48.8 (1ch 49.7) / sigmoid heat **21.1 dB (3ch)**, 44.5 dB (1ch).
+  C++ post_soft 키포인트 겹침 99.6 % / 99.6 %, cos 1.0000 (`score960soft_golden.json`, 참고 항목 >= 99 % 통과; 파일 안 "ref" 글은 golden 모드에선 틀림 - 비교는 sim vs PC).
+  **주의**: 3ch 골든의 sigmoid(heat) 는 약 3.4e-4 미만 값이 0 으로 나옴 (CU Sigmoid, 랜덤 입력의 heat 는 거의 다 0.0002~0.006).
+  실제 라이브 프레임 PC 값에서 heat < 3.4e-4 인 칸은 1.2 % (중앙 0.035) -> 점수 0 이 되어 빠질 수 있음. 실제 영향은 폰 원출력으로만 확인 가능 (미측정).
+  대안(미실행): sigmoid 를 빼고 heat logit 을 내보내 CPU 에서 8160 칸만 sigmoid (exp 8160 번, 추정 < 0.1 ms).
+- **원격 E2400 시간** (웹 NNC Profiler, Duration 5 s, 같은 세션 18:21~18:33, 판마다 2 회, 로그·화면 `npuopt10/prof11/`):
+  | 판 | 평균 실행 (us) 1 / 2 회 | 골든 SNR | PSS (KB) |
+  |---|---|---|---|
+  | x960psmc (3ch, softmax 안) | **4368 / 4372** | inf | 60414 / 60556 |
+  | x960p1mc (1ch, softmax 안) | **4025 / 4037** | 67.3 | 54235 / 54288 |
+  | x960fpmc (3ch, 기존) | 3320 / 3317 | inf | 59533 / 59982 |
+  | x960f1mc (1ch, 기존) | 2987 / 2999 | 74.7 | 53837 / 53889 |
+  -> softmax/sigmoid 를 넣으면 NPU+DSP 가 **약 +1.04~1.05 ms** (640 xpsoft 는 +0.54 ms). 기존 판 값은 아침(10:27~10:43)과 같음 (3318/3330, 2997/2972).
+- **CPU 후처리 (PC x86 1 스레드, 13 x 20, 3 회, `postsoft_timing_pc.log`)**: post_off 960 p50 5.80~5.86 ms -> **post_soft 960 2.97~3.02 ms**
+  (soft 단계 3.4 -> 0.72 ms; NMS 1.43, top-k 0.20, 기술자 0.63 ms). post_soft 첫 판(v1, 셀 단위 루프)은 3.58~3.67 ms (`postsoft_timing_pc_v1.log`);
+  v2 = 채널 순서 루프(연속 읽기), 키포인트·기술자 파일 바이트 동일. **같은 v2 방식을 post_off 에 넣지 않았으므로 차이 일부(약 0.4~0.6 ms 추정)는 루프 개선 몫** (섞인 변수).
+- 합 (원격 NPU + PC 후처리 p50): 1ch 4.03 + 2.98 = **7.0 ms** vs 기존 1ch 2.99 + 5.83 = 8.8 ms; 3ch 4.37 + 2.99 = 7.4 vs 3.32 + 5.83 = 9.2 ms.
+  -> 사전 판단 규칙: 정확성 합격 + 합이 더 작음 -> **"다음 폰 측정 후보" (x960p1mc 우선)**.
+- 폰 키프레임 **추정** (사전 공식: 원격 + 0.25 ms + PC 후처리 x 1.33): x960p1mc 4.03 + 0.25 + 3.96 = **약 8.2 ms**, x960f1mc + post_off 2.99 + 0.25 + 7.75 = 약 11.0 ms. 미검증.
+- 한계: 원격 1 세션·기기 상태 모름, 골든은 랜덤 입력 1장, 폰에서 안 잼 (DSP 배치 지연·fp16 출력 읽기 비용 포함 안 됨), heat 0 잘림 영향 미측정.
+- 폰에서 할 일: nncrun 에 post=4 (xfpost_soft.h, fp16 출력 직접 읽기) 넣고 x960p1mc vs x960f1mc 같은 세션 측정 + 폰 원출력 공식 후처리 겹침 (heat 잘림 확인).
