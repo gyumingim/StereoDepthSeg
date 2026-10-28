@@ -56,3 +56,7 @@
 - `npu_opts prep_fast=1`: XFeat 입력 평균·분산을 정확한 정수 합 (Σpx, Σpx² uint64) 으로 (T0b prep 11.9 ms = 픽셀마다 double 누적합, 작은 코어).
 - PC (`pc_opts_c.sh`, 165506 전체, PC 대역 NPU): nn_fast=1,lg_post=3,prep_fast=1 vs 기본 → 포즈 1690 줄 같음, loop.jsonl 은 시간 칸 (ms, xf 서버 ms) 만 다름. `test_server` 키포인트·NN·LG 같음.
 - 계획: 묶음 뒤 S4 = 세 옵션 모두 + S 결과에서 가장 빠른 코어, 2 회.
+
+## 165506_A1 / B1 (21:58–21:59) 무효 → ABBA 처음부터
+- 화면이 꺼져 있어 (T0b 뒤 화면 꺼짐, 보안 잠금) 액티비티가 1.2 s 만에 onPause → stop_reason "user", 레코드 0. B2 는 기다리는 중 멈춤.
+- rep_run.sh: am start 전에 `input keyevent KEYCODE_WAKEUP` (화면만 켬, 소리 없음). 무효 폴더는 `phone_invalid/`.

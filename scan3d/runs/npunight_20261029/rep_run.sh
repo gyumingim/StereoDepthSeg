@@ -50,6 +50,7 @@ EX+=("$@")
 T0=$(date "+%F %T")
 $A -s "$S" shell am force-stop com.scan3d.arlat
 before=$($A -s "$S" shell "ls /sdcard/Android/data/com.scan3d.arlat/files/ov | grep ^run_ | tail -1" | tr -d '\r')
+$A -s "$S" shell input keyevent KEYCODE_WAKEUP; sleep 1   # screen off -> the activity is paused at once (165506_A1/B1 10-28 21:58)
 $A -s "$S" shell am start -n com.scan3d.arlat/.MainActivity --es mode ov --es ov_cam main --es ov_cfg c4f60 --ei secs 150 "${EX[@]}" > "$D/am_start.txt" 2>&1
 sleep 3
 for i in $(seq 1 60); do   # up to 5 min: until the new run folder has meta.json (written last) or the app is gone
