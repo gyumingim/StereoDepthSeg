@@ -38,13 +38,22 @@ def load_poses(run):
     """[(t_s, [x, y, z])] of tracking VIO poses"""
     out = []
     f = os.path.join(run, "ov_live.jsonl")
+    # the live session can hold lines of more than one app run (A1 had 2 "ready" events): keep only poses inside this
+    # run's camera time range (frames.csv t_sensor_ns)
+    lo, hi = -1e30, 1e30
+    fc = os.path.join(run, "frames.csv")
+    if os.path.isfile(fc):
+        ts = [int(r["t_sensor_ns"]) for r in csv.DictReader(open(fc)) if (r.get("t_sensor_ns") or "").isdigit()]
+        if ts:
+            lo, hi = min(ts) - 1e9, max(ts) + 1e9
     if os.path.isfile(f):
         for l in open(f):
             try:
                 d = json.loads(l)
             except Exception:
                 continue
-            if d.get("src") == "ov" and d.get("status") == "tracking" and isinstance(d.get("p"), list) and d.get("t_sensor"):
+            if d.get("src") == "ov" and d.get("status") == "tracking" and isinstance(d.get("p"), list) and d.get("t_sensor") \
+                    and lo <= d["t_sensor"] <= hi:
                 out.append((d["t_sensor"] * 1e-9, d["p"]))
     if len(out) < 10:
         f = os.path.join(run, "poses_pred.csv")
@@ -165,7 +174,7 @@ def score(d):
 
 def abba(dirs):
     """README rule: order npu1, npu0, npu0, npu1; all four valid; primary = map_end_pct."""
-    R = [score(d) if not os.path.isfile(os.path.join(d, "score.json")) else json.load(open(os.path.join(d, "score.json"))) for d in dirs]
+    R = [score(d) for d in dirs]   # always re-scored from the run files (same script for all four)
     order = [r["npu_loop"] for r in R]
     out = dict(made=time.strftime("%F %T"), dirs=dirs, order=order, rows=[{k: r.get(k) for k in ("tag", "npu_loop", "valid", "path_m",
                "map_end_cm", "map_end_pct", "vio_end_cm", "loops_accepted")} for r in R])

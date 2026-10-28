@@ -455,7 +455,10 @@ private:
     std::vector<float> q;
     while (!stop_) {
       char c;
-      if (!rd(fd, &c, 1)) break;
+      if (!rd(fd, &c, 1)) {  // 0.6.33: the bridge closed without 'Q' (its xf_down shuts the socket, or it crashed)
+        if (!stop_) fail("bridge closed the NPU connection without Q (bridge lost the server / exited)");
+        break;
+      }
       const double t_req = now_us();
       if (c == 'Q') break;
       if (c == 'F') {

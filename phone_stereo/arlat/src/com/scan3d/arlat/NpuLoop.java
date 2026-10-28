@@ -44,6 +44,9 @@ final class NpuLoop {
     private static native String nStartLog();
     private static native String nStop();   // 0.6.31: "" or the server failure (exec errors / stuck worker)
     private static native void nTemps(float skin, float ap, float bat, int status);
+    private static native boolean nFailed();   // 0.6.33: server recorded a failure (cheap: mutex + empty check)
+
+    boolean failedNow() { try { return running && nFailed(); } catch (Throwable e) { return false; } }
 
     private final Context ctx;
     private String sock;

@@ -1,0 +1,11 @@
+{"op":"start","msg":"worker tid 24217 affinity 0,1,2,3 -> 0"}
+{"op":"start","msg":"worker nice 10 -> 0"}
+{"op":"start","msg":"backend ENN (libenn_public_api_cpp.so) "}
+{"op":"start","msg":"xfeat /data/user/0/com.scan3d.arlat/files/npu/x960p1mc.nnc: in 1x544x960 f32, out 129 ch f32 (post_soft) | lighterglue /data/user/0/com.scan3d.arlat/files/npu/L6_a16mc.nnc: N 512, out A|BT|z0|z1 | lg_in x512 pad 2 | topk 512 min_cos 0.82 lg_thr 0.10 cache 300 MB"}
+{"op":"start","msg":"warm-up xfeat 8869 us"}
+{"op":"start","msg":"warm-up lighterglue 15742 us"}
+{"op":"start","msg":"listening on @scan3d_xfnpu_24196"}
+{"op":"session","n":1,"t_wall_ms":1793186091759}
+{"op":"F","id":65093145975641,"t_wall_ms":1793186098084,"nq":79,"nk":512,"us":{"prep":17296,"npu":9935,"post_q":21556,"store":287,"tot":51392,"recv":2318},"post_us":[2990,6989,396,6735],"skin":33.5,"ap":45.7,"bat":28.6,"tstat":0,"cache_n":1,"cache_mb":0.1,"evicted":0}
+{"op":"F","id":65093395977594,"t_wall_ms":1793186098324,"nq":116,"nk":512,"us":{"prep":17289,"npu":14104,"post_q":15047,"store":259,"tot":48000,"recv":1302},"post_us":[2181,5105,498,5592],"skin":33.5,"ap":45.7,"bat":28.6,"tstat":0,"cache_n":2,"cache_mb":0.2,"evicted":0}
+{"op":"M","a":65093145975641,"b":65093395977594,"mode":1,"t_wall_ms":1793186098395,"nA":591,"nB":628,"nv":[0,0],"n":244,"us":{"pack":0,"npu":0,"post":70524,"tot":70559,"recv":29},"skin":33.5,"ap":45.7}

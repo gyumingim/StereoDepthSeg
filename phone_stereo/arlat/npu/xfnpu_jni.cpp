@@ -98,3 +98,8 @@ extern "C" JNIEXPORT void JNICALL Java_com_scan3d_arlat_NpuLoop_nTemps(JNIEnv *,
   std::lock_guard<std::mutex> l(g_m);
   if (g_srv) g_srv->set_temps(skin, ap, bat, status);
 }
+
+extern "C" JNIEXPORT jboolean JNICALL Java_com_scan3d_arlat_NpuLoop_nFailed(JNIEnv *, jclass) {  // 0.6.33 RunCue
+  std::lock_guard<std::mutex> l(g_m);
+  return (g_srv && !g_srv->failure().empty()) ? JNI_TRUE : JNI_FALSE;
+}

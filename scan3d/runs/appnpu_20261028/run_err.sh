@@ -22,7 +22,7 @@ unlock() { [ -f "$LOCK/owner.txt" ] && mv "$LOCK/owner.txt" "$D/lock_owner_relea
 trap unlock EXIT
 $A connect "$S" > /dev/null 2>&1
 vc=$($A -s "$S" shell "dumpsys package com.scan3d.arlat | grep -m1 versionCode" | tr -d '\r')
-echo "$vc" | grep -q "versionCode=38" || { echo "phone app is not 0.6.32 (vc 38): $vc"; exit 2; }
+echo "$vc" | grep -q "versionCode=39" || { echo "phone app is not 0.6.33 (vc 39): $vc"; exit 2; }
 temps() {
   local o; o=$($A -s "$S" shell "dumpsys thermalservice | sed -n '/Current temperatures from HAL/,/^[^ \t]/p'; dumpsys battery | grep -E '^  level'" 2>/dev/null | tr -d '\r')
   sk=$(echo "$o" | grep -oE "mValue=[0-9.]+, mType=3, mName=SKIN" | grep -oE "[0-9.]+" | head -1)
@@ -31,7 +31,7 @@ temps() {
 }
 temps
 echo "start check: SKIN $sk AP $ap battery $bl"
-awk -v s="${sk:-99}" -v b="${bl:-0}" 'BEGIN{exit !(s < 40 && b >= 20)}' || { echo "REFUSED: SKIN $sk (need < 40) / battery $bl (need >= 20)"; exit 4; }
+awk -v s="${sk:-99}" -v a="${ap:-99}" -v b="${bl:-0}" 'BEGIN{exit !(s < 40 && a < 50 && b >= 20)}' || { echo "REFUSED: SKIN $sk (need < 40) / AP $ap (need < 50, else the monitor stops at once) / battery $bl (need >= 20)"; exit 4; }
 FLAG=/tmp/appnpu_err_mon_${TAG}_$$
 ( while [ ! -f "$FLAG" ]; do
     temps; echo "$(date +%T) SKIN $sk AP $ap batt $bl" >> "$D/temps_pc.txt"
@@ -52,7 +52,7 @@ python3 - "$D/err_meta.json" "$TAG" "$NPU" "$SECS" "$T0" "${RUN:-}" "$cam" "${br
 import json, sys, time
 o, tag, npu, secs, t0, run, cam, br = sys.argv[1:9]
 json.dump(dict(made=time.strftime("%F %T"), tag=tag, npu_loop=int(npu), secs=int(secs), started=t0, run=run or None,
-               app="0.6.32 vc 38", cfg="c4f60", extras="--es profile rec60 --ei loop 1" + (" --ei npu_loop 1" if npu == "1" else ""),
+               app="0.6.33 vc 39", cfg="c4f60", extras="--es profile rec60 --ei loop 1" + (" --ei npu_loop 1" if npu == "1" else ""),
                camera_after=cam, bridge_after=br or None), open(o, "w"), indent=1)
 PY
 [ -n "$RUN" ] && python3 "$H/score_err.py" "$D" || echo "no run folder pulled"

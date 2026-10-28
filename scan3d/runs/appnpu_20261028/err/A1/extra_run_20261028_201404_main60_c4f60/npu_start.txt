@@ -1,0 +1,10 @@
+models: /data/user/0/com.scan3d.arlat/files/npu/x960p1mc.nnc | /data/user/0/com.scan3d.arlat/files/npu/L6_a16mc.nnc | /data/user/0/com.scan3d.arlat/files/npu/lg_wr_L6_a16mc.npy
+cpus: 0,1,2,3
+worker tid 21802 affinity 0,1,2,3 -> 0
+worker nice 10 -> 0
+backend ENN (libenn_public_api_cpp.so) 
+xfeat /data/user/0/com.scan3d.arlat/files/npu/x960p1mc.nnc: in 1x544x960 f32, out 129 ch f32 (post_soft) | lighterglue /data/user/0/com.scan3d.arlat/files/npu/L6_a16mc.nnc: N 512, out A|BT|z0|z1 | lg_in x512 pad 2 | topk 512 min_cos 0.82 lg_thr 0.10 cache 300 MB
+warm-up xfeat 8712 us
+warm-up lighterglue 15474 us
+listening on @scan3d_xfnpu_21765
+started

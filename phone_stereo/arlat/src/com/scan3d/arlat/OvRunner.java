@@ -138,7 +138,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261028-appnpu-0.6.32";
+    static final String VERSION = "ov-20261028-appnpu-0.6.33";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";
@@ -185,7 +185,7 @@ class OvRunner implements SensorEventListener {
     private CaptureRequest.Builder reqB;
     private volatile int nCam, nPose, nImu, nAcc, camDropped, poolDropped, nResults;
     private volatile float lastFocus = -1;
-    private String lastStatus = "-";
+    private volatile String lastStatus = "-";
     private File dir, runDir;
     private BufferedWriter framesW, posesW, tempsW, eventsW;
     private BufferedWriter writesW;             // 0.6.16 writes.csv: written and closed by the ov-writer thread only
@@ -907,6 +907,17 @@ class OvRunner implements SensorEventListener {
     int thermalStatus() {
         try { return ((android.os.PowerManager) ctx.getSystemService(Context.POWER_SERVICE)).getCurrentThermalStatus(); }
         catch (Throwable e) { return -1; }
+    }
+
+    // ---- 0.6.33 RunCue (on-screen cue) reads these, UI thread, 2 Hz
+    long fedElapsedMs() { return fed ? 1 : 0; }
+    String vioStatus() { return lastStatus; }
+    String npuCue() {
+        if (npu == null) return "꺼짐";
+        String st = npuState;
+        if (st == null) return "여는 중";
+        if (st.startsWith("refused")) return "거부";
+        return npu.failedNow() ? "무효" : "열림";
     }
 
     /** 0.6.31: NpuLoop.start (asset copy + ENN init + model open + warm-up) on its own thread, at most timeoutMs

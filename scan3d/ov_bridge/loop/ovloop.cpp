@@ -440,6 +440,7 @@ void LoopCloser::xf_down(const char *why) {
     o.precision(15);
     o << "{\"xf_down\":\"" << why << "\",\"errno\":" << e << ",\"t_wall_ms\":" << tw << "}\n";
     log_line(o.str());
+    if (xf_in_ >= 0) ::shutdown(xf_in_, SHUT_RDWR);  // 0.6.33: the app's server sees it at once (on-screen "NPU 무효")
   }
 }
 

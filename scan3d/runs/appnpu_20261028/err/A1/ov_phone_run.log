@@ -1,0 +1,64 @@
+config c4f60: track_frequency 60 -> --ei fps 60
+preflight 2026-10-28 20:14:03 device 100.79.156.20:33841 (476 ms)
+kill-all: done; heavy apps checked: com.sec.android.app.camera com.sec.android.gallery3d com.google.android.apps.photos com.samsung.android.video com.google.android.youtube com.android.chrome com.sec.android.app.sbrowser
+  MemTotal:        7398448 kB
+  MemAvailable:    2630920 kB
+  no heavy app was running
+thermal status: 0  SKIN: 28.2 C (limit 36.0 C)
+PREFLIGHT OK
+live view: adb reverse tcp:8798 tcp:8794
+live view: http://100.92.214.97:8798
+Starting: Intent { cmp=com.scan3d.arlat/.MainActivity (has extras) }
+1793186050 t=5s SKIN 28.2 status 0
+1793186055 t=11s SKIN 29.4 status 0
+1793186061 t=17s SKIN 29.4 status 0
+1793186067 t=23s SKIN 30.4 status 0
+1793186073 t=28s SKIN 31.6 status 0
+1793186078 t=34s SKIN 31.6 status 0
+1793186084 t=40s SKIN 33.1 status 0
+1793186090 t=46s SKIN 33.1 status 0
+1793186096 t=51s SKIN 33.5 status 0
+1793186101 t=57s SKIN 33.5 status 0
+1793186107 t=63s SKIN 34.2 status 0
+1793186113 t=68s SKIN 35.0 status 0
+1793186119 t=74s SKIN 35.0 status 0
+1793186124 t=80s SKIN 35.4 status 0
+1793186130 t=86s SKIN 35.4 status 0
+1793186136 t=92s SKIN 35.5 status 0
+1793186142 t=98s SKIN 34.8 status 0
+1793186148 t=104s SKIN 34.8 status 0
+1793186154 t=109s SKIN 34.3 status 0
+1793186160 t=115s SKIN 34.3 status 0
+1793186166 t=121s SKIN 33.7 status 0
+1793186172 t=127s SKIN 33.7 status 0
+1793186178 t=133s SKIN 33.3 status 0
+1793186183 t=139s SKIN 33.0 status 0
+1793186189 t=145s SKIN 33.0 status 0
+1793186195 t=151s SKIN 32.8 status 0
+1793186201 t=157s SKIN 32.8 status 0
+1793186207 t=163s SKIN 32.3 status 0
+1793186213 t=168s SKIN 32.1 status 0
+1793186219 t=174s SKIN 32.1 status 0
+1793186225 t=180s SKIN 32.0 status 0
+1793186231 t=186s SKIN 32.0 status 0
+stop: timeout
+-- active camera clients (must be empty):
+Active Camera Clients:
+[]
+Allowed user IDs: 0
+
+-- ov_bridge processes (must be empty):
+none
+/sdcard/Android/data/com.scan3d.arlat/files/ov/run_20261028_201451_main60_c4f60/: 20 files pulled, 0 skipped. 0.9 MB/s (11023328 bytes in 11.991s)
+pulled -> /home/system/scanner/StereoDepthSeg-appnpu/scan3d/runs/appnpu_20261028/err/A1/run_20261028_201451_main60_c4f60
+live view lines -> /home/system/scanner/StereoDepthSeg-appnpu/scan3d/runs/appnpu_20261028/err/A1/run_20261028_201451_main60_c4f60/ov_live.jsonl (4221 lines, from C:\Users\a3162\scan3d_ov_live\ov_live_20261028-201405_c4f60.jsonl)
+Traceback (most recent call last):
+  File "/home/system/scanner/StereoDepthSeg-appnpu/scan3d/tools/ov_phone_timing.py", line 410, in <module>
+    main()
+  File "/home/system/scanner/StereoDepthSeg-appnpu/scan3d/tools/ov_phone_timing.py", line 406, in main
+    show(report(Path(r), a))
+  File "/home/system/scanner/StereoDepthSeg-appnpu/scan3d/tools/ov_phone_timing.py", line 299, in report
+    fate = np.array([int(r["fate"]) for r in fr if int(r["t_send_ns"]) >= t_first])
+  File "/home/system/scanner/StereoDepthSeg-appnpu/scan3d/tools/ov_phone_timing.py", line 299, in <listcomp>
+    fate = np.array([int(r["fate"]) for r in fr if int(r["t_send_ns"]) >= t_first])
+TypeError: int() argument must be a string, a bytes-like object or a real number, not 'NoneType'
