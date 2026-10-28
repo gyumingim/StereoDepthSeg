@@ -138,7 +138,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261029-npunight-0.6.36";
+    static final String VERSION = "ov-20261029-appfix-0.6.37";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";
@@ -418,7 +418,18 @@ class OvRunner implements SensorEventListener {
         return voc;
     }
 
+    /** npu_loop 0 (npu == null): prepare + launch on the caller thread, same order as 0.6.36. npu_loop 1 -> startAsync. */
     void start() throws Exception {
+        if (npu != null) throw new IllegalStateException("npu_loop 1: use startAsync");
+        launch(prepare());
+    }
+
+    // 0.6.37 (appfix-20261029): locals of prepare() that launch() needs (start was one method before)
+    private String pLib, pStamp;
+    private File pCfgDir, pRemap;
+
+    /** run dir, config, remap check and the bridge command line (no bridge / camera / sensors yet). */
+    private List<String> prepare() throws Exception {
         running = true;
         t0Elapsed = SystemClock.elapsedRealtimeNanos();
         dir = new File(ctx.getExternalFilesDir(null), "ov");
@@ -489,25 +500,90 @@ class OvRunner implements SensorEventListener {
             Collections.addAll(cmd, "--loop", "1", "--loop-vocab", voc.getAbsolutePath(),
                     "--loop-log", new File(runDir, "loop.jsonl").getAbsolutePath());
         }
-        if (npu != null) {                                                                                             // 0.6.30 appnpu
-            String why = loop == 0 ? "loop 0 (npu_loop needs loop closure, e.g. profile rec60)" : npuStartTimed(runDir, cpus, 15000);
-            if (why == null) {
-                Collections.addAll(cmd, "--loop-xf", "unix:@" + npu.sock(), "--loop-cfg", npu.bridgeCfg());
-                npuState = "on";
-                android.util.Log.i("arlat", "npu loop on");
-            } else {   // 0.6.31: refuse the run (no bridge, no camera, no recording files except meta.json / npu_start.txt)
-                npuState = "refused: " + why;
-                android.util.Log.e("arlat", "NPU LOOP REFUSED: " + why + " -> run not started (" + runDir + ")");
-                status.show("NPU REFUSED: " + why);
+        pLib = lib; pStamp = stamp; pCfgDir = cfgDir; pRemap = remap;
+        return cmd;
+    }
+
+    /** 0.6.37 (appfix-20261029, review 0.6.32 sec. 5): npu_loop 1 start WITHOUT blocking the UI thread (was join(15000) on
+     *  it = ANR risk). Called on the UI thread. prepare() here, NpuLoop.start (asset copy + ENN + models + warm-up) on thread
+     *  "npu-start", then on the UI thread: success -> --loop-xf + launch() (bridge, camera, sensors) + cb.started(); failure
+     *  or no result within NPU_START_TIMEOUT_MS -> refused exactly as 0.6.31 (meta.json "refused: why", run_valid false, no
+     *  bridge / camera) + cb.refused(why). No fallback. stop() while starting -> abandoned (meta.json "cancelled ...").
+     *  A server that comes up after the timeout / abandon is stopped right away by the start thread (review gap 2b: no
+     *  orphan server / temps thread). All phase changes under npuLock; UI-side decisions run on the main looper. */
+    interface StartCb { void started(); void refused(String why); void error(Exception e); }
+    static final long NPU_START_TIMEOUT_MS = 15000;
+    private final Object npuLock = new Object();
+    private int npuPhase;   // 0 none, 1 NPU starting, 2 result posted to the UI, 3 decided (launched / refused), 4 abandoned
+
+    void startAsync(final StartCb cb) throws Exception {
+        if (npu == null) { start(); cb.started(); return; }
+        final List<String> cmd = prepare();
+        if (loop == 0) { String why = "loop 0 (npu_loop needs loop closure, e.g. profile rec60)"; refuse(cmd, why); cb.refused(why); return; }
+        final Handler ui = new Handler(android.os.Looper.getMainLooper());
+        final File rd = runDir;
+        final String bc = cpus;
+        synchronized (npuLock) { npuPhase = 1; }
+        status.show("NPU 준비 중...");
+        final Runnable onTimeout = () -> {
+            boolean fire;
+            synchronized (npuLock) { fire = npuPhase == 1; if (fire) npuPhase = 4; }
+            if (!fire) return;
+            String why = "npu start timeout " + NPU_START_TIMEOUT_MS + " ms (server stopped if it comes up later)";
+            refuse(cmd, why);
+            cb.refused(why);
+        };
+        ui.postDelayed(onTimeout, NPU_START_TIMEOUT_MS);
+        Thread t = new Thread(() -> {
+            final String r = npu.start(rd, bc);
+            boolean late;
+            synchronized (npuLock) { late = npuPhase == 4; if (!late) npuPhase = 2; }
+            if (late) { stopLateNpu(r, rd, "start thread"); return; }
+            ui.post(() -> {
+                boolean ab;
+                synchronized (npuLock) { ab = npuPhase == 4; if (!ab) npuPhase = 3; }
+                ui.removeCallbacks(onTimeout);
+                if (ab) { new Thread(() -> stopLateNpu(r, rd, "ui"), "npu-stop").start(); return; }
+                if (r != null) { refuse(cmd, r); cb.refused(r); return; }
                 try {
-                    meta.put("app_version", VERSION).put("start_wall", stamp).put("npu_loop", npuState).put("run_valid", false)
-                            .put("stop_reason", "npu refused").put("bridge_cmd", String.join(" ", cmd));
-                    java.nio.file.Files.write(new File(runDir, "meta.json").toPath(), meta.toString(1).getBytes(StandardCharsets.UTF_8));
-                } catch (Exception e) { android.util.Log.e("arlat", "npu refused meta", e); }
-                running = false;
-                throw new NpuRefused("npu_loop 1 but the NPU cannot be used: " + why);
-            }
-        }
+                    Collections.addAll(cmd, "--loop-xf", "unix:@" + npu.sock(), "--loop-cfg", npu.bridgeCfg());
+                    npuState = "on";
+                    android.util.Log.i("arlat", "npu loop on");
+                    launch(cmd);
+                    cb.started();
+                } catch (Exception e) { cb.error(e); }
+            });
+        }, "npu-start");
+        t.start();
+    }
+
+    /** server came up although the run was already abandoned (timeout / stop): stop it, note it in npu_start.txt. */
+    private void stopLateNpu(String r, File rd, String where) {
+        if (r != null) return;   // start failed: nothing runs
+        String e = npu.stop();
+        android.util.Log.w("arlat", "npu server started after the run was abandoned -> stopped (" + where + ") " + e);
+        try { java.nio.file.Files.write(new File(rd, "npu_start.txt").toPath(), ("late start after abandon -> server stopped " + e + "\n")
+                .getBytes(StandardCharsets.UTF_8), java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND); }
+        catch (Exception ignored) { }
+    }
+
+    /** 0.6.31 refusal (no bridge, no camera, no recording files except meta.json / npu_start.txt). */
+    private void refuse(List<String> cmd, String why) {
+        npuState = "refused: " + why;
+        android.util.Log.e("arlat", "NPU LOOP REFUSED: " + why + " -> run not started (" + runDir + ")");
+        status.show("NPU REFUSED: " + why);
+        try {
+            meta.put("app_version", VERSION).put("start_wall", pStamp).put("npu_loop", npuState).put("run_valid", false)
+                    .put("stop_reason", "npu refused").put("bridge_cmd", String.join(" ", cmd));
+            java.nio.file.Files.write(new File(runDir, "meta.json").toPath(), meta.toString(1).getBytes(StandardCharsets.UTF_8));
+        } catch (Exception e) { android.util.Log.e("arlat", "npu refused meta", e); }
+        running = false;
+    }
+
+    /** bridge, threads, sensors, camera (the second half of the 0.6.36 start()). */
+    private void launch(List<String> cmd) throws Exception {
+        final String lib = pLib, stamp = pStamp;
+        final File cfgDir = pCfgDir, remap = pRemap;
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.environment().put("LD_LIBRARY_PATH", lib);
         pb.redirectError(new File(runDir, "bridge_stderr.log"));
@@ -943,18 +1019,13 @@ class OvRunner implements SensorEventListener {
         return npu.failedNow() ? "무효" : "열림";
     }
 
-    /** 0.6.31: NpuLoop.start (asset copy + ENN init + model open + warm-up) on its own thread, at most timeoutMs
-     *  (the native side has its own 10 s start timeout). Timeout -> refused (the thread is left behind). */
-    private String npuStartTimed(File rd, String bridgeCpus, long timeoutMs) {
-        final String[] res = {"npu start timeout " + timeoutMs + " ms"};
-        final boolean[] done = {false};
-        Thread t = new Thread(() -> {
-            String r = npu.start(rd, bridgeCpus);
-            synchronized (res) { res[0] = r; done[0] = true; }
-        }, "npu-start");
-        t.start();
-        try { t.join(timeoutMs); } catch (InterruptedException ignored) { }
-        synchronized (res) { return done[0] ? res[0] : "npu start timeout " + timeoutMs + " ms (still running)"; }
+    /** 0.6.37: bridge stderr has the ovloop "loop: XFeat server ... connected" line. */
+    private static boolean npuConnectedLine(File f) {
+        if (f == null || !f.isFile()) return false;
+        try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.FileReader(f))) {
+            for (String l; (l = r.readLine()) != null; ) if (l.contains("loop: XFeat server ") && l.contains(" connected")) return true;
+        } catch (Exception ignored) { }
+        return false;
     }
 
     /** 0.6.31: first "xf_down" line of the bridge loop log (= NPU server lost mid-run), null = none. */
@@ -967,6 +1038,19 @@ class OvRunner implements SensorEventListener {
     }
 
     void stop() {
+        boolean starting;   // 0.6.37: stopped while the NPU was starting (startAsync) -> abandoned, nothing else runs yet
+        synchronized (npuLock) { starting = npuPhase == 1 || npuPhase == 2; if (starting) npuPhase = 4; }
+        if (starting) {
+            running = false;
+            npuState = "cancelled: stopped while the NPU was starting";
+            try {
+                meta.put("app_version", VERSION).put("start_wall", pStamp).put("npu_loop", npuState).put("run_valid", false)
+                        .put("stop_reason", stopReason);
+                java.nio.file.Files.write(new File(runDir, "meta.json").toPath(), meta.toString(1).getBytes(StandardCharsets.UTF_8));
+            } catch (Exception e) { android.util.Log.e("arlat", "npu cancel meta", e); }
+            android.util.Log.e("arlat", "ov stopped while the NPU was starting -> run not started (" + runDir + ")");
+            return;
+        }
         if (!running && proc == null) return;
         running = false;
         if (imuTx != null) {   // 0.6.20
@@ -990,11 +1074,17 @@ class OvRunner implements SensorEventListener {
         if (npu != null) {   // 0.6.30 appnpu: after the bridge is gone (its loop thread sent 'Q' or the socket closed)
             String srvErr = npu.stop();   // 0.6.31: server-side failure (ENN exec error / stuck worker), "" = none
             String down = npuDownLine(new File(runDir, "loop.jsonl"));   // bridge lost the server mid-run
+            // 0.6.37 (review gap 2a): bridge exit != 0 (crash / kill / connect failure) or no "XFeat server ... connected"
+            // line in bridge_stderr.log -> run INVALID too (before: run_valid stayed true, only meta bridge_exit showed it)
+            String bx = meta.optString("bridge_exit", "none");
+            boolean conn = npuConnectedLine(new File(runDir, "bridge_stderr.log"));
             try {
-                if (down != null || !srvErr.isEmpty()) {
+                if (down != null || !srvErr.isEmpty() || !"0".equals(bx) || !conn) {
                     JSONObject f = new JSONObject();
                     if (down != null) f.put("bridge", new JSONObject(down));
                     if (!srvErr.isEmpty()) f.put("server", srvErr);
+                    if (!"0".equals(bx)) f.put("bridge_exit", bx);
+                    if (!conn) f.put("bridge_connected", false);
                     meta.put("run_valid", false).put("npu_failed", f);
                     android.util.Log.e("arlat", "NPU FAILED during the run -> run INVALID: " + f);
                 } else meta.put("run_valid", true);

@@ -246,6 +246,17 @@ venv_ffs/bin/python scan3d/replay.py recordings/<이름> --keep-web   # 끝난 �
 재생은 전용 브리지 프로세스(pipe, `--replay-bridge-args` 기본 `--auto-reset`)를 띄우고 프레임마다 포즈를 기다린다 (버리는 프레임 없음).
 결과: `recordings/<이름>/recon_<시각>/` (voxels.ply/json/npz, objects.json, trajectory.json, viewer.html, summary.json; auto-reset 이 나면 그 전 맵은 `segment_NN/`).
 
+### 폰 저장공간 정리 (`tools/phone_cleanup.sh`, 2026-10-29)
+```bash
+bash scan3d/tools/phone_cleanup.sh [-s SERIAL]                    # 기본 = 미리보기만 (표 + 크기, 아무것도 안 지움)
+bash scan3d/tools/phone_cleanup.sh --all-safe                     # SAFE 녹화만 지움 / --all-scratch = 시험 폴더·replay 사본
+bash scan3d/tools/phone_cleanup.sh --delete hs_20261024_165506_std60 ovopt   # 이름(또는 폰 전체 경로)으로
+bash scan3d/tools/phone_cleanup_test/run_tests.sh $PWD/scan3d/tools/phone_cleanup.sh   # 가짜 adb 시험 (폰 불필요)
+```
+- 녹화(arlat `hs_*`·`calcap*`·`ov/run_*`, dualstream `rec_*`)는 폰 파일 목록이 비어 있지 않고 **모든 파일 이름+크기**가 PC 사본 `scan3d/recordings/<이름>/`(`PC_REC` 로 바꿈)과 같을 때만 SAFE. 아니면 KEEP(이유 표시).
+- adb 오류(offline·unauthorized·기기 여러 대·끝 표시 없음)면 그 자리에서 전체 중단(종료 3). 지우기 직전에 그 항목을 다시 읽어 다시 비교하고, 지운 뒤 없어졌는지 확인.
+- 설정(`files/ov/<cfg>`)·NPU 모델(`files/npu`)·다른 앱·모르는 `/data/local/tmp` 이름은 후보에 안 나오고 안 지운다.
+
 ## 파일
 
 | 파일 | 역할 |

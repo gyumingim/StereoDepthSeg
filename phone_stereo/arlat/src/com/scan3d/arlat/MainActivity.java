@@ -42,6 +42,8 @@ import java.util.Locale;
  *   Without gyro = intent ov_opt "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse" (explicit intent wins).
  * 0.6.28 (user 2026-10-26, 60 fps only): profile rec60 + loop 1 (rec20261025 unchanged) (ovloop BoW loop closure, own thread; vocabulary shipped in
  *   the APK assets, copied to files/ov/voc_k10L4.voc). Without loop = intent loop 0. Profile + recover N -> loop off.
+ * 0.6.37 (appfix 10-29): npu_loop 1 NPU start off the UI thread (OvRunner.startAsync, "NPU 준비 중...", 15 s -> refused, no
+ *   fallback); run_valid false also when bridge exit != 0 or no "XFeat server connected" line; late server stopped. npu 0 same.
  * 0.6.36 (npunight 10-29): npu_loop 1 defaults npu_opts nn_fast=1,lg_post=3,prep_fast=1, npu_perf 1, npu_cpus auto 7,8.
  * 0.6.35 (npunight 10-29): intent replay = stream file (bridge input records) under the external files dir, fed to the bridge
  *   at its record times (shifted to now) instead of the camera + IMU (no camera opened); npu_opts nn_fast / lg_post.
@@ -379,10 +381,13 @@ public class MainActivity extends Activity {
                         });
                     });
                 }
-                try {
-                    ovStartedOnce = true;
-                    ov.start(); status.setText("OpenVINS starting...");
-                    final OvRunner mine = ov;
+                // 0.6.37 (appfix-20261029): npu_loop 1 starts the NPU off the UI thread (OvRunner.startAsync, UI shows
+                // "NPU 준비 중..."); refusal semantics unchanged (no fallback, refused -> no run, app exits). npu_loop 0: the same
+                // synchronous ov.start() as 0.6.36, then the same after-start steps.
+                final OvRunner mine = ov;
+                final Runnable afterStart = () -> {
+                    if (ov != mine) return;   // stopped (onPause) while the NPU was starting
+                    status.setText("OpenVINS starting...");
                     // 0.6.33 (user 10-28): big Korean cue for a timed run without a guide (same for npu 0 / 1).
                     // 0.6.34: intent run_secs > 0 = run length counted from VIO init (cue ends the run); secs = hard cap.
                     if (secs > 0 && g == null && ov.replayPath.isEmpty()) {   // 0.6.35: no cue for a replay
@@ -401,9 +406,25 @@ public class MainActivity extends Activity {
                         if (cue != null) cue.saving();
                         finish();
                     }, secs * 1000L);
-                }
-                catch (OvRunner.NpuRefused e) {   // 0.6.31: npu_loop 1 and no NPU -> no run at all, app exits
-                    status.setText("NPU REFUSED: " + e.getMessage()); android.util.Log.e("arlat", "ov refused", e); finish();
+                };
+                try {
+                    ovStartedOnce = true;
+                    if (ov.npu == null) { ov.start(); afterStart.run(); }
+                    else {
+                        status.setText("NPU 준비 중...");
+                        ov.startAsync(new OvRunner.StartCb() {
+                            @Override public void started() { afterStart.run(); }
+                            @Override public void refused(String why) {   // 0.6.31: npu_loop 1 and no NPU -> no run at all, app exits
+                                if (ov != mine) return;
+                                status.setText("NPU REFUSED: npu_loop 1 but the NPU cannot be used: " + why);
+                                android.util.Log.e("arlat", "ov refused: " + why); finish();
+                            }
+                            @Override public void error(Exception e) {
+                                if (ov != mine) return;
+                                status.setText("ov error: " + e); android.util.Log.e("arlat", "ov", e);
+                            }
+                        });
+                    }
                 }
                 catch (Exception e) { status.setText("ov error: " + e); android.util.Log.e("arlat", "ov", e); }
             }
