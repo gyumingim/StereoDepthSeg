@@ -1,0 +1,55 @@
+== APK build Wed Oct 28 19:34:59 KST 2026
+87334fd appnpu: ov_bridge --loop-xf unix:NAME (connect to the app NPU server, BRIEF fallback on loss), xfnpu server core + ENN backend + JNI + PC test build (torch stand-in); PC checks: flags-off identity, server == Python reference, LG padding (repeat + copy sum)
+ M phone_stereo/arlat/AndroidManifest.xml
+ M phone_stereo/arlat/build.sh
+ M phone_stereo/arlat/npu/npu_emu.py
+ M phone_stereo/arlat/npu/xfnpu_core.h
+ M phone_stereo/arlat/src/com/scan3d/arlat/MainActivity.java
+ M phone_stereo/arlat/src/com/scan3d/arlat/OvRunner.java
+ M scan3d/ov_bridge/loop/ovloop.cpp
+apk build rc 0
+-- Found Ceres compiled with miniglog substitute for glog, beware this will likely cause problems if glog is later linked.
+/home/system/scanner/tmp_appnpu/apk/arlat.apk
+package: name='com.scan3d.arlat' versionCode='36' versionName='0.6.30-appnpu-20261028' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+native-code: 'arm64-v8a'
+Signer #1 certificate DN: CN=PhoneStereo Development
+Signer #1 certificate DN: CN=PhoneStereo Development
+Archive:  /home/system/scanner/tmp_appnpu/apk/arlat.apk
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+     4144  1980-01-01 09:00   AndroidManifest.xml
+  4636672  1980-01-01 09:00   assets/npu/L6_a16mc.nnc
+      512  1980-01-01 09:00   assets/npu/lg_wr_L6_a16mc.npy
+  1986560  1980-01-01 09:00   assets/npu/x960f1mc.nnc
+  2560000  1980-01-01 09:00   assets/npu/x960p1mc.nnc
+   528524  1980-01-01 09:00   assets/voc_k10L4.voc
+   379424  2026-10-28 19:35   classes.dex
+    68040  2026-10-28 19:35   lib/arm64-v8a/libarcore_sdk_c.so
+  1794776  2026-10-28 19:35   lib/arm64-v8a/libc++_shared.so
+ 11633048  2026-10-28 19:35   lib/arm64-v8a/libarloop.so
+ 13719896  2026-10-28 19:35   lib/arm64-v8a/libov_bridge.so
+  1055704  2026-10-28 19:35   lib/arm64-v8a/libxfnpu.so
+   100800  2026-10-28 19:35   lib/arm64-v8a/libarcore_sdk_jni.so
+---------                     -------
+ 38471945                     16 files
+sha256sum: /home/system/scanner/tmp_appnpu/apkx/assets/npu: Is a directory
+687a8b35a88e9bf6d54d0ca9c296690315953bab04b42021c65cd1800be9ffef  ~/scanner/tmp_appnpu/apk/arlat.apk
+5feb3e53068a7a91dc08b2f0d6f7d1a8ab2beb763c995e7c0463d11af69d60b0  /mnt/c/Users/a3162/AppData/Local/Temp/claude/c--Users-a3162-Desktop----/27548596-eef5-4a58-bd39-e92ba44d822c/scratchpad/team/lens05/apk/arlat_0.6.29.apk
+60a65c14c7ba3db42a8395e0f0dc25c5695b4b7848da19f7d521688c853844aa  ~/scanner/tmp_appnpu/apkx/lib/arm64-v8a/libarcore_sdk_c.so
+3e20f02d82a54e0de0ec87d017a99bd86ce08621cf540058a79f3ea9167bb2b6  ~/scanner/tmp_appnpu/apkx/lib/arm64-v8a/libarcore_sdk_jni.so
+3a271cecf876b34a67ff79f6f12614bfd60b393958df1385e33b1d9af8af996f  ~/scanner/tmp_appnpu/apkx/lib/arm64-v8a/libarloop.so
+f9992c4ba6b7c5a716e3a202fceb1ce029d6a2b0605838ac6b3219f489dd7970  ~/scanner/tmp_appnpu/apkx/lib/arm64-v8a/libc++_shared.so
+afd3aebaf466c9aae88c5480c695aa2febebd2be4194e85887285c2e27f8be20  ~/scanner/tmp_appnpu/apkx/lib/arm64-v8a/libov_bridge.so
+c39ac0487b0018b39e99655a2cd838adbd1e595f0f78bf383b5b97d098debd79  ~/scanner/tmp_appnpu/apkx/lib/arm64-v8a/libxfnpu.so
+60a65c14c7ba3db42a8395e0f0dc25c5695b4b7848da19f7d521688c853844aa  ~/scanner/tmp_appnpu/apk_old/lib/arm64-v8a/libarcore_sdk_c.so
+3e20f02d82a54e0de0ec87d017a99bd86ce08621cf540058a79f3ea9167bb2b6  ~/scanner/tmp_appnpu/apk_old/lib/arm64-v8a/libarcore_sdk_jni.so
+49e390a21a15aa7d632ba9257392415cb842bc1feb8930269947a13b4385ddbb  ~/scanner/tmp_appnpu/apk_old/lib/arm64-v8a/libarloop.so
+f9992c4ba6b7c5a716e3a202fceb1ce029d6a2b0605838ac6b3219f489dd7970  ~/scanner/tmp_appnpu/apk_old/lib/arm64-v8a/libc++_shared.so
+6f29ce707761d0a5860cf7d842874c5d71e7cb8037bba06b633bf9f156f139db  ~/scanner/tmp_appnpu/apk_old/lib/arm64-v8a/libov_bridge.so
+2d6b5cec72143e6f97f3bb01d7bb79a0d65c3a776f41f392a8592a237aaa8dd7  ~/scanner/tmp_appnpu/apkx/assets/voc_k10L4.voc
+e843e50366120ccfba8da7646382ebe7a411f14675d000e43ec022effe1cfce1  ~/scanner/tmp_appnpu/apkx/assets/npu/L6_a16mc.nnc
+9e3c7f84614d63f7c1452901dcc224aa12f4680b66a593dc1576f9cf7af376fe  ~/scanner/tmp_appnpu/apkx/assets/npu/lg_wr_L6_a16mc.npy
+436432053c2ae9d29c3aec1bac73a02059f85f1266e8897a6fb9f0fe7c8a3522  ~/scanner/tmp_appnpu/apkx/assets/npu/x960f1mc.nnc
+58fbe9bb46475b1647f85ec2f820c1997308fabca9230845d9b87e3308bf0f8b  ~/scanner/tmp_appnpu/apkx/assets/npu/x960p1mc.nnc
+2d6b5cec72143e6f97f3bb01d7bb79a0d65c3a776f41f392a8592a237aaa8dd7  ~/scanner/tmp_appnpu/apk_old/assets/voc_k10L4.voc
+Wed Oct 28 19:35:10 KST 2026

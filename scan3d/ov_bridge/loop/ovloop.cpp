@@ -441,7 +441,7 @@ void LoopCloser::xf_down(const char *why) {
                xf_unix_ ? " -> box-BRIEF verification for the rest of the run (appnpu)" : "");
   if (xf_unix_) {
     std::ostringstream o;
-    o << "{\"xf_down\":\"" << why << "\",\"errno\":" << e << "}";
+    o << "{\"xf_down\":\"" << why << "\",\"errno\":" << e << "}\n";
     log_line(o.str());
   }
 }

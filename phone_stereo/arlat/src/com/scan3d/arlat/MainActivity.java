@@ -42,6 +42,9 @@ import java.util.Locale;
  *   Without gyro = intent ov_opt "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse" (explicit intent wins).
  * 0.6.28 (user 2026-10-26, 60 fps only): profile rec60 + loop 1 (rec20261025 unchanged) (ovloop BoW loop closure, own thread; vocabulary shipped in
  *   the APK assets, copied to files/ov/voc_k10L4.voc). Without loop = intent loop 0. Profile + recover N -> loop off.
+ * 0.6.30 (appnpu-20261028): intent npu_loop 1 (default 0 = 0.6.29 behaviour) -> XFeat + LighterGlue on the NPU in the loop
+ *   verification (NpuLoop, needs loop on); options npu_xf, npu_lg, npu_lg_in, npu_lg_pad, npu_topk, npu_cpus, npu_nice,
+ *   npu_perf, npu_cache_mb, npu_cfg, npu_timeout_ms.
  * arcore: a GL thread loops Session.update() and per new frame logs/streams
  *   {"src":"arcore","t_sensor":android camera ts,"t_frame":ARCore ts,"t_call":..,"t_out":update() return,"status":..,"p":[..],"q":[..]}
  * also written to files/arlat_<ms>.csv. Latency = t_out - t_sensor (phone clock).
@@ -269,6 +272,22 @@ public class MainActivity extends Activity {
                 ov.initStill = getIntent().getIntExtra("init_still", 0) != 0;               // ovrobust: --init-still 1
                 ov.recoverFrames = Math.max(0, Math.min(1000, getIntent().getIntExtra("recover", 0)));   // ovrobust: --recover N
                 ov.loop = getIntent().getIntExtra("loop", 0) != 0 ? 1 : 0;                  // 0.6.28 (ovloop): --loop 1 (BoW loop closure)
+                if (getIntent().getIntExtra("npu_loop", 0) != 0) {                           // 0.6.30 (appnpu): NPU XFeat + LighterGlue, default off
+                    NpuLoop n = new NpuLoop(this);
+                    String s0;
+                    if ((s0 = getIntent().getStringExtra("npu_xf")) != null) n.xfName = s0;
+                    if ((s0 = getIntent().getStringExtra("npu_lg")) != null) n.lgName = s0;
+                    if ((s0 = getIntent().getStringExtra("npu_lg_in")) != null) n.lgIn = s0;
+                    if ((s0 = getIntent().getStringExtra("npu_cpus")) != null) n.cpus = s0;
+                    if ((s0 = getIntent().getStringExtra("npu_cfg")) != null) n.cfgExtra = s0;
+                    n.lgPad = Math.max(0, Math.min(2, getIntent().getIntExtra("npu_lg_pad", n.lgPad)));
+                    n.topk = Math.max(64, Math.min(2048, getIntent().getIntExtra("npu_topk", n.topk)));
+                    n.nice = Math.max(-20, Math.min(19, getIntent().getIntExtra("npu_nice", n.nice)));
+                    n.perf = getIntent().getIntExtra("npu_perf", n.perf);
+                    n.cacheMb = Math.max(16, Math.min(2000, getIntent().getIntExtra("npu_cache_mb", (int) n.cacheMb)));
+                    n.timeoutMs = Math.max(200, Math.min(60000, getIntent().getIntExtra("npu_timeout_ms", n.timeoutMs)));
+                    ov.npu = n;
+                }
                 // 0.6.20 (integ): named profile = defaults for intents not given explicitly; no profile = 0.6.19 defaults
                 String prof = getIntent().getStringExtra("profile");
                 if ("rec20261025".equals(prof) || "rec60".equals(prof)) {

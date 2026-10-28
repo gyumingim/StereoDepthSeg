@@ -17,6 +17,9 @@ javac -source 8 -target 8 -classpath "$JAR:$AAR/classes.jar" -d "$B/classes" $(f
 # 0.6.28 (integ2, ovloop): loop-closure vocabulary as an asset (OvRunner copies it to files/ov/); VOC overrides the source
 VOC=${VOC:-$HERE/../../scan3d/ov_bridge/loop/voc_k10L4.voc}
 mkdir -p "$B/assets"; cp "$VOC" "$B/assets/voc_k10L4.voc"
+# 0.6.30 (appnpu): optional NPU models as assets (Samsung AI Studio output, not in git): NPU_ASSETS=<dir with NAME.nnc and
+# lg_wr_LGNAME.npy> -> assets/npu/ (NpuLoop copies them to files/npu/). Unset = no models in the APK (adb push instead).
+if [[ -n "${NPU_ASSETS:-}" ]]; then mkdir -p "$B/assets/npu"; cp "$NPU_ASSETS"/*.nnc "$NPU_ASSETS"/*.npy "$B/assets/npu/"; fi
 "$BT/aapt" package -f -M "$HERE/AndroidManifest.xml" -A "$B/assets" -I "$JAR" -F "$B/unsigned.apk"
 cp "$AAR"/jni/arm64-v8a/*.so "$B/apk/lib/arm64-v8a/"
 # live OpenVINS (mode ov): the bridge executable ships as a "library" so Android extracts it executable (W^X)
@@ -31,6 +34,10 @@ cmake -S "$HERE/jni" -B "$JB" -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.t
   -DEigen3_DIR=/usr/share/eigen3/cmake > /dev/null
 cmake --build "$JB" -j8 > /dev/null
 "$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip" -o "$B/apk/lib/arm64-v8a/libarloop.so" "$JB/libarloop.so"
+# 0.6.30 (appnpu): NPU loop server (npu/xfnpu_*), loaded only with intent npu_loop 1; ENN is dlopen-ed at run time (no link)
+"$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android34-clang++" -O2 -std=c++17 -Wall -shared -fPIC \
+  "$HERE/npu/xfnpu_jni.cpp" -o "$B/xfnpu_unstripped.so" -static-libstdc++ -llog -ldl -pthread
+"$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip" -o "$B/apk/lib/arm64-v8a/libxfnpu.so" "$B/xfnpu_unstripped.so"
 cp "$B/classes.dex" "$B/apk/"
 (cd "$B/apk" && zip -q -r "$B/unsigned.apk" classes.dex lib)
 "$BT/zipalign" -f 4 "$B/unsigned.apk" "$B/aligned.apk"

@@ -1,0 +1,9 @@
+ok   auto, bridge not pinned -> 0,1,2,3
+ok   auto, bridge 7-9 -> 0,1,2,3,4,5,6
+ok   auto, bridge 4,5,7-9 -> 0,1,2,3,6
+ok   explicit 2-3,8 -> 2,3,8
+ok   none -> none
+ok   bad cpus rejected
+ok   bridge cfg -> xf_mode=2,xf_tri=1,xf_tri_deg=3,xf_tri_mode=1,xf_min_inl=40,xf_rp_deg=2,max_cand=1,xf_timeout_ms=3000
+ok   bridge cfg + npu_cfg -> xf_mode=2,xf_tri=1,xf_tri_deg=3,xf_tri_mode=1,xf_min_inl=40,xf_rp_deg=2,max_cand=1,xf_timeout_ms=3000,max_cand=2
+RESULT PASS

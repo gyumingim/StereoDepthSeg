@@ -39,12 +39,13 @@ while True:
     if c == b"L":
         n, = struct.unpack("<I", rd(4))
         p = rd(n).decode()
-        if p in ("pc:xfsoft", "pc:xfoff"):
+        if p in ("pc:xfsoft", "pc:xfoff", "pc:xfsoft16"):   # xfsoft16: fp16 input AND output buffers (fp16 path test)
             if xfnet is None:
                 from modules.xfeat import XFeat
                 xfnet = XFeat(weights=os.path.join(XF_SRC, "weights", "xfeat.pt"), top_k=512).net.cpu().eval()
-            models.append((p, (1, 1, 544, 960), 129 if p == "pc:xfsoft" else 130))
-            fout.write(struct.pack("<II", 544 * 960 * 4, (129 if p == "pc:xfsoft" else 130) * 68 * 120 * 4))
+            ch, es = (130 if p == "pc:xfoff" else 129), (2 if p.endswith("16") else 4)
+            models.append((p, (1, 1, 544, 960), ch))
+            fout.write(struct.pack("<II", 544 * 960 * es, ch * 68 * 120 * es))
         elif p == "pc:lg512":
             spec = importlib.util.spec_from_file_location("lgnpu", LGNPU)
             lgm = importlib.util.module_from_spec(spec)
@@ -59,13 +60,14 @@ while True:
         m, = struct.unpack("<i", rd(4))
         kind, a, b = models[m]
         if kind.startswith("pc:xf"):
-            x = torch.from_numpy(np.frombuffer(rd(544 * 960 * 4), np.float32).reshape(1, 1, 544, 960).copy())
-            f, k, h = xfnet(x)
-            if kind == "pc:xfsoft":
+            f16 = kind.endswith("16")
+            x = np.frombuffer(rd(544 * 960 * (2 if f16 else 4)), np.float16 if f16 else np.float32).astype(np.float32)
+            f, k, h = xfnet(torch.from_numpy(x.reshape(1, 1, 544, 960).copy()))
+            if kind in ("pc:xfsoft", "pc:xfsoft16"):
                 o = torch.cat([f, F.softmax(k, 1)[:, :64], h], 1)
             else:
                 o = torch.cat([f, k, torch.logit(h.clamp(1e-7, 1 - 1e-7))], 1)
-            fout.write(o.numpy().astype(np.float32).tobytes())
+            fout.write(o.numpy().astype(np.float16 if f16 else np.float32).tobytes())
         else:
             x = torch.from_numpy(np.frombuffer(rd(512 * 512 * 4), np.float32).reshape(1, 512, 512).copy())
             fout.write(a(x).numpy().astype(np.float32).tobytes())

@@ -138,7 +138,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261026-integ2-0.6.28";
+    static final String VERSION = "ov-20261028-appnpu-0.6.30";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";
@@ -240,6 +240,11 @@ class OvRunner implements SensorEventListener {
     // 0.6.28 (integ2, ovloop): intent loop 1 -> --loop 1 --loop-vocab files/ov/voc_k10L4.voc (copied from the APK assets
     // when missing or different in size) --loop-log <run>/loop.jsonl. VIO/control pose unchanged; pose/pred lines get "map".
     int loop = 0;
+    // 0.6.30 (appnpu-20261028): intent npu_loop 1 -> NpuLoop (XFeat + LighterGlue on the NPU, server in this process) and
+    // ov_bridge --loop-xf unix:@SOCK --loop-cfg <FLGc gates>; null (default) = nothing of it runs (0.6.29 behaviour).
+    // Server start failure -> bridge arguments exactly as without it, reason in meta.json "npu_loop" / events.
+    NpuLoop npu;
+    private String npuState;
     String profile = "";                        // 0.6.20 intent profile (applied in MainActivity; recorded here)
     String viopUdp = "";                        // 0.6.20 intent viop_udp HOST:PORT -> ov_bridge --viop-udp
     int viopHbHz = 20;                          // 0.6.20 intent viop_hb_hz -> --viop-hb-hz
@@ -469,6 +474,17 @@ class OvRunner implements SensorEventListener {
             Collections.addAll(cmd, "--loop", "1", "--loop-vocab", voc.getAbsolutePath(),
                     "--loop-log", new File(runDir, "loop.jsonl").getAbsolutePath());
         }
+        if (npu != null) {                                                                                             // 0.6.30 appnpu
+            String why = loop == 0 ? "loop 0 (npu_loop needs loop closure, e.g. profile rec60)" : npu.start(runDir, cpus);
+            if (why == null) {
+                Collections.addAll(cmd, "--loop-xf", "unix:@" + npu.sock(), "--loop-cfg", npu.bridgeCfg());
+                npuState = "on";
+            } else {
+                npuState = "off: " + why;
+                status.show("npu loop off: " + why);
+            }
+            android.util.Log.i("arlat", "npu loop " + npuState);
+        }
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.environment().put("LD_LIBRARY_PATH", lib);
         pb.redirectError(new File(runDir, "bridge_stderr.log"));
@@ -503,6 +519,10 @@ class OvRunner implements SensorEventListener {
                 .put("profile", profile).put("viop_udp", viopUdp).put("viop_hb_hz", viopHbHz).put("viop_imu", viopImu)   // 0.6.20
                 .put("viop_hb_src", viopHbSrc)                                                                       // esp32fix
                 .put("loop", loop);                                                                                  // 0.6.28 ovloop
+        if (npu != null)                                                                                               // 0.6.30 appnpu
+            meta.put("npu_loop", npuState).put("npu_xf", npu.xfPath).put("npu_lg", npu.lgPath).put("npu_lg_in", npu.lgIn)
+                    .put("npu_lg_pad", npu.lgPad).put("npu_topk", npu.topk).put("npu_cpus", npu.usedCpus).put("npu_nice", npu.nice)
+                    .put("npu_perf", npu.perf).put("npu_cache_mb", npu.cacheMb).put("npu_cfg", npu.bridgeCfg());
         if (!viopImu.isEmpty()) {   // 0.6.20: own sensor thread, independent of the VIO feed (class doc)
             imuTx = new ViopImuSender(ctx, viopImu, viopImuUncal, runDir);
             imuTx.start();
@@ -897,6 +917,7 @@ class OvRunner implements SensorEventListener {
             try { meta.put("bridge_exit", proc.isAlive() ? "killed" : String.valueOf(proc.exitValue())); } catch (Exception ignored) { }
             proc = null;
         }
+        if (npu != null) npu.stop();   // 0.6.30 appnpu: after the bridge is gone (its loop thread sent 'Q' or the socket closed)
         Object hs = hint; hint = null;
         if (hs != null && android.os.Build.VERSION.SDK_INT >= 31) try { ((android.os.PerformanceHintManager.Session) hs).close(); } catch (Throwable ignored) { }
         notePerf("hint_reports", hintReports);

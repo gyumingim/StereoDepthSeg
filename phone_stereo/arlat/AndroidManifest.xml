@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.scan3d.arlat"
-    android:versionCode="35" android:versionName="0.6.29-lens05-20261027">
+    android:versionCode="36" android:versionName="0.6.30-appnpu-20261028">
     <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="34" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -17,6 +17,8 @@
     <application android:label="ARCore Latency" android:debuggable="true" android:extractNativeLibs="true"
         android:theme="@android:style/Theme.Material.NoActionBar">
         <meta-data android:name="com.google.ar.core" android:value="required" />
+        <!-- 0.6.30 appnpu: vendor public library for the NPU (NpuLoop, only loaded with intent npu_loop 1); not required -->
+        <uses-native-library android:name="libenn_public_api_cpp.so" android:required="false" />
         <meta-data android:name="com.google.ar.core.min_apk_version" android:value="241930000" />
         <activity android:name=".MainActivity" android:exported="true" android:screenOrientation="portrait">
             <intent-filter>

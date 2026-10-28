@@ -138,6 +138,18 @@ static inline float h2f(uint16_t h) {
   return f;
 }
 
+struct Half {  // fp16 ENN buffer element, read as float (post_soft / post_off / sample_desc are templates on the element)
+  uint16_t v;
+  operator float() const { return h2f(v); }
+};
+
+static inline std::string jn(double v) {  // JSON number, NaN / inf -> null
+  if (!std::isfinite(v)) return "null";
+  char b[32];
+  std::snprintf(b, sizeof b, "%.1f", v);
+  return b;
+}
+
 static inline double logsig(double z) { return z >= 0 ? -std::log1p(std::exp(-z)) : z - std::log1p(std::exp(z)); }
 
 class Server {
@@ -251,22 +263,25 @@ private:
     if (xf_ < 0) return false;
     lg_ = be_->load(c_.lg_model, err);
     if (lg_ < 0) return false;
-    // XFeat shapes: input 1 x Hm x Wm float, output (129 | 130) x Hm/8 x Wm/8 float (Wm = 960 assumed, Hm from the size)
+    // XFeat shapes: input 1 x 544 x 960, output (129 | 130) x 68 x 120; float32 or fp16 buffers (fp16 = the model has no
+    // CPU Cast at that end, e.g. nncrun xfpo16), told apart by the buffer size
     const size_t xin = be_->in_bytes(xf_), xout = be_->out_bytes(xf_);
     Wm_ = 960;
-    Hm_ = static_cast<int>(xin / 4 / Wm_);
-    if (xin != static_cast<size_t>(Wm_) * Hm_ * 4 || Hm_ % 32 != 0 || Hm_ < 64) {
-      err = "XFeat model input " + std::to_string(xin) + " B is not 1x1xHx960 float";
-      return false;
-    }
-    const size_t cell = static_cast<size_t>(Wm_ / 8) * (Hm_ / 8) * 4;
-    if (xout == 129 * cell) xf_soft_ = true;
-    else if (xout == 130 * cell) xf_soft_ = false;
+    Hm_ = 544;
+    const size_t npx = static_cast<size_t>(Wm_) * Hm_, cell = static_cast<size_t>(Wm_ / 8) * (Hm_ / 8);
+    if (xin == npx * 4) xf_in16_ = false;
+    else if (xin == npx * 2) xf_in16_ = true;
     else {
-      err = "XFeat model output " + std::to_string(xout) + " B is neither 129 nor 130 x " + std::to_string(Hm_ / 8) + "x" +
-            std::to_string(Wm_ / 8) + " float";
+      err = "XFeat model input " + std::to_string(xin) + " B is not 1x1x544x960 float32 / fp16";
       return false;
     }
+    if (xout == 129 * cell * 4 || xout == 129 * cell * 2) xf_soft_ = true;
+    else if (xout == 130 * cell * 4 || xout == 130 * cell * 2) xf_soft_ = false;
+    else {
+      err = "XFeat model output " + std::to_string(xout) + " B is neither 129 nor 130 x 68x120 float32 / fp16";
+      return false;
+    }
+    xf_out16_ = xout == (xf_soft_ ? 129 : 130) * cell * 2;
     // LighterGlue shapes
     const size_t lin = be_->in_bytes(lg_), lout = be_->out_bytes(lg_);
     if (lin % (512 * 4) == 0 && (lout == (lin / 2048) * 3 * 4 || lout == (lin / 2048) * (2 * (lin / 2048) + 2) * 4)) {
@@ -306,8 +321,9 @@ private:
       }
       std::memcpy(wr_, d.data() + d.size() - 384, 384);  // .npy: data is the last 384 bytes (header first)
     }
-    S("xfeat %s: in 1x%dx%d, out %d ch (%s) | lighterglue %s: N %d%s, out %s | lg_in %s pad %d | topk %d min_cos %.2f lg_thr %.2f "
-      "cache %.0f MB", c_.xf_model.c_str(), Hm_, Wm_, xf_soft_ ? 129 : 130, xf_soft_ ? "post_soft" : "post_off",
+    S("xfeat %s: in 1x%dx%d %s, out %d ch %s (%s) | lighterglue %s: N %d%s, out %s | lg_in %s pad %d | topk %d min_cos %.2f "
+      "lg_thr %.2f cache %.0f MB", c_.xf_model.c_str(), Hm_, Wm_, xf_in16_ ? "fp16" : "f32", xf_soft_ ? 129 : 130,
+      xf_out16_ ? "fp16" : "f32", xf_soft_ ? "post_soft" : "post_off",
       c_.lg_model.c_str(), N_, lg_mask_ ? " masked (513)" : "", lg_inmodel_ ? "N x 3 (in-model decision)" : "A|BT|z0|z1",
       c_.lg_in.c_str(), c_.lg_pad, c_.topk, c_.min_cos, c_.lg_thr, c_.cache_mb);
     // warm-up (zero input): first ENN runs are slower; also proves both models execute
@@ -491,10 +507,14 @@ private:
     }
     const double npx = static_cast<double>(Hm_) * Wm_, mean = s / npx, var = std::max(0.0, s2 / npx - mean * mean);
     const float r = static_cast<float>(1.0 / std::sqrt(var + 1e-5)), mf = static_cast<float>(mean);
+    uint16_t *dst16 = reinterpret_cast<uint16_t *>(dst);
     for (int y = 0; y < Hm_; y++) {
       const uint8_t *row = g + static_cast<size_t>(std::min(y, H - 1)) * W;
-      float *d = dst + static_cast<size_t>(y) * Wm_;
-      for (int x = 0; x < W; x++) d[x] = (row[x] * (1.0f / 255.0f) - mf) * r;
+      const size_t o0 = static_cast<size_t>(y) * Wm_;
+      if (xf_in16_)
+        for (int x = 0; x < W; x++) dst16[o0 + x] = f2h((row[x] * (1.0f / 255.0f) - mf) * r);
+      else
+        for (int x = 0; x < W; x++) dst[o0 + x] = (row[x] * (1.0f / 255.0f) - mf) * r;
     }
     const double b = now_us();
     if (!be_->run(xf_, err)) {
@@ -503,27 +523,31 @@ private:
       return false;
     }
     const double c = now_us();
-    const float *o = be_->out(xf_);
     std::vector<Kp> kp;
     std::vector<float> desc;
     OffT t;
-    if (xf_soft_) post_soft(o, Hm_, Wm_, B_, kp, desc, c_.topk, t, H);
-    else post_off(o, Hm_, Wm_, B_, kp, desc, c_.topk, t, H);
-    const double d = now_us();
     Entry e;
     e.W = W;
     e.H = H;
     e.nq = nq;
-    e.n = nq + static_cast<int>(kp.size());
-    e.pts.resize(2 * static_cast<size_t>(e.n));
-    e.d.resize(64 * static_cast<size_t>(e.n));
     float dq[64];
-    for (int i = 0; i < nq; i++) {
-      e.pts[2 * i] = q[2 * i];
-      e.pts[2 * i + 1] = q[2 * i + 1];
-      sample_desc(o, q[2 * i], q[2 * i + 1], dq);
-      for (int k = 0; k < 64; k++) e.d[64 * static_cast<size_t>(i) + k] = f2h(dq[k]);
-    }
+    // post-processing straight on the ENN output buffer (float32, or fp16 read through Half)
+    auto post = [&](const auto *o) {
+      if (xf_soft_) post_soft(o, Hm_, Wm_, B_, kp, desc, c_.topk, t, H);
+      else post_off(o, Hm_, Wm_, B_, kp, desc, c_.topk, t, H);
+      e.n = nq + static_cast<int>(kp.size());
+      e.pts.resize(2 * static_cast<size_t>(e.n));
+      e.d.resize(64 * static_cast<size_t>(e.n));
+      for (int i = 0; i < nq; i++) {
+        e.pts[2 * i] = q[2 * i];
+        e.pts[2 * i + 1] = q[2 * i + 1];
+        sample_desc(o, q[2 * i], q[2 * i + 1], dq);
+        for (int k = 0; k < 64; k++) e.d[64 * static_cast<size_t>(i) + k] = f2h(dq[k]);
+      }
+    };
+    if (xf_out16_) post(reinterpret_cast<const Half *>(be_->out(xf_)));
+    else post(be_->out(xf_));
+    const double d = now_us();
     kp_out.resize(2 * kp.size());
     for (size_t i = 0; i < kp.size(); i++) {
       const size_t j = nq + i;
@@ -534,11 +558,14 @@ private:
     const double f = now_us();
     put(id, std::move(e));
     n_feat_++;
-    L("{\"op\":\"F\",\"id\":%lld,\"t_wall_ms\":%.0f,\"nq\":%d,\"nk\":%d,\"us\":{\"prep\":%.0f,\"npu\":%.0f,\"post\":%.0f,"
-      "\"qdesc\":%.0f,\"tot\":%.0f,\"wait\":%.0f},\"post_us\":[%.0f,%.0f,%.0f,%.0f],\"skin\":%.1f,\"ap\":%.1f,\"bat\":%.1f,"
+    // us: prep = pad + normalise + input write, npu = EnnExecuteModel, post_q = XFeat post + query descriptors,
+    // store = cache copy (fp16), tot = request byte 1 -> answer ready, recv = request byte 1 -> body received; post_us = post stages
+    // (soft/shuffle, nms+score, top-k, descriptors)
+    L("{\"op\":\"F\",\"id\":%lld,\"t_wall_ms\":%.0f,\"nq\":%d,\"nk\":%d,\"us\":{\"prep\":%.0f,\"npu\":%.0f,\"post_q\":%.0f,"
+      "\"store\":%.0f,\"tot\":%.0f,\"recv\":%.0f},\"post_us\":[%.0f,%.0f,%.0f,%.0f],\"skin\":%s,\"ap\":%s,\"bat\":%s,"
       "\"tstat\":%d,\"cache_n\":%zu,\"cache_mb\":%.1f,\"evicted\":%llu}",
       (long long)id, wall_ms(), nq, static_cast<int>(kp.size()), b - a, c - b, d - c, f - d, f - t_req, a - t_req, t.soft, t.nms,
-      t.topk, t.desc, skin_.load(), ap_.load(), bat_.load(), tstat_.load(), cache_.size(), cache_bytes_ / 1048576.0,
+      t.topk, t.desc, jn(skin_.load()).c_str(), jn(ap_.load()).c_str(), jn(bat_.load()).c_str(), tstat_.load(), cache_.size(), cache_bytes_ / 1048576.0,
       (unsigned long long)n_evict_);
     return true;
   }
@@ -605,9 +632,9 @@ private:
     }
     n_match_++;
     L("{\"op\":\"M\",\"a\":%lld,\"b\":%lld,\"mode\":%d,\"t_wall_ms\":%.0f,\"nA\":%d,\"nB\":%d,\"nv\":[%d,%d],\"n\":%zu,"
-      "\"us\":{\"pack\":%.0f,\"npu\":%.0f,\"post\":%.0f,\"tot\":%.0f,\"wait\":%.0f},\"skin\":%.1f,\"ap\":%.1f}",
+      "\"us\":{\"pack\":%.0f,\"npu\":%.0f,\"post\":%.0f,\"tot\":%.0f,\"recv\":%.0f},\"skin\":%s,\"ap\":%s}",
       (long long)a, (long long)b, mode, wall_ms(), A.n, B.n, nv0, nv1, out.size(), t_pack, t_npu, t_post, now_us() - t_req,
-      t0 - t_req, skin_.load(), ap_.load());
+      t0 - t_req, jn(skin_.load()).c_str(), jn(ap_.load()).c_str());
     return static_cast<int32_t>(out.size());
   }
 
@@ -777,6 +804,7 @@ private:
   int xf_ = -1, lg_ = -1;
   int Wm_ = 960, Hm_ = 544, N_ = 512;
   bool xf_soft_ = true, lg_mask_ = false, lg_inmodel_ = false;
+  bool xf_in16_ = false, xf_out16_ = false;  // XFeat ENN buffers fp16 instead of float32
   float wr_[96];
   OffBuf B_;
   std::map<int64_t, Entry> cache_;
