@@ -926,6 +926,7 @@ struct PredSnap {
   // integ-20261025: only filled with --mav-udp / --viop-udp (drone output from the prediction thread)
   bool has_link = false;
   const void *epoch = nullptr;  // VioManager instance (frame alignment / reset counter)
+  bool seeded = false;          // armhist 10-29: this VioManager was seeded by state injection (VIOP_F_SEEDED)
   Eigen::Matrix<double, 9, 9> P9 = Eigen::Matrix<double, 9, 9>::Zero();
   double sigma_w = 0.0;
   int n_feat = 0;
@@ -1161,7 +1162,7 @@ private:
       const double rate = (n_int > 0 && h > 0.0) ? n_int / h : 400.0;
       g_mav->emit(s.epoch, s.t0_ns + static_cast<int64_t>(std::llround(t_pred * 1e9)), R_ItoG, p_IinG, v, w_I, s.P9, lost,
                   s.sigma_w * s.sigma_w * std::min(rate, 2000.0), f_I, src,
-                  s.t0_ns + static_cast<int64_t>(std::llround(time0 * 1e9)), s.n_feat);
+                  s.t0_ns + static_cast<int64_t>(std::llround(time0 * 1e9)), s.n_feat, s.seeded);
     }
     std::ostringstream o;
     o.precision(prec_);
@@ -1347,6 +1348,7 @@ public:
     const bool had_sys = sys_ != nullptr;
     if (p) sys_ = new_vio(*p);
     else sys_ = new_vio(params_);
+    sys_seeded_ = false;  // armhist 10-29: reinit_from_state sets it again after the injection
     if (loop_ && had_sys) loop_->reset_session("VIO re-initialised");  // --loop: new world frame -> new graph
     pred_pending_ = false;
     snap_dirty_ = true;  // --pred-thread: the published snapshot is stale
@@ -1371,8 +1373,23 @@ public:
     rx_spin_exit_us_ = spin_exit_us;
   }
 
+  // full VIO re-initialisation (never state injection): RESET record, and the FC VIO reset request (armhist 10-29)
+  void full_reset() {
+    make_system();
+    imu_hold_.clear();
+    imu_recent_.clear();
+    last_upd_t_ = -1e300;
+    newest_imu_t_ = -1e300;
+    first_cam_t_ = -1e300;
+    off_active_ = off_pending_ = false;  // --recover frame offset (2026-10-25)
+  }
+
   // 입력 하나 처리. 출력 JSON 줄들을 out 에 덧붙인다. false = QUIT.
   bool handle(uint32_t type, const std::vector<uint8_t> &buf, std::string &out) {
+    if (g_mav && g_mav->vio_reset_req.exchange(false)) {  // armhist 10-29: FC asked (VIOP_T_VIO_RESET_REQ), main thread
+      full_reset();
+      out += "{\"type\":\"reset\",\"reason\":\"fc_request\"}\n";
+    }
     switch (type) {
     case kImu:
       if (buf.size() != 56) {
@@ -1393,13 +1410,7 @@ public:
       on_stereo(buf, out);
       return true;
     case kReset:
-      make_system();
-      imu_hold_.clear();
-      imu_recent_.clear();
-      last_upd_t_ = -1e300;
-      newest_imu_t_ = -1e300;
-      first_cam_t_ = -1e300;
-      off_active_ = off_pending_ = false;  // --recover frame offset (2026-10-25)
+      full_reset();
       out += "{\"type\":\"reset\"}\n";
       return true;
     case kQuit:
@@ -1584,6 +1595,7 @@ public:
     if (g_mav) {  // integ-20261025: what the drone link needs (= Bridge::predict)
       s.has_link = true;
       s.epoch = sys_.get();
+      s.seeded = sys_seeded_;
       std::vector<std::shared_ptr<ov_type::Type>> vars = {st->_imu->q(), st->_imu->p(), st->_imu->v()};
       s.P9 = ov_msckf::StateHelper::get_marginal_covariance(st, vars);
       s.sigma_w = params_.imu_noises.sigma_w;
@@ -2382,6 +2394,7 @@ private:
       last_imu_t_ = m.timestamp;
     }
     n_reinit_state_++;
+    sys_seeded_ = true;  // armhist 10-29: this W carries the old state -> VIOP_F_SEEDED (does not clear the FC history latch)
     o << ",\"reinit\":\"state\",\"gap\":";
     jnum(o, gap);
     o << ",\"t_state\":";
@@ -2609,6 +2622,7 @@ private:
   double last_upd_t_ = -1e300;      // 마지막 특징 갱신 시각 (make_system 이 지우지 않음: 주입 뒤 또 끊기면 gap 이 커져 정지 초기화로)
   std::deque<ov_core::ImuData> imu_recent_;
   uint64_t n_reinit_state_ = 0;
+  bool sys_seeded_ = false;  // armhist 10-29: sys_ was seeded by reinit_from_state
   uint64_t n_init_vetoed_ = 0;
   bool init_checked_ = false;  // 이 VioManager 의 초기화를 --init-gate 로 확인했나
   bool use_shadow_ = false;    // --init-gate 켜짐

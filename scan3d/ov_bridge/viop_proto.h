@@ -63,7 +63,11 @@
  *
  * FRAMES:
  *   W = world, gravity aligned, Z UP (gravity -Z), x / y = arbitrary yaw fixed at VIO initialisation, origin = IMU
- *       position at initialisation; a NEW W after each reset (reset_counter changes, flag VIOP_F_RESET once).
+ *       position at initialisation; a NEW W after each reset (reset_counter changes, flag VIOP_F_RESET on the first
+ *       VIOP_RESET_REPEAT poses of the new W - armhist 2026-10-29: repeated so that one lost frame does not hide it;
+ *       was: once). A W started by STATE INJECTION (ov_bridge --reinit-state / --recover: the new filter is seeded
+ *       with the old position / velocity / attitude) also sets VIOP_F_SEEDED on EVERY pose of that W: it is a new W
+ *       for re-anchoring, but NOT a full VIO re-initialisation (a diverged state may have been carried over).
  *   I = body frame of the PHONE IMU = Android sensor axes: +x right edge of the screen, +y top edge, +z out of the
  *       screen (rear camera looks along -z). NOT the drone body.
  *   The drone ESP32 applies its mounting R_BI (phone IMU -> drone body, e.g. FRD) and z-down local frame
@@ -105,6 +109,9 @@
 #define VIOP_F_FROM_FRAME 0x0004u /* first prediction after a camera update (else between frames) */
 #define VIOP_F_RESET 0x0008u      /* first pose of a new W: re-anchor */
 #define VIOP_F_REPLAY 0x0010u     /* re-timed replay of an old stream (bench), not live */
+#define VIOP_F_SEEDED 0x0020u     /* armhist 10-29: this W was seeded from the previous filter state (not a full
+                                     re-init); set on every pose of that W */
+#define VIOP_RESET_REPEAT 50      /* VIOP_F_RESET is set on the first 50 poses of a new W (armhist 10-29) */
 
 #if defined(_MSC_VER)
 #pragma pack(push, 1)
@@ -276,7 +283,14 @@ static inline void viop_pose_to_local(const viop_pose_t *p, const float R_BI[9],
  *                                                                          latency; 36 B x 500 Hz = 18 kB/s << USB FS)
  *   0x04  VIOP_T_FC_EVENT      drone -> PC (ESP-NOW)    16 B    26 B   on every safety event (state / tier change...)
  *   0x05  VIOP_T_FC_STATUS     drone -> PC (ESP-NOW)    40 B    50 B   20 Hz
- *   0x20  VIOP_T_CMD           PC -> drone (ESP-NOW)     4 B    14 B   on demand (ARM, DISARM, KILL, LAND, CLEAR_KILL)
+ *   0x20  VIOP_T_CMD           PC -> drone (ESP-NOW)     4 B    14 B   on demand (ARM, DISARM, KILL, LAND, CLEAR_KILL,
+ *                                                                     VIO_RESET)
+ *   0x23  VIOP_T_VIO_RESET_REQ drone -> phone (USB)     4 B    14 B   armhist 10-29: after an accepted VIOP_CMD_VIO_RESET
+ *                                                                     (only DISARMED / KILLED): payload = viop_cmd_t
+ *                                                                     {cmd VIOP_CMD_VIO_RESET, confirm}; the phone does a
+ *                                                                     FULL VIO re-init (ov_bridge: as kReset, never state
+ *                                                                     injection) -> new W without VIOP_F_SEEDED, which
+ *                                                                     clears the FC VIO history latch (FS_B_VIO_HIST)
  *   0x21  VIOP_T_SETPOINT      PC -> drone (ESP-NOW)    16 B    26 B   on demand (local NED position + yaw)
  *   0x2E  VIOP_T_PC_HB         PC -> drone (ESP-NOW)     8 B    18 B   10 Hz (link-alive; missing -> EMERG_LAND)
  *
@@ -311,6 +325,7 @@ static inline void viop_pose_to_local(const viop_pose_t *p, const float R_BI[9],
 #define VIOP_T_CMD 0x20
 #define VIOP_T_SETPOINT 0x21
 #define VIOP_T_PC_HB 0x2E
+#define VIOP_T_VIO_RESET_REQ 0x23
 
 /* commands (VIOP_T_CMD.cmd); confirm must equal VIOP_CMD_CONFIRM(cmd) (guards against a mis-parsed frame) */
 #define VIOP_CMD_ARM 1
@@ -318,6 +333,7 @@ static inline void viop_pose_to_local(const viop_pose_t *p, const float R_BI[9],
 #define VIOP_CMD_KILL 3
 #define VIOP_CMD_LAND 4
 #define VIOP_CMD_CLEAR_KILL 5
+#define VIOP_CMD_VIO_RESET 6 /* armhist 10-29: ask the phone for a full VIO re-init (FC forwards 0x23) */
 #define VIOP_CMD_CONFIRM(c) ((uint16_t)(0xC0DEu ^ (uint16_t)(c)))
 
 #if defined(_MSC_VER)
