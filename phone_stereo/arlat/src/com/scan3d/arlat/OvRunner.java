@@ -138,7 +138,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261029-appfix-0.6.37";
+    static final String VERSION = "ov-20261029-appfix-0.6.37b";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";
@@ -1063,12 +1063,17 @@ class OvRunner implements SensorEventListener {
         if (imuThread != null) imuThread.quitSafely();
         try { if (writerT != null) writerT.join(500); } catch (InterruptedException ignored) { }
         try { if (replayT != null) replayT.join(1500); } catch (InterruptedException ignored) { }   // 0.6.35
-        if (proc != null && writerT != null && writerT.isAlive()) proc.destroy();   // writer stuck in a 2 MB write: closing stdin would block the UI thread
+        boolean killedByStop = false;   // 0.6.37b: we destroyed the bridge in this normal stop (not a crash)
+        if (proc != null && writerT != null && writerT.isAlive()) { proc.destroy(); killedByStop = true; }   // writer stuck in a 2 MB write: closing stdin would block the UI thread
         if (proc != null) {
             // EOF on stdin -> the bridge returns from main (closes bridge_timing.csv / ov_timing.txt), then kill if needed
             try { proc.getOutputStream().close(); } catch (Exception ignored) { }
-            try { if (!proc.waitFor(1500, java.util.concurrent.TimeUnit.MILLISECONDS)) proc.destroy(); } catch (Exception ignored) { proc.destroy(); }
-            try { meta.put("bridge_exit", proc.isAlive() ? "killed" : String.valueOf(proc.exitValue())); } catch (Exception ignored) { }
+            // 0.6.37b: npu_loop 1 -> 5 s graceful window (loop thread sends Q to the NPU server); npu_loop 0: 1.5 s as before
+            final long graceMs = npu != null ? 5000 : 1500;
+            try { if (!proc.waitFor(graceMs, java.util.concurrent.TimeUnit.MILLISECONDS)) { proc.destroy(); killedByStop = true; } }
+            catch (Exception ignored) { proc.destroy(); killedByStop = true; }
+            try { meta.put("bridge_exit", proc.isAlive() || (killedByStop && npu != null) ? "killed" : String.valueOf(proc.exitValue())); } catch (Exception ignored) { }
+            if (npu != null) try { meta.put("bridge_killed_by_stop", killedByStop).put("bridge_grace_ms", graceMs); } catch (Exception ignored) { }
             proc = null;
         }
         if (npu != null) {   // 0.6.30 appnpu: after the bridge is gone (its loop thread sent 'Q' or the socket closed)
@@ -1076,14 +1081,17 @@ class OvRunner implements SensorEventListener {
             String down = npuDownLine(new File(runDir, "loop.jsonl"));   // bridge lost the server mid-run
             // 0.6.37 (review gap 2a): bridge exit != 0 (crash / kill / connect failure) or no "XFeat server ... connected"
             // line in bridge_stderr.log -> run INVALID too (before: run_valid stayed true, only meta bridge_exit showed it)
+            // 0.6.37b: "killed" by our own normal stop is OK (with the connect line and no xf_down / server error, checked
+            // below); a nonzero exit (crash / connect failure / exit before stop) or no bridge at all -> invalid
             String bx = meta.optString("bridge_exit", "none");
+            boolean exitOk = "0".equals(bx) || ("killed".equals(bx) && killedByStop);
             boolean conn = npuConnectedLine(new File(runDir, "bridge_stderr.log"));
             try {
-                if (down != null || !srvErr.isEmpty() || !"0".equals(bx) || !conn) {
+                if (down != null || !srvErr.isEmpty() || !exitOk || !conn) {
                     JSONObject f = new JSONObject();
                     if (down != null) f.put("bridge", new JSONObject(down));
                     if (!srvErr.isEmpty()) f.put("server", srvErr);
-                    if (!"0".equals(bx)) f.put("bridge_exit", bx);
+                    if (!exitOk) f.put("bridge_exit", bx);
                     if (!conn) f.put("bridge_connected", false);
                     meta.put("run_valid", false).put("npu_failed", f);
                     android.util.Log.e("arlat", "NPU FAILED during the run -> run INVALID: " + f);

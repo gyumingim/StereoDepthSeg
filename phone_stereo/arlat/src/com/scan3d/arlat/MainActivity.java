@@ -42,6 +42,8 @@ import java.util.Locale;
  *   Without gyro = intent ov_opt "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse" (explicit intent wins).
  * 0.6.28 (user 2026-10-26, 60 fps only): profile rec60 + loop 1 (rec20261025 unchanged) (ovloop BoW loop closure, own thread; vocabulary shipped in
  *   the APK assets, copied to files/ov/voc_k10L4.voc). Without loop = intent loop 0. Profile + recover N -> loop off.
+ * 0.6.37b (appfix 10-29): npu_loop 1 stop waits 5 s for the bridge (npu 0: 1.5 s as before); "killed" by our own stop
+ *   is a valid end (with the connect line, no xf_down / server error); nonzero exit / no connect line -> run_valid false.
  * 0.6.37 (appfix 10-29): npu_loop 1 NPU start off the UI thread (OvRunner.startAsync, "NPU 준비 중...", 15 s -> refused, no
  *   fallback); run_valid false also when bridge exit != 0 or no "XFeat server connected" line; late server stopped. npu 0 same.
  * 0.6.36 (npunight 10-29): npu_loop 1 defaults npu_opts nn_fast=1,lg_post=3,prep_fast=1, npu_perf 1, npu_cpus auto 7,8.
