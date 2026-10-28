@@ -20,7 +20,7 @@ for d in sorted(glob.glob(os.path.join(H, "phone", "*"))):
     m = re.search(r"SKIN ([0-9.]+) AP ([0-9.]+)", st)
     rows.append(dict(tag=t, rec=s.get("rec"), npu=rm.get("npu_loop"), extras=rm.get("extras", ""), valid=s.get("valid"),
                      vio_ate=s["vio"].get("ate_cm"), map_ate=s["map"].get("ate_cm"), map_end=s["map"].get("end_cm"),
-                     vio_end=s["vio"].get("end_cm"), loops=s["loop"]["n_loop"], correct=s["loop"]["n_loop_correct"],
+                     vio_end=s["vio"].get("end_cm"), loops=s["loop"]["n_loop"], correct=s["loop"]["n_loop_correct"], loop_gt=s["loop"]["n_loop_gt"],
                      kf=s["loop"]["n_kf"], ms50=s["vio_ms_p50"], ms95=s["vio_ms_p95"], msmax=s["vio_ms_max"],
                      kf_drop=s.get("kf_pushed_dropped"), late5=(s.get("meta") or {}).get("replay_late_over5ms"),
                      stop=(s.get("meta") or {}).get("stop_reason"), skin0=float(m.group(1)) if m else None, ap0=float(m.group(2)) if m else None,

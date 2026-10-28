@@ -18,4 +18,6 @@ done
 O3="--es npu_opts nn_fast=1,lg_post=3"
 one S1a 165506 1 $O3; one S2a 165506 1 $O3 --es npu_cpus 4-6; one S3a 165506 1 $O3 --es npu_cpus 7-8
 one S3b 165506 1 $O3 --es npu_cpus 7-8; one S2b 165506 1 $O3 --es npu_cpus 4-6; one S1b 165506 1 $O3
+O4="--es npu_opts nn_fast=1,lg_post=3,prep_fast=1"
+one S4a 165506 1 $O4 --es npu_cpus 7-8; one S4b 165506 1 $O4 --es npu_cpus 7-8
 echo "$(date +%H:%M) batch done" | tee -a $P
