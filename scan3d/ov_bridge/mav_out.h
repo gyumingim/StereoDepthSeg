@@ -108,6 +108,8 @@ struct Out {
   int64_t replay_off_ns = INT64_MAX;  // min(rx boot - sensor t) over IMU records
   int64_t imu_rx_boot = 0;            // receive boot time of the newest IMU record
   std::atomic<int> status{3};         // HEARTBEAT system_status: 3 standby, 4 active, 5 critical
+  std::atomic<bool> vio_reset_req{false};  // armhist 10-29: VIOP_T_VIO_RESET_REQ from the FC -> main loop full re-init
+  uint64_t n_vio_reset_req = 0;
   std::atomic<bool> stop{false};
   std::thread th;
   std::mutex mu;  // send() from the main thread and the timesync / heartbeat thread
@@ -241,6 +243,17 @@ struct Out {
           }
           n_ts++;
         }
+        // armhist 10-29: FC (via whatever carries drone -> phone bytes to this socket) asks for a FULL VIO re-init
+        if (viop_check(rx, static_cast<int>(n)) == 0 && rx[3] == VIOP_T_VIO_RESET_REQ && rx[4] == sizeof(viop_cmd_t)) {
+          viop_cmd_t c;
+          std::memcpy(&c, rx + VIOP_HDR, sizeof(c));
+          if (c.cmd == VIOP_CMD_VIO_RESET && c.confirm == VIOP_CMD_CONFIRM(VIOP_CMD_VIO_RESET)) {
+            vio_reset_req.store(true);
+            n_vio_reset_req++;
+            std::fprintf(stderr, "[ov_bridge] viop: VIO reset request from the FC (#%llu)\n",
+                         static_cast<unsigned long long>(n_vio_reset_req));
+          }
+        }
         continue;
       }
       // MAVLink 2 TIMESYNC request: FD len 0 0 seq sys comp 6F 00 00 payload(tc1 int64, ts1 int64; zeros truncated)
@@ -275,11 +288,12 @@ struct Out {
   // one prediction -> ODOMETRY / VISION_POSITION_ESTIMATE. P9 = marginal covariance of (q_GtoI JPL error, p, v).
   void emit(const void *sys_epoch, int64_t t_pred_ns, const Eigen::Matrix3d &R_ItoG, const Eigen::Vector3d &p_IinG,
             const Eigen::Vector3d &v_IinG, const Eigen::Vector3d &w_I, const Eigen::Matrix<double, 9, 9> &P9, bool lost,
-            double sigma_w2_rate, const Eigen::Vector3d &f_I, const char *src, int64_t t_state_ns = 0, int n_feat = 0) {
+            double sigma_w2_rate, const Eigen::Vector3d &f_I, const char *src, int64_t t_state_ns = 0, int n_feat = 0,
+            bool seeded = false) {
     if (fd < 0) return;
     std::lock_guard<std::mutex> lk(emu);
     if (proto == 1) {
-      emit_viop(sys_epoch, t_pred_ns, t_state_ns, R_ItoG, p_IinG, v_IinG, w_I, f_I, P9, lost, n_feat, src);
+      emit_viop(sys_epoch, t_pred_ns, t_state_ns, R_ItoG, p_IinG, v_IinG, w_I, f_I, P9, lost, n_feat, src, seeded);
       return;
     }
     if (sys_epoch != epoch) {  // first pose of a (re)initialised filter: align L, count resets
@@ -448,16 +462,17 @@ struct Out {
     if (send_raw(fr, static_cast<size_t>(fs))) n_hb_viop++;
   }
 
-  bool viop_reset_pending = true;
+  int viop_reset_left = VIOP_RESET_REPEAT;  // armhist 10-29: F_RESET on the first VIOP_RESET_REPEAT poses of a new W (was 1)
   static uint16_t sat16(double v) { return static_cast<uint16_t>(std::max(0.0, std::min(65535.0, std::round(v)))); }
   void emit_viop(const void *sys_epoch, int64_t t_pred_ns, int64_t t_state_ns, const Eigen::Matrix3d &R_ItoG,
                  const Eigen::Vector3d &p, const Eigen::Vector3d &v, const Eigen::Vector3d &w_I, const Eigen::Vector3d &f_I,
-                 const Eigen::Matrix<double, 9, 9> &P9, bool lost, int n_feat, const char *src) {
+                 const Eigen::Matrix<double, 9, 9> &P9, bool lost, int n_feat, const char *src, bool seeded = false) {
     if (sys_epoch != epoch) {
       if (epoch != nullptr) reset_counter++;
       epoch = sys_epoch;
-      viop_reset_pending = true;
-      std::fprintf(stderr, "[ov_bridge] viop: new world frame (reset_counter %d)\n", reset_counter);
+      viop_reset_left = VIOP_RESET_REPEAT;
+      std::fprintf(stderr, "[ov_bridge] viop: new world frame (reset_counter %d%s)\n", reset_counter,
+                   seeded ? ", seeded from the old state" : "");
     }
     status = lost ? 5 : 4;
     const int64_t off = (replay_time && replay_off_ns != INT64_MAX) ? replay_off_ns : 0;
@@ -489,8 +504,9 @@ struct Out {
     const int quality = lost ? 0 : std::min(100, std::max(1, static_cast<int>(std::lround(100.0 * (1.0 - sig_pos / 0.20)))));
     k.flags = static_cast<uint16_t>(VIOP_F_VALID | (lost ? 0 : VIOP_F_TRACKING) |
                                     (std::strcmp(src, "frame") == 0 ? VIOP_F_FROM_FRAME : 0) |
-                                    (viop_reset_pending ? VIOP_F_RESET : 0) | (replay_time ? VIOP_F_REPLAY : 0));
-    viop_reset_pending = false;
+                                    (viop_reset_left > 0 ? VIOP_F_RESET : 0) | (replay_time ? VIOP_F_REPLAY : 0) |
+                                    (seeded ? VIOP_F_SEEDED : 0));
+    if (viop_reset_left > 0) viop_reset_left--;
     k.reset_counter = reset_counter;
     k.quality = static_cast<uint8_t>(quality);
     k.n_feat = static_cast<uint16_t>(std::max(0, std::min(65535, n_feat)));
