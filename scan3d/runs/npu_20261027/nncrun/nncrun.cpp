@@ -284,6 +284,38 @@ static void run_main(const std::string &args, const std::string &dir) {
   int ntot = (int)(nin + nout);
   for (int i = 0; i < ntot; i++) L("buf[%d] va=%p size=%u offset=%u", i, bufs[i]->va, bufs[i]->size, bufs[i]->offset);
   EnnBuf *bi0 = bufs[0], *bo0 = bufs[nin];
+  if (I("heat", 0)) {  // heat test: NPU only (no CPU post), frame 0 of in, back-to-back (period=0) or one exec every period ms
+    std::vector<char> fd;
+    if (!in.empty() && read_file(in, fd)) memcpy(bi0->va, fd.data(), std::min<size_t>(fd.size(), bi0->size));
+    const double secs = I("secs", 60), per = I("period", 0) * 1000.0;
+    L("heat: secs=%.0f period_us=%.0f start_wall_ms=%lld", secs, per, (long long)(std::chrono::system_clock::now().time_since_epoch().count() / 1000000));
+    double t0 = now_us(), wst = t0, next = t0;
+    std::vector<double> w, all;
+    long nfail = 0;
+    while (now_us() - t0 < secs * 1e6) {
+      if (per > 0) {
+        double nw = now_us();
+        if (nw < next) usleep((useconds_t)(next - nw));
+        next += per;
+      }
+      double a = now_us();
+      int rr = eExec(mid, 0);
+      double b = now_us();
+      if (rr) nfail++;
+      w.push_back(b - a); all.push_back(b - a);
+      if (b - wst >= 10e6) {
+        L("HEATWIN t=%.0f s n=%zu p50=%.0f p95=%.0f max=%.0f us", (b - t0) / 1e6, w.size(), pct(w, .5), pct(w, .95), pct(w, 1.0));
+        w.clear(); wst = b;
+      }
+    }
+    if (!w.empty()) L("HEATWIN t=%.0f s n=%zu p50=%.0f p95=%.0f max=%.0f us", (now_us() - t0) / 1e6, w.size(), pct(w, .5), pct(w, .95), pct(w, 1.0));
+    L("HEAT total n=%zu fails=%ld p50=%.0f p95=%.0f us, wall %.1f s", all.size(), nfail, pct(all, .5), pct(all, .95), (now_us() - t0) / 1e6);
+    L("EnnReleaseBuffers -> %d", eRelBufs(bufs, ntot));
+    L("EnnCloseModel -> %d", eClose(mid));
+    L("EnnDeinitialize -> %d", eDeinit());
+    L("nncrun end");
+    return;
+  }
   if (I("p960", 0)) {  // 960x544 keyframe: pre-normalised 1ch frames -> input buffer -> NPU -> official C++ post on the ENN buffer
     std::vector<char> fd;
     const int H = 544, W = 960, ym = I("ymax", 540);
