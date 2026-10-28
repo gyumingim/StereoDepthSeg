@@ -149,6 +149,7 @@ static void xfeat_post(const float *o, std::vector<float> &K, std::vector<Kp> &k
 
 #include "xfpost.h"
 #include "lgpipe.h"
+#include "npuopt10/xfpost_soft.h"
 
 static void run_main(const std::string &args, const std::string &dir) {
   std::map<std::string, std::string> A;
@@ -283,6 +284,46 @@ static void run_main(const std::string &args, const std::string &dir) {
   int ntot = (int)(nin + nout);
   for (int i = 0; i < ntot; i++) L("buf[%d] va=%p size=%u offset=%u", i, bufs[i]->va, bufs[i]->size, bufs[i]->offset);
   EnnBuf *bi0 = bufs[0], *bo0 = bufs[nin];
+  if (I("p960", 0)) {  // 960x544 keyframe: pre-normalised 1ch frames -> input buffer -> NPU -> official C++ post on the ENN buffer
+    std::vector<char> fd;
+    const int H = 544, W = 960, ym = I("ymax", 540);
+    const bool soft = S("post960", "off") == "soft";
+    if (read_file(in, fd)) {
+      size_t fs = (size_t)H * W * 4, nf = fd.size() / fs;
+      L("p960: %zu frames, post=%s, in buf %u out buf %u", nf, soft ? "soft" : "off", bi0->size, bo0->size);
+      OffBuf OB; std::vector<Kp> kp; std::vector<float> desc;
+      FILE *fk = out.empty() ? nullptr : std::fopen(out.c_str(), "wb");
+      for (int ps = 0; ps < I("passes", 10); ps++) {
+        std::vector<double> ti, tx, tp, tt; OffT ot;
+        for (size_t k = 0; k < nf; k++) {
+          double a = now_us();
+          memcpy(bi0->va, fd.data() + k * fs, fs);
+          double b = now_us();
+          int rr = eExec(mid, 0);
+          double c = now_us();
+          if (soft) post_soft((const float *)bo0->va, H, W, OB, kp, desc, 1024, ot, ym);
+          else post_off((const float *)bo0->va, H, W, OB, kp, desc, 1024, ot, ym);
+          double e = now_us();
+          if (rr) L("exec fail %d", rr);
+          ti.push_back(b - a); tx.push_back(c - b); tp.push_back(e - c); tt.push_back(e - a);
+          if (ps == 0 && fk) {
+            int32_t n = (int32_t)kp.size(); std::fwrite(&n, 4, 1, fk);
+            for (auto &q : kp) { int32_t xy[2] = {q.x, q.y}; std::fwrite(xy, 4, 2, fk); }
+            std::fwrite(desc.data(), 4, desc.size(), fk);
+          }
+          if (ps == 0) L("p960 pass0 frame %zu: in %.0f exec %.0f post %.0f total %.0f kp %zu", k, b - a, c - b, e - c, e - a, kp.size());
+        }
+        L("P960 pass %d n=%zu total p50=%.0f p95=%.0f | in p50 %.0f | exec p50 %.0f p95 %.0f | post p50 %.0f p95 %.0f us", ps, tt.size(),
+          pct(tt, .5), pct(tt, .95), pct(ti, .5), pct(tx, .5), pct(tx, .95), pct(tp, .5), pct(tp, .95));
+      }
+      if (fk) std::fclose(fk);
+    } else L("ERROR read %s", in.c_str());
+    L("EnnReleaseBuffers -> %d", eRelBufs(bufs, ntot));
+    L("EnnCloseModel -> %d", eClose(mid));
+    L("EnnDeinitialize -> %d", eDeinit());
+    L("nncrun end");
+    return;
+  }
   if (I("lgpipe", 0)) {
     lg_pipe(I, S, P, in, out, bi0, bo0, mid, eExec);
     L("EnnReleaseBuffers -> %d", eRelBufs(bufs, ntot));
