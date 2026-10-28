@@ -42,6 +42,7 @@ import java.util.Locale;
  *   Without gyro = intent ov_opt "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse" (explicit intent wins).
  * 0.6.28 (user 2026-10-26, 60 fps only): profile rec60 + loop 1 (rec20261025 unchanged) (ovloop BoW loop closure, own thread; vocabulary shipped in
  *   the APK assets, copied to files/ov/voc_k10L4.voc). Without loop = intent loop 0. Profile + recover N -> loop off.
+ * 0.6.36 (npunight 10-29): npu_loop 1 defaults npu_opts nn_fast=1,lg_post=3,prep_fast=1, npu_perf 1, npu_cpus auto 7,8.
  * 0.6.35 (npunight 10-29): intent replay = stream file (bridge input records) under the external files dir, fed to the bridge
  *   at its record times (shifted to now) instead of the camera + IMU (no camera opened); npu_opts nn_fast / lg_post.
  * 0.6.34: cue = shake-to-start, run length from VIO init (intent run_secs, secs = hard cap); mode ov not from history, once per activity.

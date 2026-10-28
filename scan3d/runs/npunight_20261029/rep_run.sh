@@ -20,7 +20,7 @@ unlock() { [ -f "$LOCK/owner.txt" ] && mv "$LOCK/owner.txt" "$D/lock_owner_relea
 trap unlock EXIT
 $A connect "$S" > /dev/null 2>&1
 vc=$($A -s "$S" shell "dumpsys package com.scan3d.arlat | grep -m1 versionCode" | tr -d '\r')
-echo "$vc" | grep -q "versionCode=44" || { echo "phone app is not 0.6.35d (vc 44): $vc"; exit 2; }
+export VC=${VC:-44}; echo "$vc" | grep -q "versionCode=$VC" || { echo "phone app is not vc $VC: $vc"; exit 2; }
 temps() {
   local o; o=$($A -s "$S" shell "dumpsys thermalservice | sed -n '/Current temperatures from HAL/,/^[^ \t]/p'; dumpsys battery | grep -E '^  level|AC powered|USB powered'" 2>/dev/null | tr -d '\r')
   sk=$(echo "$o" | grep -oE "mValue=[0-9.]+, mType=3, mName=SKIN" | grep -oE "[0-9.]+" | head -1)
@@ -73,7 +73,7 @@ else echo "NO NEW RUN FOLDER"; fi
 python3 - "$D/rep_meta.json" "$TAG" "$REC" "$NPU" "$T0" "$run" "$cam" "${br:-}" "$*" <<'PY'
 import json, sys, time
 o, tag, rec, npu, t0, run, cam, br, extra = sys.argv[1:10]
-json.dump(dict(made=time.strftime("%F %T"), tag=tag, rec=rec, npu_loop=int(npu), started=t0, run=run or None, app="0.6.35d vc 44",
+json.dump(dict(made=time.strftime("%F %T"), tag=tag, rec=rec, npu_loop=int(npu), started=t0, run=run or None, app="vc %s" % __import__("os").environ.get("VC", "44"),
                extras="--es mode ov --es ov_cam main --es ov_cfg c4f60 --ei secs 150 --es profile rec60 --ei loop 1 --es replay replay/%s.bin%s %s"
                % (rec, " --ei npu_loop 1" if npu == "1" else "", extra), camera_after=cam, bridge_after=br or None), open(o, "w"), indent=1)
 PY

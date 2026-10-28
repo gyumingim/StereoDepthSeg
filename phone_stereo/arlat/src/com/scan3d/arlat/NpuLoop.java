@@ -30,12 +30,12 @@ final class NpuLoop {
     String lgIn = "x512";              // npu_lg_in: x512 (XFeat points only) | trk768 (tracks + XFeat, masked model needed)
     int lgPad = 2;                     // npu_lg_pad: 0 zero-centre, 1 repeat, 2 repeat + copy sum (PC check pad_check.json)
     int topk = 512;                    // npu_topk
-    String cpus = "";                  // npu_cpus: "" = auto (complement of the bridge cpus, else 0-3), "none" = no pinning
+    String cpus = "";                  // npu_cpus: "" = auto (complement of the bridge cpus, else 7,8 since 0.6.36; was 0-3), "none" = no pinning
     int nice = 10;                     // npu_nice
-    int perf = -1;                     // npu_perf: EnnSetPreferencePerfMode (-1 = not called)
+    int perf = 1;                      // npu_perf: EnnSetPreferencePerfMode (-1 = not called; 0.6.36 default 1: XFeat NPU 8.4 -> 4.7 ms, npunight S5)
     double cacheMb = 300;              // npu_cache_mb
     String cfgExtra = "";              // npu_cfg: appended to the bridge --loop-cfg (K=V,...)
-    String opts = "";                 // 0.6.35 npu_opts: nn_fast=0|1,lg_post=2|3 (server CPU post speed options, default = 0.6.34)
+    String opts = "nn_fast=1,lg_post=3,prep_fast=1";   // npu_opts (0.6.36 default; 0.6.35 default "" = 0.6.34 server; npunight S1-S5)
     int timeoutMs = 3000;              // npu_timeout_ms: bridge socket timeout -> BRIEF fallback for the rest of the run
 
     static final String BRIDGE_CFG = "xf_mode=2,xf_tri=1,xf_tri_deg=3,xf_tri_mode=1,xf_min_inl=40,xf_rp_deg=2,max_cand=1";   // = lgopt FLGc gates
@@ -118,7 +118,7 @@ final class NpuLoop {
             for (int c = 0; c <= 9; c++) if (!used.contains(c)) b.append(b.length() > 0 ? "," : "").append(c);
             if (b.length() > 0) return b.toString();
         }
-        return "0,1,2,3";
+        return "7,8";   // 0.6.36 (npunight S2-S4: on 0-3 the CPU post was 3-14x slower; 7-8 vs 4-6 about the same)
     }
 
     private static String expand(String s) {
