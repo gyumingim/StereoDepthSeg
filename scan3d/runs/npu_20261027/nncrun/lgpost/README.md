@@ -49,3 +49,34 @@
 - **eais: "OPTYPE : LOG_SOFTMAX is not supported!"** (L6p, L6pm768 변환 실패). 사전 기준대로 같은 계산 다른 연산으로 바꿈:
   LogSoftmax -> Log(Softmax) (`LGLSM=logofsm`, 기본값). 규칙 1 다시 돌림 (`pc_check_logofsm.json`): L6p torch/ORT 13/13 md5 동일,
   마스크 판 5 경우 모두 13/13 동일, 채움 짝 0 -> 합격. 새 ONNX md5 L6p 3011be07, L6pm768 a7c7c5ae (옛 판은 npu_upload/lgpost/v1_logsm).
+
+## 12차 결과 2 (19:00~19:55) - 모델 안 짝 결정: **eais 변환 못 함** / 대신 CPU 후처리 log 없는 판 (PC 에서 4.6 배)
+### 원격 Exynos 2400 (웹 NNC Profiler, CDP 크롬 자기 탭, Duration 5 s, 같은 세션 19:10~19:13) - 미검증
+| 판 | 입력·골든 | 평균 실행 (us) | SNR |
+|---|---|---|---|
+| L6_a16mc (기존, 실보정) | 1 회: 예전 골든(실보정 쌍 파생) / 2 회: L6r 합성 골든 | 13792 / 13841 | 49.1 / 12.4 (남의 골든) |
+| L6r (같은 모델, 합성 무작위 보정 40) | 합성 | 13862 / 13861 | 61.1 / 61.1 |
+- 보정을 합성으로 바꿔도 시간 같음 (13.8~13.9 ms). L6r 배치 = L6_a16mc 와 같음 (CU MUL96 Softmax52 CLN48 GeLU48, nnc 4,628,480 B).
+- **규칙 위반 1 건**: L6_a16mc 1 회차에 예전 L6_a16mc 골든 입력(실보정 쌍 = 사용자 데이터 파생)을 프로파일러에 올림. 이후는 합성 입력만.
+- L6r 골든(eais a16 시뮬, 합성 입력) vs PC fp32: 행 argmax 일치 82 %, 열 85 % (무작위 입력이라 짝 0 - 참고만).
+### L6p / L6pm768: 변환 실패 6 판 (모든 판 PC 규칙 1 은 13/13 md5 동일 합격; 각 판 pc_check_<lsm>.json)
+| 판 (LGLSM) | eais 결과 |
+|---|---|
+| logsm (LogSoftmax) | OPTYPE LOG_SOFTMAX is not supported |
+| logofsm (Log(Softmax)) | 변환기가 다시 LOG_SOFTMAX 로 묶어 같은 실패 |
+| pe (log(SM행 * SM열 + eps)) | "Add Constant Support" (행 softmax x 열 softmax 곱이 상수 입력으로 보임) |
+| vec / bc / bc2 (마지막 축만, 벡터 붙이기) | Concat/브로드캐스트 모양 오류 ("Sizes of tensors must match") |
+- 작은 시험 모델(N=64, Lab 무작위 보정, `npu_results/lgpost/lgpost_conv_logs.zip`)로 확인한 규칙:
+  - softmax(S, 축1) 단독은 되지만, 같은 S 의 행·열 softmax 를 곱하면 실패 (c2~c5), 따로 만든 S 끼리도 모양 오류 (c7, c8).
+  - ReduceMax 출력(1 칸 벡터)은 Linear 출력과 Concat 못 함 (p2, p6). [1,1,N] 행 벡터 더하기 + ArgMax/ReduceMax 는 됨 (q1).
+    [1,N,1] 열 벡터 더하기, log(sigmoid) 행 더하기, 상수(0 가중치 Linear) 붙이기는 실패 (r1~r6, s5, s6, t1~t3).
+  - **ArgMax 와 Log 는 ENN 의 CPU 에 배치됨** (CPU:ArgMax, CPU:Eltwise-LOG). N^2 개 원소의 ArgMax·Log 를 모델 안에 넣어도
+    NPU 가 아니라 ENN CPU 가 돈다 -> 모델 안으로 옮겨도 이득이 작을 것 (추정).
+- 판단 (사전 규칙): L6p 원격 시간이 없어 **판정 불가**. 남은 길: 비-NPU 연산 없이 짝을 정하는 다른 식이 있어야 하는데, 이번 시험으로는 못 찾음.
+### 대신: CPU 후처리 log 없애기 (`cpu_prod.py`, `cpu_prod_bench.cpp`) - 폰 앱에 바로 넣을 수 있음
+- sc_ij = log(A_ij BT_ji) + ls0_i + ls1_j 는 행마다 A_ij BT_ji sig(z1_j) 에, 열마다 A_ij BT_ji sig(z0_i) 에 단조 -> argmax 는 곱(float32)으로,
+  log 는 행마다 한 번(문턱)만. 모델·출력은 지금(L6_a16mc) 그대로.
+- PC fp32 13 쌍: 지금 후처리(lgpost 2 계산)와 짝 집합 md5 13/13 동일 (Python `cpu_prod_check.json`, C++ 13/13).
+- PC x86 1 스레드 (13 쌍 x 10, 3 회, `cpu_prod_bench_pc.log`): lgpost 2 p50 5.30~5.48 ms -> 곱 판 **1.14~1.18 ms** (4.6 배).
+  폰 추정: 6.4 ms x (1.15/5.3) = **약 1.4 ms (추정, 미검증)**. 폰 nncrun 에 lgpost=3 으로 넣고 같은 짝 md5 + 시간 잴 것 (폰 측정 필요).
+- Lab 서버는 lgpost 가 19:58 Stop My Server 로 정지. Lab 홈의 올린 파일: lgpost_up.zip(모델 3 + 합성 보정 생성기), probe ONNX 들, 합성 보정 (사용자 데이터 없음).

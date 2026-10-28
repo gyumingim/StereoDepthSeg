@@ -24,7 +24,7 @@ torch.set_grad_enabled(False)
 OUT = "/mnt/c/Users/a3162/scan3d_handoff/npu_upload/lgpost"
 BIG = float(os.environ.get("LGBIG", "30"))
 LN01 = float(np.log(0.1))
-LSM = os.environ.get("LGLSM", "logofsm")
+LSM = os.environ.get("LGLSM", "bc2")
 
 
 def att(q, k, v=None, pb=None):
@@ -40,14 +40,20 @@ class LGPost(nn.Module):
         self.masked = masked
         if masked:
             self.pbl = L(torch.tensor([[BIG]]), torch.tensor([-BIG]))   # pb = BIG*(v-1)
-        self.one = L(torch.zeros(1, 1), torch.ones(1))                  # constant 1 column (0*x + 1)
+        self.one = L(torch.zeros(1, 1), torch.ones(1))
+        self.idl = L(torch.ones(1, 1), torch.zeros(1))                    # identity Linear: input-slice -> linear-output layout (eais concat)
+        fp = self.b.fp
+        self.fp2 = L(fp.weight.data * 2, fp.bias.data * 2)                 # exact x2 (no scalar Mul constant)
+        if masked:
+            self.pbl2 = L(torch.tensor([[2 * BIG]]), torch.tensor([-2 * BIG]))
+        self.register_buffer("eps", torch.full((1024,), 1e-30))                  # constant 1 column (0*x + 1)
 
     def forward(self, x):
         b = self.b
         d0, d1 = b.inp(x[..., 0:64]), b.inp(x[..., 64:128])
         c0, s0, c1, s1 = x[..., 128:224], x[..., 224:320], x[..., 320:416], x[..., 416:512]
         if self.masked:
-            v = x[..., 512:513]
+            v = self.idl(x[..., 512:513]) if LSM in ("vec", "bc", "bc2") else x[..., 512:513]
             v0 = v1 = v
             pb0 = pb1 = self.pbl(v)
         else:
@@ -68,16 +74,69 @@ class LGPost(nn.Module):
         ls0, ls1 = nn.functional.logsigmoid(b.mt(d0)), nn.functional.logsigmoid(b.mt(d1))
         if self.masked:
             m0, m1 = torch.cat([m0, v0, pb0], -1), torch.cat([m1, pb1, v1], -1)
+            m0t, m1t = torch.cat([b.fp(d0), pb0, v0], -1), torch.cat([b.fp(d1), v1, pb1], -1)
             ls0, ls1 = ls0 + pb0, ls1 + pb1
+        else:
+            m0t, m1t = m0, m1
+        if LSM == "bc2":
+            # eais probes: column-vector broadcast add and concat(amax-derived, Linear) break layout; row-vector add is OK.
+            # 2*sc = log(A*A) + 2*(S + ls0_i + ls1_j) - 2*c_j   (log(A*A) = 2S - 2r; A*A avoids the Log(Softmax)->LOG_SOFTMAX fusion)
+            one0 = self.idl(x[..., 128:129] * x[..., 128:129] + x[..., 224:225] * x[..., 224:225])   # cos^2+sin^2 = 1
+            one1 = self.idl(x[..., 320:321] * x[..., 320:321] + x[..., 416:417] * x[..., 416:417])
+            S = torch.bmm(m0, m1.transpose(1, 2))
+            ST = torch.bmm(m1t, m0t.transpose(1, 2))
+            A, Bm = torch.softmax(S, 2), torch.softmax(ST, 2)
+            r = torch.amax(S, 2, keepdim=True) - torch.log(torch.amax(A, 2, keepdim=True))
+            c = torch.amax(ST, 2, keepdim=True) - torch.log(torch.amax(Bm, 2, keepdim=True))
+            S2 = torch.bmm(torch.cat([m0, ls0, one0], -1), torch.cat([m1, one1, ls1], -1).transpose(1, 2))
+            S2T = torch.bmm(torch.cat([m1t, ls1, one1], -1), torch.cat([m0t, one0, ls0], -1).transpose(1, 2))
+            T0 = torch.log(A * A) + S2 + S2 - (c + c).transpose(1, 2)
+            T1 = torch.log(Bm * Bm) + S2T + S2T - (r + r).transpose(1, 2)
+            return torch.cat([torch.argmax(T0, 2, keepdim=True).float(), torch.argmax(T1, 2, keepdim=True).float(),
+                              torch.amax(T0, 2, keepdim=True)], 2)       # col 2 = 2*rmax
+        if LSM == "bc":
+            # eais probes (10-28): only last-axis Softmax/ReduceMax/ArgMax; amax vectors cannot be concatenated with Linear outputs,
+            # but broadcast Add of [1,1,N] / [1,N,1] vectors onto [1,N,N] converts.
+            S = torch.bmm(m0, m1.transpose(1, 2))                 # [N0,N1]
+            ST = torch.bmm(m1t, m0t.transpose(1, 2))              # [N1,N0] = S^T (own MatMul)
+            r = torch.amax(S, 2, keepdim=True) - torch.log(torch.amax(torch.softmax(S, 2), 2, keepdim=True))    # row LSE
+            c = torch.amax(ST, 2, keepdim=True) - torch.log(torch.amax(torch.softmax(ST, 2), 2, keepdim=True))  # col LSE
+            u0, u1 = ls0 - r, ls1 - c                             # [1,N,1]
+            T0 = S + S + u1.transpose(1, 2) + u0                  # = sc_ij  (2S - r_i - c_j + ls0_i + ls1_j)
+            T1 = ST + ST + u0.transpose(1, 2) + u1                # = sc_ji
+            return torch.cat([torch.argmax(T0, 2, keepdim=True).float(), torch.argmax(T1, 2, keepdim=True).float(),
+                              torch.amax(T0, 2, keepdim=True)], 2)
+        if LSM == "vec":
+            # only last-axis Softmax / ReduceMax / ArgMax (eais: LOG_SOFTMAX unsupported, axis-1 softmax x row softmax Mul breaks)
+            # r_i = LSE_j S_ij = max_j S_ij - log max_j softmax(S)_ij ; c_j likewise from S^T (own MatMul)
+            S = torch.bmm(m0, m1.transpose(1, 2))                 # [N0,N1]
+            ST = torch.bmm(m1t, m0t.transpose(1, 2))              # [N1,N0] = S^T
+            r = torch.amax(S, 2, keepdim=True) - torch.log(torch.amax(torch.softmax(S, 2), 2, keepdim=True))
+            c = torch.amax(ST, 2, keepdim=True) - torch.log(torch.amax(torch.softmax(ST, 2), 2, keepdim=True))
+            one0 = self.idl(x[..., 128:129] * x[..., 128:129] + x[..., 224:225] * x[..., 224:225])   # cos^2 + sin^2 = 1 (not a constant)
+            one1 = self.idl(x[..., 320:321] * x[..., 320:321] + x[..., 416:417] * x[..., 416:417])
+            if self.masked:
+                m0x2 = torch.cat([self.fp2(d0), v0 + v0, self.pbl2(v0)], -1)
+                m1tx2 = torch.cat([self.fp2(d1), v1 + v1, self.pbl2(v1)], -1)
+            else:
+                m0x2, m1tx2 = self.fp2(d0), self.fp2(d1)
+            T0 = torch.bmm(torch.cat([m0x2, one0], -1), torch.cat([m1, ls1 - c], -1).transpose(1, 2))   # 2S_ij + ls1_j - c_j
+            T1 = torch.bmm(torch.cat([m1tx2, one1], -1), torch.cat([m0t, ls0 - r], -1).transpose(1, 2))  # 2S_ji + ls0_i - r_i
+            r0 = torch.argmax(T0, 2, keepdim=True).float()
+            r1 = torch.argmax(T1, 2, keepdim=True).float()
+            rm = torch.amax(T0, 2, keepdim=True) - r + ls0
+            return torch.cat([r0, r1, rm], 2)
         S = torch.bmm(m0, m1.transpose(1, 2))
         one0 = self.one(x[..., 0:1])
         E = torch.bmm(torch.cat([ls0, one0], -1), torch.cat([one0, ls1], -1).transpose(1, 2))
         if LSM == "logsm":   # LogSoftmax op (eais: LOG_SOFTMAX is not supported)
             sc = torch.log_softmax(S, 2) + torch.log_softmax(S, 1) + E
-        else:                # Log(Softmax) - same math; underflowed entries -> -inf (never the max)
+        elif LSM == "pe":    # log(Softmax_row * Softmax_col + 1e-30 vector)  (eais: Add Constant Support / axis-1 x axis-2 Mul fails)
+            sc = torch.log(torch.softmax(S, 2) * torch.softmax(S, 1) + self.eps[: S.shape[2]]) + E
+        else:                # Log(Softmax) (eais fuses back into LOG_SOFTMAX)
             sc = torch.log(torch.softmax(S, 2)) + torch.log(torch.softmax(S, 1)) + E
-        r0 = torch.argmax(sc, 2, keepdim=True).float()            # [1,N,1]
-        r1 = torch.argmax(sc, 1, keepdim=True).float().transpose(1, 2)  # [1,N,1]
+        r0 = torch.argmax(sc, 2, keepdim=True).float()
+        r1 = torch.argmax(sc, 1, keepdim=True).float().transpose(1, 2)
         rm = torch.amax(sc, 2, keepdim=True)
         return torch.cat([r0, r1, rm], 2)
 
@@ -89,7 +148,9 @@ def data(which, n):
 
 def finish(o, nvalid=None):
     """CPU O(N) finish on out [1,N,3]."""
-    o = o[0]
+    o = o[0].copy()
+    if LSM == "bc2":
+        o[:, 2] *= 0.5
     N = o.shape[0]
     nv = N if nvalid is None else nvalid
     m0 = np.rint(o[:, 0]).astype(np.int64)
@@ -103,7 +164,9 @@ def finish(o, nvalid=None):
 
 
 def finish_nomaskguard(o):
-    o = o[0]
+    o = o[0].copy()
+    if LSM == "bc2":
+        o[:, 2] *= 0.5
     m0 = np.rint(o[:, 0]).astype(np.int64)
     m1 = np.rint(o[:, 1]).astype(np.int64)
     return {(i, int(m0[i])) for i in range(len(m0)) if 0 <= m0[i] < len(m0) and m1[m0[i]] == i and o[i, 2] > LN01}
