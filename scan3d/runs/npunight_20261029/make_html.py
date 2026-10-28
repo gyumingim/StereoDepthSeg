@@ -34,7 +34,7 @@ def tab(head, body):
 
 
 ab = []
-for rec in ("165506", "213341", "214550"):
+for rec in ("165506", "213341", "214550", "221925", "223815"):
     for k in ("A1", "B1", "B2", "A2"):
         r = next((x for x in rows if x["tag"] == f"{rec}_{k}"), None)
         if not r:
@@ -43,7 +43,7 @@ for rec in ("165506", "213341", "214550"):
         ab.append([rec, k, "NPU" if r.get("npu") == 1 else "BRIEF", f(r.get("valid")), f(r.get("map_ate")), f(r.get("vio_ate")),
                    f(r.get("map_end")), f"{r.get('correct', '–')}/{r.get('loop_gt', '–')}/{r.get('loops', '–')}", f"{f(r.get('ms50'),1)} / {f(r.get('ms95'),1)}",
                    f"{f(r.get('ap0'),1)} → {f(r.get('ap_max'),1)}"])
-dec = [[k, html.escape(v)] for k, v in S["decision"].items()]
+dec = [[k, html.escape(v)] for k, v in S["decision"].items()] + [[k + " (추가, 탐색)", html.escape(v)] for k, v in S.get("decision_extra", {}).items()]
 sp = []
 for t in ("T0d_smoke", "S1a", "S1b", "S2a", "S2b", "S3a", "S3b", "S4a", "S4b"):
     r = next((x for x in rows if x["tag"] == t), None)
@@ -72,7 +72,7 @@ li{{margin:4px 0}}code{{font-size:.85em}}</style></head><body><div class="wrap">
 <section><h2>결론</h2><ul>{li(N['conclusion'])}</ul></section>
 <section><h2>ABBA 판정 (사전 등록 규칙)</h2>{tab(['녹화','판정'], dec)}<p><b>전체: {html.escape(S['overall'])}</b></p>
 <p class="sub">규칙: 녹화마다 두 NPU run 의 지도(루프 보정) ATE 가 두 BRIEF run 보다 모두 작으면 "NPU 쪽이 낫다". 녹화 3 개 중 2 개 이상 같은 쪽이고 반대 0 개면 전체 판정.</p></section>
-<section><h2>run 별 결과 (165506 · 213341 · 214550, ABBA)</h2>
+<section><h2>run 별 결과 (ABBA; 221925 · 223815 는 추가)</h2>
 {tab(['녹화','순서','루프','유효','지도 ATE cm','VIO ATE cm','지도 끝점 cm','맞는/GT있는/채택 루프','VIO ms p50/p95','AP 시작→최대'], ab)}
 <p class="sub">ATE = 카메라 위치, 보드 GT, 강체 정렬(회전+이동), 추적 중 포즈. 같은 자로 PC: 165506 지도 1.86 / VIO 2.00, 213341 지도 0.34 / VIO 0.37 cm.
 "맞는 루프" = 두 키프레임 시각의 GT 카메라 거리 &lt; 0.5 m 이고 광축 차 &lt; 30°.</p></section>

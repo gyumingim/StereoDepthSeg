@@ -28,24 +28,30 @@ for d in sorted(glob.glob(os.path.join(H, "phone", "*"))):
                      F_prep=n.get("F_prep_ms_p50"), F_npu=n.get("F_npu_ms_p50"), F_post=n.get("F_post_q_ms_p50"), F_tot=n.get("F_tot_ms_p50"),
                      M1_post=n.get("M1_post_ms_p50"), M2_pack=n.get("M2_pack_ms_p50"), M2_npu=n.get("M2_npu_ms_p50"), M2_post=n.get("M2_post_ms_p50"),
                      M1_n=n.get("M1_n_p50"), M2_n=n.get("M2_n_p50"), nF=n.get("n_F"), nM2=n.get("n_M2"), cpus=(s.get("meta") or {}).get("npu_cpus")))
-dec = {}
-for rec in ("165506", "213341", "214550"):
-    R = {r["tag"].split("_")[1]: r for r in rows if r["tag"].startswith(rec + "_") and r.get("map_ate") is not None}
-    if not all(k in R for k in ("A1", "B1", "B2", "A2")):
-        dec[rec] = "미완료"
-        continue
-    if not all(R[k]["valid"] for k in ("A1", "B1", "B2", "A2")):
-        dec[rec] = "무효 run 있음 → 판정 안 함"
-        continue
-    a = [R["A1"]["map_ate"], R["A2"]["map_ate"]]
-    b = [R["B1"]["map_ate"], R["B2"]["map_ate"]]
-    dec[rec] = "NPU 쪽이 낫다" if max(a) < min(b) else "BRIEF 쪽이 낫다" if min(a) > max(b) else "차이 없음"
+def decide(recs):
+  dec = {}
+  for rec in recs:
+      R = {r["tag"].split("_")[1]: r for r in rows if r["tag"].startswith(rec + "_") and r.get("map_ate") is not None}
+      if not all(k in R for k in ("A1", "B1", "B2", "A2")):
+          dec[rec] = "미완료"
+          continue
+      if not all(R[k]["valid"] for k in ("A1", "B1", "B2", "A2")):
+          dec[rec] = "무효 run 있음 → 판정 안 함"
+          continue
+      a = [R["A1"]["map_ate"], R["A2"]["map_ate"]]
+      b = [R["B1"]["map_ate"], R["B2"]["map_ate"]]
+      dec[rec] = "NPU 쪽이 낫다" if max(a) < min(b) else "BRIEF 쪽이 낫다" if min(a) > max(b) else "차이 없음"
+  return dec
+
+
+dec = decide(("165506", "213341", "214550"))
+dec_extra = decide(("221925", "223815"))
 vals = list(dec.values())
 nn, nb = vals.count("NPU 쪽이 낫다"), vals.count("BRIEF 쪽이 낫다")
 overall = "NPU 쪽이 낫다 (추정)" if nn >= 2 and nb == 0 else "BRIEF 쪽이 낫다 (추정)" if nb >= 2 and nn == 0 else "차이 보이지 않음"
 if any(v in ("미완료", "무효 run 있음 → 판정 안 함") for v in vals):
     overall += " (판정 못 한 녹화 있음)"
-json.dump(dict(rows=rows, decision=dec, overall=overall), open(os.path.join(H, "summary.json"), "w"), indent=1, ensure_ascii=False)
+json.dump(dict(rows=rows, decision=dec, overall=overall, decision_extra=dec_extra), open(os.path.join(H, "summary.json"), "w"), indent=1, ensure_ascii=False)
 for r in rows:
     print(r["tag"], {k: r.get(k) for k in ("valid", "map_ate", "vio_ate", "loops", "correct", "ms50", "ms95", "F_prep", "F_npu", "F_post", "M1_post", "M2_npu", "M2_post", "ap0", "ap_max")})
-print(dec, overall)
+print(dec, overall, dec_extra)

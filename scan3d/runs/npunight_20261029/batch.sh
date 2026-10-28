@@ -2,7 +2,7 @@
 # npunight: pre-registered order. ABBA per GT recording, then speed S1 S2 S3 S3 S2 S1 on 165506. Each run scored right after.
 H=$(cd "$(dirname "$0")" && pwd); cd $H
 PY=~/scanner/StereoDepthSeg/venv_ffs/bin/python; R=~/scanner/StereoDepthSeg/scan3d/recordings
-declare -A RD=([165506]=$R/hs_20261024_165506_std60 [213341]=$R/hs_20261021_213341 [214550]=$R/hs_20261021_214550)
+declare -A RD=([165506]=$R/hs_20261024_165506_std60 [213341]=$R/hs_20261021_213341 [214550]=$R/hs_20261021_214550 [221925]=$R/hs_20261020_221925 [223815]=$R/hs_20261020_223815)
 P=/mnt/c/Users/a3162/AppData/Local/Temp/claude/c--Users-a3162-Desktop----/27548596-eef5-4a58-bd39-e92ba44d822c/scratchpad/team/npunight.progress.txt
 one() {  # tag rec npu extra...
   local t=$1 r=$2; shift 2
