@@ -144,6 +144,16 @@ static void handle_pc_frame(const espnow_rx_t *r) {
   }
 }
 
+/* armhist 10-29: drone -> phone over the USB CDC port (VIOP_T_VIO_RESET_REQ). Best effort: if the port is closed the
+ * request is lost (the PC sees the FS_EV_VIO_RESET_REQ event and can send the command again). NOT HARDWARE-TESTED. */
+static uint16_t s_tx_seq_phone;
+static void send_phone(uint8_t type, const void *payload, uint8_t len) {
+  uint8_t f[VIOP_MAX_FRAME];
+  int n = viop_build(f, type, VIOP_SRC_DRONE, s_tx_seq_phone++, payload, len);
+  tinyusb_cdcacm_write_queue(TINYUSB_CDC_ACM_0, f, (size_t)n);
+  tinyusb_cdcacm_write_flush(TINYUSB_CDC_ACM_0, 0);
+}
+
 static void send_pc(uint8_t type, uint16_t seq, const void *payload, uint8_t len) {
   uint8_t f[VIOP_MAX_FRAME];
   int n = viop_build(f, type, VIOP_SRC_DRONE, seq, payload, len);
@@ -191,6 +201,10 @@ void link_task(void *arg) {
       fs_event_to_viop(&ev, &ve);
       send_pc(VIOP_T_FC_EVENT, s_tx_seq_ev++, &ve, sizeof(ve));
       if (ev.code == FS_EV_TRANSITION && ev.to == FS_DISARMED) disarmed_now = true;
+      if (ev.code == FS_EV_VIO_RESET_REQ) { /* armhist 10-29: forward the accepted VIO reset command to the phone */
+        viop_cmd_t rq = {.cmd = VIOP_CMD_VIO_RESET, .confirm = VIOP_CMD_CONFIRM(VIOP_CMD_VIO_RESET)};
+        send_phone(VIOP_T_VIO_RESET_REQ, &rq, sizeof(rq));
+      }
     }
     if (disarmed_now) hover_store_flush_nvs(); /* flash write only on the ground */
     int64_t t = esp_timer_get_time();

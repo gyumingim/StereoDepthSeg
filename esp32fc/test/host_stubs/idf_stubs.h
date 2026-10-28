@@ -178,4 +178,6 @@ typedef struct { tinyusb_usbdev_t usb_dev; tinyusb_cdcacm_itf_t cdc_port; size_t
 esp_err_t tinyusb_driver_install(const tinyusb_config_t *c);
 esp_err_t tusb_cdc_acm_init(const tinyusb_config_cdcacm_t *c);
 esp_err_t tinyusb_cdcacm_read(int itf, uint8_t *buf, size_t sz, size_t *rx);
+size_t tinyusb_cdcacm_write_queue(int itf, const uint8_t *in_buf, size_t in_size);
+esp_err_t tinyusb_cdcacm_write_flush(int itf, uint32_t timeout_ticks);
 #endif

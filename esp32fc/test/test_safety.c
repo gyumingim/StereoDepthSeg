@@ -1543,23 +1543,118 @@ static void t_arm_hist(void) {
   CHECK(!a.fs.vio_hist_bad && ah_probe(&a, &b));
 
   g_test = "arm_hist_armed";
-  /* latched while armed: stays armed (only ARM is blocked); after DISARM, re-ARM refused; CLEAR_KILL not affected */
+  /* v2: accumulates ONLY while DISARMED. Spikes / lost while armed or killed never latch (fast flight, touchdown or
+   * impact spike, kill) -> re-arm after landing is not blocked by them; after DISARM / CLEAR_KILL it accumulates again */
   fs_config_default(&c);
   ah_init(&a, &c);
   ah_run(&a, 1100);
   CHECK(fs_command(&a.fs, a.t, FS_CMD_ARM) && a.fs.state == FS_ARMED_IDLE);
-  a.speed = 3.0f;
+  a.speed = 3.0f; /* e.g. fast flight / impact spike while armed */
   ah_run(&a, 10);
+  a.flags = VIOP_F_VALID; /* tracking lost while armed */
+  ah_run(&a, 10);
+  a.flags = 0;
   a.speed = 0.0f;
   ah_run(&a, 100);
-  CHECK(a.fs.state == FS_ARMED_IDLE && a.fs.vio_hist_bad);
+  CHECK(a.fs.state == FS_ARMED_IDLE && !a.fs.vio_hist_bad);
   CHECK(fs_command(&a.fs, a.t, FS_CMD_DISARM) && a.fs.state == FS_DISARMED);
   ah_run(&a, 1100);
+  CHECK(ah_probe(&a, &b)); /* re-arm after landing allowed */
+  /* KILLED (kill can happen in flight): no accumulation either */
+  CHECK(fs_command(&a.fs, a.t, FS_CMD_KILL) && a.fs.state == FS_KILLED);
+  a.speed = 5.0f;
+  ah_run(&a, 50);
+  a.speed = 0.0f;
+  ah_run(&a, 1100);
+  CHECK(!a.fs.vio_hist_bad);
+  CHECK(fs_command(&a.fs, a.t, FS_CMD_CLEAR_KILL) && a.fs.state == FS_DISARMED);
+  ah_run(&a, 1100);
+  CHECK(ah_probe(&a, &b));
+  /* back in DISARMED (carried away after landing): accumulates again */
+  a.speed = 2.5f;
+  ah_run(&a, 10);
+  a.speed = 0.0f;
+  ah_run(&a, 1100);
   CHECK(!ah_probe(&a, &b) && b == FS_B_VIO_HIST);
+  /* a latch set while DISARMED survives ARM attempts, KILL and CLEAR_KILL (only a full re-init releases it) */
   CHECK(fs_command(&a.fs, a.t, FS_CMD_KILL) && a.fs.state == FS_KILLED);
   ah_run(&a, 1100);
   CHECK(fs_command(&a.fs, a.t, FS_CMD_CLEAR_KILL) && a.fs.state == FS_DISARMED);
   CHECK(!ah_probe(&a, &b) && b == FS_B_VIO_HIST);
+
+  g_test = "arm_hist_seeded";
+  /* state injection (VIOP_F_SEEDED on every pose of the new W) does NOT release; a full re-init after it does */
+  ah_init(&a, &c);
+  ah_run(&a, 500);
+  a.speed = 2.6f;
+  ah_run(&a, 10);
+  a.speed = 0.0f;
+  CHECK(a.fs.vio_hist_bad);
+  a.rc = 1;
+  a.flags = VIOP_F_VALID | VIOP_F_TRACKING | VIOP_F_SEEDED | VIOP_F_RESET; /* first poses of the seeded W */
+  ah_run(&a, 100);
+  a.flags = VIOP_F_VALID | VIOP_F_TRACKING | VIOP_F_SEEDED;
+  ah_run(&a, 1500);
+  CHECK(a.fs.vio_hist_bad && !ah_probe(&a, &b) && b == FS_B_VIO_HIST);
+  /* seeded W, lost F_RESET frames: counter change alone, still SEEDED -> no release */
+  a.rc = 2;
+  ah_run(&a, 100);
+  CHECK(a.fs.vio_hist_bad);
+  /* full re-init (no SEEDED): released */
+  a.rc = 3;
+  a.flags = 0;
+  ah_run(&a, 10);
+  CHECK(!a.fs.vio_hist_bad && ah_probe(&a, &b));
+  /* a seeded W that starts while NOT latched keeps the history check running (spike in it latches) */
+  a.rc = 4;
+  a.flags = VIOP_F_VALID | VIOP_F_TRACKING | VIOP_F_SEEDED;
+  ah_run(&a, 50);
+  CHECK(!a.fs.vio_hist_bad);
+  a.speed = 2.2f;
+  ah_run(&a, 10);
+  CHECK(a.fs.vio_hist_bad);
+
+  g_test = "arm_hist_reset_lost_frames";
+  /* app restart with the same counter (0 -> 0): the phone repeats VIOP_F_RESET on the first VIOP_RESET_REPEAT poses,
+   * so losing the first few frames still releases */
+  CHECK(VIOP_RESET_REPEAT >= 10);
+  ah_init(&a, &c);
+  ah_run(&a, 500);
+  a.speed = 3.0f;
+  ah_run(&a, 10);
+  a.speed = 0.0f;
+  CHECK(a.fs.vio_hist_bad);
+  a.pseq += 5; /* 5 frames lost, then the 6th pose of the new W (still flagged RESET) arrives */
+  a.flags = VIOP_F_VALID | VIOP_F_TRACKING | VIOP_F_RESET;
+  ah_run(&a, 10);
+  a.flags = 0;
+  CHECK(!a.fs.vio_hist_bad);
+
+  g_test = "arm_hist_vio_reset_cmd";
+  /* FS_CMD_VIO_RESET: accepted only DISARMED / KILLED -> FS_EV_VIO_RESET_REQ (the link task forwards it to the phone) */
+  ah_init(&a, &c);
+  ah_run(&a, 1100);
+  while (fs_pop_event(&a.fs, &(fs_event_t){0})) {}
+  CHECK(fs_command(&a.fs, a.t, FS_CMD_VIO_RESET) && a.fs.vio_reset_reqs == 1);
+  {
+    fs_event_t e;
+    bool seen = false;
+    while (fs_pop_event(&a.fs, &e))
+      if (e.code == FS_EV_VIO_RESET_REQ && e.from == FS_DISARMED && e.aux == FS_CMD_VIO_RESET) seen = true;
+    CHECK(seen);
+  }
+  CHECK(fs_command(&a.fs, a.t, FS_CMD_ARM) && a.fs.state == FS_ARMED_IDLE);
+  CHECK(!fs_command(&a.fs, a.t, FS_CMD_VIO_RESET) && a.fs.vio_reset_reqs == 1 && a.fs.state == FS_ARMED_IDLE);
+  {
+    fs_event_t e;
+    bool rej = false;
+    while (fs_pop_event(&a.fs, &e))
+      if (e.code == FS_EV_CMD_REJECT && e.aux == FS_CMD_VIO_RESET && e.reason == FS_B_STATE) rej = true;
+    CHECK(rej);
+  }
+  CHECK(fs_command(&a.fs, a.t, FS_CMD_KILL) && a.fs.state == FS_KILLED);
+  CHECK(fs_command(&a.fs, a.t, FS_CMD_VIO_RESET) && a.fs.vio_reset_reqs == 2 && a.fs.state == FS_KILLED);
+  CHECK(VIOP_CMD_VIO_RESET == FS_CMD_VIO_RESET && VIOP_T_VIO_RESET_REQ == 0x23 && VIOP_F_SEEDED == 0x0020u);
 
   g_test = "arm_hist_viop";
   /* fs_pose_info_from_viop keeps VIOP_F_RESET and reset_counter */

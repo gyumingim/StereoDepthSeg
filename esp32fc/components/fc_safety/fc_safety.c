@@ -17,7 +17,8 @@
 /* pose flags, must match VIOP_F_* in viop_proto.h */
 #define PF_VALID 0x0001u
 #define PF_TRACKING 0x0002u
-#define PF_RESET 0x0008u /* VIOP_F_RESET: first pose of a new W (VIO re-init) */
+#define PF_RESET 0x0008u  /* VIOP_F_RESET: first poses of a new W (VIO re-init) */
+#define PF_SEEDED 0x0020u /* VIOP_F_SEEDED: this W was seeded from the old state (not a full re-init) */
 
 static const uint8_t k_allowed[FS_NUM_STATES][FS_NUM_STATES] = {
     /* to:          DISARMED ARMED_IDLE FLYING EMERG_LAND KILLED */
@@ -243,17 +244,21 @@ void fs_on_pose(fs_t *fs, uint32_t now_ms, const fs_pose_info_t *p) {
   fs->pose_reset_counter = p->reset_counter;
   fs->rc_seen = true;
   bool valid = (p->flags & PF_VALID) != 0, tracking = (p->flags & PF_TRACKING) != 0;
-  /* armhist 10-29: VIO history latch; a re-init (new W) starts a new session, then this pose is checked */
+  /* armhist 10-29: VIO history latch. A new W starts a new tracking session; only a FULL re-init (not seeded from the
+   * old state) releases the latch. Then this pose is checked. Accumulates only while DISARMED (v2). */
   if (new_w) {
-    fs->vio_hist_bad = false;
-    fs->vio_hist_why = 0;
     fs->vio_trk_seen = false;
+    if (!(p->flags & PF_SEEDED)) {
+      fs->vio_hist_bad = false;
+      fs->vio_hist_why = 0;
+    }
   }
   {
     uint8_t why = 0;
     if (valid && fs->cfg.arm_hist_speed_max > 0.0f && !(p->speed_mps <= fs->cfg.arm_hist_speed_max)) why |= 1u;
     if (valid && tracking) fs->vio_trk_seen = true;
     else if (fs->cfg.arm_hist_lost && fs->vio_trk_seen) why |= 2u;
+    if (fs->state != FS_DISARMED) why = 0; /* armed / flying / landing / killed: never accumulates */
     if (why) {
       if (!fs->vio_hist_bad) fs->t_vio_hist_ms = now_ms;
       fs->vio_hist_bad = true;
@@ -407,6 +412,14 @@ bool fs_command(fs_t *fs, uint32_t now_ms, fs_cmd_t cmd) {
       if (fs->state == FS_FLYING) { enter_land(fs, FS_R_CMD); return true; }
       if (fs->state == FS_ARMED_IDLE) return go(fs, FS_DISARMED, FS_R_CMD);
       return true; /* already landing / on the ground */
+    case FS_CMD_VIO_RESET: /* armhist 10-29: ask the phone for a full VIO re-init; never while armed */
+      if (fs->state != FS_DISARMED && fs->state != FS_KILLED) {
+        push_ev(fs, FS_EV_CMD_REJECT, (uint8_t)fs->state, (uint8_t)fs->state, (uint8_t)cmd, FS_B_STATE);
+        return false;
+      }
+      fs->vio_reset_reqs++;
+      push_ev(fs, FS_EV_VIO_RESET_REQ, (uint8_t)fs->state, (uint8_t)fs->state, (uint8_t)cmd, 0);
+      return true;
     case FS_CMD_CLEAR_KILL: {
       if (fs->state != FS_KILLED) {
         push_ev(fs, FS_EV_CLEAR_REJECT, (uint8_t)fs->state, (uint8_t)fs->state, (uint8_t)cmd, FS_B_STATE);

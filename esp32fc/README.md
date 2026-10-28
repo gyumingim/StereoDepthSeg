@@ -23,7 +23,7 @@
      - 예전 방식(`openloop_cut_mode = 0`): 착지 후 약 1.7 s 동안 hover의 98 % 추력으로 돌았고, 기록값이 3 % 높으면 하강이 멈춰 공중에서 모터가 꺼졌습니다(시뮬레이션 1.6 m 높이).
   - **폰 IMU가 끊기면 VIO·IMU 단계가 둘 다 불가능하므로 바로 OPENLOOP으로 갑니다.** `imu_fail_kill` 설정을 켜면 대신 KILL합니다.
   - 단계는 내려가기만 하고, 착륙 중 비행으로 돌아가지 않습니다.
-- **PC 단위시험: 678개 검사 모두 통과** (armhist 2026-10-29 VIO 이력 검사 +34; armguard 644, fcarm 610, esp32fix 573, 그 전 389) (gcc, ASan/UBSan, 시뮬레이션). 검사 대상: 폰 IMU 끊김 → OPENLOOP, IMU 지터 처리, PWM 출력 한계.
+- **PC 단위시험: 700개 검사 모두 통과** (armhist 2026-10-29 VIO 이력 검사 +56 (v2 포함); armguard 644, fcarm 610, esp32fix 573, 그 전 389) (gcc, ASan/UBSan, 시뮬레이션). 검사 대상: 폰 IMU 끊김 → OPENLOOP, IMU 지터 처리, PWM 출력 한계.
 - **ESP-IDF 실제 빌드 (fcarm 2026-10-27)**: WSL 에 ESP-IDF v5.5.6 설치 → `idf.py build` 성공. 기본(PWM·폰 IMU) · OneShot125 · DShot600 · 로컬 IMU 4가지 변형, 펌웨어 경고 0 (로컬 IMU 변형의 미사용 변수 경고 1개는 고침). 앱 이미지 0xbfd40 = 785 KB (1 MB 앱 파티션의 75 %). 보드에는 아직 안 올렸습니다.
 - **arm 보호 (armguard 2026-10-29, 기본 켜짐 — 사용자 결정 "일단 켜셈")**: 기본값 `arm_still_ms 1000`, `arm_gyro_max_rps 0.05`, `arm_acc_var_max 0.1`, `arm_vio_speed_max 0.2`, `arm_vio_speed_hold_ms 0` (`arm_acc_dev_max` 그대로).
   예전 값 (10-27 까지의 기본, 즉시 arm): `arm_still_ms 0` (끔), `arm_gyro_max_rps 0.2`, `arm_acc_var_max -1` (= touch_acc_var 0.5), `arm_vio_speed_max 0` (끔), hold 0.
@@ -33,9 +33,10 @@
   - 위 두 발산 실행 (손에 든 동안 크게 튀었다가 내려놓을 때 정상처럼 보임) 은 위 순간 검사만으로는 끝 정지에서 arm 됩니다 (각 762 주기) → 아래 이력 검사로 막음.
   - 예전처럼 쓰려면 위 예전 값을 `fs_config_t` 에 넣으면 됩니다 (PC 시나리오 검사들은 `cfg_former_arm()` 으로 그렇게 함, 이력 검사도 끔).
 - **VIO 이력 검사 (armhist 2026-10-29, 기본 켜짐)**: 지금 VIO 세션에서 유효 pose 의 |v| > `arm_hist_speed_max` (2.0 m/s, NaN 포함) 이거나, 추적 중이던 VIO 가 lost / 초기화 풀림 (`arm_hist_lost`) 이면 래치 → ARM 거부 `FS_B_VIO_HIST` (1<<16).
-  풀리는 것은 VIO 재초기화 (pose `reset_counter` 바뀜 또는 `VIOP_F_RESET`) 와 부팅뿐. 비행 중에도 래치되지만 막는 것은 ARM 뿐 (CLEAR_KILL 영향 없음).
-  - 규칙·문턱은 재생 전에 사전 등록 (`scan3d/runs/armhist_20261029/README.md`, 커밋 e4cc5b0). 같은 75개 흐름: 발산 D 9 arm 가능 1,524 → **0**, 정상 60 새 거부 0 · 첫 arm 지연 증가 0 · 래치 0 (**미검증**: 문턱 2.0 이 발산 라벨 기준 (|v| > 2.0) 과 같아 일부 순환, 블라인드 아님).
-  - 주의 (추정): 2.0 m/s 넘게 들고 뛰거나 2 m/s 넘게 비행하면 그 뒤 VIO 재초기화 전까지 arm 안 됨.
+  v2 (독립 검증 반영): **DISARMED 일 때 받은 pose 만 쌓임** (ARMED_IDLE / FLYING / EMERG_LAND / KILLED 의 빠른 비행·착지 충격·kill 은 래치 안 함). 풀리는 것은 **전체 재초기화**뿐: 새 W (`reset_counter` 바뀜 또는 `VIOP_F_RESET`, 폰이 처음 50 pose 에 반복) 이면서 `VIOP_F_SEEDED` (상태 주입 `--reinit-state` / `--recover` 로 시작한 W) 가 없을 때, 그리고 부팅. 막는 것은 ARM 뿐 (CLEAR_KILL 영향 없음).
+  - 사용자 재초기화: PC `VIOP_T_CMD` cmd 6 `VIOP_CMD_VIO_RESET` → FC (DISARMED / KILLED 에서만, 이벤트 `FS_EV_VIO_RESET_REQ`) → USB 로 폰에 `VIOP_T_VIO_RESET_REQ` 0x23 → ov_bridge 전체 재초기화 (kReset 과 같음). 폰 쪽 (SEEDED, F_RESET 반복, 0x23 받기) 은 **앱 다시 빌드 필요**, 그리고 폰 앱이 USB 로 받은 바이트를 ov_bridge 소켓에 넘기는지는 확인 안 함 (안 넘기면 이 요청은 도착 안 함).
+  - 규칙·문턱은 재생 전에 사전 등록 (`scan3d/runs/armhist_20261029/README.md`, 커밋 e4cc5b0, v2 f522d2d). 같은 75개 흐름: 발산 D 9 arm 가능 1,524 → **0**, 정상 60 새 거부 0 · 첫 arm 지연 증가 0 · 래치 0 (v1·v2 같음). **미검증**: 이 0 은 전부 151646 NL60 k2·k3 두 실행이고, 그 둘의 발산 라벨 자체가 |v| > 2.0 이라 일부 순환 (블라인드 아님). 손에 든 채 arm 0 과 첫 arm 지연 1.23 / 2.35 s 는 armguard 효과 (래치는 0 추가).
+  - 주의 (추정): 내려놓기 전 2.0 m/s 넘게 들고 뛰면 VIO 재초기화 전까지 arm 안 됨.
 
 ### ⚠ 안전 위험: 비행 제어기에 독립 IMU가 없음 (사용자에게)
 
@@ -157,11 +158,11 @@ States: `DISARMED, ARMED_IDLE, FLYING, EMERG_LAND, KILLED`. Anything not in this
 - Fallbacks: previous flight (RTC RAM, else NVS) → `openloop_default_thr` 0.33.
 - The OPENLOOP numbers are **provisional and will be tested in sim / real later**: thrust exponent, 1 m/s², 0.6 m/s, 0.95, ±3 % record error band, end ratio 0.70, ramp 0.4 s, hold 0.2 s (legacy: 0.4 m/s, 0.99, margin 1.2 with `openloop_cut_mode = 0`).
 
-**Arming** requires all of: level, still on the ground (~1 g; since armguard 2026-10-29 by default gyro <= 0.05 rad/s and accel variance <= 0.1 continuously for 1 s, and last valid VIO |v| <= 0.2 m/s, unknown refuses), no VIO history latch (armhist 2026-10-29: in this VIO session no valid pose with |v| > 2.0 m/s or NaN and no tracking loss after tracking; cleared only by a VIO re-init = reset_counter change or VIOP_F_RESET; FS_B_VIO_HIST), collective low, phone IMU ok, pose fresh, heartbeat fresh, USB open, PC link, battery known ≥ 3.70 V/cell, overrun bucket low, switch released. Auto-disarm after 5 s idle. Every transition, tier change and rejection is an event sent to the PC (VIOP 0x04), plus a 20 Hz status frame (0x05).
+**Arming** requires all of: level, still on the ground (~1 g; since armguard 2026-10-29 by default gyro <= 0.05 rad/s and accel variance <= 0.1 continuously for 1 s, and last valid VIO |v| <= 0.2 m/s, unknown refuses), no VIO history latch (armhist 2026-10-29: while DISARMED in this VIO session no valid pose with |v| > 2.0 m/s or NaN and no tracking loss after tracking; cleared only by a FULL VIO re-init = new W (reset_counter change or VIOP_F_RESET) without VIOP_F_SEEDED; FS_B_VIO_HIST; user re-init: VIOP_CMD_VIO_RESET -> VIOP_T_VIO_RESET_REQ to the phone), collective low, phone IMU ok, pose fresh, heartbeat fresh, USB open, PC link, battery known ≥ 3.70 V/cell, overrun bucket low, switch released. Auto-disarm after 5 s idle. Every transition, tier change and rejection is an event sent to the PC (VIOP 0x04), plus a 20 Hz status frame (0x05).
 
 ## 4. PC unit tests (all pass)
 
-`make -C esp32fc/test` builds with gcc 11.4 in WSL, `-Wall -Wextra -Werror -fsanitize=address,undefined`. Result: **678 checks, 0 failed** (armhist 2026-10-29: +34 checks, `t_arm_hist` (VIO history latch: speed spike, lost, re-init by reset_counter / VIOP_F_RESET, off switches, armed, CLEAR_KILL) and updated NaN cases in `t_arm_guard_defaults`; log `scan3d/runs/armhist_20261029/test_safety_run.log`; armguard 2026-10-29: 644, arm guard ON by default, +34 checks for the new defaults -- `t_arm_guard_defaults`, `t_arm_guard_sim`; the other scenarios use the former arm values explicitly via `cfg_former_arm()`; fcarm 2026-10-27: 610, +37 arm-hardening checks; esp32fix 2026-10-26: 573; 389 before). Raw logs: `scan3d/runs/esp32fix_20261026/test_*.log` (earlier: `scan3d/runs/esp32fc_20261025/test_safety_run.log`).
+`make -C esp32fc/test` builds with gcc 11.4 in WSL, `-Wall -Wextra -Werror -fsanitize=address,undefined`. Result: **700 checks, 0 failed** (armhist 2026-10-29: +56 checks, `t_arm_hist` (VIO history latch: speed spike, lost, re-init by reset_counter / VIOP_F_RESET, off switches, v2: no accumulation while armed / killed, seeded W does not release, repeated F_RESET, FS_CMD_VIO_RESET only DISARMED / KILLED, CLEAR_KILL) and updated NaN cases in `t_arm_guard_defaults`; log `scan3d/runs/armhist_20261029/test_safety_run.log`; armguard 2026-10-29: 644, arm guard ON by default, +34 checks for the new defaults -- `t_arm_guard_defaults`, `t_arm_guard_sim`; the other scenarios use the former arm values explicitly via `cfg_former_arm()`; fcarm 2026-10-27: 610, +37 arm-hardening checks; esp32fix 2026-10-26: 573; 389 before). Raw logs: `scan3d/runs/esp32fix_20261026/test_*.log` (earlier: `scan3d/runs/esp32fc_20261025/test_safety_run.log`).
 
 The sim is a 1 kHz 1-D vertical model: thrust ∝ cmd² (matches the open-loop model), ground contact with an impact spike, per-motor trims. It feeds phone pose 200 Hz, heartbeat 20 Hz and PC heartbeat 10 Hz.
 

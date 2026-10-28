@@ -79,3 +79,14 @@
 - **F_RESET 반복**: 폰이 새 W 의 처음 `VIOP_RESET_REPEAT` = 50 pose 에 F_RESET 을 붙임 (예전 1 pose).
 - **사용자 재초기화 경로**: PC `VIOP_T_CMD` cmd 6 `VIOP_CMD_VIO_RESET` → FC `FS_CMD_VIO_RESET` (DISARMED / KILLED 에서만, 이벤트 `FS_EV_VIO_RESET_REQ` 9) → link task 가 USB 로 폰에 `VIOP_T_VIO_RESET_REQ` 0x23 → ov_bridge 가 전체 재초기화 (kReset 과 같게, 상태 주입 아님).
 - 재생 예측 (돌리기 전에 적음): 75개 흐름은 모두 DISARMED 이고 SEEDED 가 없어 결과가 1절과 **같아야 함**. 합격 기준은 0절 P1–P5 그대로.
+
+## 5. v2 결과 (재생 다시 돌림, 4절 커밋 f522d2d 뒤) — 예측대로 1절과 같음, 숫자는 미검증
+- `armhist_replay.json` 가 v1 과 `made`·binary 경로 말고 **완전히 같음**, P1–P5 합격. (재생 흐름은 모두 DISARMED, SEEDED 없음 → v2 차이는 재생으로는 시험 안 됨, PC 단위시험으로만 확인.)
+- **효과 나누기 (정직하게)**:
+  - armguard (순간 검사: 정지 1 s · 자이로 0.05 · 가속 분산 0.1 · |v| ≤ 0.2): 손에 든 채 arm 17,262 → 0, 발산 D 2,089 → 1,524, 첫 arm 지연 중앙 0.01 → 1.23 s (최대 0.49 → 2.35 s). 사후 선택이라 미검증.
+  - 이력 래치 (이 작업): 발산 D 1,524 → 0 만. 이 1,524 는 전부 151646 NL60 k2·k3 두 실행이고 라벨이 |v| > 2.0 이라 **일부 정의상 당연** (독립 근거 = 경로 길이뿐). 늘어난 거부·지연 0. lost 부분은 이 데이터에서 이득 0.
+  - 그러니 "발산을 막았다" 가 아니라 "이 두 순환 라벨 실행을 문턱 2.0 이 막는다" 로 읽어야 함.
+- PC 단위시험 **700 통과 / 0 실패** (v1 678, +22): 무장·비행·KILLED 중 튐/lost 는 래치 안 함 → 착지·DISARM 뒤 바로 arm 가능, CLEAR_KILL 뒤 DISARMED 에서 다시 쌓임, 켜진 래치는 KILL/CLEAR_KILL 뒤에도 유지, SEEDED W 는 안 풂 (F_RESET·카운터 변경이 있어도), SEEDED W 뒤 전체 재초기화는 풂, 앞 5 프레임을 잃어도 반복된 F_RESET 으로 풂, FS_CMD_VIO_RESET 은 DISARMED·KILLED 에서만 (무장 중 거부 이벤트).
+- `make syntax` 6 변형 통과 (link_task.c 의 USB 쓰기를 위해 host stub 2줄 추가). ESP-IDF 증분 빌드 성공, 경고 0, 앱 0xc0100 (`idf_build_default.log`).
+- 폰 쪽 (별도 커밋, **앱 다시 빌드 필요**): `scan3d/ov_bridge/main.cpp`, `mav_out.h` — 상태 주입 W 의 모든 pose 에 VIOP_F_SEEDED, F_RESET 을 새 W 의 처음 50 pose 에, UDP 소켓으로 받은 0x23 (확인값 맞을 때) → 다음 입력에서 전체 재초기화 (kReset 과 같은 `full_reset()`). PC 에서 ov_bridge 빌드만 됨 (경고·오류 없음), **동작 시험 안 함**.
+- 남은 것 (추정): 폰 앱 (Java) 이 FC 에서 USB 로 온 바이트를 ov_bridge UDP 소켓에 넘기는지 확인 안 함 → 안 넘기면 0x23 은 도착 안 하고, 사용자 재초기화는 앱 재시작뿐. FC 가 폰보다 늦게 켜지면 그 전 이력을 모름 (검증 지적, 안 고침). 위치 점프 검사 없음.

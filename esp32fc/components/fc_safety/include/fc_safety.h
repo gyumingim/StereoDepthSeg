@@ -108,8 +108,9 @@ typedef enum { FS_HOVER_NONE = 0, FS_HOVER_THIS_FLIGHT = 1, FS_HOVER_PREV_FLIGHT
 #define FS_B_TOO_SOON (1u << 13)
 #define FS_B_NOT_STILL (1u << 14)  /* arm_still_ms > 0: IMU not still long enough (fcarm 2026-10-27) */
 #define FS_B_VIO_SPEED (1u << 15)  /* arm_vio_speed_max > 0: VIO speed too high / unknown (fcarm 2026-10-27) */
-#define FS_B_VIO_HIST (1u << 16)   /* VIO history latch: this VIO session had a pose faster than arm_hist_speed_max or lost
-                                     tracking after tracking (arm_hist_lost); cleared only by a VIO re-init (armhist 10-29) */
+#define FS_B_VIO_HIST (1u << 16)   /* VIO history latch: while DISARMED this VIO session had a pose faster than
+                                     arm_hist_speed_max or lost tracking after tracking (arm_hist_lost); cleared only by a
+                                     FULL VIO re-init (armhist 10-29) */
 
 /* event codes */
 enum {
@@ -121,9 +122,12 @@ enum {
   FS_EV_ILLEGAL = 6,    /* refused transition from/to */
   FS_EV_HOVER_REC = 7,  /* this flight's takeoff hover record became valid; aux = samples / 100 */
   FS_EV_CLEAR_REJECT = 8,
+  FS_EV_VIO_RESET_REQ = 9, /* armhist 10-29: VIO_RESET command accepted; from = state. The link task forwards it to the
+                              phone (VIOP_T_VIO_RESET_REQ 0x23) and to the PC (as every event) */
 };
 
-typedef enum { FS_CMD_ARM = 1, FS_CMD_DISARM = 2, FS_CMD_KILL = 3, FS_CMD_LAND = 4, FS_CMD_CLEAR_KILL = 5 } fs_cmd_t;
+typedef enum { FS_CMD_ARM = 1, FS_CMD_DISARM = 2, FS_CMD_KILL = 3, FS_CMD_LAND = 4, FS_CMD_CLEAR_KILL = 5,
+               FS_CMD_VIO_RESET = 6 /* armhist 10-29: only DISARMED / KILLED; -> FS_EV_VIO_RESET_REQ */ } fs_cmd_t;
 
 typedef struct {
   uint32_t t_ms;
@@ -178,8 +182,14 @@ typedef struct {
   /* armhist 2026-10-29 — VIO history latch, ON by default. A VIO that spiked while hand-held can look normal once set
    * down (151646 NL60 k2/k3); the instant checks above cannot see that. Latch (ARM refused, FS_B_VIO_HIST) when, in the
    * current VIO session, a VALID pose had |v| > arm_hist_speed_max (or NaN), or (arm_hist_lost) a pose was not
-   * VALID+TRACKING after a VALID+TRACKING one. Cleared ONLY by a VIO re-init: pose reset_counter differs from the previous
-   * pose, or flag VIOP_F_RESET (0x0008); and at fs_init. Latches in every state, blocks only ARM (not CLEAR_KILL).
+   * VALID+TRACKING after a VALID+TRACKING one.
+   * WHEN it accumulates (v2, after the independent verify): only for poses received while state == FS_DISARMED (the
+   * pre-arm phase: hand carry, set down). Poses in ARMED_IDLE / FLYING / EMERG_LAND / KILLED never set it (fast flight,
+   * touchdown or impact spikes, kill) -> after landing + DISARM (or CLEAR_KILL) it accumulates again from then on.
+   * RELEASE only by a FULL VIO re-init: a new W (pose reset_counter differs from the previous pose, or VIOP_F_RESET, which
+   * the phone repeats on the first VIOP_RESET_REPEAT poses) WITHOUT VIOP_F_SEEDED (state injection, ov_bridge
+   * --reinit-state / --recover, carries the old state over -> does NOT release); and fs_init. Blocks only ARM (not
+   * CLEAR_KILL). A user re-init: FS_CMD_VIO_RESET (PC VIOP_CMD_VIO_RESET) -> phone VIOP_T_VIO_RESET_REQ.
    * 2.0 m/s = pre-registered rule from normal hand-carry runs only (max 1.224 m/s, walking); unverified on new data. */
   float arm_hist_speed_max;     /* m/s, default 2.0; 0 = off */
   bool arm_hist_lost;           /* default true */
@@ -301,7 +311,8 @@ typedef struct {
   bool vio_hist_bad;             /* latched: this VIO session diverged (speed / lost) */
   uint8_t vio_hist_why;          /* 1 = speed, 2 = lost (informative) */
   uint32_t t_vio_hist_ms;        /* when it latched (first time in this session) */
-  bool vio_trk_seen;             /* a VALID+TRACKING pose was seen in this VIO session */
+  bool vio_trk_seen;             /* a VALID+TRACKING pose was seen in this VIO session (W) */
+  uint32_t vio_reset_reqs;       /* accepted FS_CMD_VIO_RESET commands (informative) */
   /* phone heartbeat */
   bool hb_seen, hb_lost_flag, hb_seq_stalled, phone_disconnected;
   uint32_t t_hb_ok_ms;
