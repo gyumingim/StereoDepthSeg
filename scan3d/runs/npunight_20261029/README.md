@@ -43,3 +43,11 @@
   지표: npu.jsonl F (prep/npu/post_q) · M1 (상호 NN) · M2 (LG pack/npu/post) p50, 다리 VIO ms p50/p95 (poses_raw `ms`), 다리 큐 버림. 짝 수가 S0 (=A run) 과 같은지.
   좋아지면 0.6.35 기본값을 바꾸지 않고 (검증 전) 권장만 적는다.
 - 한계: 같은 입력 재생이라 run 끼리 차이 = 스레드 타이밍·열 상태 (비결정). NPU 쪽과 BRIEF 쪽은 루프 문(max_cand 1 vs 3)도 다름 (섞인 변수).
+
+## T0_smoke (0.6.35, 21:43, npu 1, 165506) = 연습 → 0.6.35b
+- 재생 경로 동작: VIO 추적, NPU 열림 (cpus 0-3), 루프 8 (GT 맞음 8), 지도 ATE 1.84 cm (PC 1.86). 카메라 클라이언트 [] (카메라 안 켜짐).
+- 문제 2 개: (1) PC 스트림 끝의 type 4 (끝 표시) 레코드를 "bad record" 로 보고 stop_reason 이 replay error. (2) 레코드 13 % 가 5 ms 넘게 늦음 (최대 49 ms) —
+  원인 미측정 (FUSE 파일 읽기 추정). 둘 다 run 무효 규칙에 걸림 → **0.6.35b (vc 42, apk sha ca64df4d…)**: 파일을 따로 미리 읽는 스레드 (레코드 400 개 큐, 이미지 버퍼 24 개 재사용),
+  type 4 = 끝. 네이티브 (다리 2ed40e6b, libxfnpu 5d10f2e9) 는 0.6.35 와 같음. A/B 는 0.6.35b 로 처음부터.
+- rep_run.sh: 앱 프로세스는 finish 뒤에도 남으므로 새 run 폴더의 meta.json 이 생기면 끝으로 봄.
+- T0 NPU 시간 (1 회, 작은 코어 0-3, 미검증): XFeat prep 11.2 · NPU 8.6 · post+질의 16.1 ms (p50), 상호 NN 88 ms, LG pack 2.3 · NPU 18.3 · post 33.9 ms. VIO ms p50 9.6 / p95 14.9 (PC 6.2 / 10.6). AP 최대 51.

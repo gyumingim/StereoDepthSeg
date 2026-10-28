@@ -138,7 +138,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261029-npunight-0.6.35";
+    static final String VERSION = "ov-20261029-npunight-0.6.35b";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";
@@ -1166,25 +1166,56 @@ class OvRunner implements SensorEventListener {
 
     @Override public void onAccuracyChanged(Sensor s, int a) { }
 
-    /** 0.6.35 npunight replay thread (see replayPath). */
+    /** 0.6.35 npunight replay thread (see replayPath). 0.6.35b: the file is read ahead on its own thread ("ov-replay-read",
+     *  queue of up to 400 records, image buffers recycled from a pool of 24) so file reads never delay a due record;
+     *  type 4 (end marker of the PC bench stream) = end of the stream (not sent). */
+    private static final byte[] REPLAY_EOF = new byte[0];
+
     private void replayLoop(File f) {
         boostSelf("replay");
         long n = 0, nImg = 0;
-        try (java.io.DataInputStream in = new java.io.DataInputStream(new java.io.BufferedInputStream(new java.io.FileInputStream(f), 8 << 20))) {
+        final java.util.concurrent.ArrayBlockingQueue<byte[]> q = new java.util.concurrent.ArrayBlockingQueue<>(400);
+        final java.util.concurrent.ArrayBlockingQueue<byte[]> free = new java.util.concurrent.ArrayBlockingQueue<>(24);
+        final String[] readErr = {null};
+        Thread rd = new Thread(() -> {
+            try (java.io.DataInputStream in = new java.io.DataInputStream(new java.io.BufferedInputStream(new java.io.FileInputStream(f), 8 << 20))) {
+                byte[] h = new byte[12];
+                ByteBuffer hb = ByteBuffer.wrap(h).order(ByteOrder.LITTLE_ENDIAN);
+                long k = 0;
+                while (running) {
+                    try { in.readFully(h); } catch (java.io.EOFException e) { break; }
+                    final int magic = hb.getInt(0), type = hb.getInt(4), len = hb.getInt(8);
+                    if (magic == MAGIC && type == 4 && len == 0) break;           // bench end marker
+                    if (magic != MAGIC || len < 8 || len > (64 << 20)) throw new IllegalStateException("bad record " + k + " type " + type + " len " + len);
+                    byte[] r = null;
+                    if (type == 2) {
+                        r = free.poll();
+                        if (r == null && nAlloc[0] < 24) { r = new byte[12 + len]; nAlloc[0]++; }
+                        if (r == null) r = free.take();
+                        if (r.length != 12 + len) r = new byte[12 + len];
+                    } else r = new byte[12 + len];
+                    System.arraycopy(h, 0, r, 0, 12);
+                    in.readFully(r, 12, len);
+                    while (running && !q.offer(r, 100, java.util.concurrent.TimeUnit.MILLISECONDS)) { }
+                    k++;
+                }
+            } catch (Exception e) {
+                readErr[0] = e.toString();
+            }
+            try { q.put(REPLAY_EOF); } catch (InterruptedException ignored) { }
+        }, "ov-replay-read");
+        rd.start();
+        try {
             OutputStream o = proc.getOutputStream();
-            byte[] h = new byte[12];
-            ByteBuffer hb = ByteBuffer.wrap(h).order(ByteOrder.LITTLE_ENDIAN);
-            byte[] img = null;
             long off = 0;
             boolean first = true;
             while (running) {
-                try { in.readFully(h); } catch (java.io.EOFException e) { break; }
-                final int magic = hb.getInt(0), type = hb.getInt(4), len = hb.getInt(8);
-                if (magic != MAGIC || len < 8 || len > (64 << 20)) throw new IllegalStateException("bad record " + n + " type " + type + " len " + len);
-                final byte[] p = type == 2 ? (img != null && img.length == len ? img : (img = new byte[len])) : new byte[len];
-                in.readFully(p);
-                ByteBuffer pb = ByteBuffer.wrap(p).order(ByteOrder.LITTLE_ENDIAN);
-                final long t = pb.getLong(0);
+                final byte[] r = q.poll(100, java.util.concurrent.TimeUnit.MILLISECONDS);
+                if (r == null) continue;
+                if (r == REPLAY_EOF) break;
+                ByteBuffer pb = ByteBuffer.wrap(r).order(ByteOrder.LITTLE_ENDIAN);
+                final int type = pb.getInt(4);
+                final long t = pb.getLong(12);
                 if (first) { off = SystemClock.elapsedRealtimeNanos() + 500_000_000L - t; replayOffsetNs = off; first = false; }
                 final long due = t + off;
                 long now = SystemClock.elapsedRealtimeNanos();
@@ -1198,15 +1229,15 @@ class OvRunner implements SensorEventListener {
                     if (late > replayLateMaxNs) replayLateMaxNs = late;
                     if (late > 5_000_000L) replayLate5++;
                 }
-                pb.putLong(0, due);
+                pb.putLong(12, due);
                 if (type == 2) sent.put(due, new long[]{due, now});
-                o.write(h);
-                o.write(p);
+                o.write(r);
                 if (type == 2) {
                     o.flush();
                     synchronized (framesLock) {
                         if (framesW != null) framesW.write(nImg + "," + due + "," + now + "," + due + ",0,0,0,0,0," + SystemClock.elapsedRealtimeNanos() + "\n");
                     }
+                    free.offer(r);
                     nImg++;
                     nCam++;
                 } else nImu++;
@@ -1215,9 +1246,11 @@ class OvRunner implements SensorEventListener {
                 replayImages = nImg;
             }
             o.flush();
+            if (readErr[0] != null) throw new IllegalStateException("replay read: " + readErr[0]);
         } catch (Exception e) {
             if (running) { status.show("replay: " + e); android.util.Log.e("arlat", "replay", e); stopReason = "replay error: " + e; }
         }
+        rd.interrupt();
         android.util.Log.i("arlat", "replay done: records " + n + " images " + nImg + " late max ms " + replayLateMaxNs / 1e6);
         if (!running) return;
         try { Thread.sleep(3000); } catch (InterruptedException ignored) { }
@@ -1225,6 +1258,7 @@ class OvRunner implements SensorEventListener {
         if (stopReason == null || !stopReason.startsWith("replay error")) stopReason = "replay end";
         if (onAutoStop != null) onAutoStop.run();
     }
+    private final int[] nAlloc = {0};
 
     /** seconds of bridge input to also save as files/ov/live_stream.bin (0 = off) — for replaying the live run on the PC */
     int dumpSecs;
