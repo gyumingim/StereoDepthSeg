@@ -1,0 +1,51 @@
+nncrun start args='model=f1.nnc in=in960.bin out=kz_f1_r2.bin p960=1 post960=off passes=10' dir=/data/user/0/com.scan3d.nncprobe/files pid=5572 uid=10472
+selinux context: u:r:untrusted_app:s0:c216,c257,c512,c768
+dlopen libenn_public_api_cpp.so OK
+EnnInitialize -> 0
+meta 110 -> 0 '2.2.27'
+meta 111 -> 0 '2.2.26:3:g844124b4'
+EnnGetPreferencePerfMode -> 0 val=7
+EnnOpenModel(file, /data/user/0/com.scan3d.nncprobe/files/f1.nnc) -> 0 id=0x15c401000000 (14.2 ms)
+meta 120 -> 0 '27'
+meta 121 -> 0 'v2.4.11.o'
+meta 122 -> 0 'NOT SUPPORTED'
+meta 123 -> 0 'NOT SUPPORTED'
+meta 124 -> 0 'NOT SUPPORTED'
+meta 130 -> 0 'Failed'
+meta 131 -> 0 'Failed'
+meta 132 -> 0 'Failed'
+meta 133 -> 0 'Failed'
+EnnGetBuffersInfo -> 0 raw u32[0..2]=1 1 0
+BufferInfo in[0] -> 0 upd=0 n=1 w=960 h=544 c=1 size=2088960 type=0 label=image_0
+BufferInfo out[0] -> 0 upd=0 n=1 w=120 h=68 c=130 size=4243200 type=0 label=out130_57
+EnnAllocateAllBuffers -> 0 raw 1 1 0 (4.3 ms)
+buf[0] va=0x78c7ea0000 size=2088960 offset=0
+buf[1] va=0x78c7a94000 size=4243200 offset=0
+p960: 13 frames, post=off, in buf 2088960 out buf 4243200
+p960 pass0 frame 0: in 147 exec 5145 post 10049 total 15342 kp 1024
+p960 pass0 frame 1: in 137 exec 4608 post 8797 total 13543 kp 1024
+p960 pass0 frame 2: in 132 exec 4971 post 8777 total 13880 kp 1024
+p960 pass0 frame 3: in 139 exec 3325 post 8854 total 12318 kp 1024
+p960 pass0 frame 4: in 135 exec 3476 post 8276 total 11887 kp 1024
+p960 pass0 frame 5: in 123 exec 3259 post 8476 total 11858 kp 1024
+p960 pass0 frame 6: in 120 exec 3235 post 8585 total 11941 kp 1024
+p960 pass0 frame 7: in 119 exec 3232 post 8487 total 11838 kp 1024
+p960 pass0 frame 8: in 119 exec 3241 post 8646 total 12006 kp 1024
+p960 pass0 frame 9: in 126 exec 3291 post 8653 total 12070 kp 1024
+p960 pass0 frame 10: in 130 exec 3301 post 8386 total 11817 kp 1024
+p960 pass0 frame 11: in 128 exec 3314 post 8523 total 11965 kp 1024
+p960 pass0 frame 12: in 133 exec 3374 post 8066 total 11574 kp 1024
+P960 pass 0 n=13 total p50=11965 p95=13880 | in p50 130 | exec p50 3314 p95 4971 | post p50 8585 p95 8854 us
+P960 pass 1 n=13 total p50=11824 p95=14581 | in p50 126 | exec p50 3451 p95 3885 | post p50 8209 p95 11099 us
+P960 pass 2 n=13 total p50=12410 p95=20296 | in p50 130 | exec p50 3869 p95 5827 | post p50 8374 p95 14339 us
+P960 pass 3 n=13 total p50=11618 p95=12386 | in p50 140 | exec p50 3247 p95 3909 | post p50 8241 p95 8374 us
+P960 pass 4 n=13 total p50=11441 p95=11606 | in p50 128 | exec p50 3175 p95 3239 | post p50 8188 p95 8293 us
+P960 pass 5 n=13 total p50=11454 p95=11673 | in p50 129 | exec p50 3186 p95 3243 | post p50 8211 p95 8302 us
+P960 pass 6 n=13 total p50=11489 p95=11593 | in p50 133 | exec p50 3174 p95 3210 | post p50 8175 p95 8288 us
+P960 pass 7 n=13 total p50=11470 p95=12495 | in p50 129 | exec p50 3179 p95 3207 | post p50 8175 p95 9111 us
+P960 pass 8 n=13 total p50=11498 p95=11607 | in p50 128 | exec p50 3163 p95 3212 | post p50 8185 p95 8335 us
+P960 pass 9 n=13 total p50=11497 p95=12117 | in p50 133 | exec p50 3172 p95 3240 | post p50 8163 p95 8484 us
+EnnReleaseBuffers -> 0
+EnnCloseModel -> 0
+EnnDeinitialize -> 0
+nncrun end

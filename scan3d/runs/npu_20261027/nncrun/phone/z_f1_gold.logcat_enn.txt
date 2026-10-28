@@ -1,0 +1,150 @@
+10-28 19:37:19.871  4646  4646 I AconfigPackage: com.android.hardware.input is mapped to system
+10-28 19:37:19.871  4646  4646 I AconfigPackage: com.android.input.flags is mapped to system
+10-28 19:37:19.872  4646  4646 I AconfigPackage: android.view.inputmethod is mapped to system
+10-28 19:37:19.984  4658  4658 D nativeloader: Configuring clns-9 for other apk /data/app/~~Csyey36FMDhimy7lmK2g2w==/com.scan3d.nncprobe-XAQ_pyCOTrVbCZoVlV00yw==/base.apk. target_sdk_version=34, uses_libraries=libenn_public_api_cpp.so, library_path=/data/app/~~Csyey36FMDhimy7lmK2g2w==/com.scan3d.nncprobe-XAQ_pyCOTrVbCZoVlV00yw==/lib/arm64:/data/app/~~Csyey36FMDhimy7lmK2g2w==/com.scan3d.nncprobe-XAQ_pyCOTrVbCZoVlV00yw==/base.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand:/data/user/0/com.scan3d.nncprobe
+10-28 19:37:19.996  4658  4658 D nativeloader: Load /data/app/~~Csyey36FMDhimy7lmK2g2w==/com.scan3d.nncprobe-XAQ_pyCOTrVbCZoVlV00yw==/lib/arm64/libnncrun.so using class loader ns clns-9 (caller=/data/app/~~Csyey36FMDhimy7lmK2g2w==/com.scan3d.nncprobe-XAQ_pyCOTrVbCZoVlV00yw==/base.apk): ok
+10-28 19:37:20.024  4658  4672 I nncrun  : nncrun start args='model=f1.nnc in=g_f1.bin out=og_f1.bin warm=5 iters=10 reps=1' dir=/data/user/0/com.scan3d.nncprobe/files pid=4658 uid=10472
+10-28 19:37:20.024  4658  4672 I nncrun  : selinux context: u:r:untrusted_app:s0:c216,c257,c512,c768
+10-28 19:37:20.033  4658  4672 I nncrun  : dlopen libenn_public_api_cpp.so OK
+10-28 19:37:20.033  4658  4672 I ENN_FRAMEWORK: 2.2.27: * ENN Trace OFF
+10-28 19:37:20.103  4674  4674 I AidlLazyServiceRegistrar: Registering service vendor.samsung_slsi.hardware.enn_aidl.IEnnInterfaceAidl/default
+10-28 19:37:20.104  4674  4674 I AidlLazyServiceRegistrar: Process has 1 (of 1 available) client(s) in use after notification vendor.samsung_slsi.hardware.enn_aidl.IEnnInterfaceAidl/default has clients: 1
+10-28 19:37:20.105  4658  4672 I DMABUFHEAPS: Using DMA-BUF heap named: system
+10-28 19:37:20.106  4658  4672 I DMABUFHEAPS: Using DMA-BUF heap named: system-uncached
+10-28 19:37:20.106  4674  4676 I ENN_FRAMEWORK: 2.2.27: * [enn_aidl] Link monitor is set(4658)
+10-28 19:37:20.106  4674  4676 I ENN_FRAMEWORK: 2.2.27: * [enn_aidl] Wake Up Monitor thread.. 
+10-28 19:37:20.106  4674  4676 I ENN_FRAMEWORK: 2.2.27: * Set SOC name as 9945
+10-28 19:37:20.108  4674  4676 W ENN_FRAMEWORK: 2.2.27:   Adjust invalid mo_scen_id from 2 to 1
+10-28 19:37:20.109  4674  4676 I DMABUFHEAPS: Using DMA-BUF heap named: system
+10-28 19:37:20.109  4674  4676 I ENN_FRAMEWORK: 2.2.27: * GpuUserDriver::Initialize started
+10-28 19:37:20.109  4674  4676 I ENN_FRAMEWORK: 2.2.27: * ENN Trace OFF
+10-28 19:37:20.109  4674  4676 I ENN_FRAMEWORK: 2.2.27: * (+) Engine::EngineImpl::init->(0x1232)
+10-28 19:37:20.109  4674  4676 I ENN_FRAMEWORK: 2.2.27: * A ClientProcess(ID: 0x123200000000) is created.
+10-28 19:37:20.109  4674  4676 I ENN_FRAMEWORK: 2.2.27: * ClientProcess(ID: 0x123200000000) is added: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+10-28 19:37:20.109  4674  4676 I ENN_FRAMEWORK: 2.2.27: * (-) Engine::EngineImpl::init->(0x1232)
+10-28 19:37:20.109  4674  4675 I ENN_FRAMEWORK: 2.2.27: * [ENN SERVICE] pid(4658): ref_cnt(1), status(0)
+10-28 19:37:20.110  4658  4672 I ENN_FRAMEWORK: 2.2.27: * Context(0x7958be1a78) ref_cnt(0x7958be1a78)=1, Commit [2.2.26:3:g844124b4], Version [2.2.27], AIDL , created context.
+10-28 19:37:20.110  4658  4672 I ENN_FRAMEWORK: 2.2.27: * Initialized, set handler with signal 53
+10-28 19:37:20.110  4658  4672 I nncrun  : EnnInitialize -> 0
+10-28 19:37:20.110  4658  4672 I nncrun  : meta 110 -> 0 '2.2.27'
+10-28 19:37:20.110  4658  4672 I nncrun  : meta 111 -> 0 '2.2.26:3:g844124b4'
+10-28 19:37:20.110  4658  4672 I nncrun  : EnnGetPreferencePerfMode -> 0 val=7
+10-28 19:37:20.110  4658  4672 I ENN_FRAMEWORK: 2.2.27: * Model File: /data/user/0/com.scan3d.nncprobe/files/f1.nnc load start
+10-28 19:37:20.110  4658  4672 I ENN_FRAMEWORK: 2.2.27: * FileDescriptorBufferReader fd(97) (size: 0 offset: 0)
+10-28 19:37:20.110  4658  4672 I ENN_FRAMEWORK: 2.2.27: * Pref: (0,0,0) (1,7,0) (2,0,0) 
+10-28 19:37:20.110  4674  4677 I ENN_FRAMEWORK: 2.2.27: * [SUBMITTED] (0x890001,2592000) (0x880002,4206000) (0x880003,533000) 
+10-28 19:37:20.112  4658  4672 I ENN_FRAMEWORK: 2.2.27: * EnnOpenFile() file load start : /data/user/0/com.scan3d.nncprobe/files/f1.nnc
+10-28 19:37:20.115  4658  4672 I ENN_FRAMEWORK: 2.2.27: * EnnOpenFile() file load ended : /data/user/0/com.scan3d.nncprobe/files/f1.nnc
+10-28 19:37:20.116  4674  4677 I ENN_FRAMEWORK: 2.2.27: * (+) Engine::EngineImpl::open_model
+10-28 19:37:20.116  4674  4677 I ENN_FRAMEWORK: 2.2.27: * NNC Model addr: 0x7144b58000, size: 1986560, fd: 11
+10-28 19:37:20.116  4674  4677 I ENN_FRAMEWORK: 2.2.27: *   [ 0] COMPILED_COMMAND: ./nncontainer-gen --compiler NPU --snc HW_x960f1mc_new_snc_8.16.21.25.snc
+10-28 19:37:20.116  4674  4677 I ENN_FRAMEWORK: --framework SNC --soc-type Root --input_conversion hw_cfu --output_conversion hw_icfu --multicore true --chip_version EVT1 --schema_version v2 --dequant_type_hw_or_sw sw --quant_type_hw_or_sw sw --npuhw hardware_configuration.EVT1.xml
+10-28 19:37:20.116  4674  4677 I ENN_FRAMEWORK: --npupass O2.json
+10-28 19:37:20.116  4674  4677 I ENN_FRAMEWORK: --cast_hw_or_sw sw --multi_vc True -D enable_hw_cost_based_stratum=true -C enable_zero_skip=false --computational_workload 3042995 --enable_stm True --export_io_info 1 -o /home/exynos-lab/x960f1mc/Compiler_result --tuning_config Config/nnc_graph_tiling.json 
+10-28 19:37:20.116  4674  4677 I ENN_FRAMEWORK: 2.2.27: *   [ 1] FRAMEWORK: SNC
+10-28 19:37:20.116  4674  4677 I ENN_FRAMEWORK: 2.2.27: *   [ 2] HW_CFU: true
+10-28 19:37:20.116  4674  4677 I ENN_FRAMEWORK: 2.2.27: *   [ 3] NAME: x960f1mc_simplify_ncp.bin
+10-28 19:37:20.116  4674  4677 I ENN_FRAMEWORK: 2.2.27: *   [ 4] NCP_VERSION: 27
+10-28 19:37:20.116  4674  4677 I ENN_FRAMEWORK: 2.2.27: *   [ 5] NPUC_VERSION: v2.4.11.o
+10-28 19:37:20.116  4674  4677 I ENN_FRAMEWORK: 2.2.27: *   [ 7] SOC_TYPE: Root
+10-28 19:37:20.116  4674  4677 I ENN_FRAMEWORK: 2.2.27: *   Operator[ 0] (hw: 1) (code:   53) CAST
+10-28 19:37:20.116  4674  4677 I ENN_FRAMEWORK: 2.2.27: *   Operator[ 1] (hw: 4) (code: 1013) ENN_NPU
+10-28 19:37:20.116  4674  4677 I ENN_FRAMEWORK: 2.2.27: *   Operator[ 2] (hw: 1) (code:   53) CAST
+10-28 19:37:20.116  4674  4677 I ENN_FRAMEWORK: 2.2.27: * [SUBMITTED] (0x890001,2592000) (0x880002,4206000) (0x880003,533000) (0x900005,1) (0x900003,2048) 
+10-28 19:37:20.116  4674  4677 I ENN_FRAMEWORK: 2.2.27: * A Model(ID: 0x123201000000) is created.
+10-28 19:37:20.116  4674  4692 I ENN_FRAMEWORK: 2.2.27: * (+) NpuUserDriver::OpenSubGraph(), model_id(0x123201000000), op_list_id(0x123201000200)
+10-28 19:37:20.117  4674  4692 I ENN_FRAMEWORK: 2.2.27: * FD Open :: model_id(0x123201000000), op_list_id(0x123201000200)
+10-28 19:37:20.117  4674  4692 I ENN_FRAMEWORK: 2.2.27: * VS4L BOOTUP :: model_id(0x123201000000), op_list_id(0x123201000200)
+10-28 19:37:20.117  4674  4691 I ENN_FRAMEWORK: 2.2.27: * opr->code = 53 (CAST)
+10-28 19:37:20.117  4674  4693 I ENN_FRAMEWORK: 2.2.27: * opr->code = 53 (CAST)
+10-28 19:37:20.124  4674  4692 I ENN_FRAMEWORK: 2.2.27: * VS4L S_PARAM(MODE) :: model_id(0x123201000000), op_list_id(0x123201000200)
+10-28 19:37:20.124  4674  4692 I ENN_FRAMEWORK: 2.2.27: * VS4L S_PARAM(SCHED_PARAM) :: model_id(0x123201000000), op_list_id(0x123201000200)
+10-28 19:37:20.124  4674  4692 I ENN_FRAMEWORK: 2.2.27: * VS4L S_GRAPH :: model_id(0x123201000000), op_list_id(0x123201000200)
+10-28 19:37:20.125  4674  4692 I ENN_FRAMEWORK: 2.2.27: * VS4L S_FORMAT :: model_id(0x123201000000), op_list_id(0x123201000200)
+10-28 19:37:20.125  4674  4692 I ENN_FRAMEWORK: 2.2.27: * VS4L STREAM_ON :: model_id(0x123201000000), op_list_id(0x123201000200)
+10-28 19:37:20.125  4674  4692 I ENN_FRAMEWORK: 2.2.27: * (-) NpuUserDriver::OpenSubGraph(), model_id(0x123201000000), op_list_id(0x123201000200)
+10-28 19:37:20.125  4674  4677 I ENN_FRAMEWORK: 2.2.27: * Model(ID: 0x123201000000) is added: ClientProcess[1], Model[1], ExecutableModel[0], ExecuteRequest[0]
+10-28 19:37:20.125  4674  4677 I ENN_FRAMEWORK: 2.2.27: * (-) Engine::EngineImpl::open_model->(0x123201000000)
+10-28 19:37:20.125  4658  4672 I ENN_FRAMEWORK: 2.2.27: * Set SOC name as 9945
+10-28 19:37:20.126  4658  4672 I ENN_FRAMEWORK: 2.2.27: * -------------------- Model container :   1 --------------------
+10-28 19:37:20.126  4658  4672 I ENN_FRAMEWORK: 2.2.27: * # Session[0] Model_ID: 0x123201000000 / 0x123201000000 (buf: 4, reg: 4), /data/user/0/com.scan3d.nncprobe/files/f1.nnc
+10-28 19:37:20.126  4658  4672 I ENN_FRAMEWORK: 2.2.27: * EnnOpenModel Success(0x123201000000)
+10-28 19:37:20.126  4658  4672 I nncrun  : EnnOpenModel(file, /data/user/0/com.scan3d.nncprobe/files/f1.nnc) -> 0 id=0x123201000000 (16.0 ms)
+10-28 19:37:20.126  4658  4672 I nncrun  : meta 120 -> 0 '27'
+10-28 19:37:20.126  4658  4672 I nncrun  : meta 121 -> 0 'v2.4.11.o'
+10-28 19:37:20.126  4674  4677 W ENN_FRAMEWORK: 2.2.27:   Queried version is not supported: 122
+10-28 19:37:20.126  4658  4672 I nncrun  : meta 122 -> 0 'NOT SUPPORTED'
+10-28 19:37:20.126  4674  4677 W ENN_FRAMEWORK: 2.2.27:   Queried version is not supported: 123
+10-28 19:37:20.126  4658  4672 I nncrun  : meta 123 -> 0 'NOT SUPPORTED'
+10-28 19:37:20.126  4674  4677 W ENN_FRAMEWORK: 2.2.27:   Queried version is not supported: 124
+10-28 19:37:20.126  4658  4672 I nncrun  : meta 124 -> 0 'NOT SUPPORTED'
+10-28 19:37:20.126  4674  4677 E ENN_FRAMEWORK: 2.2.27: * Not yet supported version_info_type(130). 
+10-28 19:37:20.126  4674  4677 E ENN_FRAMEWORK: 2.2.27:   Not supported version_info type.(vendor/samsung_slsi/exynos/enn/source/src/runtime/engine.cc:625)
+10-28 19:37:20.126  4674  4677 E ENN_FRAMEWORK: 2.2.27:   get version information failed while getting model(20005974441984) from pool
+10-28 19:37:20.127  4658  4672 I nncrun  : meta 130 -> 0 'Failed'
+10-28 19:37:20.127  4674  4677 E ENN_FRAMEWORK: 2.2.27: * Not yet supported version_info_type(131). 
+10-28 19:37:20.127  4674  4677 E ENN_FRAMEWORK: 2.2.27:   Not supported version_info type.(vendor/samsung_slsi/exynos/enn/source/src/runtime/engine.cc:625)
+10-28 19:37:20.127  4674  4677 E ENN_FRAMEWORK: 2.2.27:   get version information failed while getting model(20005974441984) from pool
+10-28 19:37:20.127  4658  4672 I nncrun  : meta 131 -> 0 'Failed'
+10-28 19:37:20.127  4674  4677 E ENN_FRAMEWORK: 2.2.27: * Not yet supported version_info_type(132). 
+10-28 19:37:20.127  4674  4677 E ENN_FRAMEWORK: 2.2.27:   Not supported version_info type.(vendor/samsung_slsi/exynos/enn/source/src/runtime/engine.cc:625)
+10-28 19:37:20.127  4674  4677 E ENN_FRAMEWORK: 2.2.27:   get version information failed while getting model(20005974441984) from pool
+10-28 19:37:20.127  4658  4672 I nncrun  : meta 132 -> 0 'Failed'
+10-28 19:37:20.127  4674  4677 E ENN_FRAMEWORK: 2.2.27: * Not yet supported version_info_type(133). 
+10-28 19:37:20.127  4674  4677 E ENN_FRAMEWORK: 2.2.27:   Not supported version_info type.(vendor/samsung_slsi/exynos/enn/source/src/runtime/engine.cc:625)
+10-28 19:37:20.127  4674  4677 E ENN_FRAMEWORK: 2.2.27:   get version information failed while getting model(20005974441984) from pool
+10-28 19:37:20.127  4658  4672 I nncrun  : meta 133 -> 0 'Failed'
+10-28 19:37:20.127  4658  4672 I nncrun  : EnnGetBuffersInfo -> 0 raw u32[0..2]=1 1 0
+10-28 19:37:20.127  4658  4672 I nncrun  : BufferInfo in[0] -> 0 upd=0 n=1 w=960 h=544 c=1 size=2088960 type=0 label=image_0
+10-28 19:37:20.127  4658  4672 I nncrun  : BufferInfo out[0] -> 0 upd=0 n=1 w=120 h=68 c=130 size=4243200 type=0 label=out130_57
+10-28 19:37:20.127  4658  4672 I ENN_FRAMEWORK: 2.2.27: * Buffer Commit: model_id(0x123201000000), session_id(0) (+)
+10-28 19:37:20.128  4674  4677 I ENN_FRAMEWORK: 2.2.27: * (+) Engine::EngineImpl::commit_execution_data->(0x123201000000)
+10-28 19:37:20.128  4674  4677 I ENN_FRAMEWORK: 2.2.27: * An ExecutableModel(ID: 0x123201000001) from a Model(ID : 0x123201000000) is created.
+10-28 19:37:20.128  4674  4677 I ENN_FRAMEWORK: 2.2.27: * (+) NpuUserDriver::CommitSubGraph(), model_id(0x123201000000), op_list_id(0x123201000200)
+10-28 19:37:20.128  4674  4677 I ENN_FRAMEWORK: 2.2.27: * NPU/DSP UD, validate fd(21) done, alloc_size(1044480) shape_size(1044480)
+10-28 19:37:20.128  4674  4677 I ENN_FRAMEWORK: 2.2.27: * NPU/DSP UD, validate fd(22) done, alloc_size(2121600) shape_size(2121600)
+10-28 19:37:20.133  4674  4677 I ENN_FRAMEWORK: 2.2.27: * (-) NpuUserDriver::CommitSubGraph(), model_id(0x123201000000), op_list_id(0x123201000200)
+10-28 19:37:20.133  4674  4677 I ENN_FRAMEWORK: 2.2.27: * ExecutableModel(ID: 0x123201000001) is added: ClientProcess[1], Model[1], ExecutableModel[1], ExecuteRequest[0]
+10-28 19:37:20.133  4674  4677 I ENN_FRAMEWORK: 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x123201000001) is created.
+10-28 19:37:20.133  4674  4677 I ENN_FRAMEWORK: 2.2.27: * ExecuteRequest from ExecutableModel(ID: 0x123201000001) is added: ClientProcess[1], Model[1], ExecutableModel[1], ExecuteRequest[1]
+10-28 19:37:20.133  4674  4677 I ENN_FRAMEWORK: 2.2.27: * (-) Engine::EngineImpl::commit_execution_data->(0x123201000000)
+10-28 19:37:20.133  4658  4672 I ENN_FRAMEWORK: 2.2.27: * EnnBufferCommit: ExecModelID: 0x123201000001 from mID 0x123201000000, 0(-)
+10-28 19:37:20.133  4658  4672 I nncrun  : EnnAllocateAllBuffers -> 0 raw 1 1 0 (6.4 ms)
+10-28 19:37:20.133  4658  4672 I nncrun  : buf[0] va=0x78cc6c5000 size=2088960 offset=0
+10-28 19:37:20.133  4658  4672 I nncrun  : buf[1] va=0x78cc2b9000 size=4243200 offset=0
+10-28 19:37:20.137  4658  4672 I nncrun  : input file /data/user/0/com.scan3d.nncprobe/files/g_f1.bin: 2088960 bytes = 1 frames of 2088960 (rest 0)
+10-28 19:37:20.137  4658  4672 I ENN_FRAMEWORK: 2.2.27: * ExecuteModel: 0x123201000000
+10-28 19:37:20.146  4658  4672 I nncrun  : frame 0 exec -> 0 5258 us out[0..2]=2.63281 2.5918 2.60352 sum=-1.32472e+06
+10-28 19:37:20.149  4658  4672 I nncrun  : memcpy in 2088960 B 125 us, out 4243200 B 1805 us
+10-28 19:37:20.185  4658  4672 I ENN_FRAMEWORK: 2.2.27: * ExecuteModel: 0x123201000000
+10-28 19:37:20.201  4658  4672 I nncrun  : TIMING rep 0: n=10 fails=0 p50=3144 p95=3163 min=3085 max=3163 mean=3130 us (wall 31.3 ms)
+10-28 19:37:20.201  4658  4672 I nncrun  : EnnReleaseBuffers -> 0
+10-28 19:37:20.201  4658  4672 I ENN_FRAMEWORK: 2.2.27: * EnnCloseModel : 0x123201000000(+)
+10-28 19:37:20.201  4674  4676 I ENN_FRAMEWORK: 2.2.27: * (+) Engine::EngineImpl::close_model->(0x123201000000)
+10-28 19:37:20.201  4674  4676 I ENN_FRAMEWORK: 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x123201000001) is released.
+10-28 19:37:20.201  4674  4676 I ENN_FRAMEWORK: 2.2.27: * An ExecutableModel(ID: 0x123201000001) from a Model(ID : 0x123201000000) is released.
+10-28 19:37:20.201  4674  4676 I ENN_FRAMEWORK: 2.2.27: * + Unload Model(ID:0x0x123201000000) Accelerator(1)
+10-28 19:37:20.201  4674  4676 I ENN_FRAMEWORK: 2.2.27: * - Unload Model(ID:0x0x123201000000) Accelerator(1)
+10-28 19:37:20.201  4674  4676 I ENN_FRAMEWORK: 2.2.27: * + Unload Model(ID:0x0x123201000000) Accelerator(4)
+10-28 19:37:20.201  4674  4676 I ENN_FRAMEWORK: 2.2.27: * (+) NpuUserDriver::CloseSubGraph(), model_id(0x123201000000), op_list_id(0x123201000200)
+10-28 19:37:20.206  4674  4676 I ENN_FRAMEWORK: 2.2.27: * (-) NpuUserDriver::CloseSubGraph(), model_id(0x123201000000), op_list_id(0x123201000200)
+10-28 19:37:20.206  4674  4676 I ENN_FRAMEWORK: 2.2.27: * - Unload Model(ID:0x0x123201000000) Accelerator(4)
+10-28 19:37:20.206  4674  4676 I ENN_FRAMEWORK: 2.2.27: * + Unload Model(ID:0x0x123201000000) Accelerator(1)
+10-28 19:37:20.206  4674  4676 I ENN_FRAMEWORK: 2.2.27: * - Unload Model(ID:0x0x123201000000) Accelerator(1)
+10-28 19:37:20.206  4674  4676 I ENN_FRAMEWORK: 2.2.27: * A Model(ID: 0x123201000000) is released.
+10-28 19:37:20.209  4674  4676 I ENN_FRAMEWORK: 2.2.27: * Model(0x123201000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+10-28 19:37:20.209  4674  4676 I ENN_FRAMEWORK: 2.2.27: * (-) Engine::EngineImpl::close_model->(0x123201000000)
+10-28 19:37:20.209  4658  4672 I ENN_FRAMEWORK: 2.2.27: * EnnCloseModel Success(0x123201000000) (-)
+10-28 19:37:20.209  4658  4672 I ENN_FRAMEWORK: 2.2.27: * -------------------- Model container :   0 --------------------
+10-28 19:37:20.209  4658  4672 I nncrun  : EnnCloseModel -> 0
+10-28 19:37:20.209  4658  4672 I ENN_FRAMEWORK: 2.2.27: * Context(0x7958be1a78) ref_cnt(0x7958be1a78)=0 , will delete context.. force_deinit(0)
+10-28 19:37:20.209  4674  4677 I BpBinder: onLastStrongRef automatically unlinking death recipients: vendor.samsung_slsi.hardware.enn_aidl.IEnnCallbackAidl
+10-28 19:37:20.210  4674  4677 I ENN_FRAMEWORK: 2.2.27: * (+) Engine::EngineImpl::deinit->(0x1232)
+10-28 19:37:20.210  4674  4677 I ENN_FRAMEWORK: 2.2.27: * A ClientProcess(ID: 0x123200000000) is released.
+10-28 19:37:20.210  4674  4677 I ENN_FRAMEWORK: 2.2.27: * ClientProcess(0x123200000000) is released: ClientProcess[0], Model[0], ExecutableModel[0], ExecuteRequest[0]
+10-28 19:37:20.210  4674  4677 I ENN_FRAMEWORK: 2.2.27: * (-) Engine::EngineImpl::deinit->(0x1232)
+10-28 19:37:20.210  4658  4672 I BpBinder: onLastStrongRef automatically unlinking death recipients: vendor.samsung_slsi.hardware.enn_aidl.IEnnInterfaceAidl
+10-28 19:37:20.210  4658  4672 I ENN_FRAMEWORK: 2.2.27: * EnnDeinitialize
+10-28 19:37:20.210  4658  4672 I nncrun  : EnnDeinitialize -> 0
+10-28 19:37:20.210  4658  4672 I nncrun  : nncrun end
+10-28 19:37:20.210  4658  4672 I nncrun  : DONE
