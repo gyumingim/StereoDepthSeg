@@ -246,8 +246,9 @@ venv_ffs/bin/python scan3d/replay.py recordings/<이름> --keep-web   # 끝난 �
 재생은 전용 브리지 프로세스(pipe, `--replay-bridge-args` 기본 `--auto-reset`)를 띄우고 프레임마다 포즈를 기다린다 (버리는 프레임 없음).
 결과: `recordings/<이름>/recon_<시각>/` (voxels.ply/json/npz, objects.json, trajectory.json, viewer.html, summary.json; auto-reset 이 나면 그 전 맵은 `segment_NN/`).
 
-### 앱 0.6.37b: npu_loop 1 시작·유효 판정 (2026-10-29)
+### 앱 0.6.37c: npu_loop 1 시작·정지·유효 판정 (2026-10-29)
 - NPU 는 UI 스레드 밖에서 연다 (화면 "NPU 준비 중..."). 실패·15 초 초과 = 시작 거부 (대체 경로 없음, meta `npu_loop` "refused: …", `run_valid` false). 시작 중 멈춤 = "cancelled", 늦게 뜬 서버는 바로 끈다.
+- 정지(다리 대기·NPU 서버 끄기·meta.json 쓰기)는 "ov-stop" 스레드에서 한다 → 화면이 안 멈춤. meta.json 은 여전히 맨 마지막에 쓴다 (스크립트는 meta.json 을 기다린 뒤 force-stop). npu_loop 0 은 예전 그대로 바로 정지.
 - 끝낼 때 다리를 5 초 기다린다 (npu_loop 0 은 1.5 초 그대로). 우리 정상 정지에서 죽인 것(`bridge_killed_by_stop` true, `bridge_exit` "killed")은 유효. `run_valid` false = 0 아닌 종료(크래시·연결 실패)·다리 없음·`bridge_stderr.log` 에 "XFeat server … connected" 없음·loop.jsonl `xf_down`·서버 오류.
 
 ### 폰 저장공간 정리 (`tools/phone_cleanup.sh`, 2026-10-29)

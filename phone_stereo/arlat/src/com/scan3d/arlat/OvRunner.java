@@ -138,7 +138,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261029-appfix-0.6.37b";
+    static final String VERSION = "ov-20261029-appfix-0.6.37c";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";
@@ -1052,6 +1052,21 @@ class OvRunner implements SensorEventListener {
             return;
         }
         if (!running && proc == null) return;
+        if (npu != null) {
+            // 0.6.37c: npu_loop 1 -> the whole stop (bridge wait up to 5 s, NPU server stop, run_valid, meta.json last) on
+            // thread "ov-stop"; the caller (onPause, UI thread) returns at once. Scripts wait for meta.json as before.
+            // npu_loop 0: synchronous, unchanged.
+            synchronized (npuLock) { if (stopThreadStarted) return; stopThreadStarted = true; }
+            running = false;
+            new Thread(this::stopNow, "ov-stop").start();
+            return;
+        }
+        stopNow();
+    }
+
+    private boolean stopThreadStarted;   // 0.6.37c, under npuLock
+
+    private void stopNow() {
         running = false;
         if (imuTx != null) {   // 0.6.20
             try { meta.put("viop_imu_result", imuTx.stop()); } catch (Exception ignored) { }
