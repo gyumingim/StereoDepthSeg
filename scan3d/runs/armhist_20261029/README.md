@@ -71,3 +71,11 @@
 - `make syntax` 6 변형 통과 (`syntax.log`). ESP-IDF v5.5.6 기본 변형 빌드 성공, 경고 0, 앱 0xbfe40 (예전 0xbfd40, +256 B) (`idf_build_default.log`, 증분 빌드: fc_safety.c · main/*.c 다시 컴파일).
 - `armhist_replay.c` (fcarm_replay + 이력 설정 2개 + 래치 열), `armhist_eval.py` → `armhist_replay.json`, `armhist_replay_configs.txt`.
 - 재현 (WSL, 이 폴더): `gcc -std=c99 -O2 -I../../../esp32fc/components/fc_safety/include armhist_replay.c ../../../esp32fc/components/fc_safety/fc_safety.c -lm -o /tmp/ah_fr && python3 armhist_eval.py /tmp/ah_fr ~/scanner/tmp_fcarm/sweep1/ev ../fcarm_20261027 armhist_replay.json`
+
+## 4. v2 규칙 변경 (독립 검증 지적 반영) — 재생 다시 돌리기 전에 커밋
+검증: `scratchpad/team/verify_arm_20261029.md` (읽기 전용 검증자). 지적 (A) 비행 중에도 래치 → 빠른 비행 / 착지 충격 튐이면 착지 뒤 arm 불가, 사용자가 VIO 를 재초기화할 수단 없음. (B) 앱 live 프리셋 `--reinit-state` (상태 주입) 가 새 W 를 만들어 래치를 풂 (옛 상태를 이어받는데도). (C) UDP 에서 첫 F_RESET pose 를 잃고 reset_counter 0 = 0 이면 안 풀림.
+- **쌓이는 때**: 상태가 `FS_DISARMED` 일 때 받은 pose 만. ARMED_IDLE / FLYING / EMERG_LAND / KILLED 의 pose 는 래치를 켜지 않음. 착지 뒤 DISARM (또는 CLEAR_KILL) 하면 그때부터 다시 쌓임. 이미 켜진 래치는 상태와 무관하게 유지.
+- **풀리는 때**: 새 W (reset_counter 바뀜 또는 VIOP_F_RESET) 이면서 **VIOP_F_SEEDED (0x0020) 가 없는** pose. SEEDED = 상태 주입으로 시작한 W 의 모든 pose 에 붙는 새 플래그 (폰 쪽 변경, 앱 다시 빌드 필요). 부팅 (`fs_init`).
+- **F_RESET 반복**: 폰이 새 W 의 처음 `VIOP_RESET_REPEAT` = 50 pose 에 F_RESET 을 붙임 (예전 1 pose).
+- **사용자 재초기화 경로**: PC `VIOP_T_CMD` cmd 6 `VIOP_CMD_VIO_RESET` → FC `FS_CMD_VIO_RESET` (DISARMED / KILLED 에서만, 이벤트 `FS_EV_VIO_RESET_REQ` 9) → link task 가 USB 로 폰에 `VIOP_T_VIO_RESET_REQ` 0x23 → ov_bridge 가 전체 재초기화 (kReset 과 같게, 상태 주입 아님).
+- 재생 예측 (돌리기 전에 적음): 75개 흐름은 모두 DISARMED 이고 SEEDED 가 없어 결과가 1절과 **같아야 함**. 합격 기준은 0절 P1–P5 그대로.
