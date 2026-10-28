@@ -69,6 +69,8 @@ static void cfg_former_arm(fs_config_t *c) {
   c->arm_still_ms = 0;
   c->arm_vio_speed_max = 0.0f;
   c->arm_vio_speed_hold_ms = 0;
+  c->arm_hist_speed_max = 0.0f; /* armhist 10-29: VIO history latch off (former) */
+  c->arm_hist_lost = false;
 }
 
 static void sim_init(sim_t *s, const fs_config_t *cfg) {
@@ -1256,6 +1258,8 @@ typedef struct {
   float gyro;    /* rad/s */
   float acc_amp; /* accel noise amplitude around g */
   uint32_t rng;
+  uint16_t flags; /* armhist: pose flags (0 = VALID | TRACKING) */
+  uint8_t rc;     /* armhist: pose reset_counter */
 } ah_t;
 
 static void ah_init(ah_t *a, const fs_config_t *c) {
@@ -1269,8 +1273,8 @@ static void ah_init(ah_t *a, const fs_config_t *c) {
 static void ah_run(ah_t *a, int ms) {
   for (int k = 0; k < ms; k += 10) {
     a->t += 10;
-    fs_pose_info_t p = {.seq = ++a->pseq, .flags = VIOP_F_VALID | VIOP_F_TRACKING, .quality = 90, .pos_std_max_m = 0.05f,
-                        .speed_mps = a->speed};
+    fs_pose_info_t p = {.seq = ++a->pseq, .flags = a->flags ? a->flags : (uint16_t)(VIOP_F_VALID | VIOP_F_TRACKING),
+                        .quality = 90, .pos_std_max_m = 0.05f, .speed_mps = a->speed, .reset_counter = a->rc};
     fs_on_pose(&a->fs, a->t, &p);
     if (a->t % 50 == 0) fs_on_heartbeat(&a->fs, a->t, ++a->hseq, VIOP_HB_TRACKING, 0);
     fs_on_link(&a->fs, a->t);
@@ -1352,19 +1356,22 @@ static void t_arm_guard_defaults(void) {
   a.speed = 0.2f;
   ah_run(&a, 10);
   CHECK(ah_probe(&a, &b));
-  a.speed = NAN;
+  a.speed = NAN; /* armhist 10-29: a NaN velocity on a valid pose also latches the VIO history check */
   ah_run(&a, 10);
-  CHECK(!ah_probe(&a, &b) && b == FS_B_VIO_SPEED);
+  CHECK(!ah_probe(&a, &b) && b == (FS_B_VIO_SPEED | FS_B_VIO_HIST));
   a.speed = 0.0f;
   ah_run(&a, 10);
-  CHECK(ah_probe(&a, &b)); /* hold 0: only the last pose counts */
+  CHECK(!ah_probe(&a, &b) && b == FS_B_VIO_HIST); /* hold 0: the speed check only sees the last pose; the latch stays */
+  a.rc = 1; /* VIO re-init */
+  ah_run(&a, 10);
+  CHECK(ah_probe(&a, &b));
   CHECK(fs_command(&a.fs, a.t, FS_CMD_ARM) && a.fs.state == FS_ARMED_IDLE);
 
   g_test = "arm_guard_defaults_unknown_speed";
   ah_init(&a, &c);
   a.speed = NAN; /* the phone never reports a speed */
   ah_run(&a, 2000);
-  CHECK(!ah_probe(&a, &b) && b == FS_B_VIO_SPEED);
+  CHECK(!ah_probe(&a, &b) && b == (FS_B_VIO_SPEED | FS_B_VIO_HIST));
 
   g_test = "arm_guard_defaults_clear_kill";
   /* CLEAR_KILL follows the MOVING rule (gyro 0.05, acc var 0.1) but needs neither the still time nor the VIO speed */
@@ -1413,6 +1420,157 @@ static void t_arm_guard_sim(void) {
   CHECK(find_ev(&s, FS_EV_ARM_REJECT, -1) && (find_ev(&s, FS_EV_ARM_REJECT, -1)->reason & FS_B_NOT_STILL));
   run_ms(&s, 1500);
   CHECK(cmd(&s, FS_CMD_ARM) && s.fs.state == FS_ARMED_IDLE);
+}
+
+
+/* armhist 2026-10-29: VIO history latch (default ON: speed 2.0 m/s, lost after tracking), cleared only by a VIO re-init */
+static void t_arm_hist(void) {
+  g_test = "arm_hist_defaults";
+  fs_config_t c;
+  fs_config_default(&c);
+  CHECK(c.arm_hist_speed_max == 2.0f && c.arm_hist_lost);
+  CHECK(FS_B_VIO_HIST == (1u << 16));
+  ah_t a;
+  uint32_t b;
+  /* normal hand carry (walking 1.5 m/s, rotating), set down: arms after the 1 s still time, no latch */
+  ah_init(&a, &c);
+  a.speed = 1.5f;
+  a.gyro = 0.3f;
+  ah_run(&a, 3000);
+  CHECK(!ah_probe(&a, &b) && !(b & FS_B_VIO_HIST));
+  a.speed = 2.0f; /* limit inclusive */
+  ah_run(&a, 10);
+  CHECK(!a.fs.vio_hist_bad);
+  a.speed = 0.0f;
+  a.gyro = 0.0f;
+  ah_run(&a, 1010);
+  CHECK(ah_probe(&a, &b));
+
+  g_test = "arm_hist_speed_spike";
+  /* one pose at 2.1 m/s while hand-held, then a long normal rest: ARM refused with FS_B_VIO_HIST only */
+  ah_init(&a, &c);
+  ah_run(&a, 500);
+  a.speed = 2.1f;
+  ah_run(&a, 10);
+  CHECK(a.fs.vio_hist_bad && a.fs.vio_hist_why == 1u && a.fs.t_vio_hist_ms == a.t);
+  a.speed = 0.0f;
+  ah_run(&a, 5000);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_VIO_HIST);
+  CHECK(!fs_command(&a.fs, a.t, FS_CMD_ARM) && a.fs.state == FS_DISARMED);
+  /* the reject event carries the bit */
+  {
+    fs_event_t e;
+    uint32_t r = 0;
+    while (fs_pop_event(&a.fs, &e))
+      if (e.code == FS_EV_ARM_REJECT) r = e.reason;
+    CHECK(r == FS_B_VIO_HIST);
+  }
+  /* same reset_counter, no RESET flag: still latched */
+  ah_run(&a, 1000);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_VIO_HIST);
+  /* re-init: reset_counter changes -> cleared (still time unaffected, IMU was still) */
+  a.rc = 7;
+  ah_run(&a, 10);
+  CHECK(!a.fs.vio_hist_bad && ah_probe(&a, &b));
+  /* the clearing pose itself is checked: re-init with a fast first pose latches again */
+  a.speed = 3.0f;
+  a.rc = 8;
+  ah_run(&a, 10);
+  CHECK(a.fs.vio_hist_bad);
+  a.speed = 0.0f;
+  ah_run(&a, 10);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_VIO_HIST);
+  /* re-init by VIOP_F_RESET with the same counter (e.g. new app session restarting at the same counter) */
+  a.flags = VIOP_F_VALID | VIOP_F_TRACKING | VIOP_F_RESET;
+  ah_run(&a, 10);
+  a.flags = 0;
+  CHECK(!a.fs.vio_hist_bad);
+  ah_run(&a, 10);
+  CHECK(ah_probe(&a, &b));
+
+  g_test = "arm_hist_lost";
+  /* tracking lost (VALID, not TRACKING) after tracking: latched, recovery of tracking does not clear it */
+  ah_init(&a, &c);
+  ah_run(&a, 1500);
+  CHECK(ah_probe(&a, &b));
+  a.flags = VIOP_F_VALID;
+  ah_run(&a, 30);
+  CHECK(a.fs.vio_hist_bad && a.fs.vio_hist_why == 2u);
+  a.flags = 0;
+  ah_run(&a, 3000);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_VIO_HIST);
+  a.rc = 1;
+  ah_run(&a, 10);
+  CHECK(ah_probe(&a, &b));
+  /* VIO de-initialised (not VALID) after tracking: latched too */
+  a.flags = VIOP_F_TRACKING; /* VALID bit clear */
+  ah_run(&a, 10);
+  CHECK(a.fs.vio_hist_bad);
+  /* before the first tracking pose of a session (initialising): no latch, and invalid poses' speed is ignored */
+  ah_init(&a, &c);
+  a.flags = VIOP_F_TRACKING; /* not VALID */
+  a.speed = 50.0f;
+  ah_run(&a, 300);
+  a.flags = VIOP_F_VALID; /* valid, not yet tracking */
+  a.speed = 0.0f;
+  ah_run(&a, 300);
+  CHECK(!a.fs.vio_hist_bad);
+  a.flags = 0;
+  ah_run(&a, 1100);
+  CHECK(ah_probe(&a, &b));
+
+  g_test = "arm_hist_off";
+  fs_config_default(&c);
+  c.arm_hist_lost = false;
+  ah_init(&a, &c);
+  ah_run(&a, 500);
+  a.flags = VIOP_F_VALID;
+  ah_run(&a, 100);
+  a.flags = 0;
+  ah_run(&a, 1100);
+  CHECK(!a.fs.vio_hist_bad && ah_probe(&a, &b));
+  a.speed = 2.5f;
+  ah_run(&a, 10);
+  CHECK(a.fs.vio_hist_bad); /* speed part still on */
+  fs_config_default(&c);
+  c.arm_hist_speed_max = 0.0f;
+  ah_init(&a, &c);
+  ah_run(&a, 500);
+  a.speed = 9.0f;
+  ah_run(&a, 100);
+  a.speed = 0.0f;
+  ah_run(&a, 1100);
+  CHECK(!a.fs.vio_hist_bad && ah_probe(&a, &b));
+
+  g_test = "arm_hist_armed";
+  /* latched while armed: stays armed (only ARM is blocked); after DISARM, re-ARM refused; CLEAR_KILL not affected */
+  fs_config_default(&c);
+  ah_init(&a, &c);
+  ah_run(&a, 1100);
+  CHECK(fs_command(&a.fs, a.t, FS_CMD_ARM) && a.fs.state == FS_ARMED_IDLE);
+  a.speed = 3.0f;
+  ah_run(&a, 10);
+  a.speed = 0.0f;
+  ah_run(&a, 100);
+  CHECK(a.fs.state == FS_ARMED_IDLE && a.fs.vio_hist_bad);
+  CHECK(fs_command(&a.fs, a.t, FS_CMD_DISARM) && a.fs.state == FS_DISARMED);
+  ah_run(&a, 1100);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_VIO_HIST);
+  CHECK(fs_command(&a.fs, a.t, FS_CMD_KILL) && a.fs.state == FS_KILLED);
+  ah_run(&a, 1100);
+  CHECK(fs_command(&a.fs, a.t, FS_CMD_CLEAR_KILL) && a.fs.state == FS_DISARMED);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_VIO_HIST);
+
+  g_test = "arm_hist_viop";
+  /* fs_pose_info_from_viop keeps VIOP_F_RESET and reset_counter */
+  viop_pose_t vp;
+  memset(&vp, 0, sizeof vp);
+  vp.flags = VIOP_F_VALID | VIOP_F_TRACKING | VIOP_F_RESET;
+  vp.reset_counter = 3;
+  vp.v_w[0] = 2.5f;
+  fs_pose_info_t pi;
+  fs_pose_info_from_viop(&vp, 1, &pi);
+  CHECK((pi.flags & VIOP_F_RESET) && pi.reset_counter == 3 && fabsf(pi.speed_mps - 2.5f) < 1e-6f);
 }
 
 static void t_arm_hardening(void) {
@@ -1606,6 +1764,7 @@ int main(void) {
   t_arm_hardening();
   t_arm_guard_defaults();
   t_arm_guard_sim();
+  t_arm_hist();
   g_test = "no_illegal_transitions";
   CHECK(g_illegal == 0);
   printf("%s: %d checks, %d failed\n", g_fail ? "FAILED" : "ALL PASS", g_checks, g_fail);

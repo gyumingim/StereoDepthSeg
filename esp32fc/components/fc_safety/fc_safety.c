@@ -17,6 +17,7 @@
 /* pose flags, must match VIOP_F_* in viop_proto.h */
 #define PF_VALID 0x0001u
 #define PF_TRACKING 0x0002u
+#define PF_RESET 0x0008u /* VIOP_F_RESET: first pose of a new W (VIO re-init) */
 
 static const uint8_t k_allowed[FS_NUM_STATES][FS_NUM_STATES] = {
     /* to:          DISARMED ARMED_IDLE FLYING EMERG_LAND KILLED */
@@ -71,6 +72,8 @@ void fs_config_default(fs_config_t *c) {
   c->arm_still_ms = 1000;          /* former 0 (off) */
   c->arm_vio_speed_max = 0.2f;     /* former 0 (off) */
   c->arm_vio_speed_hold_ms = 0;
+  c->arm_hist_speed_max = 2.0f;    /* armhist 10-29: VIO history latch ON (pre-registered) */
+  c->arm_hist_lost = true;
   c->idle_disarm_ms = 5000;
   c->kill_clear_min_ms = 1000;
   c->thr_takeoff = 0.15f;
@@ -235,10 +238,28 @@ void fs_on_pose(fs_t *fs, uint32_t now_ms, const fs_pose_info_t *p) {
   }
   fs->pose_seq = p->seq;
   fs->pose_seq_seen = true;
+  bool new_w = (fs->rc_seen && p->reset_counter != fs->pose_reset_counter) || (p->flags & PF_RESET);
   if (fs->rc_seen && p->reset_counter != fs->pose_reset_counter && is_armed(fs->state)) fs->pose_reset_flag = true;
   fs->pose_reset_counter = p->reset_counter;
   fs->rc_seen = true;
   bool valid = (p->flags & PF_VALID) != 0, tracking = (p->flags & PF_TRACKING) != 0;
+  /* armhist 10-29: VIO history latch; a re-init (new W) starts a new session, then this pose is checked */
+  if (new_w) {
+    fs->vio_hist_bad = false;
+    fs->vio_hist_why = 0;
+    fs->vio_trk_seen = false;
+  }
+  {
+    uint8_t why = 0;
+    if (valid && fs->cfg.arm_hist_speed_max > 0.0f && !(p->speed_mps <= fs->cfg.arm_hist_speed_max)) why |= 1u;
+    if (valid && tracking) fs->vio_trk_seen = true;
+    else if (fs->cfg.arm_hist_lost && fs->vio_trk_seen) why |= 2u;
+    if (why) {
+      if (!fs->vio_hist_bad) fs->t_vio_hist_ms = now_ms;
+      fs->vio_hist_bad = true;
+      fs->vio_hist_why |= why;
+    }
+  }
   fs->pose_lost_flag = !valid || p->quality == 0;
   if (valid) { /* arm hardening: VIO speed of every valid pose (good or not) */
     fs->pose_speed = p->speed_mps;
@@ -333,6 +354,7 @@ static uint32_t arm_blocks(const fs_t *fs) {
       (!(fs->pose_speed <= fs->cfg.arm_vio_speed_max) ||
        (fs->vio_fast_seen && elapsed(fs->now_ms, fs->t_vio_fast_ms) < fs->cfg.arm_vio_speed_hold_ms)))
     b |= FS_B_VIO_SPEED;
+  if (fs->vio_hist_bad) b |= FS_B_VIO_HIST; /* armhist 10-29: cleared only by a VIO re-init */
   return b;
 }
 

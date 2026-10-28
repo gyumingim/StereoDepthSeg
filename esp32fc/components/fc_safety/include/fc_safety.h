@@ -108,6 +108,8 @@ typedef enum { FS_HOVER_NONE = 0, FS_HOVER_THIS_FLIGHT = 1, FS_HOVER_PREV_FLIGHT
 #define FS_B_TOO_SOON (1u << 13)
 #define FS_B_NOT_STILL (1u << 14)  /* arm_still_ms > 0: IMU not still long enough (fcarm 2026-10-27) */
 #define FS_B_VIO_SPEED (1u << 15)  /* arm_vio_speed_max > 0: VIO speed too high / unknown (fcarm 2026-10-27) */
+#define FS_B_VIO_HIST (1u << 16)   /* VIO history latch: this VIO session had a pose faster than arm_hist_speed_max or lost
+                                     tracking after tracking (arm_hist_lost); cleared only by a VIO re-init (armhist 10-29) */
 
 /* event codes */
 enum {
@@ -161,7 +163,7 @@ typedef struct {
    * Defaults = the fcarm post hoc "less marginal" set (chosen AFTER the pre-registered rule found no feasible config, with
    * the 2 divergence runs 151646 NL60 k2/k3 excluded -> unverified; scan3d/runs/fcarm_20261027/README.md, replay with these
    * defaults: scan3d/runs/armguard_20261029/README.md). Those 2 runs (VIO jumped while hand-held, looks normal when set
-   * down) still arm: a history check ("no arm after a large jump until VIO re-init") is needed and NOT built.
+   * down) still arm without the history latch below (armhist 2026-10-29, scan3d/runs/armhist_20261029/README.md).
    * Former values (instant arming, defaults until 10-27): still_ms 0, gyro 0.2, acc_var -1, acc_dev -1, speed 0, hold 0.
    * "IMU still" = gyro <= arm_gyro_max_rps AND accel EMA variance <= var limit AND | accel EMA mean - g | <= dev limit
    * = the MOVING rule (ARM and CLEAR_KILL; CLEAR_KILL does not need the still time or the VIO speed). */
@@ -173,6 +175,14 @@ typedef struct {
   float arm_vio_speed_max;        /* > 0: ARM needs the last valid pose |v| <= this, m/s (unknown / NaN refuses)
                                      (FS_B_VIO_SPEED); default 0.2, 0 = off (former) */
   uint32_t arm_vio_speed_hold_ms; /* with arm_vio_speed_max: no valid pose faster than the limit in this window either (0) */
+  /* armhist 2026-10-29 — VIO history latch, ON by default. A VIO that spiked while hand-held can look normal once set
+   * down (151646 NL60 k2/k3); the instant checks above cannot see that. Latch (ARM refused, FS_B_VIO_HIST) when, in the
+   * current VIO session, a VALID pose had |v| > arm_hist_speed_max (or NaN), or (arm_hist_lost) a pose was not
+   * VALID+TRACKING after a VALID+TRACKING one. Cleared ONLY by a VIO re-init: pose reset_counter differs from the previous
+   * pose, or flag VIOP_F_RESET (0x0008); and at fs_init. Latches in every state, blocks only ARM (not CLEAR_KILL).
+   * 2.0 m/s = pre-registered rule from normal hand-carry runs only (max 1.224 m/s, walking); unverified on new data. */
+  float arm_hist_speed_max;     /* m/s, default 2.0; 0 = off */
+  bool arm_hist_lost;           /* default true */
   uint32_t idle_disarm_ms;      /* ARMED_IDLE without takeoff for this long -> DISARMED */
   uint32_t kill_clear_min_ms;
   float thr_takeoff;            /* collective above this in ARMED_IDLE -> FLYING */
@@ -287,6 +297,11 @@ typedef struct {
   bool still_run;                /* IMU still (MOVING rule) in the last control cycle ... */
   uint32_t t_still_ms;           /* ... continuously since this time */
   uint8_t pose_reset_counter;
+  /* VIO history latch (armhist 10-29) */
+  bool vio_hist_bad;             /* latched: this VIO session diverged (speed / lost) */
+  uint8_t vio_hist_why;          /* 1 = speed, 2 = lost (informative) */
+  uint32_t t_vio_hist_ms;        /* when it latched (first time in this session) */
+  bool vio_trk_seen;             /* a VALID+TRACKING pose was seen in this VIO session */
   /* phone heartbeat */
   bool hb_seen, hb_lost_flag, hb_seq_stalled, phone_disconnected;
   uint32_t t_hb_ok_ms;

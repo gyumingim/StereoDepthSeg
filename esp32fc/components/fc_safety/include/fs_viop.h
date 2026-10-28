@@ -8,7 +8,7 @@
 #include "viop_proto.h"
 
 /* fc_safety.c hard-codes these values (to stay independent of the protocol header): keep them in sync */
-typedef char fs_viop_chk1[(VIOP_F_VALID == 0x0001u && VIOP_F_TRACKING == 0x0002u) ? 1 : -1];
+typedef char fs_viop_chk1[(VIOP_F_VALID == 0x0001u && VIOP_F_TRACKING == 0x0002u && VIOP_F_RESET == 0x0008u) ? 1 : -1];
 typedef char fs_viop_chk2[(VIOP_HB_STARTING == 0 && VIOP_HB_LOST == 2 && VIOP_HB_STOPPING == 3 && VIOP_HBF_STOPPING == 1 &&
                            VIOP_HBF_IMU_STALE == 2 && VIOP_HBF_POSE_STALE == 4) ? 1 : -1];
 typedef char fs_viop_chk3[(VIOP_CMD_ARM == FS_CMD_ARM && VIOP_CMD_DISARM == FS_CMD_DISARM && VIOP_CMD_KILL == FS_CMD_KILL &&

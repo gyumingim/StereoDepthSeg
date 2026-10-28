@@ -41,3 +41,33 @@
 - P4 VIOP 6개: 발산 151646 k0 NL60V 의 E arm 가능 0; 정상 5개 첫 arm 시각이 설정 0 과 같음.
 - P5 설정 1 = 설정 2 (75개 출력 모두 같음).
 - 하나라도 못 맞추면 "불합격" 으로 그대로 적고, 같은 데이터로 문턱을 다시 맞추지 않습니다. 바꾼 값이 있으면 "사후" 로 적습니다.
+
+## 1. 결과 (재생 2026-10-29 08:15, 사전 등록 커밋 e4cc5b0 뒤) — 합격 (P1–P5 모두), 숫자는 미검증
+| | 지금 기본 (이력 끔, 설정 0) | 새 기본 (이력 켬, 설정 1) |
+|---|---|---|
+| P1 발산 D 9 끝 정지 arm 가능 (주기) | 1,524 (151646 NL60 k2 762 + k3 762) | **0** (실행마다 0) |
+| P2 정상 60 내려놓고 3 s 뒤 새 거부 | 0 | **0** |
+| P2 첫 arm 시각이 설정 0 과 다른 NE 실행 (47 중) | — | **0** (중앙 1.23 s, 최대 2.35 s 그대로) |
+| P2 래치 켜진 정상 실행 train 47 / test 13 | — | **0 / 0** |
+| P3 손에 든 채 arm 가능 HA | 0 | **0** |
+| P4 VIOP: 발산 151646 k0 NL60V E arm / 정상 5 첫 arm | 0 / 0.93–2.35 s | **0** / 같음 |
+| P5 설정 1 = 설정 2 (75개) | | **같음** |
+
+- 발산 9개 모두 손에 든 동안 래치: 151646 6개는 10.995 s (내려놓기 23.67 s 보다 12.7 s 앞), 131326 3개는 11.8–12.8 s. k0·k2·k3 NL60 은 속도로만 (처음 넘은 pose |v| 2.009 m/s; k3 NL60 은 > 2.0 pose 45개), 나머지 (k2·k3 GL60, k4 NL60, 131326 3개) 는 속도+lost.
+- 나눠 보기: 속도 래치만 (설정 3) 도 D 0. lost 래치만 (설정 4) 은 D 1,524 그대로 (k2·k3 NL60 은 lost 가 없음) → 이 데이터에서 lost 부분은 이득 없음 (다른 검사로 이미 막힌 실행에만 걸림).
+- 예전 즉시 arm 값 + 이력 (설정 5): D 2,089 → 0, HA 17,262 → 16,963 (이력은 손 허용을 막는 검사가 아님).
+- 민감도 (사후, 부차): v_lim 1.5 / 2.5 → D 0, 정상 래치 0. v_lim 3.0 / 5.0 → k3 NL60 762 주기 다시 arm 됨. 즉 이 데이터에서 통하는 범위는 정상 최대 1.224 초과 ~ k3 NL60 최대 2.755 미만, 2.0 은 그 안.
+
+## 2. 한계 (추정으로 읽기)
+- 순환: k2·k3 NL60 의 발산 라벨이 "|v| > 2.0" 이라 2.0 래치가 막는 것은 일부 정의상 당연 (0절). 독립 근거는 경로 길이뿐.
+- 블라인드 아님: 정할 때 모든 흐름의 |v| 최대를 봤음. 발산 사례는 사실상 녹화 2개 (151646, 131326), k*/s* 는 같은 IMU 라 독립 아님.
+- 2.0 m/s 넘게 들고 뛰거나 그보다 빨리 비행하면, 착륙 뒤 VIO 재초기화 전까지 arm 안 됨 (실패하면 안전 쪽). 실내 450 기체 비행 속도 ≤ 2 m/s 가정 (확인 안 함).
+- 래치 해제는 폰이 재초기화 때 reset_counter 를 올리거나 VIOP_F_RESET 을 보내야 함. 실제 폰 앱 (ov_bridge) 이 그렇게 하는지는 이 작업에서 확인 안 함 (viop_proto.h 문서 기준).
+- 재생 흐름에는 재초기화가 없어 해제 경로는 PC 단위시험으로만 확인. 위치 점프는 흐름에 위치가 없어 안 봄.
+
+## 3. 검사 · 파일
+- PC 단위시험 **678 통과 / 0 실패** (`test_safety_run.log`, 예전 644): 새 `t_arm_hist` (2.0 포함 통과 · 2.1 한 번이면 래치 · 5 s 정지 뒤에도 FS_B_VIO_HIST 만으로 거부 · 거부 이벤트에 비트 · reset_counter 변경 / VIOP_F_RESET 으로 해제 · 해제 pose 자체 검사 · lost 래치 · 추적 전 (초기화 중) 은 래치 안 됨 · 무효 pose 속도 무시 · 켜고 끄기 · 비행 중 래치는 arm 상태 유지 · CLEAR_KILL 영향 없음 · VIOP 변환).
+  `t_arm_guard_defaults` 의 NaN 속도 경우는 이제 FS_B_VIO_SPEED|FS_B_VIO_HIST 로 거부되고 재초기화 뒤 arm (기대값 고침). `cfg_former_arm()` 은 이력도 끔.
+- `make syntax` 6 변형 통과 (`syntax.log`). ESP-IDF v5.5.6 기본 변형 빌드 성공, 경고 0, 앱 0xbfe40 (예전 0xbfd40, +256 B) (`idf_build_default.log`, 증분 빌드: fc_safety.c · main/*.c 다시 컴파일).
+- `armhist_replay.c` (fcarm_replay + 이력 설정 2개 + 래치 열), `armhist_eval.py` → `armhist_replay.json`, `armhist_replay_configs.txt`.
+- 재현 (WSL, 이 폴더): `gcc -std=c99 -O2 -I../../../esp32fc/components/fc_safety/include armhist_replay.c ../../../esp32fc/components/fc_safety/fc_safety.c -lm -o /tmp/ah_fr && python3 armhist_eval.py /tmp/ah_fr ~/scanner/tmp_fcarm/sweep1/ev ../fcarm_20261027 armhist_replay.json`
