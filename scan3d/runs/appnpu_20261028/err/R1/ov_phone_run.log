@@ -1,0 +1,66 @@
+config c4f60: track_frequency 60 -> --ei fps 60
+preflight 2026-10-28 20:26:19 device 100.79.156.20:33841 (560 ms)
+kill-all: done; heavy apps checked: com.sec.android.app.camera com.sec.android.gallery3d com.google.android.apps.photos com.samsung.android.video com.google.android.youtube com.android.chrome com.sec.android.app.sbrowser
+  MemTotal:        7398448 kB
+  MemAvailable:    2707276 kB
+  no heavy app was running
+thermal status: 0  SKIN: 32.8 C (limit 36.0 C)
+PREFLIGHT OK
+live view: adb reverse tcp:8798 tcp:8794
+live view: http://100.92.214.97:8798
+Starting: Intent { cmp=com.scan3d.arlat/.MainActivity (has extras) }
+1793186785 t=5s SKIN 32.8 status 0
+1793186791 t=11s SKIN 33.7 status 0
+1793186797 t=16s SKIN 34.5 status 0
+1793186803 t=22s SKIN 34.5 status 0
+1793186808 t=28s SKIN 35.2 status 0
+1793186814 t=34s SKIN 35.2 status 0
+1793186820 t=39s SKIN 35.9 status 0
+1793186825 t=45s SKIN 35.9 status 0
+1793186831 t=51s SKIN 36.4 status 0
+1793186837 t=57s SKIN 36.7 status 0
+1793186843 t=62s SKIN 36.7 status 0
+1793186849 t=68s SKIN 36.9 status 0
+1793186854 t=74s SKIN 36.9 status 0
+1793186861 t=80s SKIN 37.0 status 0
+1793186868 t=87s SKIN 37.2 status 0
+1793186874 t=94s SKIN 37.2 status 0
+1793186880 t=100s SKIN 37.5 status 0
+1793186887 t=106s SKIN 37.7 status 0
+1793186894 t=113s SKIN 37.7 status 0
+1793186900 t=120s SKIN 37.9 status 0
+1793186907 t=126s SKIN 38.1 status 1
+1793186914 t=133s SKIN 38.1 status 1
+1793186920 t=139s SKIN 38.4 status 1
+1793186926 t=146s SKIN 38.4 status 1
+1793186933 t=152s SKIN 38.6 status 1
+1793186940 t=159s SKIN 38.3 status 1
+1793186948 t=166s SKIN 37.8 status 1
+1793186954 t=174s SKIN 37.8 status 1
+1793186961 t=180s SKIN 37.6 status 1
+1793186968 t=187s SKIN 37.0 status 1
+stop: timeout
+-- active camera clients (must be empty):
+Active Camera Clients:
+[]
+Allowed user IDs: 0
+
+-- ov_bridge processes (must be empty):
+none
+/sdcard/Android/data/com.scan3d.arlat/files/ov/run_20261028_202708_main60_c4f60/: 20 files pulled, 0 skipped. 0.7 MB/s (10873440 bytes in 15.809s)
+pulled -> /home/system/scanner/StereoDepthSeg-appnpu/scan3d/runs/appnpu_20261028/err/R1/run_20261028_202708_main60_c4f60
+live view lines -> /home/system/scanner/StereoDepthSeg-appnpu/scan3d/runs/appnpu_20261028/err/R1/run_20261028_202708_main60_c4f60/ov_live.jsonl (5892 lines, from C:\Users\a3162\scan3d_ov_live\ov_live_20261028-202711_c4f60.jsonl)
+
+== /home/system/scanner/StereoDepthSeg-appnpu/scan3d/runs/appnpu_20261028/err/R1/run_20261028_202708_main60_c4f60
+   None cam None None@None cfg None preset None imu None stop None
+   [ov_bridge] affinity start: (not pinned) threads 10974:libov_bridge.so=0,1,2,3,4,5,6,7,8,9
+   [ov_bridge] affinity ready: (not pinned) threads 10974:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 11099:libov_bridge.so=0,1,2,3,4,5,6,7,8,9
+   [ov_bridge] affinity cam300: (not pinned) threads 10974:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 11099:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 11114:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 11115:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 11116:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 11246:libov_bridge.so=0,1,2,3,4,5,6,7,8,9
+   fed 5893 frames, initialised 0 (init at None s)
+   camera: 60.0 fps measured, missing 0 (gaps 0, max 17.38 ms); Java drops pool 0 queue 0; copy p50 662.0 us
+   battery max 35.6 C, thermal status max 1, SKIN max (PC log) 38.6
+   segment    frames    fps | per-frame ms p50 / p95 / max | >16.7 | >33.3 | track p50/p95 | update ms p50 | wait p95 | latency p50/p95
+   all             0  (no frames)
+   health: OK 0.0 % DEGRADED 0.0 % LOST 0.0 % INIT 100.0 % of 5880 | first init None s, first OK None s | transitions 0 | longest LOST 0.0 s | no-update max None s | recoveries 0 (segments 0)
+           tracked p50 None | used p50 None | chi2 rejected 0.0 % | pos std p50 None max None m (incl. the 0.087 m init gauge)
+   -> None

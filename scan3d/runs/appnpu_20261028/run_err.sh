@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # appnpu error test (user approved 10-28): hand-held "return to start" run with arlat 0.6.32, live viewer on.
-#   bash run_err.sh <tag> <npu 0|1> <secs>        e.g. bash run_err.sh r1_npu1 1 90
+#   bash run_err.sh <tag> <npu 0|1> <secs>        e.g. bash run_err.sh R1 1 150
+# 0.6.34: <secs> = run length FROM VIO INIT (on-screen countdown); the app's hard cap is secs + 60 s from the start.
 # = ov_phone_run.sh run <serial> c4f60 <secs> --es profile rec60 --ei loop 1 [--ei npu_loop 1], LIVE=1 (page + adb reverse,
 #   lines -> <run>/ov_live.jsonl). Safety: start only SKIN < 40 (ov_phone_run preflight is stricter: SKIN < 36 + thermal 0),
 #   stop at SKIN >= 45 / AP >= 50 / battery < 20 % (own 5 s monitor -> force-stop) and thermal status >= 2 (ov_phone_run).
@@ -22,7 +23,7 @@ unlock() { [ -f "$LOCK/owner.txt" ] && mv "$LOCK/owner.txt" "$D/lock_owner_relea
 trap unlock EXIT
 $A connect "$S" > /dev/null 2>&1
 vc=$($A -s "$S" shell "dumpsys package com.scan3d.arlat | grep -m1 versionCode" | tr -d '\r')
-echo "$vc" | grep -q "versionCode=39" || { echo "phone app is not 0.6.33 (vc 39): $vc"; exit 2; }
+echo "$vc" | grep -q "versionCode=40" || { echo "phone app is not 0.6.34 (vc 40): $vc"; exit 2; }
 temps() {
   local o; o=$($A -s "$S" shell "dumpsys thermalservice | sed -n '/Current temperatures from HAL/,/^[^ \t]/p'; dumpsys battery | grep -E '^  level'" 2>/dev/null | tr -d '\r')
   sk=$(echo "$o" | grep -oE "mValue=[0-9.]+, mType=3, mName=SKIN" | grep -oE "[0-9.]+" | head -1)
@@ -39,9 +40,10 @@ FLAG=/tmp/appnpu_err_mon_${TAG}_$$
       echo "$(date +%T) SAFETY STOP SKIN $sk AP $ap batt $bl" | tee -a "$D/temps_pc.txt"; $A -s "$S" shell am force-stop com.scan3d.arlat; fi
     sleep 5; done ) &
 MP=$!
-EX=(--es profile rec60 --ei loop 1); [ "$NPU" = 1 ] && EX+=(--ei npu_loop 1)
+EX=(--es profile rec60 --ei loop 1 --ei run_secs "$SECS"); [ "$NPU" = 1 ] && EX+=(--ei npu_loop 1)
+CAP=$((SECS + 60))   # 0.6.34: the run lasts SECS from VIO init; app hard cap SECS + 60 s from the start
 T0=$(date "+%F %T")
-LIVE=1 MAXSKIN=45 OUT="$D" ADB="$A" bash "$W/tools/ov_phone_run.sh" run "$S" c4f60 "$SECS" "${EX[@]}" 2>&1 | tee "$D/ov_phone_run.log"
+LIVE=1 MAXSKIN=45 OUT="$D" ADB="$A" bash "$W/tools/ov_phone_run.sh" run "$S" c4f60 "$CAP" "${EX[@]}" 2>&1 | tee "$D/ov_phone_run.log"
 touch "$FLAG"; wait $MP
 cam=$($A -s "$S" shell "dumpsys media.camera | grep -A1 'Active Camera Clients'" | tr -d '\r' | tail -1)
 br=$($A -s "$S" shell "pidof libov_bridge.so" | tr -d '\r')
@@ -52,7 +54,7 @@ python3 - "$D/err_meta.json" "$TAG" "$NPU" "$SECS" "$T0" "${RUN:-}" "$cam" "${br
 import json, sys, time
 o, tag, npu, secs, t0, run, cam, br = sys.argv[1:9]
 json.dump(dict(made=time.strftime("%F %T"), tag=tag, npu_loop=int(npu), secs=int(secs), started=t0, run=run or None,
-               app="0.6.33 vc 39", cfg="c4f60", extras="--es profile rec60 --ei loop 1" + (" --ei npu_loop 1" if npu == "1" else ""),
+               app="0.6.34 vc 40", cfg="c4f60", extras="--es profile rec60 --ei loop 1" + (" --ei npu_loop 1" if npu == "1" else ""),
                camera_after=cam, bridge_after=br or None), open(o, "w"), indent=1)
 PY
 [ -n "$RUN" ] && python3 "$H/score_err.py" "$D" || echo "no run folder pulled"

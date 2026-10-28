@@ -1,0 +1,143 @@
+{
+ "run": "/home/system/scanner/StereoDepthSeg-appnpu/scan3d/runs/appnpu_20261028/err/R1/run_20261028_202708_main60_c4f60",
+ "made": "2026-10-28 20:30:01",
+ "script": "scan3d/tools/ov_phone_timing.py",
+ "inputs": [
+  "frame_2.y",
+  "poses.csv",
+  "preflight.txt",
+  "bridge_timing.csv",
+  "kalibr_imu_chain.yaml",
+  "kalibr_imucam_chain.yaml",
+  "health.csv",
+  "ov_live.jsonl",
+  "npu.jsonl",
+  "npu_start.txt",
+  "frame_0.y",
+  "poses_pred.csv",
+  "estimator_config.yaml",
+  "frame_1.y",
+  "events.jsonl",
+  "writes.csv",
+  "loop.jsonl",
+  "frames.csv",
+  "bridge_stderr.log",
+  "temps.csv",
+  "ov_timing.txt",
+  "thermal_pc.txt",
+  "frame_3.y"
+ ],
+ "budget_ms": 16.7,
+ "fps": 60.0,
+ "only_initialised": true,
+ "meta": {
+  "app_version": null,
+  "cam": null,
+  "size": null,
+  "fps": null,
+  "cfg": null,
+  "preset": null,
+  "imu": null,
+  "exp_us": null,
+  "iso": null,
+  "focus_dpt": null,
+  "yuv_min_frame_duration_ns": null,
+  "first_result": null,
+  "stop_reason": null,
+  "secs": null,
+  "bridge_exit": null,
+  "device": null,
+  "perf": null
+ },
+ "frames_fed": 5893,
+ "frames_initialised": 0,
+ "t_init_s": null,
+ "bridge_affinity": [
+  "[ov_bridge] affinity start: (not pinned) threads 10974:libov_bridge.so=0,1,2,3,4,5,6,7,8,9",
+  "[ov_bridge] affinity ready: (not pinned) threads 10974:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 11099:libov_bridge.so=0,1,2,3,4,5,6,7,8,9",
+  "[ov_bridge] affinity cam300: (not pinned) threads 10974:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 11099:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 11114:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 11115:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 11116:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 11246:libov_bridge.so=0,1,2,3,4,5,6,7,8,9"
+ ],
+ "segments": {
+  "all": {
+   "t0": 0.0,
+   "t1": 98.205067445,
+   "frames": 0,
+   "fed_fps": null,
+   "per_frame_ms": {
+    "n": 0
+   },
+   "feed_ms": {
+    "n": 0
+   },
+   "remap_ms": {
+    "n": 0
+   },
+   "wait_ms": {
+    "n": 0
+   },
+   "bridge_cam_dropped": 0,
+   "latency_sensor_to_pose_ms": {
+    "n": 5759,
+    "p50": 53.317,
+    "p95": 59.832,
+    "p99": 65.156,
+    "max": 127.962,
+    "mean": 53.723
+   }
+  }
+ },
+ "imu_delivery": {},
+ "camera": {
+  "n": 5547,
+  "secs": 92.43,
+  "fps_measured": 60.0,
+  "gaps": 0,
+  "missing_est": 0,
+  "max_gap_ms": 17.38,
+  "median_period_ms": 16.667
+ },
+ "java_pool_dropped": 0,
+ "java_queue_dropped": 0,
+ "java_copy_us": {
+  "n": 5547,
+  "p50": 662.0,
+  "p95": 993.7,
+  "p99": 1205.02,
+  "max": 3112.0,
+  "mean": 667.685
+ },
+ "frames_received": 5547,
+ "battery_c_max": 35.6,
+ "thermal_status_max": 1,
+ "skin_c_max_pc_log": 38.6,
+ "health": {
+  "file": "/home/system/scanner/StereoDepthSeg-appnpu/scan3d/runs/appnpu_20261028/err/R1/run_20261028_202708_main60_c4f60/health.csv",
+  "frames": 5880,
+  "states": {
+   "INIT": 1.0,
+   "OK": 0.0,
+   "DEGRADED": 0.0,
+   "LOST": 0.0,
+   "n": 5880
+  },
+  "transitions": 0,
+  "longest_lost_s": 0.0,
+  "first_ok_s": null,
+  "first_init_s": null,
+  "tracked": {
+   "n": 0
+  },
+  "used": {
+   "n": 0
+  },
+  "chi2_rej_share": 0.0,
+  "pos_std_m": {
+   "n": 0
+  },
+  "since_upd_max_s": null,
+  "recoveries": 0,
+  "segments_out": 0,
+  "blank_frames": 0
+ },
+ "health_log_lines": []
+}

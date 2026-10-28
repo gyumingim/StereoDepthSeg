@@ -42,6 +42,7 @@ import java.util.Locale;
  *   Without gyro = intent ov_opt "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse" (explicit intent wins).
  * 0.6.28 (user 2026-10-26, 60 fps only): profile rec60 + loop 1 (rec20261025 unchanged) (ovloop BoW loop closure, own thread; vocabulary shipped in
  *   the APK assets, copied to files/ov/voc_k10L4.voc). Without loop = intent loop 0. Profile + recover N -> loop off.
+ * 0.6.34: cue = shake-to-start, run length from VIO init (intent run_secs, secs = hard cap); mode ov not from history, once per activity.
  * 0.6.33 (user 10-28): mode ov with secs and no guide shows RunCue (big Korean phase text, VIO / NPU state), npu 0 and 1 alike.
  * 0.6.31 (user rule 10-28): npu_loop 1 without a working NPU -> run refused + app finishes; NPU lost mid-run -> run INVALID.
  * 0.6.30 (appnpu-20261028): intent npu_loop 1 (default 0 = 0.6.29 behaviour) -> XFeat + LighterGlue on the NPU in the loop
@@ -57,6 +58,7 @@ public class MainActivity extends Activity {
     private Thread worker;
     private TextView status;
     private RunCue cue;                             // 0.6.33 on-screen cue (mode ov, secs, no guide)
+    private boolean ovStartedOnce;                  // 0.6.34: mode ov runs at most once per activity instance
     private Cam2Probe cam2;
     private OvRunner ov;
     private boolean sustainedOn;                   // 0.6.13 ov: Window sustained performance mode set
@@ -91,6 +93,19 @@ public class MainActivity extends Activity {
         super.onResume();
         final int secs = getIntent().getIntExtra("secs", 0);
         String mode = getIntent().getStringExtra("mode");
+        // 0.6.34 (R1 10-28: after a safety force-stop the launcher / recents relaunched the task, which re-delivers the old
+        // intent -> a new run started by itself): mode ov never starts from a history relaunch, and at most once per activity.
+        if ("ov".equals(mode)) {
+            if ((getIntent().getFlags() & android.content.Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) {
+                status.setText("기록에서 다시 열림 — 실행하지 않음 (PC 에서 시작)");
+                android.util.Log.w("arlat", "mode ov from history relaunch: not started");
+                return;
+            }
+            if (ovStartedOnce && ov == null) {
+                status.setText("실행 끝 — 다시 하려면 PC 에서 시작");
+                return;
+            }
+        }
         if ("cam2".equals(mode)) {          // camera2 delivery latency of the VIO lens instead of ARCore
             if (cam2 == null) {
                 cam2 = new Cam2Probe(this, this::show);
@@ -355,12 +370,19 @@ public class MainActivity extends Activity {
                     });
                 }
                 try {
+                    ovStartedOnce = true;
                     ov.start(); status.setText("OpenVINS starting...");
                     final OvRunner mine = ov;
-                    // 0.6.33 (user 10-28): big Korean cue for a timed run without a guide (same for npu 0 / 1)
+                    // 0.6.33 (user 10-28): big Korean cue for a timed run without a guide (same for npu 0 / 1).
+                    // 0.6.34: intent run_secs > 0 = run length counted from VIO init (cue ends the run); secs = hard cap.
                     if (secs > 0 && g == null) {
                         if (status.getParent() != null) ((android.view.ViewGroup) status.getParent()).removeView(status);
-                        cue = new RunCue(this, ov, secs);
+                        final int runSecs = getIntent().getIntExtra("run_secs", 0);
+                        cue = new RunCue(this, ov, runSecs > 0 ? runSecs : secs, runSecs > 0 ? () -> {
+                            if (ov != mine) return;
+                            ov.stopReason = "run_secs " + runSecs + " from VIO init";
+                            finish();
+                        } : null);
                         setContentView(cue.root);
                     }
                     if (secs > 0 && g == null) status.postDelayed(() -> {
