@@ -4,13 +4,18 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/resource.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/un.h>
 #include <sys/wait.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
 #include <algorithm>
 #include <chrono>
+#include <cerrno>
 #include <cmath>
+#include <cstddef>
 #include <cstring>
 #include <sstream>
 
@@ -114,7 +119,8 @@ bool Cfg::parse(const std::string &kv, std::string &err) {
                      {"xf_rp_deg", &xf_rp_deg, nullptr}, {"xf_yaw_deg", &xf_yaw_deg, nullptr}, {"xf_pnp_px", &xf_pnp_px, nullptr},
                      {"xf_tri_mv", nullptr, &xf_tri_mv}, {"xf_tri_rel", &xf_tri_rel, nullptr},
                      {"xf_max_tri_frac", &xf_max_tri_frac, nullptr}, {"consist_n", nullptr, &consist_n},
-                     {"xf_tri_mode", nullptr, &xf_tri_mode}, {"xf_kf_every", &xf_kf_every, nullptr}};
+                     {"xf_tri_mode", nullptr, &xf_tri_mode}, {"xf_kf_every", &xf_kf_every, nullptr},
+                     {"xf_timeout_ms", nullptr, &xf_timeout_ms}};
     bool found = false;
     for (const auto &d : tab)
       if (k == d.n) {
@@ -297,8 +303,13 @@ LoopCloser::LoopCloser(const Cfg &c) : c_(c), rule_(c_), s_(new State) {
       return;
     }
     if (!xf_start(err_)) {
-      ok_ = false;
-      return;
+      if (!xf_unix_) {
+        ok_ = false;
+        return;
+      }
+      // appnpu unix mode: not fatal, BRIEF path for the whole run
+      std::fprintf(stderr, "[ov_bridge] loop: %s -> XFeat off, box-BRIEF verification (appnpu fallback)\n", err_.c_str());
+      err_.clear();
     }
   }
   std::fprintf(stderr, "[ov_bridge] loop: vocab %s (k %d L %d, %d words, sha %s) | %s\n", c_.vocab.c_str(), voc_.k, voc_.L,
@@ -319,7 +330,7 @@ LoopCloser::~LoopCloser() {
     }
     ::close(xf_in_);
   }
-  if (xf_out_ >= 0) ::close(xf_out_);
+  if (xf_out_ >= 0 && xf_out_ != xf_in_) ::close(xf_out_);  // appnpu: unix mode uses one fd for both
   if (xf_pid_ > 0) {
     int st = 0;
     for (int i = 0; i < 100 && waitpid(xf_pid_, &st, WNOHANG) == 0; i++) usleep(50000);
@@ -422,7 +433,57 @@ bool rd_all(int fd, void *p, size_t n) {
 }
 }  // namespace
 
+void LoopCloser::xf_down(const char *why) {
+  const int e = errno;
+  if (!xf_ok_) return;
+  xf_ok_ = false;
+  std::fprintf(stderr, "[ov_bridge] loop: XFeat server lost (%s, errno %d %s)%s\n", why, e, std::strerror(e),
+               xf_unix_ ? " -> box-BRIEF verification for the rest of the run (appnpu)" : "");
+  if (xf_unix_) {
+    std::ostringstream o;
+    o << "{\"xf_down\":\"" << why << "\",\"errno\":" << e << "}";
+    log_line(o.str());
+  }
+}
+
 bool LoopCloser::xf_start(std::string &err) {
+  if (c_.xf.compare(0, 5, "unix:") == 0) {  // appnpu 2026-10-28: connect to a running server (phone app NPU server)
+    xf_unix_ = true;
+    const std::string name = c_.xf.substr(5);
+    sockaddr_un sa;
+    std::memset(&sa, 0, sizeof sa);
+    sa.sun_family = AF_UNIX;
+    if (name.size() < 2 || name.size() >= sizeof(sa.sun_path)) {
+      err = "--loop-xf unix:NAME: bad name";
+      return false;
+    }
+    std::memcpy(sa.sun_path, name.data(), name.size());
+    if (name[0] == '@') sa.sun_path[0] = 0;  // abstract namespace
+    const socklen_t len = static_cast<socklen_t>(offsetof(sockaddr_un, sun_path) + name.size());
+    signal(SIGPIPE, SIG_IGN);
+    const int fd = ::socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    if (fd < 0) {
+      err = "--loop-xf unix: socket() failed";
+      return false;
+    }
+    if (c_.xf_timeout_ms > 0) {  // a hung server must not hang the loop thread (or the bridge exit) for ever
+      timeval tv;
+      tv.tv_sec = c_.xf_timeout_ms / 1000;
+      tv.tv_usec = (c_.xf_timeout_ms % 1000) * 1000;
+      setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof tv);
+      setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof tv);
+    }
+    if (::connect(fd, reinterpret_cast<sockaddr *>(&sa), len) != 0) {
+      err = std::string("--loop-xf ") + c_.xf + ": connect failed: " + std::strerror(errno);
+      ::close(fd);
+      return false;
+    }
+    xf_in_ = xf_out_ = fd;
+    xf_ok_ = true;
+    std::fprintf(stderr, "[ov_bridge] loop: XFeat server %s connected, mode %d (%s), timeout %d ms\n", c_.xf.c_str(), c_.xf_mode,
+                 c_.xf_mode == 1 ? "mutual NN" : "LighterGlue", c_.xf_timeout_ms);
+    return true;
+  }
   int a[2], b[2];  // a: bridge -> server stdin, b: server stdout -> bridge
   if (pipe(a) != 0 || pipe(b) != 0) {
     err = "--loop-xf: pipe failed";
@@ -476,12 +537,17 @@ bool LoopCloser::xf_feat(int64_t id, const cv::Mat &img, const std::vector<cv::P
   }
   int32_t nk = 0;
   if (!wr_all(xf_in_, buf.data(), buf.size()) || !rd_all(xf_out_, &nk, 4) || nk < 0 || nk > 1000000) {
+    if (xf_unix_) {
+      xf_down("feat");
+      return false;
+    }
     xf_ok_ = false;
     std::fprintf(stderr, "[ov_bridge] loop: XFeat server died (feat)\n");
     return false;
   }
   std::vector<float> v(2 * static_cast<size_t>(nk));
   if ((nk && !rd_all(xf_out_, v.data(), v.size() * 4)) || !rd_all(xf_out_, &ms, 4)) {
+    if (xf_unix_) xf_down("feat body");
     xf_ok_ = false;
     return false;
   }
@@ -501,12 +567,17 @@ bool LoopCloser::xf_match(int64_t a, int64_t b, int mode, std::vector<std::array
   std::memcpy(req + 17, &md, 4);
   int32_t n = 0;
   if (!wr_all(xf_in_, req, 21) || !rd_all(xf_out_, &n, 4) || n < 0 || n > 10000000) {
+    if (xf_unix_) {
+      xf_down("match");
+      return false;
+    }
     xf_ok_ = false;
     std::fprintf(stderr, "[ov_bridge] loop: XFeat server died (match)\n");
     return false;
   }
   std::vector<char> v(12 * static_cast<size_t>(n));
   if ((n && !rd_all(xf_out_, v.data(), v.size())) || !rd_all(xf_out_, &ms, 4)) {
+    if (xf_unix_) xf_down("match body");
     xf_ok_ = false;
     return false;
   }
@@ -1157,7 +1228,7 @@ void LoopCloser::process(KfIn &in) {
       xf_ms_match += msm;
     }
     bool ok = false;
-    if (!c_.xf_mode) {
+    if (!c_.xf_mode || (xf_unix_ && !xf_ok_)) {  // appnpu: unix server lost -> BRIEF path (CMD mode unchanged)
       ok = verify_path(old, false, xmm, diag, v, why);
       if (c_.log_cand) log_cx(v, ok, why, -1);
     } else {

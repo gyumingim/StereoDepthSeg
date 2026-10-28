@@ -69,6 +69,11 @@ struct Cfg {
   int xf_tri_mode = 0;         // lgopt 2026-10-27: matcher for the xf_tri triangulation with the previous keyframe(s)
                                //   (0 = xf_mode; 1 = mutual NN while loop candidates use xf_mode 2 = LighterGlue)
   int consist_n = 1;           // temporal consistency: earlier consistent verified loops needed (1 = ovloop rule)
+  // appnpu 2026-10-28: --loop-xf unix:NAME connects to a feature / matching server that already runs (the phone app's NPU
+  // server, abstract socket when NAME starts with '@') instead of starting CMD as a child. Same request protocol. In this
+  // mode a server that cannot be reached / dies / does not answer within xf_timeout_ms is NOT fatal: XFeat is off for the
+  // rest of the run and verification falls back to the box-BRIEF path (logged "xf_down"). CMD mode is unchanged.
+  int xf_timeout_ms = 3000;
   int diag_prev = 0;           // 1: also verify against the previous keyframe (log only, never a loop): pipeline self-test
   int sync = 0;                // --loop-sync 1: the VIO thread waits until each keyframe is processed (deterministic, PC eval only)
   // keyframe rule (VIO thread)
@@ -211,6 +216,8 @@ private:
   int xf_in_ = -1, xf_out_ = -1;  // write to server stdin / read from its stdout
   int xf_pid_ = -1;
   bool xf_ok_ = false;
+  bool xf_unix_ = false;          // appnpu: --loop-xf unix:NAME (one socket fd = xf_in_ = xf_out_)
+  void xf_down(const char *why);  // appnpu: unix mode, server lost -> BRIEF fallback for the rest of the run
 
   Cfg c_;
   bool ok_ = true;

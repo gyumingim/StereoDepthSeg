@@ -1,0 +1,51 @@
+{
+ "made": "2026-10-28 19:21:59",
+ "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261024_165506_std60",
+ "frames": [
+  600,
+  640
+ ],
+ "nq": 150,
+ "topk": 333,
+ "kp": {
+  "server": [
+   333,
+   333
+  ],
+  "ref": [
+   333,
+   333
+  ],
+  "identical": [
+   true,
+   true
+  ],
+  "set_overlap": [
+   1.0,
+   1.0
+  ]
+ },
+ "nn": {
+  "server": 176,
+  "ref": 176,
+  "common": 176,
+  "jaccard": 1.0
+ },
+ "lg": {
+  "server": 108,
+  "ref": 108,
+  "common": 108,
+  "jaccard": 1.0,
+  "server_pairs_in_xfeat_part": true
+ },
+ "unknown_id_matches": 0,
+ "server_ms": {
+  "F": [
+   50.62066650390625,
+   46.717891693115234
+  ],
+  "M1": 10.986968040466309,
+  "M2": 55.077823638916016
+ },
+ "note": "reference = Python fp32 (descriptors fp32); server stores descriptors fp16 -> tiny NN / LG set differences possible"
+}
