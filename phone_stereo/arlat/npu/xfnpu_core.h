@@ -69,6 +69,9 @@ struct Cand {
   int idx;
 };
 static inline bool cand_less(const Cand &a, const Cand &b) { return a.s > b.s || (a.s == b.s && a.idx < b.idx); }
+#if defined(__aarch64__)
+#include <arm_neon.h>
+#endif
 #include "xfpost_soft.h"  // includes xfpost_off.h (npuopt10, ovxfeat b718927 / 6843464, copied unchanged)
 
 // ---- NPU backend (phone: ENN, PC test: pipe to a torch stand-in) ----
@@ -98,6 +101,9 @@ struct Cfg {
   std::vector<int> cpus;         // worker thread affinity ({} = no pinning)
   int nice = 10;                 // worker thread nice
   double cache_mb = 300.0;       // descriptor cache (fp16) cap; oldest keyframes dropped (logged)
+  int nn_fast = 0;               // 0.6.35 npunight: 1 = mutual NN dot products with 16 partial sums (NEON on arm64; other
+                                 //   summation order than the plain loop -> cosines can differ in the last bits)
+  int lg_post = 2;               // 0.6.35 npunight: 2 = log-score post (as 0.6.34), 3 = product post (nncrun lgpost 3, no N^2 log)
 };
 
 // IEEE half <-> float (round to nearest even), own code
@@ -290,6 +296,7 @@ private:
       S("worker tid %d affinity %s -> %d", static_cast<int>(tid), cpus_str().c_str(), r);
     } else S("worker tid %d not pinned", static_cast<int>(tid));
     if (c_.nice) S("worker nice %d -> %d", c_.nice, setpriority(PRIO_PROCESS, static_cast<id_t>(tid), c_.nice));
+    S("opts nn_fast %d lg_post %d", c_.nn_fast, c_.lg_post);
     if (!be_->init(err)) return false;
     S("backend %s", be_->describe().c_str());
     xf_ = be_->load(c_.xf_model, err);
@@ -689,6 +696,29 @@ private:
     return static_cast<int32_t>(out.size());
   }
 
+  // 0.6.35 npunight nn_fast: 64-float dot product, 16 partial sums (4 x float32x4 fused multiply-add), then
+  // (q0+q1)+(q2+q3) per lane and a pairwise lane sum (vaddvq). The scalar branch does the same operations in the same order.
+  static inline float dot64f(const float *x, const float *y) {
+#if defined(__aarch64__)
+    float32x4_t a0 = vdupq_n_f32(0.f), a1 = a0, a2 = a0, a3 = a0;
+    for (int k = 0; k < 64; k += 16) {
+      a0 = vfmaq_f32(a0, vld1q_f32(x + k), vld1q_f32(y + k));
+      a1 = vfmaq_f32(a1, vld1q_f32(x + k + 4), vld1q_f32(y + k + 4));
+      a2 = vfmaq_f32(a2, vld1q_f32(x + k + 8), vld1q_f32(y + k + 8));
+      a3 = vfmaq_f32(a3, vld1q_f32(x + k + 12), vld1q_f32(y + k + 12));
+    }
+    return vaddvq_f32(vaddq_f32(vaddq_f32(a0, a1), vaddq_f32(a2, a3)));
+#else
+    float a[4][4] = {};
+    for (int k = 0; k < 64; k += 16)
+      for (int q = 0; q < 4; q++)
+        for (int l = 0; l < 4; l++) a[q][l] = std::fma(x[k + 4 * q + l], y[k + 4 * q + l], a[q][l]);
+    float s[4];
+    for (int l = 0; l < 4; l++) s[l] = (a[0][l] + a[1][l]) + (a[2][l] + a[3][l]);
+    return (s[0] + s[1]) + (s[2] + s[3]);
+#endif
+  }
+
   // mutual nearest neighbour on all points (xf_server mode 1), cos >= min_cos
   void nn(const Entry &A, const Entry &B, std::vector<std::array<float, 3>> &out) {
     const int na = A.n, nb = B.n;
@@ -701,8 +731,12 @@ private:
       const float *x = &fa[64 * static_cast<size_t>(i)];
       for (int j = 0; j < nb; j++) {
         const float *y = &fb[64 * static_cast<size_t>(j)];
-        float s = 0.f;
-        for (int k = 0; k < 64; k++) s += x[k] * y[k];
+        float s;
+        if (c_.nn_fast) s = dot64f(x, y);
+        else {
+          s = 0.f;
+          for (int k = 0; k < 64; k++) s += x[k] * y[k];
+        }
         if (s > b12[i]) { b12[i] = s; m12[i] = j; }  // first max (torch argmax: first index on ties)
         if (s > b21[j]) { b21[j] = s; m21[j] = i; }
       }
@@ -786,6 +820,59 @@ private:
         const int back = static_cast<int>(std::lround(o[3 * j + 1]));
         if (back != i || !(o[3 * i + 2] > lt)) continue;
         out.push_back({static_cast<float>(i0[i]), static_cast<float>(i1[j]), static_cast<float>(std::exp(o[3 * i + 2]))});
+      }
+    } else if (c_.lg_post == 3) {  // 0.6.35 npunight: product post (nncrun lgpost cpu_prod_bench.cpp postp, PC 13/13 same
+      // pairs as lgpost 2): sc_ij = log(p_ij s0_i s1_j) is monotone in the product -> argmax on products, log only per match
+      const int R = 2 * N + 2;
+      if (csum) {
+        a2_.assign(static_cast<size_t>(nv0) * nv1, 0.f);
+        b2_.assign(static_cast<size_t>(nv1) * nv0, 0.f);
+        for (int i = 0; i < nv0; i++) {
+          const float *ar = o + static_cast<size_t>(i) * R;
+          float *dst = &a2_[static_cast<size_t>(i) * nv1];
+          for (int r = 0; r < N; r++) dst[r % nv1] += ar[r];
+        }
+        for (int j = 0; j < nv1; j++) {
+          const float *br = o + static_cast<size_t>(j) * R + N;
+          float *dst = &b2_[static_cast<size_t>(j) * nv0];
+          for (int r = 0; r < N; r++) dst[r % nv0] += br[r];
+        }
+      }
+      p3_.resize(static_cast<size_t>(nv0) * nv1);
+      s0v_.resize(nv0);
+      s1v_.resize(nv1);
+      for (int i = 0; i < nv0; i++) s0v_[i] = 1.f / (1.f + std::exp(-o[static_cast<size_t>(i) * R + 2 * N]));
+      for (int j = 0; j < nv1; j++) s1v_[j] = 1.f / (1.f + std::exp(-o[static_cast<size_t>(j) * R + 2 * N + 1]));
+      std::vector<int> m0(nv0, 0), m1(nv1, 0);
+      std::vector<float> cb(nv1, -1.f);
+      for (int i = 0; i < nv0; i++) {
+        float best = -1.f;
+        int bj = 0;
+        float *pr = &p3_[static_cast<size_t>(i) * nv1];
+        for (int j = 0; j < nv1; j++) {
+          const float pp = csum ? a2_[static_cast<size_t>(i) * nv1 + j] * b2_[static_cast<size_t>(j) * nv0 + i]
+                                : o[static_cast<size_t>(i) * R + j] * o[static_cast<size_t>(j) * R + N + i];
+          pr[j] = pp;
+          const float q = pp * s1v_[j];
+          if (q > best) { best = q; bj = j; }
+        }
+        m0[i] = bj;
+      }
+      for (int i = 0; i < nv0; i++) {
+        const float s = s0v_[i];
+        const float *pr = &p3_[static_cast<size_t>(i) * nv1];
+        for (int j = 0; j < nv1; j++) {
+          const float q = pr[j] * s;
+          if (q > cb[j]) { cb[j] = q; m1[j] = i; }
+        }
+      }
+      const double lt = std::log(c_.lg_thr);
+      for (int i = 0; i < nv0; i++) {
+        const int j = m0[i];
+        if (m1[j] != i) continue;
+        const double r = std::log(std::max(static_cast<double>(p3_[static_cast<size_t>(i) * nv1 + j] * s1v_[j]), 1e-30)) +
+                         std::log(static_cast<double>(s0v_[i]));
+        if (r > lt) out.push_back({static_cast<float>(i0[i]), static_cast<float>(i1[j]), static_cast<float>(std::exp(r))});
       }
     } else {  // [N, 2N+2] = A | BT | z0 | z1 (lgpost 2), argmax over the real points only
       const int R = 2 * N + 2;
@@ -875,6 +962,7 @@ private:
   double cache_bytes_ = 0;
   std::vector<double> sc_, l1_;
   std::vector<float> a2_, b2_;
+  std::vector<float> p3_, s0v_, s1v_;  // 0.6.35 lg_post 3
   uint64_t n_feat_ = 0, n_match_ = 0, n_lg_ = 0, n_err_ = 0, n_evict_ = 0;
   std::atomic<float> skin_{NAN}, ap_{NAN}, bat_{NAN};
   std::atomic<int> tstat_{-1};

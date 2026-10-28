@@ -126,6 +126,21 @@ int main(int argc, char **argv) {
   if (argc > 7) c.topk = std::atoi(argv[7]);
   if (argc > 8) c.lg_in = argv[8];
   if (argc > 9) c.lg_pad = std::atoi(argv[9]);
+  if (const char *o = std::getenv("XFNPU_OPTS")) {  // 0.6.35 npunight: nn_fast=0|1,lg_post=2|3
+    std::string s(o);
+    size_t a = 0;
+    while (a < s.size()) {
+      size_t b = s.find(',', a);
+      if (b == std::string::npos) b = s.size();
+      const std::string t = s.substr(a, b - a);
+      const size_t e = t.find('=');
+      if (e != std::string::npos) {
+        if (t.compare(0, e, "nn_fast") == 0) c.nn_fast = std::atoi(t.c_str() + e + 1);
+        if (t.compare(0, e, "lg_post") == 0) c.lg_post = std::atoi(t.c_str() + e + 1);
+      }
+      a = b + 1;
+    }
+  }
   c.nice = 0;
   PipeBackend be(argv[6]);
   xfnpu::Server s(&be);

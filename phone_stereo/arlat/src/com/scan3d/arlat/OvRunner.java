@@ -138,7 +138,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261028-appnpu-0.6.34";
+    static final String VERSION = "ov-20261029-npunight-0.6.35";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";
@@ -172,6 +172,17 @@ class OvRunner implements SensorEventListener {
     private volatile boolean running;
     private final LinkedBlockingQueue<byte[]> toBridge = new LinkedBlockingQueue<>(4096);
     private ArrayBlockingQueue<byte[]> pool;
+    /** 0.6.35 npunight: intent replay = file under the external files dir with bridge input records (= live_stream.bin /
+     *  PC tee format: 12 B header magic, type, len + payload whose first 8 bytes are the record time). No camera, no IMU
+     *  sensors: a replay thread writes each whole record to the bridge stdin at its record time (all times shifted by one
+     *  constant so the first record is 'now + 0.5 s' on the elapsedRealtimeNanos clock, i.e. the bridge sees a live stream);
+     *  images are not chunked (imu_prio transport not used). Every bridge pose line also goes to poses_raw.jsonl
+     *  (t_ns still shifted; meta.json replay_offset_ns). End of file -> 3 s -> onAutoStop. */
+    String replayPath = "";
+    private Thread replayT;
+    private BufferedWriter posesRawW;
+    private volatile long replayOffsetNs, replayRecords, replayImages, replayLateMaxNs, replayLate5;
+
     /** t_ns sent to the bridge (mid exposure) -> {t_sensor, t_arrive} */
     private final ConcurrentHashMap<Long, long[]> sent = new ConcurrentHashMap<>();
     private volatile long midOffsetNs;          // (exposure + rolling shutter skew) / 2 from the latest capture result
@@ -564,6 +575,18 @@ class OvRunner implements SensorEventListener {
         notePerf("loop", loop);                    // 0.6.28 ovloop
         notePerf("bridge_pid", bridgePid);
         notePerf("sdk", android.os.Build.VERSION.SDK_INT);
+        if (!replayPath.isEmpty()) {   // 0.6.35 npunight: camera-free replay (see replayPath)
+            final File rf = new File(ctx.getExternalFilesDir(null), replayPath);
+            if (!rf.isFile()) { proc.destroy(); throw new IllegalStateException("no replay file " + rf); }
+            meta.put("replay", rf.getAbsolutePath()).put("replay_bytes", rf.length());
+            posesRawW = new BufferedWriter(new FileWriter(new File(runDir, "poses_raw.jsonl")), 1 << 16);
+            readerT = new Thread(this::readerLoop, "ov-reader");
+            readerT.start();
+            replayT = new Thread(() -> replayLoop(rf), "ov-replay");
+            replayT.start();
+            android.util.Log.i("arlat", "ov replay " + rf + " -> " + runDir);
+            return;
+        }
         writerT = new Thread(this::writer, "ov-writer");
         readerT = new Thread(this::readerLoop, "ov-reader");
         writerT.start();
@@ -955,6 +978,7 @@ class OvRunner implements SensorEventListener {
         if (camThread != null) camThread.quitSafely();
         if (imuThread != null) imuThread.quitSafely();
         try { if (writerT != null) writerT.join(500); } catch (InterruptedException ignored) { }
+        try { if (replayT != null) replayT.join(1500); } catch (InterruptedException ignored) { }   // 0.6.35
         if (proc != null && writerT != null && writerT.isAlive()) proc.destroy();   // writer stuck in a 2 MB write: closing stdin would block the UI thread
         if (proc != null) {
             // EOF on stdin -> the bridge returns from main (closes bridge_timing.csv / ov_timing.txt), then kill if needed
@@ -983,7 +1007,12 @@ class OvRunner implements SensorEventListener {
         synchronized (perf) { try { meta.put("perf", new JSONObject(perf.toString())); } catch (Exception ignored) { } }
         try { if (readerT != null) readerT.join(500); } catch (InterruptedException ignored) { }
         synchronized (framesLock) { closeQuiet(framesW); framesW = null; }
-        synchronized (posesLock) { closeQuiet(posesW); posesW = null; closeQuiet(eventsW); eventsW = null; closeQuiet(predW); predW = null; }
+        synchronized (posesLock) { closeQuiet(posesW); posesW = null; closeQuiet(eventsW); eventsW = null; closeQuiet(predW); predW = null;
+            closeQuiet(posesRawW); posesRawW = null; }
+        if (!replayPath.isEmpty()) try {   // 0.6.35
+            meta.put("replay_offset_ns", replayOffsetNs).put("replay_records", replayRecords).put("replay_images", replayImages)
+                    .put("replay_late_max_ms", replayLateMaxNs / 1e6).put("replay_late_over5ms", replayLate5);
+        } catch (Exception ignored) { }
         closeQuiet(tempsW);
         if (imuLog && runDir != null) {    // 0.6.19 imu_log rings (imu thread has been quit above; a late event may be torn)
             try { if (imuThread != null) imuThread.join(300); } catch (InterruptedException ignored) { }
@@ -1137,6 +1166,66 @@ class OvRunner implements SensorEventListener {
 
     @Override public void onAccuracyChanged(Sensor s, int a) { }
 
+    /** 0.6.35 npunight replay thread (see replayPath). */
+    private void replayLoop(File f) {
+        boostSelf("replay");
+        long n = 0, nImg = 0;
+        try (java.io.DataInputStream in = new java.io.DataInputStream(new java.io.BufferedInputStream(new java.io.FileInputStream(f), 8 << 20))) {
+            OutputStream o = proc.getOutputStream();
+            byte[] h = new byte[12];
+            ByteBuffer hb = ByteBuffer.wrap(h).order(ByteOrder.LITTLE_ENDIAN);
+            byte[] img = null;
+            long off = 0;
+            boolean first = true;
+            while (running) {
+                try { in.readFully(h); } catch (java.io.EOFException e) { break; }
+                final int magic = hb.getInt(0), type = hb.getInt(4), len = hb.getInt(8);
+                if (magic != MAGIC || len < 8 || len > (64 << 20)) throw new IllegalStateException("bad record " + n + " type " + type + " len " + len);
+                final byte[] p = type == 2 ? (img != null && img.length == len ? img : (img = new byte[len])) : new byte[len];
+                in.readFully(p);
+                ByteBuffer pb = ByteBuffer.wrap(p).order(ByteOrder.LITTLE_ENDIAN);
+                final long t = pb.getLong(0);
+                if (first) { off = SystemClock.elapsedRealtimeNanos() + 500_000_000L - t; replayOffsetNs = off; first = false; }
+                final long due = t + off;
+                long now = SystemClock.elapsedRealtimeNanos();
+                if (due > now) {
+                    o.flush();
+                    long w = due - now;
+                    Thread.sleep(w / 1_000_000L, (int) (w % 1_000_000L));
+                    now = SystemClock.elapsedRealtimeNanos();
+                } else {
+                    final long late = now - due;
+                    if (late > replayLateMaxNs) replayLateMaxNs = late;
+                    if (late > 5_000_000L) replayLate5++;
+                }
+                pb.putLong(0, due);
+                if (type == 2) sent.put(due, new long[]{due, now});
+                o.write(h);
+                o.write(p);
+                if (type == 2) {
+                    o.flush();
+                    synchronized (framesLock) {
+                        if (framesW != null) framesW.write(nImg + "," + due + "," + now + "," + due + ",0,0,0,0,0," + SystemClock.elapsedRealtimeNanos() + "\n");
+                    }
+                    nImg++;
+                    nCam++;
+                } else nImu++;
+                n++;
+                replayRecords = n;
+                replayImages = nImg;
+            }
+            o.flush();
+        } catch (Exception e) {
+            if (running) { status.show("replay: " + e); android.util.Log.e("arlat", "replay", e); stopReason = "replay error: " + e; }
+        }
+        android.util.Log.i("arlat", "replay done: records " + n + " images " + nImg + " late max ms " + replayLateMaxNs / 1e6);
+        if (!running) return;
+        try { Thread.sleep(3000); } catch (InterruptedException ignored) { }
+        if (!running) return;
+        if (stopReason == null || !stopReason.startsWith("replay error")) stopReason = "replay end";
+        if (onAutoStop != null) onAutoStop.run();
+    }
+
     /** seconds of bridge input to also save as files/ov/live_stream.bin (0 = off) — for replaying the live run on the PC */
     int dumpSecs;
 
@@ -1275,6 +1364,8 @@ class OvRunner implements SensorEventListener {
                 if (!l.startsWith("{")) continue;
                 JSONObject j = new JSONObject(l);
                 String type = j.optString("type");
+                if (posesRawW != null && "pose".equals(type))   // 0.6.35 replay: every pose line as is
+                    synchronized (posesLock) { if (posesRawW != null) { posesRawW.write(l); posesRawW.write('\n'); } }
                 if ("ready".equals(type)) {   // 0.6.15: what the bridge actually uses (cv::getNumThreads, OpenCV parallel framework)
                     notePerf("bridge_cv_threads", j.optInt("cv_threads", -1));
                     notePerf("bridge_cv_parallel", j.optString("cv_parallel", "?"));

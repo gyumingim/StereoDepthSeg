@@ -28,7 +28,7 @@ std::string js(JNIEnv *env, jstring s) {
 extern "C" JNIEXPORT jstring JNICALL Java_com_scan3d_arlat_NpuLoop_nStart(JNIEnv *env, jclass, jstring sock, jstring xf,
                                                                            jstring lg, jstring wr, jstring log, jint topk,
                                                                            jstring lgIn, jint lgPad, jstring cpus, jint nice,
-                                                                           jint perf, jdouble cacheMb) {
+                                                                           jint perf, jdouble cacheMb, jstring opts) {
   std::lock_guard<std::mutex> l(g_m);
   if (g_srv) return env->NewStringUTF("already running");
   if (!g_stuck.empty()) return env->NewStringUTF(("previous NPU server stuck (" + g_stuck + "); restart the app").c_str());
@@ -43,6 +43,19 @@ extern "C" JNIEXPORT jstring JNICALL Java_com_scan3d_arlat_NpuLoop_nStart(JNIEnv
   c.lg_pad = lgPad;
   c.nice = nice;
   c.cache_mb = cacheMb;
+  {  // 0.6.35 npunight: npu_opts K=V,... (nn_fast, lg_post)
+    std::stringstream ss(js(env, opts));
+    std::string t;
+    while (std::getline(ss, t, ',')) {
+      const size_t e = t.find('=');
+      if (e == std::string::npos) continue;
+      const std::string k = t.substr(0, e);
+      const int v = std::atoi(t.c_str() + e + 1);
+      if (k == "nn_fast") c.nn_fast = v;
+      else if (k == "lg_post") c.lg_post = v;
+      else return env->NewStringUTF(("bad npu_opts key " + k).c_str());
+    }
+  }
   {
     std::stringstream ss(js(env, cpus));
     std::string t;

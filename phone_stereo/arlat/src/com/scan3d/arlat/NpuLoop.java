@@ -35,12 +35,13 @@ final class NpuLoop {
     int perf = -1;                     // npu_perf: EnnSetPreferencePerfMode (-1 = not called)
     double cacheMb = 300;              // npu_cache_mb
     String cfgExtra = "";              // npu_cfg: appended to the bridge --loop-cfg (K=V,...)
+    String opts = "";                 // 0.6.35 npu_opts: nn_fast=0|1,lg_post=2|3 (server CPU post speed options, default = 0.6.34)
     int timeoutMs = 3000;              // npu_timeout_ms: bridge socket timeout -> BRIEF fallback for the rest of the run
 
     static final String BRIDGE_CFG = "xf_mode=2,xf_tri=1,xf_tri_deg=3,xf_tri_mode=1,xf_min_inl=40,xf_rp_deg=2,max_cand=1";   // = lgopt FLGc gates
 
     private static native String nStart(String sock, String xf, String lg, String wr, String log, int topk, String lgIn, int lgPad,
-                                        String cpus, int nice, int perf, double cacheMb);
+                                        String cpus, int nice, int perf, double cacheMb, String opts);
     private static native String nStartLog();
     private static native String nStop();   // 0.6.31: "" or the server failure (exec errors / stuck worker)
     private static native void nTemps(float skin, float ap, float bat, int status);
@@ -69,6 +70,7 @@ final class NpuLoop {
     String start(File runDir, String bridgeCpus) {
         try {
             if (!lgIn.matches("x512|trk768")) return "bad npu_lg_in " + lgIn;
+            if (!opts.isEmpty() && !opts.matches("(nn_fast=[01]|lg_post=[23])(,(nn_fast=[01]|lg_post=[23]))*")) return "bad npu_opts " + opts;
             if (!cfgExtra.isEmpty() && !cfgExtra.matches("[a-z_]+=[-0-9.eE]+(,[a-z_]+=[-0-9.eE]+)*")) return "bad npu_cfg " + cfgExtra;
             usedCpus = pickCpus(bridgeCpus);
             File dir = new File(ctx.getFilesDir(), "npu");
@@ -82,7 +84,7 @@ final class NpuLoop {
             try { System.loadLibrary("xfnpu"); } catch (Throwable e) { return "loadLibrary xfnpu: " + e; }
             sock = "scan3d_xfnpu_" + android.os.Process.myPid();
             String err = nStart(sock, xfPath, lgPath, wrPath, new File(runDir, "npu.jsonl").getAbsolutePath(), topk, lgIn, lgPad,
-                    "none".equals(usedCpus) ? "" : usedCpus, nice, perf, cacheMb);
+                    "none".equals(usedCpus) ? "" : usedCpus, nice, perf, cacheMb, opts);
             writeText(new File(runDir, "npu_start.txt"), "models: " + xfPath + " | " + lgPath + " | " + wrPath + "\ncpus: " + usedCpus
                     + "\n" + nStartLog() + (err.isEmpty() ? "started\n" : "FAILED: " + err + "\n"));
             if (!err.isEmpty()) return err;

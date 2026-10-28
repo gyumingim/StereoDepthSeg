@@ -42,6 +42,8 @@ import java.util.Locale;
  *   Without gyro = intent ov_opt "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse" (explicit intent wins).
  * 0.6.28 (user 2026-10-26, 60 fps only): profile rec60 + loop 1 (rec20261025 unchanged) (ovloop BoW loop closure, own thread; vocabulary shipped in
  *   the APK assets, copied to files/ov/voc_k10L4.voc). Without loop = intent loop 0. Profile + recover N -> loop off.
+ * 0.6.35 (npunight 10-29): intent replay = stream file (bridge input records) under the external files dir, fed to the bridge
+ *   at its record times (shifted to now) instead of the camera + IMU (no camera opened); npu_opts nn_fast / lg_post.
  * 0.6.34: cue = shake-to-start, run length from VIO init (intent run_secs, secs = hard cap); mode ov not from history, once per activity.
  * 0.6.33 (user 10-28): mode ov with secs and no guide shows RunCue (big Korean phase text, VIO / NPU state), npu 0 and 1 alike.
  * 0.6.31 (user rule 10-28): npu_loop 1 without a working NPU -> run refused + app finishes; NPU lost mid-run -> run INVALID.
@@ -298,6 +300,7 @@ public class MainActivity extends Activity {
                     if ((s0 = getIntent().getStringExtra("npu_lg_in")) != null) n.lgIn = s0;
                     if ((s0 = getIntent().getStringExtra("npu_cpus")) != null) n.cpus = s0;
                     if ((s0 = getIntent().getStringExtra("npu_cfg")) != null) n.cfgExtra = s0;
+                    if ((s0 = getIntent().getStringExtra("npu_opts")) != null) n.opts = s0;      // 0.6.35 npunight
                     n.lgPad = Math.max(0, Math.min(2, getIntent().getIntExtra("npu_lg_pad", n.lgPad)));
                     n.topk = Math.max(64, Math.min(2048, getIntent().getIntExtra("npu_topk", n.topk)));
                     n.nice = Math.max(-20, Math.min(19, getIntent().getIntExtra("npu_nice", n.nice)));
@@ -349,6 +352,11 @@ public class MainActivity extends Activity {
                     ov.notePerf("sustained_mode_set", sustainedOn);
                 } catch (Throwable e) { ov.notePerf("sustained_mode", e.toString()); }
                 ov.onAutoStop = () -> runOnUiThread(this::finish);      // onPause stops the runner and writes meta.json
+                String rp = getIntent().getStringExtra("replay");     // 0.6.35 npunight: camera-free replay of a stream file
+                if (rp != null && !rp.isEmpty()) {
+                    if (!rp.matches("[A-Za-z0-9_./-]+") || rp.contains("..")) throw new IllegalArgumentException("bad replay " + rp);
+                    ov.replayPath = rp;
+                }
                 // 0.6.12: step guide like hs/std (extras guide "label:secs;...", guide_secs): big countdown from the first fed
                 // frame (after auto ISO); at the end finish() -> onPause stops the runner and writes meta.json. With a guide the
                 // secs timer is not used (the guide end stops the run).
@@ -375,7 +383,7 @@ public class MainActivity extends Activity {
                     final OvRunner mine = ov;
                     // 0.6.33 (user 10-28): big Korean cue for a timed run without a guide (same for npu 0 / 1).
                     // 0.6.34: intent run_secs > 0 = run length counted from VIO init (cue ends the run); secs = hard cap.
-                    if (secs > 0 && g == null) {
+                    if (secs > 0 && g == null && ov.replayPath.isEmpty()) {   // 0.6.35: no cue for a replay
                         if (status.getParent() != null) ((android.view.ViewGroup) status.getParent()).removeView(status);
                         final int runSecs = getIntent().getIntExtra("run_secs", 0);
                         cue = new RunCue(this, ov, runSecs > 0 ? runSecs : secs, runSecs > 0 ? () -> {
