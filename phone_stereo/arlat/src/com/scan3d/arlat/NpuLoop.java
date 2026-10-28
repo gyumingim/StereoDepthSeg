@@ -70,7 +70,7 @@ final class NpuLoop {
     String start(File runDir, String bridgeCpus) {
         try {
             if (!lgIn.matches("x512|trk768")) return "bad npu_lg_in " + lgIn;
-            if (!opts.isEmpty() && !opts.matches("(nn_fast=[01]|lg_post=[23])(,(nn_fast=[01]|lg_post=[23]))*")) return "bad npu_opts " + opts;
+            if (!opts.isEmpty() && !opts.matches("(nn_fast=[01]|lg_post=[23]|prep_fast=[01])(,(nn_fast=[01]|lg_post=[23]|prep_fast=[01]))*")) return "bad npu_opts " + opts;
             if (!cfgExtra.isEmpty() && !cfgExtra.matches("[a-z_]+=[-0-9.eE]+(,[a-z_]+=[-0-9.eE]+)*")) return "bad npu_cfg " + cfgExtra;
             usedCpus = pickCpus(bridgeCpus);
             File dir = new File(ctx.getFilesDir(), "npu");

@@ -53,6 +53,7 @@ extern "C" JNIEXPORT jstring JNICALL Java_com_scan3d_arlat_NpuLoop_nStart(JNIEnv
       const int v = std::atoi(t.c_str() + e + 1);
       if (k == "nn_fast") c.nn_fast = v;
       else if (k == "lg_post") c.lg_post = v;
+      else if (k == "prep_fast") c.prep_fast = v;
       else return env->NewStringUTF(("bad npu_opts key " + k).c_str());
     }
   }

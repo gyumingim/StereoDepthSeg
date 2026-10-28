@@ -51,3 +51,8 @@
   type 4 = 끝. 네이티브 (다리 2ed40e6b, libxfnpu 5d10f2e9) 는 0.6.35 와 같음. A/B 는 0.6.35b 로 처음부터.
 - rep_run.sh: 앱 프로세스는 finish 뒤에도 남으므로 새 run 폴더의 meta.json 이 생기면 끝으로 봄.
 - T0 NPU 시간 (1 회, 작은 코어 0-3, 미검증): XFeat prep 11.2 · NPU 8.6 · post+질의 16.1 ms (p50), 상호 NN 88 ms, LG pack 2.3 · NPU 18.3 · post 33.9 ms. VIO ms p50 9.6 / p95 14.9 (PC 6.2 / 10.6). AP 최대 51.
+
+## 0.6.35c (vc 43, apk sha 7defcdeb…, libxfnpu e6bee298…) — 빌드만, ABBA·S 묶음이 끝난 뒤 설치
+- `npu_opts prep_fast=1`: XFeat 입력 평균·분산을 정확한 정수 합 (Σpx, Σpx² uint64) 으로 (T0b prep 11.9 ms = 픽셀마다 double 누적합, 작은 코어).
+- PC (`pc_opts_c.sh`, 165506 전체, PC 대역 NPU): nn_fast=1,lg_post=3,prep_fast=1 vs 기본 → 포즈 1690 줄 같음, loop.jsonl 은 시간 칸 (ms, xf 서버 ms) 만 다름. `test_server` 키포인트·NN·LG 같음.
+- 계획: 묶음 뒤 S4 = 세 옵션 모두 + S 결과에서 가장 빠른 코어, 2 회.

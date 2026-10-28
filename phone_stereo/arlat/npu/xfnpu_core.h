@@ -103,6 +103,7 @@ struct Cfg {
   double cache_mb = 300.0;       // descriptor cache (fp16) cap; oldest keyframes dropped (logged)
   int nn_fast = 0;               // 0.6.35 npunight: 1 = mutual NN dot products with 16 partial sums (NEON on arm64; other
                                  //   summation order than the plain loop -> cosines can differ in the last bits)
+  int prep_fast = 0;             // 0.6.35c npunight: 1 = mean / var from exact integer sums (see prep)
   int lg_post = 2;               // 0.6.35 npunight: 2 = log-score post (as 0.6.34), 3 = product post (nncrun lgpost 3, no N^2 log)
 };
 
@@ -296,7 +297,7 @@ private:
       S("worker tid %d affinity %s -> %d", static_cast<int>(tid), cpus_str().c_str(), r);
     } else S("worker tid %d not pinned", static_cast<int>(tid));
     if (c_.nice) S("worker nice %d -> %d", c_.nice, setpriority(PRIO_PROCESS, static_cast<id_t>(tid), c_.nice));
-    S("opts nn_fast %d lg_post %d", c_.nn_fast, c_.lg_post);
+    S("opts nn_fast %d lg_post %d prep_fast %d", c_.nn_fast, c_.lg_post, c_.prep_fast);
     if (!be_->init(err)) return false;
     S("backend %s", be_->describe().c_str());
     xf_ = be_->load(c_.xf_model, err);
@@ -545,6 +546,22 @@ private:
     // pad (replicate the last row) + /255 + whole-image mean / var normalisation (double sums), into the ENN input buffer
     float *dst = be_->in(xf_);
     double s = 0, s2 = 0;
+    if (c_.prep_fast) {  // 0.6.35c: exact integer sums, same padded rows; s = S1 / 255, s2 = S2 / 255^2
+      uint64_t S1 = 0, S2 = 0;
+      for (int y = 0; y < Hm_; y++) {
+        const uint8_t *row = g + static_cast<size_t>(std::min(y, H - 1)) * W;
+        uint32_t r1 = 0, r2 = 0;  // W <= 960: 960 * 255^2 < 2^32
+        for (int x = 0; x < W; x++) {
+          const uint32_t v = row[x];
+          r1 += v;
+          r2 += v * v;
+        }
+        S1 += r1;
+        S2 += r2;
+      }
+      s = static_cast<double>(S1) / 255.0;
+      s2 = static_cast<double>(S2) / 65025.0;
+    } else
     for (int y = 0; y < Hm_; y++) {
       const uint8_t *row = g + static_cast<size_t>(std::min(y, H - 1)) * W;
       double rs = 0, rs2 = 0;

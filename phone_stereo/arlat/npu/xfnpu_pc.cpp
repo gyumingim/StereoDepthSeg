@@ -137,6 +137,7 @@ int main(int argc, char **argv) {
       if (e != std::string::npos) {
         if (t.compare(0, e, "nn_fast") == 0) c.nn_fast = std::atoi(t.c_str() + e + 1);
         if (t.compare(0, e, "lg_post") == 0) c.lg_post = std::atoi(t.c_str() + e + 1);
+        if (t.compare(0, e, "prep_fast") == 0) c.prep_fast = std::atoi(t.c_str() + e + 1);
       }
       a = b + 1;
     }
