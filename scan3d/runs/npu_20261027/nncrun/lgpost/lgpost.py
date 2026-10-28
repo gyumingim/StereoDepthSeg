@@ -10,7 +10,7 @@ Masked variant (M): input x [1, N, 513], col 512 = v (1 real point, 0 padding). 
   every attention X->Y uses [qX, vX] @ [kY, pbY]^T  (= qk + pb_j for real queries) -> padding keys get exp(-BIG) weight;
   final S uses [m0, v0, pb0] @ [m1, pb1, v1]^T, E uses ls0+pb0 / ls1+pb1 -> padding rows/cols score <= -BIG.
 python lgpost.py check            -> PC fp32 match-set agreement vs current CPU post (torch + ORT), json
-python lgpost.py export NAME N M  -> onnx + random golden/calib raw (synthetic random, no user data)"""
+python lgpost.py export NAME N M(0|1|r)  -> onnx + random golden/calib raw (synthetic random, no user data)"""
 import os, sys, json, time, hashlib
 os.environ.setdefault("LGLN", "native")
 import numpy as np
@@ -188,7 +188,8 @@ def check(net):
 def export(net, name, N, masked, ncal=40):
     """onnx + synthetic random calib/golden inputs (no user data): kpts U[-1,1]^2, desc = unit gaussian 64-d;
     masked: random valid count in [N/2, N], padding rows zero desc, cos 1 sin 0."""
-    m = LGPost(net, masked=masked).eval()
+    m = (LGNpu(net, "tanh", 6) if masked == "r" else LGPost(net, masked=masked == "1")).eval()
+    masked = masked == "1"
     od = f"{OUT}/{name}"
     os.makedirs(od + "/calraw", exist_ok=True)
     g = torch.Generator().manual_seed(1234)
@@ -206,7 +207,7 @@ def export(net, name, N, masked, ncal=40):
         x.numpy().astype(np.float32).tofile(f"{od}/calraw/c{i:03d}.raw")
     f = f"{od}/{name}.onnx"
     torch.onnx.export(m, (xs[0],), f, input_names=["x"], output_names=["out"], opset_version=13, do_constant_folding=True, dynamo=False)
-    info = dict(made=time.strftime("%F %T"), input=f"x [1,{N},{xs[0].shape[-1]}]", output=f"out [1,{N},3] = argmax_j, argmax_i, max_j sc",
+    info = dict(made=time.strftime("%F %T"), input=f"x [1,{N},{xs[0].shape[-1]}]", output=f"out {list(m(xs[0]).shape)}",
                 masked=masked, BIG=BIG, calib=f"{ncal} synthetic random inputs (seed 1234), no user data",
                 onnx_md5=hashlib.md5(open(f, "rb").read()).hexdigest())
     json.dump(info, open(f"{od}/info.json", "w"), indent=1)
@@ -220,4 +221,4 @@ if __name__ == "__main__":
     elif sys.argv[1] == "stats":  # attention-logit spread to size BIG
         pass
     else:
-        export(net, sys.argv[2], int(sys.argv[3]), sys.argv[4] == "1")
+        export(net, sys.argv[2], int(sys.argv[3]), sys.argv[4])  # M: 0 post, 1 post+mask, r = current A|BT|z0|z1 model
