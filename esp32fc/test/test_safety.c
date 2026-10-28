@@ -57,10 +57,24 @@ static float frand(sim_t *s) {
   return ((float)((s->rng >> 9) & 0xffff) / 65535.0f) * 2.0f - 1.0f;
 }
 
+/* armguard 2026-10-29: the arm guard is ON by default (arm_still_ms 1000, gyro 0.05, acc_var 0.1, VIO speed 0.2).
+ * Scenario tests that test something else (landing tiers, stalls, kill, open loop ...) use the FORMER arm values
+ * explicitly (sim_init(NULL) and cfg_former_arm) so their timings stay as written (arming 600 ms after start).
+ * The new defaults are tested in t_arm_guard_defaults (10 ms harness) and t_arm_guard_sim (closed-loop sim). */
+static void cfg_former_arm(fs_config_t *c) {
+  fs_config_default(c);
+  c->arm_gyro_max_rps = 0.2f;
+  c->arm_acc_var_max = -1.0f;
+  c->arm_acc_dev_max = -1.0f;
+  c->arm_still_ms = 0;
+  c->arm_vio_speed_max = 0.0f;
+  c->arm_vio_speed_hold_ms = 0;
+}
+
 static void sim_init(sim_t *s, const fs_config_t *cfg) {
   memset(s, 0, sizeof(*s));
   fs_config_t c;
-  if (cfg) c = *cfg; else fs_config_default(&c);
+  if (cfg) c = *cfg; else cfg_former_arm(&c);
   s->t = 1000;
   fs_init(&s->fs, &c, s->t);
   s->hover_true = 0.42f;
@@ -670,7 +684,7 @@ static void t_openloop_land(void) {
 
   g_test = "imu_fail_kill_option";
   fs_config_t c;
-  fs_config_default(&c);
+  cfg_former_arm(&c);
   c.imu_fail_kill = true;
   sim_init(&s, &c);
   fly_to_hover(&s, 500);
@@ -871,7 +885,7 @@ static void t_review_regressions(void) {
 
   g_test = "land_timeout_steps_down_to_openloop";
   fs_config_t c;
-  fs_config_default(&c);
+  cfg_former_arm(&c);
   c.land_max_ms = 1000;
   sim_init(&s, &c);
   fly_to_hover(&s, 3000); /* 1 m at 0.3 m/s needs ~3.5 s > land_max_ms 1 s */
@@ -928,7 +942,7 @@ static ol_res_t ol_case2(const fs_config_t *c, float z0, float m, bool keep_pose
 }
 
 static void mode1_cfg(fs_config_t *c) {
-  fs_config_default(c);
+  cfg_former_arm(c);
   c->openloop_cut_mode = 1;
   c->openloop_vz_down = 0.6f;
   c->openloop_cruise_ratio = 0.95f;
@@ -939,7 +953,7 @@ static void t_openloop_cut(void) {
   static const float ms[] = {0.97f, 1.0f, 1.03f};
   for (int legacy = 1; legacy >= 0; legacy--) {
     fs_config_t c;
-    if (legacy) fs_config_default(&c); /* default = legacy esp32fc (mode 0, 0.4, 0.99) */
+    if (legacy) cfg_former_arm(&c); /* default = legacy esp32fc (mode 0, 0.4, 0.99) */
     else mode1_cfg(&c);
     float w_v = 0, w_zcut = 0;
     int w_hi = 0, w_spin = 0;
@@ -990,7 +1004,7 @@ static void t_openloop_cut(void) {
   printf("  mode1 + VIO, VIO height 0.95 m low: ground %d ms, cut %d ms (%s), z at cut %.2f, impact %.2f m/s\n", r.t_ground,
          r.t_cut, (r.reason & FS_R_TOUCHDOWN) ? "touch" : "timer", (double)r.z_cut, (double)r.vimp);
   CHECK(r.t_cut > 250 && r.t_ground > 0 && r.z_cut < 0.01f); /* timer deferred until VIO stops descending = on the ground */
-  fs_config_default(&c); /* legacy (default) for reference */
+  cfg_former_arm(&c); /* legacy (default open-loop mode) for reference */
   r = ol_case2(&c, 1.0f, 1.0f, true, -0.95f, 0.0f);
   printf("  legacy + VIO, VIO height 0.95 m low: cut %d ms, z at cut %.2f\n", r.t_cut, (double)r.z_cut);
 
@@ -1091,7 +1105,7 @@ static void t_phone_imu(void) {
 
   g_test = "imu_fail_kill_option_still_works";
   fs_config_t c;
-  fs_config_default(&c);
+  cfg_former_arm(&c);
   c.imu_fail_kill = true;
   sim_init(&s, &c);
   fly_to_hover(&s, 500);
@@ -1287,21 +1301,135 @@ static bool ah_probe(ah_t *a, uint32_t *bits) {
   return ok;
 }
 
-static void t_arm_hardening(void) {
-  g_test = "arm_hardening_defaults";
+/* armguard 2026-10-29: the defaults (guard ON) in the 10 ms harness */
+static void t_arm_guard_defaults(void) {
+  g_test = "arm_guard_defaults";
   fs_config_t c;
   fs_config_default(&c);
+  CHECK(c.arm_gyro_max_rps == 0.05f && c.arm_acc_var_max == 0.1f && c.arm_acc_dev_max < 0);
+  CHECK(c.arm_still_ms == 1000 && c.arm_vio_speed_max == 0.2f && c.arm_vio_speed_hold_ms == 0);
+  ah_t a;
+  uint32_t b;
+  /* set down on a table, VIO at rest: arming needs 1 s still */
+  ah_init(&a, &c);
+  CHECK(!ah_probe(&a, &b) && (b & FS_B_NO_INPUT));
+  ah_run(&a, 500);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_NOT_STILL);
+  ah_run(&a, 490);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_NOT_STILL); /* 990 ms */
+  ah_run(&a, 20);
+  CHECK(ah_probe(&a, &b)); /* >= 1000 ms */
+  /* hand-held: slow rotation 0.1 rad/s (the former 0.2 limit let it through) */
+  a.gyro = 0.1f;
+  ah_run(&a, 3000);
+  CHECK(!ah_probe(&a, &b) && b == (FS_B_MOVING | FS_B_NOT_STILL));
+  /* set down again: the 1 s starts again from the set-down */
+  a.gyro = 0.01f;
+  ah_run(&a, 900);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_NOT_STILL);
+  ah_run(&a, 110);
+  CHECK(ah_probe(&a, &b));
+  /* one bump (gyro 0.06 > 0.05 for one cycle) restarts the count */
+  a.gyro = 0.06f;
+  ah_run(&a, 10);
+  a.gyro = 0.01f;
+  ah_run(&a, 500);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_NOT_STILL);
+  ah_run(&a, 510);
+  CHECK(ah_probe(&a, &b));
+  /* hand-held, no rotation but a shaky accelerometer: variance ~0.3 > 0.1 (the former 0.5 let it through) */
+  a.gyro = 0.0f;
+  a.acc_amp = 1.0f;
+  ah_run(&a, 2000);
+  CHECK(!ah_probe(&a, &b) && b == (FS_B_MOVING | FS_B_NOT_STILL));
+  a.acc_amp = 0.0f;
+  ah_run(&a, 1500);
+  CHECK(ah_probe(&a, &b));
+  /* IMU still but VIO moving (|v| > 0.2): refused; 0.2 is inclusive; unknown (NaN) refuses */
+  a.speed = 0.25f;
+  ah_run(&a, 10);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_VIO_SPEED);
+  a.speed = 0.2f;
+  ah_run(&a, 10);
+  CHECK(ah_probe(&a, &b));
+  a.speed = NAN;
+  ah_run(&a, 10);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_VIO_SPEED);
+  a.speed = 0.0f;
+  ah_run(&a, 10);
+  CHECK(ah_probe(&a, &b)); /* hold 0: only the last pose counts */
+  CHECK(fs_command(&a.fs, a.t, FS_CMD_ARM) && a.fs.state == FS_ARMED_IDLE);
+
+  g_test = "arm_guard_defaults_unknown_speed";
+  ah_init(&a, &c);
+  a.speed = NAN; /* the phone never reports a speed */
+  ah_run(&a, 2000);
+  CHECK(!ah_probe(&a, &b) && b == FS_B_VIO_SPEED);
+
+  g_test = "arm_guard_defaults_clear_kill";
+  /* CLEAR_KILL follows the MOVING rule (gyro 0.05, acc var 0.1) but needs neither the still time nor the VIO speed */
+  ah_init(&a, &c);
+  ah_run(&a, 100);
+  CHECK(fs_command(&a.fs, a.t, FS_CMD_KILL) && a.fs.state == FS_KILLED);
+  a.gyro = 0.1f;
+  ah_run(&a, 1500);
+  CHECK(!fs_command(&a.fs, a.t, FS_CMD_CLEAR_KILL) && a.fs.state == FS_KILLED);
+  a.gyro = 0.0f;
+  a.acc_amp = 1.0f;
+  ah_run(&a, 500);
+  CHECK(!fs_command(&a.fs, a.t, FS_CMD_CLEAR_KILL) && a.fs.state == FS_KILLED);
+  a.acc_amp = 0.0f;
+  a.speed = 1.0f;
+  ah_run(&a, 300); /* accel EMA settles; still only 0.3 s, VIO says 1 m/s */
+  CHECK(fs_command(&a.fs, a.t, FS_CMD_CLEAR_KILL) && a.fs.state == FS_DISARMED);
+  CHECK(!ah_probe(&a, &b) && b == (FS_B_NOT_STILL | FS_B_VIO_SPEED)); /* but ARM still waits */
+  a.speed = 0.0f;
+  ah_run(&a, 1300); /* the still time started when the accel EMA variance fell below 0.1 (inside the 300 ms above) */
+  CHECK(ah_probe(&a, &b));
+}
+
+/* armguard 2026-10-29: the closed-loop sim with the real defaults (guard ON): arm, fly, land, re-arm */
+static void t_arm_guard_sim(void) {
+  g_test = "arm_guard_sim_defaults";
+  fs_config_t c;
+  fs_config_default(&c);
+  sim_t s;
+  sim_init(&s, &c);
+  run_ms(&s, 600);
+  s.nev = 0;
+  CHECK(!cmd(&s, FS_CMD_ARM)); /* the former instant arm after 600 ms is refused */
+  CHECK(find_ev(&s, FS_EV_ARM_REJECT, -1) && find_ev(&s, FS_EV_ARM_REJECT, -1)->reason == FS_B_NOT_STILL);
+  run_ms(&s, 450);
+  CHECK(cmd(&s, FS_CMD_ARM) && s.fs.state == FS_ARMED_IDLE);
+  s.want_fly = true;
+  run_ms(&s, 4000);
+  CHECK(s.fs.state == FS_FLYING && fabsf(s.z - 1.0f) < 0.1f);
+  s.z_target = -0.5f;
+  CHECK(run_until(&s, FS_ARMED_IDLE, 10000) > 0);
+  s.want_fly = false;
+  CHECK(cmd(&s, FS_CMD_DISARM) && s.fs.state == FS_DISARMED);
+  s.nev = 0;
+  CHECK(!cmd(&s, FS_CMD_ARM)); /* just after touchdown: not still for 1 s yet */
+  CHECK(find_ev(&s, FS_EV_ARM_REJECT, -1) && (find_ev(&s, FS_EV_ARM_REJECT, -1)->reason & FS_B_NOT_STILL));
+  run_ms(&s, 1500);
+  CHECK(cmd(&s, FS_CMD_ARM) && s.fs.state == FS_ARMED_IDLE);
+}
+
+static void t_arm_hardening(void) {
+  g_test = "arm_hardening_former";
+  fs_config_t c;
+  cfg_former_arm(&c);
   CHECK(c.arm_gyro_max_rps == 0.2f && c.arm_acc_var_max < 0 && c.arm_acc_dev_max < 0);
   CHECK(c.arm_still_ms == 0 && c.arm_vio_speed_max == 0.0f && c.arm_vio_speed_hold_ms == 0);
   ah_t a;
   uint32_t b;
-  /* defaults = former behaviour: gyro limit 0.2, no still time, VIO speed ignored */
+  /* former values (defaults before 10-29): gyro limit 0.2, no still time, VIO speed ignored */
   ah_init(&a, &c);
   a.gyro = 1.0f;
   ah_run(&a, 500);
   CHECK(!ah_probe(&a, &b) && (b & FS_B_MOVING));
   a.gyro = 0.19f;
-  a.speed = 5.0f; /* VIO says 5 m/s while still: ignored by default */
+  a.speed = 5.0f; /* VIO says 5 m/s while still: ignored (former values) */
   ah_run(&a, 10);
   CHECK(ah_probe(&a, &b)); /* armable the first still cycle (no still time) */
   a.gyro = 0.21f;
@@ -1314,12 +1442,12 @@ static void t_arm_hardening(void) {
   a.acc_amp = 0.0f;
   ah_run(&a, 1000);
   CHECK(ah_probe(&a, &b));
-  a.speed = NAN; /* unknown speed: ignored by default */
+  a.speed = NAN; /* unknown speed: ignored (former values) */
   ah_run(&a, 10);
   CHECK(ah_probe(&a, &b));
 
   g_test = "arm_hardening_gyro_accvar";
-  fs_config_default(&c);
+  cfg_former_arm(&c);
   c.arm_gyro_max_rps = 0.05f;
   ah_init(&a, &c);
   a.gyro = 0.08f;
@@ -1336,18 +1464,18 @@ static void t_arm_hardening(void) {
   a.gyro = 0.04f;
   ah_run(&a, 10);
   CHECK(fs_command(&a.fs, a.t, FS_CMD_CLEAR_KILL) && a.fs.state == FS_DISARMED);
-  fs_config_default(&c);
+  cfg_former_arm(&c);
   c.arm_acc_var_max = 0.001f; /* stricter accelerometer limit than touch_acc_var */
   ah_init(&a, &c);
   a.acc_amp = 0.3f; /* variance ~0.03: passes 0.5, fails 0.001 */
   ah_run(&a, 1000);
   CHECK(!ah_probe(&a, &b) && b == FS_B_MOVING);
-  fs_config_default(&c);
+  cfg_former_arm(&c);
   ah_init(&a, &c);
   a.acc_amp = 0.3f;
   ah_run(&a, 1000);
   CHECK(ah_probe(&a, &b));
-  fs_config_default(&c);
+  cfg_former_arm(&c);
   c.arm_acc_dev_max = 0.1f; /* | mean - g | limit */
   ah_init(&a, &c);
   a.acc_amp = 0.0f;
@@ -1357,7 +1485,7 @@ static void t_arm_hardening(void) {
   CHECK(!ah_probe(&a, &b) && b == FS_B_MOVING);
 
   g_test = "arm_hardening_still_time";
-  fs_config_default(&c);
+  cfg_former_arm(&c);
   c.arm_still_ms = 1000;
   ah_init(&a, &c);
   a.gyro = 1.0f;
@@ -1379,7 +1507,7 @@ static void t_arm_hardening(void) {
   CHECK(ah_probe(&a, &b));
   CHECK(fs_command(&a.fs, a.t, FS_CMD_ARM) && a.fs.state == FS_ARMED_IDLE);
   /* the still timer also follows the configurable gyro limit */
-  fs_config_default(&c);
+  cfg_former_arm(&c);
   c.arm_still_ms = 500;
   c.arm_gyro_max_rps = 0.05f;
   ah_init(&a, &c);
@@ -1391,7 +1519,7 @@ static void t_arm_hardening(void) {
   CHECK(ah_probe(&a, &b));
 
   g_test = "arm_hardening_vio_speed";
-  fs_config_default(&c);
+  cfg_former_arm(&c);
   c.arm_vio_speed_max = 0.3f;
   ah_init(&a, &c);
   a.speed = 0.5f; /* IMU still, VIO moving: refused */
@@ -1406,13 +1534,13 @@ static void t_arm_hardening(void) {
   a.speed = 0.3f;
   ah_run(&a, 10);
   CHECK(ah_probe(&a, &b)); /* limit inclusive */
-  fs_config_default(&c);
+  cfg_former_arm(&c);
   c.arm_vio_speed_max = 0.3f;
   ah_init(&a, &c);
   CHECK(!ah_probe(&a, &b) && (b & FS_B_NO_INPUT)); /* nothing yet */
   ah_run(&a, 300);
   CHECK(ah_probe(&a, &b));
-  fs_config_default(&c);
+  cfg_former_arm(&c);
   c.arm_vio_speed_max = 0.3f;
   c.arm_vio_speed_hold_ms = 500;
   ah_init(&a, &c);
@@ -1442,7 +1570,7 @@ static void t_arm_hardening(void) {
   fs_pose_info_from_viop(&vp, 1, &pi);
   CHECK(fabsf(pi.speed_mps - 5.0f) < 1e-5f);
   /* both new checks together: both bits */
-  fs_config_default(&c);
+  cfg_former_arm(&c);
   c.arm_vio_speed_max = 0.3f;
   c.arm_still_ms = 1000;
   ah_init(&a, &c);
@@ -1476,6 +1604,8 @@ int main(void) {
   t_openloop_cut();
   t_core();
   t_arm_hardening();
+  t_arm_guard_defaults();
+  t_arm_guard_sim();
   g_test = "no_illegal_transitions";
   CHECK(g_illegal == 0);
   printf("%s: %d checks, %d failed\n", g_fail ? "FAILED" : "ALL PASS", g_checks, g_fail);

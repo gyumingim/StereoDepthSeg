@@ -65,11 +65,11 @@ void fs_config_default(fs_config_t *c) {
   c->require_pose_to_arm = true;
   c->require_hb_to_arm = true;
   c->require_link_to_arm = true;
-  c->arm_gyro_max_rps = 0.2f;      /* fcarm: all arm-hardening defaults = former behaviour */
-  c->arm_acc_var_max = -1.0f;
+  c->arm_gyro_max_rps = 0.05f;     /* arm guard ON (user 10-29 "일단 켜셈"): fcarm post hoc less-marginal set; former 0.2 */
+  c->arm_acc_var_max = 0.1f;       /* former -1 (= touch_acc_var) */
   c->arm_acc_dev_max = -1.0f;
-  c->arm_still_ms = 0;
-  c->arm_vio_speed_max = 0.0f;
+  c->arm_still_ms = 1000;          /* former 0 (off) */
+  c->arm_vio_speed_max = 0.2f;     /* former 0 (off) */
   c->arm_vio_speed_hold_ms = 0;
   c->idle_disarm_ms = 5000;
   c->kill_clear_min_ms = 1000;
@@ -325,7 +325,7 @@ static uint32_t arm_blocks(const fs_t *fs) {
       b |= FS_B_BATT;
   }
   if (fs->overrun_bucket > fs->cfg.overrun_land_level / 2) b |= FS_B_OVERRUN;
-  /* fcarm 2026-10-27 (both off by default): still long enough, and VIO not moving while the IMU is still */
+  /* fcarm 10-27, ON by default since armguard 10-29: still long enough, and VIO not moving while the IMU is still */
   if (fs->cfg.arm_still_ms > 0 && fs->have_input &&
       (!fs->still_run || elapsed(fs->now_ms, fs->t_still_ms) < fs->cfg.arm_still_ms))
     b |= FS_B_NOT_STILL;

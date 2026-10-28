@@ -1,0 +1,45 @@
+./test_safety
+  pose stall: land triggered, IMU tier, touchdown after 3516 ms
+  hb stall: VIO tier, touchdown after 3786 ms (descent 1 m at 0.30 m/s)
+  hover record: m = 0.4086 0.4211 0.4273 0.4107 (true 0.4116 0.4242 0.4305 0.4137), 3000 samples, frozen=1
+  open-loop: motors cut after 1859 ms by impact, z=0.00
+  IMU tier w/o vz: touchdown after 3700 ms (reason 0x20000)
+  phone-IMU loss (1 m): ground contact after 1858 ms at up to 0.80 m/s, motors cut after 3526 ms (cut time 3526 ms)
+  legacy h 0.3 m thrust x0.97: ground 746 ms, cut 1435 ms (timer), on-ground spin 689 ms (>85% hover 689 ms), impact 0.64 m/s
+  legacy h 0.3 m thrust x1.00: ground 917 ms, cut 1435 ms (timer), on-ground spin 518 ms (>85% hover 518 ms), impact 0.45 m/s
+  legacy h 0.3 m thrust x1.03: ground -1 ms, cut 1435 ms (timer), on-ground spin 0 ms (>85% hover 0 ms), impact 0.90 m/s CUT IN THE AIR
+  legacy h 1.0 m thrust x0.97: ground 1615 ms, cut 3526 ms (timer), on-ground spin 1911 ms (>85% hover 1911 ms), impact 0.97 m/s
+  legacy h 1.0 m thrust x1.00: ground 2281 ms, cut 3526 ms (timer), on-ground spin 1245 ms (>85% hover 1245 ms), impact 0.58 m/s
+  legacy h 1.0 m thrust x1.03: ground -1 ms, cut 3526 ms (timer), on-ground spin 0 ms (>85% hover 0 ms), impact 4.39 m/s CUT IN THE AIR
+  legacy h 2.0 m thrust x0.97: ground 2494 ms, cut 6000 ms (timer), on-ground spin 3506 ms (>85% hover 3506 ms), impact 1.31 m/s
+  legacy h 2.0 m thrust x1.00: ground 3826 ms, cut 6000 ms (timer), on-ground spin 2174 ms (>85% hover 2174 ms), impact 0.73 m/s
+  legacy h 2.0 m thrust x1.03: ground -1 ms, cut 6000 ms (timer), on-ground spin 0 ms (>85% hover 0 ms), impact 8.17 m/s CUT IN THE AIR
+  legacy worst: impact 8.17 m/s, cut height 3.37 m, on-ground spin 3506 ms, >85% hover on ground 3506 ms
+  mode1  h 0.3 m thrust x0.97: ground 691 ms, cut 1120 ms (timer), on-ground spin 429 ms (>85% hover 118 ms), impact 0.83 m/s
+  mode1  h 0.3 m thrust x1.00: ground 784 ms, cut 1120 ms (timer), on-ground spin 336 ms (>85% hover 67 ms), impact 0.71 m/s
+  mode1  h 0.3 m thrust x1.03: ground 924 ms, cut 1120 ms (timer), on-ground spin 196 ms (>85% hover 0 ms), impact 0.68 m/s
+  mode1  h 1.0 m thrust x0.97: ground 1341 ms, cut 2050 ms (timer), on-ground spin 709 ms (>85% hover 113 ms), impact 1.32 m/s
+  mode1  h 1.0 m thrust x1.00: ground 1568 ms, cut 2050 ms (timer), on-ground spin 482 ms (>85% hover 0 ms), impact 1.23 m/s
+  mode1  h 1.0 m thrust x1.03: ground 1859 ms, cut 2050 ms (timer), on-ground spin 191 ms (>85% hover 0 ms), impact 1.52 m/s
+  mode1  h 2.0 m thrust x0.97: ground 1981 ms, cut 2940 ms (timer), on-ground spin 959 ms (>85% hover 108 ms), impact 1.81 m/s
+  mode1  h 2.0 m thrust x1.00: ground 2338 ms, cut 2940 ms (timer), on-ground spin 602 ms (>85% hover 0 ms), impact 1.85 m/s
+  mode1  h 2.0 m thrust x1.03: ground 2753 ms, cut 2940 ms (timer), on-ground spin 187 ms (>85% hover 0 ms), impact 2.35 m/s
+  mode1  worst: impact 2.35 m/s, cut height 0.00 m, on-ground spin 959 ms, >85% hover on ground 118 ms
+  mode1 + VIO: ground 1568 ms, cut 1718 ms (touch), impact 1.23 m/s
+  mode1 + VIO, VIO height 0.95 m low: ground 1100 ms, cut 1100 ms (timer), z at cut 0.00, impact 2.31 m/s
+  legacy + VIO, VIO height 0.95 m low: cut 780 ms, z at cut 0.76
+  mode1 timer+VIO deferral h 1 m thrust x0.92: ground 1117 ms, cut 2050 ms, z at cut 0.00, impact 1.66 m/s
+  mode1 timer+VIO deferral h 1 m thrust x0.97: ground 1341 ms, cut 2050 ms, z at cut 0.00, impact 1.32 m/s
+  mode1 timer+VIO deferral h 1 m thrust x1.00: ground 1568 ms, cut 2050 ms, z at cut 0.00, impact 1.23 m/s
+  mode1 timer+VIO deferral h 1 m thrust x1.03: ground 1859 ms, cut 2050 ms, z at cut 0.00, impact 1.52 m/s
+  mode1 timer+VIO deferral h 1 m thrust x1.05: ground 2070 ms, cut 2070 ms, z at cut 0.00, impact 1.74 m/s
+  mode1 timer+VIO deferral h 1 m thrust x1.08: ground 2421 ms, cut 2421 ms, z at cut 0.00, impact 2.05 m/s
+  mode1 timer+VIO deferral h 2 m thrust x0.92: ground 1626 ms, cut 2940 ms, z at cut 0.00, impact 2.28 m/s
+  mode1 timer+VIO deferral h 2 m thrust x0.97: ground 1981 ms, cut 2940 ms, z at cut 0.00, impact 1.81 m/s
+  mode1 timer+VIO deferral h 2 m thrust x1.00: ground 2338 ms, cut 2940 ms, z at cut 0.00, impact 1.85 m/s
+  mode1 timer+VIO deferral h 2 m thrust x1.03: ground 2753 ms, cut 2940 ms, z at cut 0.00, impact 2.35 m/s
+  mode1 timer+VIO deferral h 2 m thrust x1.05: ground 3054 ms, cut 3054 ms, z at cut 0.00, impact 2.66 m/s
+  mode1 timer+VIO deferral h 2 m thrust x1.08: ground 3557 ms, cut 3557 ms, z at cut 0.00, impact 3.08 m/s
+  mode1 deferral cap: cut 4050 ms after the tier start (timer 2050 + cap 2000)
+  att_est: roll 20.06 deg (20), pitch -10.03 deg (-10), bias 0.0094 -0.0194
+ALL PASS: 644 checks, 0 failed

@@ -23,9 +23,15 @@
      - 예전 방식(`openloop_cut_mode = 0`): 착지 후 약 1.7 s 동안 hover의 98 % 추력으로 돌았고, 기록값이 3 % 높으면 하강이 멈춰 공중에서 모터가 꺼졌습니다(시뮬레이션 1.6 m 높이).
   - **폰 IMU가 끊기면 VIO·IMU 단계가 둘 다 불가능하므로 바로 OPENLOOP으로 갑니다.** `imu_fail_kill` 설정을 켜면 대신 KILL합니다.
   - 단계는 내려가기만 하고, 착륙 중 비행으로 돌아가지 않습니다.
-- **PC 단위시험: 610개 검사 모두 통과** (fcarm 2026-10-27 arm 보강 +37; esp32fix 573, 그 전 389) (gcc, ASan/UBSan, 시뮬레이션). 검사 대상: 폰 IMU 끊김 → OPENLOOP, IMU 지터 처리, PWM 출력 한계.
+- **PC 단위시험: 644개 검사 모두 통과** (armguard 2026-10-29 새 기본값 검사 +34; fcarm 610, esp32fix 573, 그 전 389) (gcc, ASan/UBSan, 시뮬레이션). 검사 대상: 폰 IMU 끊김 → OPENLOOP, IMU 지터 처리, PWM 출력 한계.
 - **ESP-IDF 실제 빌드 (fcarm 2026-10-27)**: WSL 에 ESP-IDF v5.5.6 설치 → `idf.py build` 성공. 기본(PWM·폰 IMU) · OneShot125 · DShot600 · 로컬 IMU 4가지 변형, 펌웨어 경고 0 (로컬 IMU 변형의 미사용 변수 경고 1개는 고침). 앱 이미지 0xbfd40 = 785 KB (1 MB 앱 파티션의 75 %). 보드에는 아직 안 올렸습니다.
-- **arm 보강 옵션 (fcarm 2026-10-27, 기본 꺼짐 = 예전 동작)**: `arm_still_ms` (정지 유지 시간), `arm_gyro_max_rps` · `arm_acc_var_max` · `arm_acc_dev_max` (MOVING 문턱), `arm_vio_speed_max` · `arm_vio_speed_hold_ms` (IMU 정지인데 VIO 가 움직이면 거부). PC 검사 610개 통과. 추천값과 근거: `scan3d/runs/fcarm_20261027/README.md`.
+- **arm 보호 (armguard 2026-10-29, 기본 켜짐 — 사용자 결정 "일단 켜셈")**: 기본값 , , , ,  ( 그대로).
+  예전 값 (10-27 까지의 기본, 즉시 arm):  (끔), ,  (= touch_acc_var 0.5),  (끔), hold 0.
+  - 뜻: 1 s 동안 끊김 없이 정지 (자이로 ≤ 0.05 rad/s · 가속 분산 ≤ 0.1 · ~1 g) + 마지막 유효 pose |v| ≤ 0.2 m/s 여야 arm. 속도를 모르면 (NaN) 거부. CLEAR_KILL 은 MOVING 규칙 (자이로 0.05 · 가속 분산 0.1) 만 따르고 정지 시간·속도는 보지 않음.
+  - 근거 = **사후 (사전 규칙 밖)** 선택: fcarm 사전 규칙으로는 가능한 조합 0개였고, 151646 NL60 k2·k3 두 발산 실행을 빼고 고른 "덜 아슬아슬한" 튼튼 조합입니다 (). 같은 데이터로 고르고 같은 데이터로 재생했으므로 **미검증**.
+  - 75개 재생 흐름 (새 기본값, ): 손에 든 채 arm 가능 17,262 → 0 주기, 정상 실행 내려놓고 3 s 뒤 새 거부 0, **내려놓은 뒤 첫 arm 중앙 0.01 → 1.23 s, 최대 0.49 → 2.35 s**.
+  - **풀리지 않은 것**: 위 두 발산 실행 (손에 든 동안 크게 튀었다가 내려놓을 때 정상처럼 보임) 은 새 기본값으로도 끝 정지에서 arm 됩니다 (각 762 주기). "초기화 뒤 한 번이라도 크게 튀었으면 VIO 재초기화 전까지 arm 금지" 같은 **이력 검사가 필요 (안 만듦)**.
+  - 예전처럼 쓰려면 위 예전 값을  에 넣으면 됩니다 (PC 시나리오 검사들은  으로 그렇게 함).
 
 ### ⚠ 안전 위험: 비행 제어기에 독립 IMU가 없음 (사용자에게)
 
@@ -147,11 +153,11 @@ States: `DISARMED, ARMED_IDLE, FLYING, EMERG_LAND, KILLED`. Anything not in this
 - Fallbacks: previous flight (RTC RAM, else NVS) → `openloop_default_thr` 0.33.
 - The OPENLOOP numbers are **provisional and will be tested in sim / real later**: thrust exponent, 1 m/s², 0.6 m/s, 0.95, ±3 % record error band, end ratio 0.70, ramp 0.4 s, hold 0.2 s (legacy: 0.4 m/s, 0.99, margin 1.2 with `openloop_cut_mode = 0`).
 
-**Arming** requires all of: level, still on the ground (~1 g), collective low, phone IMU ok, pose fresh, heartbeat fresh, USB open, PC link, battery known ≥ 3.70 V/cell, overrun bucket low, switch released. Auto-disarm after 5 s idle. Every transition, tier change and rejection is an event sent to the PC (VIOP 0x04), plus a 20 Hz status frame (0x05).
+**Arming** requires all of: level, still on the ground (~1 g; since armguard 2026-10-29 by default gyro <= 0.05 rad/s and accel variance <= 0.1 continuously for 1 s, and last valid VIO |v| <= 0.2 m/s, unknown refuses), collective low, phone IMU ok, pose fresh, heartbeat fresh, USB open, PC link, battery known ≥ 3.70 V/cell, overrun bucket low, switch released. Auto-disarm after 5 s idle. Every transition, tier change and rejection is an event sent to the PC (VIOP 0x04), plus a 20 Hz status frame (0x05).
 
 ## 4. PC unit tests (all pass)
 
-`make -C esp32fc/test` builds with gcc 11.4 in WSL, `-Wall -Wextra -Werror -fsanitize=address,undefined`. Result: **610 checks, 0 failed** (fcarm 2026-10-27: +37 arm-hardening checks; esp32fix 2026-10-26: 573; 389 before). Raw logs: `scan3d/runs/esp32fix_20261026/test_*.log` (earlier: `scan3d/runs/esp32fc_20261025/test_safety_run.log`).
+`make -C esp32fc/test` builds with gcc 11.4 in WSL, `-Wall -Wextra -Werror -fsanitize=address,undefined`. Result: **644 checks, 0 failed** (armguard 2026-10-29: arm guard ON by default, +34 checks for the new defaults -- , ; the other scenarios use the former arm values explicitly via ; fcarm 2026-10-27: 610, +37 arm-hardening checks; esp32fix 2026-10-26: 573; 389 before). Raw logs: `scan3d/runs/esp32fix_20261026/test_*.log` (earlier: `scan3d/runs/esp32fc_20261025/test_safety_run.log`).
 
 The sim is a 1 kHz 1-D vertical model: thrust ∝ cmd² (matches the open-loop model), ground contact with an impact spike, per-motor trims. It feeds phone pose 200 Hz, heartbeat 20 Hz and PC heartbeat 10 Hz.
 

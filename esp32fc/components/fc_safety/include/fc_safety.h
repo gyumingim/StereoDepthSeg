@@ -157,16 +157,22 @@ typedef struct {
   float arm_tilt_max_deg;
   float thr_arm_max;            /* collective request must be below this to arm / clear kill */
   bool require_pose_to_arm, require_hb_to_arm, require_link_to_arm;
-  /* fcarm 2026-10-27 — arm hardening. Every default = the behaviour before (the user decides the values; evidence:
-   * scan3d/runs/fcarm_20261027/README.md). "IMU still" = gyro <= arm_gyro_max_rps AND accel EMA variance <= var limit
-   * AND | accel EMA mean - g | <= dev limit = the MOVING rule (ARM and CLEAR_KILL). */
-  float arm_gyro_max_rps;         /* MOVING rule gyro limit, rad/s (default 0.2 = the former hard-coded value) */
-  float arm_acc_var_max;          /* MOVING rule accel variance limit; < 0 (default) = touch_acc_var as before */
-  float arm_acc_dev_max;          /* MOVING rule | |f| - g | limit; < 0 (default) = touch_acc_dev as before */
-  uint32_t arm_still_ms;          /* > 0: ARM needs the IMU still this long without a break (FS_B_NOT_STILL); 0 = off */
+  /* fcarm 2026-10-27 — arm hardening; armguard 2026-10-29: ON by default (user decision "일단 켜셈").
+   * Defaults = the fcarm post hoc "less marginal" set (chosen AFTER the pre-registered rule found no feasible config, with
+   * the 2 divergence runs 151646 NL60 k2/k3 excluded -> unverified; scan3d/runs/fcarm_20261027/README.md, replay with these
+   * defaults: scan3d/runs/armguard_20261029/README.md). Those 2 runs (VIO jumped while hand-held, looks normal when set
+   * down) still arm: a history check ("no arm after a large jump until VIO re-init") is needed and NOT built.
+   * Former values (instant arming, defaults until 10-27): still_ms 0, gyro 0.2, acc_var -1, acc_dev -1, speed 0, hold 0.
+   * "IMU still" = gyro <= arm_gyro_max_rps AND accel EMA variance <= var limit AND | accel EMA mean - g | <= dev limit
+   * = the MOVING rule (ARM and CLEAR_KILL; CLEAR_KILL does not need the still time or the VIO speed). */
+  float arm_gyro_max_rps;         /* MOVING rule gyro limit, rad/s (default 0.05; former hard-coded 0.2) */
+  float arm_acc_var_max;          /* MOVING rule accel variance limit (default 0.1); < 0 = touch_acc_var (0.5, former) */
+  float arm_acc_dev_max;          /* MOVING rule | |f| - g | limit; < 0 (default, as before) = touch_acc_dev */
+  uint32_t arm_still_ms;          /* > 0: ARM needs the IMU still this long without a break (FS_B_NOT_STILL); default 1000,
+                                     0 = off (former) */
   float arm_vio_speed_max;        /* > 0: ARM needs the last valid pose |v| <= this, m/s (unknown / NaN refuses)
-                                     (FS_B_VIO_SPEED); 0 = off (default) */
-  uint32_t arm_vio_speed_hold_ms; /* with arm_vio_speed_max: no valid pose faster than the limit in this window either */
+                                     (FS_B_VIO_SPEED); default 0.2, 0 = off (former) */
+  uint32_t arm_vio_speed_hold_ms; /* with arm_vio_speed_max: no valid pose faster than the limit in this window either (0) */
   uint32_t idle_disarm_ms;      /* ARMED_IDLE without takeoff for this long -> DISARMED */
   uint32_t kill_clear_min_ms;
   float thr_takeoff;            /* collective above this in ARMED_IDLE -> FLYING */

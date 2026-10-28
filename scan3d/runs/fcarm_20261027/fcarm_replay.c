@@ -8,7 +8,9 @@
  *   segments: H = [h0, h1] (hand-held), E = (e, end] (end still), E3 = (e3, end]
  * output: one line per config:
  *   idx nH armH nE armE nE3 armE3 base_okE3 base_ok_new_rejE3 first_arm_after_e_ms rejbits_E3
- *   (config line 0 must be the default config = baseline for base_ok*) */
+ *   (config line 0 = the baseline for base_ok*; every numeric line is applied explicitly -- armguard 10-29: the defaults are no
+ *    longer the former behaviour, so line 0 "0 0.2 0.5 0 0 0.15" now sets the former values. A line "default" = untouched
+ *    fs_config_default()) */
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,10 +47,11 @@ int main(int argc, char **argv) {
   int idx = 0;
   while (fgets(line, sizeof line, fc)) {
     float still, gmax, avar, smax, shold, sdmax;
-    if (sscanf(line, "%f %f %f %f %f %f", &still, &gmax, &avar, &smax, &shold, &sdmax) != 6) continue;
+    bool dflt = strncmp(line, "default", 7) == 0;
+    if (!dflt && sscanf(line, "%f %f %f %f %f %f", &still, &gmax, &avar, &smax, &shold, &sdmax) != 6) continue;
     fs_config_t cfg;
     fs_config_default(&cfg);
-    if (idx > 0) { /* config 0 = untouched defaults */
+    if (!dflt) { /* armguard 10-29: explicit for every line (was idx > 0 = line 0 untouched defaults) */
       cfg.arm_still_ms = (uint32_t)still;
       cfg.arm_gyro_max_rps = gmax;
       cfg.arm_acc_var_max = avar;
