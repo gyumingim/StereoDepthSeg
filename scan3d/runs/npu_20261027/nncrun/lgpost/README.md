@@ -30,3 +30,16 @@
 - 판단: 이득 추정 = 6.4 ms (폰 CPU 후처리, 9차 1 회차) + 출력 복사 감소분 - (원격 L6p - 원격 L6r) - CPU 마무리(PC 에서 잼, O(N)).
   > 0 이면 "다음 폰 측정 후보", <= 0 이면 "이득 없음". L6pm768 는 원격 시간과 L6p 대비 배수만 적는다 (판정 없음).
   폰에서 재기 전 값은 모두 **미검증 / 추정**. 짝 품질(양자화 뒤)은 무작위 보정이라 폰 실데이터 측정 전에는 판정하지 않는다.
+
+## 12차 결과 1 - PC (10-28 18:16~18:20)
+- **규칙 1 합격** (`pc_check.json`, 18:16:39, 사전 등록 커밋 eabf624 18:16:30 뒤 재실행): L6p torch/ORT 13/13 쌍 짝 집합 md5 동일.
+  L6pm768: 실제 512+채움 256 (0 / 무작위), 674+94 (0 / 무작위), 768 실제 모두 13/13 md5 동일, CPU 이중 안전 없이도 채움 짝 0, 채움 행 최대 점수 -60 ~ -84.
+- 정정: 사전 기준의 "개발 중 18:2x" 는 실제 약 18:15 (커밋 직전). 같은 결과.
+- 정정: 보정 생성은 lgpost.py(torch) 대신 `gen_cal.py` (numpy, seed 1234, 같은 분포) - Lab 에서 생성해 올림 양을 줄이려고. 사용자 데이터 없음.
+- ONNX (npu_upload/lgpost/up, md5): L6r c37f236c, L6p a336b3b5, L6pm768 eaf1680d. 새 연산: LogSoftmax 2, ArgMax 2, Cast 2, ReduceMax 1, Sigmoid/Log 2.
+- CPU 마무리 (O(N), PC x86 1 스레드, N=512): 약 3 us. 출력 512x1026 f32 (2.1 MB) -> 512x3 (6 KB).
+## 컴파일·원격 시간 - 아직 못 함 (18:39 GUI 사용 중단 지시)
+- Lab: zip 업로드 + 합성 보정 생성 + eais init 3판까지. 컴파일 안 함. Lab 서버 켜져 있음 (lgpost 가 18:36 켬).
+- RESUME: (1) 각 판 dbgen_spec 입력 = cal<판> raw (1,N,512|513), Gen-6, multicore, a16w8, use_randomdb false, batch 40 -> conversion/compile.
+  (2) 골든 vs ORT 짝 일치 (`gold_post.py`, 참고). (3) 원격 E2400 같은 세션 L6_a16mc/L6r/L6p/L6pm768 각 2회, 위 판정식.
+  ArgMax/LogSoftmax 미지원이면 사전 기준대로 같은 계산 다른 연산으로 바꾸고 규칙 1 재실행.
