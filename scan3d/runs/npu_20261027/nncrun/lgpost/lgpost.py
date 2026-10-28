@@ -24,6 +24,7 @@ torch.set_grad_enabled(False)
 OUT = "/mnt/c/Users/a3162/scan3d_handoff/npu_upload/lgpost"
 BIG = float(os.environ.get("LGBIG", "30"))
 LN01 = float(np.log(0.1))
+LSM = os.environ.get("LGLSM", "logofsm")
 
 
 def att(q, k, v=None, pb=None):
@@ -71,7 +72,10 @@ class LGPost(nn.Module):
         S = torch.bmm(m0, m1.transpose(1, 2))
         one0 = self.one(x[..., 0:1])
         E = torch.bmm(torch.cat([ls0, one0], -1), torch.cat([one0, ls1], -1).transpose(1, 2))
-        sc = torch.log_softmax(S, 2) + torch.log_softmax(S, 1) + E
+        if LSM == "logsm":   # LogSoftmax op (eais: LOG_SOFTMAX is not supported)
+            sc = torch.log_softmax(S, 2) + torch.log_softmax(S, 1) + E
+        else:                # Log(Softmax) - same math; underflowed entries -> -inf (never the max)
+            sc = torch.log(torch.softmax(S, 2)) + torch.log(torch.softmax(S, 1)) + E
         r0 = torch.argmax(sc, 2, keepdim=True).float()            # [1,N,1]
         r1 = torch.argmax(sc, 1, keepdim=True).float().transpose(1, 2)  # [1,N,1]
         rm = torch.amax(sc, 2, keepdim=True)
@@ -131,7 +135,7 @@ def padded(net, a, nv, N, seed=0, padmode="zero"):
 
 def check(net):
     import onnxruntime as ort
-    res = dict(made=time.strftime("%F %T"), BIG=BIG, ref="lgnpu L6 (LGLN native, tanh, 6 layers) fp32 out A|BT|z0|z1 + current CPU post (lgnpu.post = nncrun lgpost 1/2 math), lgev 13 pairs")
+    res = dict(made=time.strftime("%F %T"), BIG=BIG, lsm=LSM, ref="lgnpu L6 (LGLN native, tanh, 6 layers) fp32 out A|BT|z0|z1 + current CPU post (lgnpu.post = nncrun lgpost 1/2 math), lgev 13 pairs")
     d512, d1024 = data("ev", 512), data("ev", 1024)
     ks = ("kpts0", "kpts1", "desc0", "desc1")
     base = LGNpu(net, "tanh", 6).eval()
@@ -208,7 +212,7 @@ def export(net, name, N, masked, ncal=40):
     f = f"{od}/{name}.onnx"
     torch.onnx.export(m, (xs[0],), f, input_names=["x"], output_names=["out"], opset_version=13, do_constant_folding=True, dynamo=False)
     info = dict(made=time.strftime("%F %T"), input=f"x [1,{N},{xs[0].shape[-1]}]", output=f"out {list(m(xs[0]).shape)}",
-                masked=masked, BIG=BIG, calib=f"{ncal} synthetic random inputs (seed 1234), no user data",
+                masked=masked, BIG=BIG, lsm=LSM, calib=f"{ncal} synthetic random inputs (seed 1234), no user data",
                 onnx_md5=hashlib.md5(open(f, "rb").read()).hexdigest())
     json.dump(info, open(f"{od}/info.json", "w"), indent=1)
     print(info)

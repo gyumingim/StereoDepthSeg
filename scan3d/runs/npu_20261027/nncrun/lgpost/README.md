@@ -43,3 +43,9 @@
 - RESUME: (1) 각 판 dbgen_spec 입력 = cal<판> raw (1,N,512|513), Gen-6, multicore, a16w8, use_randomdb false, batch 40 -> conversion/compile.
   (2) 골든 vs ORT 짝 일치 (`gold_post.py`, 참고). (3) 원격 E2400 같은 세션 L6_a16mc/L6r/L6p/L6pm768 각 2회, 위 판정식.
   ArgMax/LogSoftmax 미지원이면 사전 기준대로 같은 계산 다른 연산으로 바꾸고 규칙 1 재실행.
+
+## 12차 진행 2 (19:00~, CDP 크롬 + Jupyter API, pyautogui 안 씀)
+- Lab 홈이 또 비어 있어 lgpost_up.zip 다시 올림 (md5 71d6864f 일치). 합성 보정 Lab 에서 생성 (L6r 과 L6p 보정 c000 md5 같음 25ff7d66; PC numpy 생성 md5 와는 다름 - numpy 판 차이 추정, 분포·seed 같음).
+- **eais: "OPTYPE : LOG_SOFTMAX is not supported!"** (L6p, L6pm768 변환 실패). 사전 기준대로 같은 계산 다른 연산으로 바꿈:
+  LogSoftmax -> Log(Softmax) (`LGLSM=logofsm`, 기본값). 규칙 1 다시 돌림 (`pc_check_logofsm.json`): L6p torch/ORT 13/13 md5 동일,
+  마스크 판 5 경우 모두 13/13 동일, 채움 짝 0 -> 합격. 새 ONNX md5 L6p 3011be07, L6pm768 a7c7c5ae (옛 판은 npu_upload/lgpost/v1_logsm).
