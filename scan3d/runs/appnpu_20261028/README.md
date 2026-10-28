@@ -87,3 +87,15 @@ npuopt10 `xfpost_soft.h` / `xfpost_off.h` 복사), `phone_stereo/arlat/src/com/s
 - **UI 스레드 대기**: OvRunner.start 는 UI 스레드에서 불리고, NPU 시작은 별도 스레드지만 UI 스레드가 최대 15 s join 으로 기다린다 (첫 실행 자산 복사 약 9 MB + ENN 열기). 그동안 입력이 오면 ANR 가능 (화면은 안 씀, 추정 위험 낮음). 비동기 시작으로 바꾸려면 OvRunner.start 구조 변경 필요.
 - 시작 시간 초과 뒤 남은 네이티브 스레드는 계속 ENN 안에 있을 수 있음 → 앱 재시작 전까지 npu_loop 실행은 모두 거부.
 - 거부·INVALID 경로는 PC 에서 다리 쪽(B, C)과 서버 오류 코드(−3)만 시험. 앱(Java) 쪽은 폰 없이 코드 읽기만.
+
+## 폰 실행 1 회 (2026-10-28 20:01, 사용자 승인, 0.6.32 vc 38 설치, `phone_run.sh`, 결과 `phone/`)
+- 설치 성공 (vc 35 → 38), DUMP 권한 부여. preflight OK (SKIN 32.1, thermal 0, 배터리 45 %, 충전 안 함). `--es profile rec60 --ei npu_loop 1`, 120 s 요청.
+- **NPU 열림 (앱 프로세스)**: logcat `NpuUserDriver::OpenSubGraph/CommitSubGraph`, `Operator[1] (hw: 4) ENN_NPU` (+ `ENN_UNIFIED_DEVICE hw:16` 줄 1 개) `phone/logcat_npu_proof.txt`.
+  npu_start.txt: x960p1mc 입력·출력 **f32 버퍼** (fp16 아님), L6_a16mc N 512 A|BT|z0|z1, 워밍업 XFeat 21.4 ms / LG 18.5 ms (1 회, 첫 실행), 작업 스레드 0-3 고정 OK.
+  다리 `XFeat server … connected`. meta: npu_loop "on", **run_valid true, bridge_exit 0**, npu_failed 없음, xf_down 없음.
+- **그러나 키프레임 0 개 → 키프레임당 XFeat/LG 시간, 큐 버림, VIO 시간 비교 없음.** 이유 두 가지:
+  1. 실행이 11 s 에 "stop user" 로 끝남: 다른 앱이 앞으로 와서(logcat noteStopComponent, `phone/stop_cause.txt`) onPause → 정지. 사용자가 폰을 쓰는 중이었던 것으로 보임.
+  2. 폰을 책상에 그대로 두면 VIO 가 초기화되지 않는다 (458 프레임 모두 INIT; 동적 초기화는 움직임 필요). 초기화돼도 키프레임 규칙이 움직임(8 cm / 8°)을 요구 → **정지한 폰으로는 NPU 루프 경로를 잴 수 없음.**
+- 온도 (`phone/temps_pc.txt`, 5 s): SKIN 32.1 → 34.3, **AP 38.0~49.0** (시작 전부터 44.5, 기준 50 바로 아래), 배터리 45 %. 안전 정지 안 걸림.
+- 끝난 뒤 카메라 클라이언트 [] , ov_bridge 프로세스 없음 (`phone/after_check.txt`). 0.6.32 는 그대로 설치 (이상 동작 없음).
+- 다음: 손에 들고 천천히 움직이는 2 분 (init 후 키프레임 생김) + 사용자가 폰을 안 쓸 때. 측정값은 모두 미검증.

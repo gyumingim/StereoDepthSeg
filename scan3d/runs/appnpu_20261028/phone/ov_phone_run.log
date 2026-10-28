@@ -1,0 +1,42 @@
+config c4f60: track_frequency 60 -> --ei fps 60
+preflight 2026-10-28 20:01:24 device 100.79.156.20:33841 (732 ms)
+kill-all: done; heavy apps checked: com.sec.android.app.camera com.sec.android.gallery3d com.google.android.apps.photos com.samsung.android.video com.google.android.youtube com.android.chrome com.sec.android.app.sbrowser
+  force-stopped com.sec.android.app.sbrowser (pid 14098)
+  MemTotal:        7398448 kB
+  MemAvailable:    2312260 kB
+thermal status: 0  SKIN: 32.1 C (limit 36.0 C)
+PREFLIGHT OK
+Starting: Intent { cmp=com.scan3d.arlat/.MainActivity (has extras) }
+1793185290 t=5s SKIN 32.4 status 0
+1793185296 t=11s SKIN 34.1 status 0
+stop: app finished
+-- active camera clients (must be empty):
+Active Camera Clients:
+[]
+Allowed user IDs: 0
+
+-- ov_bridge processes (must be empty):
+none
+/sdcard/Android/data/com.scan3d.arlat/files/ov/run_20261028_200125_main60_c4f60/: 21 files pulled, 0 skipped. 0.8 MB/s (8515123 bytes in 10.451s)
+pulled -> /home/system/scanner/StereoDepthSeg-appnpu/scan3d/runs/appnpu_20261028/phone/run_20261028_200125_main60_c4f60
+
+== /home/system/scanner/StereoDepthSeg-appnpu/scan3d/runs/appnpu_20261028/phone/run_20261028_200125_main60_c4f60
+   ov-20261028-appnpu-0.6.32 cam main 1920x1080@60 cfg c4f60 preset bench imu uncalibrated types 35/16 (values 0..2) stop user
+   perf: on True sustained supported False set False; hint app+bridge 9 tids reports 429; bridge prio pid 15024 threads 5 new 5 set ok 5 fail 0 read back 15024:-8 15244:-8 15256:-8 15257:-8 15259:-8
+   perf knobs: hint_ms 0 (target_ns 16666666) cpus off
+   threads: ov_threads config -> bridge cv_threads 2 (TBB (ver 2021.11 interface 12110)), klt_overlap 0, idle_spin 2 -> bridge 2 (stripes 2), predict 2 -> bridge 2
+   bridge affinity (pose 30): 15024:libov_bridge.so=0-9 15244:libov_bridge.so=0-9 15256:libov_bridge.so=0-9 15257:libov_bridge.so=0-9 15259:libov_bridge.so=0-9
+   app affinity (pose 30): 15027:ov-writer=0-9 15028:ov-reader=0-9 15030:imu=0-9 15037:cam=0-9
+   [ov_bridge] affinity start: (not pinned) threads 15024:libov_bridge.so=0,1,2,3,4,5,6,7,8,9
+   [ov_bridge] affinity ready: (not pinned) threads 15024:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 15244:libov_bridge.so=0,1,2,3,4,5,6,7,8,9
+   [ov_bridge] affinity cam300: (not pinned) threads 15024:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 15244:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 15256:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 15257:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 15259:libov_bridge.so=0,1,2,3,4,5,6,7,8,9
+   [ov_bridge] affinity end: (not pinned) threads 15024:libov_bridge.so=0,1,2,3 15244:libov_bridge.so=0,1,2,3 15259:libov_bridge.so=0,1,2,3 16384:libov_bridge.so=0,1,2,3
+   fed 458 frames, initialised 0 (init at None s)
+   camera: 60.0 fps measured, missing 0 (gaps 0, max 16.72 ms); Java drops pool 0 queue 0; copy p50 489.5 us
+   battery max 31.0 C, thermal status max 0, SKIN max (PC log) 34.1
+   segment    frames    fps | per-frame ms p50 / p95 / max | >16.7 | >33.3 | track p50/p95 | update ms p50 | wait p95 | latency p50/p95
+   all             0  (no frames)
+   health: OK 0.0 % DEGRADED 0.0 % LOST 0.0 % INIT 100.0 % of 458 | first init None s, first OK None s | transitions 0 | longest LOST 0.0 s | no-update max None s | recoveries 0 (segments 0)
+           tracked p50 None | used p50 None | chi2 rejected 0.0 % | pos std p50 None max None m (incl. the 0.087 m init gauge)
+   [ov_bridge] health: frames INIT 458 OK 0 DEGRADED 0 LOST 0 | transitions 1 | max LOST run 0 frames | recover state 0 full 0 | blanked 0 | init_ready frames 0
+   -> None
