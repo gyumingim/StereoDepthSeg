@@ -377,6 +377,7 @@ struct Args {
   std::string loop_vocab;     // --loop-vocab FILE (vocabulary, ovloop_tool train)
   std::string loop_cfg;       // --loop-cfg K=V,... (loop/ovloop.h Cfg)
   std::string loop_log;       // --loop-log FILE (JSON lines per keyframe / loop / optimisation)
+  std::string loop_xf;          // --loop-xf CMD (ovxfeat 2026-10-26: XFeat / LighterGlue server for the verification)
   std::string loop_dump, loop_vpr;  // --loop-dump DIR / --loop-vpr FILE (offline VPR evaluation, loop/ovloop.h)
   int loop_sync = 0;          // --loop-sync 0|1 (1 = the VIO thread waits for each keyframe: deterministic PC evaluation only)
   double loop_out_hz = 5.0;   // --loop-out-hz HZ: VIOP MAP_ODOM / MAVLink DEBUG_VECT rate (+ at once on a new optimisation)
@@ -1306,6 +1307,7 @@ public:
       lc.sync = a.loop_sync;
       lc.dump = a.loop_dump;
       lc.vpr = a.loop_vpr;
+      lc.xf = a.loop_xf;
       std::string err;
       if (!a.loop_cfg.empty() && !lc.parse(a.loop_cfg, err)) {
         std::fprintf(stderr, "[ov_bridge] %s\n", err.c_str());
@@ -2889,7 +2891,7 @@ void usage() {
                "                 [--mav-udp HOST:PORT | --viop-udp HOST:PORT] [--viop-hb-hz HZ] [--viop-hb-src 0|1]\n"
                "                 [--init-still 0|1] [--health 0|1] [--health-log FILE] [--health-cfg K=V,..] [--klt-stats 0|1] [--pipe 0] [--recover N]\n"
                "                 [--recover-max-gap S] [--recover-min-feats N] [--recover-full 0|1] [--test-blank T0:D,..]\n"
-               "                 [--loop 0|1 --loop-vocab FILE [--loop-cfg K=V,..] [--loop-log FILE] [--loop-sync 0|1] [--loop-out-hz HZ] [--loop-dump DIR] [--loop-vpr FILE]]\n");
+               "                 [--loop 0|1 --loop-vocab FILE [--loop-cfg K=V,..] [--loop-log FILE] [--loop-sync 0|1] [--loop-out-hz HZ] [--loop-dump DIR] [--loop-vpr FILE] [--loop-xf CMD]]\n");
 }
 
 }  // namespace
@@ -3034,6 +3036,7 @@ int main(int argc, char **argv) {
     else if (s == "--loop-log") a.loop_log = next();
     else if (s == "--loop-dump") a.loop_dump = next();
     else if (s == "--loop-vpr") a.loop_vpr = next();
+    else if (s == "--loop-xf") a.loop_xf = next();
     else if (s == "--loop-sync") a.loop_sync = std::stoi(next()) != 0 ? 1 : 0;
     else if (s == "--loop-out-hz") a.loop_out_hz = std::max(0.0, std::stod(next()));
     else if (s == "--reinit-max-gap") a.reinit_max_gap = std::stod(next());

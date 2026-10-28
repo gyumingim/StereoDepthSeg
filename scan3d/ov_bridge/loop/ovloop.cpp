@@ -1,7 +1,10 @@
 // ovloop.cpp (2026-10-26, branch ovloop-20261026): see ovloop.h
 #include "ovloop.h"
 
+#include <fcntl.h>
+#include <signal.h>
 #include <sys/resource.h>
+#include <sys/wait.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
@@ -14,6 +17,7 @@
 #include <Eigen/Dense>
 #include <ceres/ceres.h>
 #include <opencv2/calib3d.hpp>
+#include <opencv2/imgproc.hpp>
 
 #include "lc_features.h"
 
@@ -103,7 +107,14 @@ bool Cfg::parse(const std::string &kv, std::string &err) {
                      {"consist_m", &consist_m, nullptr}, {"consist_yaw_deg", &consist_yaw_deg, nullptr},
                      {"seq_edges", nullptr, &seq_edges}, {"loop_w", &loop_w, nullptr}, {"huber", &huber, nullptr}, {"weight_mode", nullptr, &weight_mode}, {"seq_sig_m", &seq_sig_m, nullptr}, {"seq_sig_rel", &seq_sig_rel, nullptr}, {"seq_sig_deg", &seq_sig_deg, nullptr}, {"seq_sig_deg_m", &seq_sig_deg_m, nullptr}, {"loop_sig_m", &loop_sig_m, nullptr}, {"loop_sig_deg", &loop_sig_deg, nullptr}, {"huber_sig", &huber_sig, nullptr},
                      {"opt_iters", nullptr, &opt_iters}, {"smooth_v", &smooth_v, nullptr},
-                     {"smooth_w_deg", &smooth_w_deg, nullptr}};
+                     {"smooth_w_deg", &smooth_w_deg, nullptr},
+                     {"xf_mode", nullptr, &xf_mode}, {"xf_tri", nullptr, &xf_tri}, {"xf_tri_deg", &xf_tri_deg, nullptr}, {"xf_tri_px", &xf_tri_px, nullptr},
+                     {"log_cand", nullptr, &log_cand}, {"xf_both", nullptr, &xf_both}, {"xf_pick", nullptr, &xf_pick},
+                     {"xf_min_inl", nullptr, &xf_min_inl}, {"xf_min_ratio", &xf_min_ratio, nullptr}, {"xf_min_cells", nullptr, &xf_min_cells},
+                     {"xf_rp_deg", &xf_rp_deg, nullptr}, {"xf_yaw_deg", &xf_yaw_deg, nullptr}, {"xf_pnp_px", &xf_pnp_px, nullptr},
+                     {"xf_tri_mv", nullptr, &xf_tri_mv}, {"xf_tri_rel", &xf_tri_rel, nullptr},
+                     {"xf_max_tri_frac", &xf_max_tri_frac, nullptr}, {"consist_n", nullptr, &consist_n},
+                     {"xf_tri_mode", nullptr, &xf_tri_mode}, {"xf_kf_every", &xf_kf_every, nullptr}};
     bool found = false;
     for (const auto &d : tab)
       if (k == d.n) {
@@ -133,6 +144,12 @@ std::string Cfg::describe() const {
     << consist_old_s << "s " << consist_m << "m " << consist_yaw_deg << "deg | graph seq " << seq_edges << " w "
     << loop_w << " huber " << huber << " it " << opt_iters << " | smooth " << smooth_v << "m/s " << smooth_w_deg
     << "deg/s | sync " << sync;
+  if (!xf.empty()) o << " | xf mode " << xf_mode << " tri " << xf_tri << " (" << xf_tri_deg << "deg " << xf_tri_px << "px mv "
+                     << xf_tri_mv << " rel " << xf_tri_rel << " tmode " << xf_tri_mode << ") both " << xf_both << " pick " << xf_pick << " gates inl "
+                     << xf_min_inl << " ratio " << xf_min_ratio << " cells " << xf_min_cells << " rp " << xf_rp_deg << " yaw "
+                     << xf_yaw_deg << " px " << xf_pnp_px << " trifrac " << xf_max_tri_frac << " cmd " << xf;
+  if (consist_n != 1) o << " | consist_n " << consist_n;
+  if (log_cand) o << " | log_cand";
   return o.str();
 }
 
@@ -173,6 +190,15 @@ struct LoopCloser::Kf {
   cv::Mat D3;                       // their descriptors
   cv::Mat DM;                       // matching set (detected + tracked points) and their undistorted pixels
   std::vector<cv::Point2f> ptsM;
+  // --loop-xf: point list [tracks, XFeat keypoints] (undistorted pixels) and 3D (this camera frame) where known
+  std::vector<cv::Point2f> xf_und;
+  std::vector<int> xf_p3;           // -1 = no 3D, else index into xf_P3
+  std::vector<Eigen::Vector3d> xf_P3;
+  int xf_ntri = 0;                  // triangulated points (xf_tri; XFeat or, without --loop-xf, BRIEF)
+  int xf_ntrk = 0;                  // xf_P3[0 .. xf_ntrk) = OpenVINS track points, the rest triangulated
+  int n2d = 0;                      // first n2d rows of DM / ptsM = detected keypoints
+  Eigen::Matrix3d R_GtoC = Eigen::Matrix3d::Identity();
+  Eigen::Vector3d p_CinG = Eigen::Vector3d::Zero();
   // pose graph (corrected)
   double yaw_c = 0.0;
   double t_c[3] = {0, 0, 0};
@@ -195,6 +221,10 @@ struct LoopCloser::Verified {
   double dyaw = 0.0;                                // yaw_loop - yaw_vio
   double rp_deg = 0.0;
   char dir = '-';  // PnP direction: A old 3D -> current 2D, B current 3D -> old 2D
+  char path = 'b';  // xfopt: verification path b = box-BRIEF, x = XFeat
+  bool pose = false;  // PnP gave a pose (gates may still reject it)
+  int cells = 0, ntri = 0;  // xfopt: inlier grid cells (8x6), inliers with triangulated 3D
+  double hull = 0.0;        // inlier convex hull area / image area
 };
 
 struct LoopCloser::State {
@@ -209,6 +239,7 @@ struct LoopCloser::State {
     bool accepted;
   };
   std::deque<Recent> recent;  // verified loops of the last keyframes
+  double last_try = -1e9;     // lgopt xf_kf_every: time of the last keyframe whose candidates were verified
   double corr_yaw = 0.0;      // current target correction (applied to new keyframes before the next optimisation)
   Eigen::Vector3d corr_t = Eigen::Vector3d::Zero();
   int n_loop = 0;
@@ -259,6 +290,17 @@ LoopCloser::LoopCloser(const Cfg &c) : c_(c), rule_(c_), s_(new State) {
                  c_.vpr.c_str(), vpr_.size(), vpr_dim_, c_.vpr_min);
   }
   if (!c_.dump.empty()) std::fprintf(stderr, "[ov_bridge] loop: dumping keyframes to %s\n", c_.dump.c_str());
+  if (!c_.xf.empty() || c_.xf_mode) {
+    if (c_.xf.empty() || (c_.xf_mode != 1 && c_.xf_mode != 2)) {
+      ok_ = false;
+      err_ = "--loop-xf CMD needs --loop-cfg xf_mode=1|2 (and xf_mode needs --loop-xf)";
+      return;
+    }
+    if (!xf_start(err_)) {
+      ok_ = false;
+      return;
+    }
+  }
   std::fprintf(stderr, "[ov_bridge] loop: vocab %s (k %d L %d, %d words, sha %s) | %s\n", c_.vocab.c_str(), voc_.k, voc_.L,
                voc_.n_words(), voc_.sha().c_str(), c_.describe().c_str());
   th_ = std::thread([this] { run(); });
@@ -271,6 +313,21 @@ LoopCloser::~LoopCloser() {
   }
   qcv_.notify_all();
   if (th_.joinable()) th_.join();
+  if (xf_in_ >= 0) {
+    const char qq = 'Q';
+    if (::write(xf_in_, &qq, 1) != 1) {
+    }
+    ::close(xf_in_);
+  }
+  if (xf_out_ >= 0) ::close(xf_out_);
+  if (xf_pid_ > 0) {
+    int st = 0;
+    for (int i = 0; i < 100 && waitpid(xf_pid_, &st, WNOHANG) == 0; i++) usleep(50000);
+    if (waitpid(xf_pid_, &st, WNOHANG) == 0) {
+      kill(xf_pid_, SIGKILL);
+      waitpid(xf_pid_, &st, 0);
+    }
+  }
   if (log_) std::fclose(log_);
 }
 
@@ -335,6 +392,133 @@ void LoopCloser::log_line(const std::string &s) {
   std::fflush(log_);
 }
 
+// ---------------------------------------------------------------- --loop-xf server (ovxfeat 2026-10-26)
+namespace {
+bool wr_all(int fd, const void *p, size_t n) {
+  const char *c = static_cast<const char *>(p);
+  while (n) {
+    const ssize_t k = ::write(fd, c, n);
+    if (k <= 0) {
+      if (k < 0 && errno == EINTR) continue;
+      return false;
+    }
+    c += k;
+    n -= static_cast<size_t>(k);
+  }
+  return true;
+}
+bool rd_all(int fd, void *p, size_t n) {
+  char *c = static_cast<char *>(p);
+  while (n) {
+    const ssize_t k = ::read(fd, c, n);
+    if (k <= 0) {
+      if (k < 0 && errno == EINTR) continue;
+      return false;
+    }
+    c += k;
+    n -= static_cast<size_t>(k);
+  }
+  return true;
+}
+}  // namespace
+
+bool LoopCloser::xf_start(std::string &err) {
+  int a[2], b[2];  // a: bridge -> server stdin, b: server stdout -> bridge
+  if (pipe(a) != 0 || pipe(b) != 0) {
+    err = "--loop-xf: pipe failed";
+    return false;
+  }
+  signal(SIGPIPE, SIG_IGN);
+  const pid_t pid = fork();
+  if (pid < 0) {
+    err = "--loop-xf: fork failed";
+    return false;
+  }
+  if (pid == 0) {
+    dup2(a[0], 0);
+    dup2(b[1], 1);
+    ::close(a[0]);
+    ::close(a[1]);
+    ::close(b[0]);
+    ::close(b[1]);
+    execl("/bin/sh", "sh", "-c", c_.xf.c_str(), static_cast<char *>(nullptr));
+    _exit(127);
+  }
+  ::close(a[0]);
+  ::close(b[1]);
+  xf_in_ = a[1];
+  xf_out_ = b[0];
+  xf_pid_ = pid;
+  xf_ok_ = true;
+  std::fprintf(stderr, "[ov_bridge] loop: XFeat server pid %d mode %d (%s): %s\n", static_cast<int>(pid), c_.xf_mode,
+               c_.xf_mode == 1 ? "mutual NN" : "LighterGlue", c_.xf.c_str());
+  return true;
+}
+
+bool LoopCloser::xf_feat(int64_t id, const cv::Mat &img, const std::vector<cv::Point2f> &q, std::vector<cv::Point2f> &kps,
+                         float &ms) {
+  kps.clear();
+  ms = 0.0f;
+  if (!xf_ok_) return false;
+  std::vector<char> buf;
+  auto put = [&](const void *p, size_t n) { buf.insert(buf.end(), static_cast<const char *>(p), static_cast<const char *>(p) + n); };
+  const char c = 'F';
+  const int32_t W = img.cols, H = img.rows, nq = static_cast<int32_t>(q.size());
+  put(&c, 1);
+  put(&id, 8);
+  put(&W, 4);
+  put(&H, 4);
+  for (int r = 0; r < H; r++) put(img.ptr<uint8_t>(r), static_cast<size_t>(W));
+  put(&nq, 4);
+  for (const auto &p : q) {
+    put(&p.x, 4);
+    put(&p.y, 4);
+  }
+  int32_t nk = 0;
+  if (!wr_all(xf_in_, buf.data(), buf.size()) || !rd_all(xf_out_, &nk, 4) || nk < 0 || nk > 1000000) {
+    xf_ok_ = false;
+    std::fprintf(stderr, "[ov_bridge] loop: XFeat server died (feat)\n");
+    return false;
+  }
+  std::vector<float> v(2 * static_cast<size_t>(nk));
+  if ((nk && !rd_all(xf_out_, v.data(), v.size() * 4)) || !rd_all(xf_out_, &ms, 4)) {
+    xf_ok_ = false;
+    return false;
+  }
+  for (int i = 0; i < nk; i++) kps.emplace_back(v[2 * i], v[2 * i + 1]);
+  return true;
+}
+
+bool LoopCloser::xf_match(int64_t a, int64_t b, int mode, std::vector<std::array<int, 2>> &m, float &ms) {
+  m.clear();
+  ms = 0.0f;
+  if (!xf_ok_) return false;
+  char req[21];
+  req[0] = 'M';
+  const int32_t md = mode;
+  std::memcpy(req + 1, &a, 8);
+  std::memcpy(req + 9, &b, 8);
+  std::memcpy(req + 17, &md, 4);
+  int32_t n = 0;
+  if (!wr_all(xf_in_, req, 21) || !rd_all(xf_out_, &n, 4) || n < 0 || n > 10000000) {
+    xf_ok_ = false;
+    std::fprintf(stderr, "[ov_bridge] loop: XFeat server died (match)\n");
+    return false;
+  }
+  std::vector<char> v(12 * static_cast<size_t>(n));
+  if ((n && !rd_all(xf_out_, v.data(), v.size())) || !rd_all(xf_out_, &ms, 4)) {
+    xf_ok_ = false;
+    return false;
+  }
+  for (int i = 0; i < n; i++) {
+    int32_t ia, ib;
+    std::memcpy(&ia, v.data() + 12 * i, 4);
+    std::memcpy(&ib, v.data() + 12 * i + 4, 4);
+    m.push_back({ia, ib});
+  }
+  return true;
+}
+
 // ---------------------------------------------------------------- one keyframe (loop thread)
 void LoopCloser::process(KfIn &in) {
   State &S = *s_;
@@ -344,6 +528,7 @@ void LoopCloser::process(KfIn &in) {
     S.edges.clear();
     S.db.clear();
     S.recent.clear();
+    S.last_try = -1e9;
     S.corr_yaw = 0.0;
     S.corr_t.setZero();
     S.n_loop = 0;
@@ -377,7 +562,10 @@ void LoopCloser::process(KfIn &in) {
   for (size_t i = 0; i < in.clone_t.size(); i++) ci[in.clone_t[i]] = static_cast<int>(i);
   std::vector<Eigen::Vector3d> P3;
   std::vector<KeyPt> kp3;
-  for (const auto &tr : in.tracks) {
+  std::vector<int> tr_p3(in.tracks.size(), -1);  // --loop-xf: track index -> index into P3 (before BRIEF validity)
+  std::vector<Eigen::Vector3d> P3_all;
+  for (size_t ti = 0; ti < in.tracks.size(); ti++) {
+    const auto &tr = in.tracks[ti];
     Eigen::Vector3d pG;
     if (tr.slam) {
       pG = tr.p_G;
@@ -435,6 +623,8 @@ void LoopCloser::process(KfIn &in) {
     k.level = 0;
     P3.push_back(pc);
     kp3.push_back(k);
+    tr_p3[ti] = static_cast<int>(P3_all.size());
+    P3_all.push_back(pc);
   }
   const double ms_tri = ms_since(t1);
 
@@ -510,6 +700,137 @@ void LoopCloser::process(KfIn &in) {
   }
   kf.P3 = P3;
   kf.D3 = D3;
+  kf.R_GtoC = R_GtoC_kf;
+  kf.p_CinG = p_CinG_kf;
+  // xf_tri (ovxfeat): two-view midpoint triangulation of a match (undistorted pixels) between keyframe pv and this one
+  // with the VIO camera poses; parallax >= xf_tri_deg, depth 0.15..15 m, reprojection <= xf_tri_px in both views
+  auto tri_one = [&](const Kf &pv, const cv::Point2f &uc, const cv::Point2f &up, Eigen::Vector3d &X_out) -> bool {
+    const Eigen::Matrix3d R_pc = pv.R_GtoC * R_GtoC_kf.transpose();  // cur camera -> prev camera
+    const Eigen::Vector3d t_pc = pv.R_GtoC * (p_CinG_kf - pv.p_CinG);
+    const double cmin = std::cos(c_.xf_tri_deg * M_PI / 180.0);
+    const Eigen::Vector3d fc((uc.x - in.cx) / in.fx, (uc.y - in.cy) / in.fy, 1.0);
+    const Eigen::Vector3d fp((up.x - in.cx) / in.fx, (up.y - in.cy) / in.fy, 1.0);
+        // rays in the current camera frame: X = s * fc (cur), X = t_cp + s2 * R_cp fp (prev centre in cur frame)
+        const Eigen::Matrix3d R_cp = R_pc.transpose();
+        const Eigen::Vector3d o2 = -R_cp * t_pc, d1 = fc.normalized(), d2 = (R_cp * fp).normalized();
+        if (d1.dot(d2) > cmin) return false;  // too little parallax
+        Eigen::Matrix2d A;
+        A << d1.dot(d1), -d1.dot(d2), d1.dot(d2), -d2.dot(d2);
+        const Eigen::Vector2d bb(d1.dot(o2), d2.dot(o2));
+        if (std::fabs(A.determinant()) < 1e-12) return false;
+        const Eigen::Vector2d st = A.inverse() * bb;
+        const Eigen::Vector3d X = 0.5 * (st(0) * d1 + o2 + st(1) * d2);
+        if (!X.allFinite() || X(2) < 0.15 || X(2) > 15.0) return false;
+        const Eigen::Vector3d Xp = R_pc * X + t_pc;
+        if (Xp(2) < 0.15) return false;
+        const double e1x = (X(0) / X(2) - fc(0)) * in.fx, e1y = (X(1) / X(2) - fc(1)) * in.fy;
+        const double e2x = (Xp(0) / Xp(2) - fp(0)) * in.fx, e2y = (Xp(1) / Xp(2) - fp(1)) * in.fy;
+        const double tp2 = c_.xf_tri_px * c_.xf_tri_px;
+        if (e1x * e1x + e1y * e1y > tp2 || e2x * e2x + e2y * e2y > tp2) return false;
+    X_out = X;
+    return true;
+  };
+  float xf_ms_feat = 0.0f, xf_ms_tri = 0.0f, xf_ms_match = 0.0f;
+  int xf_nk = 0;
+  if (c_.xf_mode) {
+    std::vector<cv::Point2f> q, kps;
+    for (const auto &tr : in.tracks) q.emplace_back(tr.u, tr.v);
+    xf_feat(in.t_ns, in.img, q, kps, xf_ms_feat);
+    xf_nk = static_cast<int>(kps.size());
+    std::vector<cv::Point2f> all = q;
+    all.insert(all.end(), kps.begin(), kps.end());
+    kf.xf_und = all;
+    if (has_dist && !all.empty()) cv::undistortPoints(all, kf.xf_und, K, D, cv::noArray(), K);
+    kf.xf_P3 = P3_all;
+    kf.xf_ntrk = static_cast<int>(P3_all.size());
+    kf.xf_p3.assign(all.size(), -1);
+    for (size_t i = 0; i < q.size(); i++) kf.xf_p3[i] = tr_p3[i];
+    if (c_.xf_tri && !S.kfs.empty()) {  // triangulate matches with the previous keyframe (VIO camera poses)
+      const Kf &pv = S.kfs.back();
+      std::vector<std::array<int, 2>> mm;
+      float msm = 0.0f;
+      xf_match(pv.t_ns, in.t_ns, c_.xf_tri_mode ? c_.xf_tri_mode : c_.xf_mode, mm, msm);
+      xf_ms_tri = msm;
+      if (!c_.xf_tri_mv) {
+        for (const auto &m : mm) {
+          const int ia = m[0], ib = m[1];
+          if (ib < 0 || ib >= static_cast<int>(kf.xf_p3.size()) || kf.xf_p3[ib] >= 0) continue;
+          if (ia < 0 || ia >= static_cast<int>(pv.xf_und.size())) continue;
+          Eigen::Vector3d X;
+          if (!tri_one(pv, kf.xf_und[ib], pv.xf_und[ia], X)) continue;
+          kf.xf_p3[ib] = static_cast<int>(kf.xf_P3.size());
+          kf.xf_P3.push_back(X);
+          kf.xf_ntri++;
+        }
+      } else {  // xfopt xf_tri_mv: also the keyframe before the previous one; points seen from both must agree
+        const int nall = static_cast<int>(kf.xf_p3.size());
+        std::vector<int> a1(nall, -1), a2(nall, -1);
+        for (const auto &m : mm)
+          if (m[1] >= 0 && m[1] < nall && m[0] >= 0 && m[0] < static_cast<int>(pv.xf_und.size())) a1[m[1]] = m[0];
+        const Kf *pv2 = S.kfs.size() >= 2 ? &S.kfs[S.kfs.size() - 2] : nullptr;
+        if (pv2) {
+          std::vector<std::array<int, 2>> mm2;
+          float ms2 = 0.0f;
+          xf_match(pv2->t_ns, in.t_ns, c_.xf_tri_mode ? c_.xf_tri_mode : c_.xf_mode, mm2, ms2);
+          xf_ms_tri += ms2;
+          for (const auto &m : mm2)
+            if (m[1] >= 0 && m[1] < nall && m[0] >= 0 && m[0] < static_cast<int>(pv2->xf_und.size())) a2[m[1]] = m[0];
+        }
+        for (int ib = 0; ib < nall; ib++) {
+          if (kf.xf_p3[ib] >= 0) continue;
+          Eigen::Vector3d X1, X2, X;
+          const bool o1 = a1[ib] >= 0 && tri_one(pv, kf.xf_und[ib], pv.xf_und[a1[ib]], X1);
+          const bool o2 = pv2 && a2[ib] >= 0 && tri_one(*pv2, kf.xf_und[ib], pv2->xf_und[a2[ib]], X2);
+          if (o1 && o2) {
+            if ((X1 - X2).norm() > c_.xf_tri_rel * X1(2)) continue;
+            X = 0.5 * (X1 + X2);
+          } else if (o1 || o2) {
+            if (c_.xf_tri_mv >= 2) continue;
+            X = o1 ? X1 : X2;
+          } else {
+            continue;
+          }
+          kf.xf_p3[ib] = static_cast<int>(kf.xf_P3.size());
+          kf.xf_P3.push_back(X);
+          kf.xf_ntri++;
+        }
+      }
+    }
+  }
+  kf.n2d = D2.rows;
+  if (!c_.xf_mode && c_.xf_tri && !S.kfs.empty() && D2.rows > 0) {
+    const Kf &pv = S.kfs.back();
+    std::vector<cv::Point2f> u2;
+    for (const auto &k : kp2) u2.emplace_back(k.x, k.y);
+    if (has_dist && !u2.empty()) cv::undistortPoints(std::vector<cv::Point2f>(u2), u2, K, D, cv::noArray(), K);
+    std::vector<int> best_c(pv.n2d, -1), best_d(pv.n2d, 1 << 20);  // one-to-one like pnp(): best current row per prev row
+    for (int i = 0; i < D2.rows; i++) {
+      const uint8_t *a = D2.ptr<uint8_t>(i);
+      int b1 = 1 << 20, b2 = 1 << 20, bj = -1;
+      for (int j = 0; j < pv.n2d; j++) {
+        const int d = hamming32(a, pv.DM.ptr<uint8_t>(j));
+        if (d < b1) {
+          b2 = b1;
+          b1 = d;
+          bj = j;
+        } else if (d < b2)
+          b2 = d;
+      }
+      if (bj < 0 || b1 > c_.match_dist || b1 >= c_.ratio * b2) continue;
+      if (b1 < best_d[bj]) {
+        best_d[bj] = b1;
+        best_c[bj] = i;
+      }
+    }
+    for (int j = 0; j < pv.n2d; j++) {
+      if (best_c[j] < 0) continue;
+      Eigen::Vector3d X;
+      if (!tri_one(pv, u2[best_c[j]], pv.ptsM[j], X)) continue;
+      kf.P3.push_back(X);
+      kf.D3.push_back(D2.row(best_c[j]));
+      kf.xf_ntri++;
+    }
+  }
   {  // corrected pose before the next optimisation = current correction
     const Eigen::Vector3d tc = Rz(S.corr_yaw) * kf.p_v + S.corr_t;
     kf.yaw_c = wrap(kf.yaw_v + S.corr_yaw);
@@ -546,6 +867,10 @@ void LoopCloser::process(KfIn &in) {
     if (kf.path - S.kfs[x.first].path < c_.min_path_m) continue;
     cand.push_back(x);
   }
+  if (c_.xf_kf_every > 0.0 && !cand.empty()) {  // lgopt: phone budget, verify candidates at most every xf_kf_every s
+    if (in.t - S.last_try < c_.xf_kf_every) cand.clear();
+    else S.last_try = in.t;
+  }
   S.n_cand += cand.size();
   const double ms_query = ms_since(t1);
 
@@ -560,9 +885,82 @@ void LoopCloser::process(KfIn &in) {
   if (has_dist && !pts2.empty()) cv::undistortPoints(std::vector<cv::Point2f>(pts2), pts2, K, D, cv::noArray(), K);
   // PnP of 3D points (camera frame of keyframe "obj") against 2D points of keyframe "img": X_img = R X_obj + t.
   // Own brute-force matching (ratio test, one-to-one), RANSAC (EPnP), LM refinement on the inliers, re-count.
+  // xfopt: inlier distribution of a solved PnP (2D side): occupied cells of an 8x6 image grid, convex hull area / image area,
+  // inliers whose 3D point came from xf_tri triangulation (not from OpenVINS tracks)
+  struct SolveInfo {
+    int cells = 0;
+    double hull = 0.0;
+    int ntri = 0;
+  };
+  const int GW = 8, GH = 6;
+  auto solve = [&](const std::vector<cv::Point3f> &obj, const std::vector<cv::Point2f> &img, Eigen::Matrix3d &R,
+                   Eigen::Vector3d &t, int &n_inl, double &rms, std::string &why, double px, const std::vector<char> *trif,
+                   SolveInfo *si) {
+    cv::Mat rvec, tvec;
+    std::vector<int> inl;
+    if (!cv::solvePnPRansac(obj, img, K, cv::noArray(), rvec, tvec, false, c_.pnp_iters, static_cast<float>(px), 0.99,
+                            inl, cv::SOLVEPNP_EPNP)) {
+      why = "pnp";
+      return false;
+    }
+    if (static_cast<int>(inl.size()) < c_.min_inliers) {
+      n_inl = static_cast<int>(inl.size());
+      why = "inliers";
+      return false;
+    }
+    std::vector<cv::Point3f> o2;
+    std::vector<cv::Point2f> i2;
+    for (int q : inl) {
+      o2.push_back(obj[q]);
+      i2.push_back(img[q]);
+    }
+    cv::solvePnPRefineLM(o2, i2, K, cv::noArray(), rvec, tvec);
+    std::vector<cv::Point2f> pr;
+    cv::projectPoints(obj, rvec, tvec, K, cv::noArray(), pr);
+    double e2 = 0.0;
+    std::vector<cv::Point2f> ip;
+    int ntri = 0;
+    for (size_t q = 0; q < obj.size(); q++) {
+      const double ex = pr[q].x - img[q].x, ey = pr[q].y - img[q].y, e = ex * ex + ey * ey;
+      if (e <= px * px) {
+        n_inl++;
+        e2 += e;
+        if (si) {
+          ip.push_back(img[q]);
+          if (trif && (*trif)[q]) ntri++;
+        }
+      }
+    }
+    rms = n_inl ? std::sqrt(e2 / n_inl) : 0.0;
+    if (n_inl < c_.min_inliers) {
+      why = "inliers";
+      return false;
+    }
+    if (si) {
+      std::vector<char> occ(GW * GH, 0);
+      for (const auto &p : ip) {
+        const int gx = std::min(GW - 1, std::max(0, static_cast<int>(p.x * GW / in.img.cols)));
+        const int gy = std::min(GH - 1, std::max(0, static_cast<int>(p.y * GH / in.img.rows)));
+        occ[gy * GW + gx] = 1;
+      }
+      si->cells = static_cast<int>(std::count(occ.begin(), occ.end(), 1));
+      si->ntri = ntri;
+      if (ip.size() >= 3) {
+        std::vector<cv::Point2f> hull;
+        cv::convexHull(ip, hull);
+        si->hull = cv::contourArea(hull) / (static_cast<double>(in.img.cols) * in.img.rows);
+      }
+    }
+    cv::Mat Rm;
+    cv::Rodrigues(rvec, Rm);
+    for (int r = 0; r < 3; r++)
+      for (int c = 0; c < 3; c++) R(r, c) = Rm.at<double>(r, c);
+    t = Eigen::Vector3d(tvec.at<double>(0), tvec.at<double>(1), tvec.at<double>(2));
+    return true;
+  };
   auto pnp = [&](const std::vector<Eigen::Vector3d> &P3o, const cv::Mat &D3o, const cv::Mat &Di,
                  const std::vector<cv::Point2f> &pi, Eigen::Matrix3d &R, Eigen::Vector3d &t, int &n_match, int &n_inl,
-                 double &rms, std::string &why) {
+                 double &rms, std::string &why, SolveInfo *si) {
     n_match = n_inl = 0;
     rms = 0.0;
     std::vector<int> m_o, m_i;
@@ -604,46 +1002,142 @@ void LoopCloser::process(KfIn &in) {
       obj.emplace_back(static_cast<float>(X(0)), static_cast<float>(X(1)), static_cast<float>(X(2)));
       img.push_back(pi[m_i[q]]);
     }
-    cv::Mat rvec, tvec;
-    std::vector<int> inl;
-    if (!cv::solvePnPRansac(obj, img, K, cv::noArray(), rvec, tvec, false, c_.pnp_iters, static_cast<float>(c_.pnp_px), 0.99,
-                            inl, cv::SOLVEPNP_EPNP)) {
-      why = "pnp";
+    return solve(obj, img, R, t, n_inl, rms, why, c_.pnp_px, nullptr, si);
+  };
+  // --loop-xf: correspondences from the server's matches (ia in the old list, ib in the current list); direction A uses
+  // the old keyframe's 3D, B the current one's
+  auto pnp_xf = [&](const Kf &old, const Kf &cur, const std::vector<std::array<int, 2>> &mm, bool dirA, Eigen::Matrix3d &R,
+                    Eigen::Vector3d &t, int &n_match, int &n_inl, double &rms, std::string &why, double px, SolveInfo *si) {
+    n_match = n_inl = 0;
+    rms = 0.0;
+    std::vector<cv::Point3f> obj;
+    std::vector<cv::Point2f> img;
+    std::vector<char> trif;
+    const Kf &o3 = dirA ? old : cur;
+    const Kf &o2 = dirA ? cur : old;
+    for (const auto &m : mm) {
+      const int i3 = dirA ? m[0] : m[1], i2 = dirA ? m[1] : m[0];
+      if (i3 < 0 || i3 >= static_cast<int>(o3.xf_p3.size()) || i2 < 0 || i2 >= static_cast<int>(o2.xf_und.size())) continue;
+      const int k3 = o3.xf_p3[i3];
+      if (k3 < 0) continue;
+      const Eigen::Vector3d &X = o3.xf_P3[k3];
+      obj.emplace_back(static_cast<float>(X(0)), static_cast<float>(X(1)), static_cast<float>(X(2)));
+      img.push_back(o2.xf_und[i2]);
+      trif.push_back(k3 >= o3.xf_ntrk ? 1 : 0);
+    }
+    n_match = static_cast<int>(obj.size());
+    if (n_match < c_.min_inliers) {
+      why = "matches";
       return false;
     }
-    if (static_cast<int>(inl.size()) < c_.min_inliers) {
-      n_inl = static_cast<int>(inl.size());
-      why = "inliers";
-      return false;
-    }
-    std::vector<cv::Point3f> o2;
-    std::vector<cv::Point2f> i2;
-    for (int q : inl) {
-      o2.push_back(obj[q]);
-      i2.push_back(img[q]);
-    }
-    cv::solvePnPRefineLM(o2, i2, K, cv::noArray(), rvec, tvec);
-    std::vector<cv::Point2f> pr;
-    cv::projectPoints(obj, rvec, tvec, K, cv::noArray(), pr);
-    double e2 = 0.0;
-    for (size_t q = 0; q < obj.size(); q++) {
-      const double ex = pr[q].x - img[q].x, ey = pr[q].y - img[q].y, e = ex * ex + ey * ey;
-      if (e <= c_.pnp_px * c_.pnp_px) {
-        n_inl++;
-        e2 += e;
+    return solve(obj, img, R, t, n_inl, rms, why, px, &trif, si);
+  };
+  // one verification path (BRIEF = use_xf false, XFeat = true): direction A (old keyframe 3D -> current 2D), then B
+  // (current 3D -> old 2D) if A fails (e.g. the old keyframe has few 3D points such as the first keyframe after
+  // initialisation), then the gates. BRIEF path with the default config = the ovloop code unchanged (same order / values).
+  auto verify_path = [&](const Kf &old, bool use_xf, const std::vector<std::array<int, 2>> &xmm, bool diag, Verified &v,
+                         std::string &why) -> bool {
+    v = Verified();
+    v.old_idx = old.idx;
+    v.path = use_xf ? 'x' : 'b';
+    const double px = (use_xf && c_.xf_pnp_px > 0) ? c_.xf_pnp_px : c_.pnp_px;
+    Eigen::Matrix3d R_oc_C, R;
+    Eigen::Vector3d t_oc_C, t;
+    int nm = 0, ni = 0;
+    double rms = 0.0;
+    SolveInfo si;
+    bool ok = use_xf ? pnp_xf(old, kf, xmm, true, R, t, nm, ni, rms, why, px, &si)
+                     : pnp(old.P3, old.D3, DM, pts2, R, t, nm, ni, rms, why, &si);
+    if (ok) {  // X_cur = R X_old + t
+      R_oc_C = R.transpose();
+      t_oc_C = -R.transpose() * t;
+      v.dir = 'A';
+    } else {
+      std::string whyB;
+      int nmB = 0, niB = 0;
+      double rmsB = 0.0;
+      SolveInfo siB;
+      ok = use_xf ? pnp_xf(old, kf, xmm, false, R, t, nmB, niB, rmsB, whyB, px, &siB)
+                  : pnp(kf.P3, kf.D3, old.DM, old.ptsM, R, t, nmB, niB, rmsB, whyB, &siB);
+      if (ok) {  // X_old = R X_cur + t
+        R_oc_C = R;
+        t_oc_C = t;
+        v.dir = 'B';
+        nm = nmB;
+        ni = niB;
+        rms = rmsB;
+        si = siB;
+      } else if (nmB > nm) {
+        nm = nmB;
+        ni = niB;
+        why = whyB + "B";
       }
     }
-    rms = n_inl ? std::sqrt(e2 / n_inl) : 0.0;
-    if (n_inl < c_.min_inliers) {
-      why = "inliers";
-      return false;
+    v.n_match = nm;
+    v.n_inl = ni;
+    v.rms_px = rms;
+    if (ok) {
+      v.pose = true;
+      v.cells = si.cells;
+      v.hull = si.hull;
+      v.ntri = si.ntri;
+      // T_oldI_curI = T_IC * T_oldC_curC * T_CI
+      v.R_oc = in.R_ItoC.transpose() * R_oc_C * in.R_ItoC;
+      v.t_oc = in.R_ItoC.transpose() * (R_oc_C * in.p_IinC + t_oc_C - in.p_IinC);
+      const Eigen::Matrix3d R_L = old.R_v * v.R_oc;  // loop-implied current attitude (VIO world of the old kf)
+      const Eigen::Vector3d p_L = old.p_v + old.R_v * v.t_oc;
+      const Eigen::Vector3d g_l = R_L.transpose() * Eigen::Vector3d::UnitZ(), g_v = in.R_ItoG.transpose() * Eigen::Vector3d::UnitZ();
+      v.rp_deg = std::acos(std::max(-1.0, std::min(1.0, g_l.dot(g_v)))) * 180.0 / M_PI;
+      v.dyaw = wrap(yaw_of(R_L * in.R_ItoG.transpose()));
+      v.drift = p_L - in.p_IinG;
+      const double path_between = kf.path - old.path;
+      const double rp_max = (use_xf && c_.xf_rp_deg > 0) ? c_.xf_rp_deg : c_.max_rp_deg;
+      const double yaw_max = (use_xf && c_.xf_yaw_deg > 0) ? c_.xf_yaw_deg : c_.max_corr_yaw_deg;
+      if (v.rp_deg > rp_max) {
+        ok = false;
+        why = "rollpitch";
+      } else if (diag) {
+        why = "diag";
+        ok = false;
+      } else if (v.drift.norm() > c_.max_corr_m + c_.max_corr_rel * path_between) {
+        ok = false;
+        why = "drift";
+      } else if (std::fabs(v.dyaw) * 180.0 / M_PI > yaw_max) {
+        ok = false;
+        why = "yaw";
+      } else if (use_xf && c_.xf_min_inl > 0 && ni < c_.xf_min_inl) {
+        ok = false;
+        why = "xinl";
+      } else if (use_xf && c_.xf_min_ratio > 0 && ni < c_.xf_min_ratio * nm) {
+        ok = false;
+        why = "xratio";
+      } else if (use_xf && c_.xf_min_cells > 0 && v.cells < c_.xf_min_cells) {
+        ok = false;
+        why = "xcells";
+      } else if (use_xf && c_.xf_max_tri_frac > 0 && ni > 0 && v.ntri > c_.xf_max_tri_frac * ni) {
+        ok = false;
+        why = "xtri";
+      }
     }
-    cv::Mat Rm;
-    cv::Rodrigues(rvec, Rm);
-    for (int r = 0; r < 3; r++)
-      for (int c = 0; c < 3; c++) R(r, c) = Rm.at<double>(r, c);
-    t = Eigen::Vector3d(tvec.at<double>(0), tvec.at<double>(1), tvec.at<double>(2));
-    return true;
+    return ok;
+  };
+  std::ostringstream cxj;  // log_cand: every verification path result with its pose
+  cxj.precision(7);
+  int n_cx = 0;
+  auto log_cx = [&](const Verified &v, bool ok, const std::string &why, int xf_n) {
+    if (n_cx++) cxj << ",";
+    cxj << "{\"o\":" << v.old_idx << ",\"p\":\"" << v.path << "\",\"ok\":" << (ok ? 1 : 0) << ",\"why\":\"" << (ok ? "ok" : why)
+        << "\",\"nm\":" << v.n_match << ",\"ni\":" << v.n_inl << ",\"rms\":" << v.rms_px << ",\"dir\":\"" << v.dir << "\"";
+    if (xf_n >= 0) cxj << ",\"xn\":" << xf_n;
+    if (v.pose) {
+      const Eigen::Quaterniond q(v.R_oc);
+      cxj << ",\"cells\":" << v.cells << ",\"hull\":" << v.hull << ",\"ntri\":" << v.ntri << ",\"rp\":" << v.rp_deg
+          << ",\"dyaw\":" << v.dyaw << ",\"drift\":";
+      jv(cxj, v.drift);
+      cxj << ",\"q\":[" << q.x() << "," << q.y() << "," << q.z() << "," << q.w() << "],\"t\":";
+      jv(cxj, v.t_oc);
+    }
+    cxj << "}";
   };
   kf.DM = DM;
   kf.ptsM = pts2;
@@ -654,71 +1148,46 @@ void LoopCloser::process(KfIn &in) {
     Verified v;
     std::string why;
     S.n_geo++;
-    v.old_idx = old.idx;
-    Eigen::Matrix3d R_oc_C;
-    Eigen::Vector3d t_oc_C;
-    // direction A: old keyframe 3D -> current 2D; B (if A fails, e.g. the old keyframe has few 3D points such as the
-    // first keyframe after initialisation): current 3D -> old 2D
-    Eigen::Matrix3d R;
-    Eigen::Vector3d t;
-    int nm = 0, ni = 0;
-    double rms = 0.0;
-    bool ok = pnp(old.P3, old.D3, DM, pts2, R, t, nm, ni, rms, why);
-    if (ok) {  // X_cur = R X_old + t
-      R_oc_C = R.transpose();
-      t_oc_C = -R.transpose() * t;
-      v.dir = 'A';
-    } else {
-      std::string whyB;
-      int nmB = 0, niB = 0;
-      double rmsB = 0.0;
-      ok = pnp(kf.P3, kf.D3, old.DM, old.ptsM, R, t, nmB, niB, rmsB, whyB);
-      if (ok) {  // X_old = R X_cur + t
-        R_oc_C = R;
-        t_oc_C = t;
-        v.dir = 'B';
-        nm = nmB;
-        ni = niB;
-        rms = rmsB;
-      } else if (nmB > nm) {
-        nm = nmB;
-        ni = niB;
-        why = whyB + "B";
-      }
+    std::vector<std::array<int, 2>> xmm;  // --loop-xf matches (old list, current list)
+    int xf_n = -1;
+    if (c_.xf_mode) {
+      float msm = 0.0f;
+      xf_match(old.t_ns, in.t_ns, c_.xf_mode, xmm, msm);
+      xf_n = static_cast<int>(xmm.size());
+      xf_ms_match += msm;
     }
-    v.n_match = nm;
-    v.n_inl = ni;
-    v.rms_px = rms;
-    {
-      if (ok) {
-        // T_oldI_curI = T_IC * T_oldC_curC * T_CI
-        v.R_oc = in.R_ItoC.transpose() * R_oc_C * in.R_ItoC;
-        v.t_oc = in.R_ItoC.transpose() * (R_oc_C * in.p_IinC + t_oc_C - in.p_IinC);
-        const Eigen::Matrix3d R_L = old.R_v * v.R_oc;  // loop-implied current attitude (VIO world of the old kf)
-        const Eigen::Vector3d p_L = old.p_v + old.R_v * v.t_oc;
-        const Eigen::Vector3d g_l = R_L.transpose() * Eigen::Vector3d::UnitZ(), g_v = in.R_ItoG.transpose() * Eigen::Vector3d::UnitZ();
-        v.rp_deg = std::acos(std::max(-1.0, std::min(1.0, g_l.dot(g_v)))) * 180.0 / M_PI;
-        v.dyaw = wrap(yaw_of(R_L * in.R_ItoG.transpose()));
-        v.drift = p_L - in.p_IinG;
-        const double path_between = kf.path - old.path;
-        if (v.rp_deg > c_.max_rp_deg) {
-          ok = false;
-          why = "rollpitch";
-        } else if (diag) {
-          why = "diag";
-          ok = false;
-        } else if (v.drift.norm() > c_.max_corr_m + c_.max_corr_rel * path_between) {
-          ok = false;
-          why = "drift";
-        } else if (std::fabs(v.dyaw) * 180.0 / M_PI > c_.max_corr_yaw_deg) {
-          ok = false;
-          why = "yaw";
-        }
+    bool ok = false;
+    if (!c_.xf_mode) {
+      ok = verify_path(old, false, xmm, diag, v, why);
+      if (c_.log_cand) log_cx(v, ok, why, -1);
+    } else {
+      // xfopt: xf_both 1 also runs the BRIEF path (logged); xf_pick 1 = hybrid (BRIEF result if it passes, else XFeat)
+      Verified vb;
+      std::string whyb;
+      bool okb = false;
+      if (c_.xf_both || c_.xf_pick == 1) {
+        okb = verify_path(old, false, xmm, diag, vb, whyb);
+        if (c_.log_cand) log_cx(vb, okb, whyb, -1);
+      }
+      Verified vx;
+      std::string whyx;
+      const bool okx = verify_path(old, true, xmm, diag, vx, whyx);
+      if (c_.log_cand) log_cx(vx, okx, whyx, xf_n);
+      if (c_.xf_pick == 1 && okb) {
+        v = vb;
+        why = whyb;
+        ok = true;
+      } else {
+        v = vx;
+        why = whyx;
+        ok = okx;
       }
     }
     if (ci2) cj << ",";
     cj << "[" << old.idx << "," << cand[ci2].second << "," << v.n_match << "," << v.n_inl << ",\"" << (ok ? "ok" : why)
-       << "\"," << v.rp_deg << ",\"" << v.dir << "\"," << v.drift.norm() << "," << v.dyaw * 180.0 / M_PI << "," << v.rms_px << "]";
+       << "\"," << v.rp_deg << ",\"" << v.dir << "\"," << v.drift.norm() << "," << v.dyaw * 180.0 / M_PI << "," << v.rms_px;
+    if (c_.xf_mode) cj << "," << xf_n << ",\"" << v.path << "\"";  // --loop-xf: all matches of the pair; chosen path
+    cj << "]";
     if (ok && !diag) {
       S.n_verified++;
       if (!have_best || v.n_inl > best.n_inl) {
@@ -732,18 +1201,22 @@ void LoopCloser::process(KfIn &in) {
   // 5. temporal consistency
   std::vector<std::pair<int, Verified>> accept;  // (cur kf idx, loop)
   if (have_best) {
-    bool consistent = false;
+    // xfopt consist_n: at least consist_n earlier consistent loops (default 1 = ovloop rule, same order / result)
+    std::vector<State::Recent *> hits;
     for (auto &r : S.recent) {
       if (kf.idx - r.cur > c_.consist_kf) continue;
       if (std::fabs(S.kfs[r.old].t - S.kfs[best.old_idx].t) > c_.consist_old_s) continue;
       if ((r.v.drift - best.drift).norm() > c_.consist_m) continue;
       if (std::fabs(wrap(r.v.dyaw - best.dyaw)) * 180.0 / M_PI > c_.consist_yaw_deg) continue;
-      consistent = true;
-      if (!r.accepted) {
-        r.accepted = true;
-        accept.emplace_back(r.cur, r.v);
-      }
+      hits.push_back(&r);
     }
+    const bool consistent = static_cast<int>(hits.size()) >= std::max(1, c_.consist_n);
+    if (consistent)
+      for (auto *r : hits)
+        if (!r->accepted) {
+          r->accepted = true;
+          accept.emplace_back(r->cur, r->v);
+        }
     if (consistent) accept.emplace_back(kf.idx, best);
     else S.n_rej_consist++;
     S.recent.push_back({kf.idx, best.old_idx, best, consistent});
@@ -813,7 +1286,12 @@ void LoopCloser::process(KfIn &in) {
       << ",\"n_tracks\":" << in.tracks.size() << ",\"n3d\":" << K_.P3.size() << ",\"n2d\":" << D2.rows
       << ",\"n_words\":" << K_.bow.size() << ",\"s_prev\":" << s_prev << ",\"n_db\":" << max_entry << ",\"cand\":[" << cj.str()
       << "],\"acc\":" << accept.size() << ",\"ms\":[" << in.cap_ms << "," << ms_tri << "," << ms_feat << "," << ms_query << ","
-      << ms_geo << "," << ms_opt << "," << ms_total << "]}\n";
+      << ms_geo << "," << ms_opt << "," << ms_total << "]";
+    if (c_.log_cand) o << ",\"cx\":[" << cxj.str() << "]";
+    if (c_.xf_mode || c_.xf_tri)  // --loop-xf: [XFeat keypoints, 3D points (tracks + triangulated), triangulated, server ms feat / tri-match / cand-match]
+      o << ",\"xf\":[" << xf_nk << "," << K_.xf_P3.size() << "," << K_.xf_ntri << "," << xf_ms_feat << "," << xf_ms_tri << ","
+        << xf_ms_match << "]";
+    o << "}\n";
     log_line(o.str() + lj.str());
   }
 }
