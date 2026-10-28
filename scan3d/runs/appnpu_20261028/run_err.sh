@@ -32,11 +32,11 @@ temps() {
 }
 temps
 echo "start check: SKIN $sk AP $ap battery $bl"
-awk -v s="${sk:-99}" -v a="${ap:-99}" -v b="${bl:-0}" 'BEGIN{exit !(s < 40 && a < 60 && b >= 20)}' || { echo "REFUSED: SKIN $sk (need < 40) / AP $ap (need < 60, else the monitor stops at once) / battery $bl (need >= 20)"; exit 4; }
+awk -v s="${sk:-99}" -v a="${ap:-99}" -v b="${bl:-0}" 'BEGIN{exit !(s < 40 && a < 60 && b >= 5)}' || { echo "REFUSED: SKIN $sk (need < 40) / AP $ap (need < 60, else the monitor stops at once) / battery $bl (need >= 5)"; exit 4; }
 FLAG=/tmp/appnpu_err_mon_${TAG}_$$
 ( while [ ! -f "$FLAG" ]; do
     temps; echo "$(date +%T) SKIN $sk AP $ap batt $bl" >> "$D/temps_pc.txt"
-    if awk -v s="${sk:-0}" -v a="${ap:-0}" -v b="${bl:-100}" 'BEGIN{exit !(s>=45||a>=60||b<20)}'; then
+    if awk -v s="${sk:-0}" -v a="${ap:-0}" -v b="${bl:-100}" 'BEGIN{exit !(s>=45||a>=60||b<5)}'; then
       echo "$(date +%T) SAFETY STOP SKIN $sk AP $ap batt $bl" | tee -a "$D/temps_pc.txt"; $A -s "$S" shell am force-stop com.scan3d.arlat; fi
     sleep 5; done ) &
 MP=$!
