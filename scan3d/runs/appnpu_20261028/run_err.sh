@@ -4,7 +4,7 @@
 # 0.6.34: <secs> = run length FROM VIO INIT (on-screen countdown); the app's hard cap is secs + 60 s from the start.
 # = ov_phone_run.sh run <serial> c4f60 <secs> --es profile rec60 --ei loop 1 [--ei npu_loop 1], LIVE=1 (page + adb reverse,
 #   lines -> <run>/ov_live.jsonl). Safety: start only SKIN < 40 (ov_phone_run preflight is stricter: SKIN < 36 + thermal 0),
-#   stop at SKIN >= 45 / AP >= 50 / battery < 20 % (own 5 s monitor -> force-stop) and thermal status >= 2 (ov_phone_run).
+#   stop at SKIN >= 45 / AP >= 60 (user 10-28 20:5x; was 50) / battery < 20 % (own 5 s monitor -> force-stop) and thermal status >= 2 (ov_phone_run).
 #   The app stops itself after secs (meta.json). Afterwards: camera clients must be [] and no ov_bridge; pull; score.
 # Output: runs/appnpu_20261028/err/<tag>/ (run folder, temps_pc.txt, err_meta.json, score.json) + one Korean summary line.
 set -u
@@ -32,11 +32,11 @@ temps() {
 }
 temps
 echo "start check: SKIN $sk AP $ap battery $bl"
-awk -v s="${sk:-99}" -v a="${ap:-99}" -v b="${bl:-0}" 'BEGIN{exit !(s < 40 && a < 50 && b >= 20)}' || { echo "REFUSED: SKIN $sk (need < 40) / AP $ap (need < 50, else the monitor stops at once) / battery $bl (need >= 20)"; exit 4; }
+awk -v s="${sk:-99}" -v a="${ap:-99}" -v b="${bl:-0}" 'BEGIN{exit !(s < 40 && a < 60 && b >= 20)}' || { echo "REFUSED: SKIN $sk (need < 40) / AP $ap (need < 60, else the monitor stops at once) / battery $bl (need >= 20)"; exit 4; }
 FLAG=/tmp/appnpu_err_mon_${TAG}_$$
 ( while [ ! -f "$FLAG" ]; do
     temps; echo "$(date +%T) SKIN $sk AP $ap batt $bl" >> "$D/temps_pc.txt"
-    if awk -v s="${sk:-0}" -v a="${ap:-0}" -v b="${bl:-100}" 'BEGIN{exit !(s>=45||a>=50||b<20)}'; then
+    if awk -v s="${sk:-0}" -v a="${ap:-0}" -v b="${bl:-100}" 'BEGIN{exit !(s>=45||a>=60||b<20)}'; then
       echo "$(date +%T) SAFETY STOP SKIN $sk AP $ap batt $bl" | tee -a "$D/temps_pc.txt"; $A -s "$S" shell am force-stop com.scan3d.arlat; fi
     sleep 5; done ) &
 MP=$!
