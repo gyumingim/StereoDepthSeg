@@ -162,44 +162,54 @@ public:
   bool start(const Cfg &c, std::string &err) {
     c_ = c;
     if (!c_.log_path.empty()) log_ = std::fopen(c_.log_path.c_str(), "w");
-    std::mutex m;
-    std::condition_variable cv;
-    int state = 0;  // 0 starting, 1 ok, 2 failed
-    std::string e2;
-    th_ = std::thread([&, this] {
+    // start handshake through members (the worker outlives this call; no reference to locals of start())
+    th_ = std::thread([this] {
       std::string e;
       const bool ok = init_worker(e);
       {
-        std::lock_guard<std::mutex> l(m);
-        state = ok ? 1 : 2;
-        e2 = e;
+        std::lock_guard<std::mutex> l(st_m_);
+        st_state_ = ok ? 1 : 2;
+        st_err_ = e;
+        st_cv_.notify_all();
       }
-      cv.notify_all();
       if (ok) serve();
       teardown();
+      done_ = true;
     });
     {
-      std::unique_lock<std::mutex> l(m);
-      cv.wait(l, [&] { return state != 0; });
+      std::unique_lock<std::mutex> l(st_m_);
+      st_cv_.wait(l, [this] { return st_state_ != 0; });
     }
-    if (state != 1) {
-      err = e2;
+    if (st_state_ != 1) {
+      err = st_err_;
       th_.join();
       return false;
     }
     running_ = true;
     return true;
   }
-  void stop() {
+  // returns false when the worker did not finish within timeout_ms (e.g. stuck inside EnnExecuteModel): the thread is then
+  // detached and this object must NOT be destroyed (the JNI layer leaks it on purpose)
+  bool stop(int timeout_ms = 3000) {
     stop_ = true;
     int fd = cli_fd_.exchange(-1);
     if (fd >= 0) ::shutdown(fd, SHUT_RDWR);
-    if (th_.joinable()) th_.join();
+    if (th_.joinable()) {
+      for (int i = 0; i < timeout_ms / 10 && !done_; i++) usleep(10000);
+      if (!done_) {
+        L("{\"op\":\"stop\",\"error\":\"worker still busy after %d ms, detached\"}", timeout_ms);
+        th_.detach();
+        running_ = false;
+        return false;
+      }
+      th_.join();
+    }
     running_ = false;
     if (log_) {
       std::fclose(log_);
       log_ = nullptr;
     }
+    return true;
   }
   bool running() const { return running_; }
   void set_temps(float skin, float ap, float bat, int status) {
@@ -797,6 +807,11 @@ private:
   std::string start_log_;
   std::thread th_;
   std::atomic<bool> stop_{false};
+  std::atomic<bool> done_{false};
+  std::mutex st_m_;
+  std::condition_variable st_cv_;
+  int st_state_ = 0;  // start handshake: 0 starting, 1 ok, 2 failed
+  std::string st_err_;
   bool running_ = false;
   std::atomic<int> cli_fd_{-1};
   int lfd_ = -1;

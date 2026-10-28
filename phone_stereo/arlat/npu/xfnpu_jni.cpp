@@ -69,7 +69,13 @@ extern "C" JNIEXPORT jstring JNICALL Java_com_scan3d_arlat_NpuLoop_nStartLog(JNI
 
 extern "C" JNIEXPORT void JNICALL Java_com_scan3d_arlat_NpuLoop_nStop(JNIEnv *, jclass) {
   std::lock_guard<std::mutex> l(g_m);
-  if (g_srv) g_srv->stop();
+  if (g_srv && !g_srv->stop(3000)) {
+    // worker stuck (e.g. inside EnnExecuteModel): it still uses both objects -> leak them on purpose, never free under it
+    __android_log_print(ANDROID_LOG_WARN, "xfnpu", "stop: worker busy after 3 s, server object leaked");
+    g_srv.release();
+    g_be.release();
+    return;
+  }
   g_srv.reset();
   g_be.reset();
 }
