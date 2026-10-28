@@ -1,0 +1,36 @@
+nncrun start args='model=p1.nnc in=in960.bin heat=1 secs=180 period=0 log=heat_p1.txt' dir=/data/user/0/com.scan3d.nncprobe/files pid=22481 uid=10473
+selinux context: u:r:untrusted_app:s0:c217,c257,c512,c768
+dlopen libenn_public_api_cpp.so OK
+EnnInitialize -> 0
+meta 110 -> 0 '2.2.27'
+meta 111 -> 0 '2.2.26:3:g844124b4'
+EnnGetPreferencePerfMode -> 0 val=7
+EnnOpenModel(file, /data/user/0/com.scan3d.nncprobe/files/p1.nnc) -> 0 id=0x57d101000000 (19.0 ms)
+meta 120 -> 0 '27'
+meta 121 -> 0 'v2.4.11.o'
+meta 122 -> 0 'NOT SUPPORTED'
+meta 123 -> 0 'NOT SUPPORTED'
+meta 124 -> 0 'NOT SUPPORTED'
+meta 130 -> 0 'Failed'
+meta 131 -> 0 'Failed'
+meta 132 -> 0 'Failed'
+meta 133 -> 0 'Failed'
+EnnGetBuffersInfo -> 0 raw u32[0..2]=1 1 0
+BufferInfo in[0] -> 0 upd=0 n=1 w=960 h=544 c=1 size=2088960 type=0 label=image_0
+BufferInfo out[0] -> 0 upd=0 n=1 w=120 h=68 c=129 size=4210560 type=0 label=out129_64
+EnnAllocateAllBuffers -> 0 raw 1 1 0 (6.0 ms)
+buf[0] va=0x78c6b2c000 size=2088960 offset=0
+buf[1] va=0x78c6728000 size=4210560 offset=0
+heat: secs=180 period_us=0 start_wall_ms=1793187739
+HEATWIN t=10 s n=2180 p50=4530 p95=5190 max=12196 us
+HEATWIN t=20 s n=2131 p50=4670 p95=5185 max=5576 us
+HEATWIN t=30 s n=2104 p50=4705 p95=5208 max=5548 us
+HEATWIN t=40 s n=2151 p50=4646 p95=5155 max=6353 us
+HEATWIN t=50 s n=2161 p50=4639 p95=5038 max=5857 us
+HEATWIN t=60 s n=2139 p50=4658 p95=5165 max=6751 us
+HEATWIN t=70 s n=2181 p50=4503 p95=5175 max=16261 us
+HEATWIN t=80 s n=2138 p50=4648 p95=5180 max=5546 us
+HEATWIN t=90 s n=2176 p50=4608 p95=4963 max=5525 us
+HEATWIN t=100 s n=2114 p50=4704 p95=5210 max=9983 us
+HEATWIN t=110 s n=2123 p50=4675 p95=5180 max=5577 us
+HEATWIN t=120 s n=2170 p50=4610 p95=4977 max=5461 us
