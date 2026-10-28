@@ -15,6 +15,6 @@ date
 # A: with the server (FLGc gates), B: no server (connect fails -> BRIEF fallback), C: server killed after 12 s
 srv apA; nice -n 5 $PY $D/appnpu_replay.py $R/hs_20261024_165506_std60 $C $B $O/A --extra "--loop-xf unix:@apA --loop-cfg $CFG" > A.log 2>&1; kill $SP; wait $SP
 nice -n 5 $PY $D/appnpu_replay.py $R/hs_20261024_165506_std60 $C $B $O/B --extra "--loop-xf unix:@apNONE --loop-cfg $CFG" > B.log 2>&1
-srv apC; (sleep 12; kill -9 $SP) & nice -n 5 $PY $D/appnpu_replay.py $R/hs_20261024_165506_std60 $C $B $O/C --extra "--loop-xf unix:@apC --loop-cfg $CFG" > C.log 2>&1; wait
+srv apC; (sleep 6; kill -9 $SP) & nice -n 5 $PY $D/appnpu_replay.py $R/hs_20261024_165506_std60 $C $B $O/C --extra "--loop-xf unix:@apC --loop-cfg $CFG" > C.log 2>&1; wait
 for x in A B C; do echo "== $x"; tail -1 $x.log; grep -i "xfeat\|xf_down\|loop:" $x.bridge.err | head -5; done
 date

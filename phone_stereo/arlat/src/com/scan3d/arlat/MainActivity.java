@@ -42,6 +42,7 @@ import java.util.Locale;
  *   Without gyro = intent ov_opt "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse" (explicit intent wins).
  * 0.6.28 (user 2026-10-26, 60 fps only): profile rec60 + loop 1 (rec20261025 unchanged) (ovloop BoW loop closure, own thread; vocabulary shipped in
  *   the APK assets, copied to files/ov/voc_k10L4.voc). Without loop = intent loop 0. Profile + recover N -> loop off.
+ * 0.6.31 (user rule 10-28): npu_loop 1 without a working NPU -> run refused + app finishes; NPU lost mid-run -> run INVALID.
  * 0.6.30 (appnpu-20261028): intent npu_loop 1 (default 0 = 0.6.29 behaviour) -> XFeat + LighterGlue on the NPU in the loop
  *   verification (NpuLoop, needs loop on); options npu_xf, npu_lg, npu_lg_in, npu_lg_pad, npu_topk, npu_cpus, npu_nice,
  *   npu_perf, npu_cache_mb, npu_cfg, npu_timeout_ms.
@@ -359,6 +360,9 @@ public class MainActivity extends Activity {
                         ov.stopReason = "secs " + secs;
                         finish();
                     }, secs * 1000L);
+                }
+                catch (OvRunner.NpuRefused e) {   // 0.6.31: npu_loop 1 and no NPU -> no run at all, app exits
+                    status.setText("NPU REFUSED: " + e.getMessage()); android.util.Log.e("arlat", "ov refused", e); finish();
                 }
                 catch (Exception e) { status.setText("ov error: " + e); android.util.Log.e("arlat", "ov", e); }
             }

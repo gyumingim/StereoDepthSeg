@@ -121,6 +121,9 @@ def F_(s, kid, g, q):
 def M_(s, a, b, mode):
     s.sendall(b"M" + struct.pack("<qqi", a, b, mode))
     n, = struct.unpack("<i", rd(s, 4))
+    if n < 0:   # 0.6.31 explicit server error code (-3 = keyframe not cached), then the server closes the session
+        ms, = struct.unpack("<f", rd(s, 4))
+        return n, ms
     r = np.frombuffer(rd(s, 12 * n), dtype=[("a", "<i4"), ("b", "<i4"), ("s", "<f4")])
     ms, = struct.unpack("<f", rd(s, 4))
     return {(int(x), int(y)) for x, y in zip(r["a"], r["b"])}, ms
@@ -135,8 +138,12 @@ ka, msa = F_(s, 1, ga, qa)
 kb, msb = F_(s, 2, gb, qb)
 m1, ms1 = M_(s, 1, 2, 1)
 m2, ms2 = M_(s, 1, 2, 2)
-m0, _ = M_(s, 1, 99, 2)   # unknown id -> 0 matches, server must survive
-s.sendall(b"Q"); s.close()
+m0, _ = M_(s, 1, 99, 2)   # unknown id -> explicit error -3 (not "0 matches"), session closed by the server
+try:
+    s.sendall(b"Q")
+except OSError:
+    pass
+s.close()
 rka, pa, da = ref_feat(ga, qa)
 rkb, pb, db = ref_feat(gb, qb)
 r1 = mnn(da, db)
@@ -151,7 +158,7 @@ res = dict(made=time.strftime("%F %T"), rec=rec, frames=[fa, fb], nq=NQ, topk=TO
            nn=dict(server=len(m1), ref=len(r1), common=len(m1 & r1), jaccard=round(j(m1, r1), 4)),
            lg=dict(server=len(m2), ref=len(r2), common=len(m2 & r2), jaccard=round(j(m2, r2), 4),
                    server_pairs_in_xfeat_part=all(a >= NQ and b >= NQ for a, b in m2)),
-           unknown_id_matches=len(m0), server_ms=dict(F=[msa, msb], M1=ms1, M2=ms2),
+           unknown_id_answer=m0 if isinstance(m0, int) else len(m0), server_ms=dict(F=[msa, msb], M1=ms1, M2=ms2),
            note="reference = Python fp32 (descriptors fp32); server stores descriptors fp16 -> tiny NN / LG set differences possible")
 json.dump(res, open(outp, "w"), indent=1)
 print(json.dumps(res, indent=1))

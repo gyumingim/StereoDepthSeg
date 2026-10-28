@@ -16,7 +16,7 @@ import java.nio.charset.StandardCharsets;
  * uses-native-library, required=false); the bridge is a separate executable, so the NPU work runs here in a native server
  * thread (npu/xfnpu_core.h) that the bridge's loop thread connects to: ov_bridge --loop-xf unix:@SOCK --loop-cfg CFG.
  * start() opens ENN + both models + one warm-up run each BEFORE the bridge starts; any failure -> returns the reason and
- * OvRunner runs the bridge exactly as 0.6.29 (no --loop-xf). No CPU / GPU fallback for the models.
+ * OvRunner REFUSES the run (0.6.31 user rule: no fallback of any kind). No CPU / GPU fallback for the models.
  * Model files: name -> files/npu/NAME.nnc (internal storage; ENN gets a file path). Copied from the APK assets npu/NAME.nnc
  * when that asset exists (rewritten if the size differs), else from external files/npu/NAME.nnc (adb push target), else an
  * absolute path is used as is. Same for the LighterGlue positional-encoding weights npu/lg_wr_LGNAME.npy.
@@ -42,7 +42,7 @@ final class NpuLoop {
     private static native String nStart(String sock, String xf, String lg, String wr, String log, int topk, String lgIn, int lgPad,
                                         String cpus, int nice, int perf, double cacheMb);
     private static native String nStartLog();
-    private static native void nStop();
+    private static native String nStop();   // 0.6.31: "" or the server failure (exec errors / stuck worker)
     private static native void nTemps(float skin, float ap, float bat, int status);
 
     private final Context ctx;
@@ -91,11 +91,12 @@ final class NpuLoop {
         }
     }
 
-    void stop() {
-        if (!running) return;
+    /** @return "" or why the NPU failed during the run (0.6.31: the caller marks the run INVALID). */
+    String stop() {
+        if (!running) return "";
         running = false;
         if (tempT != null) { tempT.interrupt(); try { tempT.join(1000); } catch (InterruptedException ignored) { } }
-        try { nStop(); } catch (Throwable e) { android.util.Log.e("arlat", "npu stop", e); }
+        try { String r = nStop(); return r == null ? "" : r; } catch (Throwable e) { android.util.Log.e("arlat", "npu stop", e); return "nStop: " + e; }
     }
 
     /** "" = auto: complement of the bridge --cpus inside 0-9 if the bridge is pinned, else the little cores 0-3 (추정: VIO

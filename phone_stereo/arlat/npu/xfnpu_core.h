@@ -7,6 +7,10 @@
 //       -> i32 nk, f32[2*nk] XFeat keypoints (pixels of the given image), f32 ms   (point list of id = [queries, keypoints])
 //   'M' i64 idA, i64 idB, i32 mode (1 mutual NN cos >= min_cos, 2 LighterGlue) -> i32 n, n x (i32 ia, i32 ib, f32 s), f32 ms
 //   'Q' -> end of this session (the server keeps listening until stop()).
+// 0.6.31 explicit errors (never "0 points / 0 matches" for a failure): nk / n = -1 NPU (EnnExecuteModel) failure,
+//   -2 image size does not fit the model, -3 keyframe not in the cache (never sent / evicted), -4 bad mode; followed by
+//   the f32 ms, then the server closes the session. The bridge treats any negative count as "server lost" (xf_down ->
+//   loop closure stops, run INVALID).
 // The NPU calls go through the Backend interface (phone: ENN; PC test: torch stand-in over a pipe). No CPU / GPU model path.
 //
 // XFeat: model input 1 x 1 x Hm x Wm float (Wm = W, Hm = H rounded up to 32: 960x540 -> 960x544, bottom rows replicated),
@@ -155,10 +159,14 @@ static inline double logsig(double z) { return z >= 0 ? -std::log1p(std::exp(-z)
 class Server {
 public:
   explicit Server(Backend *be) : be_(be) {}
-  ~Server() { stop(); }
+  ~Server() {
+    if (!stuck_) stop();
+  }
 
   // opens the backend + both models, checks the buffer shapes, one warm-up run each, binds the socket; then the worker
   // thread serves. Returns false (and err) when anything fails: the caller must then run without the feature.
+  int start_timeout_ms = 10000;  // 0.6.31
+  bool stuck() const { return stuck_; }  // start timed out or stop() could not join: never destroy this object
   bool start(const Cfg &c, std::string &err) {
     c_ = c;
     if (!c_.log_path.empty()) log_ = std::fopen(c_.log_path.c_str(), "w");
@@ -172,13 +180,21 @@ public:
         st_err_ = e;
         st_cv_.notify_all();
       }
-      if (ok) serve();
+      if (ok && !stop_) serve();
       teardown();
       done_ = true;
     });
     {
       std::unique_lock<std::mutex> l(st_m_);
-      st_cv_.wait(l, [this] { return st_state_ != 0; });
+      if (!st_cv_.wait_for(l, std::chrono::milliseconds(start_timeout_ms), [this] { return st_state_ != 0; })) {
+        // 0.6.31: worker stuck in ENN init / model open / warm-up -> refuse; the worker keeps this object -> caller must leak it
+        err = "NPU start timeout " + std::to_string(start_timeout_ms) + " ms (ENN init / model open / warm-up)";
+        stuck_ = true;
+        stop_ = true;
+        l.unlock();
+        th_.detach();
+        return false;
+      }
     }
     if (st_state_ != 1) {
       err = st_err_;
@@ -198,6 +214,8 @@ public:
       for (int i = 0; i < timeout_ms / 10 && !done_; i++) usleep(10000);
       if (!done_) {
         L("{\"op\":\"stop\",\"error\":\"worker still busy after %d ms, detached\"}", timeout_ms);
+        stuck_ = true;
+        fail("worker still busy at stop (" + std::to_string(timeout_ms) + " ms)");
         th_.detach();
         running_ = false;
         return false;
@@ -219,6 +237,11 @@ public:
     tstat_ = status;
   }
   std::string start_log() const { return start_log_; }
+  // 0.6.31: first NPU failure during the run ("" = none); the app marks the run INVALID
+  std::string failure() {
+    std::lock_guard<std::mutex> l(fail_m_);
+    return fail_;
+  }
 
 private:
   struct Entry {
@@ -444,10 +467,12 @@ private:
         q.resize(2 * static_cast<size_t>(nq));
         if (nq && !rd(fd, q.data(), q.size() * 4)) break;
         std::vector<float> kp;
-        const bool ok = feat(id, W, H, img.data(), nq, q.data(), kp, t_req);
-        const int32_t nk = ok ? static_cast<int32_t>(kp.size() / 2) : 0;
+        int32_t code = 0;
+        const bool ok = feat(id, W, H, img.data(), nq, q.data(), kp, t_req, code);
+        const int32_t nk = ok ? static_cast<int32_t>(kp.size() / 2) : (code < 0 ? code : -1);
         const float ms = static_cast<float>((now_us() - t_req) / 1000.0);
-        if (!wr(fd, &nk, 4) || (nk && !wr(fd, kp.data(), kp.size() * 4)) || !wr(fd, &ms, 4)) break;
+        if (!wr(fd, &nk, 4) || (nk > 0 && !wr(fd, kp.data(), kp.size() * 4)) || !wr(fd, &ms, 4)) break;
+        if (nk < 0) break;  // 0.6.31: error answered explicitly, then the session ends
       } else if (c == 'M') {
         int64_t a, b;
         int32_t mode;
@@ -455,10 +480,12 @@ private:
         std::vector<char> rec;
         const int32_t n = match(a, b, mode, rec, t_req);
         const float ms = static_cast<float>((now_us() - t_req) / 1000.0);
-        if (!wr(fd, &n, 4) || (n && !wr(fd, rec.data(), rec.size())) || !wr(fd, &ms, 4)) break;
+        if (!wr(fd, &n, 4) || (n > 0 && !wr(fd, rec.data(), rec.size())) || !wr(fd, &ms, 4)) break;
+        if (n < 0) break;  // 0.6.31: explicit error, session ends
       } else {
         L("{\"op\":\"error\",\"msg\":\"bad request %d\"}", static_cast<int>(c));
         n_err_++;
+        fail("bad request byte " + std::to_string(static_cast<int>(c)));
         break;
       }
     }
@@ -492,12 +519,16 @@ private:
     for (int c = 0; c < 64; c++) dd[c] *= r;
   }
 
-  bool feat(int64_t id, int W, int H, const uint8_t *g, int nq, const float *q, std::vector<float> &kp_out, double t_req) {
+  bool feat(int64_t id, int W, int H, const uint8_t *g, int nq, const float *q, std::vector<float> &kp_out, double t_req,
+            int32_t &code) {
     kp_out.clear();
+    code = 0;
     std::string err;
     if (W != Wm_ || H > Hm_ || H <= Hm_ - 32) {
       n_err_++;
+      code = -2;
       L("{\"op\":\"F\",\"id\":%lld,\"error\":\"image %dx%d does not fit the model %dx%d\"}", (long long)id, W, H, Wm_, Hm_);
+      fail("image " + std::to_string(W) + "x" + std::to_string(H) + " does not fit the XFeat model");
       return false;
     }
     const double a = now_us();
@@ -530,6 +561,8 @@ private:
     if (!be_->run(xf_, err)) {
       n_err_++;
       L("{\"op\":\"F\",\"id\":%lld,\"error\":\"npu: %s\"}", (long long)id, err.c_str());
+      fail("xfeat EnnExecuteModel: " + err);
+      code = -1;
       return false;
     }
     const double c = now_us();
@@ -608,9 +641,11 @@ private:
     rec.clear();
     auto ia = cache_.find(a), ib = cache_.find(b);
     if (ia == cache_.end() || ib == cache_.end() || !ia->second.n || !ib->second.n) {
-      L("{\"op\":\"M\",\"a\":%lld,\"b\":%lld,\"mode\":%d,\"miss\":[%d,%d]}", (long long)a, (long long)b, mode,
-        ia == cache_.end() ? 1 : 0, ib == cache_.end() ? 1 : 0);
-      return 0;
+      L("{\"op\":\"M\",\"a\":%lld,\"b\":%lld,\"mode\":%d,\"miss\":[%d,%d],\"evicted\":%llu}", (long long)a, (long long)b, mode,
+        ia == cache_.end() ? 1 : 0, ib == cache_.end() ? 1 : 0, (unsigned long long)n_evict_);
+      n_err_++;
+      fail(std::string("keyframe not in the descriptor cache (") + (n_evict_ ? "evicted?" : "never sent") + ")");
+      return -3;
     }
     const Entry &A = ia->second, &B = ib->second;
     std::vector<std::array<float, 3>> out;  // (ia, ib, s) as floats then packed
@@ -625,12 +660,15 @@ private:
       if (!lg(A, B, out, t_pack, t_npu, t_post, nv0, nv1, err)) {
         n_err_++;
         L("{\"op\":\"M\",\"a\":%lld,\"b\":%lld,\"mode\":2,\"error\":\"%s\"}", (long long)a, (long long)b, err.c_str());
-        return 0;
+        fail("lighterglue EnnExecuteModel: " + err);
+        return -1;
       }
       n_lg_++;
     } else {
       L("{\"op\":\"M\",\"a\":%lld,\"b\":%lld,\"mode\":%d,\"error\":\"bad mode\"}", (long long)a, (long long)b, mode);
-      return 0;
+      n_err_++;
+      fail("bad match mode " + std::to_string(mode));
+      return -4;
     }
     rec.resize(out.size() * 12);
     for (size_t i = 0; i < out.size(); i++) {
@@ -808,6 +846,13 @@ private:
   std::thread th_;
   std::atomic<bool> stop_{false};
   std::atomic<bool> done_{false};
+  std::atomic<bool> stuck_{false};
+  std::mutex fail_m_;
+  std::string fail_;
+  void fail(const std::string &w) {  // 0.6.31: first server failure of the run (the app marks the run INVALID)
+    std::lock_guard<std::mutex> l(fail_m_);
+    if (fail_.empty()) fail_ = w + " at t_wall_ms " + std::to_string(static_cast<long long>(wall_ms()));
+  }
   std::mutex st_m_;
   std::condition_variable st_cv_;
   int st_state_ = 0;  // start handshake: 0 starting, 1 ok, 2 failed

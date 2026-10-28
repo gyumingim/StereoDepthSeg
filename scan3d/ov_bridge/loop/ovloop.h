@@ -71,8 +71,9 @@ struct Cfg {
   int consist_n = 1;           // temporal consistency: earlier consistent verified loops needed (1 = ovloop rule)
   // appnpu 2026-10-28: --loop-xf unix:NAME connects to a feature / matching server that already runs (the phone app's NPU
   // server, abstract socket when NAME starts with '@') instead of starting CMD as a child. Same request protocol. In this
-  // mode a server that cannot be reached / dies / does not answer within xf_timeout_ms is NOT fatal: XFeat is off for the
-  // rest of the run and verification falls back to the box-BRIEF path (logged "xf_down"). CMD mode is unchanged.
+  // mode (0.6.31 user rule, no fallback) a server that cannot be reached at start is fatal (bridge exits like CMD mode); one
+  // that dies / does not answer within xf_timeout_ms mid-run stops loop closure for the rest of the run (no BRIEF, no new
+  // loops; logged "xf_down" with wall time -> the app marks the run INVALID). The VIO / control pose is never affected.
   int xf_timeout_ms = 3000;
   int diag_prev = 0;           // 1: also verify against the previous keyframe (log only, never a loop): pipeline self-test
   int sync = 0;                // --loop-sync 1: the VIO thread waits until each keyframe is processed (deterministic, PC eval only)
@@ -217,7 +218,7 @@ private:
   int xf_pid_ = -1;
   bool xf_ok_ = false;
   bool xf_unix_ = false;          // appnpu: --loop-xf unix:NAME (one socket fd = xf_in_ = xf_out_)
-  void xf_down(const char *why);  // appnpu: unix mode, server lost -> BRIEF fallback for the rest of the run
+  void xf_down(const char *why);  // appnpu: unix mode, server lost -> loop closure stops for the rest of the run
 
   Cfg c_;
   bool ok_ = true;

@@ -302,14 +302,9 @@ LoopCloser::LoopCloser(const Cfg &c) : c_(c), rule_(c_), s_(new State) {
       err_ = "--loop-xf CMD needs --loop-cfg xf_mode=1|2 (and xf_mode needs --loop-xf)";
       return;
     }
-    if (!xf_start(err_)) {
-      if (!xf_unix_) {
-        ok_ = false;
-        return;
-      }
-      // appnpu unix mode: not fatal, BRIEF path for the whole run
-      std::fprintf(stderr, "[ov_bridge] loop: %s -> XFeat off, box-BRIEF verification (appnpu fallback)\n", err_.c_str());
-      err_.clear();
+    if (!xf_start(err_)) {  // appnpu 0.6.31 (user rule): fatal in unix mode too - no BRIEF fallback
+      ok_ = false;
+      return;
     }
   }
   std::fprintf(stderr, "[ov_bridge] loop: vocab %s (k %d L %d, %d words, sha %s) | %s\n", c_.vocab.c_str(), voc_.k, voc_.L,
@@ -438,10 +433,12 @@ void LoopCloser::xf_down(const char *why) {
   if (!xf_ok_) return;
   xf_ok_ = false;
   std::fprintf(stderr, "[ov_bridge] loop: XFeat server lost (%s, errno %d %s)%s\n", why, e, std::strerror(e),
-               xf_unix_ ? " -> box-BRIEF verification for the rest of the run (appnpu)" : "");
+               xf_unix_ ? " -> loop closure STOPPED for the rest of the run, VIO continues, run INVALID (appnpu)" : "");
   if (xf_unix_) {
+    const double tw = std::chrono::duration<double, std::milli>(std::chrono::system_clock::now().time_since_epoch()).count();
     std::ostringstream o;
-    o << "{\"xf_down\":\"" << why << "\",\"errno\":" << e << "}\n";
+    o.precision(15);
+    o << "{\"xf_down\":\"" << why << "\",\"errno\":" << e << ",\"t_wall_ms\":" << tw << "}\n";
     log_line(o.str());
   }
 }
@@ -537,8 +534,10 @@ bool LoopCloser::xf_feat(int64_t id, const cv::Mat &img, const std::vector<cv::P
   }
   int32_t nk = 0;
   if (!wr_all(xf_in_, buf.data(), buf.size()) || !rd_all(xf_out_, &nk, 4) || nk < 0 || nk > 1000000) {
-    if (xf_unix_) {
-      xf_down("feat");
+    if (xf_unix_) {  // appnpu 0.6.31: nk < 0 = explicit server error code (-1 NPU, -2 size, ...)
+      static const char *msg[] = {"feat: no answer", "feat: server error -1 (NPU)", "feat: server error -2 (image size)",
+                                  "feat: server error -3", "feat: server error -4"};
+      xf_down(nk < 0 && nk >= -4 ? msg[-nk] : (nk < 0 ? "feat: server error" : "feat: no answer"));
       return false;
     }
     xf_ok_ = false;
@@ -567,8 +566,10 @@ bool LoopCloser::xf_match(int64_t a, int64_t b, int mode, std::vector<std::array
   std::memcpy(req + 17, &md, 4);
   int32_t n = 0;
   if (!wr_all(xf_in_, req, 21) || !rd_all(xf_out_, &n, 4) || n < 0 || n > 10000000) {
-    if (xf_unix_) {
-      xf_down("match");
+    if (xf_unix_) {  // appnpu 0.6.31: n < 0 = explicit server error code
+      static const char *msg[] = {"match: no answer", "match: server error -1 (NPU)", "match: server error -2",
+                                  "match: server error -3 (keyframe not cached / evicted)", "match: server error -4 (mode)"};
+      xf_down(n < 0 && n >= -4 ? msg[-n] : (n < 0 ? "match: server error" : "match: no answer"));
       return false;
     }
     xf_ok_ = false;
@@ -1228,7 +1229,9 @@ void LoopCloser::process(KfIn &in) {
       xf_ms_match += msm;
     }
     bool ok = false;
-    if (!c_.xf_mode || (xf_unix_ && !xf_ok_)) {  // appnpu: unix server lost -> BRIEF path (CMD mode unchanged)
+    if (xf_unix_ && !xf_ok_) {  // appnpu 0.6.31: server lost -> no verification at all (no BRIEF fallback, no new loops)
+      why = "xf_down";
+    } else if (!c_.xf_mode) {
       ok = verify_path(old, false, xmm, diag, v, why);
       if (c_.log_cand) log_cx(v, ok, why, -1);
     } else {
