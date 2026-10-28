@@ -60,3 +60,8 @@
 ## 165506_A1 / B1 (21:58–21:59) 무효 → ABBA 처음부터
 - 화면이 꺼져 있어 (T0b 뒤 화면 꺼짐, 보안 잠금) 액티비티가 1.2 s 만에 onPause → stop_reason "user", 레코드 0. B2 는 기다리는 중 멈춤.
 - rep_run.sh: am start 전에 `input keyevent KEYCODE_WAKEUP` (화면만 켬, 소리 없음). 무효 폴더는 `phone_invalid/`.
+
+## 두 번째 시도도 무효 (22:00–22:02) → 0.6.35d (vc 44, apk sha f76e68e8…)
+- 화면을 켜도 보안 잠금 화면 위에서는 액티비티가 resume → pause(sleep) → resume (잠금 화면 가림) 순서를 거쳐, 처음 pause 에서 run 이 멈춤 (logcat wm_pause_activity …sleep).
+- 0.6.35d: replay run 은 finish 가 아닌 onPause 를 무시 (카메라를 안 쓰므로 안전), 끝 = 스트림 끝 / finish / onDestroy. 0.6.35c 의 prep_fast 포함 (기본 꺼짐).
+- T0d_smoke (22:07, 잠금 화면 위, npu 1): 유효, 지도 ATE 1.84 cm, VIO ATE 2.092 cm, 루프 8/8 — T0b 와 같은 값. **ABBA 는 0.6.35d 로 처음부터.**

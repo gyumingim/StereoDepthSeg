@@ -86,6 +86,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (ov != null) { ov.stop(); ov = null; }   // 0.6.35d: a replay kept through onPause
         if (streamer != null) streamer.close();
         super.onDestroy();
     }
@@ -451,7 +452,9 @@ public class MainActivity extends Activity {
     protected void onPause() {
         running = false;
         if (cam2 != null) { cam2.stop(); cam2 = null; }
-        if (ov != null) { ov.stop(); ov = null; if (cue != null) cue.finished(); }
+        if (ov != null && !ov.replayPath.isEmpty() && !isFinishing()) {   // 0.6.35d: replay ignores a transient pause
+            android.util.Log.i("arlat", "replay: onPause while not finishing -> keep running");
+        } else if (ov != null) { ov.stop(); ov = null; if (cue != null) cue.finished(); }
         if (imuTx != null) { imuTx.stop(); imuTx = null; }   // 0.6.20 mode imu_tx
         if (sustainedOn) { try { getWindow().setSustainedPerformanceMode(false); } catch (Throwable ignored) { } sustainedOn = false; }
         if (hs != null) { hs.stop(); hs = null; }

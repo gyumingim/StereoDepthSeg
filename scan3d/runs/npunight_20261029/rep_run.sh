@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# npunight 2026-10-29: one camera-free in-app replay run (arlat 0.6.35b vc 42, intent replay), README pre-registered rules.
+# npunight 2026-10-29: one camera-free in-app replay run (arlat 0.6.35d vc 44, intent replay), README pre-registered rules.
 #   bash rep_run.sh <tag> <rec> <npu 0|1> [extra am args ...]     e.g. bash rep_run.sh 165506_A1 165506 1
 # Start gate: SKIN < 38 and AP < 40 (checked every 10 s, wait at most 15 min, else SKIPPED). Stop: SKIN >= 45 / AP >= 60 /
 # battery < 15 % while not charging (own 5 s monitor -> force-stop). The app ends by itself 3 s after the stream end
@@ -20,7 +20,7 @@ unlock() { [ -f "$LOCK/owner.txt" ] && mv "$LOCK/owner.txt" "$D/lock_owner_relea
 trap unlock EXIT
 $A connect "$S" > /dev/null 2>&1
 vc=$($A -s "$S" shell "dumpsys package com.scan3d.arlat | grep -m1 versionCode" | tr -d '\r')
-echo "$vc" | grep -q "versionCode=42" || { echo "phone app is not 0.6.35b (vc 42): $vc"; exit 2; }
+echo "$vc" | grep -q "versionCode=44" || { echo "phone app is not 0.6.35d (vc 44): $vc"; exit 2; }
 temps() {
   local o; o=$($A -s "$S" shell "dumpsys thermalservice | sed -n '/Current temperatures from HAL/,/^[^ \t]/p'; dumpsys battery | grep -E '^  level|AC powered|USB powered'" 2>/dev/null | tr -d '\r')
   sk=$(echo "$o" | grep -oE "mValue=[0-9.]+, mType=3, mName=SKIN" | grep -oE "[0-9.]+" | head -1)
@@ -50,7 +50,7 @@ EX+=("$@")
 T0=$(date "+%F %T")
 $A -s "$S" shell am force-stop com.scan3d.arlat
 before=$($A -s "$S" shell "ls /sdcard/Android/data/com.scan3d.arlat/files/ov | grep ^run_ | tail -1" | tr -d '\r')
-$A -s "$S" shell input keyevent KEYCODE_WAKEUP; sleep 1   # screen off -> the activity is paused at once (165506_A1/B1 10-28 21:58)
+$A -s "$S" shell input keyevent KEYCODE_WAKEUP; sleep 3   # screen off -> the activity is paused at once (165506_A1/B1 10-28 21:58)
 $A -s "$S" shell am start -n com.scan3d.arlat/.MainActivity --es mode ov --es ov_cam main --es ov_cfg c4f60 --ei secs 150 "${EX[@]}" > "$D/am_start.txt" 2>&1
 sleep 3
 for i in $(seq 1 60); do   # up to 5 min: until the new run folder has meta.json (written last) or the app is gone
@@ -73,7 +73,7 @@ else echo "NO NEW RUN FOLDER"; fi
 python3 - "$D/rep_meta.json" "$TAG" "$REC" "$NPU" "$T0" "$run" "$cam" "${br:-}" "$*" <<'PY'
 import json, sys, time
 o, tag, rec, npu, t0, run, cam, br, extra = sys.argv[1:10]
-json.dump(dict(made=time.strftime("%F %T"), tag=tag, rec=rec, npu_loop=int(npu), started=t0, run=run or None, app="0.6.35b vc 42",
+json.dump(dict(made=time.strftime("%F %T"), tag=tag, rec=rec, npu_loop=int(npu), started=t0, run=run or None, app="0.6.35d vc 44",
                extras="--es mode ov --es ov_cam main --es ov_cfg c4f60 --ei secs 150 --es profile rec60 --ei loop 1 --es replay replay/%s.bin%s %s"
                % (rec, " --ei npu_loop 1" if npu == "1" else "", extra), camera_after=cam, bridge_after=br or None), open(o, "w"), indent=1)
 PY
