@@ -233,13 +233,20 @@ static bool link_fresh(const fs_t *fs) { return fs->link_seen && elapsed(fs->now
 
 void fs_on_pose(fs_t *fs, uint32_t now_ms, const fs_pose_info_t *p) {
   fs->now_ms = now_ms;
+  bool seq_back = false;
   if (fs->pose_seq_seen) {
     int16_t d = (int16_t)(uint16_t)(p->seq - fs->pose_seq);
     if (d == 0 || (d < 0 && fs->state != FS_DISARMED)) return; /* repeated / old frame: never refreshes the pose timer */
+    seq_back = d < 0; /* DISARMED only: the sender restarted (ov_bridge seq starts at 0 again) */
   }
   fs->pose_seq = p->seq;
   fs->pose_seq_seen = true;
-  bool new_w = (fs->rc_seen && p->reset_counter != fs->pose_reset_counter) || (p->flags & PF_RESET);
+  /* usbrelay 10-29: the phone repeats VIOP_F_RESET on the first VIOP_RESET_REPEAT poses of a new W -> only the FIRST
+   * pose of such a run is a new W (rising edge, or a sender restart = pose seq went back). Before, every flagged pose
+   * was a new W: a latch set inside the run was wiped by the next pose and the lost check restarted on every pose. */
+  bool reset_edge = (p->flags & PF_RESET) && (!fs->pose_reset_prev || seq_back);
+  fs->pose_reset_prev = (p->flags & PF_RESET) != 0;
+  bool new_w = (fs->rc_seen && p->reset_counter != fs->pose_reset_counter) || reset_edge;
   if (fs->rc_seen && p->reset_counter != fs->pose_reset_counter && is_armed(fs->state)) fs->pose_reset_flag = true;
   fs->pose_reset_counter = p->reset_counter;
   fs->rc_seen = true;

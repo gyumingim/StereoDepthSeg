@@ -187,7 +187,8 @@ typedef struct {
    * pre-arm phase: hand carry, set down). Poses in ARMED_IDLE / FLYING / EMERG_LAND / KILLED never set it (fast flight,
    * touchdown or impact spikes, kill) -> after landing + DISARM (or CLEAR_KILL) it accumulates again from then on.
    * RELEASE only by a FULL VIO re-init: a new W (pose reset_counter differs from the previous pose, or VIOP_F_RESET, which
-   * the phone repeats on the first VIOP_RESET_REPEAT poses) WITHOUT VIOP_F_SEEDED (state injection, ov_bridge
+   * the phone repeats on the first VIOP_RESET_REPEAT poses; only the first pose of such a run counts, usbrelay 10-29)
+   * WITHOUT VIOP_F_SEEDED (state injection, ov_bridge
    * --reinit-state / --recover, carries the old state over -> does NOT release); and fs_init. Blocks only ARM (not
    * CLEAR_KILL). A user re-init: FS_CMD_VIO_RESET (PC VIOP_CMD_VIO_RESET) -> phone VIOP_T_VIO_RESET_REQ.
    * 2.0 m/s = pre-registered rule from normal hand-carry runs only (max 1.224 m/s, walking); unverified on new data. */
@@ -312,6 +313,7 @@ typedef struct {
   uint8_t vio_hist_why;          /* 1 = speed, 2 = lost (informative) */
   uint32_t t_vio_hist_ms;        /* when it latched (first time in this session) */
   bool vio_trk_seen;             /* a VALID+TRACKING pose was seen in this VIO session (W) */
+  bool pose_reset_prev;          /* usbrelay 10-29: the last accepted pose had VIOP_F_RESET (edge detection) */
   uint32_t vio_reset_reqs;       /* accepted FS_CMD_VIO_RESET commands (informative) */
   /* phone heartbeat */
   bool hb_seen, hb_lost_flag, hb_seq_stalled, phone_disconnected;

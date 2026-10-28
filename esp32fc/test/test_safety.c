@@ -1630,6 +1630,64 @@ static void t_arm_hist(void) {
   a.flags = 0;
   CHECK(!a.fs.vio_hist_bad);
 
+  g_test = "arm_hist_reset_run_once";
+  /* usbrelay 10-29: VIOP_F_RESET repeated on the first VIOP_RESET_REPEAT poses releases ONCE (first pose of the run);
+   * a speed spike or a lost pose INSIDE the run latches and stays latched */
+  ah_init(&a, &c);
+  ah_run(&a, 500);
+  a.speed = 3.0f;
+  ah_run(&a, 10);
+  a.speed = 0.0f;
+  CHECK(a.fs.vio_hist_bad);
+  a.rc = 1; /* full re-init: new counter + F_RESET run */
+  a.flags = VIOP_F_VALID | VIOP_F_TRACKING | VIOP_F_RESET;
+  ah_run(&a, 10);
+  CHECK(!a.fs.vio_hist_bad);
+  ah_run(&a, 100); /* pose 11 of the run */
+  a.speed = 2.5f;  /* spike inside the run */
+  ah_run(&a, 10);
+  a.speed = 0.0f;
+  CHECK(a.fs.vio_hist_bad);
+  ah_run(&a, 280); /* rest of the 50-pose run, still flagged: must NOT release */
+  CHECK(a.fs.vio_hist_bad);
+  a.flags = 0;
+  ah_run(&a, 2000);
+  CHECK(a.fs.vio_hist_bad && !ah_probe(&a, &b) && b == FS_B_VIO_HIST);
+  /* lost inside a run: tracking seen on the first poses, then lost -> latched, not wiped by the next flagged pose */
+  a.rc = 2;
+  a.flags = VIOP_F_VALID | VIOP_F_TRACKING | VIOP_F_RESET;
+  ah_run(&a, 50);
+  CHECK(!a.fs.vio_hist_bad);
+  a.flags = VIOP_F_VALID | VIOP_F_RESET; /* lost, still in the run */
+  ah_run(&a, 10);
+  a.flags = VIOP_F_VALID | VIOP_F_TRACKING | VIOP_F_RESET;
+  ah_run(&a, 100);
+  CHECK(a.fs.vio_hist_bad && a.fs.vio_hist_why == 2u);
+  /* a new run after a gap (rising edge, same counter) releases again */
+  a.flags = 0;
+  ah_run(&a, 100);
+  a.flags = VIOP_F_VALID | VIOP_F_TRACKING | VIOP_F_RESET;
+  ah_run(&a, 10);
+  CHECK(!a.fs.vio_hist_bad);
+  /* sender restart inside a run (pose seq goes back, same counter 2, still flagged): new W -> releases */
+  a.speed = 2.5f;
+  ah_run(&a, 10);
+  a.speed = 0.0f;
+  CHECK(a.fs.vio_hist_bad);
+  a.pseq = 0;
+  ah_run(&a, 10);
+  CHECK(!a.fs.vio_hist_bad);
+  /* SEEDED run: the edge does not release, later flagged poses do not either */
+  a.speed = 2.5f;
+  ah_run(&a, 10);
+  a.speed = 0.0f;
+  a.flags = 0;
+  ah_run(&a, 10);
+  a.rc = 3;
+  a.flags = VIOP_F_VALID | VIOP_F_TRACKING | VIOP_F_RESET | VIOP_F_SEEDED;
+  ah_run(&a, 500);
+  CHECK(a.fs.vio_hist_bad);
+
   g_test = "arm_hist_vio_reset_cmd";
   /* FS_CMD_VIO_RESET: accepted only DISARMED / KILLED -> FS_EV_VIO_RESET_REQ (the link task forwards it to the phone) */
   ah_init(&a, &c);
