@@ -363,3 +363,17 @@ SKIN 약 5 °C 높음 -> 시간 비교 시 "따뜻한 폰"). 사용자 지시 06
 - 추정 3.5 ms 는 실제 3.0~3.3 ms 였다. 폰 실측(앱 안, 따뜻한 폰)은 원격보다 0.2~0.3 ms 느렸던 적이 있어 폰 값은 나중에 잴 것.
 - 960 키프레임 실비용 추정: NPU 약 3.0 ms (1ch) + C++ 공식 후처리 (PC 5.8~6.0 ms, 폰 더 느림 추정) -> 후처리가 더 크다 -> softmax 를 모델 안으로 옮긴 960 판이 다음.
 - 1 회 세션·한 시간대 (10:27~10:43), 원격 기기 상태(온도·클럭)는 모름.
+
+## 11차 사전 기준 (npuopt 10-28 저녁, 측정 전 작성, 시각 = 이 단락을 넣은 커밋). 폰 없음 - PC + Exynos Lab/웹 프로파일러만
+### XFeat 960x544 softmax 모델 안 (xpsoft 방식 960 판: x960psmc 3ch / x960p1mc 1ch)
+- 그래프 = `npu_upload/xf960/xf960_{3,1}ch_noadd_op13_cat1out.onnx` 뒤에 640 xpsoft 와 같은 노드(Slice, Softmax axis 1, Sigmoid, Concat)만 붙임.
+  단일 입력 / 단일 출력 1x129x68x120 = feats 0-63 | softmax 확률 64-127 (dustbin 버림) | sigmoid(heat) 128. Lab fp16 multicore Gen-6, random db.
+- 정확성 (PC, 사전 규칙): 입력 = 라이브 경로 13 평가 프레임 (gray -> c4f60 remap -> 960x540, 아래 4줄 복제 -> 544, `tmp_npu/xf960/in960_norm.npy`).
+  기준 = 공식 XFeatModel(torch) 원출력 + 공식 torch 후처리 (top-1024, y >= 540 버림). 비교 = 새 ONNX fp32(ORT) 출력 + C++ post_soft (softmax 생략 판).
+  합격: 키포인트 겹침(1 px) 중앙 >= 99 % 그리고 상호 기술자 cos 중앙 >= 0.999 (최소값도 적음). 3ch·1ch 각각.
+  참고 (판정 아님): Lab fp16 골든(랜덤 입력 1장) vs PC fp32, 같은 C++ post_soft -> 겹침 >= 99 % 기대.
+- 시간 (원격): 웹 NNC Profiler Exynos 2400, Duration 5 s, 같은 세션에서 판마다 >= 2 회, 비교용 x960fpmc 도 같은 세션에서 >= 2 회.
+  올리는 것 = 우리 nnc 와 그 Lab 골든 입·출력 bin (랜덤) 만. 로그인 안 돼 있으면 시간은 못 잰다고 적고 멈춤.
+- CPU 후처리 (PC x86 1 스레드, 13 장 x 20, 3 회, 로그 저장): post_off 960 (기존) vs post_soft 960 (새). p50 과 단계(soft/nms/topk/desc).
+- 폰 비용은 전부 **추정**: 폰 후처리 = PC 시간 x 1.33 (9차 폰 post_v2 2.8 ms / PC 2.1 ms), 키프레임 = 원격 NPU + 0.25 ms (5차 폰-원격 차) + 폰 후처리 추정.
+- 판단: 정확성 합격이고 (원격 NPU + PC 후처리) 합이 x960fpmc(+post_off) 보다 작으면 "다음 폰 측정 후보". 아니면 "이득 없음". 폰에서 재기 전 값은 미검증.
