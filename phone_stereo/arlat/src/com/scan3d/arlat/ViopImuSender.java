@@ -33,6 +33,11 @@ import java.util.Arrays;
  * an attached device, permission asked once; bulkTransfer timeout 2 ms, failures counted, never blocks longer).
  * USB PATH IS UNTESTED (no ESP32 attached during integration). Log: <dir>/viop_imu.json (counts, write time, sample ->
  * write-done latency p50/p95/max, sent-sample gaps) + viop_imu.csv (t_sample_ns, t_written_ns, ok) ring 2^19.
+ * usbrelay 10-29 (0.6.38): target usb goes through a ViopRelayCore (UsbLink), the single owner of the USB OUT writes,
+ * shared with the ov_bridge POSE / HEARTBEAT relay (OvRunner viop_udp usb). Fast path: if no transfer is in flight the
+ * frame is written right here as before; else it is queued (IMU before any POSE) and send() returns at once. So
+ * "t_written" / lat_* = written (fast path) or QUEUED (ok = queued); the link summary (usb_link / viop_usb.json) has the
+ * per-frame queued -> written latency (imu_q_ms_*) and imu_direct. UDP target unchanged.
  */
 public class ViopImuSender implements SensorEventListener {
     static final int T_IMU = 0x06, SRC_PHONE = 1, VERSION = 2, IMUF_UNCAL = 0x02;
@@ -47,7 +52,8 @@ public class ViopImuSender implements SensorEventListener {
     private SensorManager sm;
     private DatagramSocket sock;
     private DatagramPacket pkt;
-    private UsbSink usb;
+    private UsbLink link;            // usbrelay: target usb -> shared link (OvRunner) or own link (mode imu_tx)
+    private boolean ownLink;
     private final byte[] frame = new byte[36];
     private int frameSeq, sampleSeq;
     // newest accel + held gyro (sensor thread only)
@@ -62,11 +68,15 @@ public class ViopImuSender implements SensorEventListener {
     private long nRing;
     String error = "";
 
-    ViopImuSender(Context ctx, String target, boolean uncal, File dir) {
+    ViopImuSender(Context ctx, String target, boolean uncal, File dir) { this(ctx, target, uncal, dir, null); }
+
+    /** shared = the USB link owned by the caller (OvRunner with viop_udp usb); null = open an own link for target usb. */
+    ViopImuSender(Context ctx, String target, boolean uncal, File dir, UsbLink shared) {
         this.ctx = ctx;
         this.target = target;
         this.uncal = uncal;
         this.dir = dir;
+        this.link = shared;
     }
 
     /** throws on a bad target; the USB permission dialog may appear (the sink then stays closed until granted). */
@@ -80,8 +90,7 @@ public class ViopImuSender implements SensorEventListener {
             sock = new DatagramSocket();
             pkt = new DatagramPacket(frame, frame.length, a, port);
         } else if (target.equals("usb")) {
-            usb = new UsbSink(ctx);
-            usb.open();
+            if (link == null) { link = UsbLink.open(ctx, false); ownLink = true; }
         } else throw new IllegalArgumentException("viop_imu must be udp:HOST:PORT or usb, got " + target);
         th = new HandlerThread("viop_imu", android.os.Process.THREAD_PRIORITY_URGENT_DISPLAY);
         th.start();
@@ -126,7 +135,7 @@ public class ViopImuSender implements SensorEventListener {
         boolean ok;
         try {
             if (sock != null) { sock.send(pkt); ok = true; }
-            else ok = usb.write(frame);
+            else ok = link.core.offerImu(frame, frame.length);   // usbrelay: direct if the port is free, else queued
         } catch (Exception ex) { ok = false; if (error.isEmpty()) error = ex.toString(); }
         long t1 = SystemClock.elapsedRealtimeNanos();
         if (ok) nSent++; else nFail++;
@@ -167,7 +176,8 @@ public class ViopImuSender implements SensorEventListener {
         if (sm != null) sm.unregisterListener(this);
         if (th != null) { th.quitSafely(); try { th.join(500); } catch (InterruptedException ignored) { } }
         if (sock != null) sock.close();
-        if (usb != null) usb.close();
+        JSONObject linkRes = null;
+        if (link != null && ownLink) linkRes = link.stop();
         JSONObject j = new JSONObject();
         try {
             int n = (int) Math.min(nRing, RING);
@@ -193,7 +203,9 @@ public class ViopImuSender implements SensorEventListener {
                     .put("max_write_ms", maxWriteNs / 1e6).put("lat_ms_p50", q(lat, 0.5) / 1e6).put("lat_ms_p95", q(lat, 0.95) / 1e6)
                     .put("lat_ms_max", n > 0 ? lat[n - 1] / 1e6 : -1).put("gap_ms_p50", q(gap, 0.5) / 1e6)
                     .put("gap_ms_p95", q(gap, 0.95) / 1e6).put("gap_ms_max", gap.length > 0 ? gap[gap.length - 1] / 1e6 : -1)
-                    .put("gaps_over_10ms", g10).put("error", error).put("usb", usb != null ? usb.info : "");
+                    .put("gaps_over_10ms", g10).put("error", error).put("usb", link != null ? link.usb.info : "")
+                    .put("usb_queued", target.equals("usb") ? 1 : 0);
+            if (linkRes != null) j.put("usb_link", linkRes);
             FileWriter fw = new FileWriter(new File(dir, "viop_imu.json"));
             fw.write(j.toString(1));
             fw.close();
@@ -203,13 +215,38 @@ public class ViopImuSender implements SensorEventListener {
 
     static double q(long[] s, double f) { return s.length == 0 ? -1 : s[Math.min(s.length - 1, (int) (f * s.length))]; }
 
-    /** USB CDC sink (UNTESTED: no device during integration). First attached device with a CDC data interface (class 0x0A)
-     *  and a bulk OUT endpoint; DTR set on the control interface (ESP32 TinyUSB CDC needs it to accept data). */
-    static class UsbSink {
+    /** usbrelay 10-29: the USB endpoint pair + its ViopRelayCore (the single owner of the USB OUT writes and IN reads). */
+    static class UsbLink {
+        final UsbSink usb;
+        final ViopRelayCore core;
+        private UsbLink(UsbSink u, ViopRelayCore c) { usb = u; core = c; }
+        /** opens the first CDC device (asks permission if needed: then no port this run, as before) and starts the link.
+         *  udpRelay = also open the ov_bridge relay socket (127.0.0.1:core.udpPort()). Never throws for "no device". */
+        static UsbLink open(Context ctx, boolean udpRelay) throws Exception {
+            UsbSink u = new UsbSink(ctx);
+            u.open();
+            ViopRelayCore c = new ViopRelayCore(u.conn != null ? u : null,
+                    () -> android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_DISPLAY));
+            c.start(udpRelay);
+            return new UsbLink(u, c);
+        }
+        JSONObject stop() {
+            JSONObject j = core.stop();
+            usb.close();
+            try { j.put("usb", usb.info); } catch (Exception ignored) { }
+            return j;
+        }
+    }
+
+    /** USB CDC endpoint pair (UNTESTED on hardware). First attached device with a CDC data interface (class 0x0A) and a
+     *  bulk OUT endpoint (+ its bulk IN endpoint, usbrelay); DTR set on the control interface (ESP32 TinyUSB CDC needs it to
+     *  accept data); on close DTR is cleared first (the FC link_task.c reads DTR 1 -> 0 as "phone app closed the port"). */
+    static class UsbSink implements ViopRelayCore.Port {
         final Context ctx;
         android.hardware.usb.UsbDeviceConnection conn;
-        android.hardware.usb.UsbEndpoint out;
+        android.hardware.usb.UsbEndpoint out, in;
         android.hardware.usb.UsbInterface dataIf;
+        int ctrlIf;
         String info = "";
         UsbSink(Context c) { ctx = c; }
         void open() {
@@ -218,33 +255,52 @@ public class ViopImuSender implements SensorEventListener {
                 for (int i = 0; i < d.getInterfaceCount(); i++) {
                     android.hardware.usb.UsbInterface itf = d.getInterface(i);
                     if (itf.getInterfaceClass() != 0x0A) continue;
+                    android.hardware.usb.UsbEndpoint o = null, n = null;
                     for (int e = 0; e < itf.getEndpointCount(); e++) {
                         android.hardware.usb.UsbEndpoint ep = itf.getEndpoint(e);
-                        if (ep.getType() == android.hardware.usb.UsbConstants.USB_ENDPOINT_XFER_BULK
-                                && ep.getDirection() == android.hardware.usb.UsbConstants.USB_DIR_OUT) {
-                            info = String.format(java.util.Locale.US, "%04x:%04x %s", d.getVendorId(), d.getProductId(), d.getDeviceName());
-                            if (!um.hasPermission(d)) {
-                                info += " (no permission: asked, start again after allowing)";
-                                um.requestPermission(d, android.app.PendingIntent.getBroadcast(ctx, 0,
-                                        new android.content.Intent("com.scan3d.arlat.USB_PERMISSION"),
-                                        android.app.PendingIntent.FLAG_IMMUTABLE));
-                                return;
-                            }
-                            conn = um.openDevice(d);
-                            if (conn == null) { info += " (open failed)"; return; }
-                            conn.claimInterface(itf, true);
-                            dataIf = itf;
-                            out = ep;
-                            // SET_CONTROL_LINE_STATE DTR|RTS on interface i - 1 (the CDC control interface precedes data)
-                            conn.controlTransfer(0x21, 0x22, 0x03, Math.max(0, i - 1), null, 0, 100);
-                            return;
-                        }
+                        if (ep.getType() != android.hardware.usb.UsbConstants.USB_ENDPOINT_XFER_BULK) continue;
+                        if (ep.getDirection() == android.hardware.usb.UsbConstants.USB_DIR_OUT) { if (o == null) o = ep; }
+                        else if (n == null) n = ep;
                     }
+                    if (o == null) continue;
+                    info = String.format(java.util.Locale.US, "%04x:%04x %s%s", d.getVendorId(), d.getProductId(), d.getDeviceName(),
+                            n == null ? " (no bulk IN)" : "");
+                    if (!um.hasPermission(d)) {
+                        info += " (no permission: asked, start again after allowing)";
+                        um.requestPermission(d, android.app.PendingIntent.getBroadcast(ctx, 0,
+                                new android.content.Intent("com.scan3d.arlat.USB_PERMISSION"),
+                                android.app.PendingIntent.FLAG_IMMUTABLE));
+                        return;
+                    }
+                    conn = um.openDevice(d);
+                    if (conn == null) { info += " (open failed)"; return; }
+                    conn.claimInterface(itf, true);
+                    dataIf = itf;
+                    out = o;
+                    in = n;
+                    // SET_CONTROL_LINE_STATE DTR|RTS on interface i - 1 (the CDC control interface precedes data)
+                    ctrlIf = Math.max(0, i - 1);
+                    conn.controlTransfer(0x21, 0x22, 0x03, ctrlIf, null, 0, 100);
+                    return;
                 }
             }
             info = "no CDC device";
         }
-        boolean write(byte[] f) { return conn != null && conn.bulkTransfer(out, f, f.length, 2) == f.length; }
-        void close() { if (conn != null) { conn.releaseInterface(dataIf); conn.close(); conn = null; } }
+        @Override public int write(byte[] b, int n, int timeoutMs) {
+            android.hardware.usb.UsbDeviceConnection c = conn;
+            return c == null ? -1 : c.bulkTransfer(out, b, n, timeoutMs);
+        }
+        @Override public int read(byte[] b, int timeoutMs) {
+            android.hardware.usb.UsbDeviceConnection c = conn;
+            if (c == null || in == null) { try { Thread.sleep(timeoutMs); } catch (InterruptedException ignored) { } return -1; }
+            return c.bulkTransfer(in, b, b.length, timeoutMs);
+        }
+        void close() {
+            if (conn == null) return;
+            try { conn.controlTransfer(0x21, 0x22, 0x00, ctrlIf, null, 0, 100); } catch (Exception ignored) { }   // DTR 0
+            conn.releaseInterface(dataIf);
+            conn.close();
+            conn = null;
+        }
     }
 }

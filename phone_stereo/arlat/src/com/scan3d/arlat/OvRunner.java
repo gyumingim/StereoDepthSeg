@@ -134,11 +134,18 @@ import java.util.concurrent.LinkedBlockingQueue;
  * meta.json "profile" / "viop_udp" / "viop_hb_hz" / "viop_imu".
  * esp32fix-20261026 (default off = unchanged command line): intent viop_hb_src 1 -> ov_bridge --viop-hb-src 1 (VIOP
  * heartbeat from a steady 20 Hz thread instead of the main loop); meta.json "viop_hb_src".
+ * usbrelay-20261029 (0.6.38, default off = unchanged command line): intent viop_udp usb -> the app relays ov_bridge VIOP
+ * to the FC over USB CDC: ov_bridge gets --viop-udp 127.0.0.1:<relay port> (ViopRelayCore socket), every valid frame
+ * (POSE / HEARTBEAT / ...) goes out on USB bulk OUT; USB bulk IN is parsed and VIOP_T_VIO_RESET_REQ (0x23) is passed to
+ * the bridge socket (its full re-init path). With viop_imu usb as well, the IMU frames share the same link (one writer
+ * thread, IMU first). No USB device -> the relay drains and drops (counted), VIO unchanged. Link stopped after the
+ * bridge exited (its 3 STOPPING heartbeats still go out) -> <run>/viop_usb.json + meta "viop_usb_result".
+ * USB PATH IS UNTESTED ON HARDWARE (PC fake-endpoint test only: scan3d/runs/usbrelay_20261029).
  */
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261029-appfix-0.6.37c";
+    static final String VERSION = "ov-20261029-usbrelay-0.6.38";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";
@@ -267,6 +274,7 @@ class OvRunner implements SensorEventListener {
     String viopImu = "";                        // 0.6.20 intent viop_imu udp:HOST:PORT | usb -> ViopImuSender
     boolean viopImuUncal = false;               // 0.6.20 intent viop_imu_uncal 1
     private ViopImuSender imuTx;
+    private ViopImuSender.UsbLink usbLink;      // usbrelay 0.6.38: viop_udp usb (shared with viop_imu usb)
     private BufferedWriter predW;               // poses_pred.csv (predict > 0)
     private long nPred;
     private long lastPoseTns = -1, lastPoseSensor = -1, lastPoseArrive = -1;   // frame of the latest pose line (reader)
@@ -484,10 +492,16 @@ class OvRunner implements SensorEventListener {
                     "--mav-log", new File(runDir, "mav_log.csv").getAbsolutePath());
         }
         if (!viopUdp.isEmpty()) {                                                                                      // 0.6.20
-            if (!viopUdp.matches("[0-9.]+:[0-9]+")) throw new IllegalArgumentException("bad viop_udp " + viopUdp);
+            boolean viaUsb = viopUdp.equals("usb");                                                                    // usbrelay
+            if (!viaUsb && !viopUdp.matches("[0-9.]+:[0-9]+")) throw new IllegalArgumentException("bad viop_udp " + viopUdp);
             if (!mavUdp.isEmpty()) throw new IllegalArgumentException("viop_udp and mav_udp: pick one");
             if (predict < 1) throw new IllegalArgumentException("viop_udp needs predict 1 or 2");
-            Collections.addAll(cmd, "--viop-udp", viopUdp, "--viop-hb-hz", Integer.toString(viopHbHz),
+            String viopDst = viopUdp;
+            if (viaUsb) {   // usbrelay: bridge -> 127.0.0.1 relay socket -> USB; stopped in stopNow() after the bridge
+                if (usbLink == null) usbLink = ViopImuSender.UsbLink.open(ctx, true);
+                viopDst = "127.0.0.1:" + usbLink.core.udpPort();
+            }
+            Collections.addAll(cmd, "--viop-udp", viopDst, "--viop-hb-hz", Integer.toString(viopHbHz),
                     "--viop-log", new File(runDir, "viop_log.csv").getAbsolutePath());
             if (viopHbSrc != 0) Collections.addAll(cmd, "--viop-hb-src", "1");                                         // esp32fix
         }
@@ -623,7 +637,7 @@ class OvRunner implements SensorEventListener {
                     .put("npu_lg_pad", npu.lgPad).put("npu_topk", npu.topk).put("npu_cpus", npu.usedCpus).put("npu_nice", npu.nice)
                     .put("npu_perf", npu.perf).put("npu_cache_mb", npu.cacheMb).put("npu_cfg", npu.bridgeCfg());
         if (!viopImu.isEmpty()) {   // 0.6.20: own sensor thread, independent of the VIO feed (class doc)
-            imuTx = new ViopImuSender(ctx, viopImu, viopImuUncal, runDir);
+            imuTx = new ViopImuSender(ctx, viopImu, viopImuUncal, runDir, "usb".equals(viopImu) ? usbLink : null);   // usbrelay: shared link
             imuTx.start();
         }
 
@@ -1049,9 +1063,10 @@ class OvRunner implements SensorEventListener {
                 java.nio.file.Files.write(new File(runDir, "meta.json").toPath(), meta.toString(1).getBytes(StandardCharsets.UTF_8));
             } catch (Exception e) { android.util.Log.e("arlat", "npu cancel meta", e); }
             android.util.Log.e("arlat", "ov stopped while the NPU was starting -> run not started (" + runDir + ")");
+            closeUsbLinkEarly();   // usbrelay
             return;
         }
-        if (!running && proc == null) return;
+        if (!running && proc == null) { closeUsbLinkEarly(); return; }   // usbrelay: prepare() opened it, launch failed
         if (npu != null) {
             // 0.6.37c: npu_loop 1 -> the whole stop (bridge wait up to 5 s, NPU server stop, run_valid, meta.json last) on
             // thread "ov-stop"; the caller (onPause, UI thread) returns at once. Scripts wait for meta.json as before.
@@ -1065,6 +1080,13 @@ class OvRunner implements SensorEventListener {
     }
 
     private boolean stopThreadStarted;   // 0.6.37c, under npuLock
+
+    /** usbrelay: a run that never launched (start failure / cancelled NPU start) still releases the USB link. */
+    private void closeUsbLinkEarly() {
+        if (usbLink == null) return;
+        try { usbLink.stop(); } catch (Exception ignored) { }
+        usbLink = null;
+    }
 
     private void stopNow() {
         running = false;
@@ -1090,6 +1112,14 @@ class OvRunner implements SensorEventListener {
             try { meta.put("bridge_exit", proc.isAlive() || (killedByStop && npu != null) ? "killed" : String.valueOf(proc.exitValue())); } catch (Exception ignored) { }
             if (npu != null) try { meta.put("bridge_killed_by_stop", killedByStop).put("bridge_grace_ms", graceMs); } catch (Exception ignored) { }
             proc = null;
+        }
+        if (usbLink != null) {   // usbrelay 0.6.38: after the bridge exited (its STOPPING heartbeats went through the relay)
+            try {
+                JSONObject u = usbLink.stop();
+                meta.put("viop_usb_result", u);
+                if (runDir != null) java.nio.file.Files.write(new File(runDir, "viop_usb.json").toPath(), u.toString(1).getBytes(StandardCharsets.UTF_8));
+            } catch (Exception e) { android.util.Log.e("arlat", "viop usb", e); }
+            usbLink = null;
         }
         if (npu != null) {   // 0.6.30 appnpu: after the bridge is gone (its loop thread sent 'Q' or the socket closed)
             String srvErr = npu.stop();   // 0.6.31: server-side failure (ENN exec error / stuck worker), "" = none

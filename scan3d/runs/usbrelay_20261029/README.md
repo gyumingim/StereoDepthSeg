@@ -20,3 +20,84 @@ POSE / HEARTBEAT (UDP) 를 USB 로 FC 에 보내는 길도, FC -> 폰 (USB IN, �
 4. APK 0.6.38 빌드 (설치 안 함) + SHA256SUMS, 이 README 에 시험한 것 (PC 만) / 보드+폰 시험 필요한 것 / 벤치 시험 순서.
 
 규칙: gyro_klt=5 프로필 기본값 유지, NPU 의 BRIEF 대체 없음, 측정 안 한 것은 추정.
+
+## 1. 한 일 (2026-10-29, PC 만 — 폰·보드·adb 안 씀)
+| 항목 | 결과 |
+|---|---|
+| fcarm d1b5779 cherry-pick (SEEDED / F_RESET x50 / 0x23) | 충돌 0 → appfix 60a7652 |
+| ov_bridge Android 빌드 | rc 0, 경고 0, stripped sha `3a012a39…` |
+| 빌드 재현 확인 | 같은 소스·같은 경로 (appnpu) 다시 빌드 = 0.6.36 다리 `2ed40e6b` 와 **build-id 20 바이트만 다름** (코드 동일) → 플래그 같음 |
+| Java USB 중계 (ViopRelayCore + ViopImuSender.UsbLink + OvRunner) | 아래 2절 |
+| PC 시험 `test/run_test.sh 10` | **ALL PASS 62 / 0**, FC 파서 (esp32fc viop_stream) 로 OUT 바이트 다시 검사 **ALL OK** |
+| FC: F_RESET 반복 구간 래치 문제 | fcarm 1af078e: `make run` **711 / 0** (새 시험 arm_hist_reset_run_once, 옛 규칙이면 3개 실패 확인), `make syntax` fail=0, `idf.py build` (v5.5.6) **경고 0** |
+| APK 0.6.38 (vc 49) | 설치 안 함. `scratchpad/team/usbrelay/apk/arlat_0.6.38_usbrelay.apk` sha256 `0a298ac8…` (SHA256SUMS). 네이티브: libov_bridge 만 새 것, 나머지 + assets = 0.6.36 과 같음 (libarloop 는 appfix 때처럼 0.6.36 파일 그대로 넣음) |
+
+## 2. 앱 중계 동작 (0.6.38)
+- 켜기: intent `viop_udp usb` (새 값). ov_bridge 는 `--viop-udp 127.0.0.1:<중계 포트>` 로 지금처럼 UDP 로 보냄 → 앱이
+  데이터그램 하나 (= VIOP 프레임 하나, viop_check 통과한 것만) 를 USB bulk OUT 으로 바이트 그대로 보냄.
+  `viop_imu usb` 를 같이 주면 IMU 도 **같은 USB 연결** (UsbLink 하나) 을 씀.
+- 쓰기 규칙: USB 전송은 잠금 하나 (한 번에 하나). IMU 는 빈 때 센서 스레드가 바로 씀 (= 0.6.37c 와 같은 지연),
+  전송 중이면 IMU 큐 (POSE 보다 먼저 나감) 에 넣고 바로 돌아옴. 쓰기 스레드는 IMU 큐를 다 비운 뒤에만 POSE/HB 를
+  묶어서 (≤ 256 B) 보냄. 큐가 차면 가장 오래된 것 버림 (IMU 64, 기타 32, 개수 기록).
+  처음엔 "모든 IMU 를 큐로" 했는데 PC 시험에서 넘겨주기만으로 IMU p95 가 0.6–1.4 ms 늘어서 (아래 표 `_q`) 바꿈.
+- 읽기: bulk IN 스트림을 viop_stream 규칙으로 파싱 → 0x23 은 ov_bridge 소켓 (마지막 데이터그램 보낸 주소) 으로 그대로
+  보냄 (다리의 confirm 검사 → full_reset). 다른 종류는 개수·처음 200개 기록만 (지금 FC 는 USB 로 0x23 만 보냄.
+  FC_STATUS / FC_EVENT 는 ESP-NOW 로 PC 에 감 → "폰에서 FC 상태 기록" 은 FC 가 USB 로 보내지 않아 할 것 없음).
+- 끝낼 때: 다리가 끝난 뒤 (STOPPING 하트비트 3개도 나간 뒤) 중계 정지 → `<run>/viop_usb.json`, meta `viop_usb_result`.
+  닫기 전 DTR 0 을 보냄 (FC link_task.c 가 "앱이 포트 닫음" 으로 읽음 → 빠른 폰 끊김 판정). **새 동작**.
+- USB 장치 없음 / 권한 없음: 중계 소켓은 받아서 버림 (lo_no_port 로 셈), VIO 영향 없음. 권한 창이 뜨면 이번 실행은
+  포트 없이 돎 → 허용 후 다시 시작 (0.6.37c 와 같음).
+- intent 없음 (기본) / `viop_udp HOST:PORT` / `viop_imu udp:…`: 명령줄·동작 0.6.37c 와 같음. npu_loop 경로 안 건드림.
+  gyro_klt=5 프로필 기본값 그대로, NPU BRIEF 대체 없음.
+
+## 3. PC 시험 숫자 (가짜 USB 끝점, 추정 조건)
+가짜 전송 시간 = **가정** (S24 실측 아님): fast 0.125 ms + 0.02 ms/64B, slow 1 ms + 0.1 ms/64B. IMU 500 Hz, POSE 200 Hz + HB 20 Hz,
+10 s, 실행 1번씩. **PC 부하 load average 29–49 (16 CPU, 다른 작업 중)** → max 값은 OS 선점이 섞임, p50/p95 만 비교.
+| 경우 | IMU 들어옴→쓰기 끝 p50 / p95 / p99 ms | POSE UDP→쓰기 끝 p50 / p95 ms |
+|---|---|---|
+| fast IMU 만, 새 (d) | 0.147 / 0.158 / 0.297 | – |
+| fast 옛 직접 쓰기 (0.6.37c) | 0.146 / 0.150 / 0.253 | – |
+| fast IMU + POSE, 새 (d) | 0.147 / 0.167 / 0.357 | 0.196 / 1.620 |
+| fast IMU + POSE, 모두 큐 (q, 안 씀) | 0.172 / 1.571 / 3.471 | 0.205 / 1.955 |
+| slow IMU 만, 새 (d) | 1.101 / 1.116 / 2.148 | – |
+| slow 옛 직접 쓰기 | 1.101 / 1.118 / 2.143 | – |
+| slow IMU + POSE, 새 (d) | 1.102 / 2.125 / 2.752 | 1.924 / 5.126 |
+- 결론 (PC 기준): POSE 가 없으면 IMU 지연 = 옛 경로와 같음. POSE 가 같이 가면 IMU p95 +0.01 ms (fast) / +1.0 ms (slow 가정).
+  slow 에선 POSE 가 IMU 에 밀려 p95 5 ms. **폰 실측 없음 → 추정**.
+- 그 밖의 확인: 프레임 무결성 (8 경우, 바이트·순서 그대로, 버림 0), 쓰는 쪽 동시 2개 없음, 0x23 (조각 5 B 단위, 쓰레기·CRC 틀린
+  프레임 섞임) → 맞는 2개만 다리 소켓에 그대로 + C 로 다리 검사식 통과, 다리 주소 모를 때 셈, 장치 없음, FC 멈춤 (모든 쓰기
+  timeout) 에서 큐 한도·개수 맞음, 정지 때 STOPPING HB 3개 나감.
+- 시험 안 한 것: 실제 Android UsbDeviceConnection (두 스레드가 OUT/IN 끝점을 동시에 bulkTransfer — 문서상 가능, **추정**),
+  실제 ov_bridge 프로세스 → 중계 (다리 코드의 send_raw 는 프레임 하나 = 데이터그램 하나, 코드로만 확인), TinyUSB 수신 버퍼와 256 B 묶음.
+
+## 4. 보드 + 폰이 있어야 확인되는 것
+1. USB 권한·열기·DTR (FC 가 DTR 1 받음, 앱 끝날 때 0) — FC 로그 FC_MSG_PHONE_CONN.
+2. FC 가 POSE / HB / IMU 를 실제로 받는지, 속도 (POSE ~200 Hz, HB 20 Hz, IMU ~500 Hz), CRC 오류 0.
+3. viop_usb.json 의 imu_q_ms_* / lo_q_ms_* / max_write_ms (실제 전송 시간), imu_drop_full = 0, write_fail_calls = 0.
+4. IMU 지연이 0.6.37c 대비 나빠지지 않았는지 (viop_imu.json lat_ms_p95, 0.6.37c 는 USB 로 시험된 적 없음 → 첫 실측).
+5. FC → 폰 0x23: PC 에서 VIOP_CMD_VIO_RESET → FC → USB → 앱 → 다리 "VIO reset request from the FC" 로그 → reset_counter +1.
+6. 케이블 뽑기 / 앱 강제 종료 때 FC 의 폰 끊김 판정.
+
+## 5. 벤치 시험 순서 (프롭 없이 — 프롭을 반드시 뺀다)
+1. FC 에 fcarm 1af078e 펌웨어 올리기 (`. ~/esp/esp-idf/export.sh && cd esp32fc && idf.py -p <포트> flash monitor`), PC 쪽 ESP32 와 짝.
+   모터 전원 (배터리) 은 **연결하지 않거나** ESC 신호선을 뺀다.
+2. 폰에 APK 0.6.38 설치 (SHA256SUMS 확인). 폰 ↔ FC 를 USB-C OTG 로 연결 → 처음엔 권한 창 → 허용.
+3. 첫 시험 (카메라 없이 IMU 만): `am start ... --es mode imu_tx --es viop_imu usb --ei secs 20` →
+   files/ov/imu_tx_*/viop_imu.json 의 usb_link: imu_written ≈ imu_in, imu_fail 0, max_write_ms; FC 모니터에 IMU 수신 수.
+4. VIO + 중계: 평소 live 실행 intent 에 `--es viop_udp usb --es viop_imu usb` 추가 (predict 1/2 필요). 폰을 책상에 둔 채 60 s.
+   확인: FC 모니터 pose 나이 (pose_age_ms) 작음, HB 끊김 없음, ARM 판정 (armguard 정지 1 s) 이 정상으로 바뀌는지 (실제 ARM 은
+   모터 전원 없이만).
+5. 0x23: FC 가 DISARMED 일 때 PC 에서 VIO_RESET 명령 → 다리 로그 (bridge_stderr.log "VIO reset request") + viop_usb.json
+   reset_fwd 1, FC 에 새 reset_counter 와 F_RESET 50 pose → 래치 해제 (FS_B_VIO_HIST 사라짐).
+6. 앱 정지 → FC 가 STOPPING HB 와 DTR 0 을 받고 "폰 끊김" 으로 가는지. 케이블 뽑기도 한 번.
+7. 결과 파일 (viop_usb.json, viop_imu.json, meta.json, FC 로그) 을 PC 로 가져와 이 README 에 적기.
+
+## 6. 위험한 곳 (독립 검토자에게)
+- ViopRelayCore 잠금 순서: 쓰기 스레드는 wl → lk, 센서 스레드는 wl.tryLock → lk (교착 없음 의도). IMU 순서 보장은 "쓰기 스레드는
+  wl 잡은 채로만 큐에서 꺼냄" 에 기댐.
+- 빠른 경로는 센서 스레드가 USB 전송 동안 막힘 (0.6.37c 와 같음, timeout 2 ms). FC 가 멈추면 프레임마다 2 ms.
+- 2개 스레드에서 같은 UsbDeviceConnection 에 bulkTransfer (OUT/IN) — 하드웨어 미시험.
+- DTR 0 on close = 새 동작 (FC 가 폰 끊김으로 봄).
+- prepare() 에서 링크를 연 뒤 시작 실패 → stop() 의 이른 return 두 곳에 closeUsbLinkEarly 추가 (Android 에서 미시험).
+- FC 수정: F_RESET 상승 에지 또는 pose seq 가 뒤로 간 경우만 새 W. 같은 카운터로 앱이 다시 켜졌는데 첫 pose 들을 잃고 seq 도 앞으로만
+  가면 (실제로는 seq 가 0 부터 다시 시작하므로 드묾) 해제 안 됨 → 안전 쪽.
