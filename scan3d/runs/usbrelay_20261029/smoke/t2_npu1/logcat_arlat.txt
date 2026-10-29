@@ -1,0 +1,60 @@
+10-29 09:53:42.132 I/ENN_FRAMEWORK(27350): 2.2.27: * (-) DspUserDriver::CloseSubGraph(), model_id(0x6AA701000000), op_list_id(0x6AA701000200)
+10-29 09:53:42.132 I/ENN_FRAMEWORK(27350): 2.2.27: * - Unload Model(ID:0x0x6AA701000000) Accelerator(16)
+10-29 09:53:42.132 I/ENN_FRAMEWORK(27350): 2.2.27: * + Unload Model(ID:0x0x6AA701000000) Accelerator(1)
+10-29 09:53:42.132 I/ENN_FRAMEWORK(27350): 2.2.27: * - Unload Model(ID:0x0x6AA701000000) Accelerator(1)
+10-29 09:53:42.132 I/ENN_FRAMEWORK(27350): 2.2.27: * A Model(ID: 0x6AA701000000) is released.
+10-29 09:53:42.133 I/ENN_FRAMEWORK(27350): 2.2.27: * Model(0x6AA701000000) is released: ClientProcess[1], Model[1], ExecutableModel[1], ExecuteRequest[1]
+10-29 09:53:42.133 I/ENN_FRAMEWORK(27350): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x6AA701000000)
+10-29 09:53:42.133 I/ENN_FRAMEWORK(27303): 2.2.27: * EnnCloseModel Success(0x6AA701000000) (-)
+10-29 09:53:42.133 I/ENN_FRAMEWORK(27303): 2.2.27: * -------------------- Model container :   1 --------------------
+10-29 09:53:42.133 I/ENN_FRAMEWORK(27303): 2.2.27: * # Session[0] Model_ID: 0x6AA702000000 / 0x6AA702000000 (buf: 5, reg: 5), /data/user/0/com.scan3d.arlat/files/npu/L6_a16mc.nnc
+10-29 09:53:42.134 I/ENN_FRAMEWORK(27303): 2.2.27: * EnnCloseModel : 0x6AA702000000(+)
+10-29 09:53:42.134 I/ENN_FRAMEWORK(27350): 2.2.27: * (+) Engine::EngineImpl::close_model->(0x6AA702000000)
+10-29 09:53:42.134 I/ENN_FRAMEWORK(27350): 2.2.27: * An ExecuteRequest from an ExecutableModel(ID: 0x6AA702000002) is released.
+10-29 09:53:42.134 I/ENN_FRAMEWORK(27350): 2.2.27: * An ExecutableModel(ID: 0x6AA702000002) from a Model(ID : 0x6AA702000000) is released.
+10-29 09:53:42.134 I/ENN_FRAMEWORK(27350): 2.2.27: * + Unload Model(ID:0x0x6AA702000000) Accelerator(1)
+10-29 09:53:42.135 I/ENN_FRAMEWORK(27350): 2.2.27: * - Unload Model(ID:0x0x6AA702000000) Accelerator(1)
+10-29 09:53:42.135 I/ENN_FRAMEWORK(27350): 2.2.27: * + Unload Model(ID:0x0x6AA702000000) Accelerator(4)
+10-29 09:53:42.135 I/ENN_FRAMEWORK(27350): 2.2.27: * (+) NpuUserDriver::CloseSubGraph(), model_id(0x6AA702000000), op_list_id(0x6AA702000700)
+10-29 09:53:42.141 I/ENN_FRAMEWORK(27350): 2.2.27: * (-) NpuUserDriver::CloseSubGraph(), model_id(0x6AA702000000), op_list_id(0x6AA702000700)
+10-29 09:53:42.141 I/ENN_FRAMEWORK(27350): 2.2.27: * - Unload Model(ID:0x0x6AA702000000) Accelerator(4)
+10-29 09:53:42.141 I/ENN_FRAMEWORK(27350): 2.2.27: * + Unload Model(ID:0x0x6AA702000000) Accelerator(1)
+10-29 09:53:42.141 I/ENN_FRAMEWORK(27350): 2.2.27: * - Unload Model(ID:0x0x6AA702000000) Accelerator(1)
+10-29 09:53:42.141 I/ENN_FRAMEWORK(27350): 2.2.27: * A Model(ID: 0x6AA702000000) is released.
+10-29 09:53:42.143 I/ENN_FRAMEWORK(27350): 2.2.27: * Model(0x6AA702000000) is released: ClientProcess[1], Model[0], ExecutableModel[0], ExecuteRequest[0]
+10-29 09:53:42.143 I/ENN_FRAMEWORK(27350): 2.2.27: * (-) Engine::EngineImpl::close_model->(0x6AA702000000)
+10-29 09:53:42.144 I/ENN_FRAMEWORK(27303): 2.2.27: * EnnCloseModel Success(0x6AA702000000) (-)
+10-29 09:53:42.144 I/ENN_FRAMEWORK(27303): 2.2.27: * -------------------- Model container :   0 --------------------
+10-29 09:53:42.145 I/ENN_FRAMEWORK(27303): 2.2.27: * Context(0x78c0710a78) ref_cnt(0x78c0710a78)=0 , will delete context.. force_deinit(0)
+10-29 09:53:42.145 I/ENN_FRAMEWORK(27350): 2.2.27: * (+) Engine::EngineImpl::deinit->(0x6AA7)
+10-29 09:53:42.145 I/ENN_FRAMEWORK(27350): 2.2.27: * A ClientProcess(ID: 0x6AA700000000) is released.
+10-29 09:53:42.145 I/ENN_FRAMEWORK(27350): 2.2.27: * ClientProcess(0x6AA700000000) is released: ClientProcess[0], Model[0], ExecutableModel[0], ExecuteRequest[0]
+10-29 09:53:42.145 I/ENN_FRAMEWORK(27350): 2.2.27: * (-) Engine::EngineImpl::deinit->(0x6AA7)
+10-29 09:53:42.145 I/ENN_FRAMEWORK(27303): 2.2.27: * EnnDeinitialize
+10-29 09:53:42.154 I/arlat   (27303): ov stopped (user) -> /storage/emulated/0/Android/data/com.scan3d.arlat/files/ov/run_20261029_095311_main60_c4f60
+10-29 09:53:42.597 V/WindowManager( 1181):    ChangeInfo{c392a33 container=Task{43a138e #909 type=standard A=10409:com.scan3d.arlat} flags=0x10}
+10-29 09:53:42.597 V/WindowManager( 1181):    ChangeInfo{63afd1c container=ActivityRecord{217233289 u0 com.scan3d.arlat/.MainActivity t909} flags=0x0}
+10-29 09:53:42.597 V/WindowManager( 1181): Setting visibility of Window{9fdce55 u0 com.scan3d.arlat/com.scan3d.arlat.MainActivity}: false, caller=com.android.server.wm.WindowContainer.sendAppVisibilityToClients:19 com.android.server.wm.WindowToken.setClientVisible:48 com.android.server.wm.ActivityRecord.commitVisibility:186 com.android.server.wm.TransitionController.finishTransition:846 com.android.server.wm.WindowOrganizerController.finishTransitionInner:31 
+10-29 09:53:42.598 D/ChangeTransitionController( 1181):    ChangeInfo{c392a33 container=Task{43a138e #909 type=standard A=10409:com.scan3d.arlat} flags=0x10}
+10-29 09:53:42.598 D/ChangeTransitionController( 1181):    ChangeInfo{63afd1c container=ActivityRecord{217233289 u0 com.scan3d.arlat/.MainActivity t909} flags=0x0}
+10-29 09:53:42.600 D/PowerManagerService( 1181): [api] release WakeLock SCREEN_BRIGHT_WAKE_LOCK           'WindowManager/displayId:0' ON_AFTER_RELEASE ACQ=-30s851ms (uid=1000 pid=1181 ws=WorkSource{10409 com.scan3d.arlat} displayId=0 lock=32673bd)
+10-29 09:53:42.600 D/PowerManagerService( 1181): [api] applyWakeLockFlagsOnReleaseLocked : userActivityNoUpdateLocked is called : SCREEN_BRIGHT_WAKE_LOCK           'WindowManager/displayId:0' ON_AFTER_RELEASE DISABLED (uid=1000 pid=1181 ws=WorkSource{10409 com.scan3d.arlat} displayId=0 lock=32673bd)
+10-29 09:53:42.606 I/WindowManager( 1181): Relayout Window{9fdce55 u0 com.scan3d.arlat/com.scan3d.arlat.MainActivity}: viewVisibility=8 req=1080x2340 ty=1 d0
+10-29 09:53:42.616 I/SurfaceFlinger(  936): RequestedLayer [com.scan3d.arlat/com.scan3d.arlat.MainActivity$_27303#26025] hidden!! flag  from(0) --> to(1)
+10-29 09:53:42.617 I/SurfaceFlinger(  936): RequestedLayer [ActivityRecord{217233289 u0 com.scan3d.arlat/.MainActivity t909}#26016] hidden!! flag  from(0) --> to(1)
+10-29 09:53:42.617 D/VRI[MainActivity]@b4b1f47(27303): WindowStopped on com.scan3d.arlat/com.scan3d.arlat.MainActivity set to true
+10-29 09:53:42.631 I/WindowManager( 1181):     InsetsFrameProvider: {id=#8ccc0001, index=0, type=navigationBars, source=FRAME, flags=[SUPPRESS_SCRIM], insetsSize=Insets{left=0, top=0, right=0, bottom=0}, insetsSizeOverrides=[TypedInsetsSize: {windowType=INPUT_METHOD, insetsSize=null}]}
+10-29 09:53:42.631 I/WindowManager( 1181):         InsetsFrameProvider: {id=#8ccc0001, index=0, type=navigationBars, source=FRAME, flags=[SUPPRESS_SCRIM], insetsSize=Insets{left=0, top=0, right=0, bottom=0}, insetsSizeOverrides=[TypedInsetsSize: {windowType=INPUT_METHOD, insetsSize=null}]}
+10-29 09:53:42.631 I/WindowManager( 1181):         InsetsFrameProvider: {id=#8ccc0001, index=0, type=navigationBars, source=FRAME, flags=[SUPPRESS_SCRIM], insetsSize=Insets{left=0, top=0, right=0, bottom=0}, insetsSizeOverrides=[TypedInsetsSize: {windowType=INPUT_METHOD, insetsSize=Insets{left=0, top=0, right=0, bottom=0}}]}
+10-29 09:53:42.631 I/WindowManager( 1181):         InsetsFrameProvider: {id=#8ccc0001, index=0, type=navigationBars, source=FRAME, flags=[SUPPRESS_SCRIM], insetsSize=Insets{left=0, top=0, right=0, bottom=0}, insetsSizeOverrides=[TypedInsetsSize: {windowType=INPUT_METHOD, insetsSize=null}]}
+10-29 09:53:42.631 I/WindowManager( 1181):         InsetsFrameProvider: {id=#8ccc0001, index=0, type=navigationBars, source=FRAME, flags=[SUPPRESS_SCRIM], insetsSize=Insets{left=0, top=0, right=0, bottom=0}, insetsSizeOverrides=[TypedInsetsSize: {windowType=INPUT_METHOD, insetsSize=Insets{left=0, top=0, right=0, bottom=0}}]}
+10-29 09:53:42.635 E/WindowManager( 1181): win=Window{9fdce55 u0 com.scan3d.arlat/com.scan3d.arlat.MainActivity} destroySurfaces: appStopped=true cleanupOnResume=false win.mWindowRemovalAllowed=false win.mRemoveOnExit=false win.mViewVisibility=8 caller=com.android.server.wm.ActivityRecord.destroySurfaces:25 com.android.server.wm.ActivityRecord.activityStopped:192 com.android.server.wm.ActivityClientController.activityStopped:97 android.app.IActivityClientController$Stub.onTransact:740 com.android.server.wm.ActivityClientController.onTransact:1 android.os.Binder.execTransactInternal:1462 android.os.Binder.execTransact:1401 
+10-29 09:53:42.636 D/SGM:FgCheckThread( 1181): pkgName: com.scan3d.arlat is not in foreground
+10-29 09:53:42.636 D/SGM:FgCheckThread( 1181): noteStopComponent(), received pkgName: com.scan3d.arlat, focusedPkgName: com.sec.android.app.launcher, userId: 0
+10-29 09:53:42.637 D/PkgPredictorService-SecIpmManagerServiceImpl( 1181): bg information pid:27303 uid:10409 pkgName:com.scan3d.arlat
+10-29 09:53:42.650 I/SurfaceFlinger(  936): [LayerHierarchy{RequestedLayerState{com.scan3d.arlat/com.scan3d.arlat.MainActivity$_27303#26025} no children}] reparent to OffscreenRoot
+10-29 09:53:42.650 I/SurfaceFlinger(  936): [LayerHierarchy{RequestedLayerState{com.scan3d.arlat/com.scan3d.arlat.MainActivity$_27303#26025} no children}] RelativeParent to null
+10-29 09:53:42.650 I/SurfaceFlinger(  936): id=26025 Removed com.scan3d.arlat/com.scan3d.arlat.MainActivity$_27303#26025 (210)
+10-29 09:53:42.666 I/SurfaceFlinger(  936): destroyed com.scan3d.arlat/com.scan3d.arlat.MainActivity$_27303#26025
+10-29 09:53:42.667 I/Layer   (  936): id=26025 Destroyed com.scan3d.arlat/com.scan3d.arlat.MainActivity$_27303#26025
+10-29 09:53:48.645 D/FreecessHandler( 1181): freeze com.scan3d.arlat(10409) result : 2

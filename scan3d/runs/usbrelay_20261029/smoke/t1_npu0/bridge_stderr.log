@@ -1,0 +1,67 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 rs_postinit=0 ekf_sparse=1 sym_inplace=1 init_gemm=0 gyro_klt=5 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse,gyro_klt=5', prof log -)
+[ov_bridge] drop-late 50 ms mode 1 cap 3 win 3.00 s | pred-stale 500 ms
+[ov_bridge] affinity start: (not pinned) threads 24386:libov_bridge.so=0,1,2,3,4,5,6,7,8,9
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 0 -> 2 | TBB (ver 2021.11 interface 12110) | cpus 10 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /storage/emulated/0/Android/data/com.scan3d.arlat/files/ov/c4f60/remap_1920x1080.bin
+[ov_bridge] ovrobust: init_still 0 | health 1 log /storage/emulated/0/Android/data/com.scan3d.arlat/files/ov/run_20261029_095029_main60_c4f60/health.csv | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 0 (max gap 3.0 s, min feats 20) | test blank 0 windows
+[ov_bridge] loop: vocab /storage/emulated/0/Android/data/com.scan3d.arlat/files/ov/voc_k10L4.voc (k 10 L 4, 9992 words, sha d962dc5e69c5742b) | kf 0.25s/0.08m/8deg max_dt 2 q 6 nice 10 | feat 600 L3 fast 20 | gap 3s/1m score 0.015/0.25 cand 3 | match 64/0.8 inl 25 pnp 3px x200 rp 3deg corr 0.5m+0.05*path yaw 10deg | consist 3kf 4s 0.05m 1.5deg | graph seq 4 w 1 huber 0.1 it 30 | smooth 0.1m/s 3deg/s | sync 0
+[ov_bridge] affinity ready: (not pinned) threads 24386:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 24493:libov_bridge.so=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin: mode 2 (pool) stripes 2 max 200 ms | pred thread (input reader thread on)
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] health t=3.890 INIT -> OK (tracked 94 used 16 since_upd 0.00 pos_std 0.089)
+[ov_bridge] drop-late: frame t=4.006 50.8 ms late (> 50.0) -> skipped (#1)
+[ov_bridge] health t=4.023 OK -> DEGRADED (tracked 11 used 12 since_upd 0.00 pos_std 0.087)
+[ov_bridge] drop-late: frame t=4.040 53.4 ms late (> 50.0) -> skipped (#2)
+[ov_bridge] drop-late: frame t=4.073 54.0 ms late (> 50.0) -> skipped (#3)
+[ov_bridge] drop-late: frame t=4.106 54.9 ms late (> 50.0) -> skipped (#4)
+[ov_bridge] drop-late: frame t=4.140 56.1 ms late (> 50.0) -> skipped (#5)
+[ov_bridge] drop-late: frame t=4.173 59.7 ms late (> 50.0) -> skipped (#6)
+[ov_bridge] drop-late: frame t=4.206 62.5 ms late (> 50.0) -> skipped (#7)
+[ov_bridge] drop-late: frame t=4.223 50.4 ms late (> 50.0) -> skipped (#8)
+[ov_bridge] drop-late: frame t=4.256 54.8 ms late (> 50.0) -> skipped (#9)
+[ov_bridge] drop-late: frame t=4.290 55.7 ms late (> 50.0) -> skipped (#10)
+[ov_bridge] drop-late: frame t=4.323 54.2 ms late (> 50.0) -> skipped (#11)
+[ov_bridge] drop-late: frame t=4.356 58.1 ms late (> 50.0) -> skipped (#12)
+[ov_bridge] drop-late: frame t=4.390 58.2 ms late (> 50.0) -> skipped (#13)
+[ov_bridge] drop-late: frame t=4.423 59.8 ms late (> 50.0) -> skipped (#14)
+[ov_bridge] drop-late: frame t=4.456 62.2 ms late (> 50.0) -> skipped (#15)
+[ov_bridge] drop-late: frame t=4.490 63.1 ms late (> 50.0) -> skipped (#16)
+[ov_bridge] drop-late: frame t=4.523 59.1 ms late (> 50.0) -> skipped (#17)
+[ov_bridge] drop-late: frame t=4.556 60.9 ms late (> 50.0) -> skipped (#18)
+[ov_bridge] drop-late: frame t=4.590 59.2 ms late (> 50.0) -> skipped (#19)
+[ov_bridge] drop-late: frame t=4.623 62.7 ms late (> 50.0) -> skipped (#20)
+[ov_bridge] health t=4.840 DEGRADED -> OK (tracked 45 used 2 since_upd 0.00 pos_std 0.100)
+[ov_bridge] health t=4.856 OK -> DEGRADED (tracked 34 used 0 since_upd 0.02 pos_std 0.101)
+[ov_bridge] health t=5.140 DEGRADED -> OK (tracked 40 used 0 since_upd 0.02 pos_std 0.108)
+[ov_bridge] health t=5.190 OK -> DEGRADED (tracked 35 used 0 since_upd 0.07 pos_std 0.111)
+[ov_bridge] health t=5.573 DEGRADED -> OK (tracked 206 used 0 since_upd 0.10 pos_std 0.143)
+[ov_bridge] health t=5.590 OK -> DEGRADED (tracked 3 used 0 since_upd 0.12 pos_std 0.146)
+[ov_bridge] health t=6.473 DEGRADED -> LOST (tracked 13 used 0 since_upd 1.00 pos_std 0.369)
+[ov_bridge] health t=6.673 LOST -> DEGRADED (tracked 9 used 5 since_upd 0.00 pos_std 0.416)
+[ov_bridge] affinity cam300: (not pinned) threads 24386:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 24493:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 24495:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 24496:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 24497:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 25001:libov_bridge.so=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin cam300: mode 2 (pool) stripes 2 | waits 4018 spun 1651 timeouts 0 spin 3.06 s | exit_us n 1651 p50 1.5 p95 135.3 p99 3686.5 max 33545.9
+[ov_bridge] health t=7.690 DEGRADED -> OK (tracked 148 used 8 since_upd 0.00 pos_std 0.249)
+[ov_bridge] health t=7.906 OK -> DEGRADED (tracked 156 used 14 since_upd 0.00 pos_std 0.225)
+[ov_bridge] health t=7.923 DEGRADED -> OK (tracked 166 used 16 since_upd 0.00 pos_std 0.226)
+[ov_bridge] health t=7.973 OK -> DEGRADED (tracked 161 used 8 since_upd 0.00 pos_std 0.230)
+[ov_bridge] health t=7.990 DEGRADED -> OK (tracked 172 used 8 since_upd 0.00 pos_std 0.231)
+[ov_bridge] health t=8.040 OK -> DEGRADED (tracked 178 used 5 since_upd 0.00 pos_std 0.234)
+[ov_bridge] health t=8.073 DEGRADED -> OK (tracked 160 used 6 since_upd 0.00 pos_std 0.236)
+[ov_bridge] health t=8.240 OK -> DEGRADED (tracked 136 used 1 since_upd 0.00 pos_std 0.250)
+[ov_bridge] health t=9.523 DEGRADED -> LOST (tracked 181 used 6 since_upd 0.00 pos_std 0.431)
+[ov_bridge] drop-late: frame t=16.906 53.2 ms late (> 50.0) -> skipped (#100)
+[ov_bridge] drop-late: frame t=38.290 60.0 ms late (> 50.0) -> skipped (#200)
+[ov_bridge] pred thread reader: image space waits 268
+[ov_bridge] pred thread: mode 2 hz 200 | lines 14621 (frame 3333 rate 11288) snapshots 3333 | compute us p50 154.6 p95 235.5 max 3316.7 | horizon ms p50 54.4 p95 102.9 max 163.8 | thread cpu 3.514 s (pred) 10.473 s (reader)
+[ov_bridge] pred thread stale (--pred-stale-ms): 0 lines marked lost
+[ov_bridge] affinity end: (not pinned) threads 24386:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 24493:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 24497:libov_bridge.so=0,1,2,3,4,5,6,7,8,9 25001:libov_bridge.so=0,1,2,3,4,5,6,7,8,9
+[ov_bridge] idle spin end: mode 2 (pool) stripes 2 | waits 35416 spun 12755 timeouts 1 spin 20.59 s | exit_us n 12754 p50 2.4 p95 18.5 p99 136.8 max 33545.9
+[ov_bridge] predict: mode 2 hz 200 | lines 0 | horizon ms p50 -1.0 p95 -1.0 max -1.0
+[ov_bridge] drop-late: limit 50.0 ms | dropped 248 frames | min lag 31.2 ms
+[ov_bridge] drop-late mode 1: cap 3 win 3.00 s | forced 0 | re-anchors 0 | late-lost 0 | max late run 3 frames | pred stale 500 ms (main-loop stale preds 0)
+[ov_bridge] gyro_klt mode 5: frames 3414 (no rotation 0) | pts in 452009 LK ok 432537 (95.69 %) kept 381843 (84.48 %) | fallback 0/0 | predicted shift px mean 11.310 max 433.87
+[ov_bridge] gyro_klt mode 5: LK result - start px mean 5.126 | LK result - old px mean 10.967 (n 432537) | guards: capped pts 0, translation refused frames 3324
+[ov_bridge] loop: keyframes pushed 22 dropped 0 processed 22 | candidates 21 geo 21 verified 0 accepted 0 (consistency-rejected 0) | optimisations 0 | sessions 0
+[ov_bridge] loop: ms p50/p95/max per keyframe: total 9.82/18.58/20.24 tri 0.18/0.36 feat 9.54/17.87 query 0.01/0.07 geo 0.02/0.16 | VIO-thread copy 0.620/0.934/1.047 | opt nan/nan/nan (n 0)
+[ov_bridge] health: frames INIT 88 OK 41 DEGRADED 230 LOST 3062 | transitions 20 | max LOST run 3057 frames | recover state 0 full 0 | blanked 0 | init_ready frames 80

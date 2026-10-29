@@ -116,3 +116,18 @@ POSE / HEARTBEAT (UDP) 를 USB 로 FC 에 보내는 길도, FC -> 폰 (USB IN, �
   있으면 래치를 잘못 풀 수 있음 — F_RESET 이 붙는 새 W 의 처음 50 pose (~0.25 s) 안에서만 (검토 지적, 불확실·작음). USB 는 순서 안 바뀜.
 - FC 수정: F_RESET 상승 에지 또는 pose seq 가 뒤로 간 경우만 새 W. 같은 카운터로 앱이 다시 켜졌는데 첫 pose 들을 잃고 seq 도 앞으로만
   가면 (실제로는 seq 가 0 부터 다시 시작하므로 드묾) 해제 안 됨 → 안전 쪽.
+
+## 7. phone smoke (2026-10-29 09:50–10:00, S24, APK 0.6.38 vc 49 sha 0a298ac8…, FC 없음, 폰은 책상 위 → VIO 초기화 안 됨)
+수명 주기(시작·정지·NPU·카메라·USB 대기)만 본 시험이다. 정확도는 안 봤다. 스크립트: `smoke.sh` (이 폴더, Windows adb.exe 를 WSL 에서 씀).
+안전 조건: 시작할 때 SKIN < 40, 실행 중 3 초마다 SKIN ≥ 45 / AP ≥ 60 / 배터리 ≤ 5 % 이면 멈춤 → 한 번도 걸리지 않음. SKIN 은 35.3–40.0, AP 는 최고 47 근처(측정 시점 기준), 충전 중 57→68 %.
+| # | 조건 | 결과 (meta.json · logcat) |
+|---|---|---|
+| 1 | npu_loop 0, 프로필 rec60 | npu 칸 없음, bridge_exit 0, frames 3674. 화면이 꺼져 64 s 에 멈춤 (`secs 20` 이 안 걸림, 아래 참고) |
+| 2 | npu_loop 1, 30 s 후 HOME | 앱 로그 "NPU 준비 중" → 0.29 s 뒤 "npu loop on"; ENN `Operator[0] (hw: 4) ENN_NPU`, warm-up XFeat 4.8 / LG 12.7 ms; 다리 "XFeat server … connected"; npu.jsonl 244 줄 (n_err 0); npu_loop "on", run_valid true, bridge_exit 0, killed_by_stop false, grace 5000 ms. HOME 입력부터 "ov stopped"(meta 다 씀)까지 0.6 s (시험 4·5 는 0.55 s·0.47 s) |
+| 3 | npu_loop 1, "NPU 준비 중" 로그가 뜨자마자 폰에서 HOME | 0.11 s 뒤 "ov stopped while the NPU was starting"; meta npu_loop "cancelled: …", run_valid false; 0.28 s 뒤 늦게 뜬 서버를 끔 (npu_start.txt "late start after abandon -> server stopped"); 카메라·다리 안 켜짐 (같은 결과 2 회) |
+| 4 | 3 바로 뒤 같은 프로세스(pid 같음)에서 새 액티비티 (`-f 0x10008000`) npu_loop 1 15 s | "already running" 거부 없이 정상 시작: connected, npu F 18 개, run_valid true, bridge_exit 0 |
+| 5 | npu_loop 0 + `viop_udp usb`, FC 없음 | 문제 없이 대기: viop_usb.json `usb "no CDC device"`, udp_hb 383 → lo_no_port 383, writes 0, error ""; bridge_exit 0 |
+매 실행 뒤 `dumpsys media.camera` Active Camera Clients `[]`, ov_bridge 프로세스 0. 다섯 번 모두 logcat 에 ANR·"Input dispatching timed out"·FATAL·Choreographer "Skipped frames" 없음.
+- 플래그를 안 주고 다시 띄우면(`am start`) "task brought to front" 가 되어 같은 액티비티로 돌아온다. 그러면 mode ov 는 액티비티당 한 번만이라 새 실행이 없다 (0.6.34 설계).
+- **발견 (0.6.38 이전부터, 고치지 않음)**: 큐(RunCue)가 화면에 있으면 `secs` 상한 타이머가 안 걸린다. `status.postDelayed` 를 부르는 status 뷰가 큐를 붙일 때 화면에서 떨어져서 그런 것으로 보인다 (추정, 코드 MainActivity afterStart). 시험 1 은 20 s 로 걸었지만 화면이 꺼질 때(64 s)까지 돌았다. 그래서 시험 2–5 는 N 초 뒤 HOME 으로 멈췄다. run_secs(VIO 초기화 기준)는 상관없다.
+- 아직 안 본 것: FC 를 꽂은 실제 USB 중계, VIO 가 초기화된 상태의 루프 닫힘, 긴 실행·열.
