@@ -1,0 +1,17 @@
+{
+ "set": "main",
+ "head": "c0dc492fe2531aa65934582fe298837b7297821e",
+ "bridge": "/home/system/scanner/tmp_appnpu/ident/ov_bridge_new",
+ "bridge_sha256": "4d79caf62ddaf68e7067f52daab8102f8a5f9841bb285a51d06df8827aeeac3f",
+ "server_sha256": "de9e5868a3a4650190ea950ce60d4cce5c7c3dd574558e5932deed7404d7508a",
+ "gates": "xf_mode=2,xf_tri=1,xf_tri_deg=3,xf_tri_mode=1,xf_min_inl=40,xf_rp_deg=2,max_cand=1,log_cand=1",
+ "srv_common": "--topk 512 --min-cos 0.82 --lg-conf 0.1 --det-th 0.05 --lg-width -1 --lg-depth -1 --dev cuda",
+ "conds": {
+  "A": "--lg-in x512 --pad32 1",
+  "B": "--lg-in trk --pad32 1",
+  "Bm": "--lg-in trkm --lg-cap 768 --pad32 1",
+  "A640": "--lg-in x512 --w 640 --h 360",
+  "B640": "--lg-in trk --w 640 --h 360"
+ },
+ "started": "2026-10-29 08:16:26"
+}
