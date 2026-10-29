@@ -26,7 +26,8 @@ final class RunCue {
     private final Runnable onEnd;
     private long fedMs = -1, goMs = -1, initMs = -1;
     private volatile boolean done;
-    private final Runnable tick = new Runnable() { @Override public void run() { update(); if (!done) big.postDelayed(this, 500); } };
+    private final Runnable tick = new Runnable() { @Override public void run() { update(); if (!done) h.postDelayed(this, 500); } };
+    private final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());   // 0.6.38b: not a View
 
     /** @param runSecs run length counted from VIO init; onEnd is called once when it is over */
     RunCue(Activity act, OvRunner ov, int runSecs, Runnable onEnd) {
@@ -49,7 +50,7 @@ final class RunCue {
         root.addView(big);
         root.addView(small);
         big.setText("준비 중 — 가만히");
-        big.post(tick);
+        h.post(tick);
     }
 
     void saving() { done = true; big.setText("저장 중"); root.setBackgroundColor(0xFF3A3A3A); }

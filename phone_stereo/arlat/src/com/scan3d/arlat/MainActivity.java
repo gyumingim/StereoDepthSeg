@@ -42,6 +42,8 @@ import java.util.Locale;
  *   Without gyro = intent ov_opt "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse" (explicit intent wins).
  * 0.6.28 (user 2026-10-26, 60 fps only): profile rec60 + loop 1 (rec20261025 unchanged) (ovloop BoW loop closure, own thread; vocabulary shipped in
  *   the APK assets, copied to files/ov/voc_k10L4.voc). Without loop = intent loop 0. Profile + recover N -> loop off.
+ * 0.6.38b (10-29): secs cap / imu_tx timer and the RunCue 2 Hz tick on a main-looper Handler (a detached status view never
+ *   ran the cap: run went on until the screen turned off).
  * 0.6.37c (appfix 10-29): npu_loop 1 stop runs on thread ov-stop (onPause returns at once, meta.json still last).
  * 0.6.37b (appfix 10-29): npu_loop 1 stop waits 5 s for the bridge (npu 0: 1.5 s as before); "killed" by our own stop
  *   is a valid end (with the connect line, no xf_down / server error); nonzero exit / no connect line -> run_valid false.
@@ -65,6 +67,9 @@ public class MainActivity extends Activity {
     private volatile boolean running;
     private Thread worker;
     private TextView status;
+    // 0.6.38b: run timers (secs cap, imu_tx secs) on the main looper, not View.postDelayed: a View that is not attached
+    // (status after the RunCue replaced the content) queues its runnables until attach = the cap never fired (smoke 10-29).
+    private final android.os.Handler uiH = new android.os.Handler(android.os.Looper.getMainLooper());
     private RunCue cue;                             // 0.6.33 on-screen cue (mode ov, secs, no guide)
     private boolean ovStartedOnce;                  // 0.6.34: mode ov runs at most once per activity instance
     private Cam2Probe cam2;
@@ -92,6 +97,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        uiH.removeCallbacksAndMessages(null);   // 0.6.38b
         if (ov != null) { ov.stop(); ov = null; }   // 0.6.35d: a replay kept through onPause
         if (streamer != null) streamer.close();
         super.onDestroy();
@@ -236,7 +242,7 @@ public class MainActivity extends Activity {
                     imuTx.start();
                     status.setText("imu_tx " + tg + " -> " + d);
                     final ViopImuSender mine = imuTx;
-                    status.postDelayed(() -> { if (imuTx == mine) finish(); }, Math.max(1, secs > 0 ? secs : 30) * 1000L);
+                    uiH.postDelayed(() -> { if (imuTx == mine) finish(); }, Math.max(1, secs > 0 ? secs : 30) * 1000L);
                 } catch (Exception e) { status.setText("imu_tx error: " + e); imuTx = null; }
             }
             return;
@@ -403,7 +409,7 @@ public class MainActivity extends Activity {
                         } : null);
                         setContentView(cue.root);
                     }
-                    if (secs > 0 && g == null) status.postDelayed(() -> {
+                    if (secs > 0 && g == null) uiH.postDelayed(() -> {   // 0.6.38b: not a view (status is detached when the cue is shown)
                         if (ov != mine) return;       // an older run's timer must not stop a newer run
                         ov.stopReason = "secs " + secs;
                         if (cue != null) cue.saving();

@@ -131,3 +131,7 @@ POSE / HEARTBEAT (UDP) 를 USB 로 FC 에 보내는 길도, FC -> 폰 (USB IN, �
 - 플래그를 안 주고 다시 띄우면(`am start`) "task brought to front" 가 되어 같은 액티비티로 돌아온다. 그러면 mode ov 는 액티비티당 한 번만이라 새 실행이 없다 (0.6.34 설계).
 - **발견 (0.6.38 이전부터, 고치지 않음)**: 큐(RunCue)가 화면에 있으면 `secs` 상한 타이머가 안 걸린다. `status.postDelayed` 를 부르는 status 뷰가 큐를 붙일 때 화면에서 떨어져서 그런 것으로 보인다 (추정, 코드 MainActivity afterStart). 시험 1 은 20 s 로 걸었지만 화면이 꺼질 때(64 s)까지 돌았다. 그래서 시험 2–5 는 N 초 뒤 HOME 으로 멈췄다. run_secs(VIO 초기화 기준)는 상관없다.
 - 아직 안 본 것: FC 를 꽂은 실제 USB 중계, VIO 가 초기화된 상태의 루프 닫힘, 긴 실행·열.
+
+### 7b. 0.6.38b (vc 50, sha 5a81cde3…): secs 상한 고침 + 폰 확인 (2026-10-29 10:03)
+- 고친 것: `secs` 상한 타이머와 imu_tx 타이머를 MainActivity 의 main-looper Handler(`uiH`)로 옮겼다. 이전에는 화면에서 떨어진 status 뷰에 걸려 있어서 실행이 안 됐다. RunCue 의 2 Hz 갱신도 View 대신 Handler 로 돈다. onDestroy 에서 타이머를 지운다. 상한의 의미는 그대로다: 실행 시작(npu_loop 1 이면 NPU 가 열린 뒤)부터 `secs` 초. run_secs(VIO 초기화부터 세는 길이)도 그대로다. 네이티브 lib 은 0.6.38 과 같다(bridge 3a012a39, 나머지는 0.6.36 과 같음).
+- 폰 확인(시험 6, `smoke.sh t6`): npu_loop 0, `secs 20`, 큐가 화면에 떠 있고 HOME 은 안 누름 → 앱이 스스로 멈춤. stop_reason "secs 20", secs 20.55, bridge_exit 0, 끝난 뒤 카메라 `[]`, ov_bridge 0, ANR 0. 지금 폰에 0.6.38b 가 깔려 있다.

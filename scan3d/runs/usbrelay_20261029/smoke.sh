@@ -63,6 +63,8 @@ case "${1:-}" in
   t4b) # same process, NEW activity instance (clear task) right after t3: server from t3 must be gone -> clean start
       skin_ok || exit 2; a logcat -c; echo "app pid before: $(a shell pidof $PKG)"; b=$(latest)
       runfor 15 -f 0x10008000 --ei secs 15 --ei npu_loop 1; watch_run "$b" 30; post t4_relaunch "$(latest)" ;;
+  t6) # 0.6.38b: secs 20 with the cue on screen, NO HOME -> the app must stop itself at ~20 s
+      skin_ok || exit 2; a shell am force-stop $PKG; a logcat -c; b=$(latest); a shell input keyevent KEYCODE_WAKEUP; start --ei secs 20; watch_run "$b" 45; post t6_secscap "$(latest)" ;;
   t5) skin_ok || exit 2; a shell am force-stop $PKG; a logcat -c; b=$(latest); runfor 20 --ei secs 20 --es viop_udp usb; watch_run "$b" 30; post t5_usb "$(latest)" ;;
   post) post "$2" "$3"; exit 0 ;;
   *) echo "usage: t1|t2|t3|t5"; exit 2 ;;
