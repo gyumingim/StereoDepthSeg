@@ -145,7 +145,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261029-usbrelay-0.6.38b";
+    static final String VERSION = "ov-20261029-usbrelay-0.6.38c";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";

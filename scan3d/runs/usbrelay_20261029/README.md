@@ -135,3 +135,9 @@ POSE / HEARTBEAT (UDP) 를 USB 로 FC 에 보내는 길도, FC -> 폰 (USB IN, �
 ### 7b. 0.6.38b (vc 50, sha 5a81cde3…): secs 상한 고침 + 폰 확인 (2026-10-29 10:03)
 - 고친 것: `secs` 상한 타이머와 imu_tx 타이머를 MainActivity 의 main-looper Handler(`uiH`)로 옮겼다. 이전에는 화면에서 떨어진 status 뷰에 걸려 있어서 실행이 안 됐다. RunCue 의 2 Hz 갱신도 View 대신 Handler 로 돈다. onDestroy 에서 타이머를 지운다. 상한의 의미는 그대로다: 실행 시작(npu_loop 1 이면 NPU 가 열린 뒤)부터 `secs` 초. run_secs(VIO 초기화부터 세는 길이)도 그대로다. 네이티브 lib 은 0.6.38 과 같다(bridge 3a012a39, 나머지는 0.6.36 과 같음).
 - 폰 확인(시험 6, `smoke.sh t6`): npu_loop 0, `secs 20`, 큐가 화면에 떠 있고 HOME 은 안 누름 → 앱이 스스로 멈춤. stop_reason "secs 20", secs 20.55, bridge_exit 0, 끝난 뒤 카메라 `[]`, ov_bridge 0, ANR 0. 지금 폰에 0.6.38b 가 깔려 있다.
+
+### 7c. 0.6.38c (vc 51, sha 7cadf8dc…): hard_cap (2026-10-29 10:07)
+- 사용자 규칙은 "카메라를 지켜보는 사람 없이 켜 두지 않는다" 이다. 그래서 실행 시작부터 `secs + 60 s` 가 지나면 VIO·가이드·NPU 상태와 상관없이 멈추게 했다 (meta stop_reason `"hard_cap"`). `secs > 0` 일 때만 걸리고, 가이드 실행에도 걸린다. View 가 아니라 main-looper Handler 로 돈다. 보통은 `secs` 타이머나 가이드·run_secs 큐가 먼저 끝낸다.
+- 문서 정정: 0.6.34 메모(`appnpu_20261028/run_err.sh` 머리말)의 "앱 강제 상한 = secs + 60 s" 는 틀렸다. 실제로는 스크립트가 intent secs 를 SECS + 60 으로 넘겼을 뿐이고, 그 상한도 0.6.38b 전까지는 큐가 떠 있으면 걸리지 않았다. 해당 스크립트 주석, MainActivity, RunCue 머리말을 고쳤다.
+- 폰 확인(시험 7, `smoke.sh t7`): 폰은 책상 위(VIO 초기화 안 됨). 가이드 `still:200` (가이드 실행에서는 secs 타이머를 안 씀) + `secs 20`. 화면이 꺼지지 않게 시험 동안만 `svc power stayon true` 를 켰다가 끝에 껐다. 결과: stop_reason "hard_cap", secs 80.66, bridge_exit 0, 카메라 `[]`, ov_bridge 0, ANR 0. 지금 폰에 0.6.38c 가 깔려 있다.
+- 남은 틈: `secs 0` 이고 가이드가 없는 실행은 여전히 상한이 없다 (사람이 멈춤). 모든 스크립트는 secs 를 넘긴다.

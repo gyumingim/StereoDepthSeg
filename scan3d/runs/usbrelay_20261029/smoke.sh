@@ -65,6 +65,10 @@ case "${1:-}" in
       runfor 15 -f 0x10008000 --ei secs 15 --ei npu_loop 1; watch_run "$b" 30; post t4_relaunch "$(latest)" ;;
   t6) # 0.6.38b: secs 20 with the cue on screen, NO HOME -> the app must stop itself at ~20 s
       skin_ok || exit 2; a shell am force-stop $PKG; a logcat -c; b=$(latest); a shell input keyevent KEYCODE_WAKEUP; start --ei secs 20; watch_run "$b" 45; post t6_secscap "$(latest)" ;;
+  t7) # 0.6.38c: hard_cap. Guide run (secs timer not used with a guide) guide 200 s, secs 20 -> hard_cap at 20 + 60 = 80 s
+      skin_ok || exit 2; a shell am force-stop $PKG; a logcat -c; b=$(latest); a shell input keyevent KEYCODE_WAKEUP; a shell svc power stayon true
+      T0=$(date +%s); start --ei secs 20 --es guide still:200 --ei guide_secs 200; watch_run "$b" 120; echo "wall ${T0}->$(date +%s) = $(( $(date +%s) - T0 )) s (incl. 3 s poll)"
+      a shell svc power stayon false; post t7_hardcap "$(latest)" ;;
   t5) skin_ok || exit 2; a shell am force-stop $PKG; a logcat -c; b=$(latest); runfor 20 --ei secs 20 --es viop_udp usb; watch_run "$b" 30; post t5_usb "$(latest)" ;;
   post) post "$2" "$3"; exit 0 ;;
   *) echo "usage: t1|t2|t3|t5"; exit 2 ;;

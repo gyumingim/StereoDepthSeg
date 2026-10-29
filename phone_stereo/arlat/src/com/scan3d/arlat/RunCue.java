@@ -15,7 +15,8 @@ import android.widget.TextView;
  *     not tracking 20 s after that: "폰을 조금 더 크게 흔들기"
  *   VIO tracking: green "VIO 시작됨" (3 s), then "천천히 한 바퀴 + 남은 초" - the run length (runSecs) counts FROM VIO INIT;
  *     last 15 s "출발 표시로 돌아와 멈추기", last 3 s "끝 — 가만히 3초", then onEnd (the activity finishes: "저장 중" / "완료").
- *   Hard cap: the intent secs (MainActivity timer from the start) still ends the run if VIO never initialises.
+ *   Cap: the intent secs (MainActivity timer from the start; works with the cue shown since 0.6.38b) ends the run if VIO never
+ *   initialises; 0.6.38c hard_cap = secs + 60 s from the start as a backstop.
  * Small line: VIO 추적 중 / 초기화 전 / 잃음, NPU 꺼짐 / 여는 중 / 열림 / 거부 / 무효.
  */
 final class RunCue {

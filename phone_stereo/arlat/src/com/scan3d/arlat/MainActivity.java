@@ -42,6 +42,7 @@ import java.util.Locale;
  *   Without gyro = intent ov_opt "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse" (explicit intent wins).
  * 0.6.28 (user 2026-10-26, 60 fps only): profile rec60 + loop 1 (rec20261025 unchanged) (ovloop BoW loop closure, own thread; vocabulary shipped in
  *   the APK assets, copied to files/ov/voc_k10L4.voc). Without loop = intent loop 0. Profile + recover N -> loop off.
+ * 0.6.38c (10-29): hard_cap stop at secs + 60 s from the run start (meta stop_reason "hard_cap"), main-looper Handler.
  * 0.6.38b (10-29): secs cap / imu_tx timer and the RunCue 2 Hz tick on a main-looper Handler (a detached status view never
  *   ran the cap: run went on until the screen turned off).
  * 0.6.37c (appfix 10-29): npu_loop 1 stop runs on thread ov-stop (onPause returns at once, meta.json still last).
@@ -52,7 +53,8 @@ import java.util.Locale;
  * 0.6.36 (npunight 10-29): npu_loop 1 defaults npu_opts nn_fast=1,lg_post=3,prep_fast=1, npu_perf 1, npu_cpus auto 7,8.
  * 0.6.35 (npunight 10-29): intent replay = stream file (bridge input records) under the external files dir, fed to the bridge
  *   at its record times (shifted to now) instead of the camera + IMU (no camera opened); npu_opts nn_fast / lg_post.
- * 0.6.34: cue = shake-to-start, run length from VIO init (intent run_secs, secs = hard cap); mode ov not from history, once per activity.
+ * 0.6.34: cue = shake-to-start, run length from VIO init (intent run_secs, secs = cap from the start; it never fired while the
+ *   cue was shown until 0.6.38b; 0.6.38c adds hard_cap = secs + 60 s from the start, also for guide runs); mode ov not from history, once per activity.
  * 0.6.33 (user 10-28): mode ov with secs and no guide shows RunCue (big Korean phase text, VIO / NPU state), npu 0 and 1 alike.
  * 0.6.31 (user rule 10-28): npu_loop 1 without a working NPU -> run refused + app finishes; NPU lost mid-run -> run INVALID.
  * 0.6.30 (appnpu-20261028): intent npu_loop 1 (default 0 = 0.6.29 behaviour) -> XFeat + LighterGlue on the NPU in the loop
@@ -394,6 +396,15 @@ public class MainActivity extends Activity {
                 // "NPU 준비 중..."); refusal semantics unchanged (no fallback, refused -> no run, app exits). npu_loop 0: the same
                 // synchronous ov.start() as 0.6.36, then the same after-start steps.
                 final OvRunner mine = ov;
+                // 0.6.38c (user rule: the camera never stays on unattended): hard stop at secs + 60 s from the run start,
+                // whatever the VIO / guide / NPU state (the secs timer below or the guide / run_secs cue normally end it first).
+                if (secs > 0) uiH.postDelayed(() -> {
+                    if (ov != mine) return;
+                    ov.stopReason = "hard_cap";
+                    android.util.Log.w("arlat", "hard_cap: secs " + secs + " + 60 s from the start -> stop");
+                    if (cue != null) cue.saving();
+                    finish();
+                }, (secs + 60) * 1000L);
                 final Runnable afterStart = () -> {
                     if (ov != mine) return;   // stopped (onPause) while the NPU was starting
                     status.setText("OpenVINS starting...");
