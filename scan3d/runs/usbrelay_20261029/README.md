@@ -47,7 +47,10 @@ POSE / HEARTBEAT (UDP) 를 USB 로 FC 에 보내는 길도, FC -> 폰 (USB IN, �
   닫기 전 DTR 0 을 보냄 (FC link_task.c 가 "앱이 포트 닫음" 으로 읽음 → 빠른 폰 끊김 판정). **새 동작**.
 - USB 장치 없음 / 권한 없음: 중계 소켓은 받아서 버림 (lo_no_port 로 셈), VIO 영향 없음. 권한 창이 뜨면 이번 실행은
   포트 없이 돎 → 허용 후 다시 시작 (0.6.37c 와 같음).
-- intent 없음 (기본) / `viop_udp HOST:PORT` / `viop_imu udp:…`: 명령줄·동작 0.6.37c 와 같음. npu_loop 경로 안 건드림.
+- intent 없음 (기본) / `viop_udp HOST:PORT` / `viop_imu udp:…`: 앱 명령줄은 0.6.37c 와 같음. **단 다리 바이너리가 새 것 (d1b5779)
+  이라 UDP 로 나가는 VIOP 도 바뀜**: 새 W 의 처음 50 pose 에 F_RESET (예전 1번), 상태 주입 W 에 SEEDED → "USB 아닌 경로는 그대로"
+  는 **틀림** (검토 지적). 이 폰 앱은 FC 펌웨어 **≥ fcarm 1af078e** 와 짝지어 쓴다 (그 전 펌웨어는 F_RESET 50번마다 래치를 다시 풂).
+  npu_loop 경로 안 건드림.
   gyro_klt=5 프로필 기본값 그대로, NPU BRIEF 대체 없음.
 
 ## 3. PC 시험 숫자 (가짜 USB 끝점, 추정 조건)
@@ -62,8 +65,9 @@ POSE / HEARTBEAT (UDP) 를 USB 로 FC 에 보내는 길도, FC -> 폰 (USB IN, �
 | slow IMU 만, 새 (d) | 1.101 / 1.116 / 2.148 | – |
 | slow 옛 직접 쓰기 | 1.101 / 1.118 / 2.143 | – |
 | slow IMU + POSE, 새 (d) | 1.102 / 2.125 / 2.752 | 1.924 / 5.126 |
-- 결론 (PC 기준): POSE 가 없으면 IMU 지연 = 옛 경로와 같음. POSE 가 같이 가면 IMU p95 +0.01 ms (fast) / +1.0 ms (slow 가정).
-  slow 에선 POSE 가 IMU 에 밀려 p95 5 ms. **폰 실측 없음 → 추정**.
+- 결론 (PC 기준): POSE 가 없으면 IMU 지연 = 옛 경로와 같음. POSE 가 같이 가면 IMU p95 +0.01 ms (fast), slow 가정에서는
+  **부하에 따라 다름** (이 표 +1.0 ms, 검토자 재실행 +0.36 ms — 반복 1번씩이라 확정 아님). slow 에선 POSE 가 IMU 에 밀려 p95 5 ms.
+  **폰 실측 없음 → 추정**.
 - 그 밖의 확인: 프레임 무결성 (8 경우, 바이트·순서 그대로, 버림 0), 쓰는 쪽 동시 2개 없음, 0x23 (조각 5 B 단위, 쓰레기·CRC 틀린
   프레임 섞임) → 맞는 2개만 다리 소켓에 그대로 + C 로 다리 검사식 통과, 다리 주소 모를 때 셈, 장치 없음, FC 멈춤 (모든 쓰기
   timeout) 에서 큐 한도·개수 맞음, 정지 때 STOPPING HB 3개 나감.
@@ -79,8 +83,17 @@ POSE / HEARTBEAT (UDP) 를 USB 로 FC 에 보내는 길도, FC -> 폰 (USB IN, �
 6. 케이블 뽑기 / 앱 강제 종료 때 FC 의 폰 끊김 판정.
 
 ## 5. 벤치 시험 순서 (프롭 없이 — 프롭을 반드시 뺀다)
+독립 검토 (scratchpad team/review_usbrelay_20261029.md) 판정: 이 벤치는 **배터리와 ESC 신호선 둘 다 뺀 상태, 프롭 없음일 때만 GO**.
+모터 전원이 들어가는 시험은 **NO-GO** — 하드웨어에서 USB 지연 · 부분 쓰기 (partial write) · OUT/IN 동시 bulkTransfer 를 먼저 확인할 것.
+0. 준비 (먼저):
+   - **배터리 뽑기 + ESC 신호선 뽑기 (둘 다)**. 프롭 없음. ESC 캘리브레이션은 아직 하지 않는다.
+   - **킬 스위치 시험을 맨 처음**: PC 에서 KILL → FC 상태 KILLED 확인, CLEAR_KILL 까지 (모터 출력 0 인지 FC 로그로).
+   - **ESP-NOW 짝 확인**: FC_PC_PEER_MAC 이 브로드캐스트 (짝 안 됨) 이면 **아무 MAC 의 명령이나 받음** (link_task.c pc_mac_ok, 벤치 전용)
+     → 실제 PC 쪽 ESP32 MAC 을 넣고 빌드했는지 확인.
+   - 폰 케이블은 ESP32-S3 의 **네이티브 USB 포트** (TinyUSB, GPIO19/20) 에 꽂는다 — UART 브리지 포트 아님.
+   - **케이블을 뽑았다 꽂거나 FC 를 리셋하면 앱을 다시 시작**한다 (앱은 다시 열기를 안 함: 포트가 죽은 채로 돎).
+   - 나중에 모터 전원을 넣는 단계가 오면 그 전에 **전류 제한 전원** (벤치 전원) 부터 쓴다. 이 README 의 순서에는 모터 전원 단계 없음.
 1. FC 에 fcarm 1af078e 펌웨어 올리기 (`. ~/esp/esp-idf/export.sh && cd esp32fc && idf.py -p <포트> flash monitor`), PC 쪽 ESP32 와 짝.
-   모터 전원 (배터리) 은 **연결하지 않거나** ESC 신호선을 뺀다.
 2. 폰에 APK 0.6.38 설치 (SHA256SUMS 확인). 폰 ↔ FC 를 USB-C OTG 로 연결 → 처음엔 권한 창 → 허용.
 3. 첫 시험 (카메라 없이 IMU 만): `am start ... --es mode imu_tx --es viop_imu usb --ei secs 20` →
    files/ov/imu_tx_*/viop_imu.json 의 usb_link: imu_written ≈ imu_in, imu_fail 0, max_write_ms; FC 모니터에 IMU 수신 수.
@@ -99,5 +112,7 @@ POSE / HEARTBEAT (UDP) 를 USB 로 FC 에 보내는 길도, FC -> 폰 (USB IN, �
 - 2개 스레드에서 같은 UsbDeviceConnection 에 bulkTransfer (OUT/IN) — 하드웨어 미시험.
 - DTR 0 on close = 새 동작 (FC 가 폰 끊김으로 봄).
 - prepare() 에서 링크를 연 뒤 시작 실패 → stop() 의 이른 return 두 곳에 closeUsbLinkEarly 추가 (Android 에서 미시험).
+- FC 수정 + UDP: UDP 경로 (USB 아님) 에서 순서가 바뀐 pose (seq 뒤로) 는 DISARMED 에서 "보낸 쪽 재시작" 으로 읽혀 F_RESET 이 붙어
+  있으면 래치를 잘못 풀 수 있음 — F_RESET 이 붙는 새 W 의 처음 50 pose (~0.25 s) 안에서만 (검토 지적, 불확실·작음). USB 는 순서 안 바뀜.
 - FC 수정: F_RESET 상승 에지 또는 pose seq 가 뒤로 간 경우만 새 W. 같은 카운터로 앱이 다시 켜졌는데 첫 pose 들을 잃고 seq 도 앞으로만
   가면 (실제로는 seq 가 0 부터 다시 시작하므로 드묾) 해제 안 됨 → 안전 쪽.
