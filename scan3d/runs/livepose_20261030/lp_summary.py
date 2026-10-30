@@ -97,13 +97,24 @@ def main():
           if r["score"].get("status") == "ok" and r["score"].get("ate_map_cm") is not None]
     md += ["", "## Loop closure share in B (map ATE − VIO ATE, cm)", "",
            "| rec | VIO | map | Δ |", "|---|---|---|---|"] + [f"| {a} | {v:.2f} | {m:.2f} | {m - v:+.2f} |" for a, m, v in lc]
+    # Sim3 scale (VIO -> GT) per condition, GT sets (reference; < 1 = VIO motion too large)
+    md += ["", "## Sim3 scale median (S+H ok runs) and alt-GT ATE (B)", "", "| cond | n | scale median | min | max |", "|---|---|---|---|---|"]
+    scl = {}
+    for c, runs in allc.items():
+        v = [r["score"].get("scale_sim3") for r in runs.values() if r["score"].get("status") == "ok" and r["score"].get("scale_sim3")]
+        if v:
+            scl[c] = dict(n=len(v), med=float(np.median(v)), min=min(v), max=max(v))
+            md.append(f"| {c} | {len(v)} | {np.median(v):.4f} | {min(v):.4f} | {max(v):.4f} |")
+    alt = [(r["rec"], r["score"].get("ate_vio_cm"), r["score"].get("ate_vio_cm_imu_gt"), r["score"].get("ate_vio_cm_imu_gt_rs"))
+           for r in B.values() if r["score"].get("ate_vio_cm")]
+    md += ["", "| rec | ATE spl | ATE imu_gt | ATE imu_gt_rs |", "|---|---|---|---|"] + [f"| {a} | {b} | {c} | {d} |" for a, b, c, d in alt]
     # Lp0 identity
     ident = {}
     for r, x in allc.get("Lp0", {}).items():
         if r in B:
             ident[r] = (x["score"].get("ate_vio_cm"), B[r]["score"].get("ate_vio_cm"))
     md += ["", f"Lp0 (loop off) VIO ATE vs B VIO ATE: {ident}"]
-    summ = dict(made=time.strftime("%F %T"), runs_dir=str(RUNS), baseline=base, pairs=pairs, loop_share=lc, lp0_identity=ident,
+    summ = dict(made=time.strftime("%F %T"), runs_dir=str(RUNS), baseline=base, pairs=pairs, loop_share=lc, lp0_identity=ident, scale=scl, alt_gt=alt,
                 n_runs={c: len(v) for c, v in allc.items()})
     json.dump(summ, open(HERE / "summary.json", "w"), indent=1, ensure_ascii=False)
     (HERE / "summary.md").write_text("\n".join(md) + "\n")
