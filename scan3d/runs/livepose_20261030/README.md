@@ -69,5 +69,12 @@
 - 173432 가 B 에서 초기화 안 됨 (`[init]: not enough feats to compute disp: 0,67 < 15`, 추적 점 36–69 개). 탐색 조건 (S+L 만):
   `X_win05` init_window_time 0.5 s, `X_pts300` num_pts 300, `X_fast10` fast_threshold 10. 결과는 "탐색" 으로만 적는다.
 
+### 2.7 독립 검증 (19:00, 읽기 전용 에이전트, `scratchpad/team/verify_livepose_baseline.md`) — 주장 8개 틀림 0, 덧붙인 차이
+- c4f60 은 rec60 기본값이 아니라 launcher `<cfg>` 인자 (ov_phone_run.sh 121, 154) — 운영자가 c4f60 을 줄 때만 이 기준선이 라이브와 같다.
+- 폰 첫 프레임 (idx 0) 은 capture result 전이라 시각 오프셋 0 으로 나감 (재생은 +4.27 ms). Image.getTimestamp = SENSOR_TIMESTAMP 는 가정.
+- `--health 1` 은 gyro_klt mode 5 가드에 들어가고 (main.cpp 1959), drop-late mode 1 은 늦은 프레임이 이어지면 DEGRADED (2081) → 라이브에서는 늦은 프레임이 포즈를 바꿀 수 있음. 재생 (drop-late 0) 에는 이 경로 없음.
+- 폰은 acquireLatestImage·pool 에서 프레임을 버릴 수 있음, 재생은 모두 넣음. 디코드 = H.264 (limited range) → BGR → GRAY. 폰 .so 와 PC 빌드 동일성은 확인 불가.
+- 채점 세부: `scale_sim3` 는 반사 부호 미처리 (참고값), "10 Hz" 경로 = 매칭 포즈 6 개마다, 표류/m 은 실제 GT 경로 (≥ D) 로 나눔. `imu_gt` 시각은 t_mid 와 0.5–0.7 ms 어긋남 (참고 자).
+
 ## 3. 결과
 (측정 뒤 채움)
