@@ -43,6 +43,10 @@ CONDS = {   # name: (cfg dir, extra lp_replay args, sets)
     "K_off": (LIVE, ["--extra", f"--ovopt {OVOPT}"], "SLH"),          # gyro_klt off
     "D10": (LIVE, ["--drop-every", "10"], "SLH"),    # 10 % frames dropped (timing stress)
     "Lp0": (LIVE, ["--loop", "0"], "S"),             # loop off: VIO pose must be identical to B
+    # README 2.6 exploratory (registered 18:20 after part of B was seen; not used for verdicts)
+    "X_win05": (LIVE, ["--yaml", "init_window_time=0.5"], "SL"),
+    "X_pts300": (LIVE, ["--yaml", "num_pts=300"], "SL"),
+    "X_fast10": (LIVE, ["--yaml", "fast_threshold=10"], "SL"),
 }
 
 

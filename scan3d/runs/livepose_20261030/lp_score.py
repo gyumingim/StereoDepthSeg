@@ -121,6 +121,20 @@ def score(rec, poses, shift_ns, t_first_fed, t_last_fed, gt="auto"):
             mu_s, mu_d = P.mean(0), Pg.mean(0)
             U2, s2, Vt2 = np.linalg.svd((Pg - mu_d).T @ (P - mu_s) / len(P))
             res["scale_sim3"] = round(float(s2.sum() / np.mean(np.sum((P - mu_s) ** 2, 1))), 4)
+    # ruler check (added 18:10, after the pre-registration, reference only): same VIO poses vs the other GT variants
+    for alt in ("imu_gt", "imu_gt_rs"):
+        if alt == gdir.name or not (rec / alt / "gt.npz").exists():
+            continue
+        h = dict(np.load(rec / alt / "gt.npz", allow_pickle=True))
+        ok2 = h["ok"].astype(bool) & (np.linalg.norm(h["p_bc"], axis=1) < 1.2)
+        t2, p2 = h["t_ns"][ok2], h["p_bc"][ok2]
+        k = np.clip(np.searchsorted(t2, vt), 1, len(t2) - 1)
+        k = np.where(np.abs(t2[k - 1] - vt) < np.abs(t2[k] - vt), k - 1, k)
+        m2 = np.abs(t2[k] - vt) < 2_000_000
+        if m2.sum() >= 50:
+            P2 = np.array([_T(tr[i], "vio")[:3, 3] for i in np.nonzero(m2)[0]])
+            R2, tt2 = umeyama(P2, p2[k[m2]])
+            res[f"ate_vio_cm_{alt}"] = round(float(np.sqrt(np.mean(np.sum((P2 @ R2.T + tt2 - p2[k[m2]]) ** 2, 1)))) * 100, 2)
     L = path_len(Pg)
     res["path_m"] = round(L, 3)
     res["gt_span_s"] = round((tt[-1] - tt[0]) / 1e9, 2)
