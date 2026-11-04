@@ -145,7 +145,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 class OvRunner implements SensorEventListener {
     interface Status { void show(String s); }
 
-    static final String VERSION = "ov-20261029-usbrelay-0.6.38c";
+    static final String VERSION = "ov-20261104-usbrelay-0.6.38d";
     private static final int MAGIC = 0x4F564252;
     // settings (intent extras, MainActivity)
     String cam = "lens2";
@@ -740,6 +740,11 @@ class OvRunner implements SensorEventListener {
     /** 0.6.12: on-screen guide (MainActivity / OvGuide) -> meta.json; its countdown starts at first_fed_elapsed_ns. */
     void noteGuide(String spec, int secs) {
         try { meta.put("guide", spec).put("guide_secs", secs).put("guide_t0", "first_fed_elapsed_ns"); } catch (Exception ignored) { }
+    }
+
+    /** 0.6.38d: default absolute cap for a run with secs 0 and no guide (MainActivity) -> meta.json. */
+    void noteDefaultCap(int capMin, int intentMin) {
+        try { meta.put("default_cap_min", capMin).put("max_run_min_intent", intentMin).put("default_cap_t0", "run_start"); } catch (Exception ignored) { }
     }
 
     boolean autoIsoActive() { return isMain() && autoIso && iso <= 0 && expUs > 0; }

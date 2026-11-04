@@ -141,3 +141,11 @@ POSE / HEARTBEAT (UDP) 를 USB 로 FC 에 보내는 길도, FC -> 폰 (USB IN, �
 - 문서 정정: 0.6.34 메모(`appnpu_20261028/run_err.sh` 머리말)의 "앱 강제 상한 = secs + 60 s" 는 틀렸다. 실제로는 스크립트가 intent secs 를 SECS + 60 으로 넘겼을 뿐이고, 그 상한도 0.6.38b 전까지는 큐가 떠 있으면 걸리지 않았다. 해당 스크립트 주석, MainActivity, RunCue 머리말을 고쳤다.
 - 폰 확인(시험 7, `smoke.sh t7`): 폰은 책상 위(VIO 초기화 안 됨). 가이드 `still:200` (가이드 실행에서는 secs 타이머를 안 씀) + `secs 20`. 화면이 꺼지지 않게 시험 동안만 `svc power stayon true` 를 켰다가 끝에 껐다. 결과: stop_reason "hard_cap", secs 80.66, bridge_exit 0, 카메라 `[]`, ov_bridge 0, ANR 0. 지금 폰에 0.6.38c 가 깔려 있다.
 - 남은 틈: `secs 0` 이고 가이드가 없는 실행은 여전히 상한이 없다 (사람이 멈춤). 모든 스크립트는 secs 를 넘긴다.
+
+### 7d. 0.6.38d (vc 52, sha f9160fd5…): default_cap (2026-11-04, PC 만 — 폰 설치·시험 안 함)
+- 7c 의 남은 틈을 막았다: mode ov 를 `secs 0` 또는 secs 없이, 가이드 없이 시작하면 실행 시작부터 **30 분** 뒤 VIO·NPU 상태와 상관없이 멈춘다 (meta stop_reason `"default_cap"`). hard_cap 과 같은 main-looper Handler(`uiH`), 같은 "이전 실행 타이머는 새 실행을 안 멈춤" 검사.
+- intent `max_run_min N` (`--ei`) 로 바꿀 수 있다: N > 0 → N 분 (최대 1440), 0·없음·음수 → 30 분. 무제한은 없다. `--es` 로 주면 Android 가 정수로 못 읽어 30 분이 된다 (안전 쪽).
+- meta.json 에 `default_cap_min`, `max_run_min_intent`, `default_cap_t0 "run_start"` 가 들어간다 (default_cap 이 걸린 실행만).
+- 그대로인 것: `secs > 0` 이면 0.6.38c 그대로 (secs 타이머 + secs + 60 s hard_cap, default_cap 없음). 가이드가 있고 secs 0 이면 가이드 끝이 멈춤 (default_cap 없음, 요청 범위대로). 다른 mode (hs·imu_tx·calcap 등) 는 손대지 않음.
+- 빌드: Java 만 다시 컴파일. 네이티브 lib 6 개와 assets 5 개는 0.6.38c APK 에서 그대로 꺼내 넣었고 바이트 비교 모두 같음. 서명 인증서도 0.6.38c 와 같음 (`00aeb27b…`). `scratchpad/team/usbrelay/apk/arlat_0.6.38d_usbrelay.apk`, SHA256SUMS 에 추가.
+- 아직 안 본 것: 폰에서 30 분 (또는 `max_run_min 1`) 으로 실제로 멈추는지. 확인 방법: `secs` 없이 `--ei max_run_min 1` → 약 60 s 에 stop_reason "default_cap".

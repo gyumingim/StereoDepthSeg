@@ -27,7 +27,7 @@ import java.util.Locale;
 /**
  * VIO latency/pose bench (PC page: scan3d/tools/vio_bench_server.py).
  * Intent extras: mode = arcore (default) | ov (live OpenVINS, OvRunner) | cam2 (camera2 delivery only, Cam2Probe);
- * secs = run length (0 = until the activity is stopped).
+ * secs = run length (0 = until the activity is stopped; mode ov 0.6.38d: without a guide at most max_run_min, default 30 min).
  * ov (0.6.7): ov_cam lens2 (default) | main (std60 camera, baseline timing), ov_size, fps, exp_us, iso, focus_dpt,
  * ov_cfg (config subdir of files/ov), ov_preset bench | live, imu raw | cal, ov_timing 0/1, max_temp_dc, pool,
  * perf 0/1 (0.6.13, default 1: thread priorities + PerformanceHintManager + sustained mode, OvRunner doc);
@@ -42,6 +42,9 @@ import java.util.Locale;
  *   Without gyro = intent ov_opt "all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse" (explicit intent wins).
  * 0.6.28 (user 2026-10-26, 60 fps only): profile rec60 + loop 1 (rec20261025 unchanged) (ovloop BoW loop closure, own thread; vocabulary shipped in
  *   the APK assets, copied to files/ov/voc_k10L4.voc). Without loop = intent loop 0. Profile + recover N -> loop off.
+ * 0.6.38d (appcap 11-04): secs 0 / no secs and no guide -> default_cap stop 30 min from the run start (meta stop_reason
+ *   "default_cap", default_cap_min, max_run_min_intent), main-looper Handler; intent max_run_min N overrides (0 = 30, max 1440,
+ *   never unlimited). Explicit secs keeps the secs + 60 s hard_cap.
  * 0.6.38c (10-29): hard_cap stop at secs + 60 s from the run start (meta stop_reason "hard_cap"), main-looper Handler.
  * 0.6.38b (10-29): secs cap / imu_tx timer and the RunCue 2 Hz tick on a main-looper Handler (a detached status view never
  *   ran the cap: run went on until the screen turned off).
@@ -405,6 +408,21 @@ public class MainActivity extends Activity {
                     if (cue != null) cue.saving();
                     finish();
                 }, (secs + 60) * 1000L);
+                // 0.6.38d (appcap 11-04): secs 0 / no secs and no guide had no cap at all -> default absolute cap 30 min from the
+                // run start (meta stop_reason "default_cap"), same main-looper Handler. Intent max_run_min N (> 0) changes it;
+                // 0 / missing / negative = 30; never unlimited (clamped 1..1440).
+                if (secs <= 0 && g == null) {
+                    final int mrm = getIntent().getIntExtra("max_run_min", 0);
+                    final int capMin = mrm > 0 ? Math.min(1440, mrm) : 30;
+                    ov.noteDefaultCap(capMin, mrm);
+                    uiH.postDelayed(() -> {
+                        if (ov != mine) return;
+                        ov.stopReason = "default_cap";
+                        android.util.Log.w("arlat", "default_cap: secs 0, no guide, " + capMin + " min from the start -> stop");
+                        if (cue != null) cue.saving();
+                        finish();
+                    }, capMin * 60_000L);
+                }
                 final Runnable afterStart = () -> {
                     if (ov != mine) return;   // stopped (onPause) while the NPU was starting
                     status.setText("OpenVINS starting...");
