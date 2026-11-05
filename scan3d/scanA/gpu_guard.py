@@ -54,7 +54,7 @@ def acquire(owner):
             if d.get("pid") != os.getpid() and _alive(d.get("pid")) and age < MAX_AGE_S and d.get("host") == socket.gethostname():
                 print(f"[gpu_guard] GPU held by {d.get('owner')} (pid {d.get('pid')}, {age / 60:.0f} min) -> waiting",
                       file=sys.stderr, flush=True)
-                time.sleep(30)
+                time.sleep(float(os.environ.get("SCAN3D_GPU_POLL_S", "30")))   # featloop: env poll interval (same lock rules)
                 continue
             if d:
                 print(f"[gpu_guard] stale lock taken over: {d}", file=sys.stderr, flush=True)

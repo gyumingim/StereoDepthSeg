@@ -222,6 +222,15 @@ def main():
                          "similar keyframes that are not time neighbours (> --seq keyframes apart) and not already paired")
     ap.add_argument("--loop-k", type=int, default=5)
     ap.add_argument("--loop-min-sim", type=float, default=0.0)
+    ap.add_argument("--seed", type=int, default=-1, help="RANSAC random_seed of the two-view verification (-1 = COLMAP default = "
+                    "not repeatable run to run; featloop found inlier sets differ on 1838/1844 pairs between identical runs)")
+    ap.add_argument("--db-from", default="", help="reuse features + raw matches (db.db, pairs.txt, loop_pairs.txt) of an earlier run dir: "
+                    "only the verification (with --seed) and BA are redone, on the CPU, no GPU lock")
+    ap.add_argument("--keep-db", action="store_true", help="keep OUT/db.db (for --db-from repeats)")
+    ap.add_argument("--tracks", default="drop", choices=["drop", "greedy"],
+                    help="drop = scanA (union-find over all verified inliers, drop every track that holds two keypoints of one "
+                         "image); greedy = featloop 11-06: conflict-free union-find, pairs in order of inlier count (high first), "
+                         "an edge is skipped when it would put two keypoints of one image into one track")
     ap.add_argument("--cache-root", default="", help="keyframe image cache root (default REC/scanA_cache)")
     a = ap.parse_args()
     import pycolmap
@@ -287,39 +296,44 @@ def main():
         cap.release()
     log(f"[img] {len(kfs)} images in {img_dir} ({len(need)} new) {time.time() - t0:.0f}s")
     tm["images_s"] = round(time.time() - t0, 1)
-    gpu_job = gpu_guard.job(f"kf_ba(featloop) {out}", out_dir=str(out), torch_cap=True)   # GPU lock only for features/matching
-    gpu_job.__enter__()
+    import contextlib, shutil
+    gpu_job = gpu_guard.job(f"kf_ba(featloop) {out}", out_dir=str(out), torch_cap=True) if not a.db_from else contextlib.nullcontext()
+    gpu_job.__enter__()                            # GPU lock only for features/matching
     _GJ[0] = gpu_job
     tg = time.time()
 
-    # ---- pycolmap features + matches
     db_path = out / "db.db"
-    if db_path.exists():
-        db_path.unlink()
-    eo = pycolmap.FeatureExtractionOptions()
-    eo.sift.max_num_features = a.max_features if a.feat == "sift" else 16    # xfeat_lg: SIFT pass only creates camera/image rows
-    eo.max_image_size = max(W0, H0)
-    ro = pycolmap.ImageReaderOptions()
-    ro.camera_model = "PINHOLE"
-    ro.camera_params = f"{Kr[0, 0]:.10g},{Kr[1, 1]:.10g},{Kr[0, 2] + 0.5:.10g},{Kr[1, 2] + 0.5:.10g}"
-    pycolmap.extract_features(db_path, img_dir, image_names=[names[i] for i in kfs], camera_mode=pycolmap.CameraMode.SINGLE,
-                              reader_options=ro, extraction_options=eo, device=pycolmap.Device.auto)
-    xfeats = None
-    if a.feat == "xfeat_lg":
-        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "featloop"))
-        import feats as FL
-        xm = FL.XFLG(topk=a.xf_topk, lg_conf=a.lg_conf, subpix=a.xf_subpix)
-        db = pycolmap.Database.open(str(db_path))
-        ims0 = {im.name: im.image_id for im in db.read_all_images()}
-        db.clear_keypoints(); db.clear_descriptors()
-        xfeats = {}
-        for i in kfs:
-            gr = cv2.imread(str(img_dir / names[i]), cv2.IMREAD_GRAYSCALE)
-            xfeats[i] = xm.extract(gr)
-            db.write_keypoints(ims0[names[i]], (xfeats[i]["kp"] + 0.5).astype(np.float32))   # OpenCV 0 -> COLMAP centre 0.5
-        db.close()
-        log(f"[xfeat] {len(kfs)} images, keypoints median {np.median([len(v['kp']) for v in xfeats.values()]):.0f}, "
-            f"ms/img median {np.median(xm.ms_f):.1f}")
+    if a.db_from:
+        shutil.copy(Path(a.db_from) / "db.db", db_path)
+    else:
+        # ---- pycolmap features + matches
+        db_path = out / "db.db"
+        if db_path.exists():
+            db_path.unlink()
+        eo = pycolmap.FeatureExtractionOptions()
+        eo.sift.max_num_features = a.max_features if a.feat == "sift" else 16    # xfeat_lg: SIFT pass only creates camera/image rows
+        eo.max_image_size = max(W0, H0)
+        ro = pycolmap.ImageReaderOptions()
+        ro.camera_model = "PINHOLE"
+        ro.camera_params = f"{Kr[0, 0]:.10g},{Kr[1, 1]:.10g},{Kr[0, 2] + 0.5:.10g},{Kr[1, 2] + 0.5:.10g}"
+        pycolmap.extract_features(db_path, img_dir, image_names=[names[i] for i in kfs], camera_mode=pycolmap.CameraMode.SINGLE,
+                                  reader_options=ro, extraction_options=eo, device=pycolmap.Device.auto)
+        xfeats = None
+        if a.feat == "xfeat_lg":
+            sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "featloop"))
+            import feats as FL
+            xm = FL.XFLG(topk=a.xf_topk, lg_conf=a.lg_conf, subpix=a.xf_subpix)
+            db = pycolmap.Database.open(str(db_path))
+            ims0 = {im.name: im.image_id for im in db.read_all_images()}
+            db.clear_keypoints(); db.clear_descriptors()
+            xfeats = {}
+            for i in kfs:
+                gr = cv2.imread(str(img_dir / names[i]), cv2.IMREAD_GRAYSCALE)
+                xfeats[i] = xm.extract(gr)
+                db.write_keypoints(ims0[names[i]], (xfeats[i]["kp"] + 0.5).astype(np.float32))   # OpenCV 0 -> COLMAP centre 0.5
+            db.close()
+            log(f"[xfeat] {len(kfs)} images, keypoints median {np.median([len(v['kp']) for v in xfeats.values()]):.0f}, "
+                f"ms/img median {np.median(xm.ms_f):.1f}")
     tm["features_s"] = round(time.time() - tg, 1)
     C = {i: Tv[i][:3, 3] for i in kfs}
     Zax = {i: Tv[i][:3, 2] for i in kfs}
@@ -341,7 +355,13 @@ def main():
     n_base_pairs = len(pairs)
     loop_pairs = set()
     loop_info = {}
-    if a.loop == "salad":
+    if a.loop == "salad" and a.db_from:
+        for l_ in (Path(a.db_from) / "loop_pairs.txt").read_text().splitlines():
+            if l_.strip():
+                x_, y_ = l_.split(); loop_pairs.add((int(x_[:-4]), int(y_[:-4])))
+        pairs |= loop_pairs
+        loop_info = json.loads((Path(a.db_from) / "ba.json").read_text()).get("loop", {})
+    elif a.loop == "salad":
         t2 = time.time()
         sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "featloop"))
         import feats as FL
@@ -375,12 +395,21 @@ def main():
         log(f"[loop] SALAD {len(loop_pairs)} extra pairs (k {a.loop_k}), {loop_info}")
     pl = out / "pairs.txt"
     pl.write_text("\n".join(f"{names[x]} {names[y]}" for x, y in sorted(pairs)) + "\n")
+    (out / "loop_pairs.txt").write_text("".join(f"{names[x]} {names[y]}\n" for x, y in sorted(loop_pairs)))
+    if a.db_from:
+        assert pl.read_text() == (Path(a.db_from) / "pairs.txt").read_text(), "pairs differ from --db-from run"
+    vopt = pycolmap.TwoViewGeometryOptions(); vopt.ransac.random_seed = a.seed
     t3 = time.time()
     n_raw = {}
-    if a.feat == "sift":
+    if a.db_from:
+        db = pycolmap.Database.open(str(db_path)); db.clear_two_view_geometries(); db.close()
+        pycolmap.verify_matches(str(db_path), str(pl), vopt)
+        n_raw = {tuple(map(int, k.split())): v for k, v in json.loads((Path(a.db_from) / "ba.json").read_text()).get("n_raw", {}).items()}
+    elif a.feat == "sift":
         mo = pycolmap.FeatureMatchingOptions()
         po = pycolmap.ImportedPairingOptions(); po.match_list_path = str(pl)
-        pycolmap.match_image_pairs(str(db_path), matching_options=mo, pairing_options=po, device=pycolmap.Device.auto)
+        pycolmap.match_image_pairs(str(db_path), matching_options=mo, pairing_options=po, verification_options=vopt,
+                                   device=pycolmap.Device.auto)
     else:
         db = pycolmap.Database.open(str(db_path))
         for x, y in sorted(pairs):
@@ -389,7 +418,7 @@ def main():
             db.write_matches(ims0[names[x]], ims0[names[y]], m_)
         db.close()
         log(f"[lg] {len(pairs)} pairs, raw matches median {np.median(list(n_raw.values())):.0f}, ms/pair median {np.median(xm.ms_m):.1f}")
-        pycolmap.verify_matches(str(db_path), str(pl), pycolmap.TwoViewGeometryOptions())
+        pycolmap.verify_matches(str(db_path), str(pl), vopt)
         del xm, xfeats
     tm["matching_s"] = round(time.time() - t3, 1)
     log(f"[match] {len(pairs)} pairs {time.time() - t0:.0f}s")
@@ -409,6 +438,7 @@ def main():
     uf = UF()
     n_inl = []
     inl_of = {}
+    edges = []
     for pid, gm in zip(ids, geoms):
         i1, i2 = pid if isinstance(pid, tuple) else pycolmap.pair_id_to_image_pair(pid)
         mm = np.asarray(gm.inlier_matches)
@@ -417,8 +447,26 @@ def main():
         if len(mm) < 15:
             continue
         n_inl.append(len(mm))
-        for x, y in mm:
-            uf.u((k1, int(x)), (k2, int(y)))
+        edges.append((len(mm), min(k1, k2), max(k1, k2), k1, k2, mm))
+    n_skip = 0
+    if a.tracks == "drop":
+        for _, _, _, k1, k2, mm in edges:
+            for x, y in mm:
+                uf.u((k1, int(x)), (k2, int(y)))
+    else:
+        cimg = {}                                   # root -> set of keyframes in the track
+        for _, _, _, k1, k2, mm in sorted(edges, key=lambda e: (-e[0], e[1], e[2])):
+            for x, y in mm:
+                ra, rb = uf.f((k1, int(x))), uf.f((k2, int(y)))
+                if ra == rb:
+                    continue
+                sa, sb = cimg.get(ra, {k1}), cimg.get(rb, {k2})
+                if sa & sb:
+                    n_skip += 1
+                    continue
+                uf.u(ra, rb)
+                cimg[uf.f(ra)] = sa | sb
+        log(f"[tracks] greedy: {n_skip} conflicting match edges skipped")
     groups = {}
     for node in list(uf.p):
         groups.setdefault(uf.f(node), []).append(node)
@@ -540,8 +588,10 @@ def main():
                 points=int(len(X0)), obs=int(len(cam)), fixed_kf=[kfs[k] for k in fixed],
                 kf_obs_min=int(obs_per_kf.min()), sim3_scale=sc, sim3_rms_cm=float(np.sqrt((res[fr] ** 2).mean()) * 100),
                 runtime_s=round(time.time() - t0, 1), timing=tm, pair_stats=pair_stats, loop=loop_info,
-                points_per_kf_median=float(np.median(obs_per_kf)), **{k: v for k, v in st.items() if k != "hist"}, hist=st["hist"])
+                points_per_kf_median=float(np.median(obs_per_kf)), n_raw={f"{x} {y}": v for (x, y), v in n_raw.items()}, track_edges_skipped=n_skip, **{k: v for k, v in st.items() if k != "hist"}, hist=st["hist"])
     (out / "ba.json").write_text(json.dumps(info, indent=1))
+    if not a.keep_db and db_path.exists():
+        db_path.unlink()
     log(json.dumps({k: v for k, v in info.items() if k != "hist"}))
 
 
