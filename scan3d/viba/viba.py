@@ -75,6 +75,8 @@ def main():
     ap.add_argument("--init-scale", type=float, default=1.0, help="positive control: stretch the initial positions/points/velocities")
     ap.add_argument("--iters", type=int, default=100)
     ap.add_argument("--huber", type=float, default=1.0)
+    ap.add_argument("--diag-damp", type=int, default=1, help="LM diagonal (Ceres-like) damping")
+    ap.add_argument("--rel-tol", type=float, default=1e-5, help="LM relative error decrease to stop (README 2.4)")
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--vision-only", action="store_true",
                     help="baseline in the same solver: no IMU factors, kf_ba gauge (its fixed keyframes held), Sim(3) onto the VIO centres")
@@ -212,7 +214,9 @@ def main():
 
     _, _, e0 = reproj(vals)
     err0 = graph.error(vals)
-    lp = gtsam.LevenbergMarquardtParams(); lp.setMaxIterations(a.iters); lp.setRelativeErrorTol(1e-7); lp.setAbsoluteErrorTol(1e-9)
+    lp = gtsam.LevenbergMarquardtParams(); lp.setMaxIterations(a.iters); lp.setRelativeErrorTol(a.rel_tol); lp.setAbsoluteErrorTol(1e-9)
+    if a.diag_damp:
+        lp.setDiagonalDamping(True)
     opt = gtsam.LevenbergMarquardtOptimizer(graph, vals, lp)
     res = opt.optimize()
     err1 = graph.error(res)

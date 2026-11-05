@@ -76,7 +76,7 @@ def main():
             vj = json.loads((vd.parent / "viba.json").read_text())
             r[vd.parent.name].update(reproj_med_px=vj.get("reproj_med_px"), lm_iters=vj.get("lm_iters"))
         res[bd.name] = r
-    srcs = ["vio_kf", "ba", "viba", "viba_on", "viba_x103"]
+    srcs = ["vio_kf", "ba", "ba_g", "viba", "viba_on", "viba_x103", "x_viba_it300", "x_ba_g_it300"]
     lines = ["| 녹화 | n kf (GT 짝) | " + " | ".join(f"{s} k_fwd / k_pair / k_rev" for s in srcs) + " | 재투영 중앙 px ba / viba |",
              "|---" * (len(srcs) + 3) + "|"]
     for rec, r in res.items():
