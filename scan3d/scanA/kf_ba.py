@@ -210,9 +210,25 @@ def main():
                     help="HS 240 fps recordings (VIO fed at 60 fps): keyframes = every --kf-step-th VIO-fed frame (not every "
                          "kf-step-th recording row); sequential/covisible gaps counted in keyframes")
     ap.add_argument("--match-ms", type=float, default=4.0, help="VIO t_ns vs GT row t_ns tolerance (use 1 for 240 fps rows)")
+    # featloop 2026-11-05 (defaults = scanA behaviour)
+    ap.add_argument("--feat", default="sift", choices=["sift", "xfeat_lg"],
+                    help="sift = pycolmap CUDA SIFT + SIFT matcher (scanA); xfeat_lg = XFeat top-k + LighterGlue (PyTorch GPU), "
+                         "matches written into the same COLMAP database and verified by the same pycolmap.verify_matches")
+    ap.add_argument("--xf-topk", type=int, default=4096)
+    ap.add_argument("--xf-subpix", type=int, default=0)
+    ap.add_argument("--lg-conf", type=float, default=0.1)
+    ap.add_argument("--loop", default="none", choices=["none", "salad"],
+                    help="salad: extra appearance pairs (SALAD global descriptor retrieval), each keyframe vs its --loop-k most "
+                         "similar keyframes that are not time neighbours (> --seq keyframes apart) and not already paired")
+    ap.add_argument("--loop-k", type=int, default=5)
+    ap.add_argument("--loop-min-sim", type=float, default=0.0)
+    ap.add_argument("--cache-root", default="", help="keyframe image cache root (default REC/scanA_cache)")
     a = ap.parse_args()
     import pycolmap
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import gpu_guard
     t0 = time.time()
+    tm = {}
     rec, out = Path(a.rec).resolve(), Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     logf = open(out / "ba.log", "w")
@@ -243,7 +259,7 @@ def main():
     sq = float(g["square_mm"]) / 1000.0
     BW, BH = bj["squares_x"] * sq, bj["squares_y"] * sq
     tag = f"kf{a.kf_step}_s{s:g}" + ("_mask" if a.mask_board else "") + (f"_vio_{a.gt}" if a.kf_from_vio else "")
-    img_dir = rec / "scanA_cache" / tag
+    img_dir = (Path(a.cache_root) / rec.name if a.cache_root else rec / "scanA_cache") / tag
     img_dir.mkdir(parents=True, exist_ok=True)
     names = {i: f"{i:05d}.jpg" for i in kfs}
     need = [i for i in kfs if not (img_dir / names[i]).exists()]
@@ -270,19 +286,41 @@ def main():
             fi += 1
         cap.release()
     log(f"[img] {len(kfs)} images in {img_dir} ({len(need)} new) {time.time() - t0:.0f}s")
+    tm["images_s"] = round(time.time() - t0, 1)
+    gpu_job = gpu_guard.job(f"kf_ba(featloop) {out}", out_dir=str(out), torch_cap=True)   # GPU lock only for features/matching
+    gpu_job.__enter__()
+    _GJ[0] = gpu_job
+    tg = time.time()
 
     # ---- pycolmap features + matches
     db_path = out / "db.db"
     if db_path.exists():
         db_path.unlink()
     eo = pycolmap.FeatureExtractionOptions()
-    eo.sift.max_num_features = a.max_features
+    eo.sift.max_num_features = a.max_features if a.feat == "sift" else 16    # xfeat_lg: SIFT pass only creates camera/image rows
     eo.max_image_size = max(W0, H0)
     ro = pycolmap.ImageReaderOptions()
     ro.camera_model = "PINHOLE"
     ro.camera_params = f"{Kr[0, 0]:.10g},{Kr[1, 1]:.10g},{Kr[0, 2] + 0.5:.10g},{Kr[1, 2] + 0.5:.10g}"
     pycolmap.extract_features(db_path, img_dir, image_names=[names[i] for i in kfs], camera_mode=pycolmap.CameraMode.SINGLE,
                               reader_options=ro, extraction_options=eo, device=pycolmap.Device.auto)
+    xfeats = None
+    if a.feat == "xfeat_lg":
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "featloop"))
+        import feats as FL
+        xm = FL.XFLG(topk=a.xf_topk, lg_conf=a.lg_conf, subpix=a.xf_subpix)
+        db = pycolmap.Database.open(str(db_path))
+        ims0 = {im.name: im.image_id for im in db.read_all_images()}
+        db.clear_keypoints(); db.clear_descriptors()
+        xfeats = {}
+        for i in kfs:
+            gr = cv2.imread(str(img_dir / names[i]), cv2.IMREAD_GRAYSCALE)
+            xfeats[i] = xm.extract(gr)
+            db.write_keypoints(ims0[names[i]], (xfeats[i]["kp"] + 0.5).astype(np.float32))   # OpenCV 0 -> COLMAP centre 0.5
+        db.close()
+        log(f"[xfeat] {len(kfs)} images, keypoints median {np.median([len(v['kp']) for v in xfeats.values()]):.0f}, "
+            f"ms/img median {np.median(xm.ms_f):.1f}")
+    tm["features_s"] = round(time.time() - tg, 1)
     C = {i: Tv[i][:3, 3] for i in kfs}
     Zax = {i: Tv[i][:3, 2] for i in kfs}
     pairs = set()
@@ -300,12 +338,65 @@ def main():
                 cands.append((ang / a.cov_angle + d / 0.6, j))
         for _, j in sorted(cands)[:a.cov_k]:
             pairs.add((min(i, j), max(i, j)))
+    n_base_pairs = len(pairs)
+    loop_pairs = set()
+    loop_info = {}
+    if a.loop == "salad":
+        t2 = time.time()
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "featloop"))
+        import feats as FL
+        Dg = FL.salad_descriptors([cv2.imread(str(img_dir / names[i]), cv2.IMREAD_GRAYSCALE) for i in kfs])
+        Sg = Dg @ Dg.T
+        np.save(out / "salad_sim.npy", Sg.astype(np.float16))
+        sims = []
+        for k, i in enumerate(kfs):
+            order_ = np.argsort(-Sg[k])
+            got = 0
+            for q in order_:
+                if got >= a.loop_k or Sg[k, q] < a.loop_min_sim:
+                    break
+                j = kfs[q]
+                if abs(int(q) - k) <= a.seq:
+                    continue
+                pr = (min(i, j), max(i, j))
+                if pr in pairs:
+                    continue
+                if pr not in loop_pairs:
+                    loop_pairs.add(pr); sims.append(float(Sg[k, q]))
+                got += 1
+        pairs |= loop_pairs
+        # how far apart (VIO) are the loop pairs: centre distance and view angle
+        dd = [float(np.linalg.norm(C[x] - C[y])) for x, y in loop_pairs]
+        aa = [float(np.degrees(np.arccos(np.clip(Zax[x] @ Zax[y], -1, 1)))) for x, y in loop_pairs]
+        loop_info = dict(n_loop_pairs=len(loop_pairs), sim_median=float(np.median(sims)) if sims else None,
+                         vio_dist_m_median=float(np.median(dd)) if dd else None, vio_angle_deg_median=float(np.median(aa)) if aa else None,
+                         frac_outside_cov_gate=float(np.mean([(d_ >= 0.6) or (a_ >= a.cov_angle) for d_, a_ in zip(dd, aa)])) if dd else None,
+                         salad_s=round(time.time() - t2, 1))
+        log(f"[loop] SALAD {len(loop_pairs)} extra pairs (k {a.loop_k}), {loop_info}")
     pl = out / "pairs.txt"
     pl.write_text("\n".join(f"{names[x]} {names[y]}" for x, y in sorted(pairs)) + "\n")
-    mo = pycolmap.FeatureMatchingOptions()
-    po = pycolmap.ImportedPairingOptions(); po.match_list_path = str(pl)
-    pycolmap.match_image_pairs(str(db_path), matching_options=mo, pairing_options=po, device=pycolmap.Device.auto)
+    t3 = time.time()
+    n_raw = {}
+    if a.feat == "sift":
+        mo = pycolmap.FeatureMatchingOptions()
+        po = pycolmap.ImportedPairingOptions(); po.match_list_path = str(pl)
+        pycolmap.match_image_pairs(str(db_path), matching_options=mo, pairing_options=po, device=pycolmap.Device.auto)
+    else:
+        db = pycolmap.Database.open(str(db_path))
+        for x, y in sorted(pairs):
+            m_ = xm.match(xfeats[x], xfeats[y])
+            n_raw[(x, y)] = len(m_)
+            db.write_matches(ims0[names[x]], ims0[names[y]], m_)
+        db.close()
+        log(f"[lg] {len(pairs)} pairs, raw matches median {np.median(list(n_raw.values())):.0f}, ms/pair median {np.median(xm.ms_m):.1f}")
+        pycolmap.verify_matches(str(db_path), str(pl), pycolmap.TwoViewGeometryOptions())
+        del xm, xfeats
+    tm["matching_s"] = round(time.time() - t3, 1)
     log(f"[match] {len(pairs)} pairs {time.time() - t0:.0f}s")
+    _GJ[0] = None
+    gpu_job.__exit__(None, None, None)            # GPU free from here (BA = CPU)
+    tm["gpu_stage_s"] = round(time.time() - tg, 1)
+    t4 = time.time()
     db = pycolmap.Database.open(str(db_path))
     ims = {im.name: im.image_id for im in db.read_all_images()}
     id2kf = {ims[names[i]]: i for i in kfs}
@@ -317,12 +408,14 @@ def main():
     db.close()
     uf = UF()
     n_inl = []
+    inl_of = {}
     for pid, gm in zip(ids, geoms):
         i1, i2 = pid if isinstance(pid, tuple) else pycolmap.pair_id_to_image_pair(pid)
         mm = np.asarray(gm.inlier_matches)
+        k1, k2 = id2kf[i1], id2kf[i2]
+        inl_of[(min(k1, k2), max(k1, k2))] = len(mm)
         if len(mm) < 15:
             continue
-        k1, k2 = id2kf[i1], id2kf[i2]
         n_inl.append(len(mm))
         for x, y in mm:
             uf.u((k1, int(x)), (k2, int(y)))
@@ -374,6 +467,26 @@ def main():
         cam_l += ks; pt_l += [p] * len(ks); uv_l.append(q)
     X0 = np.array(Xs); cam = np.array(cam_l); pt = np.array(pt_l); uv = np.concatenate(uv_l)
     obs_per_kf = np.bincount(cam, minlength=len(kfs))
+    # featloop: verified pairs / inliers split base vs loop, and points that link a loop pair (both keyframes observe it)
+    vb = [inl_of.get(p_, 0) for p_ in pairs if p_ not in loop_pairs]
+    vl = [inl_of.get(p_, 0) for p_ in loop_pairs]
+    pair_stats = dict(base_pairs=n_base_pairs, base_verified=int(sum(v >= 15 for v in vb)),
+                      base_inliers_median=float(np.median([v for v in vb if v >= 15])) if any(v >= 15 for v in vb) else 0.0,
+                      loop_pairs=len(loop_pairs), loop_verified=int(sum(v >= 15 for v in vl)),
+                      loop_inliers_median=float(np.median([v for v in vl if v >= 15])) if any(v >= 15 for v in vl) else 0.0,
+                      inliers_total=int(sum(v for v in inl_of.values() if v >= 15)),
+                      raw_matches_median=float(np.median(list(n_raw.values()))) if n_raw else None)
+    if loop_pairs:
+        lp_k = {(kfi[x], kfi[y]) for x, y in loop_pairs}
+        o_ = np.argsort(pt, kind="stable"); cs_, ps_ = cam[o_], pt[o_]
+        st_ = np.r_[0, np.flatnonzero(np.diff(ps_)) + 1, len(ps_)]
+        n_lp_pts = n_lp_obs = 0
+        for s0, s1 in zip(st_[:-1], st_[1:]):
+            cc = sorted(cs_[s0:s1])
+            if any((cc[u], cc[v]) in lp_k for u in range(len(cc)) for v in range(u + 1, len(cc))):
+                n_lp_pts += 1; n_lp_obs += s1 - s0
+        pair_stats.update(loop_linked_points=n_lp_pts, loop_linked_obs=int(n_lp_obs))
+    log(f"[pairs] {pair_stats}")
     log(f"[tri] points {len(X0)}, obs {len(cam)}, track len mean {len(cam) / max(1, len(X0)):.2f}, "
         f"obs/kf min {obs_per_kf.min()} median {np.median(obs_per_kf):.0f} {time.time() - t0:.0f}s")
     # keyframes without observations cannot be refined: keep VIO pose (counted)
@@ -400,11 +513,14 @@ def main():
             f"|w| median {np.degrees(np.median(np.linalg.norm(tw[:, :3], axis=1))):.1f} deg/s, |v| median {np.median(np.linalg.norm(tw[:, 3:], axis=1)):.3f} m/s")
     # ---- BA
     fixed = [int(np.argmax(obs_per_kf[:5]))] + [k for k in range(len(kfs)) if obs_per_kf[k] < 15]
+    tm["tracks_tri_s"] = round(time.time() - t4, 1)
+    t5 = time.time()
     R1, t1, X1, st = ba_lm(Rcw, tcw, X0, cam, pt, uv, Kr, fixed=fixed, iters=a.iters, log=log, rs=rs)
     # ---- Sim(3) BA centres -> VIO centres (free keyframes only)
     Cb = np.array([-R1[k].T @ t1[k] for k in range(len(kfs))])
     Cv = np.array([C[i] for i in kfs])
     fr = np.array([k not in set(fixed) or k == fixed[0] for k in range(len(kfs))])
+    tm["ba_s"] = round(time.time() - t5, 1)
     sc, Ra, ta = umeyama(Cb[fr], Cv[fr])
     res = np.linalg.norm((sc * (Ra @ Cb.T).T + ta) - Cv, axis=1)
     log(f"[sim3] scale {sc:.5f}, BA-vs-VIO centre rms {np.sqrt((res[fr] ** 2).mean()) * 100:.2f} cm")
@@ -423,7 +539,8 @@ def main():
                 img_dir=str(img_dir), Kr=Kr.tolist(), pairs=len(pairs), verified_pairs=len(n_inl), tracks=len(tracks),
                 points=int(len(X0)), obs=int(len(cam)), fixed_kf=[kfs[k] for k in fixed],
                 kf_obs_min=int(obs_per_kf.min()), sim3_scale=sc, sim3_rms_cm=float(np.sqrt((res[fr] ** 2).mean()) * 100),
-                runtime_s=round(time.time() - t0, 1), **{k: v for k, v in st.items() if k != "hist"}, hist=st["hist"])
+                runtime_s=round(time.time() - t0, 1), timing=tm, pair_stats=pair_stats, loop=loop_info,
+                points_per_kf_median=float(np.median(obs_per_kf)), **{k: v for k, v in st.items() if k != "hist"}, hist=st["hist"])
     (out / "ba.json").write_text(json.dumps(info, indent=1))
     log(json.dumps({k: v for k, v in info.items() if k != "hist"}))
 
@@ -433,8 +550,12 @@ def _out_arg():
     return _s.argv[_s.argv.index("--out") + 1] if "--out" in _s.argv else None
 
 
+_GJ = [None]   # featloop: the gpu_guard job is held only around features + matching (BA on CPU runs without the lock)
+
 if __name__ == "__main__":
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    import gpu_guard  # one GPU job at a time, torch memory cap, clean OOM exit (README 10)
-    with gpu_guard.job("kf_ba " + str(_out_arg()), out_dir=_out_arg(), torch_cap=False):
+    try:
         main()
+    except BaseException as e:
+        if _GJ[0] is not None:     # OOM -> gpu_guard clean exit (FAILED_OOM.json, rc 3); other errors re-raised, lock released
+            _GJ[0].__exit__(type(e), e, e.__traceback__)
+        raise

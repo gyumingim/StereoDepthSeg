@@ -50,14 +50,20 @@ def main():
     ap.add_argument("--kf-step", type=int, default=10); ap.add_argument("--out", required=True)
     ap.add_argument("--rs-skew-ms", type=float, default=0.0, help="rolling shutter: per-corner row-time camera (same twist for all sources)")
     ap.add_argument("--twist", default="", help="poses for the camera twist (frames i-1, i+1); needed with --rs-skew-ms")
+    # featloop 2026-11-05 (defaults = scanA): H recordings use imu_gt_spl_cal1022 / imu_gt_rs_cal1022, 240 fps rows
+    ap.add_argument("--gt", default="imu_gt_spl"); ap.add_argument("--gt-rs", default="imu_gt_rs")
+    ap.add_argument("--tol-ms", type=float, default=4.0, help="pose t_ns vs row t_ns tolerance (1 for 240 fps rows)")
+    ap.add_argument("--max-gap-rows", type=int, default=300, help="pair search window in rows (300 = 5 s at 60 fps; 1200 at 240 fps)")
     a = ap.parse_args()
     rec = Path(a.rec)
-    gs = np.load(rec / "imu_gt_spl" / "gt.npz"); t_ns, ok = gs["t_ns"], gs["ok"]
-    gc = np.load(rec / "imu_gt_rs" / "gt.npz", allow_pickle=True)
+    gs = np.load(rec / a.gt / "gt.npz"); t_ns, ok = gs["t_ns"], gs["ok"]
+    gc = np.load(rec / a.gt_rs / "gt.npz", allow_pickle=True)
     assert np.all(np.abs(gc["t_ns"] - t_ns) < 2e6)
     K, dist = gc["K"], gc["dist"]
     sq = float(gc["square_mm"]) / 1000
-    model = {k: np.array([((k % 4) + 1) * sq, ((k // 4) + 1) * sq, 0.0]) for k in range(8)}
+    bj = json.loads(Path(str(gc["board_json"])).read_text())
+    ncx, ncy = bj["squares_x"] - 1, bj["squares_y"] - 1          # inner corners (laptop 5x3 board: 4 x 2 = 8, as before)
+    model = {k: np.array([((k % ncx) + 1) * sq, ((k // ncx) + 1) * sq, 0.0]) for k in range(ncx * ncy)}
     obs = {}
     for i in range(0, len(t_ns), a.kf_step):
         c, ids = gc["corners"][i], gc["corner_ids"][i]
@@ -99,7 +105,7 @@ def main():
         for i in obs:
             k = np.searchsorted(tt, t_ns[i]).clip(1, len(tt) - 1)
             k = k - 1 if abs(tt[k - 1] - t_ns[i]) < abs(tt[k] - t_ns[i]) else k
-            if abs(tt[k] - t_ns[i]) < 4e6:
+            if abs(tt[k] - t_ns[i]) < a.tol_ms * 1e6:
                 src[nm][i] = d[tt[k]]
     kf = sorted(i for i in obs if ok[i] and all(i in s for s in src.values()))
     Pg = {i: np.eye(4) for i in kf}
@@ -108,7 +114,7 @@ def main():
     pairs = []
     for x, i in enumerate(kf):
         for j in kf[x + 1:]:
-            if j - i > 300:
+            if j - i > a.max_gap_rows:
                 break
             B = np.linalg.norm(Pg[i][:3, 3] - Pg[j][:3, 3])
             com = sorted(set(obs[i]) & set(obs[j]))
@@ -129,7 +135,7 @@ def main():
             rmsS.append(np.sqrt(((X - sc * (R2 @ M.T).T - t2) ** 2).sum(1).mean()) * 1000)
         # multi-view
         Xmv, rep = {}, []
-        for k in range(8):
+        for k in sorted(model):
             vs = [i for i in kf if k in obs[i]]
             if len(vs) < 3:
                 continue
