@@ -45,7 +45,11 @@ def main():
     ap.add_argument("--free-scale", action="store_true",
                     help="ORACLE global scale: Sim(3) of the VIO positions to GT, translations x s (depth scales with the baseline)")
     ap.add_argument("--pose-noise-cm", type=float, default=0.0, help="add N(0, s) cm position noise per frame (VIO-like test)")
+    ap.add_argument("--allow-fullres", action="store_true",
+                    help="allow --scale > 0.5 (1920x1080 FFS needs > 16 GB; runs only under the gpu_guard cap, fails cleanly)")
     a = ap.parse_args()
+    if a.scale > 0.5 and not a.allow_fullres:
+        sys.exit("scale > 0.5 refused: 1920x1080 FFS overflowed 16 GB VRAM and crashed WSL (11-05); pass --allow-fullres to try under the cap")
     t_start = time.time()
     rec, out = Path(a.rec), Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -238,5 +242,13 @@ def main():
     print(json.dumps(summ, indent=1))
 
 
+def _out_arg():
+    import sys as _s
+    return _s.argv[_s.argv.index("--out") + 1] if "--out" in _s.argv else None
+
+
 if __name__ == "__main__":
-    main()
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import gpu_guard  # one GPU job at a time, torch memory cap, clean OOM exit (README 10)
+    with gpu_guard.job("scan_offline " + str(_out_arg()), out_dir=_out_arg(), torch_cap=True):
+        main()

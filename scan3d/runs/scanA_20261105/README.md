@@ -155,3 +155,12 @@ r960_ba 는 6절 ba 와 숫자가 같음 (결정적, 재현 확인).
 - 1920 특징 BA (7.5 분, 점 18 k, 트랙 길이 3.6 으로 짧아짐) 는 오히려 나쁨 (오라클 |dZ| p90 2.49 vs 1.85) → 960 특징 BA 유지. 원인 미확인
   (짧은 트랙·관측 적은 키프레임 min 8 추정). 1920 깊이 × 1920 BA 조합은 시간·메모리 때문에 돌리지 않음.
 - 렌즈: 두 해상도 모두 같은 보드 보정 K 를 비율로만 곱함 (8절). 메시 보기에 1920 메시 추가 (`viewer.html`, 사용자 사본 `ba_1920.ply`).
+
+## 10. GPU 안전장치 (11-05 16:56 WSL 다운 뒤 — 1920 FFS 가 16 GB VRAM 을 넘어 공유 메모리로 넘친 것이 가장 유력한 원인)
+- `scan3d/scanA/gpu_guard.py` 를 `scan_offline.py`, `kf_ba.py` 진입점에 넣음:
+  - torch 메모리 상한 `set_per_process_memory_fraction(0.75)` (env `SCAN3D_GPU_FRAC` 로 바꿈, 최대 0.85) — 모델 올리기 전에 설정.
+  - GPU 메모리 부족 → 바로 실패 (`OUT/FAILED_OOM.json`, 종료 코드 3). expandable_segments 로 다시 돌리지 않음.
+  - GPU 작업은 한 번에 하나: `~/scanner/gpu.lock` (owner, pid, host, 시각). 살아 있는 pid 이고 2 시간 안이면 기다림 (30 s 마다), 아니면 넘겨받음.
+  - `scan_offline.py --scale > 0.5` (1920 FFS) 는 기본 거부, `--allow-fullres` 일 때만 상한 안에서 시도 (넘치면 깨끗이 실패).
+- 시험 (16:58): 상한 11.9 GB 에서 13 GB 할당 → OutOfMemoryError → FAILED_OOM.json, rc 3, 잠금 풀림 확인. `--scale 1.0` 거부 확인.
+- `res_run.sh` 의 1920 run 은 이제 거부됨 (다시 돌리지 않음). 9절의 r1920_ba_fs 는 측정 못 한 채로 둠.

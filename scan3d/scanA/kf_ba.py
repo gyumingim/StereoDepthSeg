@@ -416,5 +416,13 @@ def main():
     log(json.dumps({k: v for k, v in info.items() if k != "hist"}))
 
 
+def _out_arg():
+    import sys as _s
+    return _s.argv[_s.argv.index("--out") + 1] if "--out" in _s.argv else None
+
+
 if __name__ == "__main__":
-    main()
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import gpu_guard  # one GPU job at a time, torch memory cap, clean OOM exit (README 10)
+    with gpu_guard.job("kf_ba " + str(_out_arg()), out_dir=_out_arg(), torch_cap=False):
+        main()
