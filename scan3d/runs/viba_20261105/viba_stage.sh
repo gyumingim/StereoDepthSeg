@@ -1,7 +1,7 @@
 #!/bin/bash
 # viba: VI-BA stage, the 4 variants of one recording in parallel (CPU), recordings as soon as their kf_ba dump is done.
 #   bash viba_stage.sh REC_SHORT ...      (skips a variant whose viba.json exists)
-# RAM guard: stop MY viba.py jobs when MemAvailable < 10 GB (scanA's own watchdog acts at 8 GB).
+# max VIBA_PAR (2) variants at once, each started only with >= 14 GB MemAvailable. RAM guard: stop MY viba.py jobs when MemAvailable < 10 GB (scanA's own watchdog acts at 8 GB).
 cd "$(dirname "$0")/../../.."
 PV=$HOME/scanner/viba_work/venv/bin/python; D=scan3d/runs/viba_20261105; BL=$HOME/scanner/build_livepose
 ( while sleep 5; do a=$(awk '/MemAvailable/{print int($2/1048576)}' /proc/meminfo)
@@ -17,6 +17,7 @@ while [ -n "$todo" ]; do
       for v in "ba_g:--vision-only" "viba:--calib yaml" "viba_on:--calib online" "viba_x103:--calib yaml --init-scale 1.03"; do
         n=${v%%:*}; args=${v#*:}; mkdir -p $D/viba/$r/$n
         [ -f $D/viba/$r/$n/viba.json ] && continue
+        while [ $(jobs -rp | grep -vc "^$WD$") -ge ${VIBA_PAR:-2} ] || [ $(awk '/MemAvailable/{print int($2/1048576)}' /proc/meminfo) -lt 14 ]; do sleep 10; done
         ( $PV scan3d/viba/viba.py $R --dump $D/ba/$r/viba_input.npz --vio $D/vio/$r.poses.jsonl.gz --cfg $CFG --out $D/viba/$r/$n $args \
             > $D/viba/$r/$n.log 2>&1; echo "$r $n rc $? $(date +%T) $(grep -E '^\[lm\]' $D/viba/$r/$n.log)" ) &
       done
