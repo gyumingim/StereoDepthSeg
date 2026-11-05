@@ -38,3 +38,11 @@
 - 메시 평면 오차: 복셀 5 mm (+ 꼭짓점이 sub-voxel 보간인지 확인) → 보드 위 꼭짓점 z 중앙값·RMS·p5/p95. 덮임 = 보드 사각형 1 cm 칸 중
   평면 3 cm 안 꼭짓점이 있는 칸 비율 (칸 수 반올림 버그 고침: floor 칸 번호, 분모 = 실제 칸 수).
 - 모든 비교는 같은 녹화·같은 스크립트·같은 채점.
+
+## 4. 결과 — 단계 1 (14:46, 미검증)
+- 빌드·설정·재생 = `step1_rebuild.sh` (한 번에 다시 만들기). sha 기록 `step1/build_shas.txt`: bridge 55e5d35b8ece3e29 (g++ 11.4),
+  c4f60 imucam yaml **58b9a1af46461eb3**, remap **483168c9723c0ba1** = lens05 기록과 같음. estimator/imu yaml 도 폰 run 폴더 yaml 과
+  출력 경로 줄만 다름 (diff).
+- 165506 B: VIO ATE **1.70 / 1.57 / 1.52 cm** (o0/o1/o2), 지도 ATE 1.58 / 1.41 / 1.36, 경로 4.544 m, 초기화 4.93 s, 표류 1.65 cm/m —
+  livepose summary.md 와 표시 자리까지 같음. 스모크 (`--imu cal --time oracle`) **1.63 cm** = 같음. → 사전 기준 (|Δ| ≤ 0.02) 통과.
+- 비트 동일은 확인 불가 (옛 sha 기록 삭제) — 결과 수준 재현만. 결과 json·o0 포즈: `step1/`.
