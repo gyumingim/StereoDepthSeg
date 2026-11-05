@@ -9,7 +9,7 @@ for r in ${RUNS:-ba_fs ba}; do
     n=gs${v}_$r
     if [ ! -f $O/gs/$n/summary.json ]; then
       echo "== $n $(date +%T)"
-      nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits -l 2 > $O/$n.gpu.txt & G=$!
+      ( while true; do nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits; sleep 2; done ) > $O/$n.gpu.txt & G=$!
       $P scan3d/gsplat/gs_train.py $O/dump/$r --out $O/gs/$n --variant $v ${GSARGS} > $O/$n.log 2>&1
       kill $G
       tail -n 1 $O/$n.log | head -c 400; echo
