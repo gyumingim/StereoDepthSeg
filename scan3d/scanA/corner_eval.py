@@ -118,14 +118,15 @@ def main():
                corners_src="imu_gt_rs/gt.npz corners (raw px) undistorted with its K/dist", sources={})
     for nm, s in src.items():
         cw = {i: np.linalg.inv(s[i]) for i in kf}
-        rms2, scl = [], []
+        rms2, scl, rmsS = [], [], []
         for i, j, com in pairs:
             X = np.array([tri([(cam_of(cw, i, k), obs[i][k][0]), (cam_of(cw, j, k), obs[j][k][0])]) for k in com])
             M = np.array([model[k] for k in com])
             _, R, t = fit(M, X)
             rms2.append(np.sqrt(((X - (R @ M.T).T - t) ** 2).sum(1).mean()) * 1000)
-            sc, _, _ = fit(M, X, scale=True)
+            sc, R2, t2 = fit(M, X, scale=True)
             scl.append((sc - 1) * 100)
+            rmsS.append(np.sqrt(((X - sc * (R2 @ M.T).T - t2) ** 2).sum(1).mean()) * 1000)
         # multi-view
         Xmv, rep = {}, []
         for k in range(8):
@@ -140,18 +141,19 @@ def main():
                 rep.append(np.linalg.norm(q - obs[i][k][1]))
         ks = sorted(Xmv)
         M = np.array([model[k] for k in ks]); X = np.array([Xmv[k] for k in ks])
-        _, R, t = fit(M, X); sc, _, _ = fit(M, X, scale=True)
+        _, R, t = fit(M, X); sc, R2, t2 = fit(M, X, scale=True)
         res["sources"][nm] = dict(pair2v_rigid_rms_mm=st(rms2), pair2v_scale_err_pct=st(scl),
                                   pair2v_abs_scale_err_pct=st(np.abs(scl)),
                                   mv_reproj_px=st(rep), mv_rigid_rms_mm=float(np.sqrt(((X - (R @ M.T).T - t) ** 2).sum(1).mean()) * 1000),
-                                  mv_scale_err_pct=(sc - 1) * 100)
+                                  mv_scale_err_pct=(sc - 1) * 100, pair2v_sim_rms_mm=st(rmsS),
+                                  mv_sim_rms_mm=float(np.sqrt(((X - sc * (R2 @ M.T).T - t2) ** 2).sum(1).mean()) * 1000))
     Path(a.out).write_text(json.dumps(res, indent=1))
     print(f"kf {len(kf)} pairs {len(pairs)}")
     for nm, r in res["sources"].items():
         p = r["pair2v_rigid_rms_mm"]; q = r["pair2v_abs_scale_err_pct"]; m = r["mv_reproj_px"]
         print(f"{nm:14s} pair2v rms mm mean {p['mean']:.2f} med {p['median']:.2f} p90 {p['p90']:.2f} | |scale| % med {q['median']:.2f} "
               f"p90 {q['p90']:.2f} | mv reproj px med {m['median']:.2f} p90 {m['p90']:.2f} | mv rigid {r['mv_rigid_rms_mm']:.2f} mm "
-              f"scale {r['mv_scale_err_pct']:+.2f} %")
+              f"scale {r['mv_scale_err_pct']:+.2f} % | free-scale: pair2v med {r['pair2v_sim_rms_mm']['median']:.2f} p90 {r['pair2v_sim_rms_mm']['p90']:.2f} mv {r['mv_sim_rms_mm']:.2f} mm")
 
 
 if __name__ == "__main__":

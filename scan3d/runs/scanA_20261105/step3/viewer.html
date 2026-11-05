@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>폰 3D 스캔 메시 보기 (scanA)</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1d1f23; color: #e8e8e8; font: 14px system-ui, sans-serif; }
+  #bar { position: absolute; top: 0; left: 0; right: 0; padding: 8px 12px; background: rgba(20,20,24,.85); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  select, button, label { font: inherit; }
+  #info { opacity: .8; }
+  #c { width: 100%; height: 100%; display: block; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+               "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+</script>
+</head>
+<body>
+<div id="bar">
+  <b>폰 3D 스캔 (녹화 165506, 노트북 보드 장면)</b>
+  <select id="pick"></select>
+  <label><input type="checkbox" id="wire"> 선만</label>
+  <label><input type="checkbox" id="board" checked> 보드 위치(빨간 네모)</label>
+  <button id="reset">시점 처음으로</button>
+  <span id="info">불러오는 중…</span>
+</div>
+<canvas id="c"></canvas>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { PLYLoader } from "three/addons/loaders/PLYLoader.js";
+// meshes.json: [{file, label}] written next to this page
+const meshes = await (await fetch("meshes.json")).json();
+const pick = document.getElementById("pick"), info = document.getElementById("info");
+for (const m of meshes) pick.add(new Option(m.label, m.file));
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("c"), antialias: true });
+renderer.setPixelRatio(devicePixelRatio);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x1d1f23);
+const cam = new THREE.PerspectiveCamera(50, 1, 0.01, 50);
+const ctl = new OrbitControls(cam, renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
+const dl = new THREE.DirectionalLight(0xffffff, 0.8); dl.position.set(1, -1, -2); scene.add(dl);
+// board = plane z=0, 0..302 x 0..181 mm (world = board frame)
+const bw = 0.302, bh = 0.1812;
+const boardLine = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(
+  [[0,0],[bw,0],[bw,bh],[0,bh]].map(([x,y]) => new THREE.Vector3(x, y, 0))), new THREE.LineBasicMaterial({ color: 0xff3030 }));
+scene.add(boardLine);
+let obj = null, home = null;
+function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
+addEventListener("resize", resize); resize();
+function load(file) {
+  info.textContent = "불러오는 중… " + file;
+  new PLYLoader().load(file, g => {
+    g.computeVertexNormals();
+    const mat = new THREE.MeshStandardMaterial({ vertexColors: g.hasAttribute("color"), side: THREE.DoubleSide, roughness: .9,
+                                                 wireframe: document.getElementById("wire").checked });
+    if (obj) { scene.remove(obj); obj.geometry.dispose(); }
+    obj = new THREE.Mesh(g, mat); scene.add(obj);
+    g.computeBoundingBox(); const bb = g.boundingBox, c = bb.getCenter(new THREE.Vector3()), r = bb.getSize(new THREE.Vector3()).length();
+    if (!home) { home = { c, p: c.clone().add(new THREE.Vector3(0, 0, -r * 0.9)) }; cam.up.set(0, -1, 0); }
+    ctl.target.copy(home.c); if (!cam.userData.set) { cam.position.copy(home.p); cam.userData.set = 1; }
+    info.textContent = `${(g.attributes.position.count / 1000).toFixed(0)} k 꼭짓점 · ${(g.index ? g.index.count / 3000 : 0).toFixed(0)} k 삼각형 · 마우스: 돌리기(왼쪽) 옮기기(오른쪽) 확대(휠)`;
+  }, undefined, e => info.textContent = "못 읽음: " + file + " (" + e + ")");
+}
+pick.onchange = () => load(pick.value);
+document.getElementById("wire").onchange = e => { if (obj) obj.material.wireframe = e.target.checked; };
+document.getElementById("board").onchange = e => boardLine.visible = e.target.checked;
+document.getElementById("reset").onclick = () => { if (home) { cam.position.copy(home.p); ctl.target.copy(home.c); } };
+load(meshes[0].file);
+renderer.setAnimationLoop(() => { ctl.update(); renderer.render(scene, cam); });
+</script>
+</body>
+</html>
