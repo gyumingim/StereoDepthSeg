@@ -122,3 +122,15 @@ GT 자세를 쓰지 않고, 검출된 ChArUco 안쪽 모서리 8 개를 시험 �
 - 각 run 폴더 `step3/<run>/mesh.ply`, `mesh.obj` (월드 = 보드 좌표, m, 정점 색). 보기: `step3/viewer.html` + `meshes.json`
   (three.js CDN, http 로 열어야 함). 사용자용 사본: `C:\Users\a3162\scan3d_handoff\changes_0620\scanA\viewer.html`
   (http://localhost:8796/scanA/viewer.html; ba / ba_fs / vio_all / gt 메시 4개).
+
+## 8. 사전 등록 — 해상도 시험 (960×540 vs 1920×1080, 측정 전)
+- 질문: 오프라인 스캐너는 천천히 움직이니 축소하지 않은 1920×1080 으로 깊이 + TSDF 를 하면 나아지나.
+- 바꾸는 것 하나: `scan_offline.py --scale 0.5` (지금) vs `--scale 1.0`. 렌즈 = 지금 run 과 같은 보드 보정 (imu_gt_spl/gt.npz 의 K·dist,
+  1920×1080 기준) 을 해상도 비율로만 곱함 (fx fy cx cy × s, 왜곡 그대로; 맞춤 없음). 짝 고르기·FFS 반복 8·TSDF 5 mm·채점 그대로.
+  참고: 이 K 는 라이브 VIO 설정의 calcap k12_notan 과 다른 보드 보정이다 (fx 1286.18 vs 1286.25, cx/cy/k1/k2 조금 다름) —
+  기존 run 과 같게 두려고 바꾸지 않음 (렌즈 바꾸기는 따로 시험할 일).
+- 자세: (1) 지금 BA (960 특징, `step2/ba_o0`), (2) BA 를 1920 특징으로 다시 (`kf_ba.py --scale 1.0`, 나머지 같음). 각각 원래 축척 + 오라클 전역 축척 (`--free-scale`).
+- 지표: 6절과 같음 (키프레임별·전체 화소 dZ 평균/중앙/p10/p90, |dZ|, 메시 평면 z 중앙·RMS·p5/p95, 덮임) + 실행 시간 + GPU 최대 메모리
+  (torch.cuda.max_memory_allocated, 깊이 run 마다).
+- 판정: 오라클 축척 조건에서 전체 화소 |dZ| p90 또는 메시 RMS 가 20 % 이상 줄면 "좋아짐 (녹화 1개, 추정)", 그 밖은 "잡음 수준". 원래 축척 조건도 함께 적음.
+- 한계: 녹화 1개, 보드 1장 (무늬 많은 쉬운 면), 평가 키프레임 집합이 run 마다 조금 다를 수 있음 (짝 고르기가 해상도와 무관하므로 거의 같을 것, 확인해 적음).
