@@ -40,6 +40,13 @@
   반대로 20 % 넘게 나빠지면 "나빠짐", 그 밖은 "잡음 수준". 원래 축척 조건도 같은 규칙으로 함께 적음.
 - 실행 시간이 TSDF (약 100–140 s) 의 10 배를 넘으면 그 사실을 판정 옆에 적음 (오프라인이라 실격은 아님).
 
+### 1.1 고침 (11-05 22:05, 측정 전) — 환경 문구
+- 인터넷이 느려 (~300 KB/s) torch 를 새로 받지 않음. 실제 환경: 자체 venv `~/scanner/gsplat_env/venv` (python 3.12) 가
+  `venv_ffs` 의 site-packages 를 `.pth` 한 줄로 **읽기만** 함 (torch 2.11 cu128, open3d 0.20 — venv_ffs 는 바꾸지 않음).
+  자체 설치 = gsplat 1.5.3 휠 (JIT 로 sm_120 빌드, `~/scanner/gsplat_env/torch_ext`), rich, ninja, jaxtyping.
+- nvcc = micromamba 최소 설치 (conda-forge cuda-nvcc-impl 12.8.93 + cudart-dev + cccl, `~/scanner/gsplat_env/cuda128`) — 전체 툴킷 아님.
+  cuBLAS 등 헤더는 venv_ffs 의 nvidia/*/include 를 CPATH 로 읽음. 설정 = `~/scanner/gsplat_env/env.sh`.
+
 ## 4. 한계 (측정 전)
 - 녹화 1개, 보드 1장 (무늬 많은 쉬운 면 — GS 에 유리할 수 있음). 학습 시점 = 평가 시점 (따로 남긴 시점 없음; TSDF 도 같음).
 - GS 는 무작위성 (밀도 조절) 이 있음 → 씨앗 고정 (0), 시간 되면 씨앗 1 로 한 번 더 (반복 횟수 적음).
