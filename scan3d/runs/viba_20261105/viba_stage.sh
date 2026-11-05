@@ -5,7 +5,7 @@
 cd "$(dirname "$0")/../../.."
 PV=$HOME/scanner/viba_work/venv/bin/python; D=scan3d/runs/viba_20261105; BL=$HOME/scanner/build_livepose
 ( while sleep 5; do a=$(awk '/MemAvailable/{print int($2/1048576)}' /proc/meminfo)
-    if [ "$a" -lt 10 ]; then echo "WATCHDOG $(date +%T) MemAvailable ${a} GB -> kill my viba.py"; pkill -f "[v]iba_work/venv/bin/python scan3d/viba/viba.py"; fi; done ) &
+    if [ "$a" -lt 7 ]; then echo "WATCHDOG $(date +%T) MemAvailable ${a} GB (log only)"; fi; done ) &
 WD=$!
 trap "kill $WD 2>/dev/null" EXIT
 todo="$*"
@@ -17,7 +17,7 @@ while [ -n "$todo" ]; do
       for v in "ba_g:--vision-only" "viba:--calib yaml" "viba_on:--calib online" "viba_x103:--calib yaml --init-scale 1.03"; do
         n=${v%%:*}; args=${v#*:}; mkdir -p $D/viba/$r/$n
         [ -f $D/viba/$r/$n/viba.json ] && continue
-        while [ $(jobs -rp | grep -vc "^$WD$") -ge ${VIBA_PAR:-2} ] || [ $(awk '/MemAvailable/{print int($2/1048576)}' /proc/meminfo) -lt 14 ]; do sleep 10; done
+        while [ $(jobs -rp | grep -vc "^$WD$") -ge ${VIBA_PAR:-2} ] || [ $(awk '/MemAvailable/{print int($2/1048576)}' /proc/meminfo) -lt 12 ]; do sleep 10; done
         ( $PV scan3d/viba/viba.py $R --dump $D/ba/$r/viba_input.npz --vio $D/vio/$r.poses.jsonl.gz --cfg $CFG --out $D/viba/$r/$n $args \
             > $D/viba/$r/$n.log 2>&1; echo "$r $n rc $? $(date +%T) $(grep -E '^\[lm\]' $D/viba/$r/$n.log)" ) &
       done

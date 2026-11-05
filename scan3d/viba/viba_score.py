@@ -63,20 +63,23 @@ def main():
     a = ap.parse_args()
     run = Path(a.run)
     res = {}
-    for bd in sorted((run / "ba").iterdir()):
-        if not bd.is_dir() or not (bd / "poses_ba.jsonl.gz").exists():
-            continue
+    names = sorted({d.name for d in (run / "ba").iterdir() if (d / "poses_ba.jsonl.gz").exists()} |
+                   {d.name for d in (run / "viba").iterdir() if any(d.glob("*/viba.json"))})
+    for nm in names:
+        bd = run / "ba" / nm
         rec = "hs_" + bd.name if not bd.name.endswith("165506") else "hs_" + bd.name + "_std60"
         tol = 2.0 if rec.endswith("_std60") else 1.0
-        r = {"vio_kf": score(rec, bd / "poses_vio_kf.jsonl.gz", tol), "ba": score(rec, bd / "poses_ba.jsonl.gz", tol)}
-        bj = json.loads((bd / "ba.json").read_text())
-        r["ba"].update(reproj_med_px=bj.get("final_med_px"), sim3_scale=bj.get("sim3_scale"))
+        r = {}
+        if (bd / "poses_ba.jsonl.gz").exists():
+            r = {"vio_kf": score(rec, bd / "poses_vio_kf.jsonl.gz", tol), "ba": score(rec, bd / "poses_ba.jsonl.gz", tol)}
+            bj = json.loads((bd / "ba.json").read_text())
+            r["ba"].update(reproj_med_px=bj.get("final_med_px"), sim3_scale=bj.get("sim3_scale"))
         for vd in sorted((run / "viba" / bd.name).glob("*/poses_viba.jsonl.gz")) if (run / "viba" / bd.name).is_dir() else []:
             r[vd.parent.name] = score(rec, vd, tol)
             vj = json.loads((vd.parent / "viba.json").read_text())
             r[vd.parent.name].update(reproj_med_px=vj.get("reproj_med_px"), lm_iters=vj.get("lm_iters"))
         res[bd.name] = r
-    srcs = ["vio_kf", "ba", "ba_g", "viba", "viba_on", "viba_x103", "x_viba_it300", "x_ba_g_it300"]
+    srcs = ["vio_kf", "ba", "ba_g", "viba", "viba_on", "viba_x103", ]
     lines = ["| 녹화 | n kf (GT 짝) | " + " | ".join(f"{s} k_fwd / k_pair / k_rev" for s in srcs) + " | 재투영 중앙 px ba / viba |",
              "|---" * (len(srcs) + 3) + "|"]
     for rec, r in res.items():
@@ -86,7 +89,7 @@ def main():
             cells.append(f"{v['k_fwd']:+.2f} / {v['k_pair']:+.2f} / {v['k_rev']:+.2f}" if "k_fwd" in v and v.get("k_pair") is not None
                          else (f"{v['k_fwd']:+.2f} / – / {v['k_rev']:+.2f}" if "k_fwd" in v else "–"))
         rp = lambda s: f"{r[s]['reproj_med_px']:.3f}" if s in r and r[s].get("reproj_med_px") is not None else "–"
-        lines.append(f"| {rec} | {r['ba'].get('n')} | " + " | ".join(cells) + f" | {rp('ba')} / {rp('viba')} |")
+        lines.append(f"| {rec} | {r.get('ba', r.get('viba', {})).get('n')} | " + " | ".join(cells) + f" | {rp('ba')} / {rp('viba')} |")
     summ = {}
     for s in srcs:
         k = [r[s]["k_fwd"] for r in res.values() if s in r and "k_fwd" in r[s]]
@@ -96,16 +99,26 @@ def main():
                            k_pair_med=float(np.median(kp)) if kp else None, absk_pair_med=float(np.median(np.abs(kp))) if kp else None)
     # pre-registered rule (README 4): paired vs ba
     for s in ("viba", "viba_on", "viba_x103"):
-        pr = [(abs(r[s]["k_fwd"]), abs(r["ba"]["k_fwd"])) for r in res.values() if s in r and "k_fwd" in r[s] and "k_fwd" in r["ba"]]
+        prg = [(abs(r[s]["k_fwd"]), abs(r["ba_g"]["k_fwd"])) for r in res.values() if s in r and "ba_g" in r and "k_fwd" in r[s] and "k_fwd" in r["ba_g"]]
+        if prg and s in summ:
+            summ[s].update(n_abs_smaller_vs_ba_g=sum(1 for x, y in prg if x < y), n_paired_ba_g=len(prg),
+                           d_absk_med_vs_ba_g=float(np.median([x for x, _ in prg]) - np.median([y for _, y in prg])))
+        pr = [(abs(r[s]["k_fwd"]), abs(r["ba"]["k_fwd"])) for r in res.values() if s in r and "ba" in r and "k_fwd" in r[s] and "k_fwd" in r["ba"]]
         if pr and s in summ:
             summ[s].update(n_abs_smaller=sum(1 for x, y in pr if x < y), n_paired=len(pr),
                            d_absk_med=float(np.median([x for x, _ in pr]) - np.median([y for _, y in pr])))
+    ctl = [abs(r["viba_x103"]["k_fwd"] - r["viba"]["k_fwd"]) for r in res.values() if "viba_x103" in r and "viba" in r and "k_fwd" in r["viba"]]
+    summ["control_x103"] = dict(n=len(ctl), n_within_0p3=sum(1 for x in ctl if x <= 0.3), max_abs_dk=max(ctl) if ctl else None)
+    lines += ["", f"양성 대조 (x1.03 시작): |dk| <= 0.3 %p {summ['control_x103']['n_within_0p3']}/{len(ctl)}, 최대 {summ['control_x103']['max_abs_dk']}"]
     lines += ["", "| 출처 | n | k_fwd 중앙 | \\|k_fwd\\| 중앙 | k_pair 중앙 | \\|k_pair\\| 중앙 | \\|k\\| 줄어든 녹화 (vs ba) | Δ\\|k_fwd\\| 중앙 %p |", "|---|---|---|---|---|---|---|---|"]
     for s, v in summ.items():
+        if s == "control_x103":
+            continue
         f = lambda x: "–" if x is None else f"{x:+.2f}"
         lines.append(f"| {s} | {v['n']} | {f(v['k_fwd_med'])} | {v['absk_fwd_med']:.2f} | {f(v['k_pair_med'])} | "
                      f"{'–' if v['absk_pair_med'] is None else format(v['absk_pair_med'], '.2f')} | "
-                     f"{str(v.get('n_abs_smaller', '–')) + '/' + str(v.get('n_paired', '–'))} | {f(v.get('d_absk_med'))} |")
+                     f"{str(v.get('n_abs_smaller', '–')) + '/' + str(v.get('n_paired', '–'))} (vs ba_g {v.get('n_abs_smaller_vs_ba_g', '–')}/{v.get('n_paired_ba_g', '–')}) | "
+                     f"{f(v.get('d_absk_med'))} (vs ba_g {f(v.get('d_absk_med_vs_ba_g'))}) |")
     md = "\n".join(lines)
     print(md)
     if a.out:

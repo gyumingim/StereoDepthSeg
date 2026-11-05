@@ -8,7 +8,7 @@ P=$HOME/scanner/StereoDepthSeg/venv_ffs/bin/python; PV=$HOME/scanner/viba_work/v
 D=scan3d/runs/viba_20261105; BL=$HOME/scanner/build_livepose
 export FFS_ROOT=$HOME/scanner/StereoDepthSeg
 ( while sleep 5; do a=$(awk "/MemAvailable/{print int(\$2/1048576)}" /proc/meminfo)
-    if [ "$a" -lt 10 ]; then echo "WATCHDOG $(date +%T) MemAvailable ${a} GB -> kill my jobs"; pkill -f "scan3d/viba/(kf_ba|viba|scan_offline).py"; fi; done ) &
+    if [ "$a" -lt 7 ]; then echo "WATCHDOG $(date +%T) MemAvailable ${a} GB (log only, my jobs are small)"; fi; done ) &
 WD=$!
 trap "kill $WD 2>/dev/null" EXIT
 ST=$1; shift
@@ -38,6 +38,7 @@ for r in "$@"; do
     for n in ba viba; do
       f=$D/ba/$r/poses_ba.jsonl.gz; [[ -f $f ]] || f=$D/viba/$r/ba_g/poses_viba.jsonl.gz   # kf_ba if run, else same-solver ba_g
       [[ $n == viba ]] && f=$D/viba/$r/viba/poses_viba.jsonl.gz
+      [ -f $D/mesh/${r}_$n/summary.json ] && continue
       echo "== $r mesh $n $(date +%T)"
       $P scan3d/viba/scan_offline.py $R --out $D/mesh/${r}_$n --gt $G --vio $f $MX > $D/mesh/${r}_$n.log 2>&1 || echo "   mesh $n failed rc $?"
     done

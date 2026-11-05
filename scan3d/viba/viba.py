@@ -76,6 +76,8 @@ def main():
     ap.add_argument("--iters", type=int, default=100)
     ap.add_argument("--huber", type=float, default=1.0)
     ap.add_argument("--diag-damp", type=int, default=1, help="LM diagonal (Ceres-like) damping")
+    ap.add_argument("--split-tracks", type=int, default=15, help="max obs per landmark (README 2.6), 0 = off")
+    ap.add_argument("--ordering", choices=["schur", "colamd"], default="schur", help="elimination ordering (README 2.6)")
     ap.add_argument("--rel-tol", type=float, default=1e-5, help="LM relative error decrease to stop (README 2.4)")
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--vision-only", action="store_true",
@@ -92,6 +94,22 @@ def main():
     kfs, tk, Kr, Tv = D["kfs"], D["t_ns"], D["Kr"], D["Tv"]
     cam, pt, uv, X0 = D["cam"], D["pt"], D["uv"], D["X0"]
     vio_t = D["vio_t_ns"]
+    n_pt_orig = len(X0)
+    if a.split_tracks > 0:        # README 2.6: split long tracks into sub-tracks of <= L obs (keyframe order), same observations
+        o = np.lexsort((cam, pt))
+        cam, pt, uv = cam[o], pt[o], uv[o]
+        starts = np.r_[0, np.flatnonzero(np.diff(pt)) + 1]
+        rank = np.arange(len(pt)) - np.repeat(starts, np.diff(np.r_[starts, len(pt)]))
+        sub = rank // a.split_tracks
+        key = pt.astype(np.int64) * 100000 + sub
+        uk, newpt = np.unique(key, return_inverse=True)
+        # a trailing sub-track with 1 obs cannot constrain a point: merge it into the previous sub-track
+        cnt = np.bincount(newpt)
+        lone = cnt[newpt] == 1
+        sub[lone & (sub > 0)] -= 1
+        key = pt.astype(np.int64) * 100000 + sub
+        uk, newpt = np.unique(key, return_inverse=True)
+        X0 = X0[uk // 100000]; pt = newpt
     N = len(kfs)
     cfg = Path(a.cfg)
     camy = (cfg / "kalibr_imucam_chain.yaml").read_text(); imuy = (cfg / "kalibr_imu_chain.yaml").read_text()
@@ -217,6 +235,15 @@ def main():
     lp = gtsam.LevenbergMarquardtParams(); lp.setMaxIterations(a.iters); lp.setRelativeErrorTol(a.rel_tol); lp.setAbsoluteErrorTol(1e-9)
     if a.diag_damp:
         lp.setDiagonalDamping(True)
+    if a.ordering == "schur":     # landmarks first, then V/B, then poses (Schur-like; COLAMD gave 25 GB fill-in on 1e6 obs)
+        od = gtsam.Ordering()
+        for p_ in range(len(Xl)):
+            od.push_back(L(p_))
+        for k in range(N):
+            od.push_back(V(k)); od.push_back(B(k))
+        for k in range(N):
+            od.push_back(X(k))
+        lp.setOrdering(od)
     opt = gtsam.LevenbergMarquardtOptimizer(graph, vals, lp)
     res = opt.optimize()
     err1 = graph.error(res)
@@ -252,7 +279,7 @@ def main():
     a_, b_ = Cv - Cv.mean(0), Cn - Cn.mean(0)
     s_rel = float(np.sqrt((b_ ** 2).sum() / (a_ ** 2).sum()))
     info = dict(made=time.strftime("%F %T"), rec=str(rec), dump=str(Path(a.dump).resolve()), vio=str(Path(a.vio).resolve()),
-                cfg=str(cfg.resolve()), args=vars(a), calib=calib, check=chk, n_kf=int(N), points=int(len(Xl)), obs=int(len(cam)),
+                cfg=str(cfg.resolve()), args=vars(a), calib=calib, check=chk, n_kf=int(N), points=int(len(Xl)), points_orig=int(n_pt_orig), obs=int(len(cam)),
                 imu_factors=n_imu, kf_gap_max_s=float(gaps.max()), lm_iters=int(opt.iterations()), error0=float(err0), error1=float(err1),
                 reproj_med_px0=float(np.median(e0)), reproj_med_px=float(np.median(e1)), reproj_rmse_px=float(np.sqrt((e1 ** 2).mean())),
                 frac_inlier_1px=float((e1 <= 1).mean()), imu_err_med=float(np.median(imu_err)) if imu_err else None,
