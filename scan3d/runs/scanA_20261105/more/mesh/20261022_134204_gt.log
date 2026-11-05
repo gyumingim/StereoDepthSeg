@@ -1,0 +1,151 @@
+[gpu_guard] torch memory cap 0.75 x 15.9 GB = 11.9 GB
+decoded 356 frames (960x540), gt rows 356, ok 356
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/geometry.py:76: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+kf 19/356: {'i': 19, 'pairs': 1, 'B_cm': [5.6], 'valid_frac': 0.4367283950617284, 'board_px': 145801, 'board_valid': 133935, 'ffs_ms': [87], 'board_dZ_mean_cm': -0.2744202874167096, 'board_dZ_p10_cm': -0.6185694345215186, 'board_dZ_p90_cm': -0.016971986172393812, 'board_absdZ_mean_cm': 0.27782646964733493, 'board_dZ_med_cm': -0.20760064673882583, 'board_absdZ_p50_cm': 0.20764999182796284, 'board_absdZ_p90_cm': 0.6187394568319871, 'board_Z_m': 0.6741032568445776, 'frame': 2585}
+kf 79/356: {'i': 79, 'pairs': 1, 'B_cm': [6.8], 'valid_frac': 0.16273726851851852, 'board_px': 294122, 'board_valid': 59651, 'ffs_ms': [87], 'board_dZ_mean_cm': -0.06918272172829597, 'board_dZ_p10_cm': -0.7860782316634229, 'board_dZ_p90_cm': 0.38017384958975997, 'board_absdZ_mean_cm': 0.3811320298123808, 'board_dZ_med_cm': 0.0824784195256556, 'board_absdZ_p50_cm': 0.21396337304511182, 'board_absdZ_p90_cm': 0.9261362275124585, 'board_Z_m': 0.48819077769515484, 'frame': 4982}
+kf 99/356: {'i': 99, 'pairs': 1, 'B_cm': [5.2], 'valid_frac': 0.35046875, 'board_px': 321496, 'board_valid': 169203, 'ffs_ms': [81], 'board_dZ_mean_cm': -0.08666315602570474, 'board_dZ_p10_cm': -0.36765108861501083, 'board_dZ_p90_cm': 0.1789504436298352, 'board_absdZ_mean_cm': 0.19184253834407972, 'board_dZ_med_cm': -0.0898261092218966, 'board_absdZ_p50_cm': 0.16305963106121313, 'board_absdZ_p90_cm': 0.3800913952584551, 'board_Z_m': 0.4243863459860045, 'frame': 5781}
+kf 109/356: {'i': 109, 'pairs': 2, 'B_cm': [8.1, 10.8], 'valid_frac': 0.49595100308641976, 'board_px': 240533, 'board_valid': 202893, 'ffs_ms': [81, 84], 'board_dZ_mean_cm': -0.012739183069329732, 'board_dZ_p10_cm': -0.05852598958189347, 'board_dZ_p90_cm': 0.03327116985101134, 'board_absdZ_mean_cm': 0.03150570102051308, 'board_dZ_med_cm': -0.013204782365339174, 'board_absdZ_p50_cm': 0.024245122530536234, 'board_absdZ_p90_cm': 0.07016552222114061, 'board_Z_m': 0.4504316898769869, 'frame': 6180}
+kf 119/356: {'i': 119, 'pairs': 1, 'B_cm': [5.5], 'valid_frac': 0.25644097222222223, 'board_px': 236814, 'board_valid': 94267, 'ffs_ms': [83], 'board_dZ_mean_cm': 0.16047962707860108, 'board_dZ_p10_cm': 0.03474698402376242, 'board_dZ_p90_cm': 0.33398567783190514, 'board_absdZ_mean_cm': 0.1606386213742772, 'board_dZ_med_cm': 0.13301869752095907, 'board_absdZ_p50_cm': 0.13301869752095907, 'board_absdZ_p90_cm': 0.33398567783190514, 'board_Z_m': 0.49512809048834233, 'frame': 6580}
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/geometry.py:76: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+kf 129/356: {'i': 129, 'pairs': 2, 'B_cm': [8.0, 12.9], 'valid_frac': 0.68265625, 'board_px': 258338, 'board_valid': 254502, 'ffs_ms': [89, 90], 'board_dZ_mean_cm': -0.036392185035852426, 'board_dZ_p10_cm': -0.2187341606538462, 'board_dZ_p90_cm': 0.182814005974975, 'board_absdZ_mean_cm': 0.12905424307737764, 'board_dZ_med_cm': -0.03748056164954161, 'board_absdZ_p50_cm': 0.11708837885920087, 'board_absdZ_p90_cm': 0.2605938178079248, 'board_Z_m': 0.5051422553416167, 'frame': 6979}
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/geometry.py:76: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+W1105 21:02:48.336000 235204 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8] torch._dynamo hit config.recompile_limit (8)
+W1105 21:02:48.336000 235204 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8]    function: 'build_gwc_volume_optimized_pytorch1' (/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:376)
+W1105 21:02:48.336000 235204 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8]    last reason: 0/4: tensor 'refimg_fea' size mismatch at index 3. expected 240, actual 216
+W1105 21:02:48.336000 235204 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1105 21:02:48.336000 235204 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1105 21:02:48.380000 235204 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8] torch._dynamo hit config.recompile_limit (8)
+W1105 21:02:48.380000 235204 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8]    function: 'build_concat_volume_optimized_pytorch1' (/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:492)
+W1105 21:02:48.380000 235204 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8]    last reason: 1/4: tensor 'refimg_fea' size mismatch at index 3. expected 240, actual 216
+W1105 21:02:48.380000 235204 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1105 21:02:48.380000 235204 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+kf 139/356: {'i': 139, 'pairs': 2, 'B_cm': [7.5, 11.2], 'valid_frac': 0.6629899691358024, 'board_px': 342741, 'board_valid': 305541, 'ffs_ms': [82, 84], 'board_dZ_mean_cm': 0.01922271065743451, 'board_dZ_p10_cm': -0.2541764382452516, 'board_dZ_p90_cm': 0.27395202305200983, 'board_absdZ_mean_cm': 0.1576299705466732, 'board_dZ_med_cm': 0.029567259145690805, 'board_absdZ_p50_cm': 0.14107857680762947, 'board_absdZ_p90_cm': 0.3075328089569396, 'board_Z_m': 0.43498853258818987, 'frame': 7379}
+kf 149/356: {'i': 149, 'pairs': 2, 'B_cm': [7.8, 10.0], 'valid_frac': 0.5074440586419753, 'board_px': 255670, 'board_valid': 229448, 'ffs_ms': [89, 92], 'board_dZ_mean_cm': 0.04613167841635034, 'board_dZ_p10_cm': -0.011431228290457174, 'board_dZ_p90_cm': 0.11194635516799836, 'board_absdZ_mean_cm': 0.05508045754383155, 'board_dZ_med_cm': 0.04493219967836026, 'board_absdZ_p50_cm': 0.047707123083956526, 'board_absdZ_p90_cm': 0.1125410184403992, 'board_Z_m': 0.5029734419406889, 'frame': 7779}
+kf 159/356: {'i': 159, 'pairs': 2, 'B_cm': [8.2, 10.4], 'valid_frac': 0.5678317901234567, 'board_px': 343744, 'board_valid': 289751, 'ffs_ms': [80, 84], 'board_dZ_mean_cm': -0.020740165556049156, 'board_dZ_p10_cm': -0.0928496203263518, 'board_dZ_p90_cm': 0.02959209123211126, 'board_absdZ_mean_cm': 0.0397310675353817, 'board_dZ_med_cm': -0.008959569461619576, 'board_absdZ_p50_cm': 0.023421039361765095, 'board_absdZ_p90_cm': 0.09516763670587292, 'board_Z_m': 0.43332951121899166, 'frame': 8178}
+kf 169/356: {'i': 169, 'pairs': 2, 'B_cm': [8.2, 9.4], 'valid_frac': 0.4409645061728395, 'board_px': 317610, 'board_valid': 223526, 'ffs_ms': [89, 91], 'board_dZ_mean_cm': -0.021506914250631576, 'board_dZ_p10_cm': -0.12552532046941067, 'board_dZ_p90_cm': 0.0501719479707452, 'board_absdZ_mean_cm': 0.0552316042109616, 'board_dZ_med_cm': -0.005422216605871499, 'board_absdZ_p50_cm': 0.0290685733955659, 'board_absdZ_p90_cm': 0.14058318901914446, 'board_Z_m': 0.4645819646659232, 'frame': 8578}
+kf 189/356: {'i': 189, 'pairs': 1, 'B_cm': [5.0], 'valid_frac': 0.3775250771604938, 'board_px': 206270, 'board_valid': 149434, 'ffs_ms': [90], 'board_dZ_mean_cm': 0.44674330028524784, 'board_dZ_p10_cm': 0.06911714817722683, 'board_dZ_p90_cm': 0.9209168727164221, 'board_absdZ_mean_cm': 0.4496158088202766, 'board_dZ_med_cm': 0.385753794536392, 'board_absdZ_p50_cm': 0.385753794536392, 'board_absdZ_p90_cm': 0.9209168727164221, 'board_Z_m': 0.579334923865921, 'frame': 9377}
+kf 229/356: {'i': 229, 'pairs': 1, 'B_cm': [6.2], 'valid_frac': 0.3335648148148148, 'board_px': 218292, 'board_valid': 103870, 'ffs_ms': [159], 'board_dZ_mean_cm': -0.2179230038706516, 'board_dZ_p10_cm': -0.509555538819817, 'board_dZ_p90_cm': 0.01426992687708525, 'board_absdZ_mean_cm': 0.23439127385900058, 'board_dZ_med_cm': -0.18362686614529222, 'board_absdZ_p50_cm': 0.1859727547156298, 'board_absdZ_p90_cm': 0.5095555388198171, 'board_Z_m': 0.5246744737836302, 'frame': 10975}
+kf 249/356: {'i': 249, 'pairs': 1, 'B_cm': [4.7], 'valid_frac': 0.3683815586419753, 'board_px': 267909, 'board_valid': 145147, 'ffs_ms': [126], 'board_dZ_mean_cm': 0.24078976642935176, 'board_dZ_p10_cm': -0.038361654698737535, 'board_dZ_p90_cm': 0.3740496375399639, 'board_absdZ_mean_cm': 0.2604704954472089, 'board_dZ_med_cm': 0.07441072833738738, 'board_absdZ_p50_cm': 0.09108496292721258, 'board_absdZ_p90_cm': 0.3740496375399639, 'board_Z_m': 0.48626072593975117, 'frame': 11774}
+kf 269/356: {'i': 269, 'pairs': 2, 'B_cm': [7.3, 17.0], 'valid_frac': 0.47519675925925925, 'board_px': 245235, 'board_valid': 105927, 'ffs_ms': [131, 141], 'board_dZ_mean_cm': 0.0285667786752408, 'board_dZ_p10_cm': -0.012988159946663023, 'board_dZ_p90_cm': 0.07279854098928173, 'board_absdZ_mean_cm': 0.038565030816239604, 'board_dZ_med_cm': 0.030144035018070392, 'board_absdZ_p50_cm': 0.03407675353471751, 'board_absdZ_p90_cm': 0.07607364339477066, 'board_Z_m': 0.42664369487270465, 'frame': 12571}
+kf 279/356: {'i': 279, 'pairs': 1, 'B_cm': [8.8], 'valid_frac': 0.605270061728395, 'board_px': 211532, 'board_valid': 182426, 'ffs_ms': [170], 'board_dZ_mean_cm': 0.004750846239859654, 'board_dZ_p10_cm': -0.031894868630508166, 'board_dZ_p90_cm': 0.03835886975999958, 'board_absdZ_mean_cm': 0.024040318663686448, 'board_dZ_med_cm': 0.0034129929986276286, 'board_absdZ_p50_cm': 0.01687774885426041, 'board_absdZ_p90_cm': 0.05116694575062475, 'board_Z_m': 0.38556748615351677, 'frame': 12970}
+kf 289/356: {'i': 289, 'pairs': 1, 'B_cm': [7.5], 'valid_frac': 0.3540509259259259, 'board_px': 216973, 'board_valid': 119760, 'ffs_ms': [150], 'board_dZ_mean_cm': -0.003925233302702162, 'board_dZ_p10_cm': -0.05085043251457033, 'board_dZ_p90_cm': 0.03876821138232012, 'board_absdZ_mean_cm': 0.03069354025500522, 'board_dZ_med_cm': -0.005110532419211333, 'board_absdZ_p50_cm': 0.0188257190957275, 'board_absdZ_p90_cm': 0.069798705846566, 'board_Z_m': 0.41051798437021664, 'frame': 13370}
+{
+ "poses": {
+  "source": "imu_gt_spl_cal1022",
+  "rows_from": {
+   "file": "scan3d/runs/scanA_20261105/more/ba/20261022_134204/poses_ba.jsonl.gz",
+   "n": 356
+  },
+  "compressed_rows": 356
+ },
+ "made": "2026-11-05 21:03:25",
+ "rec": "scan3d/recordings/hs_20261022_134204",
+ "gt": "imu_gt_spl_cal1022",
+ "args": {
+  "rec": "scan3d/recordings/hs_20261022_134204",
+  "out": "scan3d/runs/scanA_20261105/more/mesh/20261022_134204_gt",
+  "gt": "imu_gt_spl_cal1022",
+  "scale": 0.5,
+  "kf_step": 1,
+  "n_pairs": 2,
+  "iters": 8,
+  "voxel": 0.005,
+  "zmax": 2.0,
+  "b_target": 0.08,
+  "vio": "",
+  "free_scale": false,
+  "pose_noise_cm": 0.0,
+  "allow_fullres": false,
+  "rows_from": "scan3d/runs/scanA_20261105/more/ba/20261022_134204/poses_ba.jsonl.gz",
+  "compress": true
+ },
+ "board_mm": [
+  569.646,
+  316.47
+ ],
+ "square_mm": 63.294000000000004,
+ "gt_corner_px_median": 0.19673240184783936,
+ "n_kf": 356,
+ "n_kf_depth": 164,
+ "mesh_vertices": 25235,
+ "mesh_faces": 41883,
+ "runtime_s": 104.5,
+ "image_size": [
+  960,
+  540
+ ],
+ "K_used": [
+  [
+   651.9460924794001,
+   0.0,
+   484.19031371717165
+  ],
+  [
+   0.0,
+   651.4422678797331,
+   276.23278304372155
+  ],
+  [
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "gpu_max_alloc_gb": 3.68,
+ "gpu_max_reserved_gb": 7.54,
+ "kf_board_absdZ_p50_cm_median": 0.09172477362913434,
+ "kf_board_absdZ_p90_cm_median": 0.2749847712343474,
+ "kf_board_dZ_bias_cm_median": 0.004828063122851167,
+ "kf_board_Z_m_median": 0.4559377992711224,
+ "n_kf_board_eval": 162,
+ "n_kf_no_pair": 192,
+ "kf_board_dZ_mean_cm_stats": {
+  "mean": 0.2573165268683108,
+  "median": 0.0019175005563680716,
+  "p10": -0.2469251878195691,
+  "p90": 0.21627515050030957
+ },
+ "kf_board_dZ_med_cm_stats": {
+  "mean": 0.23490691287649781,
+  "median": 0.004828063122851167,
+  "p10": -0.1795028511368379,
+  "p90": 0.13236891170544443
+ },
+ "kf_board_absdZ_p50_cm_stats": {
+  "mean": 0.36661780574743924,
+  "median": 0.09172477362913434,
+  "p10": 0.02287577044955802,
+  "p90": 0.29983729549507904
+ },
+ "kf_board_absdZ_mean_cm_stats": {
+  "mean": 0.45045366299297057,
+  "median": 0.13344748398992715,
+  "p10": 0.031063478431315312,
+  "p90": 0.4676994780468779
+ },
+ "pooled_dZ_cm": {
+  "n": 29803165,
+  "mean": 0.03639320656657219,
+  "median": 0.0052754804491996765,
+  "p10": -0.25879183411598206,
+  "p90": 0.23412775993347168
+ },
+ "pooled_absdZ_cm": {
+  "mean": 0.2090909779071808,
+  "median": 0.0766742005944252,
+  "p90": 0.4262855648994446
+ },
+ "kf_frac_abs_bias_gt_1cm": 0.006172839506172839,
+ "mesh_board_vertices": 6393,
+ "mesh_board_z_med_cm": 0.0026813147123903036,
+ "mesh_board_z_rms_cm": 0.0462135374546051,
+ "mesh_board_z_p5_p95_cm": [
+  -0.05367937311530113,
+  0.060725800693035126
+ ],
+ "mesh_board_cover_frac": 1.0,
+ "mesh_board_z_unique_mm": 58
+}

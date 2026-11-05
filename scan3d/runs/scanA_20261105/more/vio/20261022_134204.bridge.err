@@ -1,0 +1,53 @@
+[ov_bridge] ovopt: skip_retri=1 par_tri=1 par_jac=1 par_ma=1 par_s=1 cov_move=1 frame_nocopy=1 givens_rm=1 ekf_gemm=1 qr_compress=1 ekf_chol=1 par_cov=0 prof=0 rs_derot=0 rs_row_ppm=0 rs_postinit=0 ekf_sparse=1 sym_inplace=1 init_gemm=0 gyro_klt=5 (--ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse,gyro_klt=5', prof log -)
+[ov_bridge] profile rec60: ovopt 'all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse,gyro_klt=5' idle_spin 0 idle_spin_ms 0 drop_late 0 health 1 predict 0 hz 200 pred_thread 0 (after explicit flags)
+[ov_bridge] affinity start: (not pinned) threads 230482:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+Setting printing level to: WARNING
+[ov_bridge] opencv threads: config 2, --threads 0 -> 2 | TBB (ver 2020.3 interface 11103) | cpus 16 | klt overlap 0
+[ov_bridge] remap 960x540 (source 1920x1080) from /home/system/scanner/build_livepose/cfg_gen_hs222/c4f60/remap_1920x1080.bin
+[ov_bridge] ovrobust: init_still 0 | health 1 log - | rules upd 0.20/1.00 s std 0.25/1.00 m trk 40/10(15 fr) rej 0.50 | recover 0 (max gap 3.0 s, min feats 20) | test blank 0 windows
+[ov_bridge] loop: vocab /home/system/scanner/StereoDepthSeg-scanA/scan3d/ov_bridge/loop/voc_k10L4.voc (k 10 L 4, 9992 words, sha d962dc5e69c5742b) | kf 0.25s/0.08m/8deg max_dt 2 q 6 nice 10 | feat 600 L3 fast 20 | gap 3s/1m score 0.015/0.25 cand 3 | match 64/0.8 inl 25 pnp 3px x200 rp 3deg corr 0.5m+0.05*path yaw 10deg | consist 3kf 4s 0.05m 1.5deg | graph seq 4 w 1 huber 0.1 it 30 | smooth 0.1m/s 3deg/s | sync 1
+[ov_bridge] affinity ready: (not pinned) threads 230482:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 230502:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] idle spin: mode 0 (off) stripes 2 max 200 ms
+[ovpatch] TrackKLT overlap off (OV_KLT_OVERLAP=0)
+[ov_bridge] affinity cam300: (not pinned) threads 230482:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 230502:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 230503:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] health t=9.346 INIT -> OK (tracked 161 used 0 since_upd 0.00 pos_std 0.100)
+[ov_bridge] health t=56.629 OK -> DEGRADED (tracked 163 used 23 since_upd 0.00 pos_std 0.087)
+[ov_bridge] health t=56.662 DEGRADED -> OK (tracked 175 used 6 since_upd 0.00 pos_std 0.087)
+[ov_bridge] affinity end: (not pinned) threads 230482:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 230502:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 230503:ov_bridge=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+[ov_bridge] gyro_klt mode 5: frames 4008 (no rotation 0) | pts in 687667 LK ok 684435 (99.53 %) kept 677742 (98.56 %) | fallback 0/0 | predicted shift px mean 6.936 max 61.25
+[ov_bridge] gyro_klt mode 5: LK result - start px mean 1.230 | LK result - old px mean 6.993 (n 684435) | guards: capped pts 0, translation refused frames 6
+[ov_bridge] loop: keyframes pushed 150 dropped 0 processed 150 | candidates 387 geo 387 verified 3 accepted 0 (consistency-rejected 3) | optimisations 0 | sessions 0
+[ov_bridge] loop: ms p50/p95/max per keyframe: total 15.75/43.75/61.83 tri 0.25/0.33 feat 9.11/12.27 query 0.22/0.45 geo 5.43/32.52 | VIO-thread copy 0.261/0.401/1.406 | opt nan/nan/nan (n 0)
+[ov_bridge] health: frames INIT 456 OK 3551 DEGRADED 2 LOST 0 | transitions 4 | max LOST run 0 frames | recover state 0 full 0 | blanked 0 | init_ready frames 387
+[33m[init]: not enough feats to compute disp: 0,0 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,0 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m[33m[init]: not enough feats to compute disp: 0,66 < 15
+[0m

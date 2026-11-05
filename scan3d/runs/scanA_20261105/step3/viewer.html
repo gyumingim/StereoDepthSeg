@@ -17,7 +17,7 @@
 </head>
 <body>
 <div id="bar">
-  <b>폰 3D 스캔 (녹화 165506, 노트북 보드 장면)</b>
+  <b>폰 3D 스캔 (녹화별 메시)</b>
   <select id="pick"></select>
   <label><input type="checkbox" id="wire"> 선만</label>
   <label><input type="checkbox" id="board" checked> 보드 위치(빨간 네모)</label>
@@ -29,10 +29,16 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { PLYLoader } from "three/addons/loaders/PLYLoader.js";
-// meshes.json: [{file, label}] written next to this page
+// meshes.json: [{file, label, rec?, board_mm?}] written next to this page (rec / board_mm missing = 165506, 302 x 181.2 mm)
 const meshes = await (await fetch("meshes.json")).json();
 const pick = document.getElementById("pick"), info = document.getElementById("info");
-for (const m of meshes) pick.add(new Option(m.label, m.file));
+const byFile = {};
+for (const m of meshes) { m.rec = m.rec || "165506"; byFile[m.file] = m; }
+const groups = {};
+for (const m of meshes) {
+  if (!groups[m.rec]) { groups[m.rec] = document.createElement("optgroup"); groups[m.rec].label = "녹화 " + m.rec; pick.appendChild(groups[m.rec]); }
+  groups[m.rec].appendChild(new Option(m.label, m.file));
+}
 const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("c"), antialias: true });
 renderer.setPixelRatio(devicePixelRatio);
 const scene = new THREE.Scene(); scene.background = new THREE.Color(0x1d1f23);
@@ -40,15 +46,18 @@ const cam = new THREE.PerspectiveCamera(50, 1, 0.01, 50);
 const ctl = new OrbitControls(cam, renderer.domElement);
 scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
 const dl = new THREE.DirectionalLight(0xffffff, 0.8); dl.position.set(1, -1, -2); scene.add(dl);
-// board = plane z=0, 0..302 x 0..181 mm (world = board frame)
-const bw = 0.302, bh = 0.1812;
-const boardLine = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(
-  [[0,0],[bw,0],[bw,bh],[0,bh]].map(([x,y]) => new THREE.Vector3(x, y, 0))), new THREE.LineBasicMaterial({ color: 0xff3030 }));
+// board = plane z=0, 0..W x 0..H mm (world = board frame; size per recording)
+const boardLine = new THREE.LineLoop(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xff3030 }));
+function setBoard(mm) { const bw = mm[0] / 1000, bh = mm[1] / 1000;
+  boardLine.geometry.setFromPoints([[0,0],[bw,0],[bw,bh],[0,bh]].map(([x,y]) => new THREE.Vector3(x, y, 0))); }
 scene.add(boardLine);
-let obj = null, home = null;
+let obj = null, home = null, homeRec = null;
 function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
 addEventListener("resize", resize); resize();
 function load(file) {
+  const m = byFile[file];
+  setBoard(m.board_mm || [302, 181.2]);
+  if (m.rec !== homeRec) { home = null; cam.userData.set = 0; homeRec = m.rec; }   // other recording = other scene: new view
   info.textContent = "불러오는 중… " + file;
   new PLYLoader().load(file, g => {
     g.computeVertexNormals();

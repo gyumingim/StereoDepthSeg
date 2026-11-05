@@ -47,6 +47,11 @@ def main():
     ap.add_argument("--pose-noise-cm", type=float, default=0.0, help="add N(0, s) cm position noise per frame (VIO-like test)")
     ap.add_argument("--allow-fullres", action="store_true",
                     help="allow --scale > 0.5 (1920x1080 FFS needs > 16 GB; runs only under the gpu_guard cap, fails cleanly)")
+    ap.add_argument("--rows-from", default="", help="poses.jsonl.gz: keep only recording rows that have a pose in this file "
+                    "(t_ns within 1 ms), e.g. the BA keyframes, so a GT-pose run uses the same keyframes")
+    ap.add_argument("--compress", action="store_true",
+                    help="HS 240 fps recordings: keep only rows with a pose (RAM), --kf-step counts kept rows; pair search "
+                         "window +-150 kept rows (dt still capped by MSConfig.dt_max_s)")
     a = ap.parse_args()
     if a.scale > 0.5 and not a.allow_fullres:
         sys.exit("scale > 0.5 refused: 1920x1080 FFS overflowed 16 GB VRAM and crashed WSL (11-05); pass --allow-fullres to try under the cap")
@@ -112,11 +117,39 @@ def main():
         print("VIO poses", pose_info, flush=True)
         T, ok = newT, okv & ok      # GT 'ok' is still needed for the board-depth check plane (pose of the plane uses VIO world)
 
+    if a.rows_from:
+        import gzip
+        rt = np.array([json.loads(l)["t_ns"] for l in gzip.open(a.rows_from, "rt") if "t_ns" in l], np.int64)
+        j = np.searchsorted(t_ns, rt).clip(1, len(t_ns) - 1)
+        j = np.where(np.abs(t_ns[j - 1] - rt) < np.abs(t_ns[j] - rt), j - 1, j)
+        keep = np.zeros(len(ok), bool); keep[j[np.abs(t_ns[j] - rt) < 1e6]] = True
+        ok = ok & keep
+        pose_info["rows_from"] = dict(file=a.rows_from, n=int(keep.sum()))
+    sel = np.flatnonzero(ok) if a.compress else None
+    if sel is not None:                                # compressed row index k <-> recording frame sel[k]
+        t_ns, T, Tgt, ok = t_ns[sel], T[sel], Tgt[sel], ok[sel]
+        n = len(sel)
+        pose_info["compressed_rows"] = int(n)
+
     # decode (scaled) frames
     cap = cv2.VideoCapture(str(rec / "cam5.mp4"))
     W0, H0 = int(round(1920 * s)), int(round(1080 * s))
     imgs = []
-    while True:
+    if sel is not None:
+        pos = {int(r_): k for k, r_ in enumerate(sel)}
+        imgs = [None] * n
+        fi, nimg = 0, 0
+        while True:
+            r, f = cap.read()
+            if not r:
+                break
+            if fi in pos:
+                imgs[pos[fi]] = f if (W0, H0) == (f.shape[1], f.shape[0]) else cv2.resize(f, (W0, H0), interpolation=cv2.INTER_AREA)
+                nimg = pos[fi] + 1
+            fi += 1
+            if fi > sel[-1]:
+                break
+    while sel is None:
         r, f = cap.read()
         if not r:
             break
@@ -124,7 +157,7 @@ def main():
         imgs.append((f if (W0, H0) == (f.shape[1], f.shape[0]) else cv2.resize(f, (W0, H0), interpolation=cv2.INTER_AREA))
                     if (k_ < len(ok) and ok[k_]) else None)
     cap.release()
-    nimg = len(imgs)
+    nimg = len(imgs) if sel is None else nimg
     print(f"decoded {nimg} frames ({W0}x{H0}), gt rows {n}, ok {int(ok.sum())}", flush=True)
     n = min(n, nimg)
 
@@ -144,11 +177,11 @@ def main():
     rays = np.stack([(uu - Kr[0, 2]) / Kr[0, 0], (vv - Kr[1, 2]) / Kr[1, 1], np.ones_like(uu)], -1)
     rows, dz_all = [], []
     for i in range(0, n, a.kf_step):
-        if not ok[i]:
+        if not ok[i] or imgs[i] is None:
             continue
         cands = []
         for j in range(max(0, i - 150), min(n, i + 150)):
-            if j == i or not ok[j]:
+            if j == i or not ok[j] or imgs[j] is None:
                 continue
             R, t = ms.rel_pose(T[i], T[j])
             gg = ms.pair_geometry(R, t)
@@ -189,6 +222,8 @@ def main():
                        board_dZ_p90_cm=float(np.percentile(dz, 90) * 100), board_absdZ_mean_cm=float(np.abs(dz).mean() * 100))
             row.update(board_dZ_med_cm=float(np.median(dz) * 100), board_absdZ_p50_cm=float(np.median(np.abs(dz)) * 100),
                        board_absdZ_p90_cm=float(np.percentile(np.abs(dz), 90) * 100), board_Z_m=float(np.median(Zp[m])))
+        if sel is not None:
+            row["frame"] = int(sel[i])
         rows.append(row)
         tsdf.integrate(np.where(V, Z, np.nan).astype(np.float32), V, bgr, rp["f"], rp["cx"], rp["cy"], 0.08, T[i],
                        sigma=np.where(V, S, np.inf).astype(np.float32))

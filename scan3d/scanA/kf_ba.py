@@ -143,12 +143,16 @@ def ba_lm(R, t, X, cam, pt, uv, K, fixed=(0,), iters=30, huber=1.0, log=print, r
             # - W Hpp^-1 W^T
             V = np.einsum("nij,njk->nik", Hcp_o, Hpp_inv[pt])      # (n,6,3)
             m = fo[pa] & fo[pb]
-            A_, B_ = pa[m], pb[m]
-            blk = np.einsum("nij,nkj->nik", V[A_], Hcp_o[B_])      # (m,6,6)
-            ri = (cidx[cam[A_]] * 6)[:, None, None] + np.arange(6)[None, :, None]
-            ci = (cidx[cam[B_]] * 6)[:, None, None] + np.arange(6)[None, None, :]
-            flat = (np.broadcast_to(ri, blk.shape) * (Nf * 6) + np.broadcast_to(ci, blk.shape)).ravel()
-            S -= np.bincount(flat, weights=blk.ravel(), minlength=(Nf * 6) ** 2).reshape(Nf * 6, Nf * 6)
+            Am, Bm = pa[m], pb[m]
+            CH = 2_000_000                                          # obs pairs per chunk (RAM: long recordings > 30 GB unchunked)
+            for c0_ in range(0, len(Am), CH):                       # one chunk (= unchanged sums) when < CH pairs
+                A_, B_ = Am[c0_:c0_ + CH], Bm[c0_:c0_ + CH]
+                blk = np.einsum("nij,nkj->nik", V[A_], Hcp_o[B_])      # (m,6,6)
+                ri = (cidx[cam[A_]] * 6)[:, None, None] + np.arange(6)[None, :, None]
+                ci = (cidx[cam[B_]] * 6)[:, None, None] + np.arange(6)[None, None, :]
+                flat = (np.broadcast_to(ri, blk.shape) * (Nf * 6) + np.broadcast_to(ci, blk.shape)).ravel()
+                S -= np.bincount(flat, weights=blk.ravel(), minlength=(Nf * 6) ** 2).reshape(Nf * 6, Nf * 6)
+                del blk, ri, ci, flat
             # b += W Hpp^-1 gp
             vg = np.einsum("nij,nj->ni", V, gp[pt])
             bb = np.zeros((N, 6)); np.add.at(bb, cam, vg)
@@ -202,6 +206,10 @@ def main():
     ap.add_argument("--min-tri-deg", type=float, default=1.0)
     ap.add_argument("--rs-skew-ms", type=float, default=0.0, help="rolling-shutter readout (6.54 ms on lens 5); 0 = global shutter model")
     ap.add_argument("--twist", default="", help="poses for the per-keyframe camera twist used by --rs-skew-ms (default --vio)")
+    ap.add_argument("--kf-from-vio", action="store_true",
+                    help="HS 240 fps recordings (VIO fed at 60 fps): keyframes = every --kf-step-th VIO-fed frame (not every "
+                         "kf-step-th recording row); sequential/covisible gaps counted in keyframes")
+    ap.add_argument("--match-ms", type=float, default=4.0, help="VIO t_ns vs GT row t_ns tolerance (use 1 for 240 fps rows)")
     a = ap.parse_args()
     import pycolmap
     t0 = time.time()
@@ -223,15 +231,18 @@ def main():
     vt, vT = load_vio(a.vio)
     idx = np.searchsorted(vt, t_ns).clip(1, len(vt) - 1)
     idx = np.where(np.abs(vt[idx - 1] - t_ns) < np.abs(vt[idx] - t_ns), idx - 1, idx)
-    has = np.abs(vt[idx] - t_ns) < 4e6
-    kfs = [i for i in range(0, len(t_ns), a.kf_step) if has[i]]
+    has = np.abs(vt[idx] - t_ns) < a.match_ms * 1e6
+    if a.kf_from_vio:
+        kfs = [int(i) for i in np.flatnonzero(has)[::a.kf_step]]
+    else:
+        kfs = [i for i in range(0, len(t_ns), a.kf_step) if has[i]]
     Tv = {i: vT[idx[i]] for i in kfs}
     log(f"[kf] {len(kfs)} keyframes (step {a.kf_step}) with VIO tracking poses, frames {kfs[0]}..{kfs[-1]}")
     # board quad (for --mask-board)
     bj = json.loads(Path(str(g["board_json"])).read_text())
     sq = float(g["square_mm"]) / 1000.0
     BW, BH = bj["squares_x"] * sq, bj["squares_y"] * sq
-    tag = f"kf{a.kf_step}_s{s:g}" + ("_mask" if a.mask_board else "")
+    tag = f"kf{a.kf_step}_s{s:g}" + ("_mask" if a.mask_board else "") + (f"_vio_{a.gt}" if a.kf_from_vio else "")
     img_dir = rec / "scanA_cache" / tag
     img_dir.mkdir(parents=True, exist_ok=True)
     names = {i: f"{i:05d}.jpg" for i in kfs}
@@ -275,12 +286,13 @@ def main():
     C = {i: Tv[i][:3, 3] for i in kfs}
     Zax = {i: Tv[i][:3, 2] for i in kfs}
     pairs = set()
+    kpos = {i: n for n, i in enumerate(kfs)}
     for k, i in enumerate(kfs):
         for j in kfs[k + 1:k + 1 + a.seq]:
             pairs.add((i, j))
         cands = []
         for j in kfs:
-            if abs(j - i) <= a.seq * a.kf_step:
+            if (abs(kpos[j] - kpos[i]) <= a.seq) if a.kf_from_vio else (abs(j - i) <= a.seq * a.kf_step):
                 continue
             ang = np.degrees(np.arccos(np.clip(Zax[i] @ Zax[j], -1, 1)))
             d = np.linalg.norm(C[i] - C[j])
