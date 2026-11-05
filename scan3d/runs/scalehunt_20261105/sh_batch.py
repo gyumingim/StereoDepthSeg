@@ -78,8 +78,9 @@ def main():
     ap.add_argument("cmd"); ap.add_argument("conds", nargs="?", default="B"); ap.add_argument("-j", type=int, default=14)
     a = ap.parse_args()
     conds = ORDER if a.conds == "all" else a.conds.split(",")
-    # HS first within a condition (longer), conditions in ORDER
-    jobs = [(c, r) for c in conds for r in RECS[1:] + RECS[:1]]
+    # by recording (all conditions of one recording run together -> its frame cache stays in the page cache; 47 GB of caches
+    # > 30 GB RAM thrashed at 200 MB/s when 14 recordings streamed at once, 16:15)
+    jobs = [(c, r) for r in RECS for c in conds]
     print(time.strftime("%F %T"), "jobs", len(jobs), flush=True)
     with ThreadPoolExecutor(a.j) as ex:
         list(ex.map(lambda cr: job(*cr), jobs))
