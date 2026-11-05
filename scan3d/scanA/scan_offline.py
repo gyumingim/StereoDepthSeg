@@ -116,7 +116,9 @@ def main():
         r, f = cap.read()
         if not r:
             break
-        imgs.append(cv2.resize(f, (W0, H0), interpolation=cv2.INTER_AREA))
+        k_ = len(imgs)                                   # keep only frames that have a pose (RAM at full res)
+        imgs.append((f if (W0, H0) == (f.shape[1], f.shape[0]) else cv2.resize(f, (W0, H0), interpolation=cv2.INTER_AREA))
+                    if (k_ < len(ok) and ok[k_]) else None)
     cap.release()
     nimg = len(imgs)
     print(f"decoded {nimg} frames ({W0}x{H0}), gt rows {n}, ok {int(ok.sum())}", flush=True)
@@ -195,7 +197,9 @@ def main():
     summ = dict(poses=pose_info, made=time.strftime("%Y-%m-%d %H:%M:%S"), rec=str(rec), gt=a.gt, args=vars(a), board_mm=[BW * 1000, BH * 1000],
                 square_mm=sq * 1000, gt_corner_px_median=board.get("corner_px_median"), n_kf=len(rows),
                 n_kf_depth=sum(1 for r in rows if r.get("pairs")), mesh_vertices=int(len(Vm)), mesh_faces=int(len(Fm)),
-                runtime_s=round(time.time() - t_start, 1))
+                runtime_s=round(time.time() - t_start, 1), image_size=[W0, H0], K_used=K.tolist(),
+                gpu_max_alloc_gb=round(__import__('torch').cuda.max_memory_allocated() / 2 ** 30, 2),
+                gpu_max_reserved_gb=round(__import__('torch').cuda.max_memory_reserved() / 2 ** 30, 2))
     ev = [r for r in rows if "board_absdZ_p50_cm" in r]
     if ev:
         summ["kf_board_absdZ_p50_cm_median"] = float(np.median([r["board_absdZ_p50_cm"] for r in ev]))

@@ -1,0 +1,49 @@
+VIO poses {'source': 'scan3d/runs/scanA_20261105/step2/ba_o0/poses_ba.jsonl.gz', 'n': 139, 'se3_rmse_cm': 0.9511519228298326, 'sim3_scale_would_be': 0.980883483365814, 'free_scale_applied': True, 'rot_diff_deg_median': 0.8206587902263012}
+decoded 1690 frames (1920x1080), gt rows 1690, ok 134
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/geometry.py:76: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/geometry.py:76: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/geometry.py:76: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/geometry.py:76: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+kf 490/1690: {'i': 490, 'pairs': 1, 'B_cm': [7.4], 'valid_frac': 0.25929301697530865, 'board_px': 108771, 'board_valid': 71404, 'ffs_ms': [10854], 'board_dZ_mean_cm': 3.3755967337179684, 'board_dZ_p10_cm': 2.7996708322012944, 'board_dZ_p90_cm': 3.94113137018831, 'board_absdZ_mean_cm': 3.3755967337179684, 'board_dZ_med_cm': 3.4376236707965635, 'board_absdZ_p50_cm': 3.4376236707965635, 'board_absdZ_p90_cm': 3.94113137018831, 'board_Z_m': 0.8382976975512141}
+W1105 16:23:51.315000 74402 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8] torch._dynamo hit config.recompile_limit (8)
+W1105 16:23:51.315000 74402 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8]    function: 'build_gwc_volume_optimized_pytorch1' (/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:376)
+W1105 16:23:51.315000 74402 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8]    last reason: 0/7: tensor 'refimg_fea' size mismatch at index 3. expected 168, actual 160
+W1105 16:23:51.315000 74402 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1105 16:23:51.315000 74402 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1105 16:23:51.470000 74402 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8] torch._dynamo hit config.recompile_limit (8)
+W1105 16:23:51.470000 74402 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8]    function: 'build_concat_volume_optimized_pytorch1' (/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:492)
+W1105 16:23:51.470000 74402 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8]    last reason: 1/7: tensor 'refimg_fea' size mismatch at index 3. expected 168, actual 160
+W1105 16:23:51.470000 74402 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1105 16:23:51.470000 74402 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+kf 590/1690: {'i': 590, 'pairs': 2, 'B_cm': [13.4, 12.2], 'valid_frac': 0.7358256172839506, 'board_px': 117618, 'board_valid': 117618, 'ffs_ms': [269, 4356], 'board_dZ_mean_cm': -0.09469383624217798, 'board_dZ_p10_cm': -0.12722576784708672, 'board_dZ_p90_cm': -0.06705040208193402, 'board_absdZ_mean_cm': 0.09469383624217798, 'board_dZ_med_cm': -0.09244321235997721, 'board_absdZ_p50_cm': 0.09244321235997721, 'board_absdZ_p90_cm': 0.12722576784708672, 'board_Z_m': 0.7964133144993428}
+kf 720/1690: {'i': 720, 'pairs': 2, 'B_cm': [7.2, 7.8], 'valid_frac': 0.7072120949074074, 'board_px': 136858, 'board_valid': 136858, 'ffs_ms': [14283, 13870], 'board_dZ_mean_cm': -0.1418615570403029, 'board_dZ_p10_cm': -0.3771500416051021, 'board_dZ_p90_cm': 0.1166043910785486, 'board_absdZ_mean_cm': 0.1962243873259507, 'board_dZ_med_cm': -0.16269846735059712, 'board_absdZ_p50_cm': 0.18307493246865203, 'board_absdZ_p90_cm': 0.377419013301018, 'board_Z_m': 0.7394743812620355}
+kf 820/1690: {'i': 820, 'pairs': 2, 'B_cm': [7.2, 12.6], 'valid_frac': 0.773154899691358, 'board_px': 137969, 'board_valid': 137969, 'ffs_ms': [13940, 3128], 'board_dZ_mean_cm': 0.3551034651479826, 'board_dZ_p10_cm': 0.06727292541846898, 'board_dZ_p90_cm': 0.6330362499091113, 'board_absdZ_mean_cm': 0.35540787200226476, 'board_dZ_med_cm': 0.3565121371759128, 'board_absdZ_p50_cm': 0.3565121371759128, 'board_absdZ_p90_cm': 0.6330362499091113, 'board_Z_m': 0.7423600109717262}
+kf 920/1690: {'i': 920, 'pairs': 2, 'B_cm': [8.1, 8.8], 'valid_frac': 0.8025665509259259, 'board_px': 161455, 'board_valid': 161455, 'ffs_ms': [13006, 11440], 'board_dZ_mean_cm': 0.2503245375087064, 'board_dZ_p10_cm': 0.12906664204118679, 'board_dZ_p90_cm': 0.3615860635817958, 'board_absdZ_mean_cm': 0.2503427683733218, 'board_dZ_med_cm': 0.25981961324533787, 'board_absdZ_p50_cm': 0.25981961324533787, 'board_absdZ_p90_cm': 0.3615860635817958, 'board_Z_m': 0.6819875860131879}
+Traceback (most recent call last):
+  File "/home/system/scanner/StereoDepthSeg-scanA/scan3d/scanA/scan_offline.py", line 242, in <module>
+    main()
+  File "/home/system/scanner/StereoDepthSeg-scanA/scan3d/scanA/scan_offline.py", line 167, in main
+    r = ms.pair_depth(model, lib_ffs.infer, imgs[i], imgs[j], R, t, K, dist, rp, cfg, iters=a.iters)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/system/scanner/StereoDepthSeg-scanA/scan3d/motion_stereo.py", line 361, in pair_depth
+    disp = infer(model, rgbL, rgbR, valid_iters=iters, scale=s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/system/scanner/StereoDepthSeg/lib_ffs.py", line 140, in infer
+    disp = model.forward(tl, tr, iters=valid_iters, test_mode=True,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/foundation_stereo.py", line 245, in forward
+    geo_feat = geo_fn(disp, coords, dx=self.dx, low_memory=low_memory)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/geometry.py", line 44, in __call__
+    y0 = torch.zeros_like(x0)
+         ^^^^^^^^^^^^^^^^^^^^
+torch.AcceleratorError: CUDA error: out of memory
+Search for `cudaErrorMemoryAllocation' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
