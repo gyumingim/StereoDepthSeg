@@ -1,0 +1,59 @@
+{
+ "made": "2026-11-05 16:20:22",
+ "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261024_165506_std60",
+ "args": {
+  "rec": "/home/system/scanner/StereoDepthSeg-scalehunt/scan3d/recordings/hs_20261024_165506_std60",
+  "pose": [
+   "T_p3=/home/system/scanner/build_livepose/scalehunt/runs/T_p3//165506s.poses.jsonl.gz"
+  ],
+  "kf_step": 10,
+  "out": "/home/system/scanner/build_livepose/scalehunt/corner/T_p3.json",
+  "rs_skew_ms": 0.0,
+  "twist": ""
+ },
+ "n_kf": 134,
+ "n_pairs": 1859,
+ "corners_src": "imu_gt_rs/gt.npz corners (raw px) undistorted with its K/dist",
+ "sources": {
+  "T_p3": {
+   "pair2v_rigid_rms_mm": {
+    "n": 1859,
+    "mean": 16.292963615485217,
+    "median": 2.968231042816562,
+    "p10": 0.6677618991329646,
+    "p90": 23.82907279448776
+   },
+   "pair2v_scale_err_pct": {
+    "n": 1859,
+    "mean": 11.141535561671997,
+    "median": 1.503905390856497,
+    "p10": -4.18180488829492,
+    "p90": 26.60496079739158
+   },
+   "pair2v_abs_scale_err_pct": {
+    "n": 1859,
+    "mean": 13.252127302291346,
+    "median": 3.1632820272323947,
+    "p10": 0.5122078470552127,
+    "p90": 26.713384088429283
+   },
+   "mv_reproj_px": {
+    "n": 1064,
+    "mean": 15.110704773481135,
+    "median": 10.908565765090767,
+    "p10": 6.414851925119436,
+    "p90": 31.78373711725679
+   },
+   "mv_rigid_rms_mm": 3.017783511458631,
+   "mv_scale_err_pct": 3.9654001458220733,
+   "pair2v_sim_rms_mm": {
+    "n": 1859,
+    "mean": 11.413459654444498,
+    "median": 0.9885694577340189,
+    "p10": 0.3381681872249454,
+    "p90": 9.715061036254651
+   },
+   "mv_sim_rms_mm": 0.7086954054394093
+  }
+ }
+}

@@ -103,14 +103,15 @@ def cmd_table(out_json, out_md):
             S[c] = json.load(open(f))["cells"]
     keys = ["k_fwd", "k_rev", "k_x", "k_y", "k_z"]
     B = S["B"]
+    B60 = S.get("B60", {})          # README 3.1: capped conditions are paired with the capped baseline
     rows, lines = {}, []
-    lines.append("| cond | n ok | R2 k_fwd med (B=…) | Δk_fwd med | sign +/− | Δk_rev med | Δk_z med | Δk_xy med | R1 old-GT Δk_fwd med | ATE med cm |")
+    lines.append("| cond | n ok | R2 k_fwd med | Δk_fwd med (vs B60; B60 vs B) | sign +/− | Δk_rev med | Δk_z med | Δk_xy med | R1 old-GT Δk_fwd med | ATE med cm |")
     lines.append("|---|---|---|---|---|---|---|---|---|---|")
     for c, cells in S.items():
         d = {k: [] for k in keys + ["old"]}
         kb, ate = [], []
         for rec, v in cells.items():
-            b = B.get(rec, {})
+            b = (B if c in ("B", "B60") else B60).get(rec, {})
             if "best" not in v or v.get("status") != "ok":
                 continue
             kb.append(v["best"]["k_fwd"]); ate.append(v["best"]["ate_se3_cm"])
