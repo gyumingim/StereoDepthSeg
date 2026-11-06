@@ -14,12 +14,14 @@ while [ -n "$todo" ]; do
   for r in $todo; do
     if [ -f $D/ba/$r/viba_input.npz ] && ! pgrep -f "[k]f_ba.py scan3d/recordings/hs_$r " > /dev/null; then
       if [[ $r == *165506 ]]; then R=scan3d/recordings/hs_${r}_std60; CFG=$BL/cfg_gen/c4f60; else R=scan3d/recordings/hs_$r; CFG=$BL/cfg_gen_hs222/c4f60; fi
-      for v in "ba_g:--vision-only" "viba:--calib yaml" "viba_on:--calib online" "viba_x103:--calib yaml --init-scale 1.03"; do
-        n=${v%%:*}; args=${v#*:}; mkdir -p $D/viba/$r/$n
+      for n in ${VARIANTS:-viba ba_g viba_x103 viba_on}; do
+        case $n in ba_g) args="--vision-only";; viba) args="--calib yaml";; viba_on) args="--calib online";; viba_x103) args="--calib yaml --init-scale 1.03";; esac
+        mkdir -p $D/viba/$r/$n
         [ -f $D/viba/$r/$n/viba.json ] && continue
+        [ -f $D/viba/$r/$n.log.mem ] && continue      # running in another stage instance (or failed: rerun by hand)
         while [ $(jobs -rp | grep -vc "^$WD$") -ge ${VIBA_PAR:-2} ] || [ $(awk '/MemAvailable/{print int($2/1048576)}' /proc/meminfo) -lt 12 ]; do sleep 10; done
-        ( $PV scan3d/viba/viba.py $R --dump $D/ba/$r/viba_input.npz --vio $D/vio/$r.poses.jsonl.gz --cfg $CFG --out $D/viba/$r/$n $args \
-            > $D/viba/$r/$n.log 2>&1; echo "$r $n rc $? $(date +%T) $(grep -E '^\[lm\]' $D/viba/$r/$n.log)" ) &
+        ( $HOME/scanner/viba_work/memrun.sh 11000 $D/viba/$r/$n.log $PV scan3d/viba/viba.py $R --dump $D/ba/$r/viba_input.npz --vio $D/vio/$r.poses.jsonl.gz --cfg $CFG --out $D/viba/$r/$n $args \
+            > /dev/null 2>&1; echo "$r $n rc $? $(date +%T) $(grep -E '^\[lm\]' $D/viba/$r/$n.log)" ) &
       done
       wait $(jobs -p | grep -v "^$WD$")
     else left="$left $r"; fi
