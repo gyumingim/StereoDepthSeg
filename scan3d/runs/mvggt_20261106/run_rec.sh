@@ -24,17 +24,20 @@ heavy() { name=$1; shift; memwait; echo "== $id $name start $(date '+%F %T')"; f
 # GPU steps (11-06 coordinator rule: one CPU job + one GPU job at a time): no heavy.lock, only ~/scanner/gpu.lock (gpu_guard inside)
 gpu() { name=$1; shift; memwait; echo "== $id $name start(gpu) $(date '+%F %T')"; "$@" > $D/$name.log 2>&1;
           rc=$?; echo "== $id $name rc $rc $(date '+%F %T')"; tail -n 2 $D/$name.log | cut -c1-300; return $rc; }
+# light CPU steps (11-06 coordinator: single process, < 4 GB): dump, align -> no lock
+light() { name=$1; shift; memwait; echo "== $id $name start(light) $(date '+%F %T')"; "$@" > $D/$name.log 2>&1;
+          rc=$?; echo "== $id $name rc $rc $(date '+%F %T')"; tail -n 2 $D/$name.log | cut -c1-300; return $rc; }
 mesh() { n=$1; shift; [ -f $D/mesh_$n/summary.json ] && { echo "== $n exists"; return; }
          gpu mesh_$n $PY scan3d/mvggt/mv_offline.py $R --out $D/mesh_$n --gt $G $SOO --kf-subset $SUB "$@"; }
 for st in $STEPS; do case $st in
-  dump) [ -f $D/frames/frames.npz ] || heavy dump $PY scan3d/mvggt/mv_dump.py $R --gt $G --ba $BA --out $D/frames ;;
+  dump) [ -f $D/frames/frames.npz ] || light dump $PY scan3d/mvggt/mv_dump.py $R --gt $G --ba $BA --out $D/frames ;;
   probe) [ -f $D/vggt_chunk.txt ] || for c in 64 48; do gpu probe_bf16_c$c $PY scan3d/mvggt/vggt_run.py $D/frames --out $D/probe_bf16_c$c/raw.npz --chunk $c --probe \
            && { echo $c > $D/vggt_chunk.txt; break; }; done ;;
   b0) mesh B0 --vio $BA; mesh B0_fs --vio $BA --free-scale ;;
   vggt_inf) [ -f $D/raw_vggt.npz ] || gpu vggt $PY scan3d/mvggt/vggt_run.py $D/frames --out $D/raw_vggt.npz --chunk $(cat scan3d/runs/mvggt_20261106/rec/165506/vggt_chunk.txt) --overlap 8 ;;
-  vggt_al) [ -f $D/al/align_vggt.json ] || heavy align_vggt $PY scan3d/mvggt/mv_align.py vggt $D/frames $D/raw_vggt.npz --out $D/al --vio-kf $D/poses_vio_kf.jsonl.gz ;;
+  vggt_al) [ -f $D/al/align_vggt.json ] || light align_vggt $PY scan3d/mvggt/mv_align.py vggt $D/frames $D/raw_vggt.npz --out $D/al --vio-kf $D/poses_vio_kf.jsonl.gz ;;
   mast3r_inf) [ -f $D/raw_mast3r.npz ] || gpu mast3r $PY scan3d/mvggt/mast3r_run.py $D/frames --out $D/raw_mast3r.npz --win ${WIN:-8} ;;
-  mast3r_al) [ -f $D/al/align_mast3r.json ] || heavy align_mast3r $PY scan3d/mvggt/mv_align.py mast3r $D/frames $D/raw_mast3r.npz --out $D/al --vio-kf $D/poses_vio_kf.jsonl.gz ;;
+  mast3r_al) [ -f $D/al/align_mast3r.json ] || light align_mast3r $PY scan3d/mvggt/mv_align.py mast3r $D/frames $D/raw_mast3r.npz --out $D/al --vio-kf $D/poses_vio_kf.jsonl.gz ;;
   mesh1) mesh $MN $MA ;;
   vggt) [ -f $D/raw_vggt.npz ] || gpu vggt $PY scan3d/mvggt/vggt_run.py $D/frames --out $D/raw_vggt.npz --chunk ${CHUNK:-$(cat scan3d/runs/mvggt_20261106/rec/165506/vggt_chunk.txt)} --overlap 8
         [ -f $D/raw_vggt.npz ] && heavy align_vggt $PY scan3d/mvggt/mv_align.py vggt $D/frames $D/raw_vggt.npz --out $D/al --vio-kf $D/poses_vio_kf.jsonl.gz ;;
