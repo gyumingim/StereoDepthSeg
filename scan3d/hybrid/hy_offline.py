@@ -1,0 +1,465 @@
+#!/usr/bin/env python3
+"""hybrid 2026-11-07: copy of mvggt/mv_offline.py + FFS depth cache and VGGT fill (README runs/hybrid_20261107).
+  --save-ffs P   : normal FFS run (= B0) and also save every keyframe's FFS depth (t_ns, Z, V, S, B) to P (npz)
+  --ffs-cache P  : no FFS model; keyframe depth from P (keyframes not in P = 'no FFS depth')
+  --fill-depth Q --fill-raw R --hybrid H1|H2|H3 : VGGT depth Q (V2_depth.npz, BA-pose units) fills where FFS failed
+      H1 = keyframes without FFS depth get VGGT depth as is (chunks in --exclude-chunks skipped)
+      H2 = H1, but VGGT depth x per-keyframe ratio = median of the FFS/VGGT ratios of the up-to --n-nbr nearest FFS keyframes
+           of the SAME VGGT chunk (ratio per FFS keyframe = median Z_ffs / Z_vggt over the whole image, both valid,
+           >= --min-joint-px pixels; no GT used); no such keyframe -> no fill
+      H3 = H2 + pixel fill in FFS keyframes: pixels FFS invalid & VGGT mask -> VGGT x that keyframe's own ratio
+mvggt 2026-11-06: generated from scanA/scan_offline.py by make_mv_offline.py (adds --ext-depth, --kf-subset).
+scanA 2026-11-05 step 3 (from scanplan/e2e_mono_ms.py, same depth/fusion code; changes: pooled + per-keyframe depth error
+stats incl. mean/p10/p90, --voxel default 5 mm, coverage cell fix, OBJ export, --kf-only uses poses only at keyframes).
+Original docstring: one quick end-to-end attempt of the scanner on a mono 60 fps recording (hs std60, lens 5 1920x1080).
+
+record (cam5.mp4) -> poses (default: board GT imu_gt_spl = best case; VIO poses are the realistic case, not done here)
+-> two-frame motion stereo of the same lens (motion_stereo.pair_depth, FFS, no two-lens anchor) -> TSDF (tsdf_map) -> mesh.ply.
+Checks (the ChArUco board on the laptop screen is the known object; world = board frame, board plane z = 0):
+  * per-keyframe depth error inside the board rectangle vs the GT plane depth (cm, median / p90 of |dZ|)
+  * mesh vertices over the board rectangle: z offset and RMS from the plane (cm)
+Usage: venv_ffs/bin/python scan3d/scanplan/e2e_mono_ms.py <rec dir> --out <dir> [--scale 0.5] [--kf-step 10]
+"""
+import argparse
+import json
+import sys
+import time
+from pathlib import Path
+
+import cv2
+import numpy as np
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent))
+sys.path.insert(0, str(HERE.parent.parent))
+import os  # noqa: E402
+if os.environ.get("FFS_ROOT"):            # repo root that holds tools/Fast-FoundationStereo (worktrees do not)
+    sys.path.insert(0, os.environ["FFS_ROOT"])
+import motion_stereo as ms  # noqa: E402
+import tsdf_map  # noqa: E402
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("rec")
+    ap.add_argument("--out", required=True)
+    ap.add_argument("--gt", default="imu_gt_spl")
+    ap.add_argument("--scale", type=float, default=0.5, help="image scale vs 1920x1080")
+    ap.add_argument("--kf-step", type=int, default=10)
+    ap.add_argument("--n-pairs", type=int, default=2)
+    ap.add_argument("--iters", type=int, default=8)
+    ap.add_argument("--voxel", type=float, default=0.005)
+    ap.add_argument("--zmax", type=float, default=2.0)
+    ap.add_argument("--b-target", type=float, default=0.08)
+    ap.add_argument("--vio", default="", help="VIO poses.jsonl.gz (T_world_cam0 per frame); rigid SE(3) align to GT (scale NOT fixed)")
+    ap.add_argument("--free-scale", action="store_true",
+                    help="ORACLE global scale: Sim(3) of the VIO positions to GT, translations x s (depth scales with the baseline)")
+    ap.add_argument("--pose-noise-cm", type=float, default=0.0, help="add N(0, s) cm position noise per frame (VIO-like test)")
+    ap.add_argument("--allow-fullres", action="store_true",
+                    help="allow --scale > 0.5 (1920x1080 FFS needs > 16 GB; runs only under the gpu_guard cap, fails cleanly)")
+    ap.add_argument("--rows-from", default="", help="poses.jsonl.gz: keep only recording rows that have a pose in this file "
+                    "(t_ns within 1 ms), e.g. the BA keyframes, so a GT-pose run uses the same keyframes")
+    ap.add_argument("--ext-depth", default="", help="mvggt: npz (t_ns, depth (N,H,W) m in pose-file units, mask) on the "
+                    "undistorted keyframe grid; replaces FFS. --free-scale multiplies it by the same oracle scale")
+    ap.add_argument("--kf-subset", default="", help="mvggt: text file of t_ns; only these keyframes are fused/scored "
+                    "(FFS pair candidates still use every row with a pose)")
+    ap.add_argument("--sig-a", type=float, default=0.003, help="ext depth sigma = a + b*Z^2 (m)")
+    ap.add_argument("--sig-b", type=float, default=0.01)
+    ap.add_argument("--compress", action="store_true",
+                    help="HS 240 fps recordings: keep only rows with a pose (RAM), --kf-step counts kept rows; pair search "
+                         "window +-150 kept rows (dt still capped by MSConfig.dt_max_s)")
+    ap.add_argument("--save-ffs", default="")
+    ap.add_argument("--ffs-cache", default="")
+    ap.add_argument("--fill-depth", default="")
+    ap.add_argument("--fill-raw", default="", help="raw_vggt.npz (chunk, fidx) -> first chunk of each keyframe (as mv_align V2)")
+    ap.add_argument("--hybrid", default="", choices=["", "H1", "H2", "H3"])
+    ap.add_argument("--exclude-chunks", default="", help="comma list of VGGT chunk ids never used for fill (H1)")
+    ap.add_argument("--n-nbr", type=int, default=4)
+    ap.add_argument("--min-joint-px", type=int, default=2000)
+    a = ap.parse_args()
+    assert not (a.hybrid and not (a.ffs_cache and a.fill_depth and a.fill_raw)), "--hybrid needs --ffs-cache --fill-depth --fill-raw"
+    assert not (a.ext_depth and (a.ffs_cache or a.save_ffs or a.hybrid))
+    if a.scale > 0.5 and not a.allow_fullres:
+        sys.exit("scale > 0.5 refused: 1920x1080 FFS overflowed 16 GB VRAM and crashed WSL (11-05); pass --allow-fullres to try under the cap")
+    t_start = time.time()
+    rec, out = Path(a.rec), Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    g = np.load(rec / a.gt / "gt.npz")
+    board = json.loads((rec / a.gt / "board.json").read_text())
+    sq = float(g["square_mm"]) / 1000.0
+    bj = json.loads(Path(str(g["board_json"])).read_text())
+    BW, BH = bj["squares_x"] * sq, bj["squares_y"] * sq
+    s = a.scale
+    K = g["K"].copy()
+    K[:2] *= s
+    dist = g["dist"].astype(np.float64)
+    ok = g["ok"]
+    n = len(ok)
+    rng = np.random.default_rng(0)
+    T = np.zeros((n, 4, 4))
+    T[:, :3, :3] = g["R_bc"]
+    T[:, :3, 3] = g["p_bc"] + (rng.normal(0, a.pose_noise_cm / 100.0, (n, 3)) if a.pose_noise_cm > 0 else 0)
+    T[:, 3, 3] = 1
+    t_ns = g["t_ns"]
+    pose_info = dict(source=a.gt)
+    zscale = 1.0                                   # mvggt: oracle scale applied to external depth
+    Tgt = T.copy()
+    if a.vio:
+        import gzip
+        vt, vT = [], []
+        for line in gzip.open(a.vio, "rt"):
+            d = json.loads(line)
+            if d.get("type") == "pose" and d.get("T_world_cam0") and d.get("status") == "tracking":
+                vt.append(d["t_ns"]); vT.append(np.array(d["T_world_cam0"], float).reshape(4, 4))
+        vt = np.array(vt); vT = np.array(vT)
+        # frame index by nearest time (VIO t_ns vs GT t_ns are both frame times; allow 4 ms)
+        idx = np.searchsorted(t_ns, vt).clip(1, len(t_ns) - 1)
+        idx = np.where(np.abs(t_ns[idx - 1] - vt) < np.abs(t_ns[idx] - vt), idx - 1, idx)
+        good = np.abs(t_ns[idx] - vt) < 8e6   # VIO t_ns is shifted by the GT align dt (~4.7 ms) vs t_mid; frame period 16.7 ms
+        idx, vT = idx[good], vT[good]
+        both = ok[idx]
+        A = vT[both][:, :3, 3]; Bp = T[idx[both]][:, :3, 3]
+        ma, mb = A.mean(0), Bp.mean(0)
+        U, S_, Vt = np.linalg.svd((Bp - mb).T @ (A - ma))
+        D = np.diag([1, 1, np.sign(np.linalg.det(U @ Vt))])
+        Ra = U @ D @ Vt
+        sc = float(np.trace(np.diag(S_) @ D) / ((A - ma) ** 2).sum())
+        ta = mb - Ra @ ma
+        if a.free_scale:                       # scale the pose translations by the oracle Sim(3) scale, then rigid again
+            vT = vT.copy(); vT[:, :3, 3] *= sc
+            A = A * sc; ma = A.mean(0)
+            U, S_, Vt = np.linalg.svd((Bp - mb).T @ (A - ma))
+            D = np.diag([1, 1, np.sign(np.linalg.det(U @ Vt))])
+            Ra = U @ D @ Vt
+            ta = mb - Ra @ ma
+            zscale = sc
+        Tal = np.eye(4); Tal[:3, :3] = Ra; Tal[:3, 3] = ta
+        newT = np.zeros_like(T); okv = np.zeros(len(ok), bool)
+        for k, Tv in zip(idx, vT):
+            newT[k] = Tal @ Tv; okv[k] = True
+        res = np.linalg.norm((newT[idx[both]][:, :3, 3]) - Bp, axis=1)
+        # rotation check: relative GT vs VIO camera rotation (axes convention)
+        dR = [np.degrees(np.arccos(np.clip((np.trace(newT[k][:3, :3].T @ T[k][:3, :3]) - 1) / 2, -1, 1))) for k in idx[both][::20]]
+        pose_info = dict(source=a.vio, n=int(len(idx)), se3_rmse_cm=float(np.sqrt((res ** 2).mean()) * 100),
+                         sim3_scale_would_be=sc, free_scale_applied=bool(a.free_scale), rot_diff_deg_median=float(np.median(dR)))
+        print("VIO poses", pose_info, flush=True)
+        T, ok = newT, okv & ok      # GT 'ok' is still needed for the board-depth check plane (pose of the plane uses VIO world)
+
+    if a.rows_from:
+        import gzip
+        rt = np.array([json.loads(l)["t_ns"] for l in gzip.open(a.rows_from, "rt") if "t_ns" in l], np.int64)
+        j = np.searchsorted(t_ns, rt).clip(1, len(t_ns) - 1)
+        j = np.where(np.abs(t_ns[j - 1] - rt) < np.abs(t_ns[j] - rt), j - 1, j)
+        keep = np.zeros(len(ok), bool); keep[j[np.abs(t_ns[j] - rt) < 1e6]] = True
+        ok = ok & keep
+        pose_info["rows_from"] = dict(file=a.rows_from, n=int(keep.sum()))
+    sel = np.flatnonzero(ok) if a.compress else None
+    if sel is not None:                                # compressed row index k <-> recording frame sel[k]
+        t_ns, T, Tgt, ok = t_ns[sel], T[sel], Tgt[sel], ok[sel]
+        n = len(sel)
+        pose_info["compressed_rows"] = int(n)
+
+    # decode (scaled) frames
+    cap = cv2.VideoCapture(str(rec / "cam5.mp4"))
+    W0, H0 = int(round(1920 * s)), int(round(1080 * s))
+    imgs = []
+    if sel is not None:
+        pos = {int(r_): k for k, r_ in enumerate(sel)}
+        imgs = [None] * n
+        fi, nimg = 0, 0
+        while True:
+            r, f = cap.read()
+            if not r:
+                break
+            if fi in pos:
+                imgs[pos[fi]] = f if (W0, H0) == (f.shape[1], f.shape[0]) else cv2.resize(f, (W0, H0), interpolation=cv2.INTER_AREA)
+                nimg = pos[fi] + 1
+            fi += 1
+            if fi > sel[-1]:
+                break
+    while sel is None:
+        r, f = cap.read()
+        if not r:
+            break
+        k_ = len(imgs)                                   # keep only frames that have a pose (RAM at full res)
+        imgs.append((f if (W0, H0) == (f.shape[1], f.shape[0]) else cv2.resize(f, (W0, H0), interpolation=cv2.INTER_AREA))
+                    if (k_ < len(ok) and ok[k_]) else None)
+    cap.release()
+    nimg = len(imgs) if sel is None else nimg
+    print(f"decoded {nimg} frames ({W0}x{H0}), gt rows {n}, ok {int(ok.sum())}", flush=True)
+    n = min(n, nimg)
+
+    # keyframe grid = undistorted pinhole with the same K (R1 = I)
+    rp = dict(size=(W0, H0), f=float(K[0, 0]), cx=float(K[0, 2]), cy=float(K[1, 2]), R1=np.eye(3).tolist())
+    Kr = ms.K_of(rp["f"], rp["cx"], rp["cy"])
+    und = cv2.initUndistortRectifyMap(K, dist, np.eye(3), Kr, (W0, H0), cv2.CV_32FC1)
+    cfg = ms.MSConfig()
+    cfg.b_target_m = a.b_target
+    cfg.z_max = a.zmax
+    ext = None
+    if a.ext_depth:
+        _e = np.load(a.ext_depth)
+        ext = dict(t=_e["t_ns"].astype(np.int64), D=_e["depth"], M=_e["mask"])
+        assert ext["D"].shape[1:] == (H0, W0), (ext["D"].shape, H0, W0)
+        assert np.all(np.diff(ext["t"]) > 0)
+        pose_info["ext_depth"] = dict(file=a.ext_depth, n=int(len(ext["t"])), zscale=float(zscale))
+        model = None
+    elif a.ffs_cache:
+        model = None
+    else:
+        import lib_ffs
+        model = lib_ffs.load(valid_iters=a.iters)
+    subset = None
+    if a.kf_subset:
+        subset = np.sort(np.loadtxt(a.kf_subset, dtype=np.int64).reshape(-1))
+        pose_info["kf_subset"] = dict(file=a.kf_subset, n=int(len(subset)))
+
+    def _near(arr, t, tol=1e6):
+        k = int(np.searchsorted(arr, t))
+        best = -1
+        for c in (k - 1, k):
+            if 0 <= c < len(arr) and abs(int(arr[c]) - int(t)) < tol and (best < 0 or abs(int(arr[c]) - int(t)) < abs(int(arr[best]) - int(t))):
+                best = c
+        return best
+
+    # hybrid: FFS cache, VGGT fill depth, chunk of each fill row, FFS/VGGT ratio per cached keyframe
+    save = dict(t=[], Z=[], V=[], S=[], B=[]) if a.save_ffs else None
+    C = F = None
+    if a.ffs_cache:
+        _c = np.load(a.ffs_cache)
+        C = dict(t=_c["t_ns"].astype(np.int64), Z=_c["Z"], V=_c["V"], S=_c["S"], B=_c["B"])
+        assert np.all(np.diff(C["t"]) > 0)
+        pose_info["ffs_cache"] = dict(file=a.ffs_cache, n=int(len(C["t"])))
+    hy = dict(variant=a.hybrid)
+    if a.hybrid:
+        _f = np.load(a.fill_depth)
+        F = dict(t=_f["t_ns"].astype(np.int64), D=_f["depth"], M=_f["mask"])
+        assert F["D"].shape[1:] == (H0, W0) and np.all(np.diff(F["t"]) > 0)
+        _r = np.load(a.fill_raw)
+        cid, fidx = np.asarray(_r["chunk"]), np.asarray(_r["fidx"])
+        chunk = np.full(len(F["t"]), -1)
+        for k in range(int(cid.max()) + 1):          # first chunk wins (mv_align V2: dep2 set only where still NaN)
+            f = fidx[cid == k]
+            chunk[f[chunk[f] < 0]] = k
+        assert (chunk >= 0).all()
+        F["chunk"] = chunk
+        excl = {int(x) for x in a.exclude_chunks.split(",") if x.strip()}
+
+        def vggt_z(kf_):
+            Zv = F["D"][kf_].astype(np.float32) * np.float32(zscale)
+            Mv = F["M"][kf_].astype(bool) & np.isfinite(Zv) & (Zv > 0)
+            return Zv, Mv
+        ratio = {}                                    # cache index -> (fill row, ratio FFS/VGGT, n px)
+        for kc in range(len(C["t"])):
+            kf_ = _near(F["t"], C["t"][kc])
+            if kf_ < 0:
+                continue
+            Zv, Mv = vggt_z(kf_)
+            Zc = C["Z"][kc]
+            j = C["V"][kc] & Mv & np.isfinite(Zc) & (Zc > 0)
+            if j.sum() >= a.min_joint_px:
+                ratio[kc] = (kf_, float(np.median(Zc[j] / Zv[j])), int(j.sum()))
+        rr = np.array([v[1] for v in ratio.values()]) if ratio else np.array([np.nan])
+        per_chunk = {}
+        for kc, (kf_, r_, npx) in ratio.items():
+            per_chunk.setdefault(int(F["chunk"][kf_]), []).append(r_)
+        hy.update(fill_depth=a.fill_depth, exclude_chunks=sorted(excl), n_ratio_kf=len(ratio), ratio_median=float(np.median(rr)),
+                  ratio_p10_p90=[float(np.percentile(rr, 10)), float(np.percentile(rr, 90))],
+                  chunk_ratio_median={str(k): dict(n=len(v), median=float(np.median(v))) for k, v in sorted(per_chunk.items())})
+        print("hybrid", hy, flush=True)
+
+        def nbr_ratio(kf_):
+            """median FFS/VGGT ratio of the up-to n_nbr nearest (by fill row) ratio keyframes in the same chunk; None if none."""
+            ch = F["chunk"][kf_]
+            c = sorted((abs(v[0] - kf_), v[1]) for v in ratio.values() if F["chunk"][v[0]] == ch)
+            return (float(np.median([x[1] for x in c[:a.n_nbr]])), len(c[:a.n_nbr])) if c else (None, 0)
+    sig = lambda Z: (a.sig_a + a.sig_b * Z * Z).astype(np.float32)
+    tsdf = tsdf_map.TSDFMap(voxel_m=a.voxel, z_max=a.zmax, sigma_max=0.08, sigma_ok=0.02, min_obs=2)
+
+    # board quad in the undistorted keyframe grid -> GT plane depth per pixel
+    uu, vv = np.meshgrid(np.arange(W0, dtype=np.float64), np.arange(H0, dtype=np.float64))
+    rays = np.stack([(uu - Kr[0, 2]) / Kr[0, 0], (vv - Kr[1, 2]) / Kr[1, 1], np.ones_like(uu)], -1)
+    rows, dz_all = [], []
+    def board_px(i):                           # same board rectangle test as below (GT pose), for keyframes without depth
+        Rw, pw = Tgt[i][:3, :3], Tgt[i][:3, 3]
+        rz = rays @ Rw[2]
+        with np.errstate(divide="ignore", invalid="ignore"):
+            Zp = -pw[2] / rz
+        Xw = pw[None, None] + Zp[..., None] * (rays @ Rw.T)
+        return int(((Xw[..., 0] > 0.01) & (Xw[..., 0] < BW - 0.01) & (Xw[..., 1] > 0.01) & (Xw[..., 1] < BH - 0.01) & (Zp > 0)).sum())
+    n_fill = n_pixfill_kf = 0
+    pixfill_px = []
+    for i in range(0, n, a.kf_step):
+        if not ok[i] or imgs[i] is None:
+            continue
+        if subset is not None and _near(subset, t_ns[i]) < 0:
+            continue
+        src = "ffs"
+        hrow = {}
+        if C is not None:
+            kc = _near(C["t"], t_ns[i])
+            if kc >= 0:
+                Z, V, S = C["Z"][kc].copy(), C["V"][kc].copy(), C["S"][kc].copy()
+                res = [dict(B=float(b), ms=dict(ffs=0.0)) for b in C["B"][kc] if np.isfinite(b)]
+                if a.hybrid == "H3":
+                    kf_ = _near(F["t"], t_ns[i])
+                    if kf_ >= 0:
+                        r_ = ratio[kc][1] if kc in ratio else nbr_ratio(kf_)[0]
+                        if r_ is not None:
+                            Zv, Mv = vggt_z(kf_)
+                            pix = ~V & Mv
+                            Zf = Zv * np.float32(r_)
+                            Z = np.where(pix, Zf, Z).astype(np.float32); S = np.where(pix, sig(Zf), S).astype(np.float32)
+                            V = V | pix
+                            n_pixfill_kf += 1; pixfill_px.append(int(pix.sum()))
+                            hrow = dict(pixfill_px=int(pix.sum()), pixfill_ratio=r_)
+            else:
+                Z = None
+                if a.hybrid:
+                    kf_ = _near(F["t"], t_ns[i])
+                    r_, nn = (1.0, 0) if a.hybrid == "H1" else nbr_ratio(kf_) if kf_ >= 0 else (None, 0)
+                    if kf_ >= 0 and r_ is not None and not (a.hybrid == "H1" and int(F["chunk"][kf_]) in excl):
+                        Zv, Mv = vggt_z(kf_)
+                        Z = (Zv * np.float32(r_)).astype(np.float32); V = Mv; S = sig(Z)
+                        res = [dict(B=0.0, ms=dict(ffs=0.0))]
+                        src = "vggt"; n_fill += 1
+                        hrow = dict(fill_ratio=r_, fill_nbr=nn, chunk=int(F["chunk"][kf_]))
+                    else:
+                        hrow = dict(chunk=int(F["chunk"][kf_]) if kf_ >= 0 else None, fill_skipped=True)
+                if Z is None:
+                    rows.append(dict(i=i, pairs=0, board_px=board_px(i), src="none", frame=int(sel[i]) if sel is not None else None, **hrow))
+                    continue
+        elif ext is not None:
+            ke = _near(ext["t"], t_ns[i])
+            if ke < 0:
+                rows.append(dict(i=i, pairs=0, no_ext=True))
+                continue
+            Z = ext["D"][ke].astype(np.float32) * np.float32(zscale)
+            V = ext["M"][ke].astype(bool) & np.isfinite(Z) & (Z > 0)
+            S = (a.sig_a + a.sig_b * Z * Z).astype(np.float32)
+            res = [dict(B=0.0, ms=dict(ffs=0.0))]
+        else:
+            cands = []
+            for j in range(max(0, i - 150), min(n, i + 150)):
+                if j == i or not ok[j] or imgs[j] is None:
+                    continue
+                R, t = ms.rel_pose(T[i], T[j])
+                gg = ms.pair_geometry(R, t)
+                sc, why = ms.score_pair(gg, abs(t_ns[i] - t_ns[j]) * 1e-9, cfg)
+                if sc is not None:
+                    cands.append((sc, j, gg))
+            cands.sort(key=lambda x: x[0])
+            chosen = []
+            for sc, j, gg in cands:
+                if not chosen or all(ms.dir_differs(gg, c[2], cfg.pair2_min_dir_deg) for c in chosen):
+                    chosen.append((sc, j, gg))
+                if len(chosen) >= a.n_pairs:
+                    break
+            if not chosen:
+                rows.append(dict(i=i, pairs=0, board_px=board_px(i), src="none", frame=int(sel[i]) if sel is not None else None))
+                continue
+            res = []
+            for sc, j, gg in chosen:
+                R, t = ms.rel_pose(T[i], T[j])
+                r = ms.pair_depth(model, lib_ffs.infer, imgs[i], imgs[j], R, t, K, dist, rp, cfg, iters=a.iters)
+                res.append(r)
+            Z, V, S, agree = ms.combine_motion(res, cfg)
+            if save is not None:
+                save["t"].append(int(t_ns[i])); save["Z"].append(np.asarray(Z, np.float32)); save["V"].append(np.asarray(V, bool))
+                save["S"].append(np.asarray(S, np.float32))
+                save["B"].append([float(r["B"]) for r in res] + [np.nan] * (a.n_pairs - len(res)))
+        bgr = cv2.remap(imgs[i], *und, cv2.INTER_LINEAR)
+        # GT plane depth: board plane z=0 in world; ray in cam: X = Z*ray, world = R X + p, z_w = 0
+        Rw, pw = Tgt[i][:3, :3], Tgt[i][:3, 3]   # GT plane depth always from the GT pose
+        rz = rays @ Rw[2]                      # z_world component per unit-depth ray
+        with np.errstate(divide="ignore", invalid="ignore"):
+            Zp = -pw[2] / rz
+        Xw = pw[None, None] + Zp[..., None] * (rays @ Rw.T)
+        inb = (Xw[..., 0] > 0.01) & (Xw[..., 0] < BW - 0.01) & (Xw[..., 1] > 0.01) & (Xw[..., 1] < BH - 0.01) & (Zp > 0)
+        m = inb & V & np.isfinite(Z)
+        row = dict(i=i, pairs=len(res), B_cm=[round(r["B"] * 100, 1) for r in res], valid_frac=float(V.mean()),
+                   board_px=int(inb.sum()), board_valid=int(m.sum()), ffs_ms=[round(r["ms"]["ffs"]) for r in res], src=src, **hrow)
+        if m.sum() > 200:
+            dz = (Z[m] - Zp[m])
+            dz_all.append(dz.astype(np.float32))
+            row.update(board_dZ_mean_cm=float(dz.mean() * 100), board_dZ_p10_cm=float(np.percentile(dz, 10) * 100),
+                       board_dZ_p90_cm=float(np.percentile(dz, 90) * 100), board_absdZ_mean_cm=float(np.abs(dz).mean() * 100))
+            row.update(board_dZ_med_cm=float(np.median(dz) * 100), board_absdZ_p50_cm=float(np.median(np.abs(dz)) * 100),
+                       board_absdZ_p90_cm=float(np.percentile(np.abs(dz), 90) * 100), board_Z_m=float(np.median(Zp[m])))
+        if sel is not None:
+            row["frame"] = int(sel[i])
+        rows.append(row)
+        tsdf.integrate(np.where(V, Z, np.nan).astype(np.float32), V, bgr, rp["f"], rp["cx"], rp["cy"], 0.08, T[i],
+                       sigma=np.where(V, S, np.inf).astype(np.float32))
+        if len(rows) % 10 == 0:
+            print(f"kf {i}/{n}: {row}", flush=True)
+    tsdf.update_mesh(force=True)
+    Vm, Cm, Fm = tsdf.mesh_arrays()
+    tsdf_map.write_mesh_ply(out / "mesh.ply", Vm, Cm, Fm)
+    (out / "mesh.obj").write_bytes(tsdf_map.mesh_obj_bytes(Vm, Cm, Fm))
+    summ = dict(poses=pose_info, made=time.strftime("%Y-%m-%d %H:%M:%S"), rec=str(rec), gt=a.gt, args=vars(a), board_mm=[BW * 1000, BH * 1000],
+                square_mm=sq * 1000, gt_corner_px_median=board.get("corner_px_median"), n_kf=len(rows),
+                n_kf_depth=sum(1 for r in rows if r.get("pairs")), mesh_vertices=int(len(Vm)), mesh_faces=int(len(Fm)),
+                runtime_s=round(time.time() - t_start, 1), image_size=[W0, H0], K_used=K.tolist(),
+                gpu_max_alloc_gb=round(__import__('torch').cuda.max_memory_allocated() / 2 ** 30, 2),
+                gpu_max_reserved_gb=round(__import__('torch').cuda.max_memory_reserved() / 2 ** 30, 2))
+    ev = [r for r in rows if "board_absdZ_p50_cm" in r]
+    if ev:
+        summ["kf_board_absdZ_p50_cm_median"] = float(np.median([r["board_absdZ_p50_cm"] for r in ev]))
+        summ["kf_board_absdZ_p90_cm_median"] = float(np.median([r["board_absdZ_p90_cm"] for r in ev]))
+        summ["kf_board_dZ_bias_cm_median"] = float(np.median([r["board_dZ_med_cm"] for r in ev]))
+        summ["kf_board_Z_m_median"] = float(np.median([r["board_Z_m"] for r in ev]))
+        summ["n_kf_board_eval"] = len(ev)
+        summ["n_kf_no_pair"] = sum(1 for r in rows if not r.get("pairs"))
+        for k in ("board_dZ_mean_cm", "board_dZ_med_cm", "board_absdZ_p50_cm", "board_absdZ_mean_cm"):
+            v = np.array([r[k] for r in ev])
+            summ[f"kf_{k}_stats"] = dict(mean=float(v.mean()), median=float(np.median(v)), p10=float(np.percentile(v, 10)),
+                                         p90=float(np.percentile(v, 90)))
+        D = np.concatenate(dz_all) * 100
+        summ["pooled_dZ_cm"] = dict(n=int(len(D)), mean=float(D.mean()), median=float(np.median(D)), p10=float(np.percentile(D, 10)),
+                                    p90=float(np.percentile(D, 90)))
+        summ["pooled_absdZ_cm"] = dict(mean=float(np.abs(D).mean()), median=float(np.median(np.abs(D))),
+                                       p90=float(np.percentile(np.abs(D), 90)))
+        summ["kf_frac_abs_bias_gt_1cm"] = float(np.mean([abs(r["board_dZ_med_cm"]) > 1 for r in ev]))
+    if len(Vm):
+        Vm = np.asarray(Vm)
+        mb = (Vm[:, 0] > 0.02) & (Vm[:, 0] < BW - 0.02) & (Vm[:, 1] > 0.02) & (Vm[:, 1] < BH - 0.02) & (np.abs(Vm[:, 2]) < 0.10)
+        if mb.sum() > 20:
+            z = Vm[mb, 2]
+            summ.update(mesh_board_vertices=int(mb.sum()), mesh_board_z_med_cm=float(np.median(z) * 100),
+                        mesh_board_z_rms_cm=float(np.sqrt(np.mean((z - np.median(z)) ** 2)) * 100),
+                        mesh_board_z_p5_p95_cm=[float(np.percentile(z, 5) * 100), float(np.percentile(z, 95) * 100)])
+            # board coverage: fraction of 1 cm cells of the board rectangle that hold a mesh vertex within 3 cm of the plane
+            near = mb & (np.abs(Vm[:, 2]) < 0.03)
+            cx_ = np.floor((Vm[near, 0] - 0.02) * 100).astype(int); cy_ = np.floor((Vm[near, 1] - 0.02) * 100).astype(int)
+            nx_, ny_ = int(np.ceil((BW - 0.04) * 100)), int(np.ceil((BH - 0.04) * 100))
+            cells = set(zip(cx_.clip(0, nx_ - 1), cy_.clip(0, ny_ - 1)))
+            summ["mesh_board_cover_frac"] = len(cells) / float(nx_ * ny_)
+            summ["mesh_board_z_unique_mm"] = int(len(np.unique(np.round(z * 1000, 1))))   # sub-voxel check (many = interpolated)
+    # hybrid: depth source counts and the tail metric over board-visible keyframes (no depth / not evaluated / |bias| > 1 cm)
+    vis = [r for r in rows if r.get("board_px", 0) > 200]
+    bad = [r for r in vis if "board_dZ_med_cm" not in r or abs(r["board_dZ_med_cm"]) > 1]
+    hy.update(n_kf_src={k: sum(1 for r in rows if r.get("src") == k) for k in ("ffs", "vggt", "none")}, n_fill=n_fill,
+              n_pixfill_kf=n_pixfill_kf, pixfill_px_median=float(np.median(pixfill_px)) if pixfill_px else 0.0)
+    summ["hybrid"] = hy
+    summ["n_kf_board_visible"] = len(vis)
+    summ["kf_fail_frac_visible"] = len(bad) / max(1, len(vis))
+    if save is not None:
+        np.savez(a.save_ffs, t_ns=np.array(save["t"], np.int64), Z=np.stack(save["Z"]), V=np.stack(save["V"]),
+                 S=np.stack(save["S"]), B=np.array(save["B"], np.float64))
+        summ["saved_ffs"] = dict(file=a.save_ffs, n=len(save["t"]))
+    (out / "summary.json").write_text(json.dumps(summ, indent=1))
+    (out / "keyframes.json").write_text(json.dumps(rows, indent=0))
+    print(json.dumps(summ, indent=1))
+
+
+def _out_arg():
+    import sys as _s
+    return _s.argv[_s.argv.index("--out") + 1] if "--out" in _s.argv else None
+
+
+if __name__ == "__main__":
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scanA"))
+    import gpu_guard  # one GPU job at a time, torch memory cap, clean OOM exit (README 10)
+    with gpu_guard.job("scan_offline " + str(_out_arg()), out_dir=_out_arg(), torch_cap=True):
+        main()
