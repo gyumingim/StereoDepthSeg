@@ -104,6 +104,27 @@ for rid in ["165506"] + H:
             xv = [x for x in xs if x is not None]
             spread.append(dict(rec=rid, var=v, c_mv_p90=xs, range=max(xv) - min(xv)))
             L.append(f"| {rid} | {v} | {' / '.join(f(x) for x in xs)} | {max(xv) - min(xv):.2f} |")
+# overlap-only depth comparison (independent check 11-06): evaluation keyframes depend on the poses (depth pairs chosen with
+# them), so also compare only keyframes evaluated in both runs: median over shared kf of board |dZ| p90, relative change vs base
+def kfmap(rid, v):
+    k = J(D / "rec" / rid / f"mesh_{v}" / "keyframes.json") or []
+    return {r.get("frame", r.get("i")): r["board_absdZ_p90_cm"] for r in k if r.get("board_absdZ_p90_cm") is not None}
+L += ["", "## 겹치는 평가 kf 만 (kf 별 보드 |dZ| p90 중앙값, 기준 대비 상대 변화 %)", "| 녹화 | " + " | ".join(["X", "SL", "XL"]) + " |", "|---|---|---|---|"]
+overlap = {}
+for rid in ["165506"] + H:
+    a0 = kfmap(rid, "S"); cells = []
+    for v in ["X", "SL", "XL"]:
+        b0 = kfmap(rid, v); com = sorted(set(a0) & set(b0))
+        if a0 and b0 and com:
+            ma, mb = float(np.median([a0[c] for c in com])), float(np.median([b0[c] for c in com]))
+            overlap[(rid, v)] = dict(n=len(com), rel=(mb - ma) / ma * 100); cells.append(f"{(mb - ma) / ma * 100:+.0f} (n {len(com)})")
+        else:
+            cells.append("—")
+    L.append(f"| {rid} | " + " | ".join(cells) + " |")
+for v in ["X", "SL", "XL"]:
+    xs = [overlap[(r, v)]["rel"] for r in H if (r, v) in overlap]
+    if xs:
+        L.append(f"| H 중앙 {v} | {np.median(xs):+.0f} % (n {len(xs)}, 나은 녹화 {sum(x < 0 for x in xs)}) | | |")
 (D / "table.md").write_text("\n".join(L) + "\n")
-(D / "table.json").write_text(json.dumps(dict(made=time.strftime("%F %T"), rows=rows, rule=rule, seed_spread=spread), indent=1))
+(D / "table.json").write_text(json.dumps(dict(made=time.strftime("%F %T"), rows=rows, rule=rule, seed_spread=spread, overlap={f"{k[0]}:{k[1]}": v for k, v in overlap.items()}), indent=1))
 print("\n".join(L))

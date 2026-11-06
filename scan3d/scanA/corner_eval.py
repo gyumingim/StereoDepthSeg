@@ -65,8 +65,9 @@ def main():
     ncx, ncy = bj["squares_x"] - 1, bj["squares_y"] - 1          # inner corners (laptop 5x3 board: 4 x 2 = 8, as before)
     model = {k: np.array([((k % ncx) + 1) * sq, ((k // ncx) + 1) * sq, 0.0]) for k in range(ncx * ncy)}
     obs = {}
+    GC, GI = gc["corners"], gc["corner_ids"]   # featloop 11-06: load once (NpzFile re-reads the whole array on every key access)
     for i in range(0, len(t_ns), a.kf_step):
-        c, ids = gc["corners"][i], gc["corner_ids"][i]
+        c, ids = GC[i], GI[i]
         if c is None or ids is None or len(np.atleast_1d(ids)) < 4:
             continue
         c = np.asarray(c, np.float64).reshape(-1, 1, 2)
@@ -109,8 +110,9 @@ def main():
                 src[nm][i] = d[tt[k]]
     kf = sorted(i for i in obs if ok[i] and all(i in s for s in src.values()))
     Pg = {i: np.eye(4) for i in kf}
+    GR_, GP_ = gs["R_bc"], gs["p_bc"]
     for i in kf:
-        Pg[i][:3, :3] = gs["R_bc"][i]; Pg[i][:3, 3] = gs["p_bc"][i]
+        Pg[i][:3, :3] = GR_[i]; Pg[i][:3, 3] = GP_[i]
     pairs = []
     for x, i in enumerate(kf):
         for j in kf[x + 1:]:
@@ -126,7 +128,14 @@ def main():
         cw = {i: np.linalg.inv(s[i]) for i in kf}
         rms2, scl, rmsS = [], [], []
         for i, j, com in pairs:
-            X = np.array([tri([(cam_of(cw, i, k), obs[i][k][0]), (cam_of(cw, j, k), obs[j][k][0])]) for k in com])
+            if tw:
+                X = np.array([tri([(cam_of(cw, i, k), obs[i][k][0]), (cam_of(cw, j, k), obs[j][k][0])]) for k in com])
+            else:   # featloop 11-06: same DLT, batched over the corners of the pair (no rolling shutter -> one camera per frame)
+                P0, P1 = cw[i][:3], cw[j][:3]
+                n0 = np.array([obs[i][k][0] for k in com]); n1 = np.array([obs[j][k][0] for k in com])
+                A = np.stack([n0[:, :1] * P0[2] - P0[0], n0[:, 1:] * P0[2] - P0[1], n1[:, :1] * P1[2] - P1[0], n1[:, 1:] * P1[2] - P1[1]], 1)
+                Xh = np.linalg.svd(A)[2][:, -1]
+                X = Xh[:, :3] / Xh[:, 3:]
             M = np.array([model[k] for k in com])
             _, R, t = fit(M, X)
             rms2.append(np.sqrt(((X - (R @ M.T).T - t) ** 2).sum(1).mean()) * 1000)
@@ -140,11 +149,10 @@ def main():
             if len(vs) < 3:
                 continue
             X = tri([(cam_of(cw, i, k), obs[i][k][0]) for i in vs]); Xmv[k] = X
-            for i in vs:
-                Pc = cam_of(cw, i, k)
-                Xc = Pc[:, :3] @ X + Pc[:, 3]
-                q = cv2.projectPoints(Xc.reshape(1, 3), np.zeros(3), np.zeros(3), K, dist)[0].ravel()
-                rep.append(np.linalg.norm(q - obs[i][k][1]))
+            Pcs = np.array([cam_of(cw, i, k) for i in vs])
+            Xc = np.einsum("nij,j->ni", Pcs[:, :, :3], X) + Pcs[:, :, 3]
+            q = cv2.projectPoints(Xc.reshape(-1, 1, 3), np.zeros(3), np.zeros(3), K, dist)[0].reshape(-1, 2)
+            rep += list(np.linalg.norm(q - np.array([obs[i][k][1] for i in vs]), axis=1))
         ks = sorted(Xmv)
         M = np.array([model[k] for k in ks]); X = np.array([Xmv[k] for k in ks])
         _, R, t = fit(M, X); sc, R2, t2 = fit(M, X, scale=True)
