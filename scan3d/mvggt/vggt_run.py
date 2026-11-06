@@ -86,6 +86,7 @@ def main():
         np.savez(a.out, extrinsic=np.concatenate(E), intrinsic=np.concatenate(I), depth=np.concatenate(D),
                  conf=np.concatenate(Cf), chunk=np.concatenate(cid), fidx=np.concatenate(fidx), t_ns=tn,
                  meta=json.dumps(meta))
+    Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).with_suffix(".json").write_text(json.dumps(meta, indent=1))
     print("DONE", json.dumps(meta)[:400])
 
