@@ -11,6 +11,7 @@ import numpy as np
 
 H = Path(__file__).resolve().parent
 VARS = ("B0", "V1", "V2", "M1", "M2")
+GROUPS = {"V": ("B0", "V1", "V2"), "M": ("B0", "M1", "M2")}   # VGGT and MASt3R compared to B0 separately (M keeps far fewer kf)
 
 
 def kf(rd, name):
@@ -30,8 +31,8 @@ def main():
         if summ is None:
             continue
         compressed = bool(summ["args"].get("compress"))
-        for fs in ("", "_fs"):
-            K = {v: kf(rd, v + fs) for v in VARS}
+        for (g, gv), fs in [(x, y) for x in GROUPS.items() for y in ("", "_fs")]:
+            K = {v: kf(rd, v + fs) for v in gv}
             K = {v: k for v, k in K.items() if k is not None}
             if "B0" not in K or len(K) < 2:
                 continue
@@ -46,12 +47,12 @@ def main():
                 res["vars"][v] = dict(kf_absdZ_med_median=float(np.median(a50)), kf_absdZ_p90_median=float(np.median(a90)),
                                       kf_absbias_median=float(np.median(np.abs(bias))), kf_bias_mean=float(bias.mean()),
                                       kf_frac_absbias_gt1cm=float(np.mean(np.abs(bias) > 1)))
-            out[f"{rd.name}{fs or '_native'}"] = res
+            out[f"{rd.name}_{g}{fs or '_native'}"] = res
             if "--write-lists" in sys.argv:
                 rows = np.asarray(fr["row"]); trow = np.asarray(fr["t_row"])
                 m = {int(r): int(t) for r, t in zip(rows, trow)}
                 lst = [m[c] for c in common]          # common ids are recording rows (165506) or frames (compressed)
-                (rd / f"overlap{fs or '_native'}.txt").write_text("\n".join(map(str, lst)) + "\n")
+                (rd / f"overlap{g}{fs or '_native'}.txt").write_text("\n".join(map(str, lst)) + "\n")
     (H / "overlap.json").write_text(json.dumps(out, indent=1))
     md = ["| rec · scale | kf in all variants | var | kf median |dZ| (median over kf) | kf p90 |dZ| (median) | |kf bias| median | kf |bias|>1 cm |",
           "|---|---|---|---|---|---|---|"]

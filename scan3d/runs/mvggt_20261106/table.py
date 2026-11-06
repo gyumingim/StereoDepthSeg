@@ -13,9 +13,9 @@ for rd in sorted((H / "rec").iterdir()):
     S = {}
     for m in sorted(rd.glob("mesh_*/summary.json")):
         S[m.parent.name[5:]] = json.loads(m.read_text())
-    for ov, fs in (("", ""), ("", "_fs"), ("_ov", ""), ("_ov", "_fs")):
+    for ov, fs in [(o, f) for o in ("", "_ovV", "_ovM") for f in ("", "_fs")]:
         b = S.get("B0" + ov + fs)
-        for v in ("B0", "V1", "V2", "M1", "M2"):
+        for v in {"": ("B0", "V1", "V2", "M1", "M2"), "_ovV": ("B0", "V1", "V2"), "_ovM": ("B0", "M1", "M2")}[ov]:
             s = S.get(v + ov + fs)
             if not s or "pooled_absdZ_cm" not in s:
                 continue
@@ -30,7 +30,7 @@ for rd in sorted((H / "rec").iterdir()):
                 d2 = (rms / b["mesh_board_z_rms_cm"] - 1) if (rms is not None and b.get("mesh_board_z_rms_cm")) else None
                 r.update(rel_p90=d1, rel_rms=d2)
                 rel = f"{d1 * 100:+.0f} % / " + (f"{d2 * 100:+.0f} %" if d2 is not None else "—")
-                if fs and (ov or not any(k.endswith("_ov" + fs) for k in S)):
+                if fs and (ov or not any("_ov" in k for k in S)):
                     better = d1 <= -0.2 or (d2 is not None and d2 <= -0.2)
                     covok = (cov or 0) >= (b.get("mesh_board_cover_frac") or 0) - 0.05
                     verdict = "좋아짐" if (better and covok) else ("덮임 손실" if better else "아님")

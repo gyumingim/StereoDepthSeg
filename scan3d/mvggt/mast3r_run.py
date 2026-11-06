@@ -22,6 +22,7 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--win", type=int, default=8)
     ap.add_argument("--keep-cache", action="store_true")
+    ap.add_argument("--every", type=int, default=1, help="use every k-th dumped keyframe (README 6: 356-frame GA OOM at 0.6)")
     a = ap.parse_args()
     import torch
     from mast3r.model import AsymmetricMASt3R
@@ -35,7 +36,7 @@ def main():
     from dust3r.image_pairs import make_pairs
     t0 = time.time()
     fr = np.load(Path(a.frames) / "frames.npz")
-    tn = fr["t_ns"]; Kr = fr["K"]; W0, H0 = [int(x) for x in fr["size"]]
+    tn = fr["t_ns"][::a.every]; Kr = fr["K"]; W0, H0 = [int(x) for x in fr["size"]]
     paths = [str(Path(a.frames) / "img" / f"{t}.png") for t in tn]
     model = AsymmetricMASt3R.from_pretrained(str(WEIGHTS)).cuda().eval()
     imgs = load_images(paths, size=512, verbose=False)
@@ -56,7 +57,7 @@ def main():
     K = np.stack([k.detach().float().cpu().numpy() for k in scene.intrinsics])
     D = np.stack([d.detach().float().cpu().numpy().reshape(h, w) for d in depthmaps]).astype(np.float32)
     C = np.stack([c.detach().float().cpu().numpy().reshape(h, w) for c in confs]).astype(np.float32)
-    meta = dict(made=time.strftime("%Y-%m-%d %H:%M:%S"), frames=a.frames, weights=str(WEIGHTS), n_frames=len(paths),
+    meta = dict(made=time.strftime("%Y-%m-%d %H:%M:%S"), frames=a.frames, weights=str(WEIGHTS), n_frames=len(paths), every=a.every,
                 n_pairs=len(pairs), scene_graph=f"swin-{a.win}-noncyclic", model_hw=[h, w], K_init=Km.tolist(),
                 focal_final_median=float(np.median(K[:, 0, 0])), focal_init=float(Km[0, 0]),
                 ga_s=round(t_ga, 1), runtime_s=round(time.time() - t0, 1),

@@ -36,7 +36,7 @@ for st in $STEPS; do case $st in
   b0) mesh B0 --vio $BA; mesh B0_fs --vio $BA --free-scale ;;
   vggt_inf) [ -f $D/raw_vggt.npz ] || gpu vggt $PY scan3d/mvggt/vggt_run.py $D/frames --out $D/raw_vggt.npz --chunk $(cat scan3d/runs/mvggt_20261106/rec/165506/vggt_chunk.txt) --overlap 8 ;;
   vggt_al) [ -f $D/al/align_vggt.json ] || light align_vggt $PY scan3d/mvggt/mv_align.py vggt $D/frames $D/raw_vggt.npz --out $D/al --vio-kf $D/poses_vio_kf.jsonl.gz ;;
-  mast3r_inf) [ -f $D/raw_mast3r.npz ] || gpu mast3r $PY scan3d/mvggt/mast3r_run.py $D/frames --out $D/raw_mast3r.npz --win ${WIN:-8} ;;
+  mast3r_inf) [ -f $D/raw_mast3r.npz ] || gpu mast3r $PY scan3d/mvggt/mast3r_run.py $D/frames --out $D/raw_mast3r.npz --win ${WIN:-8} --every $(cat $D/mast3r_every.txt 2>/dev/null || echo 1) ;;
   mast3r_al) [ -f $D/al/align_mast3r.json ] || light align_mast3r $PY scan3d/mvggt/mv_align.py mast3r $D/frames $D/raw_mast3r.npz --out $D/al --vio-kf $D/poses_vio_kf.jsonl.gz ;;
   mesh1) mesh $MN $MA ;;
   vggt) [ -f $D/raw_vggt.npz ] || gpu vggt $PY scan3d/mvggt/vggt_run.py $D/frames --out $D/raw_vggt.npz --chunk ${CHUNK:-$(cat scan3d/runs/mvggt_20261106/rec/165506/vggt_chunk.txt)} --overlap 8

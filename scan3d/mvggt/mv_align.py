@@ -98,7 +98,10 @@ def main():
     tn, trow, Tba, Tgt, gok = fr["t_ns"], fr["t_row"], fr["T_ba"], fr["T_gt"], fr["gt_ok"].astype(bool)
     Kr = fr["K"]; W0, H0 = [int(x) for x in fr["size"]]
     raw = np.load(a.raw)
-    assert np.array_equal(raw["t_ns"], tn)
+    if not np.array_equal(raw["t_ns"], tn):          # model run on a subset of the dumped keyframes (MASt3R --every)
+        sel = np.searchsorted(tn, raw["t_ns"])
+        assert np.array_equal(tn[sel], raw["t_ns"])
+        tn, trow, Tba, Tgt, gok = tn[sel], trow[sel], Tba[sel], Tgt[sel], gok[sel]
     N = len(tn)
     info = dict(made=time.strftime("%Y-%m-%d %H:%M:%S"), kind=a.kind, frames=a.frames, raw=a.raw, n=N, n_gt_ok=int(gok.sum()))
     if a.kind == "vggt":
