@@ -40,3 +40,14 @@
 CPU 무거운 단계 (VIO 재생, kf_ba, board_scale) = `flock ~/scanner/heavy.lock`, GPU 단계 (scan_offline) = gpu.lock 만 (gpu_guard),
 `SCAN3D_GPU_FRAC=0.6 TORCH_COMPILE_DISABLE=1 OMP/MKL/OPENBLAS_NUM_THREADS=8`, 시작 전 여유 RAM ≥ 12 GB, 자기 작업만 죽이는 감시 (< 4 GB).
 featloop·viba 줄은 건드리지 않음.
+
+## 5. 덧붙임 (11-07 00:20, 결과 일부를 본 뒤 — 사후 변경)
+- **사전 등록 방법 그대로는 실패**: c4f60 VIO 재생 (o0) 이 173432 에서 **초기화를 한 번도 못 함** (1700 프레임 모두 `init`, bridge.err
+  `[init]: not enough feats to compute disp`). 그래서 kf_ba 가 자세 0 개로 실패 (IndexError), 뒤 단계 없음. = **지금 스캐너는 이 녹화에서 자세를 못 만든다.**
+  같은 현상이 10-24 문서 (`docs/std60_board_check_20261024.md`) 에 이미 있음: 기본 초기화 (창 1.0 s) 는 173432 o0/o1/o2 모두 초기화 못 함,
+  감사 초기화 (창 1.5 s / init_max_disparity 2.30) 는 6/6 초기화.
+- 추가 (사후, 판정 규칙은 3절 그대로 적용하되 "사전 등록 밖 변형" 으로 표시):
+  (1) 기본 c4f60 o1·o2 (시작 1·2 s) 재생 — 초기화 실패가 시작 시점 탓인지 확인.
+  (2) **c4f60 + 감사 초기화** `--yaml init_window_time=1.5,init_max_disparity=2.30` o0·o1·o2 재생 (나머지 설정 같음) → o0 로 BA (시드 0) → 보드 축척 → 깊이 3 개.
+  섞인 변수: 초기화 설정 2 개가 165506 과 다름 (165506 은 기본 초기화로 됨). 165506 에도 같은 감사 초기화 VIO o0 를 돌려 k 를 같이 적는다 (축척 비교를 같은 설정으로).
+- 실행: heavy.lock 을 CPU 단계 묶음 (재생 7 개 + BA + 보드 축척, 약 10 분) 동안 한 번만 잡음 (그 사이 다른 무거운 작업 없음 = 규칙 같음) — 단계마다 놓으면 다른 줄에 밀려 1 시간 넘게 기다림 (00:10 실제).
