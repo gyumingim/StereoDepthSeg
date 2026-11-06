@@ -26,6 +26,11 @@ def main():
     import torch
     from mast3r.model import AsymmetricMASt3R
     from mast3r.cloud_opt.sparse_ga import sparse_global_alignment
+    # scipy >= 1.18 no longer exposes scipy.cluster.hierarchy.distance (sparse_ga uses sch.distance.squareform);
+    # same function, compatibility only (11-06 first 165506 run failed here after the pair forward)
+    import scipy.cluster.hierarchy as _sch, scipy.spatial.distance as _ssd
+    if not hasattr(_sch, "distance"):
+        _sch.distance = _ssd
     from dust3r.utils.image import load_images
     from dust3r.image_pairs import make_pairs
     t0 = time.time()
