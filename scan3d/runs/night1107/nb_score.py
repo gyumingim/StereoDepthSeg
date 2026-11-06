@@ -15,7 +15,29 @@ RECS = {"165506": dict(rec=RD / "hs_20261024_165506_std60", ba=FL / "165506/ba_S
                        d_oracle=O / "depth/165506_S_oracle"),
         "173432": dict(rec=RD / "hs_20261024_173432_std60", ba=O / "rec/173432/ba_S", board=O / "scale/173432_S/board_scale.json",
                        vio_json=O / "vio/173432_B_o0.json", d_ba=O / "depth/173432_ba", d_board=O / "depth/173432_board",
-                       d_oracle=O / "depth/173432_oracle")}
+                       d_oracle=O / "depth/173432_oracle"),
+        "173432A": dict(rec=RD / "hs_20261024_173432_std60", ba=O / "rec/173432/ba_SA", board=O / "scale/173432_SA/board_scale.json",
+                        vio_json=O / "vio/173432_A_o0.json", d_ba=O / "depth/173432A_ba", d_board=O / "depth/173432A_board",
+                        d_oracle=O / "depth/173432A_oracle")}
+VIOS = [("165506", "B_o0 (기본, scanA)", SA / "B_o0"), ("165506", "B_o1 (기본, scanA)", SA / "B_o1"), ("165506", "B_o2 (기본, scanA)", SA / "B_o2"),
+        ("165506", "A_o0 (감사 초기화)", O / "vio/165506_A_o0")] + \
+       [("173432", f"{v}_o{o} ({'기본' if v == 'B' else '감사 초기화'})", O / f"vio/173432_{v}_o{o}") for v in "BA" for o in range(3)]
+
+
+def vio_rows():
+    rows = []
+    for r, name, base in VIOS:
+        js, pz = Path(str(base) + ".json"), Path(str(base) + ".poses.jsonl.gz")
+        if not js.exists():
+            continue
+        s = json.loads(js.read_text()); s = s.get("score", s)
+        t, _ = load(pz) if pz.exists() else ([], None)
+        row = dict(rec=r, name=name, status=s.get("status"), tracked=int(len(t)), init_s=s.get("init_s"), ate_vio_cm=s.get("ate_vio_cm"),
+                   scale_sim3=s.get("scale_sim3"), path_m=s.get("path_m"))
+        if len(t) > 50:
+            row.update({"k_" + k: v for k, v in kscore(RECS[r]["rec"], pz).items() if k in ("k_fwd", "k_pair", "n")})
+        rows.append(row)
+    return rows
 
 
 def gt(rec):
@@ -105,8 +127,14 @@ def main():
             row["verdict_2pct"] = ("다시 나옴" if 1.0 <= kf <= 3.0 and kp is not None and kp >= 0.5 else
                                    "안 나옴" if abs(kf) < 1.0 else "다른 크기")
         out["recs"][r] = row
+    out["vio"] = vio_rows()
     (O / "table.json").write_text(json.dumps(out, indent=1, ensure_ascii=False))
     f = lambda x, n=2: "—" if x is None else f"{x:+.{n}f}"
+    vmd = ["", "VIO 재생 (c4f60; 기본 = 사전 등록, 감사 초기화 = 사후 변형 init_window_time 1.5 / init_max_disparity 2.30):", "",
+           "| 녹화 | run | 상태 | tracking 프레임 | 초기화 s | ATE cm | lp sim3 축척 | k_fwd % (전체 프레임) | k_pair % |", "|---|---|---|---|---|---|---|---|---|"]
+    for v in out["vio"]:
+        vmd.append(f"| {v['rec']} | {v['name']} | {v['status']} | {v['tracked']} | {v['init_s']} | {v['ate_vio_cm']} | {v['scale_sim3']} | "
+                   f"{f(v.get('k_k_fwd'))} | {f(v.get('k_k_pair'))} |")
     md = [f"night1107 채점 {out['made']} (미검증 · 독립 검사 전)", "",
           "| 녹화 | VIO ATE cm | k_fwd VIO kf / BA % | k_pair VIO kf / BA % | 판정 (+2 %) | BA 재투영 px | 보드 c (σ) | GT 축척 | c 차 % | 보드 kf |",
           "|---|---|---|---|---|---|---|---|---|---|"]
@@ -127,6 +155,7 @@ def main():
         pd = {True: "통과", False: "못 함"}.get(row.get("pass_depth"), "—")
         md.append(f"| {r} | {g('dZ_mean')} | {g('absdZ_p90', lambda x: format(x, '.2f'))} | {g('kf_bias_med')} | {g('mesh_z_med')} | "
                   f"{g('mesh_rms', lambda x: format(x, '.2f'))} | {g('cover', lambda x: format(x, '.3f'))} | {g('n_eval', str)} | {pd} |")
+    md += vmd
     (O / "table.md").write_text("\n".join(md) + "\n"); print("\n".join(md))
 
 
