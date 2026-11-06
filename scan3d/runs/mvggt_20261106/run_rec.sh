@@ -24,7 +24,7 @@ mesh() { n=$1; shift; [ -f $D/mesh_$n/summary.json ] && { echo "== $n exists"; r
          heavy mesh_$n $PY scan3d/mvggt/mv_offline.py $R --out $D/mesh_$n --gt $G $SOO --kf-subset $SUB "$@"; }
 for st in $STEPS; do case $st in
   dump) [ -f $D/frames/frames.npz ] || heavy dump $PY scan3d/mvggt/mv_dump.py $R --gt $G --ba $BA --out $D/frames ;;
-  probe) for c in 96 64 48 32; do heavy probe_c$c $PY scan3d/mvggt/vggt_run.py $D/frames --out $D/probe_c$c/raw.npz --chunk $c --probe \
+  probe) for c in 64 48; do heavy probe_bf16_c$c $PY scan3d/mvggt/vggt_run.py $D/frames --out $D/probe_bf16_c$c/raw.npz --chunk $c --probe \
            && { echo $c > $D/vggt_chunk.txt; break; }; done ;;
   b0) mesh B0 --vio $BA; mesh B0_fs --vio $BA --free-scale ;;
   vggt) [ -f $D/raw_vggt.npz ] || heavy vggt $PY scan3d/mvggt/vggt_run.py $D/frames --out $D/raw_vggt.npz --chunk ${CHUNK:-$(cat scan3d/runs/mvggt_20261106/rec/165506/vggt_chunk.txt)} --overlap 8

@@ -37,6 +37,7 @@ def main():
     ap.add_argument("--chunk", type=int, default=64)
     ap.add_argument("--overlap", type=int, default=8)
     ap.add_argument("--probe", action="store_true")
+    ap.add_argument("--fp32-weights", action="store_true", help="old (11-06 first probes): fp32 weights; default = bf16 aggregator weights")
     a = ap.parse_args()
     import torch
     from safetensors.torch import load_file
@@ -53,6 +54,8 @@ def main():
     assert not miss, miss[:5]
     assert all(k.startswith(("point_head.", "track_head.")) for k in unexp), [k for k in unexp if not k.startswith(("point_head.", "track_head."))][:5]
     del sd
+    if not a.fp32_weights:          # README 5 (11-06 amendment): aggregator weights bf16 (heads stay fp32, run outside autocast as in the official forward)
+        model.aggregator.to(torch.bfloat16)
     model = model.cuda().eval()
     dtype = torch.bfloat16
     ch = chunks(len(paths), a.chunk, a.overlap)
@@ -76,7 +79,7 @@ def main():
         stats.append(st)
         print(json.dumps(st), flush=True)
         del pred, imgs
-    meta = dict(made=time.strftime("%Y-%m-%d %H:%M:%S"), frames=a.frames, weights=str(WEIGHTS), chunk=a.chunk, overlap=a.overlap,
+    meta = dict(made=time.strftime("%Y-%m-%d %H:%M:%S"), frames=a.frames, weights=str(WEIGHTS), chunk=a.chunk, overlap=a.overlap, weights_dtype="fp32" if a.fp32_weights else "aggregator bf16",
                 n_frames=len(paths), n_chunks=len(ch), chunks=ch, stats=stats, runtime_s=round(time.time() - t0, 1),
                 unexpected_keys_heads=sorted({k.split(".")[0] for k in unexp}), torch=torch.__version__)
     if not a.probe:
