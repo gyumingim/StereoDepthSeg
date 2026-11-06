@@ -1,6 +1,6 @@
 #!/bin/bash
 # mvggt 11-06: one recording, all steps (README 2-4). Every heavy step: flock ~/scanner/heavy.lock (one heavy job machine-wide),
-# threads 8, GPU frac 0.6 + gpu.lock (gpu_guard), no torch.compile, wait for >= 12 GB free RAM, watchdog kills MY job < 8 GB.
+# threads 8, GPU frac 0.6 + gpu.lock (gpu_guard), no torch.compile, wait for >= 8 GB free RAM, watchdog kills MY job < 4 GB (11-06 floor 8 -> 4 GB).
 # 11-06 later: GPU steps (probe, vggt, mast3r, meshes) take only gpu.lock; CPU steps (dump, align) keep heavy.lock.
 # usage: run_rec.sh ID STEPS...   ID = 165506 | 20261022_134204 | 20261020_222747 ; STEPS from: dump b0 vggt v mast3r m  (default all)
 # env: CHUNK (VGGT chunk, default 64), WIN (MASt3R swin window, default 8)
@@ -13,9 +13,9 @@ D=scan3d/runs/mvggt_20261106/rec/$id
 if [ "$id" = 165506 ]; then R=scan3d/recordings/hs_20261024_165506_std60; G=imu_gt_spl; SOO=""
 else R=scan3d/recordings/hs_$id; G=imu_gt_spl_cal1022; SOO="--compress --kf-step 1"; fi
 BA=$D/poses_ba.jsonl.gz; SUB=$D/frames/kf_subset.txt
-memwait() { while [ $(awk '/MemAvailable/{print int($2/1048576)}' /proc/meminfo) -lt 12 ]; do sleep 20; done; }
+memwait() { while [ $(awk '/MemAvailable/{print int($2/1048576)}' /proc/meminfo) -lt 8 ]; do sleep 20; done; }
 ( while sleep 5; do a=$(awk '/MemAvailable/{print int($2/1048576)}' /proc/meminfo)
-    if [ "$a" -lt 8 ]; then for p in $(pgrep -f "mvggt_20261106/rec/$id"); do
+    if [ "$a" -lt 4 ]; then for p in $(pgrep -f "mvggt_20261106/rec/$id"); do
       r=$(awk '/VmRSS/{print int($2/1048576)}' /proc/$p/status 2>/dev/null)
       [ "${r:-0}" -ge 3 ] && { echo "WATCHDOG $(date +%T) MemAvailable ${a} GB, my pid $p ${r} GB -> kill"; kill $p; }; done; fi; done ) &
 WD=$!
