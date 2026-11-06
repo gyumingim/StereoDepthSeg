@@ -1,0 +1,118 @@
+{
+ "poses": {
+  "source": "/home/system/scanner/StereoDepthSeg-scanA/scan3d/runs/scanA_20261105/more/ba/20261021_213341/poses_ba.jsonl.gz",
+  "n": 779,
+  "se3_rmse_cm": 0.17131851270946458,
+  "sim3_scale_would_be": 1.0055491246200479,
+  "free_scale_applied": true,
+  "rot_diff_deg_median": 0.3748776621688923,
+  "compressed_rows": 770
+ },
+ "made": "2026-11-06 16:43:32",
+ "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261021_213341",
+ "gt": "imu_gt_spl_cal1022",
+ "args": {
+  "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261021_213341",
+  "out": "scan3d/runs/boardscale_20261106/depth/20261021_213341_oracle",
+  "gt": "imu_gt_spl_cal1022",
+  "scale": 0.5,
+  "kf_step": 1,
+  "n_pairs": 2,
+  "iters": 8,
+  "voxel": 0.005,
+  "zmax": 2.0,
+  "b_target": 0.08,
+  "vio": "/home/system/scanner/StereoDepthSeg-scanA/scan3d/runs/scanA_20261105/more/ba/20261021_213341/poses_ba.jsonl.gz",
+  "free_scale": true,
+  "pose_noise_cm": 0.0,
+  "allow_fullres": false,
+  "rows_from": "",
+  "compress": true
+ },
+ "board_mm": [
+  288.27000000000004,
+  160.15
+ ],
+ "square_mm": 32.03,
+ "gt_corner_px_median": 0.34131720662117004,
+ "n_kf": 770,
+ "n_kf_depth": 468,
+ "mesh_vertices": 23068,
+ "mesh_faces": 38209,
+ "runtime_s": 232.7,
+ "image_size": [
+  960,
+  540
+ ],
+ "K_used": [
+  [
+   651.9460924794001,
+   0.0,
+   484.19031371717165
+  ],
+  [
+   0.0,
+   651.4422678797331,
+   276.23278304372155
+  ],
+  [
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "gpu_max_alloc_gb": 4.19,
+ "gpu_max_reserved_gb": 5.01,
+ "kf_board_absdZ_p50_cm_median": 0.09692420177605104,
+ "kf_board_absdZ_p90_cm_median": 0.1598168473684647,
+ "kf_board_dZ_bias_cm_median": 0.0871717086321791,
+ "kf_board_Z_m_median": 0.3592465705484256,
+ "n_kf_board_eval": 438,
+ "n_kf_no_pair": 302,
+ "kf_board_dZ_mean_cm_stats": {
+  "mean": 0.740541265643729,
+  "median": 0.08474060883865832,
+  "p10": -0.005270538624797856,
+  "p90": 0.22592040614978026
+ },
+ "kf_board_dZ_med_cm_stats": {
+  "mean": 0.6801400503292481,
+  "median": 0.0871717086321791,
+  "p10": 0.0035135385009860136,
+  "p90": 0.2135614239760514
+ },
+ "kf_board_absdZ_p50_cm_stats": {
+  "mean": 0.6986124785770855,
+  "median": 0.09692420177605104,
+  "p10": 0.045610114727293594,
+  "p90": 0.2135614239760514
+ },
+ "kf_board_absdZ_mean_cm_stats": {
+  "mean": 0.7672104093347604,
+  "median": 0.10149354948510189,
+  "p10": 0.05280049101619054,
+  "p90": 0.22775539766196337
+ },
+ "pooled_dZ_cm": {
+  "n": 39891792,
+  "mean": 0.46216094493865967,
+  "median": 0.08649994432926178,
+  "p10": -0.03982160985469818,
+  "p90": 0.20950005948543549
+ },
+ "pooled_absdZ_cm": {
+  "mean": 0.48806771636009216,
+  "median": 0.0962790995836258,
+  "p90": 0.21798266470432281
+ },
+ "kf_frac_abs_bias_gt_1cm": 0.0410958904109589,
+ "mesh_board_vertices": 1310,
+ "mesh_board_z_med_cm": 0.1276102513074875,
+ "mesh_board_z_rms_cm": 0.06466797739267349,
+ "mesh_board_z_p5_p95_cm": [
+  0.02248416282236576,
+  0.2164490818977356
+ ],
+ "mesh_board_cover_frac": 0.9230769230769231,
+ "mesh_board_z_unique_mm": 28
+}
