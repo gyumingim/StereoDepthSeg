@@ -19,6 +19,9 @@ RECS = {"165506": dict(rec=RD / "hs_20261024_165506_std60", ba=FL / "165506/ba_S
         "173432A": dict(rec=RD / "hs_20261024_173432_std60", ba=O / "rec/173432/ba_SA", board=O / "scale/173432_SA/board_scale.json",
                         vio_json=O / "vio/173432_A_o0.json", d_ba=O / "depth/173432A_ba", d_board=O / "depth/173432A_board",
                         d_oracle=O / "depth/173432A_oracle")}
+for _n in ("173432_A_o1", "173432_A_o2", "165506_A_o0"):   # README 5.1 (exploratory, no oracle run)
+    RECS[_n] = dict(rec=RECS[_n[:6]]["rec"], ba=O / f"rec/{_n}/ba_S", board=O / f"scale/{_n}_S/board_scale.json",
+                    vio_json=O / f"vio/{_n}.json", d_ba=O / f"depth/{_n}_ba", d_board=O / f"depth/{_n}_board", d_oracle=O / "none")
 VIOS = [("165506", "B_o0 (기본, scanA)", SA / "B_o0"), ("165506", "B_o1 (기본, scanA)", SA / "B_o1"), ("165506", "B_o2 (기본, scanA)", SA / "B_o2"),
         ("165506", "A_o0 (감사 초기화)", O / "vio/165506_A_o0")] + \
        [("173432", f"{v}_o{o} ({'기본' if v == 'B' else '감사 초기화'})", O / f"vio/173432_{v}_o{o}") for v in "BA" for o in range(3)]

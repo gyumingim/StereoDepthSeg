@@ -1,0 +1,68 @@
+{
+ "rec": "hs_20261024_173432_std60",
+ "made": "2026-11-07 00:41:09",
+ "args": {
+  "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261024_173432_std60",
+  "cfg": "/home/system/scanner/build_livepose/cfg_gen/c4f60",
+  "out": "/home/system/scanner/StereoDepthSeg-night1107/scan3d/runs/night1107/vio/173432_B_o1",
+  "bridge": "/home/system/scanner/build_livepose/bridge/ov_bridge",
+  "vocab": "/home/system/scanner/StereoDepthSeg-night1107/scan3d/ov_bridge/loop/voc_k10L4.voc",
+  "imu": "raw",
+  "time": "live",
+  "yaml": "",
+  "chain": "",
+  "noise_scale": 1.0,
+  "remap": "",
+  "intr": "",
+  "extra": "",
+  "loop": 1,
+  "start_off": 1.0,
+  "max_secs": 0.0,
+  "fps": 60.0,
+  "decode_threads": 2,
+  "drop_every": 0,
+  "gt": "auto"
+ },
+ "bridge_cmd": "/home/system/scanner/build_livepose/bridge/ov_bridge /tmp/lpcfg_xrav3ed3/estimator_config.yaml --stdio --max-speed 8 --lost-frames 1000000 --startup-lost-frames 1000000 --remap /home/system/scanner/build_livepose/cfg_gen/c4f60/remap_1920x1080.bin --profile rec60 --drop-late 0 --idle-spin 0 --predict 0 --loop 1 --loop-sync 1 --loop-vocab /home/system/scanner/StereoDepthSeg-night1107/scan3d/ov_bridge/loop/voc_k10L4.voc --loop-log /home/system/scanner/StereoDepthSeg-night1107/scan3d/runs/night1107/vio/173432_B_o1.loop.jsonl",
+ "bridge_sha": "55e5d35b8ece3e29",
+ "remap_sha": "483168c9723c0ba1",
+ "cfg_src": "/home/system/scanner/build_livepose/cfg_gen/c4f60",
+ "yaml_sha": {
+  "estimator_config.yaml": "9adc09407aa97922",
+  "kalibr_imu_chain.yaml": "0f8eefa54043fc3e",
+  "kalibr_imucam_chain.yaml": "58b9a1af46461eb3"
+ },
+ "imucam_intrinsics": "intrinsics: [659.353988, 658.670308, 482.344248, 276.318145]",
+ "timeshift_yaml": "timeshift_cam_imu: 0.002172",
+ "input_path": {
+  "decode": "cam5.mp4 OpenCV-FFmpeg H.264 -> BGR -> GRAY 1920x1080 (phone: camera Y plane, no codec)",
+  "remap": "bridge --remap remap_1920x1080.bin sha 483168c9723c0ba1",
+  "imu": "uncalibrated 35/16 v0..2, no rebias (= phone)",
+  "time": "t_mid, no shift (= phone)",
+  "offline": "drop-late 0, loop-sync 1, idle-spin 0, predict 0",
+  "selection": "60 fps grid from save_fps 60, start_off 1.0"
+ },
+ "frames_selected": 1640,
+ "frames_fed": 1640,
+ "poses": 1640,
+ "wall_s": 22.9,
+ "crashed": null,
+ "focus_dpt_rec": 0.5,
+ "save_fps": 60,
+ "gt_align_dt_ms": -1.618031,
+ "t_first_fed": 34644813959469,
+ "t_last_fed": 34672130850641,
+ "score": {
+  "poses": 1640,
+  "tracked": 0,
+  "tracked_frac": 0.0,
+  "status_counts": {
+   "init": 1640
+  },
+  "clip_s": 27.32,
+  "pc_ms_med": 0.88,
+  "n_loop": 0,
+  "status": "no_init",
+  "init_s": null
+ }
+}

@@ -1,0 +1,133 @@
+start 2026-11-06 22:46:28 mem 25 GB
+[gpu_guard] torch memory cap 0.60 x 15.9 GB = 9.6 GB
+VIO poses {'source': '/home/system/scanner/StereoDepthSeg-featloop/scan3d/runs/featloop_20261105/rec/165506/ba_S/poses_ba.jsonl.gz', 'n': 139, 'se3_rmse_cm': 1.0232608413919513, 'sim3_scale_would_be': 0.9797849831063482, 'free_scale_applied': True, 'rot_diff_deg_median': 0.7830455020872091}
+decoded 1690 frames (960x540), gt rows 1690, ok 134
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/geometry.py:76: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+kf 490/1690: {'i': 490, 'pairs': 1, 'B_cm': [7.8], 'valid_frac': 0.3124749228395062, 'board_px': 27195, 'board_valid': 25799, 'ffs_ms': [111], 'board_dZ_mean_cm': 5.631016159045749, 'board_dZ_p10_cm': 4.991768003132726, 'board_dZ_p90_cm': 6.233895844134509, 'board_absdZ_mean_cm': 5.631016159045749, 'board_dZ_med_cm': 5.647513881761846, 'board_absdZ_p50_cm': 5.647513881761846, 'board_absdZ_p90_cm': 6.233895844134509, 'board_Z_m': 0.8296431279058422}
+kf 590/1690: {'i': 590, 'pairs': 2, 'B_cm': [12.4, 13.6], 'valid_frac': 0.7237808641975308, 'board_px': 29413, 'board_valid': 29413, 'ffs_ms': [111, 106], 'board_dZ_mean_cm': -0.012412877582936773, 'board_dZ_p10_cm': -0.0695320280030276, 'board_dZ_p90_cm': 0.036767844367586726, 'board_absdZ_mean_cm': 0.03504879845407214, 'board_dZ_med_cm': -0.008045838678882866, 'board_absdZ_p50_cm': 0.03213461406271767, 'board_absdZ_p90_cm': 0.0695320280030276, 'board_Z_m': 0.7964223082960515}
+kf 720/1690: {'i': 720, 'pairs': 2, 'B_cm': [7.2, 7.8], 'valid_frac': 0.7175482253086419, 'board_px': 34224, 'board_valid': 34224, 'ffs_ms': [114, 113], 'board_dZ_mean_cm': -0.12094336519307726, 'board_dZ_p10_cm': -0.3572798136707467, 'board_dZ_p90_cm': 0.1257455093310944, 'board_absdZ_mean_cm': 0.1789081052309023, 'board_dZ_med_cm': -0.12499631957968438, 'board_absdZ_p50_cm': 0.15815089174612273, 'board_absdZ_p90_cm': 0.3575034794675303, 'board_Z_m': 0.7394623849893789}
+kf 820/1690: {'i': 820, 'pairs': 2, 'B_cm': [7.4, 12.6], 'valid_frac': 0.7670447530864197, 'board_px': 34491, 'board_valid': 34491, 'ffs_ms': [107, 109], 'board_dZ_mean_cm': 0.4871833466481429, 'board_dZ_p10_cm': 0.19266688366049722, 'board_dZ_p90_cm': 0.7592767966822955, 'board_absdZ_mean_cm': 0.4871833466481429, 'board_dZ_med_cm': 0.49839971639233926, 'board_absdZ_p50_cm': 0.49839971639233926, 'board_absdZ_p90_cm': 0.7592767966822955, 'board_Z_m': 0.7423639236820939}
+kf 920/1690: {'i': 920, 'pairs': 2, 'B_cm': [8.1, 8.9], 'valid_frac': 0.8020601851851852, 'board_px': 40358, 'board_valid': 40358, 'ffs_ms': [125, 113], 'board_dZ_mean_cm': 0.24965486539549916, 'board_dZ_p10_cm': 0.12586295577083018, 'board_dZ_p90_cm': 0.3544316915271406, 'board_absdZ_mean_cm': 0.24965486539549916, 'board_dZ_med_cm': 0.2616008257434188, 'board_absdZ_p50_cm': 0.2616008257434188, 'board_absdZ_p90_cm': 0.3544316915271406, 'board_Z_m': 0.6819883218769538}
+kf 1020/1690: {'i': 1020, 'pairs': 2, 'B_cm': [7.4, 6.8], 'valid_frac': 0.6989178240740741, 'board_px': 31468, 'board_valid': 31468, 'ffs_ms': [111, 111], 'board_dZ_mean_cm': 0.13651816112654253, 'board_dZ_p10_cm': -0.14267173346533935, 'board_dZ_p90_cm': 0.49046977781841633, 'board_absdZ_mean_cm': 0.20759857973018273, 'board_dZ_med_cm': 0.10514275555322805, 'board_absdZ_p50_cm': 0.15358913022567866, 'board_absdZ_p90_cm': 0.49046977781841633, 'board_Z_m': 0.7661256940275998}
+kf 1120/1690: {'i': 1120, 'pairs': 2, 'B_cm': [7.6, 10.9], 'valid_frac': 0.5387789351851852, 'board_px': 61796, 'board_valid': 60739, 'ffs_ms': [109, 108], 'board_dZ_mean_cm': 0.21965633079311583, 'board_dZ_p10_cm': 0.09473389008986866, 'board_dZ_p90_cm': 0.3318062884483754, 'board_absdZ_mean_cm': 0.22689425350340026, 'board_dZ_med_cm': 0.21259045858791348, 'board_absdZ_p50_cm': 0.21259045858791348, 'board_absdZ_p90_cm': 0.3318062884483754, 'board_Z_m': 0.5525910512093427}
+kf 1240/1690: {'i': 1240, 'pairs': 1, 'B_cm': [11.0], 'valid_frac': 0.23345100308641975, 'board_px': 27094, 'board_valid': 27094, 'ffs_ms': [109], 'board_dZ_mean_cm': -0.10882891170177901, 'board_dZ_p10_cm': -0.24159603250000772, 'board_dZ_p90_cm': 0.08152732113082874, 'board_absdZ_mean_cm': 0.148109191233088, 'board_dZ_med_cm': -0.14126160600398396, 'board_absdZ_p50_cm': 0.15722795603771988, 'board_absdZ_p90_cm': 0.24465729146591733, 'board_Z_m': 0.8284214846625715}
+kf 1340/1690: {'i': 1340, 'pairs': 1, 'B_cm': [4.6], 'valid_frac': 0.5141859567901235, 'board_px': 28491, 'board_valid': 28491, 'ffs_ms': [113], 'board_dZ_mean_cm': -0.1445626647238115, 'board_dZ_p10_cm': -2.2833120413540575, 'board_dZ_p90_cm': 2.0087093089963926, 'board_absdZ_mean_cm': 1.317632522098535, 'board_dZ_med_cm': -0.14806030758807154, 'board_absdZ_p50_cm': 1.1833609073048201, 'board_absdZ_p90_cm': 2.597500256998042, 'board_Z_m': 0.8075534430333213}
+{
+ "poses": {
+  "source": "/home/system/scanner/StereoDepthSeg-featloop/scan3d/runs/featloop_20261105/rec/165506/ba_S/poses_ba.jsonl.gz",
+  "n": 139,
+  "se3_rmse_cm": 1.0232608413919513,
+  "sim3_scale_would_be": 0.9797849831063482,
+  "free_scale_applied": true,
+  "rot_diff_deg_median": 0.7830455020872091
+ },
+ "made": "2026-11-06 22:47:14",
+ "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261024_165506_std60",
+ "gt": "imu_gt_spl",
+ "args": {
+  "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261024_165506_std60",
+  "out": "/home/system/scanner/StereoDepthSeg-night1107/scan3d/runs/night1107/depth/165506_S_oracle",
+  "gt": "imu_gt_spl",
+  "scale": 0.5,
+  "kf_step": 10,
+  "n_pairs": 2,
+  "iters": 8,
+  "voxel": 0.005,
+  "zmax": 2.0,
+  "b_target": 0.08,
+  "vio": "/home/system/scanner/StereoDepthSeg-featloop/scan3d/runs/featloop_20261105/rec/165506/ba_S/poses_ba.jsonl.gz",
+  "free_scale": true,
+  "pose_noise_cm": 0.0,
+  "allow_fullres": false,
+  "rows_from": "",
+  "compress": false
+ },
+ "board_mm": [
+  302.0,
+  181.19999999999996
+ ],
+ "square_mm": 60.4,
+ "gt_corner_px_median": 0.09769907593727112,
+ "n_kf": 134,
+ "n_kf_depth": 92,
+ "mesh_vertices": 41760,
+ "mesh_faces": 70281,
+ "runtime_s": 43.5,
+ "image_size": [
+  960,
+  540
+ ],
+ "K_used": [
+  [
+   643.0891632633826,
+   0.0,
+   482.567347550798
+  ],
+  [
+   0.0,
+   644.0105966432322,
+   277.2129335844328
+  ],
+  [
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "gpu_max_alloc_gb": 4.19,
+ "gpu_max_reserved_gb": 5.01,
+ "kf_board_absdZ_p50_cm_median": 0.3289810495001766,
+ "kf_board_absdZ_p90_cm_median": 0.5624973196556415,
+ "kf_board_dZ_bias_cm_median": 0.011830463302545113,
+ "kf_board_Z_m_median": 0.7638850628553436,
+ "n_kf_board_eval": 92,
+ "n_kf_no_pair": 42,
+ "kf_board_dZ_mean_cm_stats": {
+  "mean": -0.6513717039077285,
+  "median": -0.024563302800651412,
+  "p10": -0.47146967066141665,
+  "p90": 0.7609324612632509
+ },
+ "kf_board_dZ_med_cm_stats": {
+  "mean": -0.5525695152093215,
+  "median": 0.011830463302545113,
+  "p10": -0.4558921486341233,
+  "p90": 0.8321182814847718
+ },
+ "kf_board_absdZ_p50_cm_stats": {
+  "mean": 1.716738268154878,
+  "median": 0.3289810495001766,
+  "p10": 0.12458755092737583,
+  "p90": 5.620934390791798
+ },
+ "kf_board_absdZ_mean_cm_stats": {
+  "mean": 1.7870452729630921,
+  "median": 0.3700210893454329,
+  "p10": 0.1366861421996937,
+  "p90": 5.724850978317034
+ },
+ "pooled_dZ_cm": {
+  "n": 3358065,
+  "mean": -0.22713667154312134,
+  "median": 0.0447586253285408,
+  "p10": -0.673180341720581,
+  "p90": 0.9474326372146606
+ },
+ "pooled_absdZ_cm": {
+  "mean": 1.2770917415618896,
+  "median": 0.2889833152294159,
+  "p90": 4.990335941314697
+ },
+ "kf_frac_abs_bias_gt_1cm": 0.17391304347826086,
+ "mesh_board_vertices": 1859,
+ "mesh_board_z_med_cm": -0.22273051738739014,
+ "mesh_board_z_rms_cm": 0.13364481925964355,
+ "mesh_board_z_p5_p95_cm": [
+  -0.5534681677818298,
+  -0.05834845453500748
+ ],
+ "mesh_board_cover_frac": 0.9135802469135802,
+ "mesh_board_z_unique_mm": 78
+}
+JOBDONE rc 0 2026-11-06 22:47:17

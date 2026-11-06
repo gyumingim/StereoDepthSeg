@@ -1,0 +1,130 @@
+start 2026-11-07 00:59:18 mem 30 GB
+[gpu_guard] torch memory cap 0.60 x 15.9 GB = 9.6 GB
+VIO poses {'source': '/home/system/scanner/StereoDepthSeg-night1107/scan3d/runs/night1107/rec/173432_A_o1/ba_S/poses_ba.jsonl.gz', 'n': 143, 'se3_rmse_cm': 1.0363917465019137, 'sim3_scale_would_be': 1.053122070141249, 'free_scale_applied': False, 'rot_diff_deg_median': 1.1027333568583126}
+decoded 1700 frames (960x540), gt rows 1700, ok 129
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/geometry.py:76: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+kf 360/1700: {'i': 360, 'pairs': 2, 'B_cm': [5.4, 10.6], 'valid_frac': 0.5937403549382716, 'board_px': 27329, 'board_valid': 27329, 'ffs_ms': [109, 108], 'board_dZ_mean_cm': -2.3184328595440498, 'board_dZ_p10_cm': -2.608232340681238, 'board_dZ_p90_cm': -2.0673447978746085, 'board_absdZ_mean_cm': 2.3184328595440498, 'board_dZ_med_cm': -2.3055868675509905, 'board_absdZ_p50_cm': 2.3055868675509905, 'board_absdZ_p90_cm': 2.608232340681238, 'board_Z_m': 0.8257151400843507}
+kf 570/1700: {'i': 570, 'pairs': 2, 'B_cm': [20.5, 13.4], 'valid_frac': 0.3866820987654321, 'board_px': 39626, 'board_valid': 24777, 'ffs_ms': [1233, 110], 'board_dZ_mean_cm': -1.7661163922033263, 'board_dZ_p10_cm': -2.0861920148106017, 'board_dZ_p90_cm': -1.4957068158014029, 'board_absdZ_mean_cm': 1.7661163922033263, 'board_dZ_med_cm': -1.746908704516048, 'board_absdZ_p50_cm': 1.746908704516048, 'board_absdZ_p90_cm': 2.0861920148106017, 'board_Z_m': 0.6883176193889207}
+kf 680/1700: {'i': 680, 'pairs': 2, 'B_cm': [9.5, 8.3], 'valid_frac': 0.612758487654321, 'board_px': 59895, 'board_valid': 59895, 'ffs_ms': [101, 106], 'board_dZ_mean_cm': -1.4012532207219996, 'board_dZ_p10_cm': -1.5116043049200156, 'board_dZ_p90_cm': -1.2887294034600916, 'board_absdZ_mean_cm': 1.4012532207219996, 'board_dZ_med_cm': -1.4050065171661963, 'board_absdZ_p50_cm': 1.4050065171661963, 'board_absdZ_p90_cm': 1.5116043049200156, 'board_Z_m': 0.5197251033666431}
+kf 790/1700: {'i': 790, 'pairs': 2, 'B_cm': [13.1, 9.9], 'valid_frac': 0.5170640432098765, 'board_px': 51817, 'board_valid': 51817, 'ffs_ms': [103, 107], 'board_dZ_mean_cm': -1.8281721361885475, 'board_dZ_p10_cm': -2.040177511867771, 'board_dZ_p90_cm': -1.6905508413998405, 'board_absdZ_mean_cm': 1.8281721361885475, 'board_dZ_med_cm': -1.779472545333527, 'board_absdZ_p50_cm': 1.779472545333527, 'board_absdZ_p90_cm': 2.040177511867771, 'board_Z_m': 0.5798800978342522}
+kf 890/1700: {'i': 890, 'pairs': 2, 'B_cm': [9.3, 11.8], 'valid_frac': 0.6849729938271605, 'board_px': 28598, 'board_valid': 28598, 'ffs_ms': [108, 109], 'board_dZ_mean_cm': -2.103643801245654, 'board_dZ_p10_cm': -2.276441703322889, 'board_dZ_p90_cm': -1.9468145319659558, 'board_absdZ_mean_cm': 2.103643801245654, 'board_dZ_med_cm': -2.096563499443999, 'board_absdZ_p50_cm': 2.096563499443999, 'board_absdZ_p90_cm': 2.276441703322889, 'board_Z_m': 0.8082031012976865}
+kf 1000/1700: {'i': 1000, 'pairs': 2, 'B_cm': [9.7, 6.2], 'valid_frac': 0.5287210648148148, 'board_px': 26896, 'board_valid': 26896, 'ffs_ms': [109, 105], 'board_dZ_mean_cm': -2.110941590591085, 'board_dZ_p10_cm': -2.3568927461044717, 'board_dZ_p90_cm': -1.83564187618942, 'board_absdZ_mean_cm': 2.110941590591085, 'board_dZ_med_cm': -2.121632660136197, 'board_absdZ_p50_cm': 2.121632660136197, 'board_absdZ_p90_cm': 2.3568927461044717, 'board_Z_m': 0.8367616974377571}
+{
+ "poses": {
+  "source": "/home/system/scanner/StereoDepthSeg-night1107/scan3d/runs/night1107/rec/173432_A_o1/ba_S/poses_ba.jsonl.gz",
+  "n": 143,
+  "se3_rmse_cm": 1.0363917465019137,
+  "sim3_scale_would_be": 1.053122070141249,
+  "free_scale_applied": false,
+  "rot_diff_deg_median": 1.1027333568583126
+ },
+ "made": "2026-11-07 00:59:59",
+ "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261024_173432_std60",
+ "gt": "imu_gt_spl",
+ "args": {
+  "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261024_173432_std60",
+  "out": "/home/system/scanner/StereoDepthSeg-night1107/scan3d/runs/night1107/depth/173432_A_o1_ba",
+  "gt": "imu_gt_spl",
+  "scale": 0.5,
+  "kf_step": 10,
+  "n_pairs": 2,
+  "iters": 8,
+  "voxel": 0.005,
+  "zmax": 2.0,
+  "b_target": 0.08,
+  "vio": "/home/system/scanner/StereoDepthSeg-night1107/scan3d/runs/night1107/rec/173432_A_o1/ba_S/poses_ba.jsonl.gz",
+  "free_scale": false,
+  "pose_noise_cm": 0.0,
+  "allow_fullres": false,
+  "rows_from": "",
+  "compress": false
+ },
+ "board_mm": [
+  302.0,
+  181.19999999999996
+ ],
+ "square_mm": 60.4,
+ "gt_corner_px_median": 0.08682004362344742,
+ "n_kf": 129,
+ "n_kf_depth": 61,
+ "mesh_vertices": 29649,
+ "mesh_faces": 50385,
+ "runtime_s": 39.1,
+ "image_size": [
+  960,
+  540
+ ],
+ "K_used": [
+  [
+   643.0891632633826,
+   0.0,
+   482.567347550798
+  ],
+  [
+   0.0,
+   644.0105966432322,
+   277.2129335844328
+  ],
+  [
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "gpu_max_alloc_gb": 4.17,
+ "gpu_max_reserved_gb": 5.01,
+ "kf_board_absdZ_p50_cm_median": 2.076466445739822,
+ "kf_board_absdZ_p90_cm_median": 2.314075609803423,
+ "kf_board_dZ_bias_cm_median": -2.076466445739822,
+ "kf_board_Z_m_median": 0.8178235591704732,
+ "n_kf_board_eval": 61,
+ "n_kf_no_pair": 68,
+ "kf_board_dZ_mean_cm_stats": {
+  "mean": -2.3517433565338712,
+  "median": -2.077407505874681,
+  "p10": -2.534715180815912,
+  "p90": -1.3220311276337036
+ },
+ "kf_board_dZ_med_cm_stats": {
+  "mean": -2.372195444383372,
+  "median": -2.076466445739822,
+  "p10": -2.5353013663744095,
+  "p90": -1.2984217897270889
+ },
+ "kf_board_absdZ_p50_cm_stats": {
+  "mean": 2.372195444383372,
+  "median": 2.076466445739822,
+  "p10": 1.2984217897270889,
+  "p90": 2.5353013663744095
+ },
+ "kf_board_absdZ_mean_cm_stats": {
+  "mean": 2.3517673056139934,
+  "median": 2.077407505874681,
+  "p10": 1.3220311276337036,
+  "p90": 2.534715180815912
+ },
+ "pooled_dZ_cm": {
+  "n": 2073098,
+  "mean": -2.1356453895568848,
+  "median": -1.935553789138794,
+  "p10": -2.5818428993225098,
+  "p90": -1.144848108291626
+ },
+ "pooled_absdZ_cm": {
+  "mean": 2.135671615600586,
+  "median": 1.935553789138794,
+  "p90": 2.5818428993225098
+ },
+ "kf_frac_abs_bias_gt_1cm": 1.0,
+ "mesh_board_vertices": 1563,
+ "mesh_board_z_med_cm": -2.1260833740234375,
+ "mesh_board_z_rms_cm": 0.1357741802930832,
+ "mesh_board_z_p5_p95_cm": [
+  -2.3363773822784424,
+  -1.8925985097885132
+ ],
+ "mesh_board_cover_frac": 0.8987654320987655,
+ "mesh_board_z_unique_mm": 71
+}
+JOBDONE rc 0 2026-11-07 01:00:03

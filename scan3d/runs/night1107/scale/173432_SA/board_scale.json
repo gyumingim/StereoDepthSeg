@@ -1,0 +1,62 @@
+{
+ "made": "2026-11-07 00:48:55",
+ "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261024_173432_std60",
+ "poses": "/home/system/scanner/StereoDepthSeg-night1107/scan3d/runs/night1107/rec/173432/ba_SA/poses_ba.jsonl.gz",
+ "board": "/home/system/scanner/StereoDepthSeg/scan3d/config/charuco/board_laptop_5x3.json",
+ "square_mm": 60.4,
+ "square_src": "square_mm",
+ "square_estimated": false,
+ "lens": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261024_173432_std60/imu_gt_spl/gt.npz",
+ "lens_fx": 1286.1783265267652,
+ "args": {
+  "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261024_173432_std60",
+  "poses": "/home/system/scanner/StereoDepthSeg-night1107/scan3d/runs/night1107/rec/173432/ba_SA/poses_ba.jsonl.gz",
+  "board": "/home/system/scanner/StereoDepthSeg/scan3d/config/charuco/board_laptop_5x3.json",
+  "lens": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261024_173432_std60/imu_gt_spl/gt.npz",
+  "out": "/home/system/scanner/StereoDepthSeg-night1107/scan3d/runs/night1107/scale/173432_SA",
+  "min_corners": 6,
+  "max_rep_px": 3.0,
+  "min_spread_deg": 2.0,
+  "max_sim_mm": 2.0,
+  "boot": 200,
+  "block": 10,
+  "seed": 0,
+  "check_gt_corners": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261024_173432_std60/imu_gt_rs/gt.npz"
+ },
+ "n_poses": 143,
+ "n_kf_board": 129,
+ "c": 0.9640425613673934,
+ "best": {
+  "c": 0.9640425613673934,
+  "s": 1.0372986007812817,
+  "n_corners": 8,
+  "n_corners_tri": 8,
+  "n_obs": 903,
+  "sim_rms_mm": 0.5214005629236639,
+  "rep_px_median": 0.20879534875088132,
+  "rep_px_p90": 1.567442627648151,
+  "dropped_corner_ids": []
+ },
+ "boot": {
+  "n": 199,
+  "sd": 0.001603678428325176,
+  "p2_5": 0.9624036808339544,
+  "p97_5": 0.9664983471964401,
+  "median": 0.964448521894836
+ },
+ "pair2v": {
+  "n": 1870,
+  "median": 0.9661161029669398,
+  "p10": 0.9554154935669265,
+  "p90": 0.982126798198674
+ },
+ "uses_gt_poses": false,
+ "check_vs_gt_detections": {
+  "file": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261024_173432_std60/imu_gt_rs/gt.npz",
+  "frames": 129,
+  "n": 1032,
+  "median_px": 0.0,
+  "p99_px": 0.0
+ },
+ "runtime_s": 8.7
+}
