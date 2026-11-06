@@ -43,6 +43,15 @@ def rot_deg(Ra, Rb):
     return np.degrees(np.arccos(np.clip((np.einsum("nij,nij->n", Ra, Rb) - 1) / 2, -1, 1)))
 
 
+def ortho(T):
+    """float32 model rotations are slightly non-orthonormal (MASt3R det ~1.0005): arccos(trace) would clip errors < ~2 deg
+    to 0 -> project every rotation to SO(3) (11-06 fix, found on 165506 M1 rot error 0.00)."""
+    T = np.array(T, np.float64)
+    for k in range(len(T)):
+        T[k, :3, :3] = proj_rot(T[k, :3, :3])
+    return T
+
+
 def pose_eval(T, Tgt, ok):
     """Sim3 to GT camera centres on GT-ok frames: ATE RMSE cm, scale k = 1/s - 1 (%; >0 = estimate larger than GT), rotation error."""
     A, B = T[ok, :3, 3], Tgt[ok, :3, 3]
@@ -103,6 +112,7 @@ def main():
         c2w = np.zeros((len(E), 4, 4)); c2w[:, 3, 3] = 1
         Rw = np.transpose(E[:, :3, :3], (0, 2, 1))
         c2w[:, :3, :3] = Rw; c2w[:, :3, 3] = -np.einsum("nij,nj->ni", Rw, E[:, :3, 3])
+        c2w = ortho(c2w)
         msk = C >= np.median(C.reshape(len(C), -1), axis=1)[:, None, None]
         nch = int(cid.max()) + 1
         chain = np.full((N, 4, 4), np.nan); dep1 = np.full((N, h, w), np.nan, np.float32); m1 = np.zeros((N, h, w), bool)
@@ -139,7 +149,7 @@ def main():
         v2_D = dep2
         names = ("V1", "V2")
     else:
-        c2w, K, D, C = raw["cam2w"].astype(np.float64), raw["K"], raw["depth"], raw["conf"]
+        c2w, K, D, C = ortho(raw["cam2w"]), raw["K"], raw["depth"], raw["conf"]
         h, w = D.shape[1:]
         info["model_hw"] = [int(h), int(w)]
         info["focal_final_960"] = float(np.median(K[:, 0, 0]) * W0 / w); info["focal_ours"] = float(Kr[0, 0])
@@ -159,6 +169,7 @@ def main():
     info["mask_frac_mean"] = float(model_M.mean())
     info["depth_med_m_V1like"] = float(np.nanmedian(D1u[M1u]))
     # pose accuracy (all on the same frames, GT ok only)
+    Tba = ortho(Tba); Tgt = ortho(Tgt)
     pe = dict(BA=pose_eval(Tba, Tgt, gok), **{names[0]: pose_eval(T1, Tgt, gok)})
     if a.kind == "mast3r":
         sg, _, _ = umeyama(model_T[gok, :3, 3], Tgt[gok, :3, 3])
