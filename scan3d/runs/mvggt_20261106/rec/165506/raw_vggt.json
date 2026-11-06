@@ -1,0 +1,71 @@
+{
+ "made": "2026-11-06 17:09:06",
+ "frames": "scan3d/runs/mvggt_20261106/rec/165506/frames",
+ "weights": "/home/system/scanner/mvggt_env/weights/VGGT-1B/model.safetensors",
+ "chunk": 64,
+ "overlap": 8,
+ "weights_dtype": "aggregator bf16",
+ "n_frames": 139,
+ "n_chunks": 3,
+ "chunks": [
+  [
+   0,
+   64
+  ],
+  [
+   56,
+   120
+  ],
+  [
+   75,
+   139
+  ]
+ ],
+ "stats": [
+  {
+   "chunk": 0,
+   "s": 0,
+   "e": 64,
+   "n": 64,
+   "sec": 4.85,
+   "gpu_peak_alloc_gb": 5.83,
+   "gpu_peak_reserved_gb": 7.98,
+   "hw": [
+    294,
+    518
+   ]
+  },
+  {
+   "chunk": 1,
+   "s": 56,
+   "e": 120,
+   "n": 64,
+   "sec": 5.51,
+   "gpu_peak_alloc_gb": 5.83,
+   "gpu_peak_reserved_gb": 7.98,
+   "hw": [
+    294,
+    518
+   ]
+  },
+  {
+   "chunk": 2,
+   "s": 75,
+   "e": 139,
+   "n": 64,
+   "sec": 5.54,
+   "gpu_peak_alloc_gb": 5.83,
+   "gpu_peak_reserved_gb": 7.98,
+   "hw": [
+    294,
+    518
+   ]
+  }
+ ],
+ "runtime_s": 27.7,
+ "unexpected_keys_heads": [
+  "point_head",
+  "track_head"
+ ],
+ "torch": "2.11.0+cu128"
+}
