@@ -360,7 +360,7 @@ def main():
             if l_.strip():
                 x_, y_ = l_.split(); loop_pairs.add((int(x_[:-4]), int(y_[:-4])))
         pairs |= loop_pairs
-        loop_info = json.loads((Path(a.db_from) / "ba.json").read_text()).get("loop", {})
+        loop_info = json.loads((Path(a.db_from) / "ba.json").read_text()).get("loop", {}) if (Path(a.db_from) / "ba.json").exists() else {}
     elif a.loop == "salad":
         t2 = time.time()
         sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "featloop"))
@@ -404,7 +404,7 @@ def main():
     if a.db_from:
         db = pycolmap.Database.open(str(db_path)); db.clear_two_view_geometries(); db.close()
         pycolmap.verify_matches(str(db_path), str(pl), vopt)
-        n_raw = {tuple(map(int, k.split())): v for k, v in json.loads((Path(a.db_from) / "ba.json").read_text()).get("n_raw", {}).items()}
+        n_raw = {tuple(map(int, k.split())): v for k, v in json.loads((Path(a.db_from) / "ba.json").read_text()).get("n_raw", {}).items()} if (Path(a.db_from) / "ba.json").exists() else {}
     elif a.feat == "sift":
         mo = pycolmap.FeatureMatchingOptions()
         po = pycolmap.ImportedPairingOptions(); po.match_list_path = str(pl)

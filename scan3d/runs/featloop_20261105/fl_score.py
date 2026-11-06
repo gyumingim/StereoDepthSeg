@@ -8,7 +8,8 @@ import numpy as np
 D = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parent
 H = ["20261022_133820", "20261022_134550", "20261022_134204", "20261021_214550", "20261021_213341", "20261021_215348",
      "20261020_214138", "20261020_221052", "20261020_221925", "20261020_222747", "20261020_223815", "20261020_224323"]
-VARS = ["S", "X", "SL", "XL", "S2"]
+VARS = ["S", "X", "SL", "XL", "Sg", "Xg", "SLg", "XLg"]
+SEEDV = [v + f"_s{k}" for v in VARS for k in (1, 2)]
 
 
 def J(p):
@@ -21,8 +22,8 @@ def J(p):
 rows = []
 for rid in ["165506"] + H:
     R = D / "rec" / rid
-    ce = J(R / "corner.json") or {}
-    for v in VARS + ["VIO"]:
+    ce = J(R / "corner_main.json") or J(R / "corner_rep.json") or J(R / "corner.json") or {}
+    for v in VARS + SEEDV + ["VIO"]:
         b = J(R / f"ba_{v}" / "ba.json") if v != "VIO" else None
         m = J(R / f"mesh_{v}" / "summary.json") if v != "VIO" else None
         c = (ce.get("sources") or {}).get(v)
@@ -62,11 +63,11 @@ for r in rows:
 # pre-registered rule on H
 by = {(r["rec"], r["var"]): r for r in rows}
 rule = {}
-for v in ["X", "SL", "XL"]:
+for v, base in [("X", "S"), ("SL", "S"), ("XL", "S"), ("Sg", "S"), ("Xg", "Sg"), ("SLg", "Sg"), ("XLg", "Sg")]:
     rel = {"adz_p90": [], "c_mv_p90": []}
     n_imp = 0; n = 0; recs = []
     for rid in H:
-        a, b = by.get((rid, "S")), by.get((rid, v))
+        a, b = by.get((rid, base)), by.get((rid, v))
         if not a or not b or a.get("adz_p90") is None or b.get("adz_p90") is None or a.get("c_mv_p90") is None or b.get("c_mv_p90") is None:
             continue
         n += 1; recs.append(rid)
@@ -84,15 +85,25 @@ for v in ["X", "SL", "XL"]:
         verdict = "잡음 수준"
     extra = {}
     for k in ["c_p2_med", "dz_mean", "mesh_rms", "k_gt", "points", "obs", "t_total", "t_gpu"]:
-        d_ = [by[(rid, v)][k] - by[(rid, "S")][k] for rid in recs if by[(rid, v)].get(k) is not None and by[(rid, "S")].get(k) is not None]
+        d_ = [by[(rid, v)][k] - by[(rid, base)][k] for rid in recs if by[(rid, v)].get(k) is not None and by[(rid, base)].get(k) is not None]
         extra[k + "_diff_median"] = float(np.median(d_)) if d_ else None
-    rule[v] = dict(n=n, rel_change_median_pct=md, rel_change_all_pct={k: [round(x, 1) for x in xs] for k, xs in rel.items()},
+    rule[v] = dict(base=base, n=n, rel_change_median_pct=md, rel_change_all_pct={k: [round(x, 1) for x in xs] for k, xs in rel.items()},
                    adz_p90_improved=int(n_imp), verdict=verdict, **extra)
-L += ["", "## 판정 (README 4, H 녹화)", "| 변형 | n | |dZ| p90 상대 변화 중앙 % | 모서리 다시점 p90 상대 변화 중앙 % | |dZ| p90 준 녹화 | 판정 | 점 수 차 중앙 | 전체 시간 차 중앙 s |",
+L += ["", "## 판정 (README 4, H 녹화)", "| 변형 (기준) | n | |dZ| p90 상대 변화 중앙 % | 모서리 다시점 p90 상대 변화 중앙 % | |dZ| p90 준 녹화 | 판정 | 점 수 차 중앙 | 전체 시간 차 중앙 s |",
       "|---|---|---|---|---|---|---|---|"]
 for v, q in rule.items():
-    L.append(f"| {v} | {q['n']} | {q['rel_change_median_pct']['adz_p90']:+.1f} | {q['rel_change_median_pct']['c_mv_p90']:+.1f} | "
+    L.append(f"| {v} ({q['base']}) | {q['n']} | {q['rel_change_median_pct']['adz_p90']:+.1f} | {q['rel_change_median_pct']['c_mv_p90']:+.1f} | "
              f"{q['adz_p90_improved']}/{q['n']} | {q['verdict']} | {f(q['points_diff_median'], 0)} | {f(q['t_total_diff_median'], 0)} |")
+# seed spread (same features+matches, RANSAC seed 0/1/2): range of the two main metrics per recording and variant
+L += ["", "## 시드 흔들림 (같은 특징·매칭, 검증 시드 0/1/2; 범위 = 최대−최소)", "| 녹화 | 변형 | 모서리 다시점 p90 px (시드 0/1/2) | 범위 |", "|---|---|---|---|"]
+spread = []
+for rid in ["165506"] + H:
+    for v in VARS:
+        xs = [by.get((rid, v + sfx), {}).get("c_mv_p90") for sfx in ("", "_s1", "_s2")]
+        if sum(x is not None for x in xs) >= 2:
+            xv = [x for x in xs if x is not None]
+            spread.append(dict(rec=rid, var=v, c_mv_p90=xs, range=max(xv) - min(xv)))
+            L.append(f"| {rid} | {v} | {' / '.join(f(x) for x in xs)} | {max(xv) - min(xv):.2f} |")
 (D / "table.md").write_text("\n".join(L) + "\n")
-(D / "table.json").write_text(json.dumps(dict(made=time.strftime("%F %T"), rows=rows, rule=rule), indent=1))
+(D / "table.json").write_text(json.dumps(dict(made=time.strftime("%F %T"), rows=rows, rule=rule, seed_spread=spread), indent=1))
 print("\n".join(L))
