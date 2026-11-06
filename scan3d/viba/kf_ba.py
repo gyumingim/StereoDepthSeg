@@ -213,6 +213,7 @@ def main():
     ap.add_argument("--cache-root", default=str(Path.home() / "scanner/viba_work/cache"),
                     help="viba: keyframe JPEG cache root (scanA wrote REC/scanA_cache; here own folder, same content)")
     ap.add_argument("--cpu-features", action="store_true", help="viba: pycolmap SIFT/matching on CPU (no GPU lock)")
+    ap.add_argument("--seed", type=int, default=None, help="two-view RANSAC seed (default: pycolmap -1 = random)")
     ap.add_argument("--no-ba", action="store_true", help="viba: stop after --dump (baseline BA solved elsewhere)")
     ap.add_argument("--dump", action="store_true", help="viba: write OUT/viba_input.npz (keyframes, observations, initial points)")
     a = ap.parse_args()
@@ -313,7 +314,10 @@ def main():
     pl.write_text("\n".join(f"{names[x]} {names[y]}" for x, y in sorted(pairs)) + "\n")
     mo = pycolmap.FeatureMatchingOptions()
     po = pycolmap.ImportedPairingOptions(); po.match_list_path = str(pl)
-    pycolmap.match_image_pairs(str(db_path), matching_options=mo, pairing_options=po, device=dev)
+    vo = pycolmap.TwoViewGeometryOptions()
+    if a.seed is not None:
+        vo.ransac.random_seed = a.seed          # default -1 = random (README 2.8)
+    pycolmap.match_image_pairs(str(db_path), matching_options=mo, pairing_options=po, verification_options=vo, device=dev)
     gpu_ctx.__exit__(None, None, None)
     log(f"[match] {len(pairs)} pairs {time.time() - t0:.0f}s")
     db = pycolmap.Database.open(str(db_path))
