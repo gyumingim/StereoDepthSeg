@@ -1,0 +1,101 @@
+{
+ "made": "2026-11-06 05:15:12",
+ "rec": "scan3d/recordings/hs_20261020_214138",
+ "dump": "/home/system/scanner/StereoDepthSeg-viba/scan3d/runs/viba_20261105/ba/20261020_214138/viba_input.npz",
+ "vio": "/home/system/scanner/StereoDepthSeg-viba/scan3d/runs/viba_20261105/vio/20261020_214138.poses.jsonl.gz",
+ "cfg": "/home/system/scanner/build_livepose/cfg_gen_hs222/c4f60",
+ "args": {
+  "rec": "scan3d/recordings/hs_20261020_214138",
+  "dump": "scan3d/runs/viba_20261105/ba/20261020_214138/viba_input.npz",
+  "vio": "scan3d/runs/viba_20261105/vio/20261020_214138.poses.jsonl.gz",
+  "cfg": "/home/system/scanner/build_livepose/cfg_gen_hs222/c4f60",
+  "out": "scan3d/runs/viba_20261105/viba/20261020_214138/ba_g",
+  "calib": "yaml",
+  "init_scale": 1.0,
+  "iters": 100,
+  "huber": 1.0,
+  "diag_damp": 1,
+  "split_tracks": 15,
+  "ordering": "schur",
+  "rel_tol": 1e-05,
+  "check": false,
+  "vision_only": true
+ },
+ "calib": {
+  "mode": "yaml",
+  "T_imu_cam": [
+   [
+    0.020201228802,
+    -0.99977773579,
+    -0.00603236055105,
+    0.0458238306231
+   ],
+   [
+    -0.999795522195,
+    -0.0201953741747,
+    -0.00102988426744,
+    0.00581655355542
+   ],
+   [
+    0.000907829582544,
+    0.00605193199493,
+    -0.999981274807,
+    -0.0113826293871
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  ],
+  "timeshift_s": 0.002172,
+  "acc_nd": 0.01,
+  "acc_rw": 0.001,
+  "gyr_nd": 0.001,
+  "gyr_rw": 0.0001,
+  "gravity": 9.8
+ },
+ "check": {
+  "acc_norm_med": 9.812058229870162,
+  "grav_err_zup_med": 0.361290700336114,
+  "grav_err_zdown_med": 19.606738172855465,
+  "imu_res_pos_mm_med": 2.122868882397418,
+  "imu_res_pos_mm_p90": 4.792593696469546,
+  "imu_res_vel_mms_med": 14.786745648684352,
+  "imu_res_rot_deg_med": 0.09064667760999184
+ },
+ "n_kf": 1355,
+ "points": 175090,
+ "points_orig": 157289,
+ "obs": 827544,
+ "imu_factors": 0,
+ "kf_gap_max_s": 0.25027703100000004,
+ "lm_iters": 31,
+ "error0": 571084.0951073017,
+ "error1": 89150.92608432971,
+ "reproj_med_px0": 0.7872466622074638,
+ "reproj_med_px": 0.22777040422442824,
+ "reproj_rmse_px": 0.8279950536839984,
+ "frac_inlier_1px": 0.9637070657270187,
+ "imu_err_med": null,
+ "imu_err_p90": null,
+ "ba_med": [
+  -0.0273688493,
+  -0.0654603799,
+  0.0468292059
+ ],
+ "bg_med": [
+  0.0034621747,
+  0.00465897573,
+  0.00265946291
+ ],
+ "size_ratio_vs_vio": 0.9996328365540388,
+ "sim3": {
+  "scale": 1.0027474791462903,
+  "rms_cm": 0.5075309161473613,
+  "n_fixed": 1
+ },
+ "gtsam": "4.2 (pip)",
+ "runtime_s": 2397.4
+}
