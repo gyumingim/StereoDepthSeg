@@ -74,8 +74,14 @@ def project(Rc, tc, X, K):
     return Xc, np.stack([K[0, 0] * Xc[:, 0] / Xc[:, 2] + K[0, 2], K[1, 1] * Xc[:, 1] / Xc[:, 2] + K[1, 2]], 1)
 
 
-def ba_lm(R, t, X, cam, pt, uv, K, fixed=(0,), iters=30, huber=1.0, log=print, rs=None):
-    """R,t: cam_from_world (N,3,3),(N,3); X (P,3); obs (cam idx, point idx, uv). Returns refined R,t,X, stats."""
+def ba_lm(R, t, X, cam, pt, uv, K, fixed=(0,), iters=30, huber=1.0, log=print, rs=None, tmr=None):
+    """R,t: cam_from_world (N,3,3),(N,3); X (P,3); obs (cam idx, point idx, uv). Returns refined R,t,X, stats.
+    tmr: optional dict, gets wall seconds per BA phase (gpuba 11-09 timers only, numbers unchanged)."""
+    tmr = {} if tmr is None else tmr
+    _tk = [time.time()]
+
+    def tick(k):
+        n_ = time.time(); tmr[k] = round(tmr.get(k, 0.0) + n_ - _tk[0], 3); _tk[0] = n_
     N, P = len(R), len(X)
     R, t, X = R.copy(), t.copy(), X.copy()
     fixed = set(fixed)
@@ -97,6 +103,7 @@ def ba_lm(R, t, X, cam, pt, uv, K, fixed=(0,), iters=30, huber=1.0, log=print, r
         a_, b_ = np.meshgrid(idx, idx, indexing="ij")
         pa.append(a_.ravel()); pb.append(b_.ravel())
     pa, pb = np.concatenate(pa), np.concatenate(pb)
+    tmr["n_obs_pairs"] = int(len(pa))
     lam = 1e-3
 
     def cost(R, t, X):
@@ -109,6 +116,7 @@ def ba_lm(R, t, X, cam, pt, uv, K, fixed=(0,), iters=30, huber=1.0, log=print, r
         return r, e, w, rho.sum(), (Xm, Xc)
 
     r, e, w, c0, (Xm, Xc) = cost(R, t, X)
+    tick("setup_s")
     hist = [dict(it=0, cost=float(c0), rmse_px=float(np.sqrt((e ** 2).mean())), med_px=float(np.median(e)))]
     for it in range(1, iters + 1):
         Z = Xc[:, 2]
@@ -127,7 +135,9 @@ def ba_lm(R, t, X, cam, pt, uv, K, fixed=(0,), iters=30, huber=1.0, log=print, r
         gp_o = np.einsum("nki,nk->ni", Jp, w[:, None] * r)
         Hpp = np.zeros((P, 3, 3)); np.add.at(Hpp, pt, Hpp_o)
         gp = np.zeros((P, 3)); np.add.at(gp, pt, gp_o)
+        tick("jac_s")
         while True:
+            tmr["n_solves"] = tmr.get("n_solves", 0) + 1
             Hpp_d = Hpp + lam * (np.einsum("pii->pi", Hpp)[:, :, None] * np.eye(3) + 1e-9 * np.eye(3))
             Hpp_inv = np.linalg.inv(Hpp_d)
             S = np.zeros((Nf * 6, Nf * 6)); b = np.zeros(Nf * 6)
@@ -159,11 +169,13 @@ def ba_lm(R, t, X, cam, pt, uv, K, fixed=(0,), iters=30, huber=1.0, log=print, r
             for i in np.flatnonzero(free):
                 k = cidx[i] * 6
                 b[k:k + 6] += bb[i]
+            tick("schur_s")
             try:
                 dc = np.linalg.solve(S, b)
             except np.linalg.LinAlgError:
-                lam *= 10; continue
+                lam *= 10; tick("solve_s"); continue
             dcam = np.zeros((N, 6)); dcam[free] = dc.reshape(-1, 6)
+            tick("solve_s")
             # dp = Hpp^-1 (-gp - W^T dc)
             wt = np.einsum("nij,ni->nj", Hcp_o, dcam[cam])
             rhs = np.zeros((P, 3)); np.add.at(rhs, pt, wt)
@@ -172,6 +184,7 @@ def ba_lm(R, t, X, cam, pt, uv, K, fixed=(0,), iters=30, huber=1.0, log=print, r
             tn = np.array([expso3(dcam[i, :3]) @ t[i] + dcam[i, 3:] for i in range(N)])
             Xn = X + dp
             rn, en, wn, cn, Xcn = cost(Rn, tn, Xn)
+            tick("update_cost_s")
             if cn < c0 and np.all(Xcn[1][:, 2] > 1e-3):
                 R, t, X, r, e, w, (Xm, Xc) = Rn, tn, Xn, rn, en, wn, Xcn
                 rel = (c0 - cn) / c0
@@ -231,6 +244,9 @@ def main():
                     help="drop = scanA (union-find over all verified inliers, drop every track that holds two keypoints of one "
                          "image); greedy = featloop 11-06: conflict-free union-find, pairs in order of inlier count (high first), "
                          "an edge is skipped when it would put two keypoints of one image into one track")
+    ap.add_argument("--ba-device", default="cpu", choices=["cpu", "cuda"],
+                    help="gpuba 11-09: cpu = numpy ba_lm (scanA); cuda = same LM / Schur steps in torch float64 on the GPU (ba_torch.py), "
+                         "GPU lock held through the BA")
     ap.add_argument("--cache-root", default="", help="keyframe image cache root (default REC/scanA_cache)")
     a = ap.parse_args()
     import pycolmap
@@ -422,8 +438,9 @@ def main():
         del xm, xfeats
     tm["matching_s"] = round(time.time() - t3, 1)
     log(f"[match] {len(pairs)} pairs {time.time() - t0:.0f}s")
-    _GJ[0] = None
-    gpu_job.__exit__(None, None, None)            # GPU free from here (BA = CPU)
+    if a.ba_device == "cpu":
+        _GJ[0] = None
+        gpu_job.__exit__(None, None, None)            # GPU free from here (BA = CPU)
     tm["gpu_stage_s"] = round(time.time() - tg, 1)
     t4 = time.time()
     db = pycolmap.Database.open(str(db_path))
@@ -467,6 +484,7 @@ def main():
                 uf.u(ra, rb)
                 cimg[uf.f(ra)] = sa | sb
         log(f"[tracks] greedy: {n_skip} conflicting match edges skipped")
+    tm["read_db_uf_s"] = round(time.time() - t4, 1)
     groups = {}
     for node in list(uf.p):
         groups.setdefault(uf.f(node), []).append(node)
@@ -479,6 +497,7 @@ def main():
         if len(set(cams_)) != len(cams_):          # two keypoints of one image in one track: drop the track
             continue
         tracks.append(nodes)
+    tm["tracks_s"] = round(time.time() - t4, 1)
     log(f"[tracks] verified pairs {len(n_inl)} (inliers median {np.median(n_inl) if n_inl else 0:.0f}), tracks {len(tracks)}")
     # ---- triangulate with VIO poses (cam_from_world)
     Rcw = np.array([Tv[i][:3, :3].T for i in kfs]); tcw = np.array([-Tv[i][:3, :3].T @ Tv[i][:3, 3] for i in kfs])
@@ -563,7 +582,17 @@ def main():
     fixed = [int(np.argmax(obs_per_kf[:5]))] + [k for k in range(len(kfs)) if obs_per_kf[k] < 15]
     tm["tracks_tri_s"] = round(time.time() - t4, 1)
     t5 = time.time()
-    R1, t1, X1, st = ba_lm(Rcw, tcw, X0, cam, pt, uv, Kr, fixed=fixed, iters=a.iters, log=log, rs=rs)
+    tba = {}
+    if a.ba_device == "cuda":
+        if a.db_from:                              # --db-from runs had no GPU lock so far: take it for the BA
+            gpu_job = gpu_guard.job(f"kf_ba(gpuba) {out}", out_dir=str(out), torch_cap=True); gpu_job.__enter__(); _GJ[0] = gpu_job
+        import ba_torch
+        R1, t1, X1, st = ba_torch.ba_lm_torch(Rcw, tcw, X0, cam, pt, uv, Kr, fixed=fixed, iters=a.iters, log=log, rs=rs, tmr=tba)
+        _GJ[0] = None
+        gpu_job.__exit__(None, None, None)
+    else:
+        R1, t1, X1, st = ba_lm(Rcw, tcw, X0, cam, pt, uv, Kr, fixed=fixed, iters=a.iters, log=log, rs=rs, tmr=tba)
+    tm["ba_phases"] = tba
     # ---- Sim(3) BA centres -> VIO centres (free keyframes only)
     Cb = np.array([-R1[k].T @ t1[k] for k in range(len(kfs))])
     Cv = np.array([C[i] for i in kfs])
