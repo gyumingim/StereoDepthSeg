@@ -351,6 +351,9 @@ def main():
                          "GPU lock held through the BA")
     ap.add_argument("--fast-tracks", action="store_true", help="gpuba 11-09: drop-tracks by scipy connected components + "
                     "length-batched triangulation (same tracks, same order, same per-track arithmetic as the default path)")
+    ap.add_argument("--match-device", default="auto", choices=["auto", "cpu"], help="gpuba 11-11: SIFT matcher device")
+    ap.add_argument("--sort-matches", action="store_true", help="gpuba 11-11: sort each pair's inlier matches before building tracks "
+                    "(track / point order independent of the order the matcher returns)")
     ap.add_argument("--sift-device", default="auto", choices=["auto", "cpu"],
                     help="auto = pycolmap CUDA SIFT when available (scanA); cpu = pycolmap CPU SIFT (gpuba 11-11, deterministic run to run)")
     ap.add_argument("--save-tri", action="store_true", help="write OUT/tri_dump.npz (points, obs) after triangulation and go on")
@@ -535,8 +538,10 @@ def main():
     elif a.feat == "sift":
         mo = pycolmap.FeatureMatchingOptions()
         po = pycolmap.ImportedPairingOptions(); po.match_list_path = str(pl)
+        if a.match_device == "cpu":
+            mo.use_gpu = False
         pycolmap.match_image_pairs(str(db_path), matching_options=mo, pairing_options=po, verification_options=vopt,
-                                   device=pycolmap.Device.auto)
+                                   device=pycolmap.Device.cpu if a.match_device == "cpu" else pycolmap.Device.auto)
     else:
         db = pycolmap.Database.open(str(db_path))
         for x, y in sorted(pairs):
@@ -570,6 +575,8 @@ def main():
     for pid, gm in zip(ids, geoms):
         i1, i2 = pid if isinstance(pid, tuple) else pycolmap.pair_id_to_image_pair(pid)
         mm = np.asarray(gm.inlier_matches)
+        if a.sort_matches and len(mm):              # gpuba 11-11: the GPU matcher can return inliers in run-dependent order
+            mm = mm[np.lexsort((mm[:, 1], mm[:, 0]))]
         k1, k2 = id2kf[i1], id2kf[i2]
         inl_of[(min(k1, k2), max(k1, k2))] = len(mm)
         if len(mm) < 15:

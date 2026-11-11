@@ -10,8 +10,10 @@ mkdir -p "${O:?}"
 $P scan3d/scanA/kf_ba.py $R --vio $V --out "${O:?}/warm" --gt $G $KFO --feat sift --loop none --cache-root $CACHE --seed 0 --dump-tri --max-features 16 > "${O:?}/warm.log" 2>&1
 rm -rf "${O:?}/warm"
 for sp in $SPECS; do
-  IFS=: read tag sd bd <<< "$sp"
+  IFS=: read tag sd bd ex <<< "$sp"
   F=""; [ "$bd" = cuda ] && F="--fast-tracks"
+  case "$ex" in *s*) F="$F --sort-matches";; esac                 # 4th field: s = --sort-matches, m = --match-device cpu
+  case "$ex" in *m*) F="$F --match-device cpu";; esac
   echo "$(date +%T) $tag sift $sd ba $bd"
   /usr/bin/time -f "TIME $tag %e s maxrss %M kB" $P scan3d/scanA/kf_ba.py $R --vio $V --out "${O:?}/${tag:?}" --gt $G $KFO --feat sift --loop none \
     --cache-root $CACHE --seed 0 --keep-db --sift-device $sd --ba-device $bd $F > "$O/$tag.log" 2>&1 || echo "$tag failed rc $?"
