@@ -132,23 +132,19 @@ def main():
         pose_info["compressed_rows"] = int(n)
 
     # decode (scaled) frames
-    cap = cv2.VideoCapture(str(rec / "cam5.mp4"))
     W0, H0 = int(round(1920 * s)), int(round(1080 * s))
     imgs = []
+    if (rec / "frames_kf").is_dir() and sel is None:
+        sys.exit("REC/frames_kf (reduced keyframe-only recording) needs --compress (reads only rows with a pose)")
+    cap = None if sel is not None else cv2.VideoCapture(str(rec / "cam5.mp4"))
     if sel is not None:
+        import kf_frames                               # kfonly 11-11: REC/frames_kf/ (reduced recording) or cam5.mp4, same frames
         pos = {int(r_): k for k, r_ in enumerate(sel)}
         imgs = [None] * n
-        fi, nimg = 0, 0
-        while True:
-            r, f = cap.read()
-            if not r:
-                break
-            if fi in pos:
-                imgs[pos[fi]] = f if (W0, H0) == (f.shape[1], f.shape[0]) else cv2.resize(f, (W0, H0), interpolation=cv2.INTER_AREA)
-                nimg = pos[fi] + 1
-            fi += 1
-            if fi > sel[-1]:
-                break
+        nimg = 0
+        for fi, f in kf_frames.iter_frames(rec, sel):
+            imgs[pos[fi]] = f if (W0, H0) == (f.shape[1], f.shape[0]) else cv2.resize(f, (W0, H0), interpolation=cv2.INTER_AREA)
+            nimg = pos[fi] + 1
     while sel is None:
         r, f = cap.read()
         if not r:
@@ -156,7 +152,8 @@ def main():
         k_ = len(imgs)                                   # keep only frames that have a pose (RAM at full res)
         imgs.append((f if (W0, H0) == (f.shape[1], f.shape[0]) else cv2.resize(f, (W0, H0), interpolation=cv2.INTER_AREA))
                     if (k_ < len(ok) and ok[k_]) else None)
-    cap.release()
+    if cap is not None:
+        cap.release()
     nimg = len(imgs) if sel is None else nimg
     print(f"decoded {nimg} frames ({W0}x{H0}), gt rows {n}, ok {int(ok.sum())}", flush=True)
     n = min(n, nimg)

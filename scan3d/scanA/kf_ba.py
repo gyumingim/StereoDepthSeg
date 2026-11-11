@@ -274,12 +274,9 @@ def main():
     need = [i for i in kfs if not (img_dir / names[i]).exists()]
     if need:
         need_s = set(need)
-        cap = cv2.VideoCapture(str(rec / "cam5.mp4"))
-        fi = 0
-        while need_s:
-            r_, f = cap.read()
-            if not r_:
-                break
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import kf_frames                           # kfonly 11-11: REC/frames_kf/ (reduced recording) or cam5.mp4
+        for fi, f in kf_frames.iter_frames(rec, need):
             if fi in need_s:
                 im = cv2.remap(cv2.resize(f, (W0, H0), interpolation=cv2.INTER_AREA), *und, cv2.INTER_LINEAR)
                 if a.mask_board and ok_gt[fi]:
@@ -292,8 +289,6 @@ def main():
                         cv2.fillConvexPoly(im, np.round(q).astype(np.int32), (128, 128, 128))
                 cv2.imwrite(str(img_dir / names[fi]), im, [cv2.IMWRITE_JPEG_QUALITY, 95])
                 need_s.discard(fi)
-            fi += 1
-        cap.release()
     log(f"[img] {len(kfs)} images in {img_dir} ({len(need)} new) {time.time() - t0:.0f}s")
     tm["images_s"] = round(time.time() - t0, 1)
     import contextlib, shutil

@@ -1,0 +1,51 @@
+# kfonly 2026-11-11 — 폰이 영상 전체 대신 "자세 + IMU + 키프레임"만 보내도 스캐너 결과가 같은가
+
+브랜치 `kfonly-20261111` (laptop 3507ef6 = featloop 7384db5 + 노트북 작업 도구 위), 워크트리 `~/scanner/StereoDepthSeg-kfonly`.
+계산은 전부 노트북 작업 PC (`scan3d/tools/remote_laptop.sh`, 잠금 1개). 이 PC 는 파일 준비·집계만. 창 안 띄움.
+이 0–5 절은 **실행 전에 커밋** (사전 등록). 바꾸면 아래에 날짜·이유를 덧붙인다.
+
+## 0. 시작 전에 확인한 것 (코드를 읽어서)
+- **녹화에 폰의 실시간 VIO 자세가 없다.** H 녹화 (`app: arlat hs`, 1920×1080 240 fps, 160 Mbit/s) 폴더 = cam5.mp4, frames_cam5.csv, imu.csv,
+  meta.json, results_cam5.csv, temps.csv (+ PC 가 만든 GT). 폰은 이 녹화 때 VIO 를 돌리지 않았다.
+- 그래서 **대용 = PC 재생 `lp_replay.py`** (livepose 10-30): 폰 앱의 실시간 설정 그대로 (app 0.6.38c profile rec60, `cfg_gen_hs222/c4f60` 2.22 dpt 렌즈,
+  60 fps 격자, IMU 원시 35/16, 시각 t_mid 이동 없음, bridge 55e5d35b). OpenVINS 필터의 **프레임마다 실시간 출력** (뒤로 다듬기 없음, 인과적).
+  이것은 기준 A 가 쓰는 VIO 파일과 **같은 파일** (featloop `vio/<id>.poses.jsonl.gz`, sha256 = featloop `vio/sha.txt`).
+  - 가정 (폰 실제와 다른 점): 영상이 폰 Y 평면이 아니라 H.264 복호 (160 Mbit/s); 루프 닫기 `loop-sync 1` (폰은 비동기, 보정이 늦게 옴);
+    `drop-late 0` (폰은 늦은 프레임을 버림). 실제 폰 자세는 이보다 조금 나쁠 수 있음 (미측정).
+- **기준 A 도 영상 전체를 읽는 곳은 VIO 하나뿐이다.** `kf_ba.py --kf-from-vio` 는 VIO tracking 프레임 10 개마다 = 키프레임만 영상에서 꺼냄 (6 장/s, 60 fps 의 1/10).
+  `scan_offline.py --compress --kf-step 1` 은 **BA 키프레임 행만** 남기고, 움직임 스테레오 짝 (기준선 8 cm, 짝 2 개)도 **다른 키프레임** 중에서 고른다.
+  → 폰에서 VIO 가 돌면 PC 에 필요한 영상 = 키프레임뿐. "키프레임마다 짝 프레임 1 장 더" 는 지금 파이프라인에는 필요 없다 (짝 = 키프레임).
+- 그러므로 B 가 A 와 다른 점은 **영상 경로 하나**: A = mp4 복호 원본 (키프레임은 PC 에서 960×540 축소), B = 폰이 960×540 축소 후 JPEG 로 보낸 것.
+  VIO 자세·키프레임 고르기·짝 고르기·BA·FFS·TSDF 코드는 같다.
+
+## 1. 데이터
+- H 11 개 = featloop 7.4 과 같음 (12 개에서 214138 뺌): 133820 134550 134204 214550 213341 215348 221052 221925 222747 223815 224323.
+- GT·렌즈 = `imu_gt_spl_cal1022` (렌즈 K·dist 와 채점에만 씀; "보낸 것" 아님). VIO = featloop `vio/<id>.poses.jsonl.gz` 복사 (sha 확인).
+
+## 2. 변형 (한 녹화 = 노트북 작업 1 개 = `job_rec.sh`, A·B 같은 기계·같은 코드·같은 실행)
+| 이름 | 영상 입력 | 나머지 |
+|---|---|---|
+| **A** (기준) | 원래 녹화 폴더 (cam5.mp4 전체) | kf_ba SIFT 6000, 시드 0, 루프 없음, `--kf-from-vio --match-ms 1` → scan_offline 960×540 FFS (8 회) + TSDF 5 mm, `--compress --kf-step 1`, BA 자세, 축척 그대로 |
+| **B** (키프레임만) | **줄인 녹화 폴더** (`make_reduced.py`): `frames_kf/NNNNN.jpg` (키프레임만, 960×540 INTER_AREA, JPEG 품질 90), imu.csv, frames_cam5.csv, meta.json, `phone_live_poses.jsonl.gz` (= 위 VIO), GT 폴더. **cam5.mp4 없음** | A 와 같음 |
+- 강제: `scanA/kf_frames.py` — `frames_kf/` 가 있으면 그 JPEG 만 읽고, 원하는 프레임이 없으면 **오류로 멈춤** (영상으로 돌아가지 않음);
+  `frames_kf/` 와 `cam5.mp4` 가 같이 있어도 멈춤. B 의 키프레임 목록은 VIO + 프레임 시각만으로 다시 계산하고 A 의 BA 프레임 목록과 같은지 확인 (manifest `check_A`).
+- JPEG 품질 90 은 미리 정함 (FFS·SIFT 가 960×540 에서 쓰는 화질; 시험 전 근거 없음 → 결과로 판단). 크기 표본으로 품질 80/95·PNG·1080p q90 바이트도 적음.
+- A 는 featloop 표 (이 PC, GPU SIFT 비결정) 를 쓰지 않고 **노트북에서 다시 돌림** (노트북 GPU SIFT 는 3 회 같음, laptop_worker.md). featloop S 값은 참고로만 적음.
+
+## 3. 채점 (featloop fl_score 와 같은 정의, scan_offline summary 에서)
+- |dZ| p90 = `pooled_absdZ_cm.p90` (보드 안 전체 화소, cm). 메시 RMS = `mesh_board_z_rms_cm`. 축척 k = (1 / `sim3_scale_would_be` − 1) × 100 % (BA 키프레임 → GT).
+- 참고: 평가 kf 수, 깊이 있는 kf 수, BA 점·관측, 시간.
+- 데이터 크기 (분당): A = cam5.mp4 + frames_cam5.csv + imu.csv 바이트 / 녹화 길이. B = 키프레임 JPEG + 자세 (실시간 자세 파일 그대로 / 키프레임 자세만) + imu.csv (원본 / zlib)
+  / 녹화 길이. A 는 240 fps 녹화라 크므로, 60 fps 녹화 (165506 std60) 의 분당 크기도 따로 적음.
+
+## 4. 판정 (사전 등록)
+녹화마다 B 와 A 비교, 11 개 녹화의 중앙값으로:
+- (1) |dZ| p90 상대 변화 (B − A) / A 중앙값 ≤ **+5 %**
+- (2) 메시 RMS 상대 변화 중앙값 ≤ **+10 %**
+- (3) |k_B − k_A| 중앙값 ≤ **0.3 %p**
+셋 다 만족 → **통과** ("키프레임만 보내도 됨", 녹화 11 개, 추정). 하나라도 넘으면 → **불합격**. 녹화가 빠지면 n 을 적고 같은 규칙.
+반복: 녹화마다 1 회 (노트북 결정성에 기댐). 섞인 변수: B 는 JPEG 한 번 더 (A 는 H.264 만) — 실제 폰은 H.264 없이 원본에서 JPEG 하므로 B 는 **비관적** 쪽.
+
+## 5. 한계 (미리 적음)
+- 폰 실시간 자세 대신 PC 재생 (0 절의 가정). 같은 VIO 파일이라 A·B 차이는 영상 경로만 잼 — "폰 자세가 PC 재생 자세만큼 좋은가" 는 이 시험이 아님.
+- 보드 장면·짧은 녹화. 깊이·메시 자는 보드 영역만 봄 (featloop 와 같음).
