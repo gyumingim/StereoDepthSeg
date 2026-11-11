@@ -34,6 +34,7 @@ def main():
     ap.add_argument("--match-ms", type=float, default=1.0)
     ap.add_argument("--scale", type=float, default=0.5)
     ap.add_argument("--check", default="", help="A's poses_ba.jsonl.gz: its 'frame' list must equal the keyframes here")
+    ap.add_argument("--full-res", action="store_true", help="store the decoded 1920x1080 frame (no resize); the PC downscales like A")
     ap.add_argument("--size-sample", type=int, default=40, help="keyframes also encoded at other qualities / PNG (sizes only)")
     a = ap.parse_args()
     t0 = time.time()
@@ -71,7 +72,7 @@ def main():
             break
         if fi in want:
             im = cv2.resize(f, (W0, H0), interpolation=cv2.INTER_AREA)
-            ok, buf = cv2.imencode(".jpg", im, [cv2.IMWRITE_JPEG_QUALITY, a.quality])
+            ok, buf = cv2.imencode(".jpg", f if a.full_res else im, [cv2.IMWRITE_JPEG_QUALITY, a.quality])
             (out / "frames_kf" / f"{fi:05d}.jpg").write_bytes(buf.tobytes())
             nb += len(buf); got += 1
             if fi in samp:
@@ -98,7 +99,7 @@ def main():
     man = dict(made=time.strftime("%Y-%m-%d %H:%M:%S"), rec=str(rec), vio=a.vio, vio_sha256=sha(a.vio), args=vars(a),
                mp4_bytes=(rec / "cam5.mp4").stat().st_size, mp4_sha256_first_64MB=hashlib.sha256(open(rec / "cam5.mp4", "rb").read(1 << 26)).hexdigest(),
                duration_s=dur_s, frames_in_video=int(meta.get("frames", 0)), save_fps=meta.get("save_fps"),
-               n_keyframes=len(kfs), keyframes=kfs, jpeg_quality=a.quality, image_size=[W0, H0], jpeg_bytes=nb,
+               n_keyframes=len(kfs), keyframes=kfs, jpeg_quality=a.quality, image_size=[f.shape[1], f.shape[0]] if a.full_res else [W0, H0], jpeg_bytes=nb,
                imu_csv_bytes=imu_b, imu_csv_zlib_bytes=imu_gz, live_pose_file_bytes=pose_b, live_pose_rows=n_pose,
                frames_csv_bytes=(rec / "frames_cam5.csv").stat().st_size, size_sample=ss, check_A=check,
                runtime_s=round(time.time() - t0, 1))
