@@ -112,7 +112,7 @@ def main():
     ap.add_argument("--rulers", default="red,imu")
     ap.add_argument("--views", default=""); ap.add_argument("--kfmap", default="")
     a = ap.parse_args()
-    rec, out = Path(a.rec), Path(a.out)
+    rec, out = Path(a.rec), Path(a.out).resolve()   # 11-12 fix: replays run with cwd = livepose dir
     (out / "runs").mkdir(parents=True, exist_ok=True)
     if not (out / "prov.json").exists() or "onset_fix" not in json.load(open(out / "prov.json")):
         subprocess.run([PY, str(HERE / "vs_prov.py"), str(rec), str(out / "prov.json")], check=True, stdout=subprocess.DEVNULL)
