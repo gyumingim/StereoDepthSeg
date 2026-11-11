@@ -1,0 +1,28 @@
+== job 20261111_204156_20261111_202906_std60_cmd on a3162@169.254.78.233: hs_20261111_202906_std60, steps 'cmd:bash scan3d/runs/redscreen_20261111/run_job.sh $R $O', out scan3d/runs/laptop/20261111_202906_std60
+push /home/system/scanner/StereoDepthSeg-redscreen done 1 s
+send rec 11 s (1.1G)
+running (log there: /home/system/scanner/laptop_jobs/20261111_204156_20261111_202906_std60_cmd/job.log)
+== job rc 0 (214 s total)
+Traceback (most recent call last):
+  File "<stdin>", line 28, in <module>
+  File "<stdin>", line 11, in mesh
+KeyError: 'pooled_absdZ_cm'
+run_scanner rc 1 (a summary KeyError is expected: no board pooled dZ)
+scan3d/runs/laptop/20261111_202906_std60/scan:
+ba
+kfba.log
+mesh
+mesh.log
+red
+reduce.log
+times.txt
+
+scan3d/runs/laptop/20261111_202906_std60/scan/mesh:
+keyframes.json
+mesh.obj
+mesh.ply
+summary.json
+20:45:28 step cmd done
+pulled scan3d/runs/laptop/20261111_202906_std60 (2 s) -> /home/system/scanner/StereoDepthSeg-redscreen/scan3d/runs/laptop/20261111_202906_std60
+== cleanup
+exit 0

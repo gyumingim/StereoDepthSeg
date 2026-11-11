@@ -85,8 +85,11 @@ def main():
             m = re.search(rf"(?m)^(\s*{k}:\s*)([-0-9.eE+]+)", imu_y)
             imu_y = imu_y[:m.start(2)] + f"{float(m.group(2)) * x.noise_scale:.4e}" + imu_y[m.end(2):]
     cam_y = (cfg / "kalibr_imucam_chain.yaml").read_text()
-    al = json.load(open(rec / "imu_gt" / "align.json"))
-    dt_gt = int(al["dt_ns"])
+    alp = rec / "imu_gt" / "align.json"
+    if not alp.exists() and x.time == "live":      # redscreen 11-11: recording without GT; live mode never uses dt_gt (report only)
+        dt_gt = 0
+    else:
+        dt_gt = int(json.load(open(alp))["dt_ns"])
     if x.time == "oracle":
         cam_y = re.sub(r"(?m)^(\s*timeshift_cam_imu:).*$", r"\1 0.0", cam_y)
     for kv in filter(None, x.chain.split(",")):
