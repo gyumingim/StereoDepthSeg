@@ -68,8 +68,11 @@ def main():
                          "have a partner (dt cap leaves baselines < 4 cm), all 313/342")
     ap.add_argument("--pair-min-valid", type=float, default=None,
                     help="pair gate: drop a partner whose FFS depth is valid on < F of the image and try the next candidate "
-                         "(up to MSConfig.max_tries = 4 drops per keyframe). Default 0.2 with --ffs-partners all (133820: pairs "
-                         "> 30 s apart had valid 0.10 and |dZ| p90 8-38 cm, BA without loop closure), 0 = off (old) with near")
+                         "(up to MSConfig.max_tries = 4 drops per keyframe). Default 0 = off. Tried 0.2 with --ffs-partners all on "
+                         "133820 (fv_g*): worse (380 drops, fewer keyframes, double layer 0.25) -> replaced by --pair-check dy")
+    ap.add_argument("--pair-check", choices=("auto", "none", "dy"), default="auto",
+                    help="check a partner before FFS: dy = SIFT rectification check (dy_ok); auto = dy with --ffs-partners all, "
+                         "none (old) with near")
     a = ap.parse_args()
     if a.ffs_views is not None:
         if not 2 <= a.ffs_views <= 8:
@@ -191,8 +194,29 @@ def main():
     cfg.z_max = a.zmax
     if a.ffs_partners == "all":
         cfg.dt_max_s = 1e9                               # no time cap (score term 0.2 dt/dt_max -> 0); BA poses are global
-    min_valid = a.pair_min_valid if a.pair_min_valid is not None else (0.2 if a.ffs_partners == "all" else 0.0)
+    min_valid = a.pair_min_valid if a.pair_min_valid is not None else 0.0
+    pair_check = a.pair_check if a.pair_check != "auto" else ("dy" if a.ffs_partners == "all" else "none")
     ffs_ms_all = [0.0]
+    _feat, _dy, dy_stat = {}, {}, dict(checked=0, rejected=0, s=0.0)
+
+    def dy_ok(i, j):
+        """pair check before FFS (motion_stereo gate: SIFT matches moved into this pair's motion rectification with the BA
+        relative pose; |dy| median <= cfg.gate_dy_px 1.2 px and dx > 0 for >= 90 %). Catches keyframes whose BA rotation is off
+        (133820 row 2: 0.33 deg -> ~4 px dy -> FFS valid 0.10, 85 keyframes chose it with --ffs-partners all and no check)."""
+        if (i, j) in _dy:
+            return _dy[(i, j)]
+        t0 = time.perf_counter()
+        for k_ in (i, j):
+            if k_ not in _feat:
+                _feat[k_] = ms.sift_feats(cv2.cvtColor(imgs[k_], cv2.COLOR_BGR2GRAY), cfg.sift_n)
+        mt = ms.match_norm(_feat[i], _feat[j], K, dist)
+        okk = False
+        if mt is not None:
+            R_, t_ = ms.rel_pose(T[i], T[j])
+            okk = ms.gate_ok(ms.rect_match_stats(mt[0], mt[1], R_, t_, rp["f"]), cfg)
+        _dy[(i, j)] = okk
+        dy_stat["checked"] += 1; dy_stat["rejected"] += int(not okk); dy_stat["s"] += time.perf_counter() - t0
+        return okk
     import lib_ffs
     model = lib_ffs.load(valid_iters=a.iters)
     tsdf = tsdf_map.TSDFMap(voxel_m=a.voxel, z_max=a.zmax, sigma_max=0.08, sigma_ok=0.02, min_obs=2,
@@ -222,11 +246,14 @@ def main():
             chosen = []
             for sc, j, gg in cl:
                 if not chosen or all(ms.dir_differs(gg, c[2], cfg.pair2_min_dir_deg) for c in chosen):
+                    if pair_check == "dy" and not dy_ok(i, j):
+                        continue
                     chosen.append((sc, j, gg))
                 if len(chosen) >= min(a.n_pairs, 2):           # partners 1..2: the old rule unchanged (same pairs for every N >= 3)
                     break
             if a.n_pairs > 2 and chosen:
-                chosen = pick_extra(chosen, cl, a.n_pairs, cfg.pair2_min_dir_deg)
+                chosen = pick_extra(chosen, cl, a.n_pairs, cfg.pair2_min_dir_deg,
+                                    ok_fn=(lambda j: dy_ok(i, j)) if pair_check == "dy" else None)
             bad = False
             for sc, j, gg in chosen:
                 if j not in rcache:
@@ -280,7 +307,8 @@ def main():
                 runtime_s=round(time.time() - t_start, 1), image_size=[W0, H0], K_used=K.tolist(),
                 gpu_max_alloc_gb=round(__import__('torch').cuda.max_memory_allocated() / 2 ** 30, 2),
                 gpu_max_reserved_gb=round(__import__('torch').cuda.max_memory_reserved() / 2 ** 30, 2))
-    summ.update(ffs_views=a.ffs_views, ffs_fuse=fuse, ffs_partners=a.ffs_partners, pair_min_valid=min_valid,
+    summ.update(ffs_views=a.ffs_views, ffs_fuse=fuse, ffs_partners=a.ffs_partners, pair_min_valid=min_valid, pair_check=pair_check,
+                pair_check_n=dy_stat["checked"], pair_check_rejected=dy_stat["rejected"], pair_check_s=round(dy_stat["s"], 1),
                 ffs_s_total=round(ffs_ms_all[0] / 1000, 1), ffs_s_used=round(sum(sum(r.get("ffs_ms", [])) for r in rows) / 1000, 1),
                 n_pairs_rejected=sum(len(r.get("rejected", [])) for r in rows),
                 n_kf_by_pairs={str(k): sum(1 for r in rows if r.get("pairs", 0) == k) for k in range(a.n_pairs + 1)})
@@ -329,7 +357,7 @@ def _signed_dir_deg(g0, g1):
     return float(np.degrees(np.arccos(np.clip(u0 @ u1, -1, 1))))
 
 
-def pick_extra(chosen, cands, n_pairs, min_dir_deg, b_ratio=1.5):
+def pick_extra(chosen, cands, n_pairs, min_dir_deg, b_ratio=1.5, ok_fn=None):
     """ffs-views 11-11: partners beyond the old two. cands = all partners that pass score_pair (B 4-30 cm, dt 0.15-2.5 s,
     baseline >= 40 deg off the optical axis, rotation <= 25 deg), best score first. Pass 1: signed baseline direction >= min_dir_deg
     from every chosen partner (old rule uses |cos| -> the other side of the reference on the same motion line is new here: its
@@ -349,7 +377,7 @@ def pick_extra(chosen, cands, n_pairs, min_dir_deg, b_ratio=1.5):
                 if rule == "dir_or_b":
                     d = d or max(gg["B"] / c[2]["B"], c[2]["B"] / gg["B"]) >= b_ratio
                 okk &= d
-            if okk:
+            if okk and (ok_fn is None or ok_fn(j)):
                 chosen.append((sc, j, gg)); used.add(j)
     return chosen
 
