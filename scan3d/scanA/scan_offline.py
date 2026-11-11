@@ -52,6 +52,9 @@ def main():
     ap.add_argument("--compress", action="store_true",
                     help="HS 240 fps recordings: keep only rows with a pose (RAM), --kf-step counts kept rows; pair search "
                          "window +-150 kept rows (dt still capped by MSConfig.dt_max_s)")
+    ap.add_argument("--tsdf-alloc", choices=("sparse", "dense"), default="sparse",
+                    help="TSDF block allocation: sparse = 3 points z-mu, z, z+mu (tsdf_map default, old); dense = the whole [-mu, +mu] "
+                         "band every half block (ghost 11-11: no ghost double layer when mu > block; run_scanner.sh passes dense)")
     a = ap.parse_args()
     if a.scale > 0.5 and not a.allow_fullres:
         sys.exit("scale > 0.5 refused: 1920x1080 FFS overflowed 16 GB VRAM and crashed WSL (11-05); pass --allow-fullres to try under the cap")
@@ -167,7 +170,9 @@ def main():
     cfg.z_max = a.zmax
     import lib_ffs
     model = lib_ffs.load(valid_iters=a.iters)
-    tsdf = tsdf_map.TSDFMap(voxel_m=a.voxel, z_max=a.zmax, sigma_max=0.08, sigma_ok=0.02, min_obs=2)
+    tsdf = tsdf_map.TSDFMap(voxel_m=a.voxel, z_max=a.zmax, sigma_max=0.08, sigma_ok=0.02, min_obs=2,
+                            alloc_dense=(a.tsdf_alloc == "dense"))
+    print(f"[tsdf] alloc {a.tsdf_alloc}", flush=True)
 
     # board quad in the undistorted keyframe grid -> GT plane depth per pixel
     uu, vv = np.meshgrid(np.arange(W0, dtype=np.float64), np.arange(H0, dtype=np.float64))
@@ -269,6 +274,7 @@ def main():
             cells = set(zip(cx_.clip(0, nx_ - 1), cy_.clip(0, ny_ - 1)))
             summ["mesh_board_cover_frac"] = len(cells) / float(nx_ * ny_)
             summ["mesh_board_z_unique_mm"] = int(len(np.unique(np.round(z * 1000, 1))))   # sub-voxel check (many = interpolated)
+    summ["tsdf_alloc"] = a.tsdf_alloc
     (out / "summary.json").write_text(json.dumps(summ, indent=1))
     (out / "keyframes.json").write_text(json.dumps(rows, indent=0))
     print(json.dumps(summ, indent=1))

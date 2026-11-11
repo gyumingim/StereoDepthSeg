@@ -46,7 +46,11 @@ MERGE_CHUNK = 400000         # merge 한 번에 옮기는 원본 복셀 수 (8 �
 #   sigma_ok 3 cm: 2 cm 는 두께 8.2 / 8.8 cm 로 더 얇지만 구멍이 늘어 정점 약 35 % 감소, 5 cm 는 12.6 / 12.8 cm.
 #   trunc_max 10 cm (6 cm 는 11.9 / 12.0 cm 로 나빠짐), min_obs 3.
 DEFAULTS = dict(voxel_m=0.02, z_min=0.3, z_max=2.5, sigma_max=0.15, sigma_px=0.5, trunc_k=2.0, trunc_min_vox=2.5,
-                trunc_max=0.10, sigma_ok=0.03, min_obs=3, max_blocks=60000, sigma_floor=0.0)
+                trunc_max=0.10, sigma_ok=0.03, min_obs=3, max_blocks=60000, sigma_floor=0.0,
+                alloc_ks=(-1.0, 0.0, 1.0), alloc_dense=False)
+# ghost 11-11: alloc_ks = block allocation samples along the ray in units of mu. alloc_dense = sample the whole [-mu, +mu] band every
+#   half block instead: with mu > block size (8 voxels) the 3-point band skips the blocks between z-mu and z, so most views never
+#   update those voxels and a surface left there by a few other views survives as a second layer (ghost, runs/ghost_20261111).
 
 _TABLES = {}
 
@@ -96,12 +100,12 @@ def _unpack(p):
 
 class TSDFMap:
     def __init__(self, voxel_m=None, z_min=None, z_max=None, sigma_max=None, sigma_px=None, trunc_k=None, trunc_min_vox=None,
-                 trunc_max=None, sigma_ok=None, min_obs=None, max_blocks=None, sigma_floor=None, device=None, log=None):
+                 trunc_max=None, sigma_ok=None, min_obs=None, max_blocks=None, sigma_floor=None, device=None, log=None, alloc_ks=None, alloc_dense=None):
         import torch
         c = dict(DEFAULTS)
         for k, v in dict(voxel_m=voxel_m, z_min=z_min, z_max=z_max, sigma_max=sigma_max, sigma_px=sigma_px, trunc_k=trunc_k,
                          trunc_min_vox=trunc_min_vox, trunc_max=trunc_max, sigma_ok=sigma_ok, min_obs=min_obs,
-                         max_blocks=max_blocks, sigma_floor=sigma_floor).items():
+                         max_blocks=max_blocks, sigma_floor=sigma_floor, alloc_ks=alloc_ks, alloc_dense=alloc_dense).items():
             if v is not None:
                 c[k] = v
         self.cfg = c
@@ -242,7 +246,11 @@ class TSDFMap:
             z = Zt[vs, us]
             mu = self._trunc(z, f_eff, B) if St is None else self._trunc_sig(St[vs, us])
             pts = []
-            for k in (-1.0, 0.0, 1.0):
+            ks = tuple(c.get("alloc_ks") or (-1.0, 0.0, 1.0))
+            if c.get("alloc_dense") and len(z):
+                nk = int(np.ceil(2 * float(mu.max()) / (0.5 * self.vm * BLK))) + 1
+                ks = tuple(np.linspace(-1.0, 1.0, max(nk, 3)).tolist())
+            for k in ks:
                 zz = z + k * mu
                 pc = torch.stack([(us - cx) / f * zz, (vs - cy) / f * zz, zz], 1)
                 pts.append(pc @ R.T + tr)

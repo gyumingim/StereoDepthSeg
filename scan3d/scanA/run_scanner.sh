@@ -4,6 +4,7 @@
 #   (1) keyframe-only input: kf_ba / FFS / TSDF read only REC/frames_kf/*.jpg (kf_frames.py refuses a cam5.mp4 next to it)
 #   (2) keyframes sent as 1920x1080 JPEG q90, the PC downscales to 960x540 (INTER_AREA) for all compute (kf_ba, FFS, TSDF)
 #   (3) bundle adjustment on GPU (kf_ba defaults: --ba-device cuda, --sift-device cpu, --fast-tracks)
+#   (4) TSDF dense block allocation (ghost 11-11, scan_offline --tsdf-alloc dense): no ghost double layer on the board
 #
 #   run_scanner.sh REC OUT [options]          (cwd = anywhere; paths absolute or relative to cwd)
 # REC = a full recording (cam5.mp4 ...)  -> steps vio, reduce, kfba, mesh [, board]
@@ -14,7 +15,7 @@
 #   reduce  until the phone app sends keyframes: make_reduced.py (kfonly) = the kf_ba keyframe rule on the live poses, keyframes
 #           decoded from cam5.mp4, 1920x1080 JPEG q90 -> OUT/red/<rec>_kf/  (no video inside)
 #   kfba    kf_ba.py SIFT 6000, seed 0, no loop, --kf-from-vio --match-ms 1, BA on GPU -> OUT/ba/poses_ba.jsonl.gz
-#   mesh    scan_offline.py FFS 960x540 + TSDF 5 mm, --compress --kf-step 1, on the BA poses -> OUT/mesh/ (summary.json, mesh.ply)
+#   mesh    scan_offline.py FFS 960x540 + TSDF 5 mm (dense block allocation), --compress --kf-step 1, on the BA poses -> OUT/mesh/ (summary.json, mesh.ply)
 #   board   (only with --board FILE|auto) board_scale.py: metric scale from the ChArUco board -> OUT/board/; then mesh again on the
 #           board-scaled poses -> OUT/mesh_board/ (skip the 2nd mesh with --board-no-mesh)
 # Options (old behaviour by flags)
@@ -24,6 +25,7 @@
 #   --gt NAME   GT/lens dir in REC (default: imu_gt_spl_cal1022 if present, else imu_gt_spl). Lens K/dist + scoring only.
 #   --cfg DIR   VIO config (default: build_livepose/cfg_gen_hs222/c4f60 when the GT is cal1022 (2.22 dpt H), else cfg_gen/c4f60)
 #   --vio FILE  use these live poses (skip the vio step)
+#   --tsdf-alloc dense|sparse  TSDF block allocation (default dense; sparse = old 3-point allocation, ghost layer)
 #   --kfba-args '...'  --mesh-args '...'  --vio-args '...'  extra arguments for that step
 #   --cache DIR  kf_ba image cache root (default OUT/cache, deleted at the end unless --keep-cache)
 # Env: SCANNER_COMMIT (commit to record, default git rev-parse), P (python, default ~/scanner/StereoDepthSeg/venv_ffs/bin/python), FFS_ROOT (default ~/scanner/StereoDepthSeg).
@@ -38,15 +40,17 @@ COMMIT=${SCANNER_COMMIT:-$(git -C "$WT" rev-parse HEAD 2>/dev/null || echo unkno
 [ $# -ge 2 ] || { sed -n '2,/^set -euo/p' "$0" | grep '^#'; exit 1; }
 REC=$(realpath -m "$1"); OUT=$(realpath -m "$2"); shift 2
 FULLV=0; KRES=1920; KQ=90; BADEV=cuda; SIFTDEV=cpu; G=""; CFG=""; VIO=""; BOARD=""; BOARD_MESH=1
-KFX=""; MSX=""; VIX=""; CACHE=""; KEEPC=0
+KFX=""; MSX=""; VIX=""; CACHE=""; KEEPC=0; TALLOC=dense
 while [ $# -gt 0 ]; do case $1 in
   --full-video) FULLV=1;; --kf-res) KRES=$2; shift;; --kf-quality) KQ=$2; shift;;
   --ba-device) BADEV=$2; shift;; --sift-device) SIFTDEV=$2; shift;; --gt) G=$2; shift;; --cfg) CFG=$2; shift;;
   --vio) VIO=$(realpath -m "$2"); shift;; --board) BOARD=$2; shift;; --board-no-mesh) BOARD_MESH=0;;
   --kfba-args) KFX=$2; shift;; --mesh-args) MSX=$2; shift;; --vio-args) VIX=$2; shift;;
+  --tsdf-alloc) TALLOC=$2; shift;;
   --cache) CACHE=$(realpath -m "$2"); shift;; --keep-cache) KEEPC=1;;
   *) echo "bad option $1" >&2; exit 1;; esac; shift; done
 case $KRES in 1920|960) ;; *) echo "--kf-res must be 1920 or 960" >&2; exit 1;; esac
+case $TALLOC in dense|sparse) ;; *) echo "--tsdf-alloc must be dense or sparse" >&2; exit 1;; esac
 mkdir -p "$OUT"; CACHE=${CACHE:-$OUT/cache}
 TIMES=$OUT/times.txt; : > "$TIMES"
 T() {  # T NAME LOG CMD...: run CMD > LOG 2>&1, print + record wall ms; stop the script on failure
@@ -65,7 +69,7 @@ fi
 if [ -z "$G" ]; then [ -d "$REC/imu_gt_spl_cal1022" ] && G=imu_gt_spl_cal1022 || G=imu_gt_spl; fi
 if [ -z "$CFG" ]; then [ "$G" = imu_gt_spl_cal1022 ] && CFG=$B/cfg_gen_hs222/c4f60 || CFG=$B/cfg_gen/c4f60; fi
 echo "== run_scanner $(date '+%F %T'): REC $REC ($([ $REDUCED = 1 ] && echo keyframe-only || echo full recording)) -> $OUT"
-echo "   gt $G, input $([ $FULLV = 1 ] && echo 'full video (old)' || echo "keyframes ${KRES} JPEG q${KQ}"), BA $BADEV, SIFT $SIFTDEV, git ${COMMIT:0:12}"
+echo "   gt $G, input $([ $FULLV = 1 ] && echo 'full video (old)' || echo "keyframes ${KRES} JPEG q${KQ}"), BA $BADEV, SIFT $SIFTDEV, TSDF alloc $TALLOC, git ${COMMIT:0:12}"
 
 # ---- vio (stand-in for the phone's live poses)
 if [ $REDUCED = 1 ]; then
@@ -104,7 +108,7 @@ rm -f "$OUT/ba/db.db"
 
 # ---- FFS 960 + TSDF
 T mesh "$OUT/mesh.log" $P "$WT/scan3d/scanA/scan_offline.py" "$IN" --out "$OUT/mesh" --gt "$G" --vio "$OUT/ba/poses_ba.jsonl.gz" \
-  --compress --kf-step 1 $MSX
+  --compress --kf-step 1 --tsdf-alloc "$TALLOC" $MSX
 
 # ---- optional board scale
 if [ -n "$BOARD" ]; then
@@ -117,16 +121,16 @@ if [ -n "$BOARD" ]; then
     --lens "$IN/$G/gt.npz" --out "$OUT/board"
   if [ $BOARD_MESH = 1 ]; then
     T mesh_board "$OUT/mesh_board.log" $P "$WT/scan3d/scanA/scan_offline.py" "$IN" --out "$OUT/mesh_board" --gt "$G" \
-      --vio "$OUT/board/poses_board.jsonl.gz" --compress --kf-step 1 $MSX
+      --vio "$OUT/board/poses_board.jsonl.gz" --compress --kf-step 1 --tsdf-alloc "$TALLOC" $MSX
   fi
 fi
 [ $KEEPC = 1 ] || rm -rf "$CACHE"
 
 # ---- summary
-$P - "$OUT" "$REC" "$IN" "$VIO" "$G" "$CFG" "$KRES" "$KQ" "$FULLV" "$COMMIT" <<'EOF'
+$P - "$OUT" "$REC" "$IN" "$VIO" "$G" "$CFG" "$KRES" "$KQ" "$FULLV" "$COMMIT" "$TALLOC" <<'EOF'
 import json, sys, time
 from pathlib import Path
-out, rec, inp, vio, g, cfg, kres, kq, fullv, commit = sys.argv[1:]
+out, rec, inp, vio, g, cfg, kres, kq, fullv, commit, talloc = sys.argv[1:]
 out = Path(out)
 times = {l.split()[0]: round(float(l.split()[1]) / 1000, 1) for l in (out / "times.txt").read_text().split("\n") if l.strip()}
 def mesh(d):
@@ -141,7 +145,7 @@ ba = json.loads((out / "ba" / "ba.json").read_text()) if (out / "ba" / "ba.json"
 bs = json.loads((out / "board" / "board_scale.json").read_text()) if (out / "board" / "board_scale.json").exists() else None
 man = json.loads((Path(inp) / "manifest.json").read_text()) if (Path(inp) / "manifest.json").exists() else None
 r = dict(made=time.strftime("%Y-%m-%d %H:%M:%S"), commit=commit, rec=rec, input=inp, keyframe_only=(Path(inp) / "frames_kf").is_dir(),
-         kf_res=None if fullv == "1" else int(kres), kf_quality=None if fullv == "1" else int(kq), live_poses=vio, gt=g, vio_cfg=cfg,
+         kf_res=None if fullv == "1" else int(kres), kf_quality=None if fullv == "1" else int(kq), live_poses=vio, gt=g, vio_cfg=cfg, tsdf_alloc=talloc,
          kfba_device_line=dev, step_s=times, total_s=round(sum(times.values()), 1),
          sent=None if man is None else dict(n_keyframes=man["n_keyframes"], image_size=man["image_size"], jpeg_bytes=man["jpeg_bytes"],
                                             duration_s=man["duration_s"], jpeg_MB_per_min=man["jpeg_bytes"] / 1e6 / man["duration_s"] * 60),
