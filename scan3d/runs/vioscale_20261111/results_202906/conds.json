@@ -1,0 +1,236 @@
+{
+ "made": "2026-11-12 07:05:03",
+ "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261111_202906_std60",
+ "conds": {
+  "B": [],
+  "S_0.05": [
+   "--start-off",
+   "0.05"
+  ],
+  "S_0.1": [
+   "--start-off",
+   "0.1"
+  ],
+  "S_0.2": [
+   "--start-off",
+   "0.2"
+  ],
+  "S_0.5": [
+   "--start-off",
+   "0.5"
+  ],
+  "S_1": [
+   "--start-off",
+   "1.0"
+  ],
+  "S_2": [
+   "--start-off",
+   "2.0"
+  ],
+  "I_w05": [
+   "--yaml",
+   "init_window_time=0.5"
+  ],
+  "I_w15": [
+   "--yaml",
+   "init_window_time=1.5"
+  ],
+  "I_w2": [
+   "--yaml",
+   "init_window_time=2.0"
+  ],
+  "I_th015": [
+   "--yaml",
+   "init_imu_thresh=0.15"
+  ],
+  "I_th06": [
+   "--yaml",
+   "init_imu_thresh=0.6"
+  ],
+  "I_audit": [
+   "--yaml",
+   "init_window_time=1.5,init_max_disparity=2.30"
+  ],
+  "I_dyn": [
+   "--yaml",
+   "init_dyn_use=true"
+  ],
+  "I_dyn_post": [
+   "--yaml",
+   "init_dyn_use=true",
+   "--start-off",
+   "6.20"
+  ],
+  "I_stat_post": [
+   "--start-off",
+   "6.20"
+  ],
+  "N_ax2": [
+   "--chain",
+   "accelerometer_noise_density=2.0e-02"
+  ],
+  "N_ax.5": [
+   "--chain",
+   "accelerometer_noise_density=5.0e-03"
+  ],
+  "N_gx2": [
+   "--chain",
+   "gyroscope_noise_density=2.0e-03"
+  ],
+  "N_gx.5": [
+   "--chain",
+   "gyroscope_noise_density=5.0e-04"
+  ],
+  "N_awx10": [
+   "--chain",
+   "accelerometer_random_walk=1.0e-02"
+  ],
+  "N_awx.1": [
+   "--chain",
+   "accelerometer_random_walk=1.0e-04"
+  ],
+  "N_gwx10": [
+   "--chain",
+   "gyroscope_random_walk=1.0e-03"
+  ],
+  "N_allx2": [
+   "--noise-scale",
+   "2"
+  ],
+  "N_allx.5": [
+   "--noise-scale",
+   "0.5"
+  ],
+  "C_imuintr": [
+   "--yaml",
+   "calib_imu_intrinsics=true"
+  ],
+  "C_gsens": [
+   "--yaml",
+   "calib_imu_g_sensitivity=true"
+  ],
+  "C_imuintr_gs": [
+   "--yaml",
+   "calib_imu_intrinsics=true,calib_imu_g_sensitivity=true"
+  ],
+  "GR_9797": [
+   "--yaml",
+   "gravity_mag=9.7973"
+  ],
+  "A_s+1": [
+   "--acc-scale",
+   "1.01"
+  ],
+  "A_s-1": [
+   "--acc-scale",
+   "0.99"
+  ],
+  "A_s-5": [
+   "--acc-scale",
+   "0.95"
+  ],
+  "G_s+1": [
+   "--gyro-scale",
+   "1.01"
+  ],
+  "G_s-1": [
+   "--gyro-scale",
+   "0.99"
+  ],
+  "T_fix": [
+   "--yaml",
+   "calib_cam_timeoffset=false"
+  ],
+  "T_0": [
+   "--chain",
+   "timeshift_cam_imu=0.0"
+  ],
+  "T_m3": [
+   "--chain",
+   "timeshift_cam_imu=-0.000828"
+  ],
+  "T_p3": [
+   "--chain",
+   "timeshift_cam_imu=0.005172"
+  ],
+  "T_m10": [
+   "--chain",
+   "timeshift_cam_imu=-0.007828"
+  ],
+  "T_p10": [
+   "--chain",
+   "timeshift_cam_imu=0.012172"
+  ],
+  "E_fix": [
+   "--yaml",
+   "calib_cam_extrinsics=false"
+  ],
+  "F_p100": [
+   "--yaml",
+   "num_pts=100"
+  ],
+  "F_p300": [
+   "--yaml",
+   "num_pts=300"
+  ],
+  "F_fast10": [
+   "--yaml",
+   "fast_threshold=10"
+  ],
+  "F_fast25": [
+   "--yaml",
+   "fast_threshold=25"
+  ],
+  "F_s100": [
+   "--yaml",
+   "max_slam=100"
+  ],
+  "F_sg05": [
+   "--yaml",
+   "up_msckf_sigma_px=0.5,up_slam_sigma_px=0.5"
+  ],
+  "F_sg2": [
+   "--yaml",
+   "up_msckf_sigma_px=2,up_slam_sigma_px=2"
+  ],
+  "F_c11": [
+   "--yaml",
+   "max_clones=11"
+  ],
+  "F_c25": [
+   "--yaml",
+   "max_clones=25"
+  ],
+  "F_fidef": [
+   "--yaml",
+   "fi_max_baseline=40.0,fi_max_cond_number=10000.0"
+  ],
+  "Z_on": [
+   "--yaml",
+   "try_zupt=true"
+  ],
+  "L_off": [
+   "--loop",
+   "0"
+  ],
+  "Q_gcal": [
+   "--gyro-cal"
+  ],
+  "Q_d2": [
+   "--imu-decim",
+   "2"
+  ],
+  "R_rs": [
+   "--extra",
+   "--ovopt all_exact,ekf_gemm,qr_compress,ekf_chol,sym_inplace,ekf_sparse,gyro_klt=5,rs_derot"
+  ],
+  "A_meas": [
+   "--acc-scale",
+   "1.000973"
+  ],
+  "GR_meas": [
+   "--yaml",
+   "gravity_mag=9.78778"
+  ]
+ }
+}
