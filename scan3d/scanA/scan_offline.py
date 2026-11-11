@@ -66,6 +66,9 @@ def main():
                     help="partner search: near = old (+-150 kept rows and dt 0.15-2.5 s: time neighbours only); all = every keyframe "
                          "(no dt cap, no window; same baseline / angle / rotation limits). pair_diag.py 133820: near 81/342 keyframes "
                          "have a partner (dt cap leaves baselines < 4 cm), all 313/342")
+    ap.add_argument("--ffs-dt-max", type=float, default=None,
+                    help="with --ffs-partners all: max time between reference and partner (s, default 30; 1e9 = no cap). "
+                         "near mode keeps MSConfig.dt_max_s 2.5")
     ap.add_argument("--pair-min-valid", type=float, default=None,
                     help="pair gate: drop a partner whose FFS depth is valid on < F of the image and try the next candidate "
                          "(up to MSConfig.max_tries = 4 drops per keyframe). Default 0 = off. Tried 0.2 with --ffs-partners all on "
@@ -193,7 +196,9 @@ def main():
     cfg.b_target_m = a.b_target
     cfg.z_max = a.zmax
     if a.ffs_partners == "all":
-        cfg.dt_max_s = 1e9                               # no time cap (score term 0.2 dt/dt_max -> 0); BA poses are global
+        # time cap: 1e9 = none (fv_a*/d*: pairs > 30 s apart on 133820 = keyframe 3/5 'hub' partners at the start, FFS valid 0.14
+        # or confidently wrong (|dZ| p90 44 cm), not caught by the dy check; cause not found) -> default 30 s (fv_c*)
+        cfg.dt_max_s = a.ffs_dt_max if a.ffs_dt_max is not None else 30.0
     min_valid = a.pair_min_valid if a.pair_min_valid is not None else 0.0
     pair_check = a.pair_check if a.pair_check != "auto" else ("dy" if a.ffs_partners == "all" else "none")
     ffs_ms_all = [0.0]
@@ -307,7 +312,7 @@ def main():
                 runtime_s=round(time.time() - t_start, 1), image_size=[W0, H0], K_used=K.tolist(),
                 gpu_max_alloc_gb=round(__import__('torch').cuda.max_memory_allocated() / 2 ** 30, 2),
                 gpu_max_reserved_gb=round(__import__('torch').cuda.max_memory_reserved() / 2 ** 30, 2))
-    summ.update(ffs_views=a.ffs_views, ffs_fuse=fuse, ffs_partners=a.ffs_partners, pair_min_valid=min_valid, pair_check=pair_check,
+    summ.update(ffs_views=a.ffs_views, ffs_fuse=fuse, ffs_partners=a.ffs_partners, ffs_dt_max=cfg.dt_max_s, pair_min_valid=min_valid, pair_check=pair_check,
                 pair_check_n=dy_stat["checked"], pair_check_rejected=dy_stat["rejected"], pair_check_s=round(dy_stat["s"], 1),
                 ffs_s_total=round(ffs_ms_all[0] / 1000, 1), ffs_s_used=round(sum(sum(r.get("ffs_ms", [])) for r in rows) / 1000, 1),
                 n_pairs_rejected=sum(len(r.get("rejected", [])) for r in rows),
