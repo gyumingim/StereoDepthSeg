@@ -1,6 +1,6 @@
 # scanA — 오프라인 폰 3D 스캐너 (키프레임 BA → FFS 깊이 → TSDF 메시)
 
-브랜치 `scanner-defaults-20261111` (featloop-20261105 7384db5 + gpu-ba-20261109 + kfonly-20261111 + laptop-worker-20261111 + ghost-20261111 의 `tsdf_map.py` 고침).
+브랜치 `scanner-defaults-20261111` (featloop-20261105 7384db5 + gpu-ba-20261109 + kfonly-20261111 + laptop-worker-20261111 + ghost-20261111 의 `tsdf_map.py` 고침 + ffsviews (6 절) + kfsel-20261111 (7 절)).
 실험 기록은 `scan3d/runs/<이름>/README.md` (scanA_20261105, featloop_20261105, gpuba_20261109, kfonly_20261111). 이 파일은 "지금 기본값과 돌리는 법" 만.
 
 ## 1. 기본값 (사용자 결정 2026-11-11)
@@ -9,10 +9,10 @@
 | 입력 | **키프레임만** (`REC/frames_kf/NNNNN.jpg`; `kf_frames.py` 가 옆에 `cam5.mp4` 가 있거나 키프레임이 빠지면 멈춤) | `--full-video` (cam5.mp4 를 복호) |
 | 키프레임 화질 | **1920×1080 JPEG q90** 로 받아서 PC 가 960×540 (INTER_AREA) 으로 줄임. kf_ba · FFS · TSDF 계산은 전부 960 | `--kf-res 960` (kfonly B), `--kf-quality Q` |
 | BA | **GPU** (`kf_ba.py` 기본 `--ba-device cuda`, `--sift-device cpu`, `--fast-tracks`; CUDA 없으면 cpu 로 바꾸고 `[device]` 줄에 찍음) | `--ba-device cpu`, `--sift-device auto` |
-| 키프레임 고르기 | VIO tracking 프레임 10 개마다 (`--kf-from-vio --match-ms 1`), 짝 = 다른 키프레임 | `--kfba-args` |
+| 키프레임 고르기 | **움직임 기준** (11-11 사용자 결정, 7 절): 마지막 키프레임에서 3 cm 이동 또는 4° 회전하면, 그 VIO 프레임 + 뒤 3 프레임 중 노출 시간 자이로 |ω| 가 가장 작은 것 (`--kf-select motion --kf-dist 3 --kf-rot 4 --kf-win 4 --kf-blur gyro`, `kf_select.py`; kf_ba 는 manifest 목록 `--kf-list`) | `--kf-select interval` (VIO tracking 10 프레임마다), `--kf-blur lap` |
 | 자세 | 폰 실시간 VIO 자세. **지금은 대용**: PC 재생 `lp_replay.py` + 폰 설정 c4f60 (H = `cfg_gen_hs222/c4f60`, 그 밖 `cfg_gen/c4f60`) | `--vio FILE`, `--cfg DIR` |
 | 깊이·메시 | `scan_offline.py` FFS 960×540 + TSDF 5 mm, `--compress --kf-step 1` | `--mesh-args` |
-| FFS 짝 | 깊이 지도 1 장 = 기준 키프레임 + 짝 최대 2 개 (**`--ffs-views 3`**, 쌍 깊이 2 개를 역분산 평균, 3σ 어긋나면 버림), 짝은 시간 이웃 (0.15–2.5 s) 만 (**`--ffs-partners near`**) | `--ffs-views 2..5`, `--ffs-partners all` (6 절) |
+| FFS 짝 | 깊이 지도 1 장 = 기준 키프레임 + 짝 1 개 (**`--ffs-views 2`**), 짝은 모든 키프레임에서 (**`--ffs-partners all`**: 시간차 ≤ 30 s, FFS 전 dy 정류 검사) (11-11 사용자 결정, 6·7 절) | `--ffs-partners near --ffs-views 3` (옛: 시간 이웃 0.15–2.5 s, 짝 최대 2 개 평균), `--ffs-views 3..5` |
 | TSDF 블록 할당 | **촘촘히** (`scan_offline.py --tsdf-alloc dense` = `TSDFMap(alloc_dense=True)`: [−mu, +mu] 띠를 반 블록마다 할당 → 보드 앞 유령 두 번째 층 없앰, 11-11) | `--tsdf-alloc sparse` (옛 3 점 할당) |
 | 축척 | 그대로 (VIO 축척). `--board auto|FILE` 이면 보드 축척 (`board_scale.py`, 1920 키프레임에서 ChArUco 검출) + 그 자세로 메시 한 번 더 | |
 
@@ -24,7 +24,7 @@ tools/remote_laptop.sh job 133820 scan                         # 기본값
 tools/remote_laptop.sh job 133820 scan --args '--board auto'    # + 보드 축척
 tools/remote_laptop.sh job 133820 scan --args '--full-video --ba-device cpu --sift-device auto --tsdf-alloc sparse' --tag old   # 옛 경로
 tools/remote_laptop.sh job 133820 scan --args '--tsdf-alloc sparse' --tag sparse   # 유령층 고침만 끄기
-tools/remote_laptop.sh job 133820 scan --args '--ffs-partners all' --tag fpall     # 짝을 모든 키프레임에서 (6 절)
+tools/remote_laptop.sh job 133820 scan --args '--kf-select interval --ffs-partners near --ffs-views 3' --tag oldkf   # 7 절 전 기본값 (되돌리기)
 # 앞 실행의 vio·reduce·kfba 를 다시 쓰고 mesh 만 (같은 BA 자세): --reuse <앞 OUT> (노트북에 그 폴더가 남아 있을 때)
 tools/remote_laptop.sh job 133820 scan --tag fv_x --args '--reuse /home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/fv_n3/scan --ffs-views 4'
 # 직접 (그 기계에서): scan3d/scanA/run_scanner.sh REC OUT [옵션]   (옵션 전체는 스크립트 머리말)
@@ -127,3 +127,28 @@ kf 중앙 = 키프레임별 보드 |dZ| p90 의 중앙 (평가 키프레임 수�
   4·5 는 시간만 늘고 나아지지 않음. **추천 (미확정, 녹화 1 개·1 회)**: `--ffs-partners all --ffs-views 3` (c3), PC 몫 +86 s (+75 %), 전체 +39 %.
   싸게: c2 (PC +35 s, +31 %), 공통 키프레임 |dZ| 는 c3 보다 0.07 cm 나쁨. **기본값은 아직 안 바꿈** (다른 녹화에서 먼저 확인; 30 s 상한 근거가 이 녹화 하나).
 - n3 의 이중층 0.079 (4.1 절 ghost 0.069) 는 평균 합치기 몫으로 보임: 짝 1 개 (n2) 0.000, 중앙값 합치기 (n3med) 0.052. 원인 미조사.
+
+## 7. 움직임 키프레임 + 넓은 짝 = 새 기본값 (11-11, 133820 1 개, 노트북, 1 회, 미검증)
+비교 실험: `runs/kfsel_20261111/README.md` (사전 등록 규칙, interval vs motion 4 변형; M2·M3g 합격, M3·M4 불합격; 판정 n = 1 이라 약함 —
+같은 문턱에서 창 안 프레임만 달라도 k 가 0.5 %p 움직임). 사용자 결정: M3g (3 cm / 4°, win 4, gyro) + 6 절의 `--ffs-partners all --ffs-views 2`.
+확인 실행: `tools/remote_laptop.sh job 133820 scan --tag newdefault` (기본값, 커밋 c13f22e, 결과 `runs/laptop/20261022_133820/newdefault/scan/`). 끝까지 돎 (rc 0).
+| | 옛 기본값 (interval + near/3, 6 절 n3) | M3g (motion + near/3, kfsel) | **새 기본값 (motion + all/2)** | 참고 c2 (interval + all/2, 6 절) |
+|---|---|---|---|---|
+| 키프레임 (보낸 것) | 342 | 203 | **203** | 342 |
+| 키프레임/분 · JPEG MB/분 | 297 · 112 | 176 · 66 | **176 · 66** | 297 · 112 |
+| kfba s | 68.6 | 37.1 | **36.7** | 68.6 |
+| mesh s | 47.2 | 42.6 | **63.1** | 82.6 |
+| PC 몫 (kfba + mesh) s | 115.8 | 79.7 | **99.8** | 151.2 |
+| 전체 s (vio + reduce + kfba + mesh) | 221.6 | (vio 생략) | **204.9** | 257.0 |
+| 짝 있는 키프레임 | 74 / 336 | 82 / 196 | **160 / 196 (0.82)** | 218 / 336 |
+| |dZ| p90 모은 화소 cm | 0.735 | 0.685 | **0.614** | 0.547 |
+| kf 별 p90 중앙 cm (평가 kf) | 0.574 (70) | 0.535 (79) | **0.449 (160)** | 0.432 (218) |
+| 축척 k % | −1.374 | −1.286 | **−1.286** | −1.374 |
+| 이중층 | 0.079 | 0.004 | **0.000** | 0.000 |
+| 보드 덮임 | 0.960 | 0.96 | **1.000** | 1.000 |
+- 키프레임 선택은 M3g 를 그대로 재현: 키프레임 203 개, 자이로·창 위치 분포 같음, BA k −1.286 같음 (kfba 36.7 vs 37.1 s). 메시만 FFS 짝 규칙 (all/2) 만큼 바뀜.
+- |dZ| 는 축척 k 가 섞인 값 (VIO 축척 그대로). 새 기본값은 옛 기본값보다 모은 p90 −16 %, kf 중앙 −22 %, PC 몫 −14 %, 데이터 −41 %.
+  c2 (키프레임 342 개 + 넓은 짝) 보다는 |dZ| 가 0.07 / 0.02 cm 나쁘고 PC 몫 −34 %. 짝 없는 키프레임 36 개 (dy 검사 탈락 8).
+- 6 절의 "공통 68 kf" 지표는 키프레임 집합이 달라서 이 실행엔 적용 안 됨.
+- 메시는 뷰어에 "[새] 133820 · 새 기본값 (움직임 키프레임 + 넓은 짝)" (`runs/kfsel_20261111/publish.py`).
+- 남은 것: 다른 녹화 (134550, 134204 등) 로 같은 비교 (motion 문턱·30 s 상한 모두 133820 하나에서 고름).
