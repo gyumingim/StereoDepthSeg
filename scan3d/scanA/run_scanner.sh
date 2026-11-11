@@ -26,7 +26,7 @@
 #   --vio FILE  use these live poses (skip the vio step)
 #   --kfba-args '...'  --mesh-args '...'  --vio-args '...'  extra arguments for that step
 #   --cache DIR  kf_ba image cache root (default OUT/cache, deleted at the end unless --keep-cache)
-# Env: P (python, default ~/scanner/StereoDepthSeg/venv_ffs/bin/python), FFS_ROOT (default ~/scanner/StereoDepthSeg).
+# Env: SCANNER_COMMIT (commit to record, default git rev-parse), P (python, default ~/scanner/StereoDepthSeg/venv_ffs/bin/python), FFS_ROOT (default ~/scanner/StereoDepthSeg).
 # Writes OUT/scan_summary.json (made, inputs, git commit, per-step seconds, |dZ| p90, k, ...) and prints it.
 set -euo pipefail
 WT=$(cd "$(dirname "$0")/../.." && pwd)
@@ -34,6 +34,7 @@ MAIN=/home/system/scanner/StereoDepthSeg
 P=${P:-$MAIN/venv_ffs/bin/python}
 export FFS_ROOT=${FFS_ROOT:-$MAIN}
 B=/home/system/scanner/build_livepose
+COMMIT=${SCANNER_COMMIT:-$(git -C "$WT" rev-parse HEAD 2>/dev/null || echo unknown)}   # remote_laptop.sh pushes code without .git -> passes it
 [ $# -ge 2 ] || { sed -n '2,/^set -euo/p' "$0" | grep '^#'; exit 1; }
 REC=$(realpath -m "$1"); OUT=$(realpath -m "$2"); shift 2
 FULLV=0; KRES=1920; KQ=90; BADEV=cuda; SIFTDEV=cpu; G=""; CFG=""; VIO=""; BOARD=""; BOARD_MESH=1
@@ -64,7 +65,7 @@ fi
 if [ -z "$G" ]; then [ -d "$REC/imu_gt_spl_cal1022" ] && G=imu_gt_spl_cal1022 || G=imu_gt_spl; fi
 if [ -z "$CFG" ]; then [ "$G" = imu_gt_spl_cal1022 ] && CFG=$B/cfg_gen_hs222/c4f60 || CFG=$B/cfg_gen/c4f60; fi
 echo "== run_scanner $(date '+%F %T'): REC $REC ($([ $REDUCED = 1 ] && echo keyframe-only || echo full recording)) -> $OUT"
-echo "   gt $G, input $([ $FULLV = 1 ] && echo 'full video (old)' || echo "keyframes ${KRES} JPEG q${KQ}"), BA $BADEV, SIFT $SIFTDEV, git $(git -C "$WT" rev-parse --short HEAD 2>/dev/null || echo ?)"
+echo "   gt $G, input $([ $FULLV = 1 ] && echo 'full video (old)' || echo "keyframes ${KRES} JPEG q${KQ}"), BA $BADEV, SIFT $SIFTDEV, git ${COMMIT:0:12}"
 
 # ---- vio (stand-in for the phone's live poses)
 if [ $REDUCED = 1 ]; then
@@ -122,7 +123,7 @@ fi
 [ $KEEPC = 1 ] || rm -rf "$CACHE"
 
 # ---- summary
-$P - "$OUT" "$REC" "$IN" "$VIO" "$G" "$CFG" "$KRES" "$KQ" "$FULLV" "$(git -C "$WT" rev-parse HEAD 2>/dev/null || echo ?)" <<'EOF'
+$P - "$OUT" "$REC" "$IN" "$VIO" "$G" "$CFG" "$KRES" "$KQ" "$FULLV" "$COMMIT" <<'EOF'
 import json, sys, time
 from pathlib import Path
 out, rec, inp, vio, g, cfg, kres, kq, fullv, commit = sys.argv[1:]
