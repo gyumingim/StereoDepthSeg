@@ -66,6 +66,10 @@ def main():
                     help="partner search: near = old (+-150 kept rows and dt 0.15-2.5 s: time neighbours only); all = every keyframe "
                          "(no dt cap, no window; same baseline / angle / rotation limits). pair_diag.py 133820: near 81/342 keyframes "
                          "have a partner (dt cap leaves baselines < 4 cm), all 313/342")
+    ap.add_argument("--pair-min-valid", type=float, default=None,
+                    help="pair gate: drop a partner whose FFS depth is valid on < F of the image and try the next candidate "
+                         "(up to MSConfig.max_tries = 4 drops per keyframe). Default 0.2 with --ffs-partners all (133820: pairs "
+                         "> 30 s apart had valid 0.10 and |dZ| p90 8-38 cm, BA without loop closure), 0 = off (old) with near")
     a = ap.parse_args()
     if a.ffs_views is not None:
         if not 2 <= a.ffs_views <= 8:
@@ -187,6 +191,8 @@ def main():
     cfg.z_max = a.zmax
     if a.ffs_partners == "all":
         cfg.dt_max_s = 1e9                               # no time cap (score term 0.2 dt/dt_max -> 0); BA poses are global
+    min_valid = a.pair_min_valid if a.pair_min_valid is not None else (0.2 if a.ffs_partners == "all" else 0.0)
+    ffs_ms_all = [0.0]
     import lib_ffs
     model = lib_ffs.load(valid_iters=a.iters)
     tsdf = tsdf_map.TSDFMap(voxel_m=a.voxel, z_max=a.zmax, sigma_max=0.08, sigma_ok=0.02, min_obs=2,
@@ -210,22 +216,32 @@ def main():
             if sc is not None:
                 cands.append((sc, j, gg))
         cands.sort(key=lambda x: x[0])
-        chosen = []
-        for sc, j, gg in cands:
-            if not chosen or all(ms.dir_differs(gg, c[2], cfg.pair2_min_dir_deg) for c in chosen):
-                chosen.append((sc, j, gg))
-            if len(chosen) >= min(a.n_pairs, 2):           # partners 1..2: the old rule unchanged (same pairs for every N >= 3)
+        rejected, rcache = [], {}
+        for _try in range(1 + (cfg.max_tries if min_valid > 0 else 0)):
+            cl = [c for c in cands if c[1] not in rejected]
+            chosen = []
+            for sc, j, gg in cl:
+                if not chosen or all(ms.dir_differs(gg, c[2], cfg.pair2_min_dir_deg) for c in chosen):
+                    chosen.append((sc, j, gg))
+                if len(chosen) >= min(a.n_pairs, 2):           # partners 1..2: the old rule unchanged (same pairs for every N >= 3)
+                    break
+            if a.n_pairs > 2 and chosen:
+                chosen = pick_extra(chosen, cl, a.n_pairs, cfg.pair2_min_dir_deg)
+            bad = False
+            for sc, j, gg in chosen:
+                if j not in rcache:
+                    R, t = ms.rel_pose(T[i], T[j])
+                    rcache[j] = ms.pair_depth(model, lib_ffs.infer, imgs[i], imgs[j], R, t, K, dist, rp, cfg, iters=a.iters)
+                    ffs_ms_all[0] += rcache[j]["ms"]["ffs"]
+                if min_valid > 0 and float(rcache[j]["valid"].mean()) < min_valid:   # pair gate (ffs-partners all): pose/overlap bad
+                    rejected.append(j); bad = True
+            if not bad:
                 break
-        if a.n_pairs > 2 and chosen:
-            chosen = pick_extra(chosen, cands, a.n_pairs, cfg.pair2_min_dir_deg)
+        chosen = [c for c in chosen if c[1] not in rejected]
         if not chosen:
-            rows.append(dict(i=i, pairs=0))
+            rows.append(dict(i=i, pairs=0, **({"rejected": [int(x) for x in rejected]} if rejected else {})))
             continue
-        res = []
-        for sc, j, gg in chosen:
-            R, t = ms.rel_pose(T[i], T[j])
-            r = ms.pair_depth(model, lib_ffs.infer, imgs[i], imgs[j], R, t, K, dist, rp, cfg, iters=a.iters)
-            res.append(r)
+        res = [rcache[c[1]] for c in chosen]
         Z, V, S, agree = ms.combine_motion(res, cfg) if fuse == "mean" else fuse_median(res, cfg.k_sigma)
         bgr = cv2.remap(imgs[i], *und, cv2.INTER_LINEAR)
         # GT plane depth: board plane z=0 in world; ray in cam: X = Z*ray, world = R X + p, z_w = 0
@@ -248,7 +264,7 @@ def main():
         if sel is not None:
             row["frame"] = int(sel[i])
         if a.n_pairs != 2 or a.ffs_partners != "near":     # keyframes.json of the default run stays byte-identical to the old one
-            row.update(n_cand=len(cands), partners=[int(c[1]) for c in chosen])
+            row.update(n_cand=len(cands), partners=[int(c[1]) for c in chosen], rejected=[int(x) for x in rejected])
         rows.append(row)
         tsdf.integrate(np.where(V, Z, np.nan).astype(np.float32), V, bgr, rp["f"], rp["cx"], rp["cy"], 0.08, T[i],
                        sigma=np.where(V, S, np.inf).astype(np.float32))
@@ -264,7 +280,9 @@ def main():
                 runtime_s=round(time.time() - t_start, 1), image_size=[W0, H0], K_used=K.tolist(),
                 gpu_max_alloc_gb=round(__import__('torch').cuda.max_memory_allocated() / 2 ** 30, 2),
                 gpu_max_reserved_gb=round(__import__('torch').cuda.max_memory_reserved() / 2 ** 30, 2))
-    summ.update(ffs_views=a.ffs_views, ffs_fuse=fuse, ffs_partners=a.ffs_partners, ffs_s_total=round(sum(sum(r.get("ffs_ms", [])) for r in rows) / 1000, 1),
+    summ.update(ffs_views=a.ffs_views, ffs_fuse=fuse, ffs_partners=a.ffs_partners, pair_min_valid=min_valid,
+                ffs_s_total=round(ffs_ms_all[0] / 1000, 1), ffs_s_used=round(sum(sum(r.get("ffs_ms", [])) for r in rows) / 1000, 1),
+                n_pairs_rejected=sum(len(r.get("rejected", [])) for r in rows),
                 n_kf_by_pairs={str(k): sum(1 for r in rows if r.get("pairs", 0) == k) for k in range(a.n_pairs + 1)})
     ev = [r for r in rows if "board_absdZ_p50_cm" in r]
     if ev:
