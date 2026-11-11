@@ -55,7 +55,34 @@ def main():
     ap.add_argument("--tsdf-alloc", choices=("sparse", "dense"), default="sparse",
                     help="TSDF block allocation: sparse = 3 points z-mu, z, z+mu (tsdf_map default, old); dense = the whole [-mu, +mu] "
                          "band every half block (ghost 11-11: no ghost double layer when mu > block; run_scanner.sh passes dense)")
+    ap.add_argument("--ffs-views", type=int, default=None,
+                    help="images per keyframe depth map = reference + (N-1) partner keyframes (= --n-pairs + 1; default "
+                         "n-pairs 2 -> 3 = old behaviour). Partners 1..2 = old rule; partners 3.. = extra views (pick_extra)")
+    ap.add_argument("--ffs-fuse", choices=("auto", "mean", "median"), default="auto",
+                    help="combine the per-pair depths: mean = motion_stereo.combine_motion (old: inverse-variance mean, drop pixels "
+                         "where a pair is > 3 sigma off); median = fuse_median (median, keep pairs within 3 sigma of it, need 2 "
+                         "agreeing pairs where >= 2 are valid); auto = mean for <= 2 pairs (old), median for >= 3")
+    ap.add_argument("--ffs-partners", choices=("near", "all"), default="near",
+                    help="partner search: near = old (+-150 kept rows and dt 0.15-2.5 s: time neighbours only); all = every keyframe "
+                         "(no dt cap, no window; same baseline / angle / rotation limits). pair_diag.py 133820: near 81/342 keyframes "
+                         "have a partner (dt cap leaves baselines < 4 cm), all 313/342")
+    ap.add_argument("--ffs-dt-max", type=float, default=None,
+                    help="with --ffs-partners all: max time between reference and partner (s, default 30; 1e9 = no cap). "
+                         "near mode keeps MSConfig.dt_max_s 2.5")
+    ap.add_argument("--pair-min-valid", type=float, default=None,
+                    help="pair gate: drop a partner whose FFS depth is valid on < F of the image and try the next candidate "
+                         "(up to MSConfig.max_tries = 4 drops per keyframe). Default 0 = off. Tried 0.2 with --ffs-partners all on "
+                         "133820 (fv_g*): worse (380 drops, fewer keyframes, double layer 0.25) -> replaced by --pair-check dy")
+    ap.add_argument("--pair-check", choices=("auto", "none", "dy"), default="auto",
+                    help="check a partner before FFS: dy = SIFT rectification check (dy_ok); auto = dy with --ffs-partners all, "
+                         "none (old) with near")
     a = ap.parse_args()
+    if a.ffs_views is not None:
+        if not 2 <= a.ffs_views <= 8:
+            sys.exit("--ffs-views must be 2..8")
+        a.n_pairs = a.ffs_views - 1
+    a.ffs_views = a.n_pairs + 1
+    fuse = a.ffs_fuse if a.ffs_fuse != "auto" else ("mean" if a.n_pairs <= 2 else "median")
     if a.scale > 0.5 and not a.allow_fullres:
         sys.exit("scale > 0.5 refused: 1920x1080 FFS overflowed 16 GB VRAM and crashed WSL (11-05); pass --allow-fullres to try under the cap")
     t_start = time.time()
@@ -168,6 +195,33 @@ def main():
     cfg = ms.MSConfig()
     cfg.b_target_m = a.b_target
     cfg.z_max = a.zmax
+    if a.ffs_partners == "all":
+        # time cap: 1e9 = none (fv_a*/d*: pairs > 30 s apart on 133820 = keyframe 3/5 'hub' partners at the start, FFS valid 0.14
+        # or confidently wrong (|dZ| p90 44 cm), not caught by the dy check; cause not found) -> default 30 s (fv_c*)
+        cfg.dt_max_s = a.ffs_dt_max if a.ffs_dt_max is not None else 30.0
+    min_valid = a.pair_min_valid if a.pair_min_valid is not None else 0.0
+    pair_check = a.pair_check if a.pair_check != "auto" else ("dy" if a.ffs_partners == "all" else "none")
+    ffs_ms_all = [0.0]
+    _feat, _dy, dy_stat = {}, {}, dict(checked=0, rejected=0, s=0.0)
+
+    def dy_ok(i, j):
+        """pair check before FFS (motion_stereo gate: SIFT matches moved into this pair's motion rectification with the BA
+        relative pose; |dy| median <= cfg.gate_dy_px 1.2 px and dx > 0 for >= 90 %). Catches keyframes whose BA rotation is off
+        (133820 row 2: 0.33 deg -> ~4 px dy -> FFS valid 0.10, 85 keyframes chose it with --ffs-partners all and no check)."""
+        if (i, j) in _dy:
+            return _dy[(i, j)]
+        t0 = time.perf_counter()
+        for k_ in (i, j):
+            if k_ not in _feat:
+                _feat[k_] = ms.sift_feats(cv2.cvtColor(imgs[k_], cv2.COLOR_BGR2GRAY), cfg.sift_n)
+        mt = ms.match_norm(_feat[i], _feat[j], K, dist)
+        okk = False
+        if mt is not None:
+            R_, t_ = ms.rel_pose(T[i], T[j])
+            okk = ms.gate_ok(ms.rect_match_stats(mt[0], mt[1], R_, t_, rp["f"]), cfg)
+        _dy[(i, j)] = okk
+        dy_stat["checked"] += 1; dy_stat["rejected"] += int(not okk); dy_stat["s"] += time.perf_counter() - t0
+        return okk
     import lib_ffs
     model = lib_ffs.load(valid_iters=a.iters)
     tsdf = tsdf_map.TSDFMap(voxel_m=a.voxel, z_max=a.zmax, sigma_max=0.08, sigma_ok=0.02, min_obs=2,
@@ -182,7 +236,7 @@ def main():
         if not ok[i] or imgs[i] is None:
             continue
         cands = []
-        for j in range(max(0, i - 150), min(n, i + 150)):
+        for j in (range(max(0, i - 150), min(n, i + 150)) if a.ffs_partners == "near" else range(n)):
             if j == i or not ok[j] or imgs[j] is None:
                 continue
             R, t = ms.rel_pose(T[i], T[j])
@@ -191,21 +245,36 @@ def main():
             if sc is not None:
                 cands.append((sc, j, gg))
         cands.sort(key=lambda x: x[0])
-        chosen = []
-        for sc, j, gg in cands:
-            if not chosen or all(ms.dir_differs(gg, c[2], cfg.pair2_min_dir_deg) for c in chosen):
-                chosen.append((sc, j, gg))
-            if len(chosen) >= a.n_pairs:
+        rejected, rcache = [], {}
+        for _try in range(1 + (cfg.max_tries if min_valid > 0 else 0)):
+            cl = [c for c in cands if c[1] not in rejected]
+            chosen = []
+            for sc, j, gg in cl:
+                if not chosen or all(ms.dir_differs(gg, c[2], cfg.pair2_min_dir_deg) for c in chosen):
+                    if pair_check == "dy" and not dy_ok(i, j):
+                        continue
+                    chosen.append((sc, j, gg))
+                if len(chosen) >= min(a.n_pairs, 2):           # partners 1..2: the old rule unchanged (same pairs for every N >= 3)
+                    break
+            if a.n_pairs > 2 and chosen:
+                chosen = pick_extra(chosen, cl, a.n_pairs, cfg.pair2_min_dir_deg,
+                                    ok_fn=(lambda j: dy_ok(i, j)) if pair_check == "dy" else None)
+            bad = False
+            for sc, j, gg in chosen:
+                if j not in rcache:
+                    R, t = ms.rel_pose(T[i], T[j])
+                    rcache[j] = ms.pair_depth(model, lib_ffs.infer, imgs[i], imgs[j], R, t, K, dist, rp, cfg, iters=a.iters)
+                    ffs_ms_all[0] += rcache[j]["ms"]["ffs"]
+                if min_valid > 0 and float(rcache[j]["valid"].mean()) < min_valid:   # pair gate (ffs-partners all): pose/overlap bad
+                    rejected.append(j); bad = True
+            if not bad:
                 break
+        chosen = [c for c in chosen if c[1] not in rejected]
         if not chosen:
-            rows.append(dict(i=i, pairs=0))
+            rows.append(dict(i=i, pairs=0, **({"rejected": [int(x) for x in rejected]} if rejected else {})))
             continue
-        res = []
-        for sc, j, gg in chosen:
-            R, t = ms.rel_pose(T[i], T[j])
-            r = ms.pair_depth(model, lib_ffs.infer, imgs[i], imgs[j], R, t, K, dist, rp, cfg, iters=a.iters)
-            res.append(r)
-        Z, V, S, agree = ms.combine_motion(res, cfg)
+        res = [rcache[c[1]] for c in chosen]
+        Z, V, S, agree = ms.combine_motion(res, cfg) if fuse == "mean" else fuse_median(res, cfg.k_sigma)
         bgr = cv2.remap(imgs[i], *und, cv2.INTER_LINEAR)
         # GT plane depth: board plane z=0 in world; ray in cam: X = Z*ray, world = R X + p, z_w = 0
         Rw, pw = Tgt[i][:3, :3], Tgt[i][:3, 3]   # GT plane depth always from the GT pose
@@ -226,6 +295,8 @@ def main():
                        board_absdZ_p90_cm=float(np.percentile(np.abs(dz), 90) * 100), board_Z_m=float(np.median(Zp[m])))
         if sel is not None:
             row["frame"] = int(sel[i])
+        if a.n_pairs != 2 or a.ffs_partners != "near":     # keyframes.json of the default run stays byte-identical to the old one
+            row.update(n_cand=len(cands), partners=[int(c[1]) for c in chosen], rejected=[int(x) for x in rejected])
         rows.append(row)
         tsdf.integrate(np.where(V, Z, np.nan).astype(np.float32), V, bgr, rp["f"], rp["cx"], rp["cy"], 0.08, T[i],
                        sigma=np.where(V, S, np.inf).astype(np.float32))
@@ -241,6 +312,11 @@ def main():
                 runtime_s=round(time.time() - t_start, 1), image_size=[W0, H0], K_used=K.tolist(),
                 gpu_max_alloc_gb=round(__import__('torch').cuda.max_memory_allocated() / 2 ** 30, 2),
                 gpu_max_reserved_gb=round(__import__('torch').cuda.max_memory_reserved() / 2 ** 30, 2))
+    summ.update(ffs_views=a.ffs_views, ffs_fuse=fuse, ffs_partners=a.ffs_partners, ffs_dt_max=cfg.dt_max_s, pair_min_valid=min_valid, pair_check=pair_check,
+                pair_check_n=dy_stat["checked"], pair_check_rejected=dy_stat["rejected"], pair_check_s=round(dy_stat["s"], 1),
+                ffs_s_total=round(ffs_ms_all[0] / 1000, 1), ffs_s_used=round(sum(sum(r.get("ffs_ms", [])) for r in rows) / 1000, 1),
+                n_pairs_rejected=sum(len(r.get("rejected", [])) for r in rows),
+                n_kf_by_pairs={str(k): sum(1 for r in rows if r.get("pairs", 0) == k) for k in range(a.n_pairs + 1)})
     ev = [r for r in rows if "board_absdZ_p50_cm" in r]
     if ev:
         summ["kf_board_absdZ_p50_cm_median"] = float(np.median([r["board_absdZ_p50_cm"] for r in ev]))
@@ -278,6 +354,60 @@ def main():
     (out / "summary.json").write_text(json.dumps(summ, indent=1))
     (out / "keyframes.json").write_text(json.dumps(rows, indent=0))
     print(json.dumps(summ, indent=1))
+
+
+def _signed_dir_deg(g0, g1):
+    """angle between the two baseline vectors WITH sign (0..180): the opposite side of the reference counts as a new direction."""
+    u0, u1 = g0["c"] / g0["B"], g1["c"] / g1["B"]
+    return float(np.degrees(np.arccos(np.clip(u0 @ u1, -1, 1))))
+
+
+def pick_extra(chosen, cands, n_pairs, min_dir_deg, b_ratio=1.5, ok_fn=None):
+    """ffs-views 11-11: partners beyond the old two. cands = all partners that pass score_pair (B 4-30 cm, dt 0.15-2.5 s,
+    baseline >= 40 deg off the optical axis, rotation <= 25 deg), best score first. Pass 1: signed baseline direction >= min_dir_deg
+    from every chosen partner (old rule uses |cos| -> the other side of the reference on the same motion line is new here: its
+    occlusions are on the other side). Pass 2: same direction but baseline length x1.5 / /1.5 vs every chosen partner of that
+    direction (different disparity range). Near-duplicates (neighbouring keyframes, same B and direction) are never added."""
+    chosen = list(chosen)
+    used = {c[1] for c in chosen}
+    for rule in ("dir", "dir_or_b"):
+        for sc, j, gg in cands:
+            if len(chosen) >= n_pairs:
+                return chosen
+            if j in used:
+                continue
+            okk = True
+            for c in chosen:
+                d = _signed_dir_deg(gg, c[2]) >= min_dir_deg
+                if rule == "dir_or_b":
+                    d = d or max(gg["B"] / c[2]["B"], c[2]["B"] / gg["B"]) >= b_ratio
+                okk &= d
+            if okk and (ok_fn is None or ok_fn(j)):
+                chosen.append((sc, j, gg)); used.add(j)
+    return chosen
+
+
+def fuse_median(results, k_sigma):
+    """ffs-views 11-11: per pixel median of the valid pair depths; pairs within k_sigma * own sigma of the median are inliers;
+    pixel kept if 1 pair is valid (as combine_motion) or >= 2 pairs agree; Z / sigma = inverse-variance mean of the inliers.
+    Returns (Z, valid, sigma, agree) like motion_stereo.combine_motion."""
+    Zs = np.stack([np.where(r["valid"], r["Z"], np.nan) for r in results]).astype(np.float64)
+    Ss = np.stack([np.maximum(r["sigma"], 1e-6) for r in results]).astype(np.float64)
+    Vs = np.stack([r["valid"] for r in results])
+    nv = Vs.sum(0)
+    import warnings
+    with warnings.catch_warnings(), np.errstate(invalid="ignore", divide="ignore"):
+        warnings.simplefilter("ignore", RuntimeWarning)
+        med = np.nanmedian(Zs, 0)
+        inl = Vs & (np.abs(Zs - med[None]) <= k_sigma * Ss)
+        ni = inl.sum(0)
+        w = np.where(inl, 1.0 / Ss ** 2, 0.0)
+        den = w.sum(0)
+        Z = np.where(den > 0, (w * np.nan_to_num(Zs)).sum(0) / den, np.nan)
+        S = np.where(den > 0, 1.0 / np.sqrt(den), np.inf)
+    agree = (nv >= 2) & (ni >= 2)
+    V = (nv == 1) | agree
+    return Z.astype(np.float32), V, S.astype(np.float32), agree
 
 
 def _out_arg():
