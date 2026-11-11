@@ -101,3 +101,5 @@
 `--fast-tracks` 켬 (기본 경로와 결과 같음 확인: 165506 + H 4 개; `--no-fast-tracks` 로 끔). `--sort-matches`·`--match-device` 는 선택 (기본 끔, 미시험).
 kf_ba 를 부르는 곳 = `remote_laptop.sh` 의 kfba 단계 (WT 를 이 워크트리로) 와 runs/ 스크립트뿐 → 인자 안 주면 새 기본값.
 내 runs 스크립트 (lap_rec / lap_full / lap_badet) 는 옛 비교를 다시 낼 수 있게 플래그를 명시함.
+- 새 기본값 확인 (11-11 16:26, 노트북, `remote_laptop.sh job 165506 kfba` 인자 없이): `[device] BA cuda, SIFT cpu, matcher auto`, 전체 19.6 s
+  (추출 6.0 / 매칭+검증 4.4 / 트랙 0.5 / 삼각 0.4 / BA 3.7), 점 8610 · 관측 42828 · sim3 1.00779 = 9.2 의 fix1–3 과 같은 수 (4 번째 반복, 미검증).
