@@ -7,7 +7,7 @@ export SCAN3D_GPU_POLL_S=3 SCAN3D_GPU_FRAC=0.6 TORCH_COMPILE_DISABLE=1 OMP_NUM_T
 mkdir -p "${O:?}"
 for sp in g1:cuda: g2:cuda: g3:cuda: w1:cuda:w w2:cuda:w w3:cuda:w c1:cpu: c2:cpu:; do
   IFS=: read tag bd ws <<< "$sp"
-  F=""; [ "$bd" = cuda ] && F="--fast-tracks"
+  F="--no-fast-tracks"; [ "$bd" = cuda ] && F="--fast-tracks"
   E=""; [ "$ws" = w ] && E="CUBLAS_WORKSPACE_CONFIG=:4096:8"
   env $E $P scan3d/scanA/kf_ba.py $R --vio $V --out "$O/$tag" --gt $G $KFO --feat sift --loop none --cache-root $CACHE --seed 0 \
     --db-from $SRC --ba-device $bd --save-tri $F > "$O/$tag.log" 2>&1 || echo "$tag failed rc $?"

@@ -346,21 +346,32 @@ def main():
                     help="drop = scanA (union-find over all verified inliers, drop every track that holds two keypoints of one "
                          "image); greedy = featloop 11-06: conflict-free union-find, pairs in order of inlier count (high first), "
                          "an edge is skipped when it would put two keypoints of one image into one track")
-    ap.add_argument("--ba-device", default="cpu", choices=["cpu", "cuda"],
-                    help="gpuba 11-09: cpu = numpy ba_lm (scanA); cuda = same LM / Schur steps in torch float64 on the GPU (ba_torch.py), "
-                         "GPU lock held through the BA")
-    ap.add_argument("--fast-tracks", action="store_true", help="gpuba 11-09: drop-tracks by scipy connected components + "
+    ap.add_argument("--ba-device", default="cuda", choices=["cpu", "cuda"],
+                    help="gpuba 11-11 default cuda = LM / Schur in torch float64 on the GPU (ba_torch.py; same result as cpu to ~1e-7, "
+                         "5-9x faster), GPU lock held through the BA; falls back to cpu (printed) when CUDA is unavailable. "
+                         "cpu = numpy ba_lm (scanA)")
+    ap.add_argument("--fast-tracks", action=argparse.BooleanOptionalAction, default=True, help="gpuba 11-11 default on (--no-fast-tracks = scanA loop); 11-09: drop-tracks by scipy connected components + "
                     "length-batched triangulation (same tracks, same order, same per-track arithmetic as the default path)")
     ap.add_argument("--match-device", default="auto", choices=["auto", "cpu"], help="gpuba 11-11: SIFT matcher device")
     ap.add_argument("--sort-matches", action="store_true", help="gpuba 11-11: sort each pair's inlier matches before building tracks "
                     "(track / point order independent of the order the matcher returns)")
-    ap.add_argument("--sift-device", default="auto", choices=["auto", "cpu"],
-                    help="auto = pycolmap CUDA SIFT when available (scanA); cpu = pycolmap CPU SIFT (gpuba 11-11, deterministic run to run)")
+    ap.add_argument("--sift-device", default="cpu", choices=["auto", "cpu"],
+                    help="gpuba 11-11 default cpu = pycolmap CPU SIFT (same keypoints every run; ~+4 s per 139 images on the laptop); "
+                         "auto = pycolmap CUDA SIFT (scanA; keypoints change run to run on RTX 5080 and 4060)")
     ap.add_argument("--save-tri", action="store_true", help="write OUT/tri_dump.npz (points, obs) after triangulation and go on")
     ap.add_argument("--dump-tri", action="store_true", help="write OUT/tri_dump.npz (points, obs) after triangulation and stop")
     ap.add_argument("--cache-root", default="", help="keyframe image cache root (default REC/scanA_cache)")
     a = ap.parse_args()
     import pycolmap
+    if a.ba_device == "cuda":
+        try:
+            import torch
+            if not torch.cuda.is_available():
+                raise RuntimeError("torch.cuda.is_available() False")
+        except Exception as e_:
+            print(f"[device] CUDA not available ({e_}) -> BA on cpu", flush=True)
+            a.ba_device = "cpu"
+    print(f"[device] BA {a.ba_device}, SIFT {a.sift_device}, matcher {a.match_device}", flush=True)
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import gpu_guard
     t0 = time.time()
@@ -726,6 +737,7 @@ def main():
     else:
         R1, t1, X1, st = ba_lm(Rcw, tcw, X0, cam, pt, uv, Kr, fixed=fixed, iters=a.iters, log=log, rs=rs, tmr=tba)
     tm["ba_phases"] = tba
+    tm["ba_device"] = a.ba_device
     # ---- Sim(3) BA centres -> VIO centres (free keyframes only)
     Cb = np.array([-R1[k].T @ t1[k] for k in range(len(kfs))])
     Cv = np.array([C[i] for i in kfs])

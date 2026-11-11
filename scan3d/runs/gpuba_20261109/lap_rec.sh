@@ -12,7 +12,7 @@ mkdir -p $O
 $P scan3d/scanA/kf_ba.py $R --vio $V --out $O/warm --gt $G $KFO --feat sift --loop none --cache-root $CACHE --seed 0 --db-from $SRC --dump-tri > $O/warm.log 2>&1
 rm -rf $O/warm
 for v in cuda cpu; do
-  F=""; [ $v = cuda ] && F="--fast-tracks"
+  F="--no-fast-tracks --sift-device auto"; [ $v = cuda ] && F="--fast-tracks --sift-device auto"
   echo "$(date +%T) $v start"
   /usr/bin/time -f "TIME $v %e s maxrss %M kB" $P scan3d/scanA/kf_ba.py $R --vio $V --out $O/${v}_db --gt $G $KFO --feat sift --loop none \
     --cache-root $CACHE --seed 0 --db-from $SRC --ba-device $v --save-tri $F > $O/${v}_db.log 2>&1 || echo "$v failed rc $?"

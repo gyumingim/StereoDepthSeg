@@ -11,7 +11,7 @@ $P scan3d/scanA/kf_ba.py $R --vio $V --out "${O:?}/warm" --gt $G $KFO --feat sif
 rm -rf "${O:?}/warm"
 for sp in $SPECS; do
   IFS=: read tag sd bd ex <<< "$sp"
-  F=""; [ "$bd" = cuda ] && F="--fast-tracks"
+  F="--no-fast-tracks"; [ "$bd" = cuda ] && F="--fast-tracks"
   case "$ex" in *s*) F="$F --sort-matches";; esac                 # 4th field: s = --sort-matches, m = --match-device cpu
   case "$ex" in *m*) F="$F --match-device cpu";; esac
   echo "$(date +%T) $tag sift $sd ba $bd"
