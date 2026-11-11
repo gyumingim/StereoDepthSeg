@@ -29,6 +29,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1]))
 import tsdf_map  # noqa: E402
 
+ORACLE = []
 TS = dict(voxel_m=0.005, z_max=2.0, sigma_max=0.08, sigma_ok=0.02, min_obs=2)
 
 
@@ -73,6 +74,47 @@ def diag(K, R_):
                         dz_med_cm=float(np.median(k["Z"][m] - Zp) * 100), Z_med_m=float(np.median(k["Z"][m])),
                         cam=k["T"][:3, 3].round(4).tolist(), dpos_cm=float(np.linalg.norm(k["T"][:3, 3] - k["Tgt"][:3, 3]) * 100),
                         n=int(m.sum())))
+    return out
+
+
+def probe(K, R_):
+    """board pixels: dz = Z - GT plane depth (cm) binned by image row / col (10 x 10), by distance to the edge of the valid mask,
+    and board-frame xy (2 cm cells, GT pose) of pixels that sit > 1 cm in front of the per-kf median (the ghost side)."""
+    h, w = K[0]["Z"].shape
+    acc = {}
+    def add(key, v):
+        acc.setdefault(key, []).append(v)
+    for k in K:
+        m = k["V"] & k["inb"]
+        if m.sum() < 200:
+            continue
+        dz = (k["Z"] - gt_plane_depth(k, R_)) * 100
+        med = np.median(dz[m])
+        rel = dz - med
+        vv, uu = np.nonzero(m)
+        dist = cv2.distanceTransform(k["V"].astype(np.uint8), cv2.DIST_L2, 3)[m]
+        fr = rel[m] < -1.0
+        rb = (vv * 10 // h); cb = (uu * 10 // w)
+        for i_ in range(10):
+            add(f"row{i_}", (int((rb == i_).sum()), int((fr & (rb == i_)).sum())))
+            add(f"col{i_}", (int((cb == i_).sum()), int((fr & (cb == i_)).sum())))
+        for lo, hi in ((0, 3), (3, 8), (8, 20), (20, 50), (50, 1e9)):
+            sel = (dist >= lo) & (dist < hi)
+            add(f"edge{lo}", (int(sel.sum()), int((fr & sel).sum())))
+        X = k["Z"][m, None] * R_[m]
+        Xw = X @ k["Tgt"][:3, :3].T + k["Tgt"][:3, 3]
+        add("xy_front", np.stack([Xw[fr, 0], Xw[fr, 1]], 1)[::50].round(3).tolist())
+        add("kf_front", (k["i"], int(m.sum()), int(fr.sum())))
+    out = {}
+    for key, v in acc.items():
+        if key == "xy_front":
+            P = np.array([p for l in v for p in l]) if any(v) else np.zeros((0, 2))
+            out[key] = np.histogram2d(P[:, 0], P[:, 1], bins=[np.arange(0, 0.60, 0.02), np.arange(0, 0.34, 0.02)])[0].astype(int).tolist() if len(P) else []
+        elif key == "kf_front":
+            out[key] = v
+        else:
+            n = sum(a for a, _ in v); f = sum(b for _, b in v)
+            out[key] = dict(n=n, front_frac=f / max(n, 1))
     return out
 
 
@@ -122,6 +164,8 @@ def cons_mask(K, i, nbs, dev, thr_abs=0.005, ks=3.0, frac=0.5):
         seen += sn.int(); agree += (sn & ((Zn - zn).abs() <= tol)).int()
     keep = (seen == 0) | (agree.double() >= frac * seen.double())
     M = torch.zeros((h, w), dtype=torch.bool, device=dev); M[vs, us] = keep
+    if len(z) == 0:
+        return M.cpu().numpy(), 0.0, 0.0
     return M.cpu().numpy(), float((seen > 0).double().mean()), float((~keep).double().mean())
 
 
@@ -177,17 +221,48 @@ def run_variant(K, R_, name, out, dev, icpT=None):
     tcfg = dict(TS)
     if name.startswith("twide"):
         tcfg.update(trunc_min_vox=5.0, trunc_k=3.0)
-    use_cons = "cons" in name
+    use_cons = "cons" in name and "nocons" not in name
     min_dt = 3.0 if "consx" in name else 0.0
+    import re
+    crop = float(re.search(r"crop(\d+)", name).group(1)) / 100 if re.search(r"crop(\d+)", name) else 0.0
+    crop_b = float(re.search(r"cropb(\d+)", name).group(1)) / 100 if re.search(r"cropb(\d+)", name) else 0.0
+    if crop_b:
+        crop = 0.0
+    ero = int(re.search(r"ero(\d+)", name).group(1)) if re.search(r"ero(\d+)", name) else 0
+    cfrac = float(re.search(r"cons(\d+)", name).group(1)) / 100 if re.search(r"cons(\d+)", name) else 0.5
+    kfrej = float(re.search(r"kfrej(\d+)", name).group(1)) / 100 if re.search(r"kfrej(\d+)", name) else 0.0
+    if re.search(r"sfloor(\d+)", name):
+        tcfg["sigma_floor"] = float(re.search(r"sfloor(\d+)", name).group(1)) / 1000
+    if re.search(r"carve(\d+)", name):    # allocate blocks from -N mu in front of each depth to +1 mu behind (free-space carving)
+        nc = int(re.search(r"carve(\d+)", name).group(1)); tcfg["alloc_ks"] = tuple(float(x) for x in range(-nc, 2))
+    if "dense" in name:                     # allocate the whole +-mu band every half block (tsdf_map alloc_dense)
+        tcfg["alloc_dense"] = True
+    drop_kf = set()
+    if name.startswith("oracle"):          # diagnostic only (uses GT): drop kfs with > 10 % board pixels > 1 cm in front of their median
+        drop_kf = {r[0] for r in ORACLE if r[2] > 0.10 * r[1]}
+    kfst = []
     Ts = icpT if name.startswith("icp") else [k["T"] for k in K]
     Kp = [dict(k, T=T) for k, T in zip(K, Ts)]
     tsdf = tsdf_map.TSDFMap(**tcfg)
     dz, cst = [], []
     for ii, k in enumerate(Kp):
         V = k["V"].copy()
-        if use_cons:
-            M, sf, dropf = cons_mask(Kp, ii, neighbours(Kp, ii, min_dt=min_dt), dev)
-            V &= M; cst.append((sf, dropf))
+        if crop:
+            h_, w_ = V.shape; cm = np.zeros_like(V); cm[int(crop * h_):h_ - int(crop * h_), int(crop * w_):w_ - int(crop * w_)] = True; V &= cm
+        if crop_b:
+            V[V.shape[0] - int(crop_b * V.shape[0]):] = False
+        if ero:
+            V &= cv2.erode(V.astype(np.uint8), np.ones((2 * ero + 1, 2 * ero + 1), np.uint8)).astype(bool)
+        if k["i"] in drop_kf:
+            continue
+        if use_cons or kfrej:
+            M, sf, dropf = cons_mask(Kp, ii, neighbours(Kp, ii, min_dt=min_dt), dev, frac=cfrac)
+            kfst.append((k["i"], round(sf, 4), round(dropf, 4)))
+            if kfrej and dropf > kfrej:
+                drop_kf.add(k["i"]); continue
+            if use_cons:
+                V &= M
+            cst.append((sf, dropf))
         m = V & k["inb"]
         if m.sum() > 200:
             dz.append((k["Z"][m] - gt_plane_depth(k, R_)[m]).astype(np.float32))
@@ -207,6 +282,7 @@ def run_variant(K, R_, name, out, dev, icpT=None):
         s["cons_seen_frac_med"] = float(np.median([c[0] for c in cst])); s["cons_drop_frac_med"] = float(np.median([c[1] for c in cst]))
         s["cons_drop_frac_mean"] = float(np.mean([c[1] for c in cst]))
     s.update(mesh_metrics(Vm, K[0]["BW"], K[0]["BH"]))
+    s["dropped_kf"] = sorted(drop_kf); s["kf_cons"] = kfst
     (o / "summary.json").write_text(json.dumps(s, indent=1))
     print(json.dumps(s), flush=True)
     return s
@@ -216,6 +292,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("cache"); ap.add_argument("out")
     ap.add_argument("--variants", default="base,twide,cons,consx,icp,icp_cons")
+    ap.add_argument("--probe", action="store_true")
     a = ap.parse_args()
     t0 = time.time()
     K = load(a.cache)
@@ -225,7 +302,12 @@ def main():
     dg = diag(K, R_)
     (Path(a.out) / "diag_kf.json").write_text(json.dumps(dg, indent=0))
     dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    vs = a.variants.split(",")
+    global ORACLE
+    pj = Path(a.out) / "probe.json"
+    if a.probe or not pj.exists():
+        pj.write_text(json.dumps(probe(K, R_), indent=0))
+    ORACLE = json.loads(pj.read_text())["kf_front"]
+    vs = a.variants.split(",") if a.variants else []
     icpT = None
     if any(v.startswith("icp") for v in vs):
         t1 = time.time()
