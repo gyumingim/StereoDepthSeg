@@ -361,6 +361,8 @@ def main():
     ap.add_argument("--save-tri", action="store_true", help="write OUT/tri_dump.npz (points, obs) after triangulation and go on")
     ap.add_argument("--dump-tri", action="store_true", help="write OUT/tri_dump.npz (points, obs) after triangulation and stop")
     ap.add_argument("--cache-root", default="", help="keyframe image cache root (default REC/scanA_cache)")
+    ap.add_argument("--kf-list", default="", help="kfsel 11-11: keyframes = the 'keyframes' list of this manifest.json (make_reduced "
+                    "--kf-select motion) instead of the --kf-step rule; each must have a VIO tracking pose within --match-ms")
     a = ap.parse_args()
     import pycolmap
     if a.ba_device == "cuda":
@@ -399,13 +401,18 @@ def main():
         kfs = [int(i) for i in np.flatnonzero(has)[::a.kf_step]]
     else:
         kfs = [i for i in range(0, len(t_ns), a.kf_step) if has[i]]
+    if a.kf_list:
+        kfs = sorted(int(i) for i in json.loads(Path(a.kf_list).read_text())["keyframes"])
+        bad = [i for i in kfs if not has[i]]
+        if bad:
+            sys.exit(f"--kf-list: {len(bad)} keyframes without a VIO tracking pose within {a.match_ms} ms (first {bad[:10]})")
     Tv = {i: vT[idx[i]] for i in kfs}
-    log(f"[kf] {len(kfs)} keyframes (step {a.kf_step}) with VIO tracking poses, frames {kfs[0]}..{kfs[-1]}")
+    log(f"[kf] {len(kfs)} keyframes ({'list ' + a.kf_list if a.kf_list else f'step {a.kf_step}'}) with VIO tracking poses, frames {kfs[0]}..{kfs[-1]}")
     # board quad (for --mask-board)
     bj = json.loads(Path(str(g["board_json"])).read_text())
     sq = float(g["square_mm"]) / 1000.0
     BW, BH = bj["squares_x"] * sq, bj["squares_y"] * sq
-    tag = f"kf{a.kf_step}_s{s:g}" + ("_mask" if a.mask_board else "") + (f"_vio_{a.gt}" if a.kf_from_vio else "")
+    tag = (f"kflist{len(kfs)}_{kfs[0]}_{kfs[-1]}" if a.kf_list else f"kf{a.kf_step}") + f"_s{s:g}" + ("_mask" if a.mask_board else "") + (f"_vio_{a.gt}" if a.kf_from_vio else "")
     img_dir = (Path(a.cache_root) / rec.name if a.cache_root else rec / "scanA_cache") / tag
     img_dir.mkdir(parents=True, exist_ok=True)
     names = {i: f"{i:05d}.jpg" for i in kfs}

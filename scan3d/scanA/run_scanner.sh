@@ -26,6 +26,9 @@
 #   --cfg DIR   VIO config (default: build_livepose/cfg_gen_hs222/c4f60 when the GT is cal1022 (2.22 dpt H), else cfg_gen/c4f60)
 #   --vio FILE  use these live poses (skip the vio step)
 #   --tsdf-alloc dense|sparse  TSDF block allocation (default dense; sparse = old 3-point allocation, ghost layer)
+#   --kf-select interval|motion  keyframe rule in reduce (default interval = every 10th VIO frame; motion = kfsel 11-11, kf_select.py:
+#               new keyframe after --kf-dist CM (default 3) or --kf-rot DEG (default 4) since the last one, sharpest of a
+#               --kf-win N (default 4) VIO-frame window by --kf-blur lap|gyro|none (default lap)); kf_ba then reads the manifest list
 #   --kfba-args '...'  --mesh-args '...'  --vio-args '...'  extra arguments for that step
 #   --cache DIR  kf_ba image cache root (default OUT/cache, deleted at the end unless --keep-cache)
 # Env: SCANNER_COMMIT (commit to record, default git rev-parse), P (python, default ~/scanner/StereoDepthSeg/venv_ffs/bin/python), FFS_ROOT (default ~/scanner/StereoDepthSeg).
@@ -40,17 +43,20 @@ COMMIT=${SCANNER_COMMIT:-$(git -C "$WT" rev-parse HEAD 2>/dev/null || echo unkno
 [ $# -ge 2 ] || { sed -n '2,/^set -euo/p' "$0" | grep '^#'; exit 1; }
 REC=$(realpath -m "$1"); OUT=$(realpath -m "$2"); shift 2
 FULLV=0; KRES=1920; KQ=90; BADEV=cuda; SIFTDEV=cpu; G=""; CFG=""; VIO=""; BOARD=""; BOARD_MESH=1
-KFX=""; MSX=""; VIX=""; CACHE=""; KEEPC=0; TALLOC=dense
+KFX=""; MSX=""; VIX=""; CACHE=""; KEEPC=0; TALLOC=dense; KFSEL=interval; KFD=3; KFR=4; KFW=4; KFB=lap
 while [ $# -gt 0 ]; do case $1 in
   --full-video) FULLV=1;; --kf-res) KRES=$2; shift;; --kf-quality) KQ=$2; shift;;
   --ba-device) BADEV=$2; shift;; --sift-device) SIFTDEV=$2; shift;; --gt) G=$2; shift;; --cfg) CFG=$2; shift;;
   --vio) VIO=$(realpath -m "$2"); shift;; --board) BOARD=$2; shift;; --board-no-mesh) BOARD_MESH=0;;
   --kfba-args) KFX=$2; shift;; --mesh-args) MSX=$2; shift;; --vio-args) VIX=$2; shift;;
   --tsdf-alloc) TALLOC=$2; shift;;
+  --kf-select) KFSEL=$2; shift;; --kf-dist) KFD=$2; shift;; --kf-rot) KFR=$2; shift;; --kf-win) KFW=$2; shift;; --kf-blur) KFB=$2; shift;;
   --cache) CACHE=$(realpath -m "$2"); shift;; --keep-cache) KEEPC=1;;
   *) echo "bad option $1" >&2; exit 1;; esac; shift; done
 case $KRES in 1920|960) ;; *) echo "--kf-res must be 1920 or 960" >&2; exit 1;; esac
 case $TALLOC in dense|sparse) ;; *) echo "--tsdf-alloc must be dense or sparse" >&2; exit 1;; esac
+case $KFSEL in interval|motion) ;; *) echo "--kf-select must be interval or motion" >&2; exit 1;; esac
+[ $KFSEL = motion ] && [ $FULLV = 1 ] && { echo "--kf-select motion needs the keyframe path (not --full-video)" >&2; exit 1; }
 mkdir -p "$OUT"; CACHE=${CACHE:-$OUT/cache}
 TIMES=$OUT/times.txt; : > "$TIMES"
 T() {  # T NAME LOG CMD...: run CMD > LOG 2>&1, print + record wall ms; stop the script on failure
@@ -69,7 +75,7 @@ fi
 if [ -z "$G" ]; then [ -d "$REC/imu_gt_spl_cal1022" ] && G=imu_gt_spl_cal1022 || G=imu_gt_spl; fi
 if [ -z "$CFG" ]; then [ "$G" = imu_gt_spl_cal1022 ] && CFG=$B/cfg_gen_hs222/c4f60 || CFG=$B/cfg_gen/c4f60; fi
 echo "== run_scanner $(date '+%F %T'): REC $REC ($([ $REDUCED = 1 ] && echo keyframe-only || echo full recording)) -> $OUT"
-echo "   gt $G, input $([ $FULLV = 1 ] && echo 'full video (old)' || echo "keyframes ${KRES} JPEG q${KQ}"), BA $BADEV, SIFT $SIFTDEV, TSDF alloc $TALLOC, git ${COMMIT:0:12}"
+echo "   gt $G, input $([ $FULLV = 1 ] && echo 'full video (old)' || echo "keyframes ${KRES} JPEG q${KQ}"), BA $BADEV, SIFT $SIFTDEV, TSDF alloc $TALLOC, kf $KFSEL$([ $KFSEL = motion ] && echo " ${KFD}cm/${KFR}deg win $KFW $KFB"), git ${COMMIT:0:12}"
 
 # ---- vio (stand-in for the phone's live poses)
 if [ $REDUCED = 1 ]; then
@@ -90,7 +96,8 @@ IN=$REC
 if [ $REDUCED = 0 ] && [ $FULLV = 0 ]; then
   IN=$OUT/red/$(basename "$REC")_kf
   XR=""; [ "$KRES" = 1920 ] && XR=--full-res
-  T reduce "$OUT/reduce.log" $P "$WT/scan3d/runs/kfonly_20261111/make_reduced.py" "$REC" "$VIO" --out "$IN" --quality "$KQ" $XR --gt "$G"
+  XS=""; [ $KFSEL = motion ] && XS="--kf-select motion --kf-dist $($P -c "print($KFD/100)") --kf-rot $KFR --kf-win $KFW --kf-blur $KFB"
+  T reduce "$OUT/reduce.log" $P "$WT/scan3d/runs/kfonly_20261111/make_reduced.py" "$REC" "$VIO" --out "$IN" --quality "$KQ" $XR --gt "$G" $XS
   [ -e "$IN/cam5.mp4" ] && { echo "reduced folder holds a video" >&2; exit 9; }
   VIO=$IN/phone_live_poses.jsonl.gz
 fi
@@ -100,9 +107,13 @@ else
   echo "[input] full video $IN/cam5.mp4 (old path)"
 fi
 
-# ---- kf_ba (GPU BA)
+# ---- kf_ba (GPU BA); a motion-selected keyframe folder -> kf_ba takes its manifest list (also for a phone-sent folder)
+KL=""
+if [ -f "$IN/manifest.json" ] && [ "$($P -c "import json;print((json.load(open('$IN/manifest.json')).get('kf_select') or {}).get('rule','interval'))")" = motion ]; then
+  KL="--kf-list $IN/manifest.json"; echo "[kf] motion-selected keyframes: kf_ba --kf-list $IN/manifest.json"
+fi
 T kfba "$OUT/kfba.log" $P "$WT/scan3d/scanA/kf_ba.py" "$IN" --vio "$VIO" --out "$OUT/ba" --gt "$G" --kf-from-vio --match-ms 1 \
-  --feat sift --loop none --seed 0 --cache-root "$CACHE" --ba-device "$BADEV" --sift-device "$SIFTDEV" $KFX
+  --feat sift --loop none --seed 0 --cache-root "$CACHE" --ba-device "$BADEV" --sift-device "$SIFTDEV" $KL $KFX
 grep -m1 '^\[device\]' "$OUT/kfba.log" || true
 rm -f "$OUT/ba/db.db"
 
@@ -139,7 +150,9 @@ def mesh(d):
         return None
     m = json.loads(p.read_text()); s = m["poses"]["sim3_scale_would_be"]
     return dict(absdZ_p90_cm=m["pooled_absdZ_cm"]["p90"], k_pct=(1 / s - 1) * 100, mesh_board_z_rms_cm=m.get("mesh_board_z_rms_cm"),
-                n_kf=m.get("n_kf"), n_kf_depth=m.get("n_kf_depth"), n_kf_board_eval=m.get("n_kf_board_eval"))
+                n_kf=m.get("n_kf"), n_kf_depth=m.get("n_kf_depth"), n_kf_board_eval=m.get("n_kf_board_eval"),
+                kf_board_absdZ_p90_cm_median=m.get("kf_board_absdZ_p90_cm_median"), n_kf_no_pair=m.get("n_kf_no_pair"),
+                mesh_board_cover_frac=m.get("mesh_board_cover_frac"))
 dev = next((l.strip() for l in open(out / "kfba.log") if l.startswith("[device]")), None)
 ba = json.loads((out / "ba" / "ba.json").read_text()) if (out / "ba" / "ba.json").exists() else {}
 bs = json.loads((out / "board" / "board_scale.json").read_text()) if (out / "board" / "board_scale.json").exists() else None
@@ -148,7 +161,8 @@ r = dict(made=time.strftime("%Y-%m-%d %H:%M:%S"), commit=commit, rec=rec, input=
          kf_res=None if fullv == "1" else int(kres), kf_quality=None if fullv == "1" else int(kq), live_poses=vio, gt=g, vio_cfg=cfg, tsdf_alloc=talloc,
          kfba_device_line=dev, step_s=times, total_s=round(sum(times.values()), 1),
          sent=None if man is None else dict(n_keyframes=man["n_keyframes"], image_size=man["image_size"], jpeg_bytes=man["jpeg_bytes"],
-                                            duration_s=man["duration_s"], jpeg_MB_per_min=man["jpeg_bytes"] / 1e6 / man["duration_s"] * 60),
+                                            duration_s=man["duration_s"], jpeg_MB_per_min=man["jpeg_bytes"] / 1e6 / man["duration_s"] * 60,
+                                            kf_per_min=man["n_keyframes"] / man["duration_s"] * 60, kf_select=man.get("kf_select")),
          ba=dict(timing=ba.get("timing")), mesh=mesh("mesh"), board=bs, mesh_board=mesh("mesh_board"))
 (out / "scan_summary.json").write_text(json.dumps(r, indent=1))
 print(json.dumps({k: v for k, v in r.items() if k != "ba"}, indent=1))
