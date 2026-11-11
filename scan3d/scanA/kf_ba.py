@@ -351,6 +351,7 @@ def main():
                          "GPU lock held through the BA")
     ap.add_argument("--fast-tracks", action="store_true", help="gpuba 11-09: drop-tracks by scipy connected components + "
                     "length-batched triangulation (same tracks, same order, same per-track arithmetic as the default path)")
+    ap.add_argument("--save-tri", action="store_true", help="write OUT/tri_dump.npz (points, obs) after triangulation and go on")
     ap.add_argument("--dump-tri", action="store_true", help="write OUT/tri_dump.npz (points, obs) after triangulation and stop")
     ap.add_argument("--cache-root", default="", help="keyframe image cache root (default REC/scanA_cache)")
     a = ap.parse_args()
@@ -648,10 +649,11 @@ def main():
         cam_l += ks; pt_l += [p] * len(ks); uv_l.append(q)
     X0 = np.array(Xs); cam = np.array(cam_l); pt = np.array(pt_l); uv = np.concatenate(uv_l)
     tm["tri_s"] = round(time.time() - t4 - tm["tracks_s"], 1)
-    if a.dump_tri:
+    if a.dump_tri or a.save_tri:
         np.savez(out / "tri_dump.npz", X0=X0, cam=cam, pt=pt, uv=uv, n_tracks=len(tracks))
         log(f"[dump] {out / 'tri_dump.npz'} points {len(X0)} obs {len(cam)} tracks {len(tracks)} timing {tm}")
-        return
+        if a.dump_tri:
+            return
     obs_per_kf = np.bincount(cam, minlength=len(kfs))
     # featloop: verified pairs / inliers split base vs loop, and points that link a loop pair (both keyframes observe it)
     vb = [inl_of.get(p_, 0) for p_ in pairs if p_ not in loop_pairs]

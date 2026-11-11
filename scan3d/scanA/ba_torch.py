@@ -12,7 +12,7 @@ import numpy as np
 
 
 def ba_lm_torch(R, t, X, cam, pt, uv, K, fixed=(0,), iters=30, huber=1.0, log=print, rs=None, tmr=None,
-                device="cuda", chunk=3_000_000, deterministic=True):
+                device="cuda", chunk=1_000_000, deterministic=True):
     import torch
     torch.use_deterministic_algorithms(deterministic, warn_only=False)
     dt = torch.float64
