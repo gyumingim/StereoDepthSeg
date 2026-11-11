@@ -45,8 +45,15 @@ def ba_lm_torch(R, t, X, cam, pt, uv, K, fixed=(0,), iters=30, huber=1.0, log=pr
     del pa, pb, first, within, m
     # S block index of each pair (camera-pair block, 36 entries), as int64 on the GPU
     key = (cidx[cam[Am]] * Nf + cidx[cam[Bm]]).astype(np.int64)
+    so = np.argsort(key, kind="stable")              # pairs sorted by S block once (structure fixed) -> segment sums, no atomics
+    Am, Bm, key = Am[so], Bm[so], key[so]
+    del so
     T = lambda a, d=dt: torch.as_tensor(np.ascontiguousarray(a), dtype=d, device=dev)
-    Am_t, Bm_t, key_t = T(Am, torch.int64), T(Bm, torch.int64), T(key, torch.int64)
+    Am_t, Bm_t = T(Am, torch.int64), T(Bm, torch.int64)
+    segs = []                                        # per chunk: unique blocks + run lengths
+    for c0_ in range(0, len(key), chunk):
+        u_, cn_ = np.unique(key[c0_:c0_ + chunk], return_counts=True)
+        segs.append((c0_, T(u_, torch.int64), T(cn_, torch.int64)))
     del Am, Bm, key
     cam_t, pt_t, uv_t = T(cam, torch.int64), T(pt, torch.int64), T(uv)
     free_t = T(free, torch.bool)
@@ -127,11 +134,12 @@ def ba_lm_torch(R, t, X, cam, pt, uv, K, fixed=(0,), iters=30, huber=1.0, log=pr
             D = Hcc_f + lam * torch.diag_embed(torch.diagonal(Hcc_f, dim1=1, dim2=2) + 1e-9)
             V = torch.einsum("nij,njk->nik", Hcp_o, Hpp_inv[pt_t])           # (n,6,3)
             Sb = torch.zeros((Nf * Nf, 36), dtype=dt, device=dev)
-            for c0_ in range(0, len(Am_t), chunk):
-                A_, B_ = Am_t[c0_:c0_ + chunk], Bm_t[c0_:c0_ + chunk]
-                blk = torch.einsum("nij,nkj->nik", V[A_], Hcp_o[B_]).reshape(-1, 36)
-                Sb.index_add_(0, key_t[c0_:c0_ + chunk], blk)
-                del blk
+            for c0_, u_, cn_ in segs:
+                Va, Hb = V[Am_t[c0_:c0_ + chunk]], Hcp_o[Bm_t[c0_:c0_ + chunk]]
+                blk = (Va[:, :, 0, None] * Hb[:, None, :, 0] + Va[:, :, 1, None] * Hb[:, None, :, 1]
+                       + Va[:, :, 2, None] * Hb[:, None, :, 2]).reshape(-1, 36)          # V_a Hcp_b^T, 6x6 per pair
+                Sb[u_] += torch.segment_reduce(blk, "sum", lengths=cn_, axis=0)
+                del blk, Va, Hb
             S = (-Sb).reshape(Nf, Nf, 6, 6).permute(0, 2, 1, 3).reshape(Nf * 6, Nf * 6)
             del Sb
             S = S.contiguous()

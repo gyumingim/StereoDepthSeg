@@ -204,6 +204,108 @@ def ba_lm(R, t, X, cam, pt, uv, K, fixed=(0,), iters=30, huber=1.0, log=print, r
                          frac_inlier_1px=float((e <= 1).mean()))
 
 
+def tri_one(nodes, kfi, kps, Rcw, tcw, Pm, Kr, C, kfs, min_tri_deg):
+    """scanA triangulation of one track (DLT with the VIO poses, drop obs > 4 px, up to 3 rounds) -> (X, ks, q) or None.
+    Same code as the loop in main (kept there unchanged for the default path)."""
+    ks = [kfi[n[0]] for n in nodes]; q = np.array([kps[n[0]][n[1]] for n in nodes])
+    for _ in range(3):
+        A = np.concatenate([q[:, :1] * Pm[ks, 2] - Pm[ks, 0], q[:, 1:2] * Pm[ks, 2] - Pm[ks, 1]], 0)
+        Xh = np.linalg.svd(A)[2][-1]
+        if abs(Xh[3]) < 1e-12:
+            break
+        X = Xh[:3] / Xh[3]
+        Xc = np.einsum("nij,j->ni", Rcw[ks], X) + tcw[ks]
+        e = np.linalg.norm(Xc[:, :2] / Xc[:, 2:] * Kr[0, 0] + Kr[:2, 2] - q, axis=1)
+        good = (e < 4.0) & (Xc[:, 2] > 0.05)
+        if good.all() or good.sum() < 2:
+            break
+        ks = [k for k, g_ in zip(ks, good) if g_]; q = q[good]
+    if len(ks) < 2 or abs(Xh[3]) < 1e-12:
+        return None
+    Xc = np.einsum("nij,j->ni", Rcw[ks], X) + tcw[ks]
+    e = np.linalg.norm(Xc[:, :2] / Xc[:, 2:] * Kr[0, 0] + Kr[:2, 2] - q, axis=1)
+    if not ((e < 4.0) & (Xc[:, 2] > 0.05) & (Xc[:, 2] < 5.0)).all():
+        return None
+    cen = np.array([C[kfs[k]] for k in ks])
+    rays = X - cen; rays /= np.linalg.norm(rays, axis=1, keepdims=True)
+    ang = np.degrees(np.arccos(np.clip(np.min(rays @ rays.T), -1, 1)))
+    if ang < min_tri_deg:
+        return None
+    return X, ks, q
+
+
+def tracks_drop_fast(edges, kfs):
+    """gpuba 11-09: the scanA 'drop' tracks without the Python union-find: connected components (scipy) of the same match
+    graph; tracks and their nodes in the same order as kf_ba's UF dict (order of first appearance in the edge stream);
+    tracks with two keypoints of one image dropped. Returns node lists [(kf, kp), ...] like the default path."""
+    from scipy.sparse import coo_matrix
+    from scipy.sparse.csgraph import connected_components
+    if not edges:
+        return []
+    kfi = {i: n for n, i in enumerate(kfs)}
+    KM = int(max(int(mm.max()) for *_, mm in edges)) + 1
+    st = []
+    for _, _, _, k1, k2, mm in edges:
+        mm = mm.astype(np.int64)
+        st.append(np.stack([kfi[k1] * KM + mm[:, 0], kfi[k2] * KM + mm[:, 1]], 1).ravel())
+    S = np.concatenate(st)
+    uniq, first, inv = np.unique(S, return_index=True, return_inverse=True)
+    nU = len(uniq)
+    g = coo_matrix((np.ones(len(S) // 2, np.int8), (inv[0::2], inv[1::2])), shape=(nU, nU))
+    _, lab = connected_components(g, directed=False)
+    ordn = np.argsort(first, kind="stable")            # nodes in UF insertion order
+    lab_o = lab[ordn]
+    _, gfirst = np.unique(lab_o, return_index=True)    # per label: position of its first node
+    grank = np.empty(len(gfirst), np.int64); grank[np.argsort(gfirst, kind="stable")] = np.arange(len(gfirst))
+    o2 = np.argsort(grank[lab_o], kind="stable")
+    nodes_s = uniq[ordn][o2]; g_s = grank[lab_o][o2]
+    bnd = np.r_[0, np.flatnonzero(np.diff(g_s)) + 1, len(g_s)]
+    camk = nodes_s // KM; kp = nodes_s % KM
+    tracks = []
+    for s0, s1 in zip(bnd[:-1].tolist(), bnd[1:].tolist()):
+        if s1 - s0 < 2:
+            continue
+        cc = camk[s0:s1]
+        if len(np.unique(cc)) != len(cc):
+            continue
+        tracks.append([(kfs[c], x) for c, x in zip(cc.tolist(), kp[s0:s1].tolist())])
+    return tracks
+
+
+def tri_fast(tracks, kfi, kps, Rcw, tcw, Pm, Kr, C, kfs, min_tri_deg):
+    """gpuba 11-09: tri_one for all tracks, batched by track length (same arithmetic per track, numpy stacked SVD);
+    tracks that need a second round (some obs > 4 px but >= 2 good) go through tri_one itself. Returns per-track results."""
+    res = [None] * len(tracks)
+    if not tracks:
+        return res
+    Ls = np.array([len(t) for t in tracks])
+    Cv = np.array([C[i] for i in kfs])
+    for L in np.unique(Ls):
+        ti = np.flatnonzero(Ls == L)
+        ks = np.array([[kfi[n[0]] for n in tracks[t]] for t in ti])                    # (n,L)
+        q = np.array([[kps[n[0]][n[1]] for n in tracks[t]] for t in ti])               # (n,L,2)
+        Pk = Pm[ks]                                                                     # (n,L,3,4)
+        A = np.concatenate([q[:, :, :1] * Pk[:, :, 2] - Pk[:, :, 0], q[:, :, 1:2] * Pk[:, :, 2] - Pk[:, :, 1]], 1)
+        Xh = np.linalg.svd(A)[2][:, -1]                                                 # (n,4)
+        degen = np.abs(Xh[:, 3]) < 1e-12
+        X = Xh[:, :3] / np.where(degen, 1.0, Xh[:, 3])[:, None]
+        Xc = np.einsum("nlij,nj->nli", Rcw[ks], X) + tcw[ks]
+        e = np.linalg.norm(Xc[:, :, :2] / Xc[:, :, 2:] * Kr[0, 0] + Kr[:2, 2] - q, axis=2)
+        good = (e < 4.0) & (Xc[:, :, 2] > 0.05)
+        allg = good.all(1)
+        again = ~degen & ~allg & (good.sum(1) >= 2)
+        ok = ~degen & allg & (Xc[:, :, 2] < 5.0).all(1)
+        rays = X[:, None, :] - Cv[ks]; rays /= np.linalg.norm(rays, axis=2, keepdims=True)
+        with np.errstate(invalid="ignore"):
+            ang = np.degrees(np.arccos(np.clip((rays @ np.transpose(rays, (0, 2, 1))).min((1, 2)), -1, 1)))
+        ok &= ang >= min_tri_deg
+        for j in np.flatnonzero(ok):
+            res[ti[j]] = (X[j], ks[j].tolist(), q[j])
+        for j in np.flatnonzero(again):
+            res[ti[j]] = tri_one(tracks[ti[j]], kfi, kps, Rcw, tcw, Pm, Kr, C, kfs, min_tri_deg)
+    return res
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("rec"); ap.add_argument("--vio", required=True); ap.add_argument("--out", required=True)
@@ -247,6 +349,9 @@ def main():
     ap.add_argument("--ba-device", default="cpu", choices=["cpu", "cuda"],
                     help="gpuba 11-09: cpu = numpy ba_lm (scanA); cuda = same LM / Schur steps in torch float64 on the GPU (ba_torch.py), "
                          "GPU lock held through the BA")
+    ap.add_argument("--fast-tracks", action="store_true", help="gpuba 11-09: drop-tracks by scipy connected components + "
+                    "length-batched triangulation (same tracks, same order, same per-track arithmetic as the default path)")
+    ap.add_argument("--dump-tri", action="store_true", help="write OUT/tri_dump.npz (points, obs) after triangulation and stop")
     ap.add_argument("--cache-root", default="", help="keyframe image cache root (default REC/scanA_cache)")
     a = ap.parse_args()
     import pycolmap
@@ -466,7 +571,9 @@ def main():
         n_inl.append(len(mm))
         edges.append((len(mm), min(k1, k2), max(k1, k2), k1, k2, mm))
     n_skip = 0
-    if a.tracks == "drop":
+    if a.tracks == "drop" and a.fast_tracks:
+        pass                                        # tracks_drop_fast below
+    elif a.tracks == "drop":
         for _, _, _, k1, k2, mm in edges:
             for x, y in mm:
                 uf.u((k1, int(x)), (k2, int(y)))
@@ -489,7 +596,7 @@ def main():
     for node in list(uf.p):
         groups.setdefault(uf.f(node), []).append(node)
     kfi = {i: n for n, i in enumerate(kfs)}
-    tracks = []
+    tracks = tracks_drop_fast(edges, kfs) if (a.tracks == "drop" and a.fast_tracks) else []
     for nodes in groups.values():
         if len(nodes) < 2:
             continue
@@ -503,7 +610,14 @@ def main():
     Rcw = np.array([Tv[i][:3, :3].T for i in kfs]); tcw = np.array([-Tv[i][:3, :3].T @ Tv[i][:3, 3] for i in kfs])
     Pm = np.array([Kr @ np.hstack([Rcw[k], tcw[k][:, None]]) for k in range(len(kfs))])
     Xs, cam_l, pt_l, uv_l = [], [], [], []
-    for nodes in tracks:
+    if a.fast_tracks:
+        for r_ in tri_fast(tracks, kfi, kps, Rcw, tcw, Pm, Kr, C, kfs, a.min_tri_deg):
+            if r_ is None:
+                continue
+            X, ks, q = r_
+            p = len(Xs); Xs.append(X)
+            cam_l += ks; pt_l += [p] * len(ks); uv_l.append(q)
+    for nodes in (tracks if not a.fast_tracks else []):
         ks = [kfi[n[0]] for n in nodes]; q = np.array([kps[n[0]][n[1]] for n in nodes])
         for _ in range(3):
             A = np.concatenate([q[:, :1] * Pm[ks, 2] - Pm[ks, 0], q[:, 1:2] * Pm[ks, 2] - Pm[ks, 1]], 0)
@@ -533,6 +647,11 @@ def main():
         p = len(Xs); Xs.append(X)
         cam_l += ks; pt_l += [p] * len(ks); uv_l.append(q)
     X0 = np.array(Xs); cam = np.array(cam_l); pt = np.array(pt_l); uv = np.concatenate(uv_l)
+    tm["tri_s"] = round(time.time() - t4 - tm["tracks_s"], 1)
+    if a.dump_tri:
+        np.savez(out / "tri_dump.npz", X0=X0, cam=cam, pt=pt, uv=uv, n_tracks=len(tracks))
+        log(f"[dump] {out / 'tri_dump.npz'} points {len(X0)} obs {len(cam)} tracks {len(tracks)} timing {tm}")
+        return
     obs_per_kf = np.bincount(cam, minlength=len(kfs))
     # featloop: verified pairs / inliers split base vs loop, and points that link a loop pair (both keyframes observe it)
     vb = [inl_of.get(p_, 0) for p_ in pairs if p_ not in loop_pairs]
