@@ -26,9 +26,10 @@
 #   --cfg DIR   VIO config (default: build_livepose/cfg_gen_hs222/c4f60 when the GT is cal1022 (2.22 dpt H), else cfg_gen/c4f60)
 #   --vio FILE  use these live poses (skip the vio step)
 #   --tsdf-alloc dense|sparse  TSDF block allocation (default dense; sparse = old 3-point allocation, ghost layer)
-#   --kf-select interval|motion  keyframe rule in reduce (default interval = every 10th VIO frame; motion = kfsel 11-11, kf_select.py:
-#               new keyframe after --kf-dist CM (default 3) or --kf-rot DEG (default 4) since the last one, sharpest of a
-#               --kf-win N (default 4) VIO-frame window by --kf-blur lap|gyro|none (default lap)); kf_ba then reads the manifest list
+#   --kf-select motion|interval  keyframe rule in reduce (default motion = kfsel 11-11 user decision, kf_select.py: new keyframe after
+#               --kf-dist CM (default 3) or --kf-rot DEG (default 4) since the last one, the frame of a --kf-win N (default 4) VIO-frame
+#               window with the lowest gyro rate (--kf-blur gyro|lap|none, default gyro); kf_ba then reads the manifest list.
+#               interval = old rule, every 10th VIO frame (rollback)
 #   --kfba-args '...'  --mesh-args '...'  --vio-args '...'  extra arguments for that step
 #   --cache DIR  kf_ba image cache root (default OUT/cache, deleted at the end unless --keep-cache)
 # Env: SCANNER_COMMIT (commit to record, default git rev-parse), P (python, default ~/scanner/StereoDepthSeg/venv_ffs/bin/python), FFS_ROOT (default ~/scanner/StereoDepthSeg).
@@ -43,7 +44,7 @@ COMMIT=${SCANNER_COMMIT:-$(git -C "$WT" rev-parse HEAD 2>/dev/null || echo unkno
 [ $# -ge 2 ] || { sed -n '2,/^set -euo/p' "$0" | grep '^#'; exit 1; }
 REC=$(realpath -m "$1"); OUT=$(realpath -m "$2"); shift 2
 FULLV=0; KRES=1920; KQ=90; BADEV=cuda; SIFTDEV=cpu; G=""; CFG=""; VIO=""; BOARD=""; BOARD_MESH=1
-KFX=""; MSX=""; VIX=""; CACHE=""; KEEPC=0; TALLOC=dense; KFSEL=interval; KFD=3; KFR=4; KFW=4; KFB=lap
+KFX=""; MSX=""; VIX=""; CACHE=""; KEEPC=0; TALLOC=dense; KFSEL=motion; KFD=3; KFR=4; KFW=4; KFB=gyro
 while [ $# -gt 0 ]; do case $1 in
   --full-video) FULLV=1;; --kf-res) KRES=$2; shift;; --kf-quality) KQ=$2; shift;;
   --ba-device) BADEV=$2; shift;; --sift-device) SIFTDEV=$2; shift;; --gt) G=$2; shift;; --cfg) CFG=$2; shift;;
