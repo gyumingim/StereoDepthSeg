@@ -351,6 +351,8 @@ def main():
                          "GPU lock held through the BA")
     ap.add_argument("--fast-tracks", action="store_true", help="gpuba 11-09: drop-tracks by scipy connected components + "
                     "length-batched triangulation (same tracks, same order, same per-track arithmetic as the default path)")
+    ap.add_argument("--sift-device", default="auto", choices=["auto", "cpu"],
+                    help="auto = pycolmap CUDA SIFT when available (scanA); cpu = pycolmap CPU SIFT (gpuba 11-11, deterministic run to run)")
     ap.add_argument("--save-tri", action="store_true", help="write OUT/tri_dump.npz (points, obs) after triangulation and go on")
     ap.add_argument("--dump-tri", action="store_true", help="write OUT/tri_dump.npz (points, obs) after triangulation and stop")
     ap.add_argument("--cache-root", default="", help="keyframe image cache root (default REC/scanA_cache)")
@@ -435,11 +437,14 @@ def main():
         eo = pycolmap.FeatureExtractionOptions()
         eo.sift.max_num_features = a.max_features if a.feat == "sift" else 16    # xfeat_lg: SIFT pass only creates camera/image rows
         eo.max_image_size = max(W0, H0)
+        if a.sift_device == "cpu":                   # gpuba 11-11: CPU SIFT (repeatable; CUDA SIFT on the RTX 5080 is not)
+            eo.use_gpu = False
         ro = pycolmap.ImageReaderOptions()
         ro.camera_model = "PINHOLE"
         ro.camera_params = f"{Kr[0, 0]:.10g},{Kr[1, 1]:.10g},{Kr[0, 2] + 0.5:.10g},{Kr[1, 2] + 0.5:.10g}"
         pycolmap.extract_features(db_path, img_dir, image_names=[names[i] for i in kfs], camera_mode=pycolmap.CameraMode.SINGLE,
-                                  reader_options=ro, extraction_options=eo, device=pycolmap.Device.auto)
+                                  reader_options=ro, extraction_options=eo,
+                                  device=pycolmap.Device.cpu if a.sift_device == "cpu" else pycolmap.Device.auto)
         xfeats = None
         if a.feat == "xfeat_lg":
             sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "featloop"))

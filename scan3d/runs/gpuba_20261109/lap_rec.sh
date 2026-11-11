@@ -32,7 +32,7 @@ rm -f $O/cpu_db/tri_dump.npz $O/cuda_db/tri_dump.npz
 for v in cuda cpu; do
   [ -f $O/${v}_db/poses_ba.jsonl.gz ] || continue
   echo "$(date +%T) mesh $v"
-  /usr/bin/time -f "TIME mesh_$v %e s maxrss %M kB" $P scan3d/scanA/scan_offline.py $R --out $O/mesh_$v --gt $G --vio $O/${v}_db/poses_ba.jsonl.gz --compress --kf-step 1 \
+  SCAN3D_GPU_FRAC=0.75 /usr/bin/time -f "TIME mesh_$v %e s maxrss %M kB" $P scan3d/scanA/scan_offline.py $R --out $O/mesh_$v --gt $G --vio $O/${v}_db/poses_ba.jsonl.gz --compress --kf-step 1 \
     > $O/mesh_$v.log 2>&1 || echo "mesh $v failed rc $?"
   rm -f $O/mesh_$v/mesh.ply $O/mesh_$v/mesh.obj
 done
