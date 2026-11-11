@@ -1,0 +1,59 @@
+== run_scanner 2026-11-11 18:13:17: REC /home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261022_133820 (full recording) -> /home/system/scanner/StereoDepthSeg-kfsel/scan3d/runs/laptop/20261022_133820/kfsel_I/scan
+   gt imu_gt_spl_cal1022, input keyframes 1920 JPEG q90, BA cuda, SIFT cpu, TSDF alloc dense, kf interval, git 970450213ec0
+18:13:17 step reduce start (log /home/system/scanner/StereoDepthSeg-kfsel/scan3d/runs/laptop/20261022_133820/kfsel_I/scan/reduce.log)
+18:13:38 step reduce done 21.5 s (rc 0)
+[input] keyframe-only: /home/system/scanner/StereoDepthSeg-kfsel/scan3d/runs/laptop/20261022_133820/kfsel_I/scan/red/hs_20261022_133820_kf/frames_kf (342 jpg, 1920x1080, 124M), cam5.mp4 absent: yes
+18:13:38 step kfba start (log /home/system/scanner/StereoDepthSeg-kfsel/scan3d/runs/laptop/20261022_133820/kfsel_I/scan/kfba.log)
+18:14:46 step kfba done 67.5 s (rc 0)
+[device] BA cuda, SIFT cpu, matcher auto
+18:14:46 step mesh start (log /home/system/scanner/StereoDepthSeg-kfsel/scan3d/runs/laptop/20261022_133820/kfsel_I/scan/mesh.log)
+18:15:31 step mesh done 44.8 s (rc 0)
+{
+ "made": "2026-11-11 18:15:31",
+ "commit": "970450213ec01a9f2c8920c5c3db2871d5a4405a",
+ "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261022_133820",
+ "input": "/home/system/scanner/StereoDepthSeg-kfsel/scan3d/runs/laptop/20261022_133820/kfsel_I/scan/red/hs_20261022_133820_kf",
+ "keyframe_only": true,
+ "kf_res": 1920,
+ "kf_quality": 90,
+ "live_poses": "/home/system/scanner/StereoDepthSeg-kfsel/scan3d/runs/laptop/20261022_133820/kfsel_I/scan/red/hs_20261022_133820_kf/phone_live_poses.jsonl.gz",
+ "gt": "imu_gt_spl_cal1022",
+ "vio_cfg": "/home/system/scanner/build_livepose/cfg_gen_hs222/c4f60",
+ "tsdf_alloc": "dense",
+ "kfba_device_line": "[device] BA cuda, SIFT cpu, matcher auto",
+ "step_s": {
+  "reduce": 21.5,
+  "kfba": 67.6,
+  "mesh": 44.8
+ },
+ "total_s": 133.9,
+ "sent": {
+  "n_keyframes": 342,
+  "image_size": [
+   1920,
+   1080
+  ],
+  "jpeg_bytes": 129332226,
+  "duration_s": 69.200800547,
+  "jpeg_MB_per_min": 112.13647094630915,
+  "kf_per_min": 296.52836149002593,
+  "kf_select": {
+   "rule": "interval",
+   "kf_step": 10
+  }
+ },
+ "mesh": {
+  "absdZ_p90_cm": 0.7352232336997986,
+  "k_pct": -1.3738346946375657,
+  "mesh_board_z_rms_cm": 0.2289232611656189,
+  "n_kf": 336,
+  "n_kf_depth": 74,
+  "n_kf_board_eval": 70,
+  "kf_board_absdZ_p90_cm_median": 0.5751952117483705,
+  "n_kf_no_pair": 262,
+  "mesh_board_cover_frac": 0.9595687331536388
+ },
+ "board": null,
+ "mesh_board": null
+}
+== run_scanner done 18:15:31

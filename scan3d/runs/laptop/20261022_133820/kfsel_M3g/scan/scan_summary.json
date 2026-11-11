@@ -1,0 +1,91 @@
+{
+ "made": "2026-11-11 18:22:01",
+ "commit": "970450213ec01a9f2c8920c5c3db2871d5a4405a",
+ "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261022_133820",
+ "input": "/home/system/scanner/StereoDepthSeg-kfsel/scan3d/runs/laptop/20261022_133820/kfsel_M3g/scan/red/hs_20261022_133820_kf",
+ "keyframe_only": true,
+ "kf_res": 1920,
+ "kf_quality": 90,
+ "live_poses": "/home/system/scanner/StereoDepthSeg-kfsel/scan3d/runs/laptop/20261022_133820/kfsel_M3g/scan/red/hs_20261022_133820_kf/phone_live_poses.jsonl.gz",
+ "gt": "imu_gt_spl_cal1022",
+ "vio_cfg": "/home/system/scanner/build_livepose/cfg_gen_hs222/c4f60",
+ "tsdf_alloc": "dense",
+ "kfba_device_line": "[device] BA cuda, SIFT cpu, matcher auto",
+ "step_s": {
+  "reduce": 21.9,
+  "kfba": 37.1,
+  "mesh": 42.6
+ },
+ "total_s": 101.6,
+ "sent": {
+  "n_keyframes": 203,
+  "image_size": [
+   1920,
+   1080
+  ],
+  "jpeg_bytes": 76569624,
+  "duration_s": 69.200800547,
+  "jpeg_MB_per_min": 66.38907937025546,
+  "kf_per_min": 176.00952451016158,
+  "kf_select": {
+   "rule": "motion",
+   "dist_m": 0.03,
+   "rot_deg": 4.0,
+   "win": 4,
+   "blur": "gyro",
+   "max_gyro": 0.0,
+   "n_vio_frames": 3413,
+   "n_scored": 812,
+   "n_kf": 203,
+   "pos_in_window_hist": [
+    69,
+    20,
+    27,
+    87
+   ],
+   "gyro_kf_median": 0.9573036260217168,
+   "gyro_window_mean_median": 1.118979816142007,
+   "moved_m_median": 0.011208485847847503,
+   "rot_deg_median": 5.7541223508024615,
+   "exposure_ns_median": 4002000.0,
+   "skew_ns_median": 2938614.0
+  }
+ },
+ "ba": {
+  "timing": {
+   "images_s": 1.8,
+   "features_s": 9.0,
+   "matching_s": 7.0,
+   "gpu_stage_s": 16.2,
+   "read_db_uf_s": 0.0,
+   "tracks_s": 0.7,
+   "tri_s": 1.6,
+   "tracks_tri_s": 2.3,
+   "ba_phases": {
+    "n_obs_pairs": 5847394,
+    "setup_s": 4.469,
+    "jac_s": 2.616,
+    "n_solves": 40,
+    "schur_s": 4.54,
+    "solve_s": 0.463,
+    "update_cost_s": 0.087,
+    "gpu_peak_gb": 1.3
+   },
+   "ba_device": "cuda",
+   "ba_s": 12.7
+  }
+ },
+ "mesh": {
+  "absdZ_p90_cm": 0.6853410005569458,
+  "k_pct": -1.286365825532898,
+  "mesh_board_z_rms_cm": 0.21365760266780853,
+  "n_kf": 196,
+  "n_kf_depth": 82,
+  "n_kf_board_eval": 79,
+  "kf_board_absdZ_p90_cm_median": 0.5348816750364607,
+  "n_kf_no_pair": 114,
+  "mesh_board_cover_frac": 0.9642857142857143
+ },
+ "board": null,
+ "mesh_board": null
+}

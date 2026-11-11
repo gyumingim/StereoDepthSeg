@@ -1,0 +1,79 @@
+== run_scanner 2026-11-11 18:20:19: REC /home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261022_133820 (full recording) -> /home/system/scanner/StereoDepthSeg-kfsel/scan3d/runs/laptop/20261022_133820/kfsel_M3g/scan
+   gt imu_gt_spl_cal1022, input keyframes 1920 JPEG q90, BA cuda, SIFT cpu, TSDF alloc dense, kf motion 3cm/4deg win 4 gyro, git 970450213ec0
+18:20:20 step reduce start (log /home/system/scanner/StereoDepthSeg-kfsel/scan3d/runs/laptop/20261022_133820/kfsel_M3g/scan/reduce.log)
+18:20:41 step reduce done 21.9 s (rc 0)
+[input] keyframe-only: /home/system/scanner/StereoDepthSeg-kfsel/scan3d/runs/laptop/20261022_133820/kfsel_M3g/scan/red/hs_20261022_133820_kf/frames_kf (203 jpg, 1920x1080, 74M), cam5.mp4 absent: yes
+[kf] motion-selected keyframes: kf_ba --kf-list /home/system/scanner/StereoDepthSeg-kfsel/scan3d/runs/laptop/20261022_133820/kfsel_M3g/scan/red/hs_20261022_133820_kf/manifest.json
+18:20:42 step kfba start (log /home/system/scanner/StereoDepthSeg-kfsel/scan3d/runs/laptop/20261022_133820/kfsel_M3g/scan/kfba.log)
+18:21:19 step kfba done 37.0 s (rc 0)
+[device] BA cuda, SIFT cpu, matcher auto
+18:21:19 step mesh start (log /home/system/scanner/StereoDepthSeg-kfsel/scan3d/runs/laptop/20261022_133820/kfsel_M3g/scan/mesh.log)
+18:22:01 step mesh done 42.6 s (rc 0)
+{
+ "made": "2026-11-11 18:22:01",
+ "commit": "970450213ec01a9f2c8920c5c3db2871d5a4405a",
+ "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261022_133820",
+ "input": "/home/system/scanner/StereoDepthSeg-kfsel/scan3d/runs/laptop/20261022_133820/kfsel_M3g/scan/red/hs_20261022_133820_kf",
+ "keyframe_only": true,
+ "kf_res": 1920,
+ "kf_quality": 90,
+ "live_poses": "/home/system/scanner/StereoDepthSeg-kfsel/scan3d/runs/laptop/20261022_133820/kfsel_M3g/scan/red/hs_20261022_133820_kf/phone_live_poses.jsonl.gz",
+ "gt": "imu_gt_spl_cal1022",
+ "vio_cfg": "/home/system/scanner/build_livepose/cfg_gen_hs222/c4f60",
+ "tsdf_alloc": "dense",
+ "kfba_device_line": "[device] BA cuda, SIFT cpu, matcher auto",
+ "step_s": {
+  "reduce": 21.9,
+  "kfba": 37.1,
+  "mesh": 42.6
+ },
+ "total_s": 101.6,
+ "sent": {
+  "n_keyframes": 203,
+  "image_size": [
+   1920,
+   1080
+  ],
+  "jpeg_bytes": 76569624,
+  "duration_s": 69.200800547,
+  "jpeg_MB_per_min": 66.38907937025546,
+  "kf_per_min": 176.00952451016158,
+  "kf_select": {
+   "rule": "motion",
+   "dist_m": 0.03,
+   "rot_deg": 4.0,
+   "win": 4,
+   "blur": "gyro",
+   "max_gyro": 0.0,
+   "n_vio_frames": 3413,
+   "n_scored": 812,
+   "n_kf": 203,
+   "pos_in_window_hist": [
+    69,
+    20,
+    27,
+    87
+   ],
+   "gyro_kf_median": 0.9573036260217168,
+   "gyro_window_mean_median": 1.118979816142007,
+   "moved_m_median": 0.011208485847847503,
+   "rot_deg_median": 5.7541223508024615,
+   "exposure_ns_median": 4002000.0,
+   "skew_ns_median": 2938614.0
+  }
+ },
+ "mesh": {
+  "absdZ_p90_cm": 0.6853410005569458,
+  "k_pct": -1.286365825532898,
+  "mesh_board_z_rms_cm": 0.21365760266780853,
+  "n_kf": 196,
+  "n_kf_depth": 82,
+  "n_kf_board_eval": 79,
+  "kf_board_absdZ_p90_cm_median": 0.5348816750364607,
+  "n_kf_no_pair": 114,
+  "mesh_board_cover_frac": 0.9642857142857143
+ },
+ "board": null,
+ "mesh_board": null
+}
+== run_scanner done 18:22:01

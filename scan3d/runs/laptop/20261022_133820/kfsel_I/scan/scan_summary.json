@@ -1,0 +1,72 @@
+{
+ "made": "2026-11-11 18:15:31",
+ "commit": "970450213ec01a9f2c8920c5c3db2871d5a4405a",
+ "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261022_133820",
+ "input": "/home/system/scanner/StereoDepthSeg-kfsel/scan3d/runs/laptop/20261022_133820/kfsel_I/scan/red/hs_20261022_133820_kf",
+ "keyframe_only": true,
+ "kf_res": 1920,
+ "kf_quality": 90,
+ "live_poses": "/home/system/scanner/StereoDepthSeg-kfsel/scan3d/runs/laptop/20261022_133820/kfsel_I/scan/red/hs_20261022_133820_kf/phone_live_poses.jsonl.gz",
+ "gt": "imu_gt_spl_cal1022",
+ "vio_cfg": "/home/system/scanner/build_livepose/cfg_gen_hs222/c4f60",
+ "tsdf_alloc": "dense",
+ "kfba_device_line": "[device] BA cuda, SIFT cpu, matcher auto",
+ "step_s": {
+  "reduce": 21.5,
+  "kfba": 67.6,
+  "mesh": 44.8
+ },
+ "total_s": 133.9,
+ "sent": {
+  "n_keyframes": 342,
+  "image_size": [
+   1920,
+   1080
+  ],
+  "jpeg_bytes": 129332226,
+  "duration_s": 69.200800547,
+  "jpeg_MB_per_min": 112.13647094630915,
+  "kf_per_min": 296.52836149002593,
+  "kf_select": {
+   "rule": "interval",
+   "kf_step": 10
+  }
+ },
+ "ba": {
+  "timing": {
+   "images_s": 3.0,
+   "features_s": 18.2,
+   "matching_s": 13.2,
+   "gpu_stage_s": 31.8,
+   "read_db_uf_s": 0.1,
+   "tracks_s": 1.4,
+   "tri_s": 1.8,
+   "tracks_tri_s": 3.3,
+   "ba_phases": {
+    "n_obs_pairs": 14005276,
+    "setup_s": 1.918,
+    "jac_s": 2.211,
+    "n_solves": 58,
+    "schur_s": 18.542,
+    "solve_s": 1.983,
+    "update_cost_s": 0.12,
+    "gpu_peak_gb": 1.48
+   },
+   "ba_device": "cuda",
+   "ba_s": 25.4
+  }
+ },
+ "mesh": {
+  "absdZ_p90_cm": 0.7352232336997986,
+  "k_pct": -1.3738346946375657,
+  "mesh_board_z_rms_cm": 0.2289232611656189,
+  "n_kf": 336,
+  "n_kf_depth": 74,
+  "n_kf_board_eval": 70,
+  "kf_board_absdZ_p90_cm_median": 0.5751952117483705,
+  "n_kf_no_pair": 262,
+  "mesh_board_cover_frac": 0.9595687331536388
+ },
+ "board": null,
+ "mesh_board": null
+}
