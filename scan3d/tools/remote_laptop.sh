@@ -11,7 +11,10 @@
 #   tools/remote_laptop.sh unlock                     remove the lock (only when its holder here is gone; asks no questions)
 #
 # REC  = recording dir name under scan3d/recordings or a unique part of it (165506 -> hs_20261024_165506_std60).
-# STEP = vio | kfba | mesh | board | all (= vio kfba mesh) | 'cmd:<shell command>' (cwd = WT, $R $O $P $G $CACHE set)
+# STEP = vio | kfba | mesh | board | all (= vio kfba mesh) | scan | 'cmd:<shell command>' (cwd = WT, $R $O $P $G $CACHE set)
+#   scan  scan3d/scanA/run_scanner.sh (needs a WT that has it: scanner-defaults-20261111) = the new scanner defaults (11-11):
+#         VIO c4f60 replay -> keyframes 1920 JPEG q90 (no video) -> kf_ba GPU BA -> FFS 960 + TSDF [-> board with --args '--board auto']
+#         -> O/scan/ (scan_summary.json). --gt / --cfg only when given (run_scanner picks cal1022 + hs222 for H); other flags via --args
 #   vio   lp_replay.py with the live config c4f60 (0.5 dpt lens)            -> O/vio/B_o0.{poses.jsonl.gz,json,...}
 #   kfba  kf_ba.py SIFT, seed 0, no loop (featloop S)                          -> O/ba_S/   (input: --vio FILE or O/vio)
 #   mesh  scan_offline.py FFS 960x540 + TSDF 5 mm on the BA poses             -> O/mesh_S/ (input: --poses FILE or O/ba_S)
@@ -91,6 +94,7 @@ step_cmd() {  # step_cmd STEP -> shell line run there (cwd WT); uses vars below
     vio)  echo "mkdir -p $O/vio && cd scan3d/runs/livepose_20261030 && /usr/bin/time -f 'TIME vio %e s maxrss %M kB' $P lp_replay.py $R $CFG $WT/$O/vio/B_o0 --bridge $BRIDGE --vocab $WT/scan3d/ov_bridge/loop/voc_k10L4.voc $XARGS > $WT/$O/vio.log 2>&1" ;;
     kfba) echo "/usr/bin/time -f 'TIME kfba %e s maxrss %M kB' $P scan3d/scanA/kf_ba.py $R --vio ${VIO:-$O/vio/B_o0.poses.jsonl.gz} --out $O/ba_S --gt $G --feat sift --loop none --cache-root $CACHE --seed 0 --keep-db $XARGS > $O/kfba.log 2>&1" ;;
     mesh) echo "/usr/bin/time -f 'TIME mesh %e s maxrss %M kB' $P scan3d/scanA/scan_offline.py $R --out $O/mesh_S --gt $G --vio ${POSES:-$O/ba_S/poses_ba.jsonl.gz} $XARGS > $O/mesh.log 2>&1" ;;
+    scan) echo "bash scan3d/scanA/run_scanner.sh $R $WT/$O/scan --cache $CACHE/scan $( [ $GT_SET = 1 ] && echo --gt $G ) $( [ $CFG_SET = 1 ] && echo --cfg $CFG ) $( [ -n "$VIO" ] && echo --vio $(cd "$WT" && realpath -m "$VIO") ) $XARGS > $O/scan.log 2>&1" ;;
     board) echo "/usr/bin/time -f 'TIME board %e s maxrss %M kB' $P scan3d/scanA/board_scale.py $R --poses ${POSES:-$O/ba_S/poses_ba.jsonl.gz} --board $BOARD --lens $R/$G/gt.npz --out $O/board $( [ -d $R/imu_gt_rs ] && echo --check-gt-corners $R/imu_gt_rs/gt.npz ) $XARGS > $O/board.log 2>&1" ;;
     cmd:*) echo "${1#cmd:}" ;;
     *) echo "unknown step $1" >&2; exit 1 ;;
@@ -100,9 +104,9 @@ step_cmd() {  # step_cmd STEP -> shell line run there (cwd WT); uses vars below
 job() {
   local rec=$1 st=$2; shift 2
   G=imu_gt_spl; CFG=/home/system/scanner/build_livepose/cfg_gen/c4f60; BRIDGE=/home/system/scanner/build_livepose/bridge/ov_bridge
-  VIO=""; POSES=""; BOARD=""; TAG=""; KEEP=0; XARGS=""; SENDS=()
+  VIO=""; POSES=""; BOARD=""; TAG=""; KEEP=0; XARGS=""; SENDS=(); GT_SET=0; CFG_SET=0
   while [ $# -gt 0 ]; do case $1 in
-    --gt) G=$2; shift;; --cfg) CFG=$2; shift;; --vio) VIO=$2; shift;; --poses) POSES=$2; shift;; --board) BOARD=$2; shift;;
+    --gt) G=$2; GT_SET=1; shift;; --cfg) CFG=$2; CFG_SET=1; shift;; --vio) VIO=$2; shift;; --poses) POSES=$2; shift;; --board) BOARD=$2; shift;;
     --send) SENDS+=("$(cd "$WT" && realpath -m "$2")"); shift;; --tag) TAG=$2; shift;; --keep) KEEP=1;; --args) XARGS=$2; shift;;
     *) echo "bad option $1"; exit 1;; esac; shift; done
   local name; name=$(resolve_rec "$rec"); R=$RECS/$name
@@ -112,6 +116,10 @@ job() {
     hs_20261020_*) BOARD=$MAIN/scan3d/config/charuco/board_laptop_6x6.json;; hs_20261021_*) BOARD=$MAIN/scan3d/config/charuco/board_laptop_fit_6x6.json;;
     hs_20261022_*) BOARD=$MAIN/scan3d/config/charuco/board_monitor_6x6.json;; esac; fi
   for f in "$VIO" "$POSES"; do [ -n "$f" ] && SENDS+=("$(cd "$WT" && realpath -m "$f")"); done
+  if [ "$st" = scan ]; then                    # VIO configs run_scanner may pick (the laptop has only cfg_gen/ by default)
+    [ -f "$WT/scan3d/scanA/run_scanner.sh" ] || { echo "WT $WT has no scan3d/scanA/run_scanner.sh (use WT=~/scanner/StereoDepthSeg-defaults)" >&2; exit 1; }
+    for c in /home/system/scanner/build_livepose/cfg_gen_hs222/c4f60 "$CFG"; do [ -d "$c" ] && SENDS+=("$c"); done
+  fi
   local steps=("$st"); [ "$st" = all ] && steps=(vio kfba mesh)
   local id; id=$(date +%Y%m%d_%H%M%S)_${rid}_${st%%:*}
   echo "== job $id on $H: $name, steps '${steps[*]}', out $O"
