@@ -1,0 +1,128 @@
+{
+ "made": "2026-11-11 17:23:00",
+ "commit": "ff49d18ae88f61478e83ae17846bb50ec4061489",
+ "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261022_133820",
+ "input": "/home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/red/hs_20261022_133820_kf",
+ "keyframe_only": true,
+ "kf_res": 1920,
+ "kf_quality": 90,
+ "live_poses": "/home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/red/hs_20261022_133820_kf/phone_live_poses.jsonl.gz",
+ "gt": "imu_gt_spl_cal1022",
+ "vio_cfg": "/home/system/scanner/build_livepose/cfg_gen_hs222/c4f60",
+ "tsdf_alloc": "dense",
+ "kfba_device_line": "[device] BA cuda, SIFT cpu, matcher auto",
+ "step_s": {
+  "vio": 85.0,
+  "reduce": 20.9,
+  "kfba": 64.2,
+  "mesh": 46.2,
+  "board": 41.1,
+  "mesh_board": 50.1
+ },
+ "total_s": 307.5,
+ "sent": {
+  "n_keyframes": 342,
+  "image_size": [
+   1920,
+   1080
+  ],
+  "jpeg_bytes": 129332226,
+  "duration_s": 69.200800547,
+  "jpeg_MB_per_min": 112.13647094630915
+ },
+ "ba": {
+  "timing": {
+   "images_s": 3.1,
+   "features_s": 17.4,
+   "matching_s": 12.0,
+   "gpu_stage_s": 29.9,
+   "read_db_uf_s": 0.1,
+   "tracks_s": 1.4,
+   "tri_s": 1.8,
+   "tracks_tri_s": 3.2,
+   "ba_phases": {
+    "n_obs_pairs": 14005276,
+    "setup_s": 1.874,
+    "jac_s": 2.405,
+    "n_solves": 56,
+    "schur_s": 14.794,
+    "solve_s": 1.958,
+    "update_cost_s": 3.049,
+    "gpu_peak_gb": 1.48
+   },
+   "ba_device": "cuda",
+   "ba_s": 24.7
+  }
+ },
+ "mesh": {
+  "absdZ_p90_cm": 0.7345884442329407,
+  "k_pct": -1.3738347096096337,
+  "mesh_board_z_rms_cm": 0.22546052932739258,
+  "n_kf": 336,
+  "n_kf_depth": 74,
+  "n_kf_board_eval": 70
+ },
+ "board": {
+  "made": "2026-11-11 17:22:10",
+  "rec": "/home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/red/hs_20261022_133820_kf",
+  "poses": "/home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/ba/poses_ba.jsonl.gz",
+  "board": "/home/system/scanner/StereoDepthSeg/scan3d/config/charuco/board_monitor_6x6.json",
+  "square_mm": 63.294000000000004,
+  "square_src": "square_mm",
+  "square_estimated": false,
+  "lens": "/home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/red/hs_20261022_133820_kf/imu_gt_spl_cal1022/gt.npz",
+  "lens_fx": 1303.8921849588003,
+  "args": {
+   "rec": "/home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/red/hs_20261022_133820_kf",
+   "poses": "/home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/ba/poses_ba.jsonl.gz",
+   "board": "/home/system/scanner/StereoDepthSeg/scan3d/config/charuco/board_monitor_6x6.json",
+   "lens": "/home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/red/hs_20261022_133820_kf/imu_gt_spl_cal1022/gt.npz",
+   "out": "/home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/board",
+   "min_corners": 6,
+   "max_rep_px": 3.0,
+   "min_spread_deg": 2.0,
+   "max_sim_mm": 2.0,
+   "boot": 200,
+   "block": 10,
+   "seed": 0,
+   "check_gt_corners": ""
+  },
+  "n_poses": 342,
+  "n_kf_board": 334,
+  "c": 1.0080938700937825,
+  "best": {
+   "c": 1.0080938700937825,
+   "s": 0.991971114661148,
+   "n_corners": 32,
+   "n_corners_tri": 32,
+   "n_obs": 9069,
+   "sim_rms_mm": 0.6834365611894965,
+   "rep_px_median": 0.49724025870995814,
+   "rep_px_p90": 1.1562575007072167,
+   "dropped_corner_ids": []
+  },
+  "boot": {
+   "n": 200,
+   "sd": 0.0007470939299962555,
+   "p2_5": 1.006567865563938,
+   "p97_5": 1.0095782453396838,
+   "median": 1.0080813327258253
+  },
+  "pair2v": {
+   "n": 7187,
+   "median": 1.0083747762093103,
+   "p10": 1.002603002691927,
+   "p90": 1.0144646429778583
+  },
+  "uses_gt_poses": false,
+  "runtime_s": 41.0
+ },
+ "mesh_board": {
+  "absdZ_p90_cm": 0.7253279685974121,
+  "k_pct": -0.5755673399012173,
+  "mesh_board_z_rms_cm": 0.21843087673187256,
+  "n_kf": 336,
+  "n_kf_depth": 76,
+  "n_kf_board_eval": 72
+ }
+}

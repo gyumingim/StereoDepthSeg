@@ -1,0 +1,121 @@
+== run_scanner 2026-11-11 17:17:52: REC /home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261022_133820 (full recording) -> /home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan
+   gt imu_gt_spl_cal1022, input keyframes 1920 JPEG q90, BA cuda, SIFT cpu, TSDF alloc dense, git ff49d18ae88f
+17:17:52 step vio start (log /home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/vio.log)
+17:19:17 step vio done 85.0 s (rc 0)
+17:19:17 step reduce start (log /home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/reduce.log)
+17:19:38 step reduce done 20.9 s (rc 0)
+[input] keyframe-only: /home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/red/hs_20261022_133820_kf/frames_kf (342 jpg, 1920x1080, 124M), cam5.mp4 absent: yes
+17:19:38 step kfba start (log /home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/kfba.log)
+17:20:42 step kfba done 64.2 s (rc 0)
+[device] BA cuda, SIFT cpu, matcher auto
+17:20:42 step mesh start (log /home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/mesh.log)
+17:21:29 step mesh done 46.1 s (rc 0)
+17:21:29 step board start (log /home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/board.log)
+17:22:10 step board done 41.1 s (rc 0)
+17:22:10 step mesh_board start (log /home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/mesh_board.log)
+17:23:00 step mesh_board done 50.0 s (rc 0)
+{
+ "made": "2026-11-11 17:23:00",
+ "commit": "ff49d18ae88f61478e83ae17846bb50ec4061489",
+ "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261022_133820",
+ "input": "/home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/red/hs_20261022_133820_kf",
+ "keyframe_only": true,
+ "kf_res": 1920,
+ "kf_quality": 90,
+ "live_poses": "/home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/red/hs_20261022_133820_kf/phone_live_poses.jsonl.gz",
+ "gt": "imu_gt_spl_cal1022",
+ "vio_cfg": "/home/system/scanner/build_livepose/cfg_gen_hs222/c4f60",
+ "tsdf_alloc": "dense",
+ "kfba_device_line": "[device] BA cuda, SIFT cpu, matcher auto",
+ "step_s": {
+  "vio": 85.0,
+  "reduce": 20.9,
+  "kfba": 64.2,
+  "mesh": 46.2,
+  "board": 41.1,
+  "mesh_board": 50.1
+ },
+ "total_s": 307.5,
+ "sent": {
+  "n_keyframes": 342,
+  "image_size": [
+   1920,
+   1080
+  ],
+  "jpeg_bytes": 129332226,
+  "duration_s": 69.200800547,
+  "jpeg_MB_per_min": 112.13647094630915
+ },
+ "mesh": {
+  "absdZ_p90_cm": 0.7345884442329407,
+  "k_pct": -1.3738347096096337,
+  "mesh_board_z_rms_cm": 0.22546052932739258,
+  "n_kf": 336,
+  "n_kf_depth": 74,
+  "n_kf_board_eval": 70
+ },
+ "board": {
+  "made": "2026-11-11 17:22:10",
+  "rec": "/home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/red/hs_20261022_133820_kf",
+  "poses": "/home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/ba/poses_ba.jsonl.gz",
+  "board": "/home/system/scanner/StereoDepthSeg/scan3d/config/charuco/board_monitor_6x6.json",
+  "square_mm": 63.294000000000004,
+  "square_src": "square_mm",
+  "square_estimated": false,
+  "lens": "/home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/red/hs_20261022_133820_kf/imu_gt_spl_cal1022/gt.npz",
+  "lens_fx": 1303.8921849588003,
+  "args": {
+   "rec": "/home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/red/hs_20261022_133820_kf",
+   "poses": "/home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/ba/poses_ba.jsonl.gz",
+   "board": "/home/system/scanner/StereoDepthSeg/scan3d/config/charuco/board_monitor_6x6.json",
+   "lens": "/home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/red/hs_20261022_133820_kf/imu_gt_spl_cal1022/gt.npz",
+   "out": "/home/system/scanner/StereoDepthSeg-defaults/scan3d/runs/laptop/20261022_133820/ghost/scan/board",
+   "min_corners": 6,
+   "max_rep_px": 3.0,
+   "min_spread_deg": 2.0,
+   "max_sim_mm": 2.0,
+   "boot": 200,
+   "block": 10,
+   "seed": 0,
+   "check_gt_corners": ""
+  },
+  "n_poses": 342,
+  "n_kf_board": 334,
+  "c": 1.0080938700937825,
+  "best": {
+   "c": 1.0080938700937825,
+   "s": 0.991971114661148,
+   "n_corners": 32,
+   "n_corners_tri": 32,
+   "n_obs": 9069,
+   "sim_rms_mm": 0.6834365611894965,
+   "rep_px_median": 0.49724025870995814,
+   "rep_px_p90": 1.1562575007072167,
+   "dropped_corner_ids": []
+  },
+  "boot": {
+   "n": 200,
+   "sd": 0.0007470939299962555,
+   "p2_5": 1.006567865563938,
+   "p97_5": 1.0095782453396838,
+   "median": 1.0080813327258253
+  },
+  "pair2v": {
+   "n": 7187,
+   "median": 1.0083747762093103,
+   "p10": 1.002603002691927,
+   "p90": 1.0144646429778583
+  },
+  "uses_gt_poses": false,
+  "runtime_s": 41.0
+ },
+ "mesh_board": {
+  "absdZ_p90_cm": 0.7253279685974121,
+  "k_pct": -0.5755673399012173,
+  "mesh_board_z_rms_cm": 0.21843087673187256,
+  "n_kf": 336,
+  "n_kf_depth": 76,
+  "n_kf_board_eval": 72
+ }
+}
+== run_scanner done 17:23:00
