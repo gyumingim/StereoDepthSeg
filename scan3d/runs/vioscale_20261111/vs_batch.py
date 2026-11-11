@@ -32,8 +32,8 @@ def conds(prov):
         "I_th015": ["--yaml", "init_imu_thresh=0.15"], "I_th06": ["--yaml", "init_imu_thresh=0.6"],
         "I_audit": ["--yaml", "init_window_time=1.5,init_max_disparity=2.30"],
         "I_dyn": ["--yaml", "init_dyn_use=true"],
-        "I_dyn_after": ["--yaml", "init_dyn_use=true", "--start-off", f"{onset + 0.5:.2f}"],
-        "I_stat_after": ["--start-off", f"{onset + 0.5:.2f}"],
+        "I_dyn_post": ["--yaml", "init_dyn_use=true", "--start-off", f"{onset + 0.5:.2f}"],
+        "I_stat_post": ["--start-off", f"{onset + 0.5:.2f}"],
         "N_ax2": ["--chain", "accelerometer_noise_density=2.0e-02"], "N_ax.5": ["--chain", "accelerometer_noise_density=5.0e-03"],
         "N_gx2": ["--chain", "gyroscope_noise_density=2.0e-03"], "N_gx.5": ["--chain", "gyroscope_noise_density=5.0e-04"],
         "N_awx10": ["--chain", "accelerometer_random_walk=1.0e-02"], "N_awx.1": ["--chain", "accelerometer_random_walk=1.0e-04"],
@@ -81,6 +81,8 @@ def score(rec, out, cond, rulers, views, kfmap):
     f = out / "runs" / f"{cond}.poses.jsonl.gz"
     if not f.exists():
         return
+    if (out / "scores.jsonl").exists() and any(json.loads(l)["cond"] == cond for l in open(out / "scores.jsonl")):
+        return
     res = {}
     for r in rulers:
         if r == "red":
@@ -112,7 +114,7 @@ def main():
     a = ap.parse_args()
     rec, out = Path(a.rec), Path(a.out)
     (out / "runs").mkdir(parents=True, exist_ok=True)
-    if not (out / "prov.json").exists():
+    if not (out / "prov.json").exists() or "onset_fix" not in json.load(open(out / "prov.json")):
         subprocess.run([PY, str(HERE / "vs_prov.py"), str(rec), str(out / "prov.json")], check=True, stdout=subprocess.DEVNULL)
     prov = json.load(open(out / "prov.json"))
     C = conds(prov)
