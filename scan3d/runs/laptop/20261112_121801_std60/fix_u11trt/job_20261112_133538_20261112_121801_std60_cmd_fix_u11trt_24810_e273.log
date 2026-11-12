@@ -1,0 +1,33 @@
+13:35:57 step cmd start
+13:35:57 idle GPU memory MiB: 0
+tensorrt 10.16.1.11 torch 2.11.0+cu128 12.8
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/jit_utils.py:308: UserWarning: Constant folding - Only steps=1 can be constant folded for opset >= 10 onnx::Slice op. Constant folding not applied. (Triggered internally at /pytorch/torch/csrc/jit/passes/onnx/constant_fold.cpp:178.)
+  _C._jit_pass_onnx_node_shape_type_inference(node, params_dict, opset_version)
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/utils.py:714: UserWarning: Constant folding - Only steps=1 can be constant folded for opset >= 10 onnx::Slice op. Constant folding not applied. (Triggered internally at /pytorch/torch/csrc/jit/passes/onnx/constant_fold.cpp:178.)
+  _C._jit_pass_onnx_graph_shape_type_inference(
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/utils.py:1187: UserWarning: Constant folding - Only steps=1 can be constant folded for opset >= 10 onnx::Slice op. Constant folding not applied. (Triggered internally at /pytorch/torch/csrc/jit/passes/onnx/constant_fold.cpp:178.)
+  _C._jit_pass_onnx_graph_shape_type_inference(
+Traceback (most recent call last):
+  File "/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/onnx_proto_utils.py", line 183, in _add_onnxscript_fn
+    import onnx
+ModuleNotFoundError: No module named 'onnx'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py", line 264, in <module>
+    build(a.out, [tuple(int(v) for v in s.split("x")) for s in a.sizes.split(",")], a.iters, a.max_disp, a.workspace_gb)
+  File "/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py", line 201, in build
+    torch.onnx.export(wrapper, (torch.randn(1, 3, H, W, device="cuda"), torch.randn(1, 3, H, W, device="cuda")),
+  File "/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/__init__.py", line 334, in export
+    export(
+  File "/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/utils.py", line 552, in export
+    _export(
+  File "/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/utils.py", line 1588, in _export
+    proto = onnx_proto_utils._add_onnxscript_fn(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/onnx_proto_utils.py", line 185, in _add_onnxscript_fn
+    raise errors.OnnxExporterError("Module onnx is not installed!") from e
+torch.onnx.OnnxExporterError: Module onnx is not installed!
+Command exited with non-zero status 1
+TIME build 10.85 s maxrss 2451704 kB

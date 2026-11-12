@@ -457,3 +457,120 @@ M4 (불확실 판정) 는 손대지 않음.
 - 결과: `scan3d/runs/desktop/20261106_220612_std60/fix_u12_*`, `scan3d/runs/desktop/20261112_121801_std60/fix_u12*` (mesh.ply·obj 는 커밋 안 함).
   실행 스크립트·녹화한 입력 (220612 1.4 GB, 합침 4.7 GB): 데스크톱 WSL `~/scanner/fixes_tmp/evict/` (커밋 안 함).
 - 보기: `changes_0620/fixes_20261112/scanner_121801_131328_merged_evict_nocap.ply`, 목록 백업 `meshes.json.bak_fixes_u12_*`. 중간 보고 `review_20261112/interim_evict.txt`.
+
+## 13. 단위 13 — 깊이(FFS)를 TensorRT 로 (`scan_offline --ffs-backend trt`, **노트북 RTX 4060** 1 회, 미검증). 기본값은 안 바꿈
+(결과 폴더 이름은 `fix_u11trt` — 만들 때 붙인 이름. 위 11 절 합침과는 다른 작업.)
+
+### 먼저 잰 것 (fix_u8 로그, 노트북)
+- mesh 단계 187 s 중 FFS 102.7 s (55 %), 짝 검사(SIFT dy) 15.1 s, 나머지 (디코드·TSDF·메시 저장) 약 42 s, 시작(모델 로드·import) 약 27 s.
+  FFS 가 가장 커서 진행. 한 쌍 약 200 ms (960x540), torch.compile 재컴파일 때 1 초짜리가 가끔.
+
+### 만든 것
+- `scan3d/ffs_trt.py` (새): 상류 `scripts/make_single_onnx.py` 의 ONNX 용 코스트 볼륨 함수로 **고정 크기** ONNX (opset 17) → TensorRT fp16 엔진.
+  내보내기는 `lib_ffs.load` 와 같은 키 채우기 (normalize=True, iters 8, max_disp 192). ImageNet 정규화는 그래프 밖 (fp32) 에서.
+  내보내기와 엔진 만들기는 **다른 프로세스** (같은 프로세스면 torch 캐시가 8 GB 중 7.35 GB 를 잡아 빌더가 메모리 부족, 첫 시도).
+- 크기: 엔진 하나 = 입력 크기 하나 → **버킷 8 개** (HxW): 544x960, 448x768, 352x576, 256x448 과 세로판 960x544, 768x448, 576x352, 448x256.
+  축소 배율 s 계산·resize·되돌리기 (`/ (W/W0)`) 는 lib_ffs 와 똑같음. 다른 점은 **패딩만**: lib_ffs 는 32 배수까지, TRT 는 그 크기를 담는 가장 작은 버킷까지
+  (replicate, 같은 좌우·위아래 나눔). 화소 격자는 그대로라 시차 배율 계산은 안 바뀜. s=1 (540x960 / 960x540) 은 lib_ffs 와 패딩이 같음 (4 줄).
+- `scan_offline.py`: `--ffs-backend {pytorch,trt}` (기본 pytorch), `--ffs-engines DIR`, `--dump-depth DIR` (진단: 키프레임 깊이 uint16 0.1 mm).
+  엔진 폴더·manifest 없음, TensorRT 버전·GPU 이름·체크포인트(크기 + 앞 64 MB sha)·iters·max_disp·내보내기 버전이 다름, 엔진 sha 다름, 버킷보다 큰 입력 → **RuntimeError (PyTorch 로 안 돌아감)**.
+  summary 에 `ffs_backend`, `ffs_trt` (버킷별 호출 수, 실제 크기 → 버킷).
+- TensorRT 는 venv_ffs 를 건드리지 않고 `pip --target /home/system/scanner/ffs_trt/site` 에 설치 (노트북·데스크톱 같은 경로), TRT 모드에서만 sys.path 뒤에 붙임.
+  버전: tensorrt-cu12 **10.16.1.11**, onnx 1.19.1 (중복 numpy 지움), torch 2.11.0+cu128 (CUDA 12.8). 노트북 드라이버 592.82, 데스크톱 610.88.
+- 엔진 (`/home/system/scanner/ffs_trt/engines`, 각 40 MB) 은 GPU·TRT 버전마다 따로 만들어야 하고 git 에 안 넣음 (C-FFS 가중치 파생물).
+- 실행: `runs/fixes_20261112/trt_job.sh` (엔진 없으면 만들기 → PyTorch → TRT → `trt_compare.py`). 같은 키프레임 (fix_u8 `red/`), 같은 BA 자세, fix_u8 과 같은 mesh 명령.
+
+### 결과 (노트북 RTX 4060, 121801, 1 회, 미검증)
+| | PyTorch | TensorRT fp16 |
+|---|---|---|
+| FFS 한 쌍 중앙 / p90 (ms) | 201 / 212 (평균 291, 컴파일 포함) | **136 / 141** |
+| FFS 합계 (s) | 102.3 | **46.3** |
+| mesh 단계 (s, 프로세스 전체) | 191 | **130** (−61 s) |
+| scan_offline 내부 runtime (s) | 164.6 | 104.6 |
+| GPU 최대 nvidia-smi (MiB) | 6223 | 6597 (TRT 공유 작업 메모리 2237 MB + torch TSDF) |
+| torch max alloc / reserved (GB) | 4.83 / 5.95 | 3.77 / 5.90 |
+| 메시 정점 / 면 | 1 905 456 / 3 222 587 (= fix_u8 똑같음) | 1 915 924 / 3 237 041 (+0.55 %) |
+| 깊이 있는 키프레임 | 351 | 351 (짝 351/351 같음) |
+| 유효 깊이 화소 | 76 603 165 | 76 559 557 (−0.06 %) |
+
+- 전체 시간: fix_u8 343 s 기준 약 282 s 로 줄 것 (**추정**, 전체 파이프라인은 다시 안 돌림).
+- 엔진 만들기: 노트북 8 개 5052 s (큰 버킷 약 12 분, 작은 것 약 9 분), 한 번만. 데스크톱 RTX 5080 8 개 787 s (따로 만들어 둠).
+- 깊이 차이 (두 쪽 다 유효한 화소, 키프레임별 |dZ|):
+  | 키프레임 | 수 | |dZ| 중앙 (키프레임 중앙값) | p95 (키프레임 중앙값) | p95 (나쁜 쪽 10 %) |
+  |---|---|---|---|---|
+  | 전체 | 351 | 0.5 mm | 1.9 mm | 25.5 mm |
+  | s = 1 (패딩 lib_ffs 와 같음) | 311 | 0.5 mm | 1.8 mm | 8.9 mm |
+  | s < 1 (버킷 패딩 더 넓음) | 40 | 1.45 mm | 28 mm | 314 mm |
+  상대 |dZ|/Z 중앙 0.04 %. 0.5 mm 는 덤프 단위 0.1 mm 의 반올림 포함.
+- s < 1 키프레임 (11 %) 차이가 큰 원인은 가리지 못함: 넓은 replicate 패딩 vs fp16 (s<1 은 큰 시차 짝이기도 함). 어느 쪽이 맞는지도 모름 (이 녹화는 렌즈만, 보드 GT 없음).
+
+### 권고 (결정은 메인 세션, 기본값은 안 바꿈)
+- 아직 기본값으로 하지 않음. 이득은 mesh 단계 −61 s (전체의 약 18 %, 추정) 지만 축소 짝 11 % 에서 깊이가 수 cm 달라지고 원인 미확인.
+- 다음 시험 (싼 순서): ① s<1 짝만 lib_ffs 와 같은 32 배수 크기 엔진으로 (버킷 패딩 영향 분리), ② 보드 GT 있는 녹화 (예 165506) 에서 두 백엔드의 보드 |dZ| 비교, ③ 그 뒤 기본값 결정.
+- **데스크톱 비교는 보류** (사용자: 데스크톱 GPU 는 MVS 비교 먼저). 데스크톱 엔진은 지시가 바뀌기 전에 이미 다 만들어져 있음 (`scan3d/runs/desktop/20261112_121801_std60/fix_u11trt/build.log`); 비교 실행은 `~/scanner/trt_tmp/desktop_run.sh` (지시가 오면).
+
+### 파일
+- 코드: `scan3d/ffs_trt.py` (새), `scan3d/scanA/scan_offline.py` (플래그 3 개), `runs/fixes_20261112/trt_job.sh`, `runs/fixes_20261112/trt_compare.py`.
+- 결과: `scan3d/runs/laptop/20261112_121801_std60/fix_u11trt/` (trt_compare.json, times.txt, mesh_pt|mesh_trt/summary.json·keyframes.json, gpu_*.csv, build.log, engine_manifest.json).
+  메시 ply/obj·깊이 덤프는 노트북 `/home/system/scanner/ffs_trt/{mesh_keep,dump_pt,dump_trt}` (커밋 안 함).
+- 중간 보고 `review_20261112/interim_trt.txt`.
+
+## 13. 단위 13 — 깊이(FFS)를 TensorRT 로 (`scan_offline --ffs-backend trt`, **노트북 RTX 4060** 1 회, 미검증). 기본값은 안 바꿈
+(결과 폴더 이름은 `fix_u11trt` — 만들 때 붙인 이름. 위 11 절 합침과는 다른 작업.)
+
+### 먼저 잰 것 (fix_u8 로그, 노트북)
+- mesh 단계 187 s 중 FFS 102.7 s (55 %), 짝 검사(SIFT dy) 15.1 s, 나머지 (디코드·TSDF·메시 저장) 약 42 s, 시작(모델 로드·import) 약 27 s.
+  FFS 가 가장 커서 진행. 한 쌍 약 200 ms (960x540), torch.compile 재컴파일 때 1 초짜리가 가끔.
+
+### 만든 것
+- `scan3d/ffs_trt.py` (새): 상류 `scripts/make_single_onnx.py` 의 ONNX 용 코스트 볼륨 함수로 **고정 크기** ONNX (opset 17) → TensorRT fp16 엔진.
+  내보내기는 `lib_ffs.load` 와 같은 키 채우기 (normalize=True, iters 8, max_disp 192). ImageNet 정규화는 그래프 밖 (fp32) 에서.
+  내보내기와 엔진 만들기는 **다른 프로세스** (같은 프로세스면 torch 캐시가 8 GB 중 7.35 GB 를 잡아 빌더가 메모리 부족, 첫 시도).
+- 크기: 엔진 하나 = 입력 크기 하나 → **버킷 8 개** (HxW): 544x960, 448x768, 352x576, 256x448 과 세로판 960x544, 768x448, 576x352, 448x256.
+  축소 배율 s 계산·resize·되돌리기 (`/ (W/W0)`) 는 lib_ffs 와 똑같음. 다른 점은 **패딩만**: lib_ffs 는 32 배수까지, TRT 는 그 크기를 담는 가장 작은 버킷까지
+  (replicate, 같은 좌우·위아래 나눔). 화소 격자는 그대로라 시차 배율 계산은 안 바뀜. s=1 (540x960 / 960x540) 은 lib_ffs 와 패딩이 같음 (4 줄).
+- `scan_offline.py`: `--ffs-backend {pytorch,trt}` (기본 pytorch), `--ffs-engines DIR`, `--dump-depth DIR` (진단: 키프레임 깊이 uint16 0.1 mm).
+  엔진 폴더·manifest 없음, TensorRT 버전·GPU 이름·체크포인트(크기 + 앞 64 MB sha)·iters·max_disp·내보내기 버전이 다름, 엔진 sha 다름, 버킷보다 큰 입력 → **RuntimeError (PyTorch 로 안 돌아감)**.
+  summary 에 `ffs_backend`, `ffs_trt` (버킷별 호출 수, 실제 크기 → 버킷).
+- TensorRT 는 venv_ffs 를 건드리지 않고 `pip --target /home/system/scanner/ffs_trt/site` 에 설치 (노트북·데스크톱 같은 경로), TRT 모드에서만 sys.path 뒤에 붙임.
+  버전: tensorrt-cu12 **10.16.1.11**, onnx 1.19.1 (중복 numpy 지움), torch 2.11.0+cu128 (CUDA 12.8). 노트북 드라이버 592.82, 데스크톱 610.88.
+- 엔진 (`/home/system/scanner/ffs_trt/engines`, 각 40–63 MB) 은 GPU·TRT 버전마다 따로 만들어야 하고 git 에 안 넣음 (C-FFS 가중치 파생물).
+- 실행: `runs/fixes_20261112/trt_job.sh` (엔진 없으면 만들기 → PyTorch → TRT → `trt_compare.py`). 같은 키프레임 (fix_u8 `red/`), 같은 BA 자세, fix_u8 과 같은 mesh 명령.
+
+### 결과 (노트북 RTX 4060, 121801, 1 회, 미검증)
+| | PyTorch | TensorRT fp16 |
+|---|---|---|
+| FFS 한 쌍 중앙 / p90 (ms) | 201 / 212 (평균 291, 컴파일 포함) | **136 / 141** |
+| FFS 합계 (s) | 102.3 | **46.3** |
+| mesh 단계 (s, 프로세스 전체) | 191 | **130** (−61 s) |
+| scan_offline 내부 runtime (s) | 164.6 | 104.6 |
+| GPU 최대 nvidia-smi (MiB) | 6223 | 6597 (TRT 공유 작업 메모리 2237 MB + torch TSDF) |
+| torch max alloc / reserved (GB) | 4.83 / 5.95 | 3.77 / 5.90 |
+| 메시 정점 / 면 | 1 905 456 / 3 222 587 (= fix_u8 똑같음) | 1 915 924 / 3 237 041 (+0.55 %) |
+| 깊이 있는 키프레임 | 351 | 351 (짝 351/351 같음) |
+| 유효 깊이 화소 | 76 603 165 | 76 559 557 (−0.06 %) |
+
+- 전체 시간: fix_u8 343 s 기준 약 282 s 로 줄 것 (**추정**, 전체 파이프라인은 다시 안 돌림).
+- 엔진 만들기: 노트북 8 개 5052 s (큰 버킷 약 12 분, 작은 것 약 9 분), 한 번만. 데스크톱 RTX 5080 8 개 787 s (따로 만들어 둠).
+- 깊이 차이 (두 쪽 다 유효한 화소, 키프레임별 |dZ|):
+
+  | 키프레임 | 수 | 중앙 (키프레임 중앙값) | p95 (키프레임 중앙값) | p95 (나쁜 쪽 10 %) |
+  |---|---|---|---|---|
+  | 전체 | 351 | 0.5 mm | 1.9 mm | 25.5 mm |
+  | s = 1 (패딩 lib_ffs 와 같음) | 311 | 0.5 mm | 1.8 mm | 8.9 mm |
+  | s < 1 (버킷 패딩 더 넓음) | 40 | 1.45 mm | 28 mm | 314 mm |
+
+  상대 |dZ|/Z 중앙 0.04 %. 0.5 mm 는 덤프 단위 0.1 mm 의 반올림 포함.
+- s < 1 키프레임 (11 %) 차이가 큰 원인은 가리지 못함: 넓은 replicate 패딩 vs fp16 (s<1 은 큰 시차 짝이기도 함). 어느 쪽이 맞는지도 모름 (이 녹화는 렌즈만, 보드 GT 없음).
+
+### 권고 (결정은 메인 세션, 기본값은 안 바꿈)
+- 아직 기본값으로 하지 않음. 이득은 mesh 단계 −61 s (전체의 약 18 %, 추정) 지만 축소 짝 11 % 에서 깊이가 수 cm 달라지고 원인 미확인.
+- 다음 시험 (싼 순서): ① s<1 짝만 lib_ffs 와 같은 32 배수 크기 엔진으로 (버킷 패딩 영향 분리), ② 보드 GT 있는 녹화 (예 165506) 에서 두 백엔드의 보드 |dZ| 비교, ③ 그 뒤 기본값 결정.
+- **데스크톱 비교는 보류** (사용자: 데스크톱 GPU 는 MVS 비교 먼저). 데스크톱 엔진은 지시가 바뀌기 전에 이미 다 만들어져 있음 (`scan3d/runs/desktop/20261112_121801_std60/fix_u11trt/build.log`); 비교 실행은 데스크톱 WSL `~/scanner/trt_tmp/desktop_run.sh` (지시가 오면).
+
+### 파일
+- 코드: `scan3d/ffs_trt.py` (새), `scan3d/scanA/scan_offline.py` (플래그 3 개), `runs/fixes_20261112/trt_job.sh`, `runs/fixes_20261112/trt_compare.py`.
+- 결과: `scan3d/runs/laptop/20261112_121801_std60/fix_u11trt/` (trt_compare.json, times.txt, mesh_pt|mesh_trt/summary.json·keyframes.json, gpu_*.csv, build.log, engine_manifest.json),
+  데스크톱 엔진 빌드 기록 `scan3d/runs/desktop/20261112_121801_std60/fix_u11trt/`.
+  메시 ply/obj·깊이 덤프는 노트북 `/home/system/scanner/ffs_trt/{mesh_keep,dump_pt,dump_trt}` (커밋 안 함).
+- 중간 보고 `review_20261112/interim_trt.txt`.

@@ -1,0 +1,264 @@
+[gpu_guard] torch memory cap 0.75 x 8.0 GB = 6.0 GB
+VIO poses {'source': '/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/ba/poses_ba.jsonl.gz', 'n': 494, 'se3_rmse_cm': 7.980164675328892, 'sim3_scale_would_be': 1.0000000000000002, 'free_scale_applied': False, 'rot_diff_deg_median': 0.5735983528932168}
+decoded 494 frames (960x540), gt rows 494, ok 494
+[ffs-trt] 8 engines [(544, 960), (448, 768), (352, 576), (256, 448), (960, 544), (768, 448), (576, 352), (448, 256)] from /home/system/scanner/ffs_trt/engines, TensorRT 10.16.1.11, shared activation memory 2237 MB
+[tsdf] alloc dense
+[11/12/2026-15:04:26] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+[11/12/2026-15:04:28] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+kf 9/494: {'i': 9, 'pairs': 1, 'B_cm': [8.7], 'valid_frac': 0.5598321759259259, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [132], 'frame': 310, 'n_cand': 11, 'partners': [7], 'rejected': []}
+kf 19/494: {'i': 19, 'pairs': 1, 'B_cm': [7.8], 'valid_frac': 0.6994155092592592, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [137], 'frame': 380, 'n_cand': 14, 'partners': [22], 'rejected': []}
+[11/12/2026-15:04:33] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+[11/12/2026-15:04:33] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+kf 29/494: {'i': 29, 'pairs': 1, 'B_cm': [11.9], 'valid_frac': 0.6221643518518518, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [138], 'frame': 493, 'n_cand': 5, 'partners': [31], 'rejected': []}
+kf 39/494: {'i': 39, 'pairs': 1, 'B_cm': [6.7], 'valid_frac': 0.4408815586419753, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [134], 'frame': 563, 'n_cand': 11, 'partners': [37], 'rejected': []}
+kf 49/494: {'i': 49, 'pairs': 1, 'B_cm': [9.3], 'valid_frac': 0.07642554012345679, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [135], 'frame': 630, 'n_cand': 4, 'partners': [51], 'rejected': []}
+kf 99/494: {'i': 99, 'pairs': 1, 'B_cm': [8.6], 'valid_frac': 0.4913175154320988, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [132], 'frame': 928, 'n_cand': 6, 'partners': [101], 'rejected': []}
+kf 119/494: {'i': 119, 'pairs': 1, 'B_cm': [9.7], 'valid_frac': 0.4587789351851852, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [135], 'frame': 1041, 'n_cand': 6, 'partners': [117], 'rejected': []}
+[11/12/2026-15:04:45] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+kf 129/494: {'i': 129, 'pairs': 1, 'B_cm': [9.2], 'valid_frac': 0.4035243055555556, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [141], 'frame': 1113, 'n_cand': 8, 'partners': [131], 'rejected': []}
+kf 139/494: {'i': 139, 'pairs': 1, 'B_cm': [8.7], 'valid_frac': 0.5990702160493827, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [132], 'frame': 1184, 'n_cand': 12, 'partners': [137], 'rejected': []}
+kf 149/494: {'i': 149, 'pairs': 1, 'B_cm': [25.9], 'valid_frac': 0.20184220679012346, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [61], 'frame': 1248, 'n_cand': 2, 'partners': [155], 'rejected': []}
+kf 159/494: {'i': 159, 'pairs': 1, 'B_cm': [7.4], 'valid_frac': 0.6671527777777778, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [129], 'frame': 1308, 'n_cand': 11, 'partners': [157], 'rejected': []}
+kf 169/494: {'i': 169, 'pairs': 1, 'B_cm': [6.6], 'valid_frac': 0.7704494598765432, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [136], 'frame': 1366, 'n_cand': 11, 'partners': [171], 'rejected': []}
+kf 179/494: {'i': 179, 'pairs': 1, 'B_cm': [8.3], 'valid_frac': 0.6448302469135803, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [135], 'frame': 1430, 'n_cand': 10, 'partners': [177], 'rejected': []}
+kf 189/494: {'i': 189, 'pairs': 1, 'B_cm': [8.3], 'valid_frac': 0.5971219135802469, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [132], 'frame': 1504, 'n_cand': 10, 'partners': [192], 'rejected': []}
+kf 199/494: {'i': 199, 'pairs': 1, 'B_cm': [7.5], 'valid_frac': 0.4150250771604938, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [137], 'frame': 1582, 'n_cand': 4, 'partners': [195], 'rejected': []}
+kf 209/494: {'i': 209, 'pairs': 1, 'B_cm': [7.4], 'valid_frac': 0.5399691358024692, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [135], 'frame': 1662, 'n_cand': 9, 'partners': [207], 'rejected': []}
+kf 269/494: {'i': 269, 'pairs': 1, 'B_cm': [6.6], 'valid_frac': 0.49140046296296297, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [141], 'frame': 2075, 'n_cand': 5, 'partners': [271], 'rejected': []}
+[11/12/2026-15:05:12] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+kf 289/494: {'i': 289, 'pairs': 1, 'B_cm': [7.5], 'valid_frac': 0.18220100308641976, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [128], 'frame': 2274, 'n_cand': 13, 'partners': [287], 'rejected': []}
+kf 299/494: {'i': 299, 'pairs': 1, 'B_cm': [6.4], 'valid_frac': 0.33091628086419755, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [138], 'frame': 2371, 'n_cand': 2, 'partners': [304], 'rejected': []}
+kf 309/494: {'i': 309, 'pairs': 1, 'B_cm': [7.3], 'valid_frac': 0.25484760802469136, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [135], 'frame': 2435, 'n_cand': 12, 'partners': [307], 'rejected': []}
+[11/12/2026-15:05:19] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+kf 349/494: {'i': 349, 'pairs': 1, 'B_cm': [10.2], 'valid_frac': 0.2434837962962963, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [141], 'frame': 2647, 'n_cand': 4, 'partners': [351], 'rejected': []}
+kf 359/494: {'i': 359, 'pairs': 1, 'B_cm': [21.2], 'valid_frac': 0.20732253086419752, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [90], 'frame': 2702, 'n_cand': 2, 'partners': [363], 'rejected': []}
+kf 369/494: {'i': 369, 'pairs': 1, 'B_cm': [10.2], 'valid_frac': 0.3896469907407407, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [143], 'frame': 2753, 'n_cand': 8, 'partners': [371], 'rejected': []}
+kf 379/494: {'i': 379, 'pairs': 1, 'B_cm': [8.2], 'valid_frac': 0.2361766975308642, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [140], 'frame': 2806, 'n_cand': 6, 'partners': [381], 'rejected': []}
+kf 389/494: {'i': 389, 'pairs': 1, 'B_cm': [9.0], 'valid_frac': 0.5282735339506173, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [132], 'frame': 2858, 'n_cand': 11, 'partners': [387], 'rejected': []}
+kf 399/494: {'i': 399, 'pairs': 1, 'B_cm': [8.4], 'valid_frac': 0.4301157407407407, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [138], 'frame': 2927, 'n_cand': 12, 'partners': [401], 'rejected': []}
+kf 409/494: {'i': 409, 'pairs': 1, 'B_cm': [7.3], 'valid_frac': 0.3305208333333333, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [141], 'frame': 2995, 'n_cand': 8, 'partners': [411], 'rejected': []}
+kf 419/494: {'i': 419, 'pairs': 1, 'B_cm': [8.8], 'valid_frac': 0.19371913580246913, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [140], 'frame': 3053, 'n_cand': 6, 'partners': [417], 'rejected': []}
+kf 429/494: {'i': 429, 'pairs': 1, 'B_cm': [12.6], 'valid_frac': 0.5169598765432099, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [144], 'frame': 3123, 'n_cand': 10, 'partners': [431], 'rejected': []}
+kf 439/494: {'i': 439, 'pairs': 1, 'B_cm': [8.7], 'valid_frac': 0.4487615740740741, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [139], 'frame': 3179, 'n_cand': 10, 'partners': [441], 'rejected': []}
+kf 449/494: {'i': 449, 'pairs': 1, 'B_cm': [10.2], 'valid_frac': 0.44221064814814814, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [135], 'frame': 3228, 'n_cand': 10, 'partners': [447], 'rejected': []}
+kf 459/494: {'i': 459, 'pairs': 1, 'B_cm': [19.9], 'valid_frac': 0.24966242283950618, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [85], 'frame': 3280, 'n_cand': 3, 'partners': [455], 'rejected': []}
+kf 469/494: {'i': 469, 'pairs': 1, 'B_cm': [9.4], 'valid_frac': 0.2906076388888889, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [140], 'frame': 3332, 'n_cand': 7, 'partners': [471], 'rejected': []}
+kf 479/494: {'i': 479, 'pairs': 1, 'B_cm': [12.5], 'valid_frac': 0.35855516975308643, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [135], 'frame': 3386, 'n_cand': 7, 'partners': [477], 'rejected': []}
+{
+ "poses": {
+  "source": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/ba/poses_ba.jsonl.gz",
+  "n": 494,
+  "se3_rmse_cm": 7.980164675328892,
+  "sim3_scale_would_be": 1.0000000000000002,
+  "free_scale_applied": false,
+  "rot_diff_deg_median": 0.5735983528932168,
+  "compressed_rows": 494
+ },
+ "made": "2026-11-12 15:06:02",
+ "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/red/hs_20261112_121801_std60_kf",
+ "gt": "lensonly",
+ "args": {
+  "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/red/hs_20261112_121801_std60_kf",
+  "out": "scan3d/runs/laptop/20261112_121801_std60/fix_u11trt/mesh_trt",
+  "gt": "lensonly",
+  "scale": 0.5,
+  "kf_step": 1,
+  "n_pairs": 1,
+  "iters": 8,
+  "voxel": 0.005,
+  "zmax": 2.0,
+  "tsdf_max_blocks": 250000,
+  "b_target": 0.08,
+  "vio": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/ba/poses_ba.jsonl.gz",
+  "free_scale": false,
+  "pose_noise_cm": 0.0,
+  "allow_fullres": false,
+  "rows_from": "",
+  "compress": true,
+  "tsdf_alloc": "dense",
+  "ffs_views": 2,
+  "ffs_fuse": "auto",
+  "ffs_partners": "all",
+  "ffs_dt_max": null,
+  "pair_min_valid": null,
+  "pair_check": "auto",
+  "keep_gt_not_ok": false,
+  "sigma_rot_deg": 0.1,
+  "sigma_b_rel": 0.02,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02,
+  "ffs_backend": "trt",
+  "ffs_engines": "/home/system/scanner/ffs_trt/engines",
+  "dump_depth": "/home/system/scanner/ffs_trt/dump_trt"
+ },
+ "board_mm": [
+  302.0,
+  181.19999999999996
+ ],
+ "square_mm": 60.4,
+ "gt_corner_px_median": null,
+ "n_kf": 494,
+ "n_kf_depth": 351,
+ "mesh_vertices": 1915924,
+ "mesh_faces": 3237041,
+ "runtime_s": 104.6,
+ "image_size": [
+  960,
+  540
+ ],
+ "K_used": [
+  [
+   643.1272697202457,
+   0.0,
+   482.59568880974615
+  ],
+  [
+   0.0,
+   643.2218309269573,
+   276.6095206454582
+  ],
+  [
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "gpu_max_alloc_gb": 3.77,
+ "gpu_max_reserved_gb": 5.9,
+ "ffs_views": 2,
+ "ffs_fuse": "mean",
+ "ffs_partners": "all",
+ "ffs_dt_max": 30.0,
+ "pair_min_valid": 0.0,
+ "pair_check": "dy",
+ "pair_check_n": 398,
+ "pair_check_rejected": 47,
+ "pair_check_s": 13.2,
+ "ffs_s_total": 46.3,
+ "ffs_s_used": 46.3,
+ "n_pairs_rejected": 0,
+ "n_kf_by_pairs": {
+  "0": 143,
+  "1": 351
+ },
+ "tsdf_alloc": "dense",
+ "ffs_backend": "trt",
+ "ffs_trt": {
+  "engines": [
+   {
+    "H": 544,
+    "W": 960,
+    "calls": 263
+   },
+   {
+    "H": 448,
+    "W": 768,
+    "calls": 14
+   },
+   {
+    "H": 352,
+    "W": 576,
+    "calls": 8
+   },
+   {
+    "H": 256,
+    "W": 448,
+    "calls": 2
+   },
+   {
+    "H": 960,
+    "W": 544,
+    "calls": 59
+   },
+   {
+    "H": 768,
+    "W": 448,
+    "calls": 2
+   },
+   {
+    "H": 576,
+    "W": 352,
+    "calls": 3
+   },
+   {
+    "H": 448,
+    "W": 256,
+    "calls": 0
+   }
+  ],
+  "trt": "10.16.1.11",
+  "shapes": {
+   "247x440->256x448": 1,
+   "248x442->256x448": 1,
+   "263x468->352x576": 1,
+   "267x474->352x576": 1,
+   "287x510->352x576": 1,
+   "292x518->352x576": 1,
+   "298x530->352x576": 1,
+   "299x531->352x576": 1,
+   "322x572->352x576": 1,
+   "322x573->352x576": 1,
+   "325x577->448x768": 1,
+   "326x580->448x768": 1,
+   "342x609->448x768": 1,
+   "350x623->448x768": 1,
+   "356x633->448x768": 1,
+   "357x635->448x768": 1,
+   "371x660->448x768": 1,
+   "377x671->448x768": 1,
+   "384x684->448x768": 1,
+   "389x692->448x768": 2,
+   "403x717->448x768": 1,
+   "422x750->448x768": 1,
+   "428x761->448x768": 1,
+   "441x783->544x960": 1,
+   "448x796->544x960": 1,
+   "455x809->544x960": 1,
+   "472x266->576x352": 1,
+   "477x848->544x960": 1,
+   "488x868->544x960": 1,
+   "503x895->544x960": 1,
+   "519x923->544x960": 1,
+   "540x960->544x960": 256,
+   "556x313->576x352": 1,
+   "574x323->576x352": 1,
+   "662x373->768x448": 1,
+   "687x387->768x448": 1,
+   "804x453->960x544": 1,
+   "876x493->960x544": 1,
+   "878x494->960x544": 1,
+   "910x512->960x544": 1,
+   "960x540->960x544": 55
+  },
+  "manifest_made": "2026-11-12 15:00:49"
+ },
+ "depth_sigma": {
+  "rot_deg": 0.1,
+  "b_rel": 0.02,
+  "sigma_d_px": 0.5,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02,
+  "z_max": 2.0
+ },
+ "mesh_cam_depth_m": {
+  "n": 1915924,
+  "p50": 1.0437684122122752,
+  "p90": 1.2872709435047527,
+  "p99": 1.4437139930139624,
+  "max": 1.5872481444494397,
+  "frac_gt_0p65": 0.9201638478353004,
+  "frac_gt_1p0": 0.5926320668251976
+ },
+ "tsdf_full": false,
+ "tsdf_blocks": 154705,
+ "tsdf_max_blocks": 250000,
+ "tsdf_log": [],
+ "gt_ok_filter": true,
+ "n_kf_gt_not_ok_dropped": 0,
+ "n_kf_gt_not_ok": 0,
+ "lib_ffs": {
+  "file": "/home/system/scanner/StereoDepthSeg/lib_ffs.py",
+  "sha": "9b820bc28df4caf7"
+ }
+}
+TIME mesh_trt 129.38 s maxrss 4641956 kB

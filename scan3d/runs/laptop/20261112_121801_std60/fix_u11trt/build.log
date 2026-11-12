@@ -1,0 +1,125 @@
+/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py:202: DeprecationWarning: You are using the legacy TorchScript-based ONNX export. Starting in PyTorch 2.9, the new torch.export-based ONNX exporter has become the default. Learn more about the new export logic: https://docs.pytorch.org/docs/stable/onnx_export.html. For exporting control flow: https://pytorch.org/tutorials/beginner/onnx/export_control_flow_model_to_onnx_tutorial.html
+  torch.onnx.export(wrapper, (torch.randn(1, 3, H, W, device="cuda"), torch.randn(1, 3, H, W, device="cuda")),
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:365: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if x.shape != rem.shape:
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:572: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if pe.shape[1]<x.shape[1]:
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/geometry.py:76: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:290: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if x.shape != rem.shape:
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/symbolic_opset9.py:2822: UserWarning: ONNX export mode is set to TrainingMode.EVAL, but operator 'instance_norm' is set to train=True. Exporting with train=True.
+  symbolic_helper.check_training_mode(use_input_stats, "instance_norm")
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/jit_utils.py:308: UserWarning: Constant folding - Only steps=1 can be constant folded for opset >= 10 onnx::Slice op. Constant folding not applied. (Triggered internally at /pytorch/torch/csrc/jit/passes/onnx/constant_fold.cpp:178.)
+  _C._jit_pass_onnx_node_shape_type_inference(node, params_dict, opset_version)
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/utils.py:714: UserWarning: Constant folding - Only steps=1 can be constant folded for opset >= 10 onnx::Slice op. Constant folding not applied. (Triggered internally at /pytorch/torch/csrc/jit/passes/onnx/constant_fold.cpp:178.)
+  _C._jit_pass_onnx_graph_shape_type_inference(
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/utils.py:1187: UserWarning: Constant folding - Only steps=1 can be constant folded for opset >= 10 onnx::Slice op. Constant folding not applied. (Triggered internally at /pytorch/torch/csrc/jit/passes/onnx/constant_fold.cpp:178.)
+  _C._jit_pass_onnx_graph_shape_type_inference(
+[ffs-trt build] 544x960: {'onnx_s': 5.4, 'engine_s': 743.1}, 40 MB
+[ffs-trt build] 448x768: {'onnx_s': 4.2, 'engine_s': 650.9}, 42 MB
+[ffs-trt build] 352x576: {'onnx_s': 4.1, 'engine_s': 573.0}, 40 MB
+[ffs-trt build] 256x448: {'onnx_s': 4.3, 'engine_s': 526.2}, 40 MB
+[ffs-trt build] 960x544: {'onnx_s': 4.9, 'engine_s': 753.4}, 38 MB
+[ffs-trt build] 768x448: {'onnx_s': 4.3, 'engine_s': 651.2}, 40 MB
+[ffs-trt build] 576x352: {'onnx_s': 4.5, 'engine_s': 572.3}, 40 MB
+[ffs-trt build] 448x256: {'onnx_s': 4.3, 'engine_s': 525.1}, 40 MB
+{
+ "made": "2026-11-12 15:00:49",
+ "trt": "10.16.1.11",
+ "torch": "2.11.0+cu128",
+ "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+ "ckpt": "model_best_bp2_serialize.pth:71105659:6f3a487418c1df10",
+ "valid_iters": 8,
+ "max_disp": 192,
+ "export_version": 1,
+ "precision": "fp16",
+ "export": "upstream scripts/make_single_onnx.py volume builders, opset 17, normalisation outside",
+ "engines": [
+  {
+   "H": 544,
+   "W": 960,
+   "file": "ffs_c_it8_md192_544x960.engine",
+   "sha": "e76aed6b363d16b5"
+  },
+  {
+   "H": 448,
+   "W": 768,
+   "file": "ffs_c_it8_md192_448x768.engine",
+   "sha": "7b75746182a78665"
+  },
+  {
+   "H": 352,
+   "W": 576,
+   "file": "ffs_c_it8_md192_352x576.engine",
+   "sha": "8088591bf0763935"
+  },
+  {
+   "H": 256,
+   "W": 448,
+   "file": "ffs_c_it8_md192_256x448.engine",
+   "sha": "8eb65469c68d46cd"
+  },
+  {
+   "H": 960,
+   "W": 544,
+   "file": "ffs_c_it8_md192_960x544.engine",
+   "sha": "150bd76c657bf1a0"
+  },
+  {
+   "H": 768,
+   "W": 448,
+   "file": "ffs_c_it8_md192_768x448.engine",
+   "sha": "b4e2a25740b982c4"
+  },
+  {
+   "H": 576,
+   "W": 352,
+   "file": "ffs_c_it8_md192_576x352.engine",
+   "sha": "a3f49c79869310e3"
+  },
+  {
+   "H": 448,
+   "W": 256,
+   "file": "ffs_c_it8_md192_448x256.engine",
+   "sha": "7bdc8091ba6a4ae1"
+  }
+ ],
+ "build_times": {
+  "544x960": {
+   "onnx_s": 5.4,
+   "engine_s": 743.1
+  },
+  "448x768": {
+   "onnx_s": 4.2,
+   "engine_s": 650.9
+  },
+  "352x576": {
+   "onnx_s": 4.1,
+   "engine_s": 573.0
+  },
+  "256x448": {
+   "onnx_s": 4.3,
+   "engine_s": 526.2
+  },
+  "960x544": {
+   "onnx_s": 4.9,
+   "engine_s": 753.4
+  },
+  "768x448": {
+   "onnx_s": 4.3,
+   "engine_s": 651.2
+  },
+  "576x352": {
+   "onnx_s": 4.5,
+   "engine_s": 572.3
+  },
+  "448x256": {
+   "onnx_s": 4.3,
+   "engine_s": 525.1
+  }
+ },
+ "workspace_gb": 4.0
+}
+TIME build 5051.57 s maxrss 6819452 kB
+build 5052 s, GPU peak 7461 MiB

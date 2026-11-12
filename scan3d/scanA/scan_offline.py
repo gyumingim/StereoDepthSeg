@@ -100,6 +100,11 @@ def main():
                     "(default MSConfig.sigma_b_rel_free 0.1)")
     ap.add_argument("--sigma-max", type=float, default=0.08, help="TSDF: drop pixels with depth sigma above this (m)")
     ap.add_argument("--sigma-ok", type=float, default=0.02, help="TSDF: weight of one observation at this sigma = mesh threshold (m)")
+    # fixes 11-12 unit 11: FFS on TensorRT (opt-in; default pytorch = unchanged). Loud failure, never a silent PyTorch fallback.
+    ap.add_argument("--ffs-backend", choices=("pytorch", "trt"), default="pytorch",
+                    help="trt = scan3d/ffs_trt.py fp16 engines (fixed-size buckets, extra replicate padding; README runs/fixes_20261112 u11)")
+    ap.add_argument("--ffs-engines", default="", help="engine dir with manifest.json (default ffs_trt.ENGINE_DIR)")
+    ap.add_argument("--dump-depth", default="", help="diagnostic: per keyframe fused depth (uint16, 0.1 mm, 0 = invalid) -> DIR/kf_XXXX.npz")
     a = ap.parse_args()
     if a.ffs_views is not None:
         if not 2 <= a.ffs_views <= 8:
@@ -256,7 +261,16 @@ def main():
         dy_stat["checked"] += 1; dy_stat["rejected"] += int(not okk); dy_stat["s"] += time.perf_counter() - t0
         return okk
     import lib_ffs
-    model = lib_ffs.load(valid_iters=a.iters)
+    trt_ffs = None
+    if a.ffs_backend == "trt":
+        import ffs_trt
+        trt_ffs = ffs_trt.TrtFFS(a.ffs_engines or ffs_trt.ENGINE_DIR, valid_iters=a.iters, max_disp=cfg.ffs_max_disp,
+                                 ckpt=lib_ffs.DEFAULT_CKPT)
+        model, ffs_infer = None, trt_ffs.infer
+    else:
+        model, ffs_infer = lib_ffs.load(valid_iters=a.iters), lib_ffs.infer
+    if a.dump_depth:
+        Path(a.dump_depth).mkdir(parents=True, exist_ok=True)
     tsdf_msgs = []
     def tsdf_log(m):                     # M3 (fixes 11-12): block-limit message printed + kept for the summary (no behaviour change)
         print(m, flush=True); tsdf_msgs.append(str(m))
@@ -307,7 +321,7 @@ def main():
             for sc, j, gg in chosen:
                 if j not in rcache:
                     R, t = ms.rel_pose(T[i], T[j])
-                    rcache[j] = ms.pair_depth(model, lib_ffs.infer, imgs[i], imgs[j], R, t, K, dist, rp, cfg, iters=a.iters)
+                    rcache[j] = ms.pair_depth(model, ffs_infer, imgs[i], imgs[j], R, t, K, dist, rp, cfg, iters=a.iters)
                     ffs_ms_all[0] += rcache[j]["ms"]["ffs"]
                 if min_valid > 0 and float(rcache[j]["valid"].mean()) < min_valid:   # pair gate (ffs-partners all): pose/overlap bad
                     rejected.append(j); bad = True
@@ -342,6 +356,10 @@ def main():
         if a.n_pairs != 2 or a.ffs_partners != "near":     # keyframes.json of the default run stays byte-identical to the old one
             row.update(n_cand=len(cands), partners=[int(c[1]) for c in chosen], rejected=[int(x) for x in rejected])
         rows.append(row)
+        if a.dump_depth:
+            Zq = np.where(V & np.isfinite(Z), np.clip(np.round(np.nan_to_num(Z) * 1e4), 1, 65535), 0).astype(np.uint16)
+            np.savez_compressed(Path(a.dump_depth) / f"kf_{i:04d}.npz", Z01mm=Zq, partners=np.array([c[1] for c in chosen]),
+                                scale=np.array([r["scale"] for r in res]))
         tsdf.integrate(np.where(V, Z, np.nan).astype(np.float32), V, bgr, rp["f"], rp["cx"], rp["cy"], 0.08, T[i],
                        sigma=np.where(V, S, np.inf).astype(np.float32))
         integ_i.append(i)
@@ -396,6 +414,9 @@ def main():
             summ["mesh_board_cover_frac"] = len(cells) / float(nx_ * ny_)
             summ["mesh_board_z_unique_mm"] = int(len(np.unique(np.round(z * 1000, 1))))   # sub-voxel check (many = interpolated)
     summ["tsdf_alloc"] = a.tsdf_alloc
+    summ["ffs_backend"] = a.ffs_backend
+    if trt_ffs is not None:
+        summ["ffs_trt"] = trt_ffs.stats()
     summ["depth_sigma"] = dict(rot_deg=cfg.sigma_rot_deg_free, b_rel=cfg.sigma_b_rel_free, sigma_d_px=cfg.sigma_d_px,
                                sigma_max=a.sigma_max, sigma_ok=a.sigma_ok, z_max=a.zmax)
     # fixes 11-12 (diagnostic only): camera depth of each mesh vertex = nearest integrated keyframe camera that has it in view

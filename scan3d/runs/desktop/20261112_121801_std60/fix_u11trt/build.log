@@ -1,0 +1,205 @@
+/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py:202: DeprecationWarning: You are using the legacy TorchScript-based ONNX export. Starting in PyTorch 2.9, the new torch.export-based ONNX exporter has become the default. Learn more about the new export logic: https://docs.pytorch.org/docs/stable/onnx_export.html. For exporting control flow: https://pytorch.org/tutorials/beginner/onnx/export_control_flow_model_to_onnx_tutorial.html
+  torch.onnx.export(wrapper, (torch.randn(1, 3, H, W, device="cuda"), torch.randn(1, 3, H, W, device="cuda")),
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:365: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if x.shape != rem.shape:
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:572: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if pe.shape[1]<x.shape[1]:
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/geometry.py:76: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:290: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if x.shape != rem.shape:
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/symbolic_opset9.py:2822: UserWarning: ONNX export mode is set to TrainingMode.EVAL, but operator 'instance_norm' is set to train=True. Exporting with train=True.
+  symbolic_helper.check_training_mode(use_input_stats, "instance_norm")
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/jit_utils.py:308: UserWarning: Constant folding - Only steps=1 can be constant folded for opset >= 10 onnx::Slice op. Constant folding not applied. (Triggered internally at /pytorch/torch/csrc/jit/passes/onnx/constant_fold.cpp:178.)
+  _C._jit_pass_onnx_node_shape_type_inference(node, params_dict, opset_version)
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/utils.py:714: UserWarning: Constant folding - Only steps=1 can be constant folded for opset >= 10 onnx::Slice op. Constant folding not applied. (Triggered internally at /pytorch/torch/csrc/jit/passes/onnx/constant_fold.cpp:178.)
+  _C._jit_pass_onnx_graph_shape_type_inference(
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/utils.py:1187: UserWarning: Constant folding - Only steps=1 can be constant folded for opset >= 10 onnx::Slice op. Constant folding not applied. (Triggered internally at /pytorch/torch/csrc/jit/passes/onnx/constant_fold.cpp:178.)
+  _C._jit_pass_onnx_graph_shape_type_inference(
+[11/12/2026-14:42:15] [TRT] [W] (Unnamed Layer* 643) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:42:15] [TRT] [W] (Unnamed Layer* 661) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:42:15] [TRT] [W] (Unnamed Layer* 1139) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:42:15] [TRT] [W] (Unnamed Layer* 1157) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:42:15] [TRT] [W] (Unnamed Layer* 1454) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:42:15] [TRT] [W] (Unnamed Layer* 1472) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:42:15] [TRT] [W] (Unnamed Layer* 9608) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:42:15] [TRT] [W] (Unnamed Layer* 9627) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:42:15] [TRT] [W] (Unnamed Layer* 5551) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:42:15] [TRT] [W] (Unnamed Layer* 5571) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[ffs-trt build] 544x960: {'onnx_s': 7.0, 'engine_s': 96.7}, 62 MB
+[11/12/2026-14:43:51] [TRT] [W] (Unnamed Layer* 643) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:43:51] [TRT] [W] (Unnamed Layer* 661) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:43:51] [TRT] [W] (Unnamed Layer* 1139) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:43:51] [TRT] [W] (Unnamed Layer* 1157) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:43:51] [TRT] [W] (Unnamed Layer* 1454) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:43:51] [TRT] [W] (Unnamed Layer* 1472) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:43:51] [TRT] [W] (Unnamed Layer* 9608) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:43:51] [TRT] [W] (Unnamed Layer* 9627) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:43:51] [TRT] [W] (Unnamed Layer* 5551) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:43:51] [TRT] [W] (Unnamed Layer* 5571) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[ffs-trt build] 448x768: {'onnx_s': 4.9, 'engine_s': 94.9}, 53 MB
+[11/12/2026-14:45:26] [TRT] [W] (Unnamed Layer* 643) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:45:26] [TRT] [W] (Unnamed Layer* 661) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:45:26] [TRT] [W] (Unnamed Layer* 1139) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:45:26] [TRT] [W] (Unnamed Layer* 1157) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:45:26] [TRT] [W] (Unnamed Layer* 1454) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:45:26] [TRT] [W] (Unnamed Layer* 1472) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:45:26] [TRT] [W] (Unnamed Layer* 9608) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:45:26] [TRT] [W] (Unnamed Layer* 9627) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:45:26] [TRT] [W] (Unnamed Layer* 5551) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:45:26] [TRT] [W] (Unnamed Layer* 5571) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[ffs-trt build] 352x576: {'onnx_s': 4.5, 'engine_s': 86.8}, 50 MB
+[11/12/2026-14:46:53] [TRT] [W] (Unnamed Layer* 643) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:46:53] [TRT] [W] (Unnamed Layer* 661) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:46:53] [TRT] [W] (Unnamed Layer* 1139) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:46:53] [TRT] [W] (Unnamed Layer* 1157) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:46:53] [TRT] [W] (Unnamed Layer* 1454) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:46:53] [TRT] [W] (Unnamed Layer* 1472) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:46:53] [TRT] [W] (Unnamed Layer* 9608) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:46:53] [TRT] [W] (Unnamed Layer* 9627) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:46:53] [TRT] [W] (Unnamed Layer* 5551) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:46:53] [TRT] [W] (Unnamed Layer* 5571) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[ffs-trt build] 256x448: {'onnx_s': 4.5, 'engine_s': 82.4}, 41 MB
+[11/12/2026-14:48:15] [TRT] [W] (Unnamed Layer* 643) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:48:15] [TRT] [W] (Unnamed Layer* 661) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:48:15] [TRT] [W] (Unnamed Layer* 1139) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:48:15] [TRT] [W] (Unnamed Layer* 1157) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:48:15] [TRT] [W] (Unnamed Layer* 1454) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:48:15] [TRT] [W] (Unnamed Layer* 1472) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:48:15] [TRT] [W] (Unnamed Layer* 9608) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:48:15] [TRT] [W] (Unnamed Layer* 9627) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:48:15] [TRT] [W] (Unnamed Layer* 5551) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:48:15] [TRT] [W] (Unnamed Layer* 5571) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[ffs-trt build] 960x544: {'onnx_s': 4.9, 'engine_s': 99.2}, 63 MB
+[11/12/2026-14:49:54] [TRT] [W] (Unnamed Layer* 643) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:49:54] [TRT] [W] (Unnamed Layer* 661) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:49:54] [TRT] [W] (Unnamed Layer* 1139) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:49:54] [TRT] [W] (Unnamed Layer* 1157) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:49:54] [TRT] [W] (Unnamed Layer* 1454) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:49:54] [TRT] [W] (Unnamed Layer* 1472) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:49:54] [TRT] [W] (Unnamed Layer* 9608) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:49:54] [TRT] [W] (Unnamed Layer* 9627) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:49:54] [TRT] [W] (Unnamed Layer* 5551) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:49:54] [TRT] [W] (Unnamed Layer* 5571) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[ffs-trt build] 768x448: {'onnx_s': 4.6, 'engine_s': 97.0}, 53 MB
+[11/12/2026-14:51:32] [TRT] [W] (Unnamed Layer* 643) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:51:32] [TRT] [W] (Unnamed Layer* 661) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:51:32] [TRT] [W] (Unnamed Layer* 1139) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:51:32] [TRT] [W] (Unnamed Layer* 1157) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:51:32] [TRT] [W] (Unnamed Layer* 1454) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:51:32] [TRT] [W] (Unnamed Layer* 1472) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:51:32] [TRT] [W] (Unnamed Layer* 9608) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:51:32] [TRT] [W] (Unnamed Layer* 9627) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:51:32] [TRT] [W] (Unnamed Layer* 5551) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:51:32] [TRT] [W] (Unnamed Layer* 5571) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[ffs-trt build] 576x352: {'onnx_s': 4.5, 'engine_s': 94.3}, 45 MB
+[11/12/2026-14:53:06] [TRT] [W] (Unnamed Layer* 643) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:53:06] [TRT] [W] (Unnamed Layer* 661) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:53:06] [TRT] [W] (Unnamed Layer* 1139) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:53:06] [TRT] [W] (Unnamed Layer* 1157) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:53:06] [TRT] [W] (Unnamed Layer* 1454) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:53:06] [TRT] [W] (Unnamed Layer* 1472) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:53:06] [TRT] [W] (Unnamed Layer* 9608) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:53:06] [TRT] [W] (Unnamed Layer* 9627) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:53:06] [TRT] [W] (Unnamed Layer* 5551) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-14:53:06] [TRT] [W] (Unnamed Layer* 5571) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[ffs-trt build] 448x256: {'onnx_s': 4.4, 'engine_s': 88.9}, 41 MB
+{
+ "made": "2026-11-12 14:54:33",
+ "trt": "10.16.1.11",
+ "torch": "2.11.0+cu128",
+ "gpu": "NVIDIA GeForce RTX 5080",
+ "ckpt": "model_best_bp2_serialize.pth:71105659:6f3a487418c1df10",
+ "valid_iters": 8,
+ "max_disp": 192,
+ "export_version": 1,
+ "precision": "fp16",
+ "export": "upstream scripts/make_single_onnx.py volume builders, opset 17, normalisation outside",
+ "engines": [
+  {
+   "H": 544,
+   "W": 960,
+   "file": "ffs_c_it8_md192_544x960.engine",
+   "sha": "470a337b3fb956d7"
+  },
+  {
+   "H": 448,
+   "W": 768,
+   "file": "ffs_c_it8_md192_448x768.engine",
+   "sha": "eca1c168b50d7370"
+  },
+  {
+   "H": 352,
+   "W": 576,
+   "file": "ffs_c_it8_md192_352x576.engine",
+   "sha": "57e93b4a20d03dad"
+  },
+  {
+   "H": 256,
+   "W": 448,
+   "file": "ffs_c_it8_md192_256x448.engine",
+   "sha": "4034d0b9ba8bb31a"
+  },
+  {
+   "H": 960,
+   "W": 544,
+   "file": "ffs_c_it8_md192_960x544.engine",
+   "sha": "9da0626dd79af5de"
+  },
+  {
+   "H": 768,
+   "W": 448,
+   "file": "ffs_c_it8_md192_768x448.engine",
+   "sha": "ae425bae9f056d5d"
+  },
+  {
+   "H": 576,
+   "W": 352,
+   "file": "ffs_c_it8_md192_576x352.engine",
+   "sha": "84d834a6a90eaddf"
+  },
+  {
+   "H": 448,
+   "W": 256,
+   "file": "ffs_c_it8_md192_448x256.engine",
+   "sha": "68fff1b0ff836c92"
+  }
+ ],
+ "build_times": {
+  "544x960": {
+   "onnx_s": 7.0,
+   "engine_s": 96.7
+  },
+  "448x768": {
+   "onnx_s": 4.9,
+   "engine_s": 94.9
+  },
+  "352x576": {
+   "onnx_s": 4.5,
+   "engine_s": 86.8
+  },
+  "256x448": {
+   "onnx_s": 4.5,
+   "engine_s": 82.4
+  },
+  "960x544": {
+   "onnx_s": 4.9,
+   "engine_s": 99.2
+  },
+  "768x448": {
+   "onnx_s": 4.6,
+   "engine_s": 97.0
+  },
+  "576x352": {
+   "onnx_s": 4.5,
+   "engine_s": 94.3
+  },
+  "448x256": {
+   "onnx_s": 4.4,
+   "engine_s": 88.9
+  }
+ },
+ "workspace_gb": 4.0
+}
+TIME build 787.24 s maxrss 5725744 kB
+build 787 s, GPU peak 7760 MiB
