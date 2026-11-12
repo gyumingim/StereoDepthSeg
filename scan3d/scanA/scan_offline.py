@@ -80,6 +80,15 @@ def main():
                     help="fixes 11-12 M1: with --vio, also use keyframes whose GT row is not 'ok' (board not seen / GT fit failed). "
                          "Default (off) = old behaviour: such keyframes are dropped from the mesh input (133820: 7 of 203). "
                          "Their board-depth check is skipped (no GT plane).")
+    # fixes 11-12 H1: depth noise model of a motion pair without a two-lens anchor (motion_stereo.pair_depth) + TSDF thresholds.
+    # Defaults = old values (rotation 0.5 deg, baseline 10 %, sigma_max 0.08 m, sigma_ok 0.02 m): with them nothing beyond ~0.63 m
+    # (baseline 7.2 cm) reaches the mesh. README of runs/fixes_20261112 section 2 for the 'ba' values (0.1 deg, 2 %).
+    ap.add_argument("--sigma-rot-deg", type=float, default=None, help="relative rotation error of a pair (deg) in the depth sigma "
+                    "(default MSConfig.sigma_rot_deg_free 0.5)")
+    ap.add_argument("--sigma-b-rel", type=float, default=None, help="relative baseline error of a pair in the depth sigma "
+                    "(default MSConfig.sigma_b_rel_free 0.1)")
+    ap.add_argument("--sigma-max", type=float, default=0.08, help="TSDF: drop pixels with depth sigma above this (m)")
+    ap.add_argument("--sigma-ok", type=float, default=0.02, help="TSDF: weight of one observation at this sigma = mesh threshold (m)")
     a = ap.parse_args()
     if a.ffs_views is not None:
         if not 2 <= a.ffs_views <= 8:
@@ -204,6 +213,10 @@ def main():
     cfg = ms.MSConfig()
     cfg.b_target_m = a.b_target
     cfg.z_max = a.zmax
+    if a.sigma_rot_deg is not None:
+        cfg.sigma_rot_deg_free = a.sigma_rot_deg
+    if a.sigma_b_rel is not None:
+        cfg.sigma_b_rel_free = a.sigma_b_rel
     if a.ffs_partners == "all":
         # time cap: 1e9 = none (fv_a*/d*: pairs > 30 s apart on 133820 = keyframe 3/5 'hub' partners at the start, FFS valid 0.14
         # or confidently wrong (|dZ| p90 44 cm), not caught by the dy check; cause not found) -> default 30 s (fv_c*)
@@ -236,7 +249,7 @@ def main():
     tsdf_msgs = []
     def tsdf_log(m):                     # M3 (fixes 11-12): block-limit message printed + kept for the summary (no behaviour change)
         print(m, flush=True); tsdf_msgs.append(str(m))
-    tsdf = tsdf_map.TSDFMap(voxel_m=a.voxel, z_max=a.zmax, sigma_max=0.08, sigma_ok=0.02, min_obs=2,
+    tsdf = tsdf_map.TSDFMap(voxel_m=a.voxel, z_max=a.zmax, sigma_max=a.sigma_max, sigma_ok=a.sigma_ok, min_obs=2,
                             alloc_dense=(a.tsdf_alloc == "dense"), log=tsdf_log)
     print(f"[tsdf] alloc {a.tsdf_alloc}", flush=True)
 
@@ -365,6 +378,8 @@ def main():
             summ["mesh_board_cover_frac"] = len(cells) / float(nx_ * ny_)
             summ["mesh_board_z_unique_mm"] = int(len(np.unique(np.round(z * 1000, 1))))   # sub-voxel check (many = interpolated)
     summ["tsdf_alloc"] = a.tsdf_alloc
+    summ["depth_sigma"] = dict(rot_deg=cfg.sigma_rot_deg_free, b_rel=cfg.sigma_b_rel_free, sigma_d_px=cfg.sigma_d_px,
+                               sigma_max=a.sigma_max, sigma_ok=a.sigma_ok, z_max=a.zmax)
     # fixes 11-12 (diagnostic only): camera depth of each mesh vertex = nearest integrated keyframe camera that has it in view
     # (no occlusion test); poses of the integrated keyframes saved for later analysis
     np.savez_compressed(out / "kf_poses.npz", i=np.array(integ_i, int), T=T[integ_i] if integ_i else np.zeros((0, 4, 4)),

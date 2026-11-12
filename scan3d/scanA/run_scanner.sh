@@ -51,6 +51,9 @@
 #   --reuse DIR  take vio/reduce/kfba from an earlier run_scanner OUT (DIR/red, DIR/ba): only mesh [, board] run (same BA poses)
 #   --kfba-args '...'  --mesh-args '...'  --vio-args '...'  extra arguments for that step
 #   --cache DIR  kf_ba image cache root (default OUT/cache, deleted at the end unless --keep-cache)
+#   --depth-sigma old|ba  depth noise model of a motion pair for the TSDF (fixes 11-12 H1). old (default) = rotation 0.5 deg + baseline 10 %:
+#               nothing beyond ~0.63 m (baseline 7.2 cm) reaches the mesh. ba = rotation 0.1 deg + baseline 2 % (BA poses; dy gate 1.2 px
+#               = 0.1 deg): cut ~1.4-1.8 m. Not the default yet (runs/fixes_20261112/README.md). Same as --mesh-args '--sigma-rot-deg 0.1 --sigma-b-rel 0.02'
 #   --min-mesh-vertices N  quality gate (fixes 11-12 M3): a mesh with fewer vertices -> exit 5 + summary status 'failed: ...' (default 1000)
 # Checks added 11-12 (results unchanged): failed step / VIO bridge crash -> summary status 'failed: ...' + non-zero exit (H3);
 #   earlier outputs in OUT are moved to OUT/_prev and the summary reads only steps run now (M2); explicit --gt folder missing -> stop (M5);
@@ -72,11 +75,11 @@ REC=$(realpath -m "$1"); OUT=$(realpath -m "$2"); shift 2
 FULLV=0; KRES=1920; KQ=90; BADEV=cuda; SIFTDEV=cpu; G=""; CFG=""; VIO=""; BOARD=""; BOARD_MESH=1
 LENS=""; SREF=""; REDSIZE=302.0x188.75; LENSONLY=0
 KFX=""; MSX=""; VIX=""; CACHE=""; KEEPC=0; TALLOC=dense; KFSEL=motion; KFD=3; KFR=4; KFW=4; KFB=gyro; FV=2; FF=auto; FP=all; REUSE=""
-G_SET=0; CFG_SET=0; PRE_REUSE=""; MINV=1000     # fixes 11-12: --gt given explicitly (M5), flags ignored by --reuse (M6), mesh vertex gate (M3)
+G_SET=0; CFG_SET=0; PRE_REUSE=""; MINV=1000; DSIG=old     # fixes 11-12: --gt given explicitly (M5), flags ignored by --reuse (M6), mesh vertex gate (M3)
 while [ $# -gt 0 ]; do case $1 in
   --full-video) FULLV=1;; --kf-res) KRES=$2; shift;; --kf-quality) KQ=$2; shift;;
   --ba-device) BADEV=$2; shift;; --sift-device) SIFTDEV=$2; shift;; --gt) G=$2; G_SET=1; shift;; --cfg) CFG=$2; CFG_SET=1; shift;;
-  --min-mesh-vertices) MINV=$2; shift;;
+  --min-mesh-vertices) MINV=$2; shift;; --depth-sigma) DSIG=$2; shift;;
   --vio) VIO=$(realpath -m "$2"); shift;; --board) BOARD=$2; shift;; --board-no-mesh) BOARD_MESH=0;;
   --kfba-args) KFX=$2; shift;; --mesh-args) MSX=$2; shift;; --vio-args) VIX=$2; shift;;
   --tsdf-alloc) TALLOC=$2; shift;;
@@ -100,6 +103,8 @@ if [ -n "$SREF" ]; then
   [ "$KRES" = 960 ] && [ $FULLV = 0 ] && { echo "--scale-ref redscreen needs 1920x1080 keyframes (--kf-res 1920)" >&2; exit 1; }
   [ $FULLV = 1 ] && { echo "--scale-ref redscreen needs the keyframe path (not --full-video)" >&2; exit 1; }
 fi
+case $DSIG in old) ;; ba) MSX="--sigma-rot-deg 0.1 --sigma-b-rel 0.02 $MSX";;      # H1 (fixes 11-12), README runs/fixes_20261112
+  *) echo "--depth-sigma must be old or ba" >&2; exit 1;; esac
 FFSX=""; { [ "$FV" = 3 ] && [ "$FF" = auto ]; } || FFSX="--ffs-views $FV --ffs-fuse $FF"   # views 3 + fuse auto: scan_offline gets the old command line
 [ "$FP" = near ] || FFSX="$FFSX --ffs-partners $FP"
 if [ -n "$REUSE" ] && [ ! -f "$REUSE/ba/poses_ba.jsonl.gz" ]; then echo "--reuse $REUSE: no ba/poses_ba.jsonl.gz" >&2; exit 1; fi
