@@ -120,13 +120,17 @@ def main():
             rd, _ = tr.query(refX[ref_near], k=1, workers=-1)
             r["near_lt_1m"] = dict(vertices=int(near.sum()), to_ref_median_mm=float(np.median(dd) * 1000), to_ref_p90_mm=float(np.percentile(dd, 90) * 1000),
                                    to_ref_frac_gt_2cm=float(np.mean(dd > 0.02)), ref_to_this_median_mm=float(np.median(rd) * 1000),
-                                   ref_to_this_p90_mm=float(np.percentile(rd, 90) * 1000), ref_covered_frac_2cm=float(np.mean(rd <= 0.02)))
+                                   ref_to_this_p90_mm=float(np.percentile(rd, 90) * 1000), ref_covered_frac_2cm=float(np.mean(rd <= 0.02)),
+                                   overlap_5cm_frac=float(np.mean(dd < 0.05)),
+                                   overlap_5cm_to_ref_median_mm=float(np.median(dd[dd < 0.05]) * 1000) if (dd < 0.05).any() else None,
+                                   overlap_5cm_to_ref_p90_mm=float(np.percentile(dd[dd < 0.05], 90) * 1000) if (dd < 0.05).any() else None)
         res[lab] = r
         meshes.append((lab, X, C))
         print(lab, json.dumps(r), flush=True)
     # renders
-    allX = np.concatenate([m[1] for m in meshes[:1]])
-    lo = np.percentile(allX[:, :2], 0.5, 0) - 1.0; hi = np.percentile(allX[:, :2], 99.5, 0) + 1.0
+    allX = np.concatenate([m[1][::max(1, len(m[1]) // 500000)] for m in meshes])
+    lo = np.percentile(allX[:, :2], 1, 0) - 0.5; hi = np.percentile(allX[:, :2], 99, 0) + 0.5
+    allX = meshes[0][1]
     floor = np.percentile(allX[:, 2], 2); ceil = np.percentile(allX[:, 2], 97)
     camxy = T[:, :3, 3][:, :2]
     rows = []

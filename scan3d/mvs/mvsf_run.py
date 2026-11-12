@@ -32,6 +32,9 @@ def main():
     ap.add_argument("--ndepth", type=int, default=192)
     ap.add_argument("--conf", type=float, default=0.5, help="dpcd photometric confidence threshold (repo custom-data example 0.5)")
     ap.add_argument("--skip-infer", action="store_true")
+    ap.add_argument("--cloud-stride", type=int, default=1, help="own point cloud: every k-th pixel row/col (RAM at 1920)")
+    ap.add_argument("--save-960", action="store_true", help="save the filtered depth on the 960x540 grid (2x2 median of valid, >= 2 valid)")
+    ap.add_argument("--drop-raw", action="store_true", help="delete OUT/raw after the filter (disk)")
     ap.add_argument("--limit", type=int, default=0, help="only the first N keyframes (smoke test)")
     a = ap.parse_args()
     sys.path.insert(0, a.repo)
@@ -143,10 +146,16 @@ def main():
                 geo = torch.logical_or(geo, sums[:, i - 2] >= i)
             m = torch.minimum(prob_mask, geo)
             D = torch.where(m, dav, torch.zeros_like(dav))[0, 0].cpu().numpy().astype(np.float32)
-            np.save(out / "depth" / (Path(n).stem + ".npy"), D)
+            if a.save_960 and D.shape[1] != 960:
+                sys.path.insert(0, str(Path(__file__).resolve().parent))
+                from mvs_tsdf import to960
+                np.save(out / "depth" / (Path(n).stem + ".npy"), to960(D))
+            else:
+                np.save(out / "depth" / (Path(n).stem + ".npy"), D)
             kept.append(float((D > 0).mean()))
             # own point cloud (camera -> world)
-            vv, uu = np.nonzero(D > 0)
+            Ds = np.zeros_like(D); Ds[::a.cloud_stride, ::a.cloud_stride] = D[::a.cloud_stride, ::a.cloud_stride]
+            vv, uu = np.nonzero(Ds > 0)
             z = D[vv, uu]
             Xc = np.stack([(uu - K0[0, 2]) / K0[0, 0] * z, (vv - K0[1, 2]) / K0[1, 1] * z, z], 1)
             Tw = T[idx[n]]
@@ -172,6 +181,10 @@ def main():
         f.write(hdr); f.write(rec.tobytes())
     info.update(filter_s=round(time.time() - t1, 1), fused_points=int(len(Xa)), kept_frac_median=float(np.median(kept)) if kept else None,
                 n_kf=len(names))
+    info.update(cloud_stride=a.cloud_stride, save_960=a.save_960)
+    if a.drop_raw:
+        import shutil
+        shutil.rmtree(out / "raw")
     (out / "mvsf_run.json").write_text(json.dumps(info, indent=1))
     print(json.dumps(info, indent=1))
 
