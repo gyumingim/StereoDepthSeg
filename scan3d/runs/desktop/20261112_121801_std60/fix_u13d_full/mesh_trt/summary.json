@@ -1,0 +1,226 @@
+{
+ "poses": {
+  "source": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/ba/poses_ba.jsonl.gz",
+  "n": 494,
+  "se3_rmse_cm": 7.980164675328892,
+  "sim3_scale_would_be": 1.0000000000000002,
+  "free_scale_applied": false,
+  "rot_diff_deg_median": 0.5735983528932168,
+  "compressed_rows": 494
+ },
+ "made": "2026-11-12 18:10:36",
+ "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/red/hs_20261112_121801_std60_kf",
+ "gt": "lensonly",
+ "args": {
+  "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/red/hs_20261112_121801_std60_kf",
+  "out": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261112_121801_std60/fix_u13d_full/mesh_trt",
+  "gt": "lensonly",
+  "scale": 0.5,
+  "kf_step": 1,
+  "n_pairs": 1,
+  "iters": 8,
+  "voxel": 0.005,
+  "zmax": 2.0,
+  "tsdf_max_blocks": 250000,
+  "tsdf_evict_gpu_blocks": 0,
+  "tsdf_evict_dtype": "f32",
+  "tsdf_evict_dir": "",
+  "tsdf_evict_keep": false,
+  "b_target": 0.08,
+  "vio": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/ba/poses_ba.jsonl.gz",
+  "free_scale": false,
+  "pose_noise_cm": 0.0,
+  "allow_fullres": false,
+  "rows_from": "",
+  "compress": true,
+  "tsdf_alloc": "dense",
+  "ffs_views": 2,
+  "ffs_fuse": "auto",
+  "ffs_partners": "all",
+  "ffs_dt_max": null,
+  "pair_min_valid": null,
+  "pair_check": "auto",
+  "keep_gt_not_ok": false,
+  "sigma_rot_deg": 0.1,
+  "sigma_b_rel": 0.02,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02,
+  "ffs_backend": "trt",
+  "ffs_engines": "/home/system/scanner/ffs_trt/engines_v3",
+  "kf_only": "",
+  "dump_depth": "/home/system/scanner/ffs_trt/dump13d_full_trt"
+ },
+ "board_mm": [
+  302.0,
+  181.19999999999996
+ ],
+ "square_mm": 60.4,
+ "gt_corner_px_median": null,
+ "n_kf": 494,
+ "n_kf_depth": 351,
+ "mesh_vertices": 1907653,
+ "mesh_faces": 3229400,
+ "runtime_s": 67.4,
+ "image_size": [
+  960,
+  540
+ ],
+ "K_used": [
+  [
+   643.1272697202457,
+   0.0,
+   482.59568880974615
+  ],
+  [
+   0.0,
+   643.2218309269573,
+   276.6095206454582
+  ],
+  [
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "gpu_max_alloc_gb": 5.21,
+ "gpu_max_reserved_gb": 7.33,
+ "ffs_views": 2,
+ "ffs_fuse": "mean",
+ "ffs_partners": "all",
+ "ffs_dt_max": 30.0,
+ "pair_min_valid": 0.0,
+ "pair_check": "dy",
+ "pair_check_n": 398,
+ "pair_check_rejected": 47,
+ "pair_check_s": 12.1,
+ "ffs_s_total": 12.6,
+ "ffs_s_used": 12.6,
+ "n_pairs_rejected": 0,
+ "n_kf_by_pairs": {
+  "0": 143,
+  "1": 351
+ },
+ "tsdf_alloc": "dense",
+ "ffs_backend": "trt",
+ "ffs_trt": {
+  "engines": [
+   {
+    "H": 544,
+    "W": 960,
+    "calls": 256,
+    "dynamic": false,
+    "min": null,
+    "max": null
+   },
+   {
+    "H": 960,
+    "W": 544,
+    "calls": 55,
+    "dynamic": false,
+    "min": null,
+    "max": null
+   },
+   {
+    "H": 384,
+    "W": 672,
+    "calls": 32,
+    "dynamic": true,
+    "min": [
+     128,
+     128
+    ],
+    "max": [
+     544,
+     960
+    ]
+   },
+   {
+    "H": 672,
+    "W": 384,
+    "calls": 8,
+    "dynamic": true,
+    "min": [
+     128,
+     128
+    ],
+    "max": [
+     960,
+     544
+    ]
+   }
+  ],
+  "trt": "10.16.1.11",
+  "shapes": {
+   "247x440->256x448": 1,
+   "248x442->256x448": 1,
+   "263x468->288x480": 1,
+   "267x474->288x480": 1,
+   "287x510->288x512": 1,
+   "292x518->320x544": 1,
+   "298x530->320x544": 1,
+   "299x531->320x544": 1,
+   "322x572->352x576": 1,
+   "322x573->352x576": 1,
+   "325x577->352x608": 1,
+   "326x580->352x608": 1,
+   "342x609->352x640": 1,
+   "350x623->352x640": 1,
+   "356x633->384x640": 1,
+   "357x635->384x640": 1,
+   "371x660->384x672": 1,
+   "377x671->384x672": 1,
+   "384x684->384x704": 1,
+   "389x692->416x704": 2,
+   "403x717->416x736": 1,
+   "422x750->448x768": 1,
+   "428x761->448x768": 1,
+   "441x783->448x800": 1,
+   "448x796->448x800": 1,
+   "455x809->480x832": 1,
+   "472x266->480x288": 1,
+   "477x848->480x864": 1,
+   "488x868->512x896": 1,
+   "503x895->512x896": 1,
+   "519x923->544x928": 1,
+   "540x960->544x960": 256,
+   "556x313->576x320": 1,
+   "574x323->576x352": 1,
+   "662x373->672x384": 1,
+   "687x387->704x416": 1,
+   "804x453->832x480": 1,
+   "876x493->896x512": 1,
+   "878x494->896x512": 1,
+   "910x512->928x512": 1,
+   "960x540->960x544": 55
+  },
+  "manifest_made": "2026-11-12 17:30:05"
+ },
+ "depth_sigma": {
+  "rot_deg": 0.1,
+  "b_rel": 0.02,
+  "sigma_d_px": 0.5,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02,
+  "z_max": 2.0
+ },
+ "mesh_cam_depth_m": {
+  "n": 1907653,
+  "p50": 1.0441792501080591,
+  "p90": 1.2880939157007176,
+  "p99": 1.4435906121764883,
+  "max": 1.5872481444494397,
+  "frac_gt_0p65": 0.9216235866795481,
+  "frac_gt_1p0": 0.5927414472128841
+ },
+ "tsdf_full": false,
+ "tsdf_blocks": 154553,
+ "tsdf_max_blocks": 250000,
+ "tsdf_log": [],
+ "gt_ok_filter": true,
+ "n_kf_gt_not_ok_dropped": 0,
+ "n_kf_gt_not_ok": 0,
+ "lib_ffs": {
+  "file": "/home/system/scanner/StereoDepthSeg/lib_ffs.py",
+  "sha": "9b820bc28df4caf7"
+ }
+}
