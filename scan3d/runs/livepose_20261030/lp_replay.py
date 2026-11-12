@@ -176,7 +176,9 @@ def main():
         p.stdin.write(HDR.pack(MAGIC, 4, 0)); p.stdin.close()
     except BrokenPipeError:
         crashed = f"bridge exited rc {p.poll()} after {n_fed} frames"
-    p.wait(timeout=300); th.join(timeout=10); errf.close()
+    bridge_rc = p.wait(timeout=300); th.join(timeout=10); errf.close()
+    if crashed is None and bridge_rc != 0:         # fixes 11-12 H3: the bridge may also die after all input was sent (no BrokenPipe)
+        crashed = f"bridge exited rc {bridge_rc} after all {n_fed} frames were sent"
     wall = time.time() - t0
     with gzip.open(str(out) + ".poses.jsonl.gz", "wt") as f:
         for m in poses:
@@ -192,7 +194,7 @@ def main():
                                time=("t_mid, no shift (= phone)" if x.time == "live" else f"t_mid - GT dt {dt_gt / 1e6:.3f} ms, yaml timeshift 0 (oracle)"),
                                offline="drop-late 0, loop-sync 1, idle-spin 0, predict 0",
                                selection=f"{x.fps:g} fps grid from save_fps {meta.get('save_fps')}, start_off {x.start_off}"),
-               frames_selected=n_sel, frames_fed=n_fed, poses=len(poses), wall_s=round(wall, 1), crashed=crashed,
+               frames_selected=n_sel, frames_fed=n_fed, poses=len(poses), wall_s=round(wall, 1), crashed=crashed, bridge_rc=bridge_rc,
                focus_dpt_rec=meta.get("focus_dpt_request"), save_fps=meta.get("save_fps"), gt_align_dt_ms=dt_gt / 1e6,
                t_first_fed=int(t_frames[sel[0]] - shift), t_last_fed=int(t_frames[sel[-1]] - shift))
     res["score"] = lp_score.score(rec, poses, shift, res["t_first_fed"], res["t_last_fed"], gt=x.gt)
@@ -201,6 +203,9 @@ def main():
     print(json.dumps(dict(rec=rec.name, fed=n_fed, poses=len(poses), wall=res["wall_s"], crashed=crashed,
                           **{k: s.get(k) for k in ("status", "init_s", "ate_vio_cm", "ate_map_cm", "path_m", "ate_pct",
                                                     "drift_cm_per_m", "loop_err_cm", "dt_final_ms")})))
+    if crashed:                                    # fixes 11-12 H3: poses + json are written, but the caller must see the failure
+        print(f"VIO BRIDGE FAILED: {crashed} (stderr {out}.bridge.err)", file=sys.stderr, flush=True)
+        sys.exit(2)
 
 
 if __name__ == "__main__":

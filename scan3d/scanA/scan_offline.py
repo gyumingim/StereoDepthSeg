@@ -76,6 +76,10 @@ def main():
     ap.add_argument("--pair-check", choices=("auto", "none", "dy"), default="auto",
                     help="check a partner before FFS: dy = SIFT rectification check (dy_ok); auto = dy with --ffs-partners all, "
                          "none (old) with near")
+    ap.add_argument("--keep-gt-not-ok", action="store_true",
+                    help="fixes 11-12 M1: with --vio, also use keyframes whose GT row is not 'ok' (board not seen / GT fit failed). "
+                         "Default (off) = old behaviour: such keyframes are dropped from the mesh input (133820: 7 of 203). "
+                         "Their board-depth check is skipped (no GT plane).")
     a = ap.parse_args()
     if a.ffs_views is not None:
         if not 2 <= a.ffs_views <= 8:
@@ -106,6 +110,8 @@ def main():
     T[:, 3, 3] = 1
     t_ns = g["t_ns"]
     pose_info = dict(source=a.gt)
+    gt_ok = ok.copy()                    # GT plane usable (board check); M1: also the mesh-input filter unless --keep-gt-not-ok
+    n_gt_drop = None
     Tgt = T.copy()
     if a.vio:
         import gzip
@@ -145,7 +151,10 @@ def main():
         pose_info = dict(source=a.vio, n=int(len(idx)), se3_rmse_cm=float(np.sqrt((res ** 2).mean()) * 100),
                          sim3_scale_would_be=sc, free_scale_applied=bool(a.free_scale), rot_diff_deg_median=float(np.median(dR)))
         print("VIO poses", pose_info, flush=True)
-        T, ok = newT, okv & ok      # GT 'ok' is still needed for the board-depth check plane (pose of the plane uses VIO world)
+        # GT 'ok' is still needed for the board-depth check plane (pose of the plane uses VIO world). M1 (fixes 11-12): by default it
+        # ALSO drops keyframes from the mesh input (old behaviour); --keep-gt-not-ok keeps them (board check skipped for them)
+        n_gt_drop = int((okv & ~ok).sum())
+        T, ok = newT, (okv if a.keep_gt_not_ok else okv & ok)
 
     if a.rows_from:
         import gzip
@@ -157,7 +166,7 @@ def main():
         pose_info["rows_from"] = dict(file=a.rows_from, n=int(keep.sum()))
     sel = np.flatnonzero(ok) if a.compress else None
     if sel is not None:                                # compressed row index k <-> recording frame sel[k]
-        t_ns, T, Tgt, ok = t_ns[sel], T[sel], Tgt[sel], ok[sel]
+        t_ns, T, Tgt, ok, gt_ok = t_ns[sel], T[sel], Tgt[sel], ok[sel], gt_ok[sel]
         n = len(sel)
         pose_info["compressed_rows"] = int(n)
 
@@ -224,14 +233,18 @@ def main():
         return okk
     import lib_ffs
     model = lib_ffs.load(valid_iters=a.iters)
+    tsdf_msgs = []
+    def tsdf_log(m):                     # M3 (fixes 11-12): block-limit message printed + kept for the summary (no behaviour change)
+        print(m, flush=True); tsdf_msgs.append(str(m))
     tsdf = tsdf_map.TSDFMap(voxel_m=a.voxel, z_max=a.zmax, sigma_max=0.08, sigma_ok=0.02, min_obs=2,
-                            alloc_dense=(a.tsdf_alloc == "dense"))
+                            alloc_dense=(a.tsdf_alloc == "dense"), log=tsdf_log)
     print(f"[tsdf] alloc {a.tsdf_alloc}", flush=True)
 
     # board quad in the undistorted keyframe grid -> GT plane depth per pixel
     uu, vv = np.meshgrid(np.arange(W0, dtype=np.float64), np.arange(H0, dtype=np.float64))
     rays = np.stack([(uu - Kr[0, 2]) / Kr[0, 0], (vv - Kr[1, 2]) / Kr[1, 1], np.ones_like(uu)], -1)
     rows, dz_all = [], []
+    integ_i = []                         # fixes 11-12: keyframes that went into the TSDF (for kf_poses.npz + vertex camera depth)
     for i in range(0, n, a.kf_step):
         if not ok[i] or imgs[i] is None:
             continue
@@ -286,7 +299,7 @@ def main():
         m = inb & V & np.isfinite(Z)
         row = dict(i=i, pairs=len(res), B_cm=[round(r["B"] * 100, 1) for r in res], valid_frac=float(V.mean()),
                    board_px=int(inb.sum()), board_valid=int(m.sum()), ffs_ms=[round(r["ms"]["ffs"]) for r in res])
-        if m.sum() > 200:
+        if m.sum() > 200 and gt_ok[i]:      # gt_ok: always true here unless --keep-gt-not-ok
             dz = (Z[m] - Zp[m])
             dz_all.append(dz.astype(np.float32))
             row.update(board_dZ_mean_cm=float(dz.mean() * 100), board_dZ_p10_cm=float(np.percentile(dz, 10) * 100),
@@ -300,6 +313,7 @@ def main():
         rows.append(row)
         tsdf.integrate(np.where(V, Z, np.nan).astype(np.float32), V, bgr, rp["f"], rp["cx"], rp["cy"], 0.08, T[i],
                        sigma=np.where(V, S, np.inf).astype(np.float32))
+        integ_i.append(i)
         if len(rows) % 10 == 0:
             print(f"kf {i}/{n}: {row}", flush=True)
     tsdf.update_mesh(force=True)
@@ -351,6 +365,36 @@ def main():
             summ["mesh_board_cover_frac"] = len(cells) / float(nx_ * ny_)
             summ["mesh_board_z_unique_mm"] = int(len(np.unique(np.round(z * 1000, 1))))   # sub-voxel check (many = interpolated)
     summ["tsdf_alloc"] = a.tsdf_alloc
+    # fixes 11-12 (diagnostic only): camera depth of each mesh vertex = nearest integrated keyframe camera that has it in view
+    # (no occlusion test); poses of the integrated keyframes saved for later analysis
+    np.savez_compressed(out / "kf_poses.npz", i=np.array(integ_i, int), T=T[integ_i] if integ_i else np.zeros((0, 4, 4)),
+                        t_ns=t_ns[integ_i] if integ_i else np.zeros(0, np.int64), f=rp["f"], cx=rp["cx"], cy=rp["cy"], size=np.array([W0, H0]))
+    if len(Vm) and integ_i:
+        Vv = np.asarray(Vm, np.float64)
+        best = np.full(len(Vv), np.inf)
+        for i_ in integ_i:
+            Rm_, tm_ = T[i_][:3, :3], T[i_][:3, 3]
+            pc = (Vv - tm_) @ Rm_
+            zc = pc[:, 2]
+            with np.errstate(divide="ignore", invalid="ignore"):
+                uu_ = pc[:, 0] / zc * rp["f"] + rp["cx"]; vv_ = pc[:, 1] / zc * rp["f"] + rp["cy"]
+            inn = (zc > 0.05) & (uu_ >= 0) & (uu_ < W0) & (vv_ >= 0) & (vv_ < H0)
+            best = np.where(inn, np.minimum(best, zc), best)
+        fin = best[np.isfinite(best)]
+        if len(fin):
+            summ["mesh_cam_depth_m"] = dict(n=int(len(fin)), p50=float(np.median(fin)), p90=float(np.percentile(fin, 90)),
+                                            p99=float(np.percentile(fin, 99)), max=float(fin.max()),
+                                            frac_gt_0p65=float(np.mean(fin > 0.65)), frac_gt_1p0=float(np.mean(fin > 1.0)))
+    # fixes 11-12: quality / provenance records (results unchanged)
+    summ.update(tsdf_full=bool(tsdf.full), tsdf_blocks=int(tsdf.nb), tsdf_max_blocks=tsdf.cfg.get("max_blocks"), tsdf_log=tsdf_msgs,
+                gt_ok_filter=(not a.keep_gt_not_ok), n_kf_gt_not_ok_dropped=(0 if a.keep_gt_not_ok else n_gt_drop),
+                n_kf_gt_not_ok=n_gt_drop)
+    try:
+        import hashlib
+        summ["lib_ffs"] = dict(file=str(Path(lib_ffs.__file__).resolve()),
+                               sha=hashlib.sha256(Path(lib_ffs.__file__).read_bytes()).hexdigest()[:16])
+    except Exception as e:
+        summ["lib_ffs"] = dict(error=repr(e))
     (out / "summary.json").write_text(json.dumps(summ, indent=1))
     (out / "keyframes.json").write_text(json.dumps(rows, indent=0))
     print(json.dumps(summ, indent=1))

@@ -43,6 +43,13 @@ def _alive(pid):
         return False
 
 
+def _is_python(pid):
+    try:
+        return b"python" in Path(f"/proc/{int(pid)}/cmdline").read_bytes()
+    except (OSError, ValueError, TypeError):
+        return False
+
+
 def acquire(owner):
     while True:
         if LOCK.exists():
@@ -51,7 +58,10 @@ def acquire(owner):
             except Exception:
                 d = {}
             age = time.time() - float(d.get("time", 0))
-            if d.get("pid") != os.getpid() and _alive(d.get("pid")) and age < MAX_AGE_S and d.get("host") == socket.gethostname():
+            # M8 (fixes 11-12): a live holder is never taken over by age alone (a long job kept running after 2 h); after
+            # MAX_AGE_S only when its pid no longer runs python (pid reused by another program)
+            live = _alive(d.get("pid")) and (age < MAX_AGE_S or _is_python(d.get("pid")))
+            if d.get("pid") != os.getpid() and live and d.get("host") == socket.gethostname():
                 print(f"[gpu_guard] GPU held by {d.get('owner')} (pid {d.get('pid')}, {age / 60:.0f} min) -> waiting",
                       file=sys.stderr, flush=True)
                 time.sleep(float(os.environ.get("SCAN3D_GPU_POLL_S", "30")))   # featloop: env poll interval (same lock rules)

@@ -8,7 +8,7 @@
 #   tools/remote_laptop.sh status                     lock holder + tail of the last job log
 #   tools/remote_laptop.sh pull RID[/TAG]             copy scan3d/runs/laptop/RID[/TAG] back again (e.g. after a dropped link)
 #   tools/remote_laptop.sh sh 'cmd'                   one command there (cwd = WT/scan3d)
-#   tools/remote_laptop.sh unlock                     remove the lock (only when its holder here is gone; asks no questions)
+#   tools/remote_laptop.sh unlock                     remove the lock (refuses while a laptop job runs; FORCE=1 overrides)
 #
 # REC  = recording dir name under scan3d/recordings or a unique part of it (165506 -> hs_20261024_165506_std60).
 # STEP = vio | kfba | mesh | board | all (= vio kfba mesh) | scan | 'cmd:<shell command>' (cwd = WT, $R $O $P $G $CACHE set)
@@ -23,7 +23,10 @@
 # opts: --gt imu_gt_spl   --cfg DIR (VIO config, default build_livepose/cfg_gen/c4f60)   --vio FILE   --poses FILE
 #       --board FILE (board json, default by recording)   --send FILE|DIR (repeatable; copied to the same absolute path there)
 #       --tag NAME (results under O/NAME)   --keep (do not delete the recording there)   --args 'extra args for the step script'
-# Env: LAPTOP=user@host (default LAN cable 169.254.78.233, falls back to Wi-Fi 192.168.1.76), LOCK_WAIT_S (default 6 h).
+# Env: LAPTOP=user@host (default LAN cable 169.254.78.233, falls back to Wi-Fi 192.168.1.76), LOCK_WAIT_S (default 6 h), POLL_MAX_S (default 12 h).
+# Lock (fixes 11-12 H2/M8): holder = host:pid:date:job id. A lock whose orchestrator here is gone is removed only when no laptop
+# job (laptop_jobs/*/run.sh) runs; the EXIT trap does not wipe the recording / cache or unlock while its laptop job still runs
+# (SIGTERM / SIGHUP / dropped link) -> the orphan job finishes, the next job waits for it. Cache = laptop_cache/<job id> (per job).
 set -euo pipefail
 LAN=a3162@169.254.78.233; WIFI=a3162@192.168.1.76
 HERE=$(cd "$(dirname "$0")/../.." && pwd)                 # worktree root that holds this script
@@ -75,26 +78,61 @@ resolve_rec() {
   echo "$m"
 }
 
-lock() {  # mkdir lock there; holder = this host + pid; waits up to LOCK_WAIT_S
+ALIVE_RE="$JOBS/[^ ]*/run\\.sh"                            # any laptop job (fixes 11-12 H2: the lock follows the laptop job, not only this pid)
+holder_alive_here() {  # holder_alive_here HOLDER: 0 if its orchestrator is a live remote_laptop.sh on this host
+  local hn pid; hn=${1%%:*}; pid=$(echo "$1" | cut -d: -f2)
+  [ "$hn" = "$(hostname)" ] && [ -n "$pid" ] || return 2          # other host: unknown
+  ps -p "$pid" -o args= 2>/dev/null | grep -q remote_laptop.sh       # kill -0 alone is fooled by a reused pid (M8)
+}
+lock() {  # mkdir lock there; holder = this host + pid + date + job id; waits up to LOCK_WAIT_S
   local t0=$SECONDS me="$(hostname):$$:$(date +%F_%T):$1"
   while :; do
     r=$(echo "mkdir $LOCK 2>/dev/null && echo '$me' > $LOCK/holder && echo GOT || cat $LOCK/holder 2>/dev/null" | rsh)
-    [ "${r%%$'\n'*}" = GOT ] && return 0
-    pid=$(echo "$r" | cut -d: -f2); hn=$(echo "$r" | cut -d: -f1)
-    if [ "$hn" = "$(hostname)" ] && [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then
-      echo "stale lock ($r) -> removing"; echo "rm -rf $LOCK" | rsh; continue; fi
+    [ "${r%%$'\n'*}" = GOT ] && { LOCK_ME=$me; return 0; }
+    rc_h=0; holder_alive_here "$r" || rc_h=$?
+    if [ -n "$r" ] && [ $rc_h = 1 ]; then
+      # orchestrator gone: remove ONLY if the holder line is unchanged AND no laptop job runs (one command there = no read/remove gap)
+      v=$(echo "cur=\$(cat $LOCK/holder 2>/dev/null); if [ \"\$cur\" = '$r' ] && ! pgrep -f '$ALIVE_RE' >/dev/null; then
+            oid=\${cur##*:}; [ -f $JOBS/\$oid/cleanup ] && bash $JOBS/\$oid/cleanup; rm -rf $LOCK; echo REMOVED; else echo KEPT; fi" | rsh || true)
+      case "$v" in
+        *REMOVED*) echo "stale lock ($r): orchestrator gone, no laptop job alive -> removed (+ its cache)"; continue;;
+        *) echo "$(date +%T) lock holder ($r) has no orchestrator here but its laptop job still runs -> waiting";;
+      esac
+    else
+      echo "$(date +%T) laptop busy ($r), waiting"
+    fi
     [ $((SECONDS - t0)) -gt "${LOCK_WAIT_S:-21600}" ] && { echo "lock wait timeout, holder: $r" >&2; exit 3; }
-    echo "$(date +%T) laptop busy ($r), waiting"; sleep 60
+    sleep 60
   done
 }
-unlock() { echo "rm -rf $LOCK" | rsh; }
+unlock() {  # remove the lock only when it is ours (LOCK_ME) and our laptop job is not running
+  echo "cur=\$(cat $LOCK/holder 2>/dev/null); [ \"\$cur\" = '${LOCK_ME:-}' ] && rm -rf $LOCK && echo unlocked || echo \"lock not ours (\$cur), kept\"" | rsh
+}
+job_alive() {  # job_alive ID -> ALIVE | DONE | NOTSTARTED (prints UNKNOWN when the link is down)
+  echo "if [ -f $JOBS/$1/rc ]; then echo DONE; elif pgrep -f '$JOBS/$1/run\\.sh' >/dev/null; then echo ALIVE;
+        elif [ -f $JOBS/$1/started ]; then sleep 3; [ -f $JOBS/$1/rc ] && echo DONE || { pgrep -f '$JOBS/$1/run\\.sh' >/dev/null && echo ALIVE || echo DONE; }; else echo NOTSTARTED; fi" \
+    | rsh 2>/dev/null | head -n 1 || true
+}
+cleanup() {  # EXIT trap of job(): never wipe cache / recording or unlock while the laptop job still runs (H2)
+  set +e
+  echo "== cleanup"
+  [ -n "${LOCK_ME:-}" ] || return 0                         # never got the lock: nothing of ours there
+  local st; st=$(job_alive "$JOB_ID"); st=${st:-UNKNOWN}
+  if [ "$st" = ALIVE ] || [ "$st" = UNKNOWN ]; then
+    echo "!! laptop job $JOB_ID is $st: lock, cache $JC and recording kept. It keeps running there; get results later with" >&2
+    echo "!!   remote_laptop.sh pull <RID>[/TAG]; the next job waits for it, then removes the lock and this job's cache itself." >&2
+    return 0
+  fi
+  [ $KEEP = 1 ] || echo "rm -rf $R $JC" | rsh
+  unlock
+}
 
 step_cmd() {  # step_cmd STEP -> shell line run there (cwd WT); uses vars below
   case $1 in
     vio)  echo "mkdir -p $O/vio && cd scan3d/runs/livepose_20261030 && /usr/bin/time -f 'TIME vio %e s maxrss %M kB' $P lp_replay.py $R $CFG $WT/$O/vio/B_o0 --bridge $BRIDGE --vocab $WT/scan3d/ov_bridge/loop/voc_k10L4.voc $XARGS > $WT/$O/vio.log 2>&1" ;;
-    kfba) echo "/usr/bin/time -f 'TIME kfba %e s maxrss %M kB' $P scan3d/scanA/kf_ba.py $R --vio ${VIO:-$O/vio/B_o0.poses.jsonl.gz} --out $O/ba_S --gt $G --feat sift --loop none --cache-root $CACHE --seed 0 --keep-db $XARGS > $O/kfba.log 2>&1" ;;
+    kfba) echo "/usr/bin/time -f 'TIME kfba %e s maxrss %M kB' $P scan3d/scanA/kf_ba.py $R --vio ${VIO:-$O/vio/B_o0.poses.jsonl.gz} --out $O/ba_S --gt $G --feat sift --loop none --cache-root $JC --seed 0 --keep-db $XARGS > $O/kfba.log 2>&1" ;;
     mesh) echo "/usr/bin/time -f 'TIME mesh %e s maxrss %M kB' $P scan3d/scanA/scan_offline.py $R --out $O/mesh_S --gt $G --vio ${POSES:-$O/ba_S/poses_ba.jsonl.gz} $XARGS > $O/mesh.log 2>&1" ;;
-    scan) echo "SCANNER_COMMIT=$(git -C "$WT" rev-parse HEAD)$(git -C "$WT" diff --quiet HEAD -- scan3d/scanA || echo -dirty) bash scan3d/scanA/run_scanner.sh $R $WT/$O/scan --cache $CACHE/scan $( [ $GT_SET = 1 ] && echo --gt $G ) $( [ $CFG_SET = 1 ] && echo --cfg $CFG ) $( [ -n "$VIO" ] && echo --vio $(cd "$WT" && realpath -m "$VIO") ) $XARGS > $O/scan.log 2>&1" ;;
+    scan) echo "SCANNER_COMMIT=$(git -C "$WT" rev-parse HEAD)$(git -C "$WT" diff --quiet HEAD || echo -dirty) SCANNER_MAIN_COMMIT=$(git -C "$MAIN" rev-parse HEAD 2>/dev/null)$(git -C "$MAIN" diff --quiet HEAD 2>/dev/null || echo -dirty) bash scan3d/scanA/run_scanner.sh $R $WT/$O/scan --cache $JC/scan $( [ $GT_SET = 1 ] && echo --gt $G ) $( [ $CFG_SET = 1 ] && echo --cfg $CFG ) $( [ -n "$VIO" ] && echo --vio $(cd "$WT" && realpath -m "$VIO") ) $XARGS > $O/scan.log 2>&1" ;;
     board) echo "/usr/bin/time -f 'TIME board %e s maxrss %M kB' $P scan3d/scanA/board_scale.py $R --poses ${POSES:-$O/ba_S/poses_ba.jsonl.gz} --board $BOARD --lens $R/$G/gt.npz --out $O/board $( [ -d $R/imu_gt_rs ] && echo --check-gt-corners $R/imu_gt_rs/gt.npz ) $XARGS > $O/board.log 2>&1" ;;
     cmd:*) echo "${1#cmd:}" ;;
     *) echo "unknown step $1" >&2; exit 1 ;;
@@ -121,20 +159,22 @@ job() {
     for c in /home/system/scanner/build_livepose/cfg_gen_hs222/c4f60 "$CFG"; do [ -d "$c" ] && SENDS+=("$c"); done
   fi
   local steps=("$st"); [ "$st" = all ] && steps=(vio kfba mesh)
-  local id; id=$(date +%Y%m%d_%H%M%S)_${rid}_${st%%:*}
+  JOB_ID=$(date +%Y%m%d_%H%M%S)_${rid}_${st%%:*}; local id=$JOB_ID
+  JC=$CACHE/$id                                # per-job cache dir there (fixes 11-12 H2: an orphan job keeps its own cache)
   echo "== job $id on $H: $name, steps '${steps[*]}', out $O"
   lock "$id"
-  trap 'echo "== cleanup"; [ $KEEP = 1 ] || echo "rm -rf $R $CACHE" | rsh; unlock' EXIT
+  trap cleanup EXIT
   local t0=$SECONDS
   push "$WT"
   (cd "$RECS" && tar --exclude="$name/scanA_cache" --exclude="$name/cache" -cf - "$name") \
     | ssh "${SSHO[@]}" "$H" "wsl -d Ubuntu-22.04 -u system -- bash -c \"cd $RECS && tar xf -\"" | tr -d '\0'
   echo "send rec $((SECONDS - t0)) s ($(du -sh --exclude=scanA_cache --exclude=cache "$R" | cut -f1))"
   [ ${#SENDS[@]} -gt 0 ] && send "${SENDS[@]}"
-  { echo "set -e; D=$JOBS/$id; mkdir -p \$D $CACHE; cd $WT; mkdir -p $O; touch \$D/started"
+  { echo "set -e; D=$JOBS/$id; mkdir -p \$D $JC; cd $WT; mkdir -p $O"
+    echo "echo '$( [ $KEEP = 1 ] && echo "rm -rf $JC" || echo "rm -rf $R $JC")' > \$D/cleanup; touch \$D/started"
     echo "export FFS_ROOT=$MAIN SCAN3D_GPU_POLL_S=3 PATH=/usr/local/cuda/bin:\$PATH"
     echo "cat > \$D/run.sh <<'__RUN__'"
-    echo "cd $WT; set -e; R=$R; O=$O; P=$P; G=$G; CACHE=$CACHE; WT=$WT"
+    echo "cd $WT; set -e; R=$R; O=$O; P=$P; G=$G; CACHE=$JC; WT=$WT"
     for s in "${steps[@]}"; do echo "echo \"\$(date +%T) step ${s%%:*} start\"; ( $(step_cmd "$s") ); echo \"\$(date +%T) step ${s%%:*} done\""; done
     echo "__RUN__"
     # setsid -f: a plain nohup/& child is killed when this wsl.exe session ends (tested 11-11)
@@ -144,6 +184,8 @@ job() {
   while :; do                                   # poll (ssh may drop; the job keeps running there under setsid)
     r=$(echo "cat $JOBS/$id/rc 2>/dev/null || { pgrep -f '$JOBS/$id/run.sh' >/dev/null || { sleep 5; [ -f $JOBS/$id/rc ] && cat $JOBS/$id/rc || echo 97; }; }" | rsh || true)
     rc=$(echo "$r" | head -n 1); [[ "$rc" =~ ^[0-9]+$ ]] && break   # 97 = job process gone without rc (killed / WSL restarted)
+    if [ $((SECONDS - t0)) -gt "${POLL_MAX_S:-43200}" ]; then    # M8: no endless poll; the EXIT trap keeps the lock while the job runs
+      echo "poll timeout after ${POLL_MAX_S:-43200} s: job $id still not done there (log $JOBS/$id/job.log)" >&2; exit 4; fi
     sleep 20
   done
   echo "== job rc $rc ($((SECONDS - t0)) s total)"; echo "cat $JOBS/$id/job.log" | rsh | tail -n 20
@@ -161,6 +203,7 @@ case "${1:-}" in
   status) echo "cat $LOCK/holder 2>/dev/null || echo 'lock free'; d=\$(ls -td $JOBS/*/ 2>/dev/null | head -1); [ -n \"\$d\" ] && { echo \"last job \$d rc \$(cat \$d/rc 2>/dev/null || echo running)\"; tail -n 5 \$d/job.log; }; nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader" | rsh ;;
   pull) ssh "${SSHO[@]}" "$H" "wsl -d Ubuntu-22.04 -u system --cd $WT -- tar -cf - scan3d/runs/laptop/$2" | (cd "$WT" && tar xvf - | wc -l | sed 's/^/files pulled: /') ;;
   sh) echo "cd $WT/scan3d && $2" | rsh ;;
-  unlock) unlock; echo unlocked ;;
+  unlock) [ "${FORCE:-0}" = 1 ] || { a=$(echo "pgrep -af '$ALIVE_RE' || true" | rsh); [ -z "$a" ] || { echo "a laptop job still runs ($a): not unlocking (FORCE=1 to override)" >&2; exit 1; }; }
+          echo "rm -rf $LOCK" | rsh; echo unlocked ;;
   *) sed -n '2,/^set -euo/p' "$0" | grep '^#'; exit 1 ;;
 esac

@@ -413,6 +413,12 @@ def main():
     sq = float(g["square_mm"]) / 1000.0
     BW, BH = bj["squares_x"] * sq, bj["squares_y"] * sq
     tag = (f"kflist{len(kfs)}_{kfs[0]}_{kfs[-1]}" if a.kf_list else f"kf{a.kf_step}") + f"_s{s:g}" + ("_mask" if a.mask_board else "") + (f"_vio_{a.gt}" if a.kf_from_vio else "")
+    # M10 (fixes 11-12): the cached images are undistorted with K / dist at W0 x H0 -> lens + size + source in the cache key
+    import hashlib
+    _src = sorted((rec / "frames_kf").glob("*.jpg"))[:1] if (rec / "frames_kf").is_dir() else []
+    _h = hashlib.sha1(K.tobytes() + dist.tobytes() + f"{W0}x{H0}".encode()
+                      + (f"{_src[0].name}:{_src[0].stat().st_size}".encode() if _src else b"video")).hexdigest()[:8]
+    tag += f"_L{_h}"
     img_dir = (Path(a.cache_root) / rec.name if a.cache_root else rec / "scanA_cache") / tag
     img_dir.mkdir(parents=True, exist_ok=True)
     names = {i: f"{i:05d}.jpg" for i in kfs}
@@ -748,6 +754,8 @@ def main():
     sc, Ra, ta = umeyama(Cb[fr], Cv[fr])
     res = np.linalg.norm((sc * (Ra @ Cb.T).T + ta) - Cv, axis=1)
     log(f"[sim3] scale {sc:.5f}, BA-vs-VIO centre rms {np.sqrt((res[fr] ** 2).mean()) * 100:.2f} cm")
+    if (~fr).any():
+        log(f"[warn] {int((~fr).sum())} keyframes have < 15 BA observations and keep their VIO pose: {[kfs[k] for k in np.flatnonzero(~fr)][:20]}")
     Tba = {}
     for k, i in enumerate(kfs):
         Twc = np.eye(4)
@@ -762,6 +770,7 @@ def main():
     info = dict(made=time.strftime("%F %T"), rec=str(rec), vio=str(Path(a.vio).resolve()), args=vars(a), n_kf=len(kfs),
                 img_dir=str(img_dir), Kr=Kr.tolist(), pairs=len(pairs), verified_pairs=len(n_inl), tracks=len(tracks),
                 points=int(len(X0)), obs=int(len(cam)), fixed_kf=[kfs[k] for k in fixed],
+                n_kf_vio_pose=int((~fr).sum()),   # M3 (fixes 11-12): keyframes with < 15 observations that keep the VIO pose
                 kf_obs_min=int(obs_per_kf.min()), sim3_scale=sc, sim3_rms_cm=float(np.sqrt((res[fr] ** 2).mean()) * 100),
                 runtime_s=round(time.time() - t0, 1), timing=tm, pair_stats=pair_stats, loop=loop_info,
                 points_per_kf_median=float(np.median(obs_per_kf)), n_raw={f"{x} {y}": v for (x, y), v in n_raw.items()}, track_edges_skipped=n_skip, **{k: v for k, v in st.items() if k != "hist"}, hist=st["hist"])

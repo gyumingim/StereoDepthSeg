@@ -34,7 +34,11 @@ imu.csv + frames_cam5.csv + meta.json + `phone_live_poses.jsonl.gz`, 영상 없�
 REC 가 이미 키프레임 폴더 (`frames_kf/` + `phone_live_poses.jsonl.gz`) 면 vio·reduce 를 건너뜀 = 폰 앱이 보낸 것을 그대로 처리.
 결과: `OUT/scan_summary.json` (만든 시각, 커밋, 입력, 단계별 초, |dZ| p90, 축척 k, 보낸 JPEG MB/분), 단계별 로그 `OUT/*.log`,
 줄인 폴더 `OUT/red/` (처리 전 입력), `OUT/ba/`, `OUT/mesh/` (mesh.ply, summary.json).
-- GT 폴더 (`imu_gt_spl_cal1022` 있으면 그것, 없으면 `imu_gt_spl`) 는 렌즈 K·dist 와 채점에만 씀. make_reduced 는 프레임 시각도 GT 의 t_ns 에서 읽음 (가정: = frames_cam5.csv 시각).
+- GT 폴더 (`imu_gt_spl_cal1022` 있으면 그것, 없으면 `imu_gt_spl`) 는 렌즈 K·dist 와 채점에 씀. make_reduced 는 프레임 시각도 GT 의 t_ns 에서 읽음 (가정: = frames_cam5.csv 시각).
+- **주의 (11-12 고침 M1, 동작은 그대로)**: GT 는 채점만이 아니다. `scan_offline.py` 는 GT 의 `ok` (그 프레임에서 보드 자세를 구했는가) 가
+  꺼진 키프레임을 **메시 입력에서도 뺀다** (133820: 키프레임 203 개 중 7 개, 프레임 11533–11748). 그래서 보드가 안 보이는 구간의 물체는
+  GT 가 있는 녹화에서 메시에 덜 들어간다. 빠진 수는 `mesh/summary.json` 의 `n_kf_gt_not_ok_dropped` (요약 `mesh.n_kf_gt_not_ok_dropped`).
+  끄려면 `--mesh-args '--keep-gt-not-ok'` (그 키프레임도 메시에 넣고, 그 키프레임의 보드 깊이 채점만 건너뜀). 기본값은 아직 옛 동작.
 
 ## 3. 근거
 - 키프레임만: kfonly README 10·11. 지금 파이프라인에서 영상 전체를 읽는 곳은 VIO 뿐이고 (BA·움직임 스테레오 짝은 키프레임끼리),
