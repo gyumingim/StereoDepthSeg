@@ -43,6 +43,14 @@ def main():
     ap.add_argument("--tsdf-max-blocks", type=int, default=60000,
                     help="TSDF block limit (8^3 voxels each, ~6.0 KiB GPU per block; default 60000 = tsdf_map default, ~0.37 GB). "
                          "fixes 11-12 C: a room scan at 5 mm hits 60000 (runs/fixes_20261112 README)")
+    # fixes 11-12 unit 12: TSDF block eviction to a disk spill folder (opt-in; 0 = off = old path unchanged). tsdf_evict.py
+    ap.add_argument("--tsdf-evict-gpu-blocks", type=int, default=0,
+                    help="> 0: keep at most N blocks on the GPU, least recently touched blocks go to a disk spill (numpy memmap) and "
+                         "come back when seen again; --tsdf-max-blocks then limits ALL blocks (GPU + disk). 0 = off (default)")
+    ap.add_argument("--tsdf-evict-dtype", choices=("f32", "f16"), default="f32",
+                    help="spill sdf/w as float32 (exact, mesh = no-evict mesh) or float16 (4.0 instead of 6.0 KiB per block, lossy)")
+    ap.add_argument("--tsdf-evict-dir", default="", help="spill folder (default OUT/tsdf_spill; deleted after a successful run)")
+    ap.add_argument("--tsdf-evict-keep", action="store_true", help="keep the spill folder")
     ap.add_argument("--b-target", type=float, default=0.08)
     ap.add_argument("--vio", default="", help="VIO poses.jsonl.gz (T_world_cam0 per frame); rigid SE(3) align to GT (scale NOT fixed)")
     ap.add_argument("--free-scale", action="store_true",
@@ -252,8 +260,15 @@ def main():
     tsdf_msgs = []
     def tsdf_log(m):                     # M3 (fixes 11-12): block-limit message printed + kept for the summary (no behaviour change)
         print(m, flush=True); tsdf_msgs.append(str(m))
-    tsdf = tsdf_map.TSDFMap(voxel_m=a.voxel, z_max=a.zmax, sigma_max=a.sigma_max, sigma_ok=a.sigma_ok, min_obs=2,
-                            alloc_dense=(a.tsdf_alloc == "dense"), log=tsdf_log, max_blocks=a.tsdf_max_blocks)
+    tsdf_kw = dict(voxel_m=a.voxel, z_max=a.zmax, sigma_max=a.sigma_max, sigma_ok=a.sigma_ok, min_obs=2,
+                   alloc_dense=(a.tsdf_alloc == "dense"), log=tsdf_log, max_blocks=a.tsdf_max_blocks)
+    if a.tsdf_evict_gpu_blocks > 0:
+        import tsdf_evict
+        tsdf = tsdf_evict.EvictTSDFMap(gpu_blocks=a.tsdf_evict_gpu_blocks, cpu_dtype=a.tsdf_evict_dtype,
+                                       disk_dir=a.tsdf_evict_dir or str(out / "tsdf_spill"), **tsdf_kw)
+        print(f"[tsdf] evict on: GPU {a.tsdf_evict_gpu_blocks} blocks, spill {tsdf.cpu.disk} ({a.tsdf_evict_dtype})", flush=True)
+    else:
+        tsdf = tsdf_map.TSDFMap(**tsdf_kw)
     print(f"[tsdf] alloc {a.tsdf_alloc}", flush=True)
 
     # board quad in the undistorted keyframe grid -> GT plane depth per pixel
@@ -407,6 +422,9 @@ def main():
     summ.update(tsdf_full=bool(tsdf.full), tsdf_blocks=int(tsdf.nb), tsdf_max_blocks=tsdf.cfg.get("max_blocks"), tsdf_log=tsdf_msgs,
                 gt_ok_filter=(not a.keep_gt_not_ok), n_kf_gt_not_ok_dropped=(0 if a.keep_gt_not_ok else n_gt_drop),
                 n_kf_gt_not_ok=n_gt_drop)
+    if a.tsdf_evict_gpu_blocks > 0:      # unit 12: blocks = GPU + spill; spill folder removed unless --tsdf-evict-keep
+        summ.update(tsdf_blocks=tsdf.n_total, tsdf_evict=tsdf.evict_stats())
+        tsdf.cpu.close(delete=not a.tsdf_evict_keep)
     try:
         import hashlib
         summ["lib_ffs"] = dict(file=str(Path(lib_ffs.__file__).resolve()),

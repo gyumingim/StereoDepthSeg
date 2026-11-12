@@ -1,0 +1,77 @@
+{
+ "made": "2026-11-12 14:22:44",
+ "rec": "/home/system/scanner/fixes_tmp/evict/rec_merge_off",
+ "n_frames": 804,
+ "cfg": {
+  "voxel_m": 0.005,
+  "z_min": 0.3,
+  "z_max": 2.0,
+  "sigma_max": 0.08,
+  "sigma_px": 0.5,
+  "trunc_k": 2.0,
+  "trunc_min_vox": 2.5,
+  "trunc_max": 0.1,
+  "sigma_ok": 0.02,
+  "min_obs": 2,
+  "max_blocks": 2000000,
+  "sigma_floor": 0.0,
+  "alloc_ks": [
+   -1.0,
+   0.0,
+   1.0
+  ],
+  "alloc_dense": true
+ },
+ "gpu_blocks": 60000,
+ "cpu_dtype": "f16",
+ "off": {
+  "integrate_s": 9.8,
+  "total_s": 13.1,
+  "blocks": 305348,
+  "full": false,
+  "vertices": 4485785,
+  "faces": 7602695,
+  "gpu_max_alloc_gb": 2.812
+ },
+ "on": {
+  "integrate_s": 16.5,
+  "total_s": 24.5,
+  "blocks": 305348,
+  "full": false,
+  "vertices": 4486232,
+  "faces": 7603471,
+  "gpu_max_alloc_gb": 1.178,
+  "evict": {
+   "evict_events": 20,
+   "evicted": 356748,
+   "reloaded": 51400,
+   "evict_s": 8.89,
+   "reload_s": 0.95,
+   "gpu_peak_blocks": 59894,
+   "cpu_peak_blocks": 305348,
+   "cpu_peak_bytes": 2135082880,
+   "mesh_groups": 10,
+   "mesh_s": 7.83,
+   "store_write_s": 7.86,
+   "store_read_s": 2.62,
+   "spill_bytes": 1258082304,
+   "spill_gb": 1.172,
+   "gpu_budget_blocks": 60000,
+   "cpu_dtype": "f16",
+   "disk": "/home/system/scanner/fixes_tmp/evict/spill_m60h",
+   "blocks_total": 305348,
+   "blocks_gpu": 0,
+   "blocks_cpu": 305348,
+   "cpu_peak_gb": 1.988,
+   "gpu_store_gb": 0.343
+  }
+ },
+ "compare": {
+  "same_counts": false,
+  "bit_identical": false,
+  "max_dist_off_to_on_mm": 7.383496735102997,
+  "max_dist_on_to_off_mm": 18.494168145569127,
+  "p99_off_to_on_mm": 0.0034570693969726562,
+  "frac_off_gt_1mm": 4.904381284435166e-06
+ }
+}

@@ -1,0 +1,252 @@
+[gpu_guard] torch memory cap 0.75 x 15.9 GB = 11.9 GB
+VIO poses {'source': '/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/scan/ba/poses_ba.jsonl.gz', 'n': 992, 'se3_rmse_cm': 4.856291556973808, 'sim3_scale_would_be': 1.0000000000000002, 'free_scale_applied': False, 'rot_diff_deg_median': 0.7481600339748553}
+decoded 992 frames (960x540), gt rows 992, ok 992
+[tsdf] evict on: GPU 120000 blocks, spill /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261112_121801_std60/fix_u12merge_evict120k/mesh/tsdf_spill (f32)
+[tsdf] alloc dense
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/geometry.py:76: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+kf 9/992: {'i': 9, 'pairs': 1, 'B_cm': [9.0], 'valid_frac': 0.6292303240740741, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [74], 'frame': 310, 'n_cand': 11, 'partners': [11], 'rejected': []}
+kf 19/992: {'i': 19, 'pairs': 1, 'B_cm': [8.0], 'valid_frac': 0.7058043981481481, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [75], 'frame': 380, 'n_cand': 14, 'partners': [22], 'rejected': []}
+kf 29/992: {'i': 29, 'pairs': 1, 'B_cm': [12.1], 'valid_frac': 0.621556712962963, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [89], 'frame': 493, 'n_cand': 5, 'partners': [31], 'rejected': []}
+kf 39/992: {'i': 39, 'pairs': 1, 'B_cm': [6.7], 'valid_frac': 0.45109953703703703, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [70], 'frame': 563, 'n_cand': 11, 'partners': [37], 'rejected': []}
+kf 49/992: {'i': 49, 'pairs': 1, 'B_cm': [9.2], 'valid_frac': 0.08791087962962962, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [75], 'frame': 630, 'n_cand': 4, 'partners': [51], 'rejected': []}
+W1112 14:15:50.143000 35807 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8] torch._dynamo hit config.recompile_limit (8)
+W1112 14:15:50.143000 35807 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8]    function: 'build_gwc_volume_optimized_pytorch1' (/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:376)
+W1112 14:15:50.143000 35807 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8]    last reason: 0/7: tensor 'refimg_fea' size mismatch at index 3. expected 120, actual 152
+W1112 14:15:50.143000 35807 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1112 14:15:50.143000 35807 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1112 14:15:50.163000 35807 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8] torch._dynamo hit config.recompile_limit (8)
+W1112 14:15:50.163000 35807 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8]    function: 'build_concat_volume_optimized_pytorch1' (/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:492)
+W1112 14:15:50.163000 35807 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8]    last reason: 1/7: tensor 'refimg_fea' size mismatch at index 3. expected 120, actual 152
+W1112 14:15:50.163000 35807 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1112 14:15:50.163000 35807 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+kf 99/992: {'i': 99, 'pairs': 1, 'B_cm': [8.5], 'valid_frac': 0.49016203703703703, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [74], 'frame': 928, 'n_cand': 6, 'partners': [101], 'rejected': []}
+kf 119/992: {'i': 119, 'pairs': 1, 'B_cm': [9.6], 'valid_frac': 0.4597241512345679, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [70], 'frame': 1041, 'n_cand': 6, 'partners': [117], 'rejected': []}
+kf 129/992: {'i': 129, 'pairs': 1, 'B_cm': [9.1], 'valid_frac': 0.40296489197530866, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [76], 'frame': 1113, 'n_cand': 8, 'partners': [131], 'rejected': []}
+kf 139/992: {'i': 139, 'pairs': 1, 'B_cm': [8.7], 'valid_frac': 0.6019347993827161, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [71], 'frame': 1184, 'n_cand': 12, 'partners': [137], 'rejected': []}
+kf 149/992: {'i': 149, 'pairs': 1, 'B_cm': [25.6], 'valid_frac': 0.2004668209876543, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [55], 'frame': 1248, 'n_cand': 2, 'partners': [155], 'rejected': []}
+kf 159/992: {'i': 159, 'pairs': 1, 'B_cm': [7.3], 'valid_frac': 0.6713792438271605, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [71], 'frame': 1308, 'n_cand': 11, 'partners': [157], 'rejected': []}
+kf 169/992: {'i': 169, 'pairs': 1, 'B_cm': [6.5], 'valid_frac': 0.7709143518518519, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [76], 'frame': 1366, 'n_cand': 11, 'partners': [171], 'rejected': []}
+kf 179/992: {'i': 179, 'pairs': 1, 'B_cm': [8.2], 'valid_frac': 0.6457542438271605, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [74], 'frame': 1430, 'n_cand': 10, 'partners': [177], 'rejected': []}
+kf 189/992: {'i': 189, 'pairs': 1, 'B_cm': [8.2], 'valid_frac': 0.5969174382716049, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [75], 'frame': 1504, 'n_cand': 10, 'partners': [192], 'rejected': []}
+kf 199/992: {'i': 199, 'pairs': 1, 'B_cm': [7.3], 'valid_frac': 0.4148996913580247, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [71], 'frame': 1582, 'n_cand': 4, 'partners': [195], 'rejected': []}
+kf 209/992: {'i': 209, 'pairs': 1, 'B_cm': [7.1], 'valid_frac': 0.5484375, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [71], 'frame': 1662, 'n_cand': 9, 'partners': [207], 'rejected': []}
+kf 269/992: {'i': 269, 'pairs': 1, 'B_cm': [7.9], 'valid_frac': 0.34594328703703703, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [75], 'frame': 2075, 'n_cand': 5, 'partners': [272], 'rejected': []}
+kf 289/992: {'i': 289, 'pairs': 1, 'B_cm': [7.2], 'valid_frac': 0.2194675925925926, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [68], 'frame': 2274, 'n_cand': 14, 'partners': [287], 'rejected': []}
+kf 299/992: {'i': 299, 'pairs': 1, 'B_cm': [6.5], 'valid_frac': 0.32751543209876544, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [74], 'frame': 2371, 'n_cand': 2, 'partners': [304], 'rejected': []}
+kf 309/992: {'i': 309, 'pairs': 1, 'B_cm': [7.4], 'valid_frac': 0.25121720679012344, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [68], 'frame': 2435, 'n_cand': 12, 'partners': [307], 'rejected': []}
+kf 349/992: {'i': 349, 'pairs': 1, 'B_cm': [10.4], 'valid_frac': 0.2436496913580247, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [75], 'frame': 2647, 'n_cand': 4, 'partners': [351], 'rejected': []}
+kf 359/992: {'i': 359, 'pairs': 1, 'B_cm': [21.4], 'valid_frac': 0.20620949074074074, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [1211], 'frame': 2702, 'n_cand': 2, 'partners': [363], 'rejected': []}
+kf 369/992: {'i': 369, 'pairs': 1, 'B_cm': [10.3], 'valid_frac': 0.3884567901234568, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [75], 'frame': 2753, 'n_cand': 8, 'partners': [371], 'rejected': []}
+kf 379/992: {'i': 379, 'pairs': 1, 'B_cm': [8.3], 'valid_frac': 0.23624421296296297, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [76], 'frame': 2806, 'n_cand': 6, 'partners': [381], 'rejected': []}
+kf 389/992: {'i': 389, 'pairs': 1, 'B_cm': [9.1], 'valid_frac': 0.5281211419753087, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [71], 'frame': 2858, 'n_cand': 11, 'partners': [387], 'rejected': []}
+kf 399/992: {'i': 399, 'pairs': 1, 'B_cm': [8.5], 'valid_frac': 0.4300829475308642, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [75], 'frame': 2927, 'n_cand': 10, 'partners': [401], 'rejected': []}
+kf 409/992: {'i': 409, 'pairs': 1, 'B_cm': [7.4], 'valid_frac': 0.3312827932098765, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [76], 'frame': 2995, 'n_cand': 8, 'partners': [411], 'rejected': []}
+kf 419/992: {'i': 419, 'pairs': 1, 'B_cm': [8.9], 'valid_frac': 0.19475694444444444, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [72], 'frame': 3053, 'n_cand': 5, 'partners': [417], 'rejected': []}
+kf 429/992: {'i': 429, 'pairs': 1, 'B_cm': [12.7], 'valid_frac': 0.5164679783950618, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [76], 'frame': 3123, 'n_cand': 10, 'partners': [431], 'rejected': []}
+kf 439/992: {'i': 439, 'pairs': 1, 'B_cm': [8.7], 'valid_frac': 0.44559992283950617, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [76], 'frame': 3179, 'n_cand': 10, 'partners': [441], 'rejected': []}
+kf 449/992: {'i': 449, 'pairs': 1, 'B_cm': [10.3], 'valid_frac': 0.43720293209876543, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [70], 'frame': 3228, 'n_cand': 10, 'partners': [447], 'rejected': []}
+kf 459/992: {'i': 459, 'pairs': 1, 'B_cm': [20.1], 'valid_frac': 0.2494753086419753, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [59], 'frame': 3280, 'n_cand': 3, 'partners': [455], 'rejected': []}
+kf 469/992: {'i': 469, 'pairs': 1, 'B_cm': [9.4], 'valid_frac': 0.28869212962962965, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [73], 'frame': 3332, 'n_cand': 7, 'partners': [471], 'rejected': []}
+kf 479/992: {'i': 479, 'pairs': 1, 'B_cm': [12.6], 'valid_frac': 0.3592708333333333, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [69], 'frame': 3386, 'n_cand': 7, 'partners': [477], 'rejected': []}
+kf 499/992: {'i': 499, 'pairs': 1, 'B_cm': [11.9], 'valid_frac': 0.6228337191358024, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [75], 'frame': 3758, 'n_cand': 9, 'partners': [501], 'rejected': []}
+kf 509/992: {'i': 509, 'pairs': 1, 'B_cm': [8.9], 'valid_frac': 0.5221759259259259, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [71], 'frame': 3813, 'n_cand': 10, 'partners': [507], 'rejected': []}
+kf 529/992: {'i': 529, 'pairs': 1, 'B_cm': [11.8], 'valid_frac': 0.3431423611111111, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [69], 'frame': 3976, 'n_cand': 9, 'partners': [527], 'rejected': []}
+kf 539/992: {'i': 539, 'pairs': 1, 'B_cm': [7.5], 'valid_frac': 0.48909143518518516, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [71], 'frame': 4032, 'n_cand': 7, 'partners': [541], 'rejected': []}
+kf 549/992: {'i': 549, 'pairs': 1, 'B_cm': [8.6], 'valid_frac': 0.42105324074074074, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [71], 'frame': 4169, 'n_cand': 18, 'partners': [551], 'rejected': []}
+kf 569/992: {'i': 569, 'pairs': 1, 'B_cm': [7.0], 'valid_frac': 0.4496431327160494, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [69], 'frame': 4289, 'n_cand': 4, 'partners': [567], 'rejected': []}
+kf 579/992: {'i': 579, 'pairs': 1, 'B_cm': [7.1], 'valid_frac': 0.6003510802469135, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [76], 'frame': 4349, 'n_cand': 11, 'partners': [581], 'rejected': []}
+kf 589/992: {'i': 589, 'pairs': 1, 'B_cm': [7.7], 'valid_frac': 0.5992650462962963, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [71], 'frame': 4417, 'n_cand': 9, 'partners': [587], 'rejected': []}
+kf 599/992: {'i': 599, 'pairs': 1, 'B_cm': [10.4], 'valid_frac': 0.6715046296296296, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [80], 'frame': 4474, 'n_cand': 10, 'partners': [597], 'rejected': []}
+kf 619/992: {'i': 619, 'pairs': 1, 'B_cm': [4.7], 'valid_frac': 0.49756172839506174, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [70], 'frame': 4587, 'n_cand': 2, 'partners': [623], 'rejected': []}
+kf 629/992: {'i': 629, 'pairs': 1, 'B_cm': [6.3], 'valid_frac': 0.6844926697530864, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [75], 'frame': 4654, 'n_cand': 9, 'partners': [626], 'rejected': []}
+kf 639/992: {'i': 639, 'pairs': 1, 'B_cm': [6.9], 'valid_frac': 0.4942650462962963, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [72], 'frame': 4744, 'n_cand': 11, 'partners': [637], 'rejected': []}
+kf 649/992: {'i': 649, 'pairs': 1, 'B_cm': [7.3], 'valid_frac': 0.6442438271604938, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [71], 'frame': 4818, 'n_cand': 3, 'partners': [652], 'rejected': []}
+kf 659/992: {'i': 659, 'pairs': 1, 'B_cm': [7.1], 'valid_frac': 0.41285493827160497, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [75], 'frame': 4885, 'n_cand': 6, 'partners': [657], 'rejected': []}
+kf 669/992: {'i': 669, 'pairs': 1, 'B_cm': [7.9], 'valid_frac': 0.5003993055555556, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [73], 'frame': 4941, 'n_cand': 12, 'partners': [671], 'rejected': []}
+kf 679/992: {'i': 679, 'pairs': 1, 'B_cm': [9.1], 'valid_frac': 0.5839737654320988, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [71], 'frame': 5007, 'n_cand': 8, 'partners': [677], 'rejected': []}
+kf 689/992: {'i': 689, 'pairs': 1, 'B_cm': [4.2], 'valid_frac': 0.473858024691358, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [69], 'frame': 5083, 'n_cand': 11, 'partners': [688], 'rejected': []}
+kf 699/992: {'i': 699, 'pairs': 1, 'B_cm': [4.0], 'valid_frac': 0.6465605709876543, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [76], 'frame': 5148, 'n_cand': 3, 'partners': [701], 'rejected': []}
+kf 709/992: {'i': 709, 'pairs': 1, 'B_cm': [11.6], 'valid_frac': 0.5485146604938271, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [73], 'frame': 5202, 'n_cand': 14, 'partners': [707], 'rejected': []}
+kf 719/992: {'i': 719, 'pairs': 1, 'B_cm': [9.2], 'valid_frac': 0.6111381172839506, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [80], 'frame': 5269, 'n_cand': 11, 'partners': [721], 'rejected': []}
+kf 729/992: {'i': 729, 'pairs': 1, 'B_cm': [8.9], 'valid_frac': 0.5384278549382716, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [76], 'frame': 5325, 'n_cand': 10, 'partners': [727], 'rejected': []}
+kf 739/992: {'i': 739, 'pairs': 1, 'B_cm': [10.7], 'valid_frac': 0.3289158950617284, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [78], 'frame': 5381, 'n_cand': 10, 'partners': [741], 'rejected': []}
+kf 749/992: {'i': 749, 'pairs': 1, 'B_cm': [7.2], 'valid_frac': 0.6661091820987655, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [69], 'frame': 5441, 'n_cand': 8, 'partners': [747], 'rejected': []}
+kf 759/992: {'i': 759, 'pairs': 1, 'B_cm': [6.6], 'valid_frac': 0.6080459104938272, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [72], 'frame': 5509, 'n_cand': 9, 'partners': [757], 'rejected': []}
+kf 769/992: {'i': 769, 'pairs': 1, 'B_cm': [8.7], 'valid_frac': 0.5956172839506173, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [71], 'frame': 5572, 'n_cand': 13, 'partners': [771], 'rejected': []}
+kf 779/992: {'i': 779, 'pairs': 1, 'B_cm': [9.1], 'valid_frac': 0.6450597993827161, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [72], 'frame': 5644, 'n_cand': 9, 'partners': [781], 'rejected': []}
+kf 789/992: {'i': 789, 'pairs': 1, 'B_cm': [9.5], 'valid_frac': 0.7356944444444444, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [76], 'frame': 5702, 'n_cand': 4, 'partners': [791], 'rejected': []}
+kf 799/992: {'i': 799, 'pairs': 1, 'B_cm': [10.4], 'valid_frac': 0.6161246141975308, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [71], 'frame': 5758, 'n_cand': 11, 'partners': [797], 'rejected': []}
+kf 809/992: {'i': 809, 'pairs': 1, 'B_cm': [9.9], 'valid_frac': 0.587224151234568, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [72], 'frame': 5820, 'n_cand': 11, 'partners': [802], 'rejected': []}
+kf 819/992: {'i': 819, 'pairs': 1, 'B_cm': [8.6], 'valid_frac': 0.4802932098765432, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [68], 'frame': 5870, 'n_cand': 11, 'partners': [821], 'rejected': []}
+kf 829/992: {'i': 829, 'pairs': 1, 'B_cm': [6.9], 'valid_frac': 0.2873283179012346, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [70], 'frame': 5926, 'n_cand': 2, 'partners': [831], 'rejected': []}
+kf 839/992: {'i': 839, 'pairs': 1, 'B_cm': [10.1], 'valid_frac': 0.15546296296296297, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [75], 'frame': 5982, 'n_cand': 7, 'partners': [841], 'rejected': []}
+kf 849/992: {'i': 849, 'pairs': 1, 'B_cm': [8.4], 'valid_frac': 0.40989197530864196, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [70], 'frame': 6045, 'n_cand': 10, 'partners': [852], 'rejected': []}
+kf 859/992: {'i': 859, 'pairs': 1, 'B_cm': [6.9], 'valid_frac': 0.6470717592592593, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [71], 'frame': 6118, 'n_cand': 14, 'partners': [857], 'rejected': []}
+kf 869/992: {'i': 869, 'pairs': 1, 'B_cm': [8.5], 'valid_frac': 0.5369733796296297, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [74], 'frame': 6174, 'n_cand': 12, 'partners': [886], 'rejected': []}
+kf 879/992: {'i': 879, 'pairs': 1, 'B_cm': [7.7], 'valid_frac': 0.5026601080246914, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [73], 'frame': 6254, 'n_cand': 8, 'partners': [875], 'rejected': []}
+kf 889/992: {'i': 889, 'pairs': 1, 'B_cm': [7.9], 'valid_frac': 0.5370216049382716, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [73], 'frame': 6295, 'n_cand': 6, 'partners': [863], 'rejected': []}
+kf 899/992: {'i': 899, 'pairs': 1, 'B_cm': [7.8], 'valid_frac': 0.5615181327160493, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [73], 'frame': 6352, 'n_cand': 5, 'partners': [897], 'rejected': []}
+kf 909/992: {'i': 909, 'pairs': 1, 'B_cm': [7.8], 'valid_frac': 0.6164737654320988, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [71], 'frame': 6411, 'n_cand': 23, 'partners': [949], 'rejected': []}
+kf 919/992: {'i': 919, 'pairs': 1, 'B_cm': [8.8], 'valid_frac': 0.7988252314814814, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [71], 'frame': 6481, 'n_cand': 8, 'partners': [917], 'rejected': []}
+kf 929/992: {'i': 929, 'pairs': 1, 'B_cm': [11.3], 'valid_frac': 0.45450810185185186, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [75], 'frame': 6539, 'n_cand': 21, 'partners': [927], 'rejected': []}
+kf 939/992: {'i': 939, 'pairs': 1, 'B_cm': [9.6], 'valid_frac': 0.5948688271604938, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [75], 'frame': 6607, 'n_cand': 11, 'partners': [937], 'rejected': []}
+kf 949/992: {'i': 949, 'pairs': 1, 'B_cm': [8.9], 'valid_frac': 0.5946489197530864, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [73], 'frame': 6670, 'n_cand': 25, 'partners': [951], 'rejected': []}
+kf 959/992: {'i': 959, 'pairs': 1, 'B_cm': [6.6], 'valid_frac': 0.48387345679012345, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [71], 'frame': 6721, 'n_cand': 9, 'partners': [957], 'rejected': []}
+kf 989/992: {'i': 989, 'pairs': 1, 'B_cm': [6.9], 'valid_frac': 0.5285763888888889, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [78], 'frame': 6889, 'n_cand': 3, 'partners': [991], 'rejected': []}
+{
+ "poses": {
+  "source": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/scan/ba/poses_ba.jsonl.gz",
+  "n": 992,
+  "se3_rmse_cm": 4.856291556973808,
+  "sim3_scale_would_be": 1.0000000000000002,
+  "free_scale_applied": false,
+  "rot_diff_deg_median": 0.7481600339748553,
+  "compressed_rows": 992
+ },
+ "made": "2026-11-12 14:18:55",
+ "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/merged/hs_20261112_121801_std60_merged_kf",
+ "gt": "lensonly",
+ "args": {
+  "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/merged/hs_20261112_121801_std60_merged_kf",
+  "out": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261112_121801_std60/fix_u12merge_evict120k/mesh",
+  "gt": "lensonly",
+  "scale": 0.5,
+  "kf_step": 1,
+  "n_pairs": 1,
+  "iters": 8,
+  "voxel": 0.005,
+  "zmax": 2.0,
+  "tsdf_max_blocks": 2000000,
+  "tsdf_evict_gpu_blocks": 120000,
+  "tsdf_evict_dtype": "f32",
+  "tsdf_evict_dir": "",
+  "tsdf_evict_keep": false,
+  "b_target": 0.08,
+  "vio": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/scan/ba/poses_ba.jsonl.gz",
+  "free_scale": false,
+  "pose_noise_cm": 0.0,
+  "allow_fullres": false,
+  "rows_from": "",
+  "compress": true,
+  "tsdf_alloc": "dense",
+  "ffs_views": 2,
+  "ffs_fuse": "auto",
+  "ffs_partners": "all",
+  "ffs_dt_max": null,
+  "pair_min_valid": null,
+  "pair_check": "auto",
+  "keep_gt_not_ok": false,
+  "sigma_rot_deg": 0.1,
+  "sigma_b_rel": 0.02,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02,
+  "ffs_backend": "pytorch",
+  "ffs_engines": "",
+  "dump_depth": ""
+ },
+ "board_mm": [
+  302.0,
+  181.19999999999996
+ ],
+ "square_mm": 60.4,
+ "gt_corner_px_median": null,
+ "n_kf": 992,
+ "n_kf_depth": 804,
+ "mesh_vertices": 4485785,
+ "mesh_faces": 7602695,
+ "runtime_s": 222.6,
+ "image_size": [
+  960,
+  540
+ ],
+ "K_used": [
+  [
+   643.1272697202457,
+   0.0,
+   482.59568880974615
+  ],
+  [
+   0.0,
+   643.2218309269573,
+   276.6095206454582
+  ],
+  [
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "gpu_max_alloc_gb": 4.47,
+ "gpu_max_reserved_gb": 4.87,
+ "ffs_views": 2,
+ "ffs_fuse": "mean",
+ "ffs_partners": "all",
+ "ffs_dt_max": 30.0,
+ "pair_min_valid": 0.0,
+ "pair_check": "dy",
+ "pair_check_n": 1066,
+ "pair_check_rejected": 262,
+ "pair_check_s": 20.4,
+ "ffs_s_total": 104.9,
+ "ffs_s_used": 104.9,
+ "n_pairs_rejected": 0,
+ "n_kf_by_pairs": {
+  "0": 188,
+  "1": 804
+ },
+ "tsdf_alloc": "dense",
+ "ffs_backend": "pytorch",
+ "depth_sigma": {
+  "rot_deg": 0.1,
+  "b_rel": 0.02,
+  "sigma_d_px": 0.5,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02,
+  "z_max": 2.0
+ },
+ "mesh_cam_depth_m": {
+  "n": 4485785,
+  "p50": 0.952929623062415,
+  "p90": 1.2390340103271806,
+  "p99": 1.4432048739353127,
+  "max": 1.6723183496965772,
+  "frac_gt_0p65": 0.8298779366376231,
+  "frac_gt_1p0": 0.4208219965959135
+ },
+ "tsdf_full": false,
+ "tsdf_blocks": 305348,
+ "tsdf_max_blocks": 2000000,
+ "tsdf_log": [],
+ "gt_ok_filter": true,
+ "n_kf_gt_not_ok_dropped": 0,
+ "n_kf_gt_not_ok": 0,
+ "tsdf_evict": {
+  "evict_events": 9,
+  "evicted": 344226,
+  "reloaded": 38878,
+  "evict_s": 11.19,
+  "reload_s": 0.7,
+  "gpu_peak_blocks": 119990,
+  "cpu_peak_blocks": 305348,
+  "cpu_peak_bytes": 3015510528,
+  "mesh_groups": 10,
+  "mesh_s": 8.88,
+  "store_write_s": 9.15,
+  "store_read_s": 1.91,
+  "spill_bytes": 1883447296,
+  "spill_gb": 1.754,
+  "gpu_budget_blocks": 120000,
+  "cpu_dtype": "f32",
+  "disk": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261112_121801_std60/fix_u12merge_evict120k/mesh/tsdf_spill",
+  "blocks_total": 305348,
+  "blocks_gpu": 0,
+  "blocks_cpu": 305348,
+  "cpu_peak_gb": 2.808,
+  "gpu_store_gb": 0.687
+ },
+ "lib_ffs": {
+  "file": "/home/system/scanner/StereoDepthSeg/lib_ffs.py",
+  "sha": "9b820bc28df4caf7"
+ }
+}

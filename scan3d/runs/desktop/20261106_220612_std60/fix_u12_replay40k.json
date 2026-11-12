@@ -1,0 +1,73 @@
+{
+ "made": "2026-11-12 14:09:48",
+ "rec": "/home/system/scanner/fixes_tmp/evict/rec_220612_off",
+ "n_frames": 228,
+ "cfg": {
+  "voxel_m": 0.005,
+  "z_min": 0.3,
+  "z_max": 2.0,
+  "sigma_max": 0.08,
+  "sigma_px": 0.5,
+  "trunc_k": 2.0,
+  "trunc_min_vox": 2.5,
+  "trunc_max": 0.1,
+  "sigma_ok": 0.02,
+  "min_obs": 2,
+  "max_blocks": 250000,
+  "sigma_floor": 0.0,
+  "alloc_ks": [
+   -1.0,
+   0.0,
+   1.0
+  ],
+  "alloc_dense": true
+ },
+ "gpu_blocks": 40000,
+ "cpu_dtype": "f32",
+ "off": {
+  "integrate_s": 3.5,
+  "total_s": 4.7,
+  "blocks": 138688,
+  "full": false,
+  "vertices": 1393276,
+  "faces": 2416360,
+  "gpu_max_alloc_gb": 2.082
+ },
+ "on": {
+  "integrate_s": 7.7,
+  "total_s": 10.0,
+  "blocks": 138688,
+  "full": false,
+  "vertices": 1393276,
+  "faces": 2416360,
+  "gpu_max_alloc_gb": 0.958,
+  "evict": {
+   "evict_events": 19,
+   "evicted": 244103,
+   "reloaded": 105415,
+   "evict_s": 4.82,
+   "reload_s": 0.36,
+   "gpu_peak_blocks": 39974,
+   "cpu_peak_blocks": 138688,
+   "cpu_peak_bytes": 1226839872,
+   "mesh_groups": 5,
+   "mesh_s": 2.26,
+   "store_write_s": 3.76,
+   "store_read_s": 0.5,
+   "spill_bytes": 855474176,
+   "spill_gb": 0.797,
+   "gpu_budget_blocks": 40000,
+   "cpu_dtype": "f32",
+   "disk": "/home/system/scanner/fixes_tmp/evict/spill_chk",
+   "blocks_total": 138688,
+   "blocks_gpu": 0,
+   "blocks_cpu": 138688,
+   "cpu_peak_gb": 1.143,
+   "gpu_store_gb": 0.229
+  }
+ },
+ "compare": {
+  "same_counts": true,
+  "bit_identical": true
+ }
+}

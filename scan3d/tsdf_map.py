@@ -127,6 +127,7 @@ class TSDFMap:
         self._mesh_t = 0.0
         self._mesh_ms = None
         self._dump = os.environ.get("SCAN3D_TSDF_DUMP")   # 실험용: 키프레임 깊이 입력을 npz 로 저장 (오프라인 비교)
+        self._record = os.environ.get("SCAN3D_TSDF_RECORD")   # 11-12 진단: integrate 입력을 손실 없이 저장 (tools/tsdf_evict_check.py 재생)
 
     # ---------------- 저장소 ----------------
     def _alloc(self, cap):
@@ -212,6 +213,8 @@ class TSDFMap:
         t0 = time.perf_counter()
         if self._dump:
             self._dump_kf(Z, valid, bgr, f, cx, cy, baseline_m, T_world_cam, ffs_scale, t)
+        if self._record:
+            self._record_kf(Z, valid, bgr, f, cx, cy, baseline_m, T_world_cam, ffs_scale, t, sigma, wmul)
         c = self.cfg
         dev = self.dev
         f_eff = float(f) * float(ffs_scale or 1.0)
@@ -326,6 +329,21 @@ class TSDFMap:
                                 f=f, cx=cx, cy=cy, B=B, T=np.asarray(T, np.float64), s=float(s or 1.0), t=t)
         except Exception as e:
             self.log(f"[tsdf] dump 실패 {e!r}")
+
+    def _record_kf(self, Z, valid, bgr, f, cx, cy, B, T, s, t, sigma, wmul):
+        """SCAN3D_TSDF_RECORD=DIR: integrate 인자 그대로 (f32·bool·u8, 압축 없음) + 첫 번에 cfg.json. 실패하면 예외 (조용히 넘기지 않음)."""
+        d = Path(self._record); d.mkdir(parents=True, exist_ok=True)
+        i = getattr(self, "_rec_i", 0); self._rec_i = i + 1
+        if i == 0:
+            (d / "cfg.json").write_text(json.dumps(self.cfg))
+        ex = {}
+        if sigma is not None:
+            ex["sigma"] = np.asarray(sigma, np.float32)
+        if wmul is not None:
+            ex["wmul"] = np.asarray(wmul, np.float32)
+        np.savez(d / f"int_{i:05d}.npz", Z=np.asarray(Z, np.float32), valid=np.asarray(valid, bool), bgr=np.asarray(bgr, np.uint8),
+                 f=np.float64(f), cx=np.float64(cx), cy=np.float64(cy), B=np.float64(B), T=np.asarray(T, np.float64),
+                 s=np.float64(s or 1.0), t=np.float64(t), **ex)
 
     # ---------------- 메시 ----------------
     def _mc(self, rows):

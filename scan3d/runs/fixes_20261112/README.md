@@ -402,3 +402,58 @@ M4 (불확실 판정) 는 손대지 않음.
 - 할 일 후보: 두 녹화를 합치면 블록 한도 250 000 에 걸림 → 더 큰 한도 또는 먼 곳 1 cm 복셀 (7 절) 이 필요할 수 있음 (메인 세션 결정).
 - 보기: `changes_0620/fixes_20261112/scanner_121801_131328_merged.ply`, 목록 백업 `meshes.json.bak_fixes_u11_20261112_133441`.
 - 결과: `scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/` (mesh·키프레임 사진·imu·db 는 커밋 안 함). 중간 보고 `review_20261112/interim_u11.txt`.
+
+## 12. 단위 12 — TSDF 블록을 디스크로 내보내기 (`--tsdf-evict-gpu-blocks N`, **데스크톱 RTX 5080** 1 회, 미검증). 기본값은 안 바꿈
+
+**주의: 이 절의 숫자는 데스크톱 (RTX 5080 16 GB, WSL RAM 30 GB) 에서 잰 것.** 노트북 (4060 8 GB, RAM 7 GB) 이 TensorRT 작업 중이라
+사용자 허락으로 데스크톱에서 돌렸다. 시간·메모리는 앞 절 (노트북) 숫자와 비교하면 안 된다. 켬/끔 비교는 둘 다 데스크톱.
+
+### 무엇
+- 새 파일 `scan3d/tsdf_evict.py` (`EvictTSDFMap`, `TSDFMap` 을 물려받음). GPU 에는 최대 N 블록만 둔다.
+  키프레임 하나가 GPU 칸을 더 원하면, **가장 오래 안 바뀐 블록** (블록 판 번호 bver 가 작은 것, 이번 키프레임이 쓰는 블록은 제외) 을
+  디스크 폴더 (numpy memmap, 기본 `OUT/tsdf_spill/`) 로 보낸다 (모자란 만큼 + N 의 25 % 를 한꺼번에 → 매 키프레임 일어나지 않게).
+  다시 보이면 같은 값 그대로 GPU 로 돌려와서 평소처럼 섞는다 (중복 블록 없음). `--tsdf-max-blocks` 는 이제 **GPU + 디스크 전체** 블록 한도.
+- 메시: 끝에 모든 블록을 디스크로 보낸 뒤, 할당 순서대로 64 × 512 블록씩 작은 임시 GPU 지도 (그 블록 + 이웃 +{0,1}³ 블록) 에서 marching cubes.
+  원래 `TSDFMap.update_mesh(force=True)` 와 같은 정육면체·같은 512 블록 묶음·같은 청크 순서 → **f32 면 메시가 비트 단위로 같게** 만듦. 블록 경계 이음매 없음.
+- 디스크 쪽 페이지는 쓰고 읽은 뒤 `MADV_DONTNEED` 로 프로세스에서 뗌 (데이터는 파일/페이지 캐시에 남고 커널이 내보냄) → 프로세스 RAM 으로 안 셈.
+- `--tsdf-evict-dtype f16`: 디스크에 sdf·w 를 float16 으로 (블록당 6.0 → 4.0 KiB, 값이 조금 바뀜). `--tsdf-evict-dir`, `--tsdf-evict-keep` (안 주면 성공 후 폴더 지움).
+- summary.json 에 `tsdf_evict` (내보냄·되불러옴 횟수, 디스크 크기 `spill_gb`, 쓰기·읽기 시간 `store_write_s`/`store_read_s`, 최대 GPU 블록 수 …), `tsdf_blocks` = 전체.
+- 끄면 (기본 0) 옛 코드 그대로. 조용한 대체 없음: 키프레임 하나가 N 보다 많은 블록을 원하면 RuntimeError.
+  오프라인 경로만 지원 (실시간 증분 메시·merge·save_npz·ESDF 는 NotImplementedError). 실시간 폰 스캐너 (`voxel_map.py`) 에는 아직 안 붙임.
+- 진단: `SCAN3D_TSDF_RECORD=DIR` (tsdf_map.integrate 입력을 손실 없이 저장) + `scan3d/tools/tsdf_evict_check.py DIR --gpu-blocks N --spill D`
+  (같은 입력을 끔/켬 두 지도에 넣고 메시를 비교, FFS 없이 수십 초).
+
+### 결과 (데스크톱 5080, 각 1 회)
+같은 맞춤: `scan_offline.py --gt lensonly --compress --kf-step 1 --tsdf-alloc dense --ffs-views 2 --ffs-partners all --sigma-rot-deg 0.1 --sigma-b-rel 0.02`
+(run_scanner `--depth-sigma ba` 와 같은 mesh 인자), 자세 = 220612 는 `fix_u3/scan/ba`, 합친 것은 `fix_u11merge/merge/scan/ba` + 그 키프레임 폴더 (BA 다시 안 돌림, mesh 단계만).
+
+| 실행 | 블록 (전체) | tsdf_full | 정점 / 면 | 메시 같음? | mesh 단계 | torch 최대 할당 | nvidia-smi 최대 | 최대 RSS | 디스크 |
+|---|---|---|---|---|---|---|---|---|---|
+| 220612 끔 (한도 250 000) `fix_u12_off` | 138 688 | 아니오 | 1 393 276 / 2 416 360 | 기준 | 81 s | 2.38 GB | 3 054 MiB | 5.14 GB | — |
+| 220612 켬 GPU 40 000 `fix_u12_evict40k_b` | 138 688 | 아니오 | 같음 | **mesh.ply 바이트 같음** (cmp) | 70 s | 1.24 GB | 1 814 MiB | 5.54 GB | 0.80 GB |
+| 합침 끔, 한도 2 000 000 `fix_u12merge_off_nocap` | **305 348** | **아니오** | 4 485 785 / 7 602 695 | 기준 | 227 s | 5.79 GB | 6 462 MiB | 9.28 GB | — |
+| 합침 켬 GPU 120 000 `fix_u12merge_evict120k` | 305 348 | 아니오 | 같음 | **mesh.ply 바이트 같음** | 223 s | 4.47 GB | 5 384 MiB | 9.34 GB | 1.75 GB |
+| (참고) 노트북 u11 한도 250 000 | 250 000 | **예** | 3 791 137 | — | 445 s (노트북) | 5.79 GB | — | — | — |
+
+- 220612 켬: 내보냄 19 번 (블록 244 103 개), 되불러옴 105 415 개, 디스크 쓰기 4.8 s / 읽기 2.0 s, 끝 메시 2.8 s. (첫 켬 실행 `fix_u12_evict40k` 는 MADV 고치기 전: RSS 5.87 GB, 메시는 역시 같음.)
+- 합침 켬: 내보냄 9 번 (344 226 개), 되불러옴 38 878 개 (= 131328 이 121801 끝 쪽을 다시 봄), 디스크 쓰기 9.2 s / 읽기 1.9 s, 끝 메시 8.9 s (10 묶음). 디스크 1.75 GB 는 성공 후 지워짐.
+- **한도 없이 합친 메시는 정점 4.49 M = 한도 걸린 노트북 u11 (3.79 M) 의 1.18 배.** 위에서 본 그림 비교 `u12_merge_cap_vs_evict_top.jpg` (위 = u11 한도 걸림, 아래 = u12):
+  131328 이 새로 간 곳 (파랑 경로 둘레, 가운데 왼쪽) 이 u11 에는 비어 있고 u12 에는 채워짐. 다른 GPU 라 FFS 깊이가 아주 조금 다를 수 있어 정점 수 차이 전부가 한도 탓은 아닐 수 있음 (추정).
+  그림 `u12_merge_evict_nocap_top.png`, `_overlap_zoom.png`, `_kfviews.jpg` (render_merge.py, 창 없이).
+- 재생 시험 (`tsdf_evict_check.py`, 합침 입력 804 키프레임을 녹화해 둔 것, TSDF 만): GPU 60 000 블록 f32 → **비트 같음**, 내보냄 20 번·되불러옴 51 400 개, torch 최대 1.18 GB (끔 2.81 GB), TSDF 시간 27.6 s (끔 13.3 s).
+  같은 것 f16 → 정점 4 486 232 (+447), 정점 이동 p99 0.003 mm, 최대 7.4 / 18.5 mm (정점의 0.0005 %; w 반올림으로 메시 기준 w_min 근처 복셀이 켜지고 꺼짐), 디스크 1.17 GB.
+  220612 입력 재생 (GPU 40 000) 도 비트 같음.
+- RAM: 합친 실행의 RSS 9.3 GB 는 켬/끔이 거의 같다 → TSDF 가 아니라 파이프라인 나머지 (키프레임 사진 992 장 등, 추정). **노트북 WSL 7 GB 에서는 이 합침이 TSDF 와 상관없이 빠듯** (노트북 u11 은 RSS 를 안 쟀음).
+
+### 권고 (숫자는 위 표, 결정은 메인 세션, 기본값은 안 바꿈)
+- 오프라인 스캐너 (run_scanner / run_merge) 기본값 후보: `--mesh-args '--tsdf-evict-gpu-blocks 120000 --tsdf-max-blocks 1000000'` (f32).
+  근거: 메시가 끔과 바이트 같음 (2 경우), mesh 단계 시간 같음 (223 vs 227 s, 70 vs 81 s), TSDF GPU 저장소가 0.69 GB 로 고정 (끔은 블록 수에 따라 2 배씩 커져 30 만 블록이면 3.2 GB, 늘리는 순간 4.9 GB 추정),
+  디스크는 블록당 6 KiB (30 만 블록 1.75 GB, 끝나면 지움). 한도 250 000 에 걸려 잘리던 합침이 안 잘림.
+- 노트북에서는 아직 안 돌려 봄 (4060, 디스크 속도 다름) → 기본값으로 바꾸기 전에 노트북에서 합침 1 회 (RSS 같이 잼) 권장.
+- f16 은 디스크 1/3 덜 쓰지만 메시가 조금 바뀜 → 디스크가 모자랄 때만.
+
+### 파일
+- 코드: `scan3d/tsdf_evict.py` (새), `scan3d/tsdf_map.py` (`SCAN3D_TSDF_RECORD` 진단만), `scan3d/scanA/scan_offline.py` (플래그 4 개 + 생성·summary 몇 줄), `scan3d/tools/tsdf_evict_check.py` (새).
+- 결과: `scan3d/runs/desktop/20261106_220612_std60/fix_u12_*`, `scan3d/runs/desktop/20261112_121801_std60/fix_u12*` (mesh.ply·obj 는 커밋 안 함).
+  실행 스크립트·녹화한 입력 (220612 1.4 GB, 합침 4.7 GB): 데스크톱 WSL `~/scanner/fixes_tmp/evict/` (커밋 안 함).
+- 보기: `changes_0620/fixes_20261112/scanner_121801_131328_merged_evict_nocap.ply`, 목록 백업 `meshes.json.bak_fixes_u12_*`. 중간 보고 `review_20261112/interim_evict.txt`.
