@@ -1,0 +1,108 @@
+12:54:01 part1 start
+!! lens-only: VIO config is cfg_gen/c4f60 (0.5 dpt app lens) whatever --lens says; pass --cfg for another lens (M5)
+== run_scanner 2026-11-12 12:54:01: REC /home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261112_121801_std60 (full recording) -> /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/part1
+   gt lensonly, input keyframes 1920 JPEG q90, BA cuda, SIFT cpu, TSDF alloc dense, kf motion 3cm/4deg win 4 gyro, git a616b2634b25
+   gt lensonly, input keyframes 1920 JPEG q90, BA cuda, SIFT cpu, TSDF alloc dense, git a616b2634b25
+   ffs views 2 (fuse auto, partners all)
+12:54:01 step vio start (log /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/part1/vio.log)
+12:54:29 step vio done 28.6 s (rc 0)
+12:54:29 step lensonly start (log /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/part1/lensonly.log)
+12:54:29 step lensonly done 0.1 s (rc 0)
+12:54:29 step reduce start (log /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/part1/reduce.log)
+12:54:36 step reduce done 6.2 s (rc 0)
+[input] keyframe-only: /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/part1/red/hs_20261112_121801_std60_kf/frames_kf (272 jpg, 1920x1080, 140M), cam5.mp4 absent: yes
+{
+ "made": "2026-11-12 12:54:36",
+ "commit": "a616b2634b25ac4035b58085c5cf76192a0347de-dirty",
+ "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261112_121801_std60",
+ "input": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/part1/red/hs_20261112_121801_std60_kf",
+ "keyframe_only": true,
+ "kf_res": 1920,
+ "kf_quality": 90,
+ "live_poses": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/part1/red/hs_20261112_121801_std60_kf/phone_live_poses.jsonl.gz",
+ "gt": "lensonly",
+ "vio_cfg": "/home/system/scanner/build_livepose/cfg_gen/c4f60",
+ "tsdf_alloc": "dense",
+ "ffs_views": 2,
+ "ffs_fuse": "auto",
+ "ffs_partners": "all",
+ "reuse": null,
+ "ba_dir": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/part1/ba",
+ "kfba_device_line": null,
+ "step_s": {
+  "vio": 28.6,
+  "lensonly": 0.1,
+  "reduce": 6.2
+ },
+ "total_s": 34.9,
+ "sent": {
+  "n_keyframes": 272,
+  "image_size": [
+   1920,
+   1080
+  ],
+  "jpeg_bytes": 146181154,
+  "duration_s": 60.940395976000005,
+  "jpeg_MB_per_min": 143.92537330171282,
+  "kf_per_min": 267.80265763988905,
+  "kf_select": {
+   "rule": "motion",
+   "dist_m": 0.03,
+   "rot_deg": 4.0,
+   "win": 4,
+   "blur": "gyro",
+   "max_gyro": 0.0,
+   "n_vio_frames": 1852,
+   "n_scored": 1088,
+   "n_kf": 272,
+   "pos_in_window_hist": [
+    87,
+    49,
+    49,
+    87
+   ],
+   "gyro_kf_median": 0.283857003597876,
+   "gyro_window_mean_median": 0.3491459016886137,
+   "moved_m_median": 0.04178147090034108,
+   "rot_deg_median": 1.954103581962926,
+   "exposure_ns_median": 2000000.0,
+   "skew_ns_median": 6540750.0
+  }
+ },
+ "mesh": null,
+ "board": null,
+ "mesh_board": null,
+ "status": "ok",
+ "steps_run": [
+  "lensonly",
+  "reduce",
+  "vio"
+ ],
+ "vio": {
+  "crashed": null,
+  "bridge_rc": 0,
+  "frames_selected": 2100,
+  "frames_fed": 2100,
+  "poses": 2100,
+  "wall_s": 27.6
+ },
+ "vio_crashed": null,
+ "ba_quality": null,
+ "min_mesh_vertices": 1000,
+ "provenance": {
+  "commit": "a616b2634b25ac4035b58085c5cf76192a0347de-dirty",
+  "commit_dirty": true,
+  "main_commit": "-dirty",
+  "worktree": "/home/system/scanner/StereoDepthSeg-fixes",
+  "lens_file": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json",
+  "lens_sha": "21b5f334c1bc210b",
+  "vio_cfg_sha": {
+   "estimator_config.yaml": "b81f2b377f76c84c",
+   "kalibr_imu_chain.yaml": "0f8eefa54043fc3e",
+   "kalibr_imucam_chain.yaml": "58b9a1af46461eb3"
+  }
+ },
+ "lens_only": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json"
+}
+== run_scanner stop after reduce 12:54:36: /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/part1/red/hs_20261112_121801_std60_kf
+12:54:36 part1 done 35 s (rc 0)

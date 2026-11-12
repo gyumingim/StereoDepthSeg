@@ -336,6 +336,9 @@ def main():
                     help="salad: extra appearance pairs (SALAD global descriptor retrieval), each keyframe vs its --loop-k most "
                          "similar keyframes that are not time neighbours (> --seq keyframes apart) and not already paired")
     ap.add_argument("--loop-k", type=int, default=5)
+    ap.add_argument("--extra-pairs", default="", help="merge 11-12: file of extra image pairs 'NNNNN.jpg MMMMM.jpg' per line "
+                    "(run_merge.sh: cross-recording pairs from merge_align.py); matched + verified like the loop pairs and counted "
+                    "with them in pair_stats (default none = unchanged)")
     ap.add_argument("--loop-min-sim", type=float, default=0.0)
     ap.add_argument("--seed", type=int, default=-1, help="RANSAC random_seed of the two-view verification (-1 = COLMAP default = "
                     "not repeatable run to run; featloop found inlier sets differ on 1838/1844 pairs between identical runs)")
@@ -542,6 +545,17 @@ def main():
                          frac_outside_cov_gate=float(np.mean([(d_ >= 0.6) or (a_ >= a.cov_angle) for d_, a_ in zip(dd, aa)])) if dd else None,
                          salad_s=round(time.time() - t2, 1))
         log(f"[loop] SALAD {len(loop_pairs)} extra pairs (k {a.loop_k}), {loop_info}")
+    if a.extra_pairs:                               # merge 11-12: cross-recording pairs (counted with the loop pairs in pair_stats)
+        n_ex0 = len(loop_pairs)
+        for l_ in Path(a.extra_pairs).read_text().splitlines():
+            if l_.strip():
+                x_, y_ = (int(v_[:-4]) for v_ in l_.split())
+                pr = (min(x_, y_), max(x_, y_))
+                if x_ in Tv and y_ in Tv and x_ != y_ and pr not in pairs:
+                    loop_pairs.add(pr)
+        pairs |= loop_pairs
+        loop_info["n_extra_pairs"] = len(loop_pairs) - n_ex0
+        log(f"[extra] {len(loop_pairs) - n_ex0} extra pairs from {a.extra_pairs}")
     pl = out / "pairs.txt"
     pl.write_text("\n".join(f"{names[x]} {names[y]}" for x, y in sorted(pairs)) + "\n")
     (out / "loop_pairs.txt").write_text("".join(f"{names[x]} {names[y]}\n" for x, y in sorted(loop_pairs)))

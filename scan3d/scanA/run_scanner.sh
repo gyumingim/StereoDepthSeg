@@ -55,6 +55,7 @@
 #               nothing beyond ~0.63 m (baseline 7.2 cm) reaches the mesh. ba = rotation 0.1 deg + baseline 2 % (BA poses; dy gate 1.2 px
 #               = 0.1 deg): cut ~1.4-1.8 m. Not the default yet (runs/fixes_20261112/README.md). Same as --mesh-args '--sigma-rot-deg 0.1 --sigma-b-rel 0.02'
 #   --min-mesh-vertices N  quality gate (fixes 11-12 M3): a mesh with fewer vertices -> exit 5 + summary status 'failed: ...' (default 1000)
+#   --stop-after reduce  (merge 11-12, used by run_merge.sh) stop after vio [+ lensonly] + reduce: OUT/red/<rec>_kf is the result, no kfba / mesh
 # Checks added 11-12 (results unchanged): failed step / VIO bridge crash -> summary status 'failed: ...' + non-zero exit (H3);
 #   earlier outputs in OUT are moved to OUT/_prev and the summary reads only steps run now (M2); explicit --gt folder missing -> stop (M5);
 #   --reuse + ignored flags -> warning (M6); frames_kf size must match --kf-res (M9); summary records vio crash, BA keyframes on VIO pose,
@@ -75,11 +76,11 @@ REC=$(realpath -m "$1"); OUT=$(realpath -m "$2"); shift 2
 FULLV=0; KRES=1920; KQ=90; BADEV=cuda; SIFTDEV=cpu; G=""; CFG=""; VIO=""; BOARD=""; BOARD_MESH=1
 LENS=""; SREF=""; REDSIZE=302.0x188.75; LENSONLY=0
 KFX=""; MSX=""; VIX=""; CACHE=""; KEEPC=0; TALLOC=dense; KFSEL=motion; KFD=3; KFR=4; KFW=4; KFB=gyro; FV=2; FF=auto; FP=all; REUSE=""
-G_SET=0; CFG_SET=0; PRE_REUSE=""; MINV=1000; DSIG=old     # fixes 11-12: --gt given explicitly (M5), flags ignored by --reuse (M6), mesh vertex gate (M3)
+G_SET=0; CFG_SET=0; PRE_REUSE=""; MINV=1000; DSIG=old; STOPAFTER=""     # fixes 11-12: --gt given explicitly (M5), flags ignored by --reuse (M6), mesh vertex gate (M3)
 while [ $# -gt 0 ]; do opt=$1; case $1 in      # opt: the 2nd case must see the NAME (the 1st case shifts past a value; N1 11-12)
   --full-video) FULLV=1;; --kf-res) KRES=$2; shift;; --kf-quality) KQ=$2; shift;;
   --ba-device) BADEV=$2; shift;; --sift-device) SIFTDEV=$2; shift;; --gt) G=$2; G_SET=1; shift;; --cfg) CFG=$2; CFG_SET=1; shift;;
-  --min-mesh-vertices) MINV=$2; shift;; --depth-sigma) DSIG=$2; shift;;
+  --min-mesh-vertices) MINV=$2; shift;; --depth-sigma) DSIG=$2; shift;; --stop-after) STOPAFTER=$2; shift;;
   --vio) VIO=$(realpath -m "$2"); shift;; --board) BOARD=$2; shift;; --board-no-mesh) BOARD_MESH=0;;
   --kfba-args) KFX=$2; shift;; --mesh-args) MSX=$2; shift;; --vio-args) VIX=$2; shift;;
   --tsdf-alloc) TALLOC=$2; shift;;
@@ -103,6 +104,8 @@ if [ -n "$SREF" ]; then
   [ "$KRES" = 960 ] && [ $FULLV = 0 ] && { echo "--scale-ref redscreen needs 1920x1080 keyframes (--kf-res 1920)" >&2; exit 1; }
   [ $FULLV = 1 ] && { echo "--scale-ref redscreen needs the keyframe path (not --full-video)" >&2; exit 1; }
 fi
+case $STOPAFTER in ""|reduce) ;; *) echo "--stop-after must be reduce" >&2; exit 1;; esac
+[ "$STOPAFTER" = reduce ] && { [ -z "$REUSE" ] && [ $FULLV = 0 ] || { echo "--stop-after reduce needs the keyframe path without --reuse" >&2; exit 1; }; }
 case $DSIG in old) ;; ba) MSX="--sigma-rot-deg 0.1 --sigma-b-rel 0.02 $MSX";;      # H1 (fixes 11-12), README runs/fixes_20261112
   *) echo "--depth-sigma must be old or ba" >&2; exit 1;; esac
 FFSX=""; { [ "$FV" = 3 ] && [ "$FF" = auto ]; } || FFSX="--ffs-views $FV --ffs-fuse $FF"   # views 3 + fuse auto: scan_offline gets the old command line
@@ -279,6 +282,9 @@ if [ -d "$IN/frames_kf" ]; then
   echo "[input] keyframe-only: $IN/frames_kf ($(ls "$IN/frames_kf" | wc -l) jpg, $($P -c "import cv2,glob;f=cv2.imread(sorted(glob.glob('$IN/frames_kf/*.jpg'))[0]);print(f'{f.shape[1]}x{f.shape[0]}')"), $(du -sh "$IN/frames_kf" | cut -f1)), cam5.mp4 absent: $([ -e "$IN/cam5.mp4" ] && echo NO || echo yes)"
 else
   echo "[input] full video $IN/cam5.mp4 (old path)"
+fi
+if [ "$STOPAFTER" = reduce ]; then           # merge 11-12 (run_merge.sh): keyframe folder only
+  summary; echo "== run_scanner stop after reduce $(date +%T): $IN"; exit 0
 fi
 
 # ---- kf_ba (GPU BA); a motion-selected keyframe folder -> kf_ba takes its manifest list (also for a phone-sent folder)

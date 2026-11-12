@@ -312,3 +312,52 @@ M4 (불확실 판정) 는 손대지 않음.
 - 정리: 이 녹화에서는 루프 짝이 결과를 거의 안 바꿈 (+14 s). 기본값 그대로 (`--loop none`).
 - 보기: `changes_0620/fixes_20261112/scanner_121801_office_salad_loop.ply`, 목록 백업 `meshes.json.bak_fixes_u9_20261112_125424`.
 - 결과: `scan3d/runs/laptop/20261112_121801_std60/fix_u9salad/` (mesh.ply·obj·salad_sim.npy 는 커밋 안 함).
+
+## 10. 단위 10 — 이어 찍기: 녹화 둘을 메시 하나로 (`scanA/run_merge.sh`, 121801 을 둘로 나눠 시험, 노트북 1 회, 미검증)
+
+### 만든 것 (사용법·찍는 법은 `scanA/README.md` 9 절)
+- `scanA/run_merge.sh OUT REC_A REC_B [...]`: 녹화마다 `run_scanner.sh --stop-after reduce` (새 옵션, 기본 동작 그대로) → `scanA/merge_align.py` → 합친 키프레임 폴더에 `run_scanner.sh`.
+- `merge_align.py`: 부분 표본 (녹화마다 키프레임 80 장) A×B SIFT 짝 6400 개 + A 안 이웃 짝 → A 의 VIO 자세로 삼각측량 → B 키프레임 PnP (OpenCV RANSAC 3 px, 시드 0) →
+  4 자유도 (방향각 + 이동) 다수결 (10 cm / 3° 안), 동의 < 5 이면 `MERGE FAILED` 종료 코드 6. B 자세 = M·VIO, 프레임 번호 +A 프레임 수, 시각 = A 끝 + 100 s (FFS 짝은 30 s 안이라 녹화 사이 깊이 짝 없음).
+- `kf_ba.py --extra-pairs FILE` (새 옵션, 기본 없음 = 그대로): merge_align 이 검증한 녹화 사이 짝을 매칭 목록에 더함 (pair_stats 의 loop 칸에 셈).
+
+### 시험: 121801 을 A = 0–35 s, B = 25–60 s 로 (10 s 겹침), 각자 VIO
+- B 는 걷는 중에 시작. IMU 를 1 s 창으로 보면 처음 2 s 뒤로는 멈춘 곳이 없음 (가속도 크기 표준편차 0.2–1.2 m/s², 자이로 평균 ≥ 0.19 rad/s) →
+  정지 초기화 불가 → B 만 OpenVINS **동적 초기화** (`--vio-args-of 2 '--start-off 25 --yaml init_dyn_use=true'`). A 는 정지 초기화 그대로.
+- 명령: `remote_laptop.sh job 121801 'cmd:... run_merge.sh $WT/$O/merge $R $R --vio-args-of 1 "--max-secs 35" --vio-args-of 2 "--start-off 25 --yaml init_dyn_use=true" --depth-sigma ba --mesh-args "--tsdf-max-blocks 250000"' --tag fix_u10split`
+  (코드 a616b26 + 이 단위의 커밋 전 변경 = dirty).
+
+| 항목 | 값 |
+|---|---|
+| VIO A / B | 2100 / 1966 자세, 초기화 4.13 s (정지) / 2.7 s (동적), 시간 28.6 / 47.2 s. (lp_score 의 "diverged" 는 시작·끝 거리 기준이라 조각에는 의미 없음) |
+| 키프레임 A / B | 272 / 280 (합 552; 한 번에 찍은 u8 은 494) |
+| 녹화 사이 짝 (A 80 × B 80) | 6400 중 552 검증 (≥ 15 인라이어) |
+| B 쪽에서 보인 A 의 삼각측량 점 | 5 149 |
+| PnP 성공 / 한 변환에 동의 | 29 / 25 키프레임 |
+| 4 자유도 변환 | 방향각 95.15°, 이동 (3.63, −4.74, 0.70) m |
+| 동의한 키프레임 중심 오차 중앙 / 최대 | 3.0 cm / 9.3 cm, 회전 오차 중앙 0.74° |
+| 검사: 남은 기울기 중앙 / Sim(3) 축척비 | 0.51° / **1.026** (중심 퍼짐 0.75 m; 동적 초기화 축척 2.6 % 차이 추정) |
+| kf_ba 에 더한 녹화 사이 짝 | 287 중 227 새 짝 (나머지는 이미 공시 짝), 227 모두 검증, 인라이어 중앙 131; 같은 영상 프레임끼리 짝 3 개 |
+| 합친 BA | 0.291 px (rmse 0.697, 1 px 안 91.8 %), BA-VIO rms 6.19 cm, Sim3 축척 1.0033, **관측 < 15 라 VIO 자세로 남은 키프레임 12 개** (A 끝 33–34 s 4 개, B 끝쪽 8 개) |
+| **ATE: 합친 BA vs 한 번에 찍은 u8 BA** (키프레임 중심 552 개, 487 개는 같은 프레임, 나머지 u8 키프레임 사이 보간) | SE3 맞춤 **10.1 cm rms** (중앙 7.6, 최대 22.5; A 7.5 / B 12.1), Sim3 9.8 cm (축척 0.991), 맞춤 없이 A 3.7 / B 15.2 cm |
+| 같은 비교, BA 전 (합친 VIO 입력) | SE3 14.2 cm rms (A 10.9 / B 16.7) → BA 가 4 cm 줄임 |
+| 메시 정점 / TSDF 블록 | **1 918 406** / 163 719 (u8 1 905 456 / 154 556) |
+| 정점 카메라 깊이 중앙 / p99 / 최대 | 1.06 / 1.49 / 1.71 m |
+| 시간 | part1 35.4 + part2 56.3 + align 49.6 + kfba 104.6 + mesh 187.9 s ≈ 434 s (u8 한 번에 343 s) |
+
+- 참고 자 (u8) 도 정답이 아님: u8 BA 자체가 u8 VIO 와 7.98 cm rms 다름. 그래서 10 cm 는 "한 번에 찍은 것과 비슷한 정도" 로만 읽는다.
+- **mesh 첫 실행 실패**: GPU 메모리 부족 (rc 3, 552 개 중 약 479 번째 FFS 에서 1.15 GiB 할당 실패, 상한 6.0 GB). u8·u9 도 예약 최대 5.95 / 5.93 GB 로 상한에 붙어 있었음 →
+  합치기 탓이라기보다 원래 빠듯했던 것으로 추정. 같은 BA 자세로 `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` + `--reuse` 로 mesh 만 다시 → 성공 (`fix_u10split_mesh2`, 할당 4.69 / 예약 4.95 GB).
+  run_merge·run_scanner 에는 이 변수를 아직 안 넣음 (메인 세션 결정).
+- 그림: `u10_121801_merged_kfviews.jpg` (kf 175 = A 쪽, kf 437 = B 쪽 프레임 6254 = 원래 2788), `u10_121801_merged_kfviews_top.png`. 눈 확인: 위에서 본 모습이 u8 과 거의 같고,
+  B 쪽 사진 (3D 프린터) 과 메시가 겹침. 두 줄 길도 u8 과 같은 모양.
+- 쉬운 경우라는 점: 두 조각이 같은 영상에서 나와 겹침 10 s 의 사진이 거의 같다 (실제 두 번째 녹화보다 쉬움). 다만 kf_ba 에 들어간 녹화 사이 짝 중 같은 프레임끼리는 3 개뿐.
+
+### 거부 시험: 안 겹치는 녹화 (121801 앞 35 s + 220612 다른 방)
+- `run_merge.sh ... $R <220612> --vio-args-of 1 "--max-secs 35"` (`--tag fix_u10refuse`) → 녹화 사이 짝 6400 중 검증 0, 삼각측량 점 0, PnP 0 →
+  `MERGE FAILED: part 1 (hs_20261106_220612_std60_kf): only 0 keyframes could be placed ... the recordings do not overlap`, **종료 코드 6**, scan 단계 안 돎. 시간 34 + 45 + 22 s.
+- 노트북에 보낸 220612 는 작업 끝에 지움.
+
+- 보기: `changes_0620/fixes_20261112/scanner_121801_merged_2parts.ply`, 목록 백업 `meshes.json.bak_fixes_u10_20261112_130731`.
+- 결과: `scan3d/runs/laptop/20261112_121801_std60/fix_u10split/` (merge, BA), `fix_u10split_mesh2/` (메시), `fix_u10refuse/`, ATE `fix_u10split/ate_vs_fix_u8.json`
+  (계산 스크립트 `runs/fixes_20261112/ate_merge.py`). 메시·키프레임 사진은 커밋 안 함.

@@ -1,0 +1,60 @@
+== run_merge 2026-11-12 12:54:01: 2 recordings -> /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge (git a616b2634b25)
+[part 0] /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/part1/red/hs_20261112_121801_std60_kf: 272 keyframes with a VIO pose, 3466 frames
+[part 1] /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/part2/red/hs_20261112_121801_std60_kf: 280 keyframes with a VIO pose, 3466 frames
+[part 1] 80 reference + 80 new keyframes, 6400 cross + 157 reference pairs, features + matching 47 s
+[part 1] triangulated reference points seen by part 1: 5149; PnP ok on 29/80 keyframes (>= 30 inliers); verified cross pairs (>= 15 inl) 552/6400
+[part 1] 4-DoF: 25/29 keyframes agree, yaw 95.15 deg, t [3.627, -4.74, 0.699] m, centre err median 3.0 cm, rot err median 0.74 deg, tilt median 0.51 deg, Sim3 scale ratio 1.0257 (centre spread 0.75 m)
+[merge] 552 keyframes ([272, 280]), extra pairs 287, -> /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/merged/hs_20261112_121801_std60_merged_kf (49 s)
+  "commit": "a616b2634b25ac4035b58085c5cf76192a0347de-dirty",
+  "commit_dirty": true,
+  "main_commit": "-dirty",
+  "worktree": "/home/system/scanner/StereoDepthSeg-fixes",
+  "lens_file": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json",
+  "lens_sha": "21b5f334c1bc210b",
+  "vio_cfg_sha": {
+   "estimator_config.yaml": "b81f2b377f76c84c",
+   "kalibr_imu_chain.yaml": "0f8eefa54043fc3e",
+   "kalibr_imucam_chain.yaml": "58b9a1af46461eb3"
+  }
+ },
+ "lens_only": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json"
+}
+13:00:19 scan done 237 s (rc 3)
+{
+ "status": "failed: scan rc 3",
+ "steps": {
+  "part1": {
+   "s": 35.4,
+   "rc": 0
+  },
+  "part2": {
+   "s": 56.3,
+   "rc": 0
+  },
+  "align": {
+   "s": 49.6,
+   "rc": 0
+  },
+  "scan": {
+   "s": 237.0,
+   "rc": 3
+  }
+ },
+ "n_kf": [
+  272,
+  280
+ ],
+ "parts": [
+  {
+   "n_cross_verified": 552,
+   "n_pnp_ok": 29,
+   "n_consensus": 25,
+   "yaw_deg": 95.15453822793933,
+   "centre_err_cm_median": 2.96399893558616,
+   "tilt_deg_median": 0.5062814578639452,
+   "sim3_scale_ratio": 1.0257069669869043
+  }
+ ],
+ "mesh_vertices": null
+}
+== run_merge done 13:00:19 (failed: scan rc 3)

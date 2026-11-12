@@ -1,0 +1,141 @@
+12:56:22 scan start
+!! lens-only: VIO config is cfg_gen/c4f60 (0.5 dpt app lens) whatever --lens says; pass --cfg for another lens (M5)
+== run_scanner 2026-11-12 12:56:22: REC /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/merged/hs_20261112_121801_std60_merged_kf (keyframe-only) -> /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/scan
+   gt lensonly, input keyframes 1920 JPEG q90, BA cuda, SIFT cpu, TSDF alloc dense, kf motion 3cm/4deg win 4 gyro, git a616b2634b25
+   gt lensonly, input keyframes 1920 JPEG q90, BA cuda, SIFT cpu, TSDF alloc dense, git a616b2634b25
+   ffs views 2 (fuse auto, partners all)
+12:56:22 step lensonly start (log /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/scan/lensonly.log)
+12:56:22 step lensonly done 0.1 s (rc 0)
+[input] keyframe-only: /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/merged/hs_20261112_121801_std60_merged_kf/frames_kf (552 jpg, 1920x1080, 278M), cam5.mp4 absent: yes
+[kf] motion-selected keyframes: kf_ba --kf-list /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/merged/hs_20261112_121801_std60_merged_kf/manifest.json
+12:56:22 step kfba start (log /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/scan/kfba.log)
+12:58:07 step kfba done 104.5 s (rc 0)
+[device] BA cuda, SIFT cpu, matcher auto
+12:58:07 step mesh start (log /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/scan/mesh.log)
+13:00:19 step mesh done 131.8 s (rc 3)
+step mesh failed rc 3, tail of /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/scan/mesh.log:
+kf 189/552: {'i': 189, 'pairs': 1, 'B_cm': [8.2], 'valid_frac': 0.5966068672839506, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [204], 'frame': 1504, 'n_cand': 10, 'partners': [192], 'rejected': []}
+kf 199/552: {'i': 199, 'pairs': 1, 'B_cm': [7.5], 'valid_frac': 0.4145235339506173, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [201], 'frame': 1582, 'n_cand': 4, 'partners': [195], 'rejected': []}
+kf 209/552: {'i': 209, 'pairs': 1, 'B_cm': [7.4], 'valid_frac': 0.5408641975308642, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [201], 'frame': 1662, 'n_cand': 9, 'partners': [207], 'rejected': []}
+kf 269/552: {'i': 269, 'pairs': 1, 'B_cm': [6.4], 'valid_frac': 0.5617129629629629, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [207], 'frame': 2075, 'n_cand': 3, 'partners': [271], 'rejected': []}
+kf 329/552: {'i': 329, 'pairs': 1, 'B_cm': [9.2], 'valid_frac': 0.43373842592592593, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [206], 'frame': 5527, 'n_cand': 4, 'partners': [332], 'rejected': []}
+kf 349/552: {'i': 349, 'pairs': 1, 'B_cm': [6.4], 'valid_frac': 0.41698109567901237, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [199], 'frame': 5722, 'n_cand': 13, 'partners': [351], 'rejected': []}
+kf 359/552: {'i': 359, 'pairs': 1, 'B_cm': [6.4], 'valid_frac': 0.5893827160493827, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [197], 'frame': 5824, 'n_cand': 4, 'partners': [355], 'rejected': []}
+kf 369/552: {'i': 369, 'pairs': 1, 'B_cm': [7.6], 'valid_frac': 0.2569212962962963, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [200], 'frame': 5891, 'n_cand': 11, 'partners': [371], 'rejected': []}
+kf 429/552: {'i': 429, 'pairs': 1, 'B_cm': [9.9], 'valid_frac': 0.40987268518518516, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [195], 'frame': 6211, 'n_cand': 8, 'partners': [427], 'rejected': []}
+kf 439/552: {'i': 439, 'pairs': 1, 'B_cm': [20.6], 'valid_frac': 0.17702739197530865, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [107], 'frame': 6264, 'n_cand': 3, 'partners': [444], 'rejected': []}
+kf 449/552: {'i': 449, 'pairs': 1, 'B_cm': [8.6], 'valid_frac': 0.49345871913580247, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [199], 'frame': 6313, 'n_cand': 10, 'partners': [447], 'rejected': []}
+kf 459/552: {'i': 459, 'pairs': 1, 'B_cm': [9.1], 'valid_frac': 0.47045524691358026, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [196], 'frame': 6380, 'n_cand': 10, 'partners': [457], 'rejected': []}
+kf 469/552: {'i': 469, 'pairs': 1, 'B_cm': [8.5], 'valid_frac': 0.2874363425925926, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [196], 'frame': 6443, 'n_cand': 11, 'partners': [467], 'rejected': []}
+kf 479/552: {'i': 479, 'pairs': 1, 'B_cm': [10.2], 'valid_frac': 0.2127276234567901, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [201], 'frame': 6513, 'n_cand': 5, 'partners': [477], 'rejected': []}
+[gpu_guard] GPU out of memory under the cap 0.75 -> run failed (no retry): CUDA 메모리 부족 (입력 865x487, triton). --scale 0.75 또는 0.5 로 줄일 것. 원문: CUDA out of memory. Tried to allocate 1.15 GiB. GPU 0 has a total capacity of 8.00 GiB of which 1.68 GiB is free. Includ
+{
+ "made": "2026-11-12 13:00:19",
+ "commit": "a616b2634b25ac4035b58085c5cf76192a0347de-dirty",
+ "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/merged/hs_20261112_121801_std60_merged_kf",
+ "input": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/merged/hs_20261112_121801_std60_merged_kf",
+ "keyframe_only": true,
+ "kf_res": 1920,
+ "kf_quality": 90,
+ "live_poses": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/merged/hs_20261112_121801_std60_merged_kf/phone_live_poses.jsonl.gz",
+ "gt": "lensonly",
+ "vio_cfg": "/home/system/scanner/build_livepose/cfg_gen/c4f60",
+ "tsdf_alloc": "dense",
+ "ffs_views": 2,
+ "ffs_fuse": "auto",
+ "ffs_partners": "all",
+ "reuse": null,
+ "ba_dir": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/scan/ba",
+ "kfba_device_line": "[device] BA cuda, SIFT cpu, matcher auto",
+ "step_s": {
+  "lensonly": 0.2,
+  "kfba": 104.6,
+  "mesh": 131.8
+ },
+ "total_s": 236.6,
+ "sent": {
+  "n_keyframes": 552,
+  "image_size": [
+   1920,
+   1080
+  ],
+  "jpeg_bytes": 290306474,
+  "duration_s": 121.88079195200001,
+  "jpeg_MB_per_min": 142.91331850600247,
+  "kf_per_min": 271.7409320169462,
+  "kf_select": {
+   "rule": "motion",
+   "dist_m": 0.03,
+   "rot_deg": 4.0,
+   "win": 4,
+   "blur": "gyro",
+   "max_gyro": 0.0,
+   "n_vio_frames": 1852,
+   "n_scored": 1088,
+   "n_kf": 272,
+   "pos_in_window_hist": [
+    87,
+    49,
+    49,
+    87
+   ],
+   "gyro_kf_median": 0.283857003597876,
+   "gyro_window_mean_median": 0.3491459016886137,
+   "moved_m_median": 0.04178147090034108,
+   "rot_deg_median": 1.954103581962926,
+   "exposure_ns_median": 2000000.0,
+   "skew_ns_median": 6540750.0
+  }
+ },
+ "mesh": null,
+ "board": null,
+ "mesh_board": null,
+ "status": "failed: step mesh rc 3",
+ "steps_run": [
+  "kfba",
+  "lensonly",
+  "mesh"
+ ],
+ "vio": null,
+ "vio_crashed": null,
+ "ba_quality": {
+  "n_kf": 552,
+  "kf_obs_min": 0,
+  "n_kf_vio_pose": 12,
+  "fixed_kf": [
+   279,
+   2022,
+   2029,
+   2037,
+   2050,
+   5202,
+   5442,
+   5448,
+   5454,
+   5459,
+   5488,
+   5495,
+   5503
+  ],
+  "final_med_px": 0.2908894759580501,
+  "final_rmse_px": 0.6973531670939538,
+  "frac_inlier_1px": 0.9184946201626134,
+  "sim3_rms_cm": 6.1899181051680685
+ },
+ "min_mesh_vertices": 1000,
+ "provenance": {
+  "commit": "a616b2634b25ac4035b58085c5cf76192a0347de-dirty",
+  "commit_dirty": true,
+  "main_commit": "-dirty",
+  "worktree": "/home/system/scanner/StereoDepthSeg-fixes",
+  "lens_file": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json",
+  "lens_sha": "21b5f334c1bc210b",
+  "vio_cfg_sha": {
+   "estimator_config.yaml": "b81f2b377f76c84c",
+   "kalibr_imu_chain.yaml": "0f8eefa54043fc3e",
+   "kalibr_imucam_chain.yaml": "58b9a1af46461eb3"
+  }
+ },
+ "lens_only": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json"
+}
+13:00:19 scan done 237 s (rc 3)

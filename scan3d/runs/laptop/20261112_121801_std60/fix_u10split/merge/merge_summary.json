@@ -1,0 +1,182 @@
+{
+ "made": "2026-11-12 13:00:19",
+ "commit": "a616b2634b25ac4035b58085c5cf76192a0347de-dirty",
+ "status": "failed: scan rc 3",
+ "recordings": [
+  "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261112_121801_std60",
+  "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261112_121801_std60"
+ ],
+ "steps": {
+  "part1": {
+   "s": 35.4,
+   "rc": 0
+  },
+  "part2": {
+   "s": 56.3,
+   "rc": 0
+  },
+  "align": {
+   "s": 49.6,
+   "rc": 0
+  },
+  "scan": {
+   "s": 237.0,
+   "rc": 3
+  }
+ },
+ "merge": {
+  "inputs": [
+   "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/part1/red/hs_20261112_121801_std60_kf",
+   "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/part2/red/hs_20261112_121801_std60_kf"
+  ],
+  "args": {
+   "parts": [
+    "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/part1/red/hs_20261112_121801_std60_kf",
+    "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/part2/red/hs_20261112_121801_std60_kf"
+   ],
+   "out": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/merged/hs_20261112_121801_std60_merged_kf",
+   "gt": "lensonly",
+   "max_sub": 80,
+   "min_kf": 5,
+   "min_pnp": 30,
+   "min_cross_inl": 30,
+   "gap_s": 100.0,
+   "max_features": 6000,
+   "scale": 0.5
+  },
+  "parts": [
+   {
+    "part": 1,
+    "dir": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/part2/red/hs_20261112_121801_std60_kf",
+    "n_ref": 80,
+    "n_new": 80,
+    "n_cross_pairs": 6400,
+    "n_cross_verified": 552,
+    "n_ref_points": 5149,
+    "n_pnp_ok": 29,
+    "pnp_inliers_median": 327.0,
+    "n_consensus": 25,
+    "consensus_frac": 0.8620689655172413,
+    "yaw_deg": 95.15453822793933,
+    "t_m": [
+     3.627358129620075,
+     -4.740452543258127,
+     0.6992245799955861
+    ],
+    "M": [
+     [
+      -0.0898423596996662,
+      -0.9959559982266264,
+      0.0,
+      3.627358129620075
+     ],
+     [
+      0.9959559982266264,
+      -0.0898423596996662,
+      0.0,
+      -4.740452543258127
+     ],
+     [
+      0.0,
+      0.0,
+      1.0,
+      0.6992245799955861
+     ],
+     [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+     ]
+    ],
+    "centre_err_cm_median": 2.96399893558616,
+    "centre_err_cm_max": 9.273952450588544,
+    "rot_err_deg_median": 0.7368431498043273,
+    "tilt_deg_median": 0.5062814578639452,
+    "tilt_deg_max": 2.4631289457054035,
+    "centre_spread_m": 0.7452025366118226,
+    "sim3_scale_ratio": 1.0257069669869043,
+    "consensus_frames": [
+     1662,
+     1702,
+     1726,
+     1746,
+     1765,
+     1786,
+     1807,
+     1829,
+     1849,
+     1878,
+     1900,
+     1926,
+     1947,
+     1982,
+     2002,
+     2029,
+     2061,
+     2092,
+     2133,
+     2174,
+     2204,
+     2499,
+     2519,
+     2550,
+     2568
+    ]
+   }
+  ],
+  "status": "ok",
+  "made": "2026-11-12 12:56:22",
+  "out": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/merged/hs_20261112_121801_std60_merged_kf",
+  "frame_offset": [
+   0,
+   3466
+  ],
+  "time_shift_ns": [
+   0,
+   157750472930
+  ],
+  "n_keyframes": 552,
+  "n_keyframes_per_part": [
+   272,
+   280
+  ],
+  "n_extra_pairs": 287,
+  "extra_pairs_same_source_frame": 3,
+  "runtime_s": 49.1,
+  "note": "M[k] maps part-k VIO world into part-0 world (4-DoF yaw + translation); poses of part k in the folder = M[k] * VIO"
+ },
+ "scan": {
+  "status": "failed: step mesh rc 3",
+  "ba_quality": {
+   "n_kf": 552,
+   "kf_obs_min": 0,
+   "n_kf_vio_pose": 12,
+   "fixed_kf": [
+    279,
+    2022,
+    2029,
+    2037,
+    2050,
+    5202,
+    5442,
+    5448,
+    5454,
+    5459,
+    5488,
+    5495,
+    5503
+   ],
+   "final_med_px": 0.2908894759580501,
+   "final_rmse_px": 0.6973531670939538,
+   "frac_inlier_1px": 0.9184946201626134,
+   "sim3_rms_cm": 6.1899181051680685
+  },
+  "mesh": null,
+  "step_s": {
+   "lensonly": 0.2,
+   "kfba": 104.6,
+   "mesh": 131.8
+  }
+ }
+}

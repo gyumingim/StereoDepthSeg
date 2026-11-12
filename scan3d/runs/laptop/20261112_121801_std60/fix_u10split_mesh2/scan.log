@@ -1,0 +1,165 @@
+!! lens-only: VIO config is cfg_gen/c4f60 (0.5 dpt app lens) whatever --lens says; pass --cfg for another lens (M5)
+== run_scanner 2026-11-12 13:01:11: REC /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/merged/hs_20261112_121801_std60_merged_kf (keyframe-only) -> /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split_mesh2/scan
+   gt lensonly, input keyframes 1920 JPEG q90, BA cuda, SIFT cpu, TSDF alloc dense, kf motion 3cm/4deg win 4 gyro, git 967aff479577
+   gt lensonly, input keyframes 1920 JPEG q90, BA cuda, SIFT cpu, TSDF alloc dense, git 967aff479577
+   ffs views 2 (fuse auto, partners all), reuse vio/reduce/kfba from /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/scan
+13:01:11 step lensonly start (log /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split_mesh2/scan/lensonly.log)
+13:01:12 step lensonly done 0.1 s (rc 0)
+[input] keyframe-only: /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/merged/hs_20261112_121801_std60_merged_kf/frames_kf (552 jpg, 1920x1080, 278M), cam5.mp4 absent: yes
+[kf] motion-selected keyframes: kf_ba --kf-list /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/merged/hs_20261112_121801_std60_merged_kf/manifest.json
+[reuse] BA poses /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/scan/ba/poses_ba.jsonl.gz (kfba skipped)
+13:01:12 step mesh start (log /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split_mesh2/scan/mesh.log)
+13:04:20 step mesh done 187.8 s (rc 0)
+{
+ "made": "2026-11-12 13:04:20",
+ "commit": "967aff479577c2f0be93eba96f33f42ecc30a6c1-dirty",
+ "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/merged/hs_20261112_121801_std60_merged_kf",
+ "input": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/merged/hs_20261112_121801_std60_merged_kf",
+ "keyframe_only": true,
+ "kf_res": 1920,
+ "kf_quality": 90,
+ "live_poses": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/merged/hs_20261112_121801_std60_merged_kf/phone_live_poses.jsonl.gz",
+ "gt": "lensonly",
+ "vio_cfg": "/home/system/scanner/build_livepose/cfg_gen/c4f60",
+ "tsdf_alloc": "dense",
+ "ffs_views": 2,
+ "ffs_fuse": "auto",
+ "ffs_partners": "all",
+ "reuse": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/scan",
+ "ba_dir": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/scan/ba",
+ "kfba_device_line": "[device] BA cuda, SIFT cpu, matcher auto",
+ "step_s": {
+  "lensonly": 0.2,
+  "mesh": 187.9
+ },
+ "total_s": 188.1,
+ "sent": {
+  "n_keyframes": 552,
+  "image_size": [
+   1920,
+   1080
+  ],
+  "jpeg_bytes": 290306474,
+  "duration_s": 121.88079195200001,
+  "jpeg_MB_per_min": 142.91331850600247,
+  "kf_per_min": 271.7409320169462,
+  "kf_select": {
+   "rule": "motion",
+   "dist_m": 0.03,
+   "rot_deg": 4.0,
+   "win": 4,
+   "blur": "gyro",
+   "max_gyro": 0.0,
+   "n_vio_frames": 1852,
+   "n_scored": 1088,
+   "n_kf": 272,
+   "pos_in_window_hist": [
+    87,
+    49,
+    49,
+    87
+   ],
+   "gyro_kf_median": 0.283857003597876,
+   "gyro_window_mean_median": 0.3491459016886137,
+   "moved_m_median": 0.04178147090034108,
+   "rot_deg_median": 1.954103581962926,
+   "exposure_ns_median": 2000000.0,
+   "skew_ns_median": 6540750.0
+  }
+ },
+ "mesh": {
+  "absdZ_p90_cm": null,
+  "k_pct": -8.881784197001252e-14,
+  "mesh_board_z_rms_cm": null,
+  "n_kf": 552,
+  "n_kf_depth": 354,
+  "n_kf_board_eval": null,
+  "kf_absdZ_p90_cm_median": null,
+  "board_cover_frac": null,
+  "ffs_views": 2,
+  "ffs_fuse": "mean",
+  "ffs_partners": "all",
+  "ffs_s_total": 100.7,
+  "n_kf_by_pairs": {
+   "0": 198,
+   "1": 354
+  },
+  "n_kf_no_pair": null,
+  "mesh_vertices": 1918406,
+  "tsdf_full": false,
+  "tsdf_blocks": 163719,
+  "n_kf_gt_not_ok_dropped": 0,
+  "gt_ok_filter": true,
+  "depth_sigma": {
+   "rot_deg": 0.1,
+   "b_rel": 0.02,
+   "sigma_d_px": 0.5,
+   "sigma_max": 0.08,
+   "sigma_ok": 0.02,
+   "z_max": 2.0
+  },
+  "mesh_cam_depth_m": {
+   "n": 1918406,
+   "p50": 1.0554110153906526,
+   "p90": 1.297907271870129,
+   "p99": 1.4940569025919266,
+   "max": 1.7137238757164308,
+   "frac_gt_0p65": 0.9265775857665166,
+   "frac_gt_1p0": 0.6122916629743652
+  },
+  "lib_ffs": {
+   "file": "/home/system/scanner/StereoDepthSeg/lib_ffs.py",
+   "sha": "9b820bc28df4caf7"
+  },
+  "note": "lens-only stand-in GT: k_pct and board numbers meaningless"
+ },
+ "board": null,
+ "mesh_board": null,
+ "status": "ok",
+ "steps_run": [
+  "lensonly",
+  "mesh"
+ ],
+ "vio": null,
+ "vio_crashed": null,
+ "ba_quality": {
+  "n_kf": 552,
+  "kf_obs_min": 0,
+  "n_kf_vio_pose": 12,
+  "fixed_kf": [
+   279,
+   2022,
+   2029,
+   2037,
+   2050,
+   5202,
+   5442,
+   5448,
+   5454,
+   5459,
+   5488,
+   5495,
+   5503
+  ],
+  "final_med_px": 0.2908894759580501,
+  "final_rmse_px": 0.6973531670939538,
+  "frac_inlier_1px": 0.9184946201626134,
+  "sim3_rms_cm": 6.1899181051680685
+ },
+ "min_mesh_vertices": 1000,
+ "provenance": {
+  "commit": "967aff479577c2f0be93eba96f33f42ecc30a6c1-dirty",
+  "commit_dirty": true,
+  "main_commit": "-dirty",
+  "worktree": "/home/system/scanner/StereoDepthSeg-fixes",
+  "lens_file": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json",
+  "lens_sha": "21b5f334c1bc210b",
+  "vio_cfg_sha": {
+   "estimator_config.yaml": "b81f2b377f76c84c",
+   "kalibr_imu_chain.yaml": "0f8eefa54043fc3e",
+   "kalibr_imucam_chain.yaml": "58b9a1af46461eb3"
+  }
+ },
+ "lens_only": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json"
+}
+== run_scanner done 13:04:20

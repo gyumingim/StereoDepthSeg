@@ -1,0 +1,46 @@
+[gpu_guard] torch memory cap 0.75 x 8.0 GB = 6.0 GB
+VIO poses {'source': '/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/scan/ba/poses_ba.jsonl.gz', 'n': 552, 'se3_rmse_cm': 6.122266695700299, 'sim3_scale_would_be': 1.0000000000000009, 'free_scale_applied': False, 'rot_diff_deg_median': 0.4473070393265438}
+decoded 552 frames (960x540), gt rows 552, ok 552
+[tsdf] alloc dense
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/geometry.py:76: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+kf 9/552: {'i': 9, 'pairs': 1, 'B_cm': [8.6], 'valid_frac': 0.5603896604938272, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [199], 'frame': 310, 'n_cand': 11, 'partners': [7], 'rejected': []}
+kf 19/552: {'i': 19, 'pairs': 1, 'B_cm': [8.4], 'valid_frac': 0.5966589506172839, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [199], 'frame': 380, 'n_cand': 14, 'partners': [16], 'rejected': []}
+kf 29/552: {'i': 29, 'pairs': 1, 'B_cm': [12.3], 'valid_frac': 0.618954475308642, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [200], 'frame': 493, 'n_cand': 5, 'partners': [31], 'rejected': []}
+kf 39/552: {'i': 39, 'pairs': 1, 'B_cm': [6.7], 'valid_frac': 0.44808063271604937, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [198], 'frame': 563, 'n_cand': 11, 'partners': [37], 'rejected': []}
+kf 49/552: {'i': 49, 'pairs': 1, 'B_cm': [9.2], 'valid_frac': 0.08239390432098766, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [200], 'frame': 630, 'n_cand': 4, 'partners': [51], 'rejected': []}
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/geometry.py:76: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+kf 99/552: {'i': 99, 'pairs': 1, 'B_cm': [8.6], 'valid_frac': 0.4911226851851852, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [203], 'frame': 928, 'n_cand': 6, 'partners': [101], 'rejected': []}
+kf 119/552: {'i': 119, 'pairs': 1, 'B_cm': [9.6], 'valid_frac': 0.4588966049382716, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [202], 'frame': 1041, 'n_cand': 6, 'partners': [117], 'rejected': []}
+W1112 12:58:58.960000 245591 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8] torch._dynamo hit config.recompile_limit (8)
+W1112 12:58:58.960000 245591 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8]    function: 'build_gwc_volume_optimized_pytorch1' (/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:376)
+W1112 12:58:58.960000 245591 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8]    last reason: 0/1: tensor 'refimg_fea' size mismatch at index 3. expected 240, actual 224
+W1112 12:58:58.960000 245591 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1112 12:58:58.960000 245591 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1112 12:58:58.999000 245591 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8] torch._dynamo hit config.recompile_limit (8)
+W1112 12:58:58.999000 245591 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8]    function: 'build_concat_volume_optimized_pytorch1' (/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:492)
+W1112 12:58:58.999000 245591 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8]    last reason: 1/1: tensor 'refimg_fea' size mismatch at index 3. expected 240, actual 224
+W1112 12:58:58.999000 245591 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1112 12:58:58.999000 245591 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+kf 129/552: {'i': 129, 'pairs': 1, 'B_cm': [9.2], 'valid_frac': 0.403545524691358, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [200], 'frame': 1113, 'n_cand': 8, 'partners': [131], 'rejected': []}
+kf 139/552: {'i': 139, 'pairs': 1, 'B_cm': [8.7], 'valid_frac': 0.6001099537037037, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [196], 'frame': 1184, 'n_cand': 12, 'partners': [137], 'rejected': []}
+kf 149/552: {'i': 149, 'pairs': 1, 'B_cm': [25.8], 'valid_frac': 0.20218171296296297, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [1022], 'frame': 1248, 'n_cand': 2, 'partners': [155], 'rejected': []}
+kf 159/552: {'i': 159, 'pairs': 1, 'B_cm': [7.4], 'valid_frac': 0.6690991512345679, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [201], 'frame': 1308, 'n_cand': 11, 'partners': [157], 'rejected': []}
+kf 169/552: {'i': 169, 'pairs': 1, 'B_cm': [6.5], 'valid_frac': 0.7703298611111111, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [206], 'frame': 1366, 'n_cand': 11, 'partners': [171], 'rejected': []}
+kf 179/552: {'i': 179, 'pairs': 1, 'B_cm': [8.3], 'valid_frac': 0.6448842592592593, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [203], 'frame': 1430, 'n_cand': 10, 'partners': [177], 'rejected': []}
+kf 189/552: {'i': 189, 'pairs': 1, 'B_cm': [8.2], 'valid_frac': 0.5966068672839506, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [204], 'frame': 1504, 'n_cand': 10, 'partners': [192], 'rejected': []}
+kf 199/552: {'i': 199, 'pairs': 1, 'B_cm': [7.5], 'valid_frac': 0.4145235339506173, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [201], 'frame': 1582, 'n_cand': 4, 'partners': [195], 'rejected': []}
+kf 209/552: {'i': 209, 'pairs': 1, 'B_cm': [7.4], 'valid_frac': 0.5408641975308642, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [201], 'frame': 1662, 'n_cand': 9, 'partners': [207], 'rejected': []}
+kf 269/552: {'i': 269, 'pairs': 1, 'B_cm': [6.4], 'valid_frac': 0.5617129629629629, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [207], 'frame': 2075, 'n_cand': 3, 'partners': [271], 'rejected': []}
+kf 329/552: {'i': 329, 'pairs': 1, 'B_cm': [9.2], 'valid_frac': 0.43373842592592593, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [206], 'frame': 5527, 'n_cand': 4, 'partners': [332], 'rejected': []}
+kf 349/552: {'i': 349, 'pairs': 1, 'B_cm': [6.4], 'valid_frac': 0.41698109567901237, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [199], 'frame': 5722, 'n_cand': 13, 'partners': [351], 'rejected': []}
+kf 359/552: {'i': 359, 'pairs': 1, 'B_cm': [6.4], 'valid_frac': 0.5893827160493827, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [197], 'frame': 5824, 'n_cand': 4, 'partners': [355], 'rejected': []}
+kf 369/552: {'i': 369, 'pairs': 1, 'B_cm': [7.6], 'valid_frac': 0.2569212962962963, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [200], 'frame': 5891, 'n_cand': 11, 'partners': [371], 'rejected': []}
+kf 429/552: {'i': 429, 'pairs': 1, 'B_cm': [9.9], 'valid_frac': 0.40987268518518516, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [195], 'frame': 6211, 'n_cand': 8, 'partners': [427], 'rejected': []}
+kf 439/552: {'i': 439, 'pairs': 1, 'B_cm': [20.6], 'valid_frac': 0.17702739197530865, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [107], 'frame': 6264, 'n_cand': 3, 'partners': [444], 'rejected': []}
+kf 449/552: {'i': 449, 'pairs': 1, 'B_cm': [8.6], 'valid_frac': 0.49345871913580247, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [199], 'frame': 6313, 'n_cand': 10, 'partners': [447], 'rejected': []}
+kf 459/552: {'i': 459, 'pairs': 1, 'B_cm': [9.1], 'valid_frac': 0.47045524691358026, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [196], 'frame': 6380, 'n_cand': 10, 'partners': [457], 'rejected': []}
+kf 469/552: {'i': 469, 'pairs': 1, 'B_cm': [8.5], 'valid_frac': 0.2874363425925926, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [196], 'frame': 6443, 'n_cand': 11, 'partners': [467], 'rejected': []}
+kf 479/552: {'i': 479, 'pairs': 1, 'B_cm': [10.2], 'valid_frac': 0.2127276234567901, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [201], 'frame': 6513, 'n_cand': 5, 'partners': [477], 'rejected': []}
+[gpu_guard] GPU out of memory under the cap 0.75 -> run failed (no retry): CUDA 메모리 부족 (입력 865x487, triton). --scale 0.75 또는 0.5 로 줄일 것. 원문: CUDA out of memory. Tried to allocate 1.15 GiB. GPU 0 has a total capacity of 8.00 GiB of which 1.68 GiB is free. Includ
