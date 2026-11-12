@@ -1,0 +1,175 @@
+{
+ "poses": {
+  "source": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261022_133820/fix_u1/scan/ba/poses_ba.jsonl.gz",
+  "n": 203,
+  "se3_rmse_cm": 0.4681379394398888,
+  "sim3_scale_would_be": 1.0130312882945764,
+  "free_scale_applied": false,
+  "rot_diff_deg_median": 0.5960094036380298,
+  "compressed_rows": 196
+ },
+ "made": "2026-11-12 10:37:59",
+ "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261022_133820/fix_u1/scan/red/hs_20261022_133820_kf",
+ "gt": "imu_gt_spl_cal1022",
+ "args": {
+  "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261022_133820/fix_u1/scan/red/hs_20261022_133820_kf",
+  "out": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261022_133820/fix_u2ba/scan/mesh",
+  "gt": "imu_gt_spl_cal1022",
+  "scale": 0.5,
+  "kf_step": 1,
+  "n_pairs": 1,
+  "iters": 8,
+  "voxel": 0.005,
+  "zmax": 2.0,
+  "b_target": 0.08,
+  "vio": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261022_133820/fix_u1/scan/ba/poses_ba.jsonl.gz",
+  "free_scale": false,
+  "pose_noise_cm": 0.0,
+  "allow_fullres": false,
+  "rows_from": "",
+  "compress": true,
+  "tsdf_alloc": "dense",
+  "ffs_views": 2,
+  "ffs_fuse": "auto",
+  "ffs_partners": "all",
+  "ffs_dt_max": null,
+  "pair_min_valid": null,
+  "pair_check": "auto",
+  "keep_gt_not_ok": false,
+  "sigma_rot_deg": 0.1,
+  "sigma_b_rel": 0.02,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02
+ },
+ "board_mm": [
+  569.646,
+  316.47
+ ],
+ "square_mm": 63.294000000000004,
+ "gt_corner_px_median": 0.18881681561470032,
+ "n_kf": 196,
+ "n_kf_depth": 160,
+ "mesh_vertices": 166437,
+ "mesh_faces": 259610,
+ "runtime_s": 56.2,
+ "image_size": [
+  960,
+  540
+ ],
+ "K_used": [
+  [
+   651.9460924794001,
+   0.0,
+   484.19031371717165
+  ],
+  [
+   0.0,
+   651.4422678797331,
+   276.23278304372155
+  ],
+  [
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "gpu_max_alloc_gb": 1.13,
+ "gpu_max_reserved_gb": 1.41,
+ "ffs_views": 2,
+ "ffs_fuse": "mean",
+ "ffs_partners": "all",
+ "ffs_dt_max": 30.0,
+ "pair_min_valid": 0.0,
+ "pair_check": "dy",
+ "pair_check_n": 168,
+ "pair_check_rejected": 8,
+ "pair_check_s": 5.9,
+ "ffs_s_total": 33.7,
+ "ffs_s_used": 33.7,
+ "n_pairs_rejected": 0,
+ "n_kf_by_pairs": {
+  "0": 36,
+  "1": 160
+ },
+ "kf_board_absdZ_p50_cm_median": 0.27310991705163656,
+ "kf_board_absdZ_p90_cm_median": 0.4494065787718826,
+ "kf_board_dZ_bias_cm_median": -0.19592040440608305,
+ "kf_board_Z_m_median": 0.5806811280235576,
+ "n_kf_board_eval": 160,
+ "n_kf_no_pair": 36,
+ "kf_board_dZ_mean_cm_stats": {
+  "mean": -0.12616208050824212,
+  "median": -0.20210945256062618,
+  "p10": -0.3971214936380974,
+  "p90": 0.28897095015356655
+ },
+ "kf_board_dZ_med_cm_stats": {
+  "mean": -0.13856207176756818,
+  "median": -0.19592040440608305,
+  "p10": -0.4336145037656086,
+  "p90": 0.2989381812534064
+ },
+ "kf_board_absdZ_p50_cm_stats": {
+  "mean": 0.292961116637777,
+  "median": 0.27310991705163656,
+  "p10": 0.10396636589819153,
+  "p90": 0.5113120495146678
+ },
+ "kf_board_absdZ_mean_cm_stats": {
+  "mean": 0.30560871767893383,
+  "median": 0.27368816372721183,
+  "p10": 0.12845878307802444,
+  "p90": 0.5097946893008245
+ },
+ "pooled_dZ_cm": {
+  "n": 25465408,
+  "mean": -0.13150419294834137,
+  "median": -0.1671133041381836,
+  "p10": -0.512217104434967,
+  "p90": 0.33055946230888367
+ },
+ "pooled_absdZ_cm": {
+  "mean": 0.2966255843639374,
+  "median": 0.23610123991966248,
+  "p90": 0.6144232749938965
+ },
+ "kf_frac_abs_bias_gt_1cm": 0.00625,
+ "mesh_board_vertices": 6857,
+ "mesh_board_z_med_cm": -0.03162026405334473,
+ "mesh_board_z_rms_cm": 0.21525290608406067,
+ "mesh_board_z_p5_p95_cm": [
+  -0.36814531683921814,
+  0.2923938035964966
+ ],
+ "mesh_board_cover_frac": 1.0,
+ "mesh_board_z_unique_mm": 98,
+ "tsdf_alloc": "dense",
+ "depth_sigma": {
+  "rot_deg": 0.1,
+  "b_rel": 0.02,
+  "sigma_d_px": 0.5,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02,
+  "z_max": 2.0
+ },
+ "mesh_cam_depth_m": {
+  "n": 166437,
+  "p50": 0.5941800704281938,
+  "p90": 0.7931928634168107,
+  "p99": 0.9523479342013419,
+  "max": 1.3101627719760687,
+  "frac_gt_0p65": 0.3379957581547372,
+  "frac_gt_1p0": 0.004374027409770664
+ },
+ "tsdf_full": false,
+ "tsdf_blocks": 15499,
+ "tsdf_max_blocks": 60000,
+ "tsdf_log": [],
+ "gt_ok_filter": true,
+ "n_kf_gt_not_ok_dropped": 7,
+ "n_kf_gt_not_ok": 7,
+ "lib_ffs": {
+  "file": "/home/system/scanner/StereoDepthSeg/lib_ffs.py",
+  "sha": "9b820bc28df4caf7"
+ }
+}
