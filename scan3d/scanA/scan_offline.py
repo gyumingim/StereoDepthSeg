@@ -91,6 +91,24 @@ def main():
                     help="fixes 11-12 M1: with --vio, also use keyframes whose GT row is not 'ok' (board not seen / GT fit failed). "
                          "Default (off) = old behaviour: such keyframes are dropped from the mesh input (133820: 7 of 203). "
                          "Their board-depth check is skipped (no GT plane).")
+    # fixes 11-12 unit 14: far pixels from a second, wide-baseline partner (opt-in; off = old path unchanged). README section 14.
+    ap.add_argument("--far-pairs", choices=("off", "wide"), default="off",
+                    help="wide = every keyframe that has its normal (near) pair also gets a wide partner (~--far-baseline) and a 2nd FFS run; "
+                         "per pixel the near depth stays where it is valid and (sigma <= wide sigma or Z < --far-min-z); else the wide depth "
+                         "where its sigma passes --sigma-max (same sigma model, real baseline); near and wide disagreeing > k sigma -> near kept")
+    ap.add_argument("--far-baseline", type=float, default=0.35, help="wide partner target baseline (m)")
+    ap.add_argument("--far-b-tol", type=float, default=0.3, help="wide partner baseline window = target x (1 -+ tol)")
+    ap.add_argument("--far-rot-max", type=float, default=15.0, help="wide partner: max rotation vs the reference (deg)")
+    ap.add_argument("--far-dt-max", type=float, default=30.0, help="wide partner: max time to the reference (s)")
+    ap.add_argument("--far-min-overlap", type=float, default=0.5,
+                    help="wide partner: min fraction of the reference's (near-pair) 3D points (Z > 1 m preferred) seen inside the partner image")
+    ap.add_argument("--far-znear", type=float, default=0.9,
+                    help="wide pair: nearest depth the FFS disparity range must hold (sets the FFS input scale: B 0.35 m, f 643 -> s ~0.7); "
+                         "closer surfaces exceed FFS max disparity in the wide pair")
+    ap.add_argument("--far-min-z", type=float, default=1.6,
+                    help="below this depth the near pair always wins (wide pixels only at Z >= this; 0 = pure sigma rule). "
+                         "121801: 1.2 moved the < 1.2 m mesh more (p90 5.6 vs 3.6 mm) and added more small pieces for the same > 1.6 m gain")
+    ap.add_argument("--far-zmax", type=float, default=4.0, help="depth limit of the wide pair and the TSDF (near pair keeps --zmax)")
     # fixes 11-12 H1: depth noise model of a motion pair without a two-lens anchor (motion_stereo.pair_depth) + TSDF thresholds.
     # Defaults = old values (rotation 0.5 deg, baseline 10 %, sigma_max 0.08 m, sigma_ok 0.02 m): with them nothing beyond ~0.63 m
     # (baseline 7.2 cm) reaches the mesh. README of runs/fixes_20261112 section 2 for the 'ba' values (0.1 deg, 2 %).
@@ -274,6 +292,88 @@ def main():
         _dy[(i, j)] = okk
         dy_stat["checked"] += 1; dy_stat["rejected"] += int(not okk); dy_stat["s"] += time.perf_counter() - t0
         return okk
+
+    # fixes 11-12 unit 14 (--far-pairs wide): wide partner selection + per-pixel merge with the near pair
+    far = a.far_pairs == "wide"
+    cfg_far, far_stat = None, None
+    if far:
+        import copy
+        cfg_far = copy.copy(cfg)
+        cfg_far.z_max = max(a.far_zmax, a.zmax)
+        cfg_far.b_target_m = a.far_baseline
+        cfg_far.b_min_m, cfg_far.b_max_m = a.far_baseline * (1 - a.far_b_tol), a.far_baseline * (1 + a.far_b_tol)
+        cfg_far.max_rot_deg = a.far_rot_max
+        cfg_far.dt_max_s = a.far_dt_max
+        far_stat = dict(kf_tried=0, kf_with_partner=0, no_geom_cand=0, low_overlap=0, dy_rejected=0, px_added=0, px_replaced=0,
+                        px_conflict_kept_near=0, ffs_s=0.0, select_s=0.0, merge_s=0.0)
+
+    def pick_far(i, Zn, Vn, rays_):
+        """wide partner for keyframe i: score_pair with the wide window (B, rotation, dt) + view overlap = fraction of the reference's
+        near-pair 3D points (Z > 1 m if >= 50 of them, else all valid, else a 2.5 m plane) that land inside partner j's image
+        in front of it; best score first, SIFT dy check (dy_ok) on up to MSConfig.max_tries candidates. -> (j, overlap) or None."""
+        t0 = time.perf_counter()
+        st = 8
+        Zs_, Vs_ = Zn[::st, ::st], Vn[::st, ::st] & np.isfinite(Zn[::st, ::st])
+        rs_ = rays_[::st, ::st]
+        if (Vs_ & (Zs_ > 1.0)).sum() >= 50:
+            P = rs_[Vs_ & (Zs_ > 1.0)] * Zs_[Vs_ & (Zs_ > 1.0)][:, None]
+        elif Vs_.sum() >= 50:
+            P = rs_[Vs_] * Zs_[Vs_][:, None]
+        else:
+            P = rs_.reshape(-1, 3) * 2.5
+        Pw = P @ T[i][:3, :3].T + T[i][:3, 3]
+        cl = []
+        for j in range(n):
+            if j == i or not ok[j] or imgs[j] is None:
+                continue
+            dt_ = abs(t_ns[i] - t_ns[j]) * 1e-9
+            if dt_ > cfg_far.dt_max_s:
+                continue
+            if not (cfg_far.b_min_m <= np.linalg.norm(T[j][:3, 3] - T[i][:3, 3]) <= cfg_far.b_max_m):
+                continue
+            R, t = ms.rel_pose(T[i], T[j])
+            gg = ms.pair_geometry(R, t)
+            sc, _w = ms.score_pair(gg, dt_, cfg_far)
+            if sc is None:
+                continue
+            pc = (Pw - T[j][:3, 3]) @ T[j][:3, :3]
+            z = pc[:, 2]
+            with np.errstate(divide="ignore", invalid="ignore"):
+                u_ = pc[:, 0] / z * rp["f"] + rp["cx"]; v_ = pc[:, 1] / z * rp["f"] + rp["cy"]
+            ov = float(np.mean((z > 0.1) & (u_ >= 0) & (u_ < W0) & (v_ >= 0) & (v_ < H0)))
+            cl.append((sc + (1.0 - ov), j, gg, ov))
+        res_ = None
+        if not cl:
+            far_stat["no_geom_cand"] += 1
+        else:
+            cl.sort(key=lambda x: x[0])
+            good = [c for c in cl if c[3] >= a.far_min_overlap]
+            if not good:
+                far_stat["low_overlap"] += 1
+            for sc, j, gg, ov in good[:cfg.max_tries]:
+                if dy_ok(i, j):
+                    res_ = (j, ov)
+                    break
+                far_stat["dy_rejected"] += 1
+        far_stat["select_s"] += time.perf_counter() - t0
+        return res_
+
+    def merge_far(Z, V, S, rw):
+        """near (Z, V, S) + wide pair result rw -> (Z, V, S, counts). Near kept where valid and (wide invalid or near sigma <= wide sigma
+        or Z < --far-min-z); a near pixel the wide pair beats is replaced only if the two agree within k_sigma (else near kept = old
+        result); pixels without near depth take the wide depth at Z >= --far-min-z. Wide pixels need sigma <= --sigma-max."""
+        Zw, Sw = rw["Z"], rw["sigma"]
+        Vw = rw["valid"] & np.isfinite(Zw) & (Sw <= a.sigma_max)
+        Vn = V & np.isfinite(Z)
+        with np.errstate(invalid="ignore"):
+            keep_n = Vn & (~Vw | (S <= Sw) | (Z < a.far_min_z))
+            agree = np.abs(Z - Zw) <= cfg.k_sigma * np.hypot(S, Sw)
+            add = ~Vn & Vw & (Zw >= a.far_min_z)
+        repl = Vn & ~keep_n & agree
+        conf = Vn & ~keep_n & ~agree
+        take = repl | add
+        cnt = dict(add=int(add.sum()), repl=int(repl.sum()), conflict=int(conf.sum()))
+        return (np.where(take, Zw, Z).astype(np.float32), V | add, np.where(take, Sw, S).astype(np.float32), cnt)
     import lib_ffs
     trt_ffs = None
     if a.ffs_backend == "trt":
@@ -297,7 +397,7 @@ def main():
     tsdf_msgs = []
     def tsdf_log(m):                     # M3 (fixes 11-12): block-limit message printed + kept for the summary (no behaviour change)
         print(m, flush=True); tsdf_msgs.append(str(m))
-    tsdf_kw = dict(voxel_m=a.voxel, z_max=a.zmax, sigma_max=a.sigma_max, sigma_ok=a.sigma_ok, min_obs=2,
+    tsdf_kw = dict(voxel_m=a.voxel, z_max=(cfg_far.z_max if far else a.zmax), sigma_max=a.sigma_max, sigma_ok=a.sigma_ok, min_obs=2,
                    alloc_dense=(a.tsdf_alloc == "dense"), log=tsdf_log, max_blocks=a.tsdf_max_blocks)
     if a.tsdf_evict_gpu_blocks > 0:
         import tsdf_evict
@@ -356,6 +456,25 @@ def main():
             continue
         res = [rcache[c[1]] for c in chosen]
         Z, V, S, agree = ms.combine_motion(res, cfg) if fuse == "mean" else fuse_median(res, cfg.k_sigma)
+        far_row = None
+        if far:                                        # unit 14: wide partner -> 2nd FFS -> per-pixel merge (board check below sees the merge)
+            far_stat["kf_tried"] += 1
+            pf = pick_far(i, Z, V, rays)
+            if pf is not None:
+                jf, ovf = pf
+                R, t = ms.rel_pose(T[i], T[jf])
+                rw = ms.pair_depth(model, ffs_infer, imgs[i], imgs[jf], R, t, K, dist, rp, cfg_far, z_near=a.far_znear, iters=a.iters)
+                far_stat["ffs_s"] += rw["ms"]["ffs"] / 1000
+                tm_ = time.perf_counter()
+                Z, V, S, fc = merge_far(Z, V, S, rw)
+                far_stat["merge_s"] += time.perf_counter() - tm_
+                far_stat["kf_with_partner"] += 1
+                far_stat["px_added"] += fc["add"]; far_stat["px_replaced"] += fc["repl"]; far_stat["px_conflict_kept_near"] += fc["conflict"]
+                far_row = dict(far_partner=int(jf), far_B_cm=round(rw["B"] * 100, 1), far_overlap=round(ovf, 3), far_scale=rw["scale"],
+                               far_valid_frac=round(float(rw["valid"].mean()), 4), far_ffs_ms=round(rw["ms"]["ffs"]),
+                               far_add=fc["add"], far_repl=fc["repl"], far_conflict=fc["conflict"])
+            else:
+                far_row = dict(far_partner=None)
         bgr = cv2.remap(imgs[i], *und, cv2.INTER_LINEAR)
         # GT plane depth: board plane z=0 in world; ray in cam: X = Z*ray, world = R X + p, z_w = 0
         Rw, pw = Tgt[i][:3, :3], Tgt[i][:3, 3]   # GT plane depth always from the GT pose
@@ -378,6 +497,8 @@ def main():
             row["frame"] = int(sel[i])
         if a.n_pairs != 2 or a.ffs_partners != "near":     # keyframes.json of the default run stays byte-identical to the old one
             row.update(n_cand=len(cands), partners=[int(c[1]) for c in chosen], rejected=[int(x) for x in rejected])
+        if far_row is not None:
+            row.update(far_row)
         rows.append(row)
         if a.dump_depth:
             Zq = np.where(V & np.isfinite(Z), np.clip(np.round(np.nan_to_num(Z) * 1e4), 1, 65535), 0).astype(np.uint16)
@@ -403,6 +524,12 @@ def main():
                 ffs_s_total=round(ffs_ms_all[0] / 1000, 1), ffs_s_used=round(sum(sum(r.get("ffs_ms", [])) for r in rows) / 1000, 1),
                 n_pairs_rejected=sum(len(r.get("rejected", [])) for r in rows),
                 n_kf_by_pairs={str(k): sum(1 for r in rows if r.get("pairs", 0) == k) for k in range(a.n_pairs + 1)})
+    if far:      # unit 14: ffs_s_total above = near pairs only; pair_check_* include the wide partners' dy checks
+        fb = [r["far_B_cm"] for r in rows if r.get("far_B_cm") is not None]
+        summ["far_pairs"] = dict(far_stat, ffs_s=round(far_stat["ffs_s"], 1), select_s=round(far_stat["select_s"], 1),
+                                 merge_s=round(far_stat["merge_s"], 1), B_cm_p10_p50_p90=[float(x) for x in np.percentile(fb, [10, 50, 90])] if fb else None,
+                                 cfg=dict(baseline=a.far_baseline, b_tol=a.far_b_tol, rot_max=a.far_rot_max, dt_max=a.far_dt_max,
+                                          min_overlap=a.far_min_overlap, znear=a.far_znear, min_z=a.far_min_z, zmax=cfg_far.z_max))
     ev = [r for r in rows if "board_absdZ_p50_cm" in r]
     if ev:
         summ["kf_board_absdZ_p50_cm_median"] = float(np.median([r["board_absdZ_p50_cm"] for r in ev]))

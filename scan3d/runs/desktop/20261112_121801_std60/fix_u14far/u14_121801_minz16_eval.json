@@ -1,0 +1,141 @@
+{
+ "made": "2026-11-12 21:33:49",
+ "base": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261112_121801_std60/fix_u14far/mesh_base",
+ "far": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261112_121801_std60/fix_u14far/mesh_far_minz16",
+ "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/red/hs_20261112_121801_std60_kf",
+ "results": {
+  "base": {
+   "path": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261112_121801_std60/fix_u14far/mesh_base/mesh.ply",
+   "vertices": 1904073,
+   "faces": 3221754,
+   "cam_depth_m": {
+    "p50": 1.0442967414855957,
+    "p90": 1.288008451461792,
+    "p99": 1.4435350894927979,
+    "max": 1.5872706174850464,
+    "frac_not_in_view": 0.0
+   },
+   "v_gt_1p6": 0,
+   "v_gt_2p0": 0,
+   "v_gt_2p5": 0,
+   "top_area_m2": 11.79,
+   "top_area_gt_1p6_m2": 0.0,
+   "top_area_gt_2p5_m2": 0.0,
+   "components": 8422,
+   "floater_frac_lt500": 0.03901583605250429,
+   "floater_frac_lt5000": 0.05970726962674225,
+   "floater_v_lt500": 74289,
+   "floater_v_lt5000": 113687,
+   "components_lt500": 8381,
+   "components_lt5000": 8405,
+   "gt_1p6_floater_frac_lt500": null,
+   "gt_1p6_floater_frac_lt5000": null,
+   "runtime_s": 110.2,
+   "ffs_s_total": 66.2,
+   "far_pairs": null,
+   "tsdf_blocks": 154606,
+   "tsdf_full": false,
+   "ffs_backend": "pytorch"
+  },
+  "far": {
+   "path": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261112_121801_std60/fix_u14far/mesh_far_minz16/mesh.ply",
+   "vertices": 2418021,
+   "faces": 4079069,
+   "cam_depth_m": {
+    "p50": 1.0946816205978394,
+    "p90": 1.4238903522491455,
+    "p99": 1.9890607595443726,
+    "max": 2.624643564224243,
+    "frac_not_in_view": 0.0
+   },
+   "v_gt_1p6": 105807,
+   "v_gt_2p0": 22709,
+   "v_gt_2p5": 1147,
+   "top_area_m2": 15.74,
+   "top_area_gt_1p6_m2": 1.74,
+   "top_area_gt_2p5_m2": 0.04,
+   "components": 10021,
+   "floater_frac_lt500": 0.039230842081189536,
+   "floater_frac_lt5000": 0.058906022735120994,
+   "floater_v_lt500": 94861,
+   "floater_v_lt5000": 142436,
+   "components_lt500": 9977,
+   "components_lt5000": 10005,
+   "gt_1p6_floater_frac_lt500": 0.014923398262874856,
+   "gt_1p6_floater_frac_lt5000": 0.039118394813197614,
+   "runtime_s": 150.0,
+   "ffs_s_total": 46.6,
+   "far_pairs": {
+    "kf_tried": 351,
+    "kf_with_partner": 240,
+    "no_geom_cand": 80,
+    "low_overlap": 2,
+    "dy_rejected": 125,
+    "px_added": 4703146,
+    "px_replaced": 8824647,
+    "px_conflict_kept_near": 152090,
+    "ffs_s": 48.0,
+    "select_s": 4.4,
+    "merge_s": 1.0,
+    "B_cm_p10_p50_p90": [
+     27.39,
+     33.6,
+     36.71
+    ],
+    "cfg": {
+     "baseline": 0.35,
+     "b_tol": 0.3,
+     "rot_max": 15.0,
+     "dt_max": 30.0,
+     "min_overlap": 0.5,
+     "znear": 0.9,
+     "min_z": 1.6,
+     "zmax": 4.0
+    }
+   },
+   "tsdf_blocks": 227135,
+   "tsdf_full": false,
+   "ffs_backend": "pytorch",
+   "top_area_new_vs_base_m2": 3.98
+  },
+  "near_lt_1p2m": {
+   "base_vertices": 1512087,
+   "far_vertices": 1638630,
+   "far_to_base_median_mm": 0.006198883056640625,
+   "far_to_base_p90_mm": 7.118701934814453,
+   "far_to_base_frac_gt_2cm": 0.04926127313670566,
+   "base_to_far_median_mm": 0.0016689300537109375,
+   "base_to_far_p90_mm": 3.5976563819428056,
+   "base_covered_frac_2cm": 0.9971006959255652,
+   "base_to_far_exact_frac_0p1mm": 0.634990579245771
+  },
+  "band_1p2_1p6m": {
+   "base_vertices": 391986,
+   "base_to_far_median_mm": 1.1578885923830153,
+   "base_to_far_p90_mm": 8.100059208568013
+  },
+  "kfviews_rows": [
+   {
+    "i": 453,
+    "frame": 3252,
+    "far_add": 90470,
+    "far_partner": 446,
+    "far_B_cm": 34.0
+   },
+   {
+    "i": 40,
+    "frame": 570,
+    "far_add": 89925,
+    "far_partner": 32,
+    "far_B_cm": 32.9
+   },
+   {
+    "i": 159,
+    "frame": 1308,
+    "far_add": 57386,
+    "far_partner": 152,
+    "far_B_cm": 31.0
+   }
+  ]
+ }
+}
