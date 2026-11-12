@@ -1,0 +1,124 @@
+{
+ "poses": {
+  "source": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261106_220612_std60/fix_u3/scan/ba/poses_ba.jsonl.gz",
+  "n": 285,
+  "se3_rmse_cm": 3.95342283667059,
+  "sim3_scale_would_be": 0.9999999999999989,
+  "free_scale_applied": false,
+  "rot_diff_deg_median": 2.314809956933849,
+  "compressed_rows": 285
+ },
+ "made": "2026-11-12 11:10:57",
+ "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261106_220612_std60/fix_u3/scan/red/hs_20261106_220612_std60_kf",
+ "gt": "lensonly",
+ "args": {
+  "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261106_220612_std60/fix_u3/scan/red/hs_20261106_220612_std60_kf",
+  "out": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261106_220612_std60/fix_u7cap250k/scan/mesh",
+  "gt": "lensonly",
+  "scale": 0.5,
+  "kf_step": 1,
+  "n_pairs": 1,
+  "iters": 8,
+  "voxel": 0.005,
+  "zmax": 2.0,
+  "tsdf_max_blocks": 250000,
+  "b_target": 0.08,
+  "vio": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261106_220612_std60/fix_u3/scan/ba/poses_ba.jsonl.gz",
+  "free_scale": false,
+  "pose_noise_cm": 0.0,
+  "allow_fullres": false,
+  "rows_from": "",
+  "compress": true,
+  "tsdf_alloc": "dense",
+  "ffs_views": 2,
+  "ffs_fuse": "auto",
+  "ffs_partners": "all",
+  "ffs_dt_max": null,
+  "pair_min_valid": null,
+  "pair_check": "auto",
+  "keep_gt_not_ok": false,
+  "sigma_rot_deg": 0.1,
+  "sigma_b_rel": 0.02,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02
+ },
+ "board_mm": [
+  302.0,
+  181.19999999999996
+ ],
+ "square_mm": 60.4,
+ "gt_corner_px_median": null,
+ "n_kf": 285,
+ "n_kf_depth": 228,
+ "mesh_vertices": 1394583,
+ "mesh_faces": 2418089,
+ "runtime_s": 101.0,
+ "image_size": [
+  960,
+  540
+ ],
+ "K_used": [
+  [
+   643.1272697202457,
+   0.0,
+   482.59568880974615
+  ],
+  [
+   0.0,
+   643.2218309269573,
+   276.6095206454582
+  ],
+  [
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "gpu_max_alloc_gb": 2.41,
+ "gpu_max_reserved_gb": 3.58,
+ "ffs_views": 2,
+ "ffs_fuse": "mean",
+ "ffs_partners": "all",
+ "ffs_dt_max": 30.0,
+ "pair_min_valid": 0.0,
+ "pair_check": "dy",
+ "pair_check_n": 630,
+ "pair_check_rejected": 402,
+ "pair_check_s": 9.5,
+ "ffs_s_total": 56.1,
+ "ffs_s_used": 56.1,
+ "n_pairs_rejected": 0,
+ "n_kf_by_pairs": {
+  "0": 57,
+  "1": 228
+ },
+ "tsdf_alloc": "dense",
+ "depth_sigma": {
+  "rot_deg": 0.1,
+  "b_rel": 0.02,
+  "sigma_d_px": 0.5,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02,
+  "z_max": 2.0
+ },
+ "mesh_cam_depth_m": {
+  "n": 1394583,
+  "p50": 1.1685292703097059,
+  "p90": 1.404207810824438,
+  "p99": 1.5074157033039386,
+  "max": 1.6225331966926702,
+  "frac_gt_0p65": 0.9825783047692392,
+  "frac_gt_1p0": 0.7192013670036133
+ },
+ "tsdf_full": false,
+ "tsdf_blocks": 138632,
+ "tsdf_max_blocks": 250000,
+ "tsdf_log": [],
+ "gt_ok_filter": true,
+ "n_kf_gt_not_ok_dropped": 0,
+ "n_kf_gt_not_ok": 0,
+ "lib_ffs": {
+  "file": "/home/system/scanner/StereoDepthSeg/lib_ffs.py",
+  "sha": "9b820bc28df4caf7"
+ }
+}
