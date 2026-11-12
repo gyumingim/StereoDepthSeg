@@ -1,0 +1,92 @@
+{
+ "prep": "/home/system/scanner/mvs_tmp/121801",
+ "inputs": [
+  "base=scan3d/runs/desktop/20261112_121801_std60/mvs_base/mesh/mesh.ply",
+  "mvsf960=scan3d/runs/desktop/20261112_121801_std60/mvs_mvsf960/tsdf/mesh.ply",
+  "mvsf1920=scan3d/runs/laptop/20261112_121801_std60/mvs_mvsf1920/tsdf_mvsf1920/mesh.ply"
+ ],
+ "results": {
+  "base": {
+   "path": "scan3d/runs/desktop/20261112_121801_std60/mvs_base/mesh/mesh.ply",
+   "vertices": 1904073,
+   "cam_depth_m": {
+    "n": 1904073,
+    "p50": 1.036233901977539,
+    "p90": 1.2807461023330688,
+    "p99": 1.4341272115707397,
+    "max": 1.5794562101364136,
+    "frac_gt_1p0": 0.5750819427616484,
+    "frac_gt_1p6": 0.0,
+    "frac_gt_2p0": 0.0
+   },
+   "frac_not_in_any_view": 0.0,
+   "kf_view_cover_median": 0.36311728395061726,
+   "kf_view_cover_lt_0p1": 0.10931174089068826,
+   "top_area_m2_5cm": 11.79,
+   "kf_view_cover_median_base_kfs": 0.47694444444444445,
+   "near_lt_1m_vertices": 809075
+  },
+  "mvsf960": {
+   "path": "scan3d/runs/desktop/20261112_121801_std60/mvs_mvsf960/tsdf/mesh.ply",
+   "vertices": 1095536,
+   "cam_depth_m": {
+    "n": 1095536,
+    "p50": 1.103895664215088,
+    "p90": 1.371781826019287,
+    "p99": 1.657510757446289,
+    "max": 1.8968968391418457,
+    "frac_gt_1p0": 0.705962195674081,
+    "frac_gt_1p6": 0.014251471425859122,
+    "frac_gt_2p0": 0.0
+   },
+   "frac_not_in_any_view": 0.0,
+   "kf_view_cover_median": 0.32392746913580245,
+   "kf_view_cover_lt_0p1": 0.1417004048582996,
+   "top_area_m2_5cm": 11.84,
+   "kf_view_cover_median_base_kfs": 0.3785648148148148,
+   "near_lt_1m": {
+    "vertices": 322128,
+    "to_ref_median_mm": 3.60107421875,
+    "to_ref_p90_mm": 124.48708458060365,
+    "to_ref_frac_gt_2cm": 0.19876260368549148,
+    "ref_to_this_median_mm": 33.17627035893937,
+    "ref_to_this_p90_mm": 609.084132571034,
+    "ref_covered_frac_2cm": 0.4241238451317863,
+    "overlap_5cm_frac": 0.8358106094471762,
+    "overlap_5cm_to_ref_median_mm": 2.8317972298670755,
+    "overlap_5cm_to_ref_p90_mm": 10.0185996174652
+   }
+  },
+  "mvsf1920": {
+   "path": "scan3d/runs/laptop/20261112_121801_std60/mvs_mvsf1920/tsdf_mvsf1920/mesh.ply",
+   "vertices": 1325202,
+   "cam_depth_m": {
+    "n": 1325202,
+    "p50": 1.0997689962387085,
+    "p90": 1.376264214515686,
+    "p99": 1.670247197151184,
+    "max": 1.894189476966858,
+    "frac_gt_1p0": 0.7017013255337676,
+    "frac_gt_1p6": 0.0163975001546934,
+    "frac_gt_2p0": 0.0
+   },
+   "frac_not_in_any_view": 0.0,
+   "kf_view_cover_median": 0.34432484567901234,
+   "kf_view_cover_lt_0p1": 0.08906882591093117,
+   "top_area_m2_5cm": 13.55,
+   "kf_view_cover_median_base_kfs": 0.41749228395061727,
+   "near_lt_1m": {
+    "vertices": 395306,
+    "to_ref_median_mm": 4.306425441264473,
+    "to_ref_p90_mm": 205.5199888532332,
+    "to_ref_frac_gt_2cm": 0.2601453051560057,
+    "ref_to_this_median_mm": 26.356250686599285,
+    "ref_to_this_p90_mm": 556.1766323613497,
+    "ref_covered_frac_2cm": 0.4594617309890925,
+    "overlap_5cm_frac": 0.7896439720115556,
+    "overlap_5cm_to_ref_median_mm": 3.014047883731683,
+    "overlap_5cm_to_ref_p90_mm": 12.752486069049178
+   }
+  }
+ }
+}

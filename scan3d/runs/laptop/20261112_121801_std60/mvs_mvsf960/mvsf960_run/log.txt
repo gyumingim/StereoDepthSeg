@@ -1,0 +1,54 @@
+FLASH ATTENTION2 not available
+/home/system/scanner/third_party/MVSFormerPlusPlus/models/dino/layers/attention.py:277: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+/home/system/scanner/third_party/MVSFormerPlusPlus/models/cost_volume.py:64: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=False):
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/_dynamo/eval_frame.py:1263: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/utils/checkpoint.py:232: UserWarning: None of the inputs have requires_grad=True. Gradients will be None
+  check_backward_validity(args)
+!!!No weight in ./pretrained_models/dinov2_vitb14_pretrain.pth testing should neglect this.
+[infer] 0/494 00248.jpg 1.75s d p50 1.08 conf p50 0.45
+[infer] 25/494 00463.jpg 0.52s d p50 1.27 conf p50 0.46
+[infer] 50/494 00634.jpg 0.53s d p50 3.59 conf p50 0.20
+[infer] 75/494 00785.jpg 0.53s d p50 2.11 conf p50 0.40
+[infer] 100/494 00934.jpg 0.53s d p50 1.66 conf p50 0.54
+[infer] 125/494 01084.jpg 0.53s d p50 1.37 conf p50 0.46
+[infer] 150/494 01257.jpg 0.53s d p50 1.93 conf p50 0.59
+[infer] 175/494 01403.jpg 0.53s d p50 1.47 conf p50 0.50
+[infer] 200/494 01588.jpg 0.53s d p50 1.28 conf p50 0.38
+[infer] 225/494 01772.jpg 0.53s d p50 2.28 conf p50 0.35
+[infer] 250/494 01933.jpg 0.53s d p50 1.42 conf p50 0.40
+[infer] 275/494 02147.jpg 0.53s d p50 2.14 conf p50 0.24
+[infer] 300/494 02378.jpg 0.53s d p50 2.04 conf p50 0.21
+[infer] 325/494 02528.jpg 0.53s d p50 2.87 conf p50 0.30
+[infer] 350/494 02652.jpg 0.53s d p50 2.20 conf p50 0.47
+[infer] 375/494 02788.jpg 0.53s d p50 1.50 conf p50 0.54
+[infer] 400/494 02935.jpg 0.53s d p50 1.21 conf p50 0.46
+[infer] 425/494 03092.jpg 0.53s d p50 2.29 conf p50 0.55
+[infer] 450/494 03235.jpg 0.53s d p50 1.97 conf p50 0.76
+[infer] 475/494 03362.jpg 0.53s d p50 1.22 conf p50 0.69
+{
+ "made": "2026-11-12 15:12:13",
+ "prep": "/home/system/scanner/mvs_tmp/121801",
+ "size": 960,
+ "padded": [
+  960,
+  576
+ ],
+ "pad_top": 18,
+ "n_src": 10,
+ "ndepth": 192,
+ "ckpt": "/home/system/scanner/third_party/mvsformerpp_weights/tnt_ckpt/model_best.pth",
+ "conf": 0.5,
+ "torch": "2.11.0+cu128",
+ "infer_s": 326.1,
+ "infer_model_s": 263.1,
+ "infer_per_kf_s": 0.53,
+ "infer_gpu_max_alloc_gb": 1.6,
+ "fused_points_raw": 59961749,
+ "filter_s": 107.3,
+ "fused_points": 6901780,
+ "kept_frac_median": 0.18506655092592592,
+ "n_kf": 494
+}

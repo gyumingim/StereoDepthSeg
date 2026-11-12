@@ -1,0 +1,56 @@
+kf 0/494 {'i': 0, 'name': '00248.jpg', 'depth': True, 'valid_frac': 0.0017, 'B_m': 0.26385000000000003, 'z_p50': 1.198, 'z_p99': 1.347, 'frac_sigma_le_0p08': 1.0}
+kf 50/494 {'i': 50, 'name': '00634.jpg', 'depth': True, 'valid_frac': 0.0605, 'B_m': 1.0762, 'z_p50': 2.956, 'z_p99': 4.08, 'frac_sigma_le_0p08': 0.8543}
+kf 100/494 {'i': 100, 'name': '00934.jpg', 'depth': True, 'valid_frac': 0.2202, 'B_m': 0.3955, 'z_p50': 2.017, 'z_p99': 3.328, 'frac_sigma_le_0p08': 0.9563}
+kf 150/494 {'i': 150, 'name': '01257.jpg', 'depth': True, 'valid_frac': 0.3782, 'B_m': 0.33120000000000005, 'z_p50': 1.56, 'z_p99': 3.191, 'frac_sigma_le_0p08': 0.9835}
+kf 200/494 {'i': 200, 'name': '01588.jpg', 'depth': True, 'valid_frac': 0.0713, 'B_m': 0.16060000000000002, 'z_p50': 1.272, 'z_p99': 1.683, 'frac_sigma_le_0p08': 1.0}
+kf 250/494 {'i': 250, 'name': '01933.jpg', 'depth': True, 'valid_frac': 0.0587, 'B_m': 0.47395, 'z_p50': 1.135, 'z_p99': 5.158, 'frac_sigma_le_0p08': 0.9684}
+kf 300/494 {'i': 300, 'name': '02378.jpg', 'depth': True, 'valid_frac': 0.0342, 'B_m': 0.65245, 'z_p50': 3.125, 'z_p99': 4.878, 'frac_sigma_le_0p08': 0.7955}
+kf 350/494 {'i': 350, 'name': '02652.jpg', 'depth': True, 'valid_frac': 0.2537, 'B_m': 0.5188999999999999, 'z_p50': 2.042, 'z_p99': 7.571, 'frac_sigma_le_0p08': 0.7382}
+kf 400/494 {'i': 400, 'name': '02935.jpg', 'depth': True, 'valid_frac': 0.066, 'B_m': 0.6214500000000001, 'z_p50': 3.716, 'z_p99': 6.283, 'frac_sigma_le_0p08': 0.4468}
+kf 450/494 {'i': 450, 'name': '03235.jpg', 'depth': True, 'valid_frac': 0.602, 'B_m': 0.32515, 'z_p50': 1.991, 'z_p99': 3.696, 'frac_sigma_le_0p08': 0.9338}
+{
+ "made": "2026-11-12 15:19:57",
+ "prep": "/home/system/scanner/mvs_tmp/121801",
+ "source": "mvsf",
+ "path": "scan3d/runs/laptop/20261112_121801_std60/mvs_mvsf960/mvsf960",
+ "args": {
+  "prep": "/home/system/scanner/mvs_tmp/121801",
+  "out": "scan3d/runs/laptop/20261112_121801_std60/mvs_mvsf960/tsdf_mvsf960",
+  "source": "mvsf",
+  "path": "scan3d/runs/laptop/20261112_121801_std60/mvs_mvsf960/mvsf960",
+  "zmax": 2.0,
+  "max_blocks": 250000,
+  "evict_gpu_blocks": 0,
+  "sigma_rot_deg": 0.1,
+  "sigma_b_rel": 0.02,
+  "sigma_d_px": 0.5
+ },
+ "tsdf_cfg": {
+  "voxel_m": 0.005,
+  "z_max": 2.0,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02,
+  "min_obs": 2,
+  "alloc_dense": true,
+  "max_blocks": 250000
+ },
+ "sigma_model": {
+  "sigma_d_px": 0.5,
+  "rot_deg": 0.1,
+  "b_rel": 0.02,
+  "B": "median baseline of views.json src"
+ },
+ "n_kf": 494,
+ "n_kf_depth": 494,
+ "mesh_vertices": 1083918,
+ "mesh_faces": 1744457,
+ "read_s": 1.4,
+ "integrate_s": 7.4,
+ "mesh_s": 2.0,
+ "runtime_s": 16.0,
+ "tsdf_full": false,
+ "tsdf_blocks": 91249,
+ "tsdf_log": [],
+ "gpu_max_alloc_gb": 1.54,
+ "valid_frac_median": 0.1851
+}

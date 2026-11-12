@@ -1,0 +1,46 @@
+{
+ "made": "2026-11-12 20:51:04",
+ "prep": "/home/system/scanner/mvs_tmp/121801",
+ "source": "mvsf",
+ "path": "/home/system/scanner/mvs_tmp/121801/mvsf960_desktop",
+ "args": {
+  "prep": "/home/system/scanner/mvs_tmp/121801",
+  "out": "scan3d/runs/desktop/20261112_121801_std60/mvs_mvsf960/tsdf_z5",
+  "source": "mvsf",
+  "path": "/home/system/scanner/mvs_tmp/121801/mvsf960_desktop",
+  "zmax": 5.0,
+  "max_blocks": 250000,
+  "evict_gpu_blocks": 0,
+  "sigma_rot_deg": 0.1,
+  "sigma_b_rel": 0.02,
+  "sigma_d_px": 0.5
+ },
+ "tsdf_cfg": {
+  "voxel_m": 0.005,
+  "z_max": 5.0,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02,
+  "min_obs": 2,
+  "alloc_dense": true,
+  "max_blocks": 250000
+ },
+ "sigma_model": {
+  "sigma_d_px": 0.5,
+  "rot_deg": 0.1,
+  "b_rel": 0.02,
+  "B": "median baseline of views.json src"
+ },
+ "n_kf": 494,
+ "n_kf_depth": 494,
+ "mesh_vertices": 1601467,
+ "mesh_faces": 2547077,
+ "read_s": 1.1,
+ "integrate_s": 6.9,
+ "mesh_s": 2.1,
+ "runtime_s": 14.1,
+ "tsdf_full": false,
+ "tsdf_blocks": 171101,
+ "tsdf_log": [],
+ "gpu_max_alloc_gb": 3.21,
+ "valid_frac_median": 0.1838
+}

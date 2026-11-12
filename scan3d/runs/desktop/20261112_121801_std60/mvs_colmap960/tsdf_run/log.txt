@@ -1,0 +1,56 @@
+kf 0/494 {'i': 0, 'name': '00248.jpg', 'depth': True, 'valid_frac': 0.5492, 'B_m': 0.26385000000000003, 'z_p50': 1.193, 'z_p99': 1.559, 'frac_sigma_le_0p08': 1.0}
+kf 50/494 {'i': 50, 'name': '00634.jpg', 'depth': True, 'valid_frac': 0.1744, 'B_m': 1.0762, 'z_p50': 2.745, 'z_p99': 4.346, 'frac_sigma_le_0p08': 0.902}
+kf 100/494 {'i': 100, 'name': '00934.jpg', 'depth': True, 'valid_frac': 0.4589, 'B_m': 0.3955, 'z_p50': 1.827, 'z_p99': 2.795, 'frac_sigma_le_0p08': 0.9997}
+kf 150/494 {'i': 150, 'name': '01257.jpg', 'depth': True, 'valid_frac': 0.687, 'B_m': 0.33120000000000005, 'z_p50': 1.696, 'z_p99': 3.219, 'frac_sigma_le_0p08': 0.9795}
+kf 200/494 {'i': 200, 'name': '01588.jpg', 'depth': True, 'valid_frac': 0.4607, 'B_m': 0.16060000000000002, 'z_p50': 1.258, 'z_p99': 1.816, 'frac_sigma_le_0p08': 1.0}
+kf 250/494 {'i': 250, 'name': '01933.jpg', 'depth': True, 'valid_frac': 0.6091, 'B_m': 0.47395, 'z_p50': 1.222, 'z_p99': 3.536, 'frac_sigma_le_0p08': 0.9838}
+kf 300/494 {'i': 300, 'name': '02378.jpg', 'depth': True, 'valid_frac': 0.1017, 'B_m': 0.65245, 'z_p50': 3.299, 'z_p99': 6.013, 'frac_sigma_le_0p08': 0.5938}
+kf 350/494 {'i': 350, 'name': '02652.jpg', 'depth': True, 'valid_frac': 0.401, 'B_m': 0.5188999999999999, 'z_p50': 2.258, 'z_p99': 7.406, 'frac_sigma_le_0p08': 0.7122}
+kf 400/494 {'i': 400, 'name': '02935.jpg', 'depth': True, 'valid_frac': 0.3911, 'B_m': 0.6214500000000001, 'z_p50': 1.204, 'z_p99': 6.979, 'frac_sigma_le_0p08': 0.5811}
+kf 450/494 {'i': 450, 'name': '03235.jpg', 'depth': True, 'valid_frac': 0.8438, 'B_m': 0.32515, 'z_p50': 1.937, 'z_p99': 3.805, 'frac_sigma_le_0p08': 0.9388}
+{
+ "made": "2026-11-12 16:19:19",
+ "prep": "/home/system/scanner/mvs_tmp/121801",
+ "source": "colmap",
+ "path": "/home/system/scanner/mvs_tmp/121801/colmap960",
+ "args": {
+  "prep": "/home/system/scanner/mvs_tmp/121801",
+  "out": "scan3d/runs/desktop/20261112_121801_std60/mvs_colmap960/tsdf",
+  "source": "colmap",
+  "path": "/home/system/scanner/mvs_tmp/121801/colmap960",
+  "zmax": 2.0,
+  "max_blocks": 250000,
+  "evict_gpu_blocks": 0,
+  "sigma_rot_deg": 0.1,
+  "sigma_b_rel": 0.02,
+  "sigma_d_px": 0.5
+ },
+ "tsdf_cfg": {
+  "voxel_m": 0.005,
+  "z_max": 2.0,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02,
+  "min_obs": 2,
+  "alloc_dense": true,
+  "max_blocks": 250000
+ },
+ "sigma_model": {
+  "sigma_d_px": 0.5,
+  "rot_deg": 0.1,
+  "b_rel": 0.02,
+  "B": "median baseline of views.json src"
+ },
+ "n_kf": 494,
+ "n_kf_depth": 494,
+ "mesh_vertices": 3750124,
+ "mesh_faces": 5877613,
+ "read_s": 0.5,
+ "integrate_s": 6.7,
+ "mesh_s": 7.1,
+ "runtime_s": 18.6,
+ "tsdf_full": false,
+ "tsdf_blocks": 192349,
+ "tsdf_log": [],
+ "gpu_max_alloc_gb": 2.74,
+ "valid_frac_median": 0.52675
+}
