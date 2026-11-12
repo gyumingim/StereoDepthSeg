@@ -142,7 +142,7 @@ class HsPreview {
                 // 0.6.12: same look as the ov guide: white text on an opaque band + screen below the preview in the step
                 // colour by step order (OvGuide.stepBg), so each step is clearly different from 1-2 m
                 still.setTextSize(40); still.setTextColor(Color.WHITE); still.setShadowLayer(0, 0, 0, 0);
-                still.setBackgroundColor(OvGuide.stepBg(ph)); root.setBackgroundColor(OvGuide.stepBg(ph));
+                still.setBackgroundColor((OvGuide.stepBg(ph) & 0x00FFFFFF) | 0x66000000); root.setBackgroundColor(OvGuide.stepBg(ph));  // 0.6.39: band 40 % opaque so the preview shows through
                 still.setPadding(24, 32, 24, 32);
                 still.setText(guide[ph][1] + "\n" + left + "\n" + next
                         + String.format(Locale.US, "\n녹화 %d:%02d / %d:%02d", s / 60, s % 60, guideEnd / 60, guideEnd % 60));
