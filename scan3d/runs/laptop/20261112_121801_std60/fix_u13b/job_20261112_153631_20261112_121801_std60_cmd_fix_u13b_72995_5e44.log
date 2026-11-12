@@ -1,0 +1,29 @@
+15:36:49 step cmd start
+pt 60 s, GPU peak 5859 MiB
+pt_bucket 39 s, GPU peak 1855 MiB
+pt_fp32 70 s, GPU peak 5579 MiB
+trt_dyn FAILED
+[tsdf] alloc dense
+[11/12/2026-15:39:47] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+[11/12/2026-15:39:47] [TRT] [E] IExecutionContext::enqueueV3: Error Code 1: Myelin ([exec_instruction.cpp:1367: exec] CUDA error 720 launching __myl_Inor kernel. In executeMyelinGraph at /_src/runtime/myelin/runner.cpp:878)
+Traceback (most recent call last):
+  File "/home/system/scanner/StereoDepthSeg-fixes/scan3d/scanA/scan_offline.py", line 533, in <module>
+    main()
+  File "/home/system/scanner/StereoDepthSeg-fixes/scan3d/scanA/scan_offline.py", line 334, in main
+    rcache[j] = ms.pair_depth(model, ffs_infer, imgs[i], imgs[j], R, t, K, dist, rp, cfg, iters=a.iters)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/system/scanner/StereoDepthSeg-fixes/scan3d/motion_stereo.py", line 361, in pair_depth
+    disp = infer(model, rgbL, rgbR, valid_iters=iters, scale=s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py", line 202, in infer
+    d = self.run(tl, tr)
+        ^^^^^^^^^^^^^^^^
+  File "/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py", line 173, in run
+    raise RuntimeError("--ffs-backend trt: execute_async_v3 failed")
+RuntimeError: --ffs-backend trt: execute_async_v3 failed
+Command exited with non-zero status 1
+TIME trt_dyn 9.11 s maxrss 2226308 kB
+cmp ptfull_vs_trt_dyn failed
+cmp fp32_vs_trt_dyn failed
+15:39:59 trt13b_job done
+15:39:59 step cmd done

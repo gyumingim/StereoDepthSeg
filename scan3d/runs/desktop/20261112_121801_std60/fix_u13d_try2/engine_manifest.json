@@ -1,0 +1,85 @@
+{
+ "made": "2026-11-12 17:17:48",
+ "trt": "10.16.1.11",
+ "torch": "2.11.0+cu128",
+ "gpu": "NVIDIA GeForce RTX 5080",
+ "ckpt": "model_best_bp2_serialize.pth:71105659:6f3a487418c1df10",
+ "valid_iters": 8,
+ "max_disp": 192,
+ "export_version": 2,
+ "precision": "fp16",
+ "export": "upstream scripts/make_single_onnx.py volume builders, opset 17, normalisation outside",
+ "engines": [
+  {
+   "H": 544,
+   "W": 960,
+   "file": "ffs_c_it8_md192_544x960.engine",
+   "sha": "b302bfa3cdaafd3e"
+  },
+  {
+   "H": 960,
+   "W": 544,
+   "file": "ffs_c_it8_md192_960x544.engine",
+   "sha": "836dace57dc8c3ab"
+  },
+  {
+   "H": 384,
+   "W": 672,
+   "file": "ffs_c_it8_md192_384x672_dyn.engine",
+   "sha": "2979de1112407f69",
+   "dynamic": true,
+   "min": [
+    128,
+    128
+   ],
+   "opt": [
+    384,
+    672
+   ],
+   "max": [
+    544,
+    960
+   ]
+  },
+  {
+   "H": 672,
+   "W": 384,
+   "file": "ffs_c_it8_md192_672x384_dyn.engine",
+   "sha": "3978be9a68d2e648",
+   "dynamic": true,
+   "min": [
+    128,
+    128
+   ],
+   "opt": [
+    672,
+    384
+   ],
+   "max": [
+    960,
+    544
+   ]
+  }
+ ],
+ "build_times": {
+  "ffs_c_it8_md192_544x960": {
+   "onnx_s": 6.5,
+   "engine_s": 97.9
+  },
+  "ffs_c_it8_md192_960x544": {
+   "onnx_s": 5.0,
+   "engine_s": 93.9
+  },
+  "ffs_c_it8_md192_384x672_dyn": {
+   "onnx_s": 4.7,
+   "engine_s": 139.9
+  },
+  "ffs_c_it8_md192_672x384_dyn": {
+   "onnx_s": 4.5,
+   "engine_s": 143.4
+  }
+ },
+ "workspace_gb": 4.0,
+ "inorm": "decomposed_fp32",
+ "fp32_layers": "ReduceL2*"
+}

@@ -1,0 +1,166 @@
+[ffs-trt build] InstanceNorm decomposed for export: 11 modules, kept fp32
+[ffs-trt build] ffs_c_it8_md192_544x960: engine of the same recipe exists, kept
+/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py:310: DeprecationWarning: You are using the legacy TorchScript-based ONNX export. Starting in PyTorch 2.9, the new torch.export-based ONNX exporter has become the default. Learn more about the new export logic: https://docs.pytorch.org/docs/stable/onnx_export.html. For exporting control flow: https://pytorch.org/tutorials/beginner/onnx/export_control_flow_model_to_onnx_tutorial.html
+  torch.onnx.export(wrapper, (torch.randn(1, 3, H, W, device="cuda"), torch.randn(1, 3, H, W, device="cuda")),
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:365: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if x.shape != rem.shape:
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:572: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if pe.shape[1]<x.shape[1]:
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/geometry.py:76: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:290: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if x.shape != rem.shape:
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/jit_utils.py:308: UserWarning: Constant folding - Only steps=1 can be constant folded for opset >= 10 onnx::Slice op. Constant folding not applied. (Triggered internally at /pytorch/torch/csrc/jit/passes/onnx/constant_fold.cpp:178.)
+  _C._jit_pass_onnx_node_shape_type_inference(node, params_dict, opset_version)
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/utils.py:714: UserWarning: Constant folding - Only steps=1 can be constant folded for opset >= 10 onnx::Slice op. Constant folding not applied. (Triggered internally at /pytorch/torch/csrc/jit/passes/onnx/constant_fold.cpp:178.)
+  _C._jit_pass_onnx_graph_shape_type_inference(
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/utils.py:1187: UserWarning: Constant folding - Only steps=1 can be constant folded for opset >= 10 onnx::Slice op. Constant folding not applied. (Triggered internally at /pytorch/torch/csrc/jit/passes/onnx/constant_fold.cpp:178.)
+  _C._jit_pass_onnx_graph_shape_type_inference(
+[ffs-trt build] ffs_c_it8_md192_544x960: {'kept': True}, 63 MB
+/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py:368: DeprecationWarning: Use Deprecated in TensorRT 10.12. Superseded by strong typing. instead.
+  L.precision = trt.float32
+/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py:371: DeprecationWarning: Use Deprecated in TensorRT 10.12. Superseded by strong typing. instead.
+  L.set_output_type(oi, trt.float32)
+[ffs-trt build] 30 ReduceL2 layers forced fp32
+/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py:385: DeprecationWarning: Use Deprecated in TensorRT 10.12. Superseded by strong typing. instead.
+  L.precision = trt.float32
+/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py:388: DeprecationWarning: Use Deprecated in TensorRT 10.12. Superseded by strong typing. instead.
+  L.set_output_type(oi, trt.float32)
+[ffs-trt build] 110 of 15241 layers in 11 InstanceNorm scopes forced fp32
+[11/12/2026-17:23:43] [TRT] [W] (Unnamed Layer* 643) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:23:43] [TRT] [W] (Unnamed Layer* 661) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:23:43] [TRT] [W] (Unnamed Layer* 1139) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:23:43] [TRT] [W] (Unnamed Layer* 1157) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:23:43] [TRT] [W] (Unnamed Layer* 1454) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:23:43] [TRT] [W] (Unnamed Layer* 1472) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:23:43] [TRT] [W] (Unnamed Layer* 9652) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:23:43] [TRT] [W] (Unnamed Layer* 9671) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:23:43] [TRT] [W] (Unnamed Layer* 5595) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:23:43] [TRT] [W] (Unnamed Layer* 5615) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[ffs-trt build] ffs_c_it8_md192_960x544: {'onnx_s': 6.5, 'engine_s': 97.0}, 62 MB
+/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py:368: DeprecationWarning: Use Deprecated in TensorRT 10.12. Superseded by strong typing. instead.
+  L.precision = trt.float32
+/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py:371: DeprecationWarning: Use Deprecated in TensorRT 10.12. Superseded by strong typing. instead.
+  L.set_output_type(oi, trt.float32)
+[ffs-trt build] 30 ReduceL2 layers forced fp32
+/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py:385: DeprecationWarning: Use Deprecated in TensorRT 10.12. Superseded by strong typing. instead.
+  L.precision = trt.float32
+/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py:388: DeprecationWarning: Use Deprecated in TensorRT 10.12. Superseded by strong typing. instead.
+  L.set_output_type(oi, trt.float32)
+[ffs-trt build] 110 of 19693 layers in 11 InstanceNorm scopes forced fp32
+[11/12/2026-17:25:20] [TRT] [W] (Unnamed Layer* 731) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:25:20] [TRT] [W] (Unnamed Layer* 749) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:25:20] [TRT] [W] (Unnamed Layer* 1299) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:25:20] [TRT] [W] (Unnamed Layer* 1317) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:25:20] [TRT] [W] (Unnamed Layer* 1686) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:25:20] [TRT] [W] (Unnamed Layer* 1704) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:25:20] [TRT] [W] (Unnamed Layer* 10854) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:25:20] [TRT] [W] (Unnamed Layer* 10879) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:25:20] [TRT] [W] (Unnamed Layer* 6243) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:25:20] [TRT] [W] (Unnamed Layer* 6269) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[ffs-trt build] ffs_c_it8_md192_384x672_dyn: {'onnx_s': 4.8, 'engine_s': 143.3}, 52 MB
+/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py:368: DeprecationWarning: Use Deprecated in TensorRT 10.12. Superseded by strong typing. instead.
+  L.precision = trt.float32
+/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py:371: DeprecationWarning: Use Deprecated in TensorRT 10.12. Superseded by strong typing. instead.
+  L.set_output_type(oi, trt.float32)
+[ffs-trt build] 30 ReduceL2 layers forced fp32
+/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py:385: DeprecationWarning: Use Deprecated in TensorRT 10.12. Superseded by strong typing. instead.
+  L.precision = trt.float32
+/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py:388: DeprecationWarning: Use Deprecated in TensorRT 10.12. Superseded by strong typing. instead.
+  L.set_output_type(oi, trt.float32)
+[ffs-trt build] 110 of 19693 layers in 11 InstanceNorm scopes forced fp32
+[11/12/2026-17:27:43] [TRT] [W] (Unnamed Layer* 731) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:27:43] [TRT] [W] (Unnamed Layer* 749) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:27:43] [TRT] [W] (Unnamed Layer* 1299) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:27:43] [TRT] [W] (Unnamed Layer* 1317) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:27:43] [TRT] [W] (Unnamed Layer* 1686) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:27:43] [TRT] [W] (Unnamed Layer* 1704) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:27:43] [TRT] [W] (Unnamed Layer* 10854) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:27:43] [TRT] [W] (Unnamed Layer* 10879) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:27:43] [TRT] [W] (Unnamed Layer* 6243) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[11/12/2026-17:27:43] [TRT] [W] (Unnamed Layer* 6269) [Constant] [CONSTANT] contains out-of-range weights when cast to Half, clipping to +/- 65504.
+[ffs-trt build] ffs_c_it8_md192_672x384_dyn: {'onnx_s': 4.7, 'engine_s': 143.2}, 52 MB
+{
+ "made": "2026-11-12 17:30:05",
+ "trt": "10.16.1.11",
+ "torch": "2.11.0+cu128",
+ "gpu": "NVIDIA GeForce RTX 5080",
+ "ckpt": "model_best_bp2_serialize.pth:71105659:6f3a487418c1df10",
+ "valid_iters": 8,
+ "max_disp": 192,
+ "export_version": 3,
+ "precision": "fp16",
+ "export": "upstream scripts/make_single_onnx.py volume builders, opset 17, normalisation outside",
+ "engines": [
+  {
+   "H": 544,
+   "W": 960,
+   "file": "ffs_c_it8_md192_544x960.engine",
+   "sha": "f29c7e54c2eb9c5f"
+  },
+  {
+   "H": 960,
+   "W": 544,
+   "file": "ffs_c_it8_md192_960x544.engine",
+   "sha": "04e6759763b265c9"
+  },
+  {
+   "H": 384,
+   "W": 672,
+   "file": "ffs_c_it8_md192_384x672_dyn.engine",
+   "sha": "777d55078474c86f",
+   "dynamic": true,
+   "min": [
+    128,
+    128
+   ],
+   "opt": [
+    384,
+    672
+   ],
+   "max": [
+    544,
+    960
+   ]
+  },
+  {
+   "H": 672,
+   "W": 384,
+   "file": "ffs_c_it8_md192_672x384_dyn.engine",
+   "sha": "bf96edbc4ee61956",
+   "dynamic": true,
+   "min": [
+    128,
+    128
+   ],
+   "opt": [
+    672,
+    384
+   ],
+   "max": [
+    960,
+    544
+   ]
+  }
+ ],
+ "build_times": {
+  "ffs_c_it8_md192_544x960": {
+   "kept": true
+  },
+  "ffs_c_it8_md192_960x544": {
+   "onnx_s": 6.5,
+   "engine_s": 97.0
+  },
+  "ffs_c_it8_md192_384x672_dyn": {
+   "onnx_s": 4.8,
+   "engine_s": 143.3
+  },
+  "ffs_c_it8_md192_672x384_dyn": {
+   "onnx_s": 4.7,
+   "engine_s": 143.2
+  }
+ },
+ "workspace_gb": 4.0,
+ "inorm": "decomposed_fp32",
+ "fp32_layers": "ReduceL2*"
+}

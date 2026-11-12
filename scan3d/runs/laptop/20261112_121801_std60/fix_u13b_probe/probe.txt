@@ -1,0 +1,11 @@
+memory.used [MiB], memory.total [MiB]
+0 MiB, 8188 MiB
+TRT 448x768: OK 97 ms, disp median nan (expect ~12), GPU max alloc 4.87 GB
+[11/12/2026-16:15:29] [TRT] [E] IExecutionContext::enqueueV3: Error Code 1: Myelin ([exec_instruction.cpp:1367: exec] CUDA error 720 launching __myl_Inor kernel. In executeMyelinGraph at /_src/runtime/myelin/runner.cpp:878)
+TRT 448x800: FAIL RuntimeError('--ffs-backend trt: execute_async_v3 failed')
+[11/12/2026-16:15:32] [TRT] [E] IExecutionContext::enqueueV3: Error Code 1: Myelin ([exec_instruction.cpp:1367: exec] CUDA error 720 launching __myl_Inor kernel. In executeMyelinGraph at /_src/runtime/myelin/runner.cpp:878)
+TRT 320x576: FAIL RuntimeError('--ffs-backend trt: execute_async_v3 failed')
+[11/12/2026-16:15:35] [TRT] [E] IExecutionContext::enqueueV3: Error Code 1: Myelin ([exec_instruction.cpp:1367: exec] CUDA error 720 launching __myl_Inor kernel. In executeMyelinGraph at /_src/runtime/myelin/runner.cpp:878)
+TRT 928x512: FAIL RuntimeError('--ffs-backend trt: execute_async_v3 failed')
+[11/12/2026-16:15:38] [TRT] [E] IExecutionContext::enqueueV3: Error Code 1: Myelin ([exec_instruction.cpp:1367: exec] CUDA error 720 launching __myl_Inor kernel. In executeMyelinGraph at /_src/runtime/myelin/runner.cpp:878)
+TRT 544x960: FAIL RuntimeError('--ffs-backend trt: execute_async_v3 failed')

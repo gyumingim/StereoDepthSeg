@@ -1,0 +1,24 @@
+[gpu_guard] torch memory cap 0.75 x 8.0 GB = 6.0 GB
+VIO poses {'source': '/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/ba/poses_ba.jsonl.gz', 'n': 494, 'se3_rmse_cm': 7.980164675328892, 'sim3_scale_would_be': 1.0000000000000002, 'free_scale_applied': False, 'rot_diff_deg_median': 0.5735983528932168}
+decoded 494 frames (960x540), gt rows 494, ok 494
+[ffs-trt] 1 engines [(448, 768)] from /home/system/scanner/ffs_trt/engines_dyn, TensorRT 10.16.1.11, shared activation memory 4967 MB
+[tsdf] alloc dense
+[11/12/2026-15:39:47] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+[11/12/2026-15:39:47] [TRT] [E] IExecutionContext::enqueueV3: Error Code 1: Myelin ([exec_instruction.cpp:1367: exec] CUDA error 720 launching __myl_Inor kernel. In executeMyelinGraph at /_src/runtime/myelin/runner.cpp:878)
+Traceback (most recent call last):
+  File "/home/system/scanner/StereoDepthSeg-fixes/scan3d/scanA/scan_offline.py", line 533, in <module>
+    main()
+  File "/home/system/scanner/StereoDepthSeg-fixes/scan3d/scanA/scan_offline.py", line 334, in main
+    rcache[j] = ms.pair_depth(model, ffs_infer, imgs[i], imgs[j], R, t, K, dist, rp, cfg, iters=a.iters)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/system/scanner/StereoDepthSeg-fixes/scan3d/motion_stereo.py", line 361, in pair_depth
+    disp = infer(model, rgbL, rgbR, valid_iters=iters, scale=s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py", line 202, in infer
+    d = self.run(tl, tr)
+        ^^^^^^^^^^^^^^^^
+  File "/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py", line 173, in run
+    raise RuntimeError("--ffs-backend trt: execute_async_v3 failed")
+RuntimeError: --ffs-backend trt: execute_async_v3 failed
+Command exited with non-zero status 1
+TIME trt_dyn 9.11 s maxrss 2226308 kB

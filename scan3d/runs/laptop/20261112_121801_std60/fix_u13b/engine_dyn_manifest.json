@@ -1,0 +1,40 @@
+{
+ "made": "2026-11-12 15:35:03",
+ "trt": "10.16.1.11",
+ "torch": "2.11.0+cu128",
+ "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+ "ckpt": "model_best_bp2_serialize.pth:71105659:6f3a487418c1df10",
+ "valid_iters": 8,
+ "max_disp": 192,
+ "export_version": 1,
+ "precision": "fp16",
+ "export": "upstream scripts/make_single_onnx.py volume builders, opset 17, normalisation outside",
+ "engines": [
+  {
+   "H": 448,
+   "W": 768,
+   "file": "ffs_c_it8_md192_448x768_dyn.engine",
+   "sha": "08f964aee6889249",
+   "dynamic": true,
+   "min": [
+    256,
+    256
+   ],
+   "opt": [
+    448,
+    768
+   ],
+   "max": [
+    960,
+    960
+   ]
+  }
+ ],
+ "build_times": {
+  "448x768": {
+   "onnx_s": 5.6,
+   "engine_s": 799.2
+  }
+ },
+ "workspace_gb": 4.0
+}

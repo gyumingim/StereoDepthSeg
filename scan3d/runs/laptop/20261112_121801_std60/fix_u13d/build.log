@@ -1,0 +1,1153 @@
+[ffs-trt build] InstanceNorm decomposed for export: 11 modules, kept fp32
+/home/system/scanner/StereoDepthSeg-fixes/scan3d/ffs_trt.py:274: DeprecationWarning: You are using the legacy TorchScript-based ONNX export. Starting in PyTorch 2.9, the new torch.export-based ONNX exporter has become the default. Learn more about the new export logic: https://docs.pytorch.org/docs/stable/onnx_export.html. For exporting control flow: https://pytorch.org/tutorials/beginner/onnx/export_control_flow_model_to_onnx_tutorial.html
+  torch.onnx.export(wrapper, (torch.randn(1, 3, H, W, device="cuda"), torch.randn(1, 3, H, W, device="cuda")),
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:365: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if x.shape != rem.shape:
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:572: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if pe.shape[1]<x.shape[1]:
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/geometry.py:76: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:290: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+  if x.shape != rem.shape:
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/jit_utils.py:308: UserWarning: Constant folding - Only steps=1 can be constant folded for opset >= 10 onnx::Slice op. Constant folding not applied. (Triggered internally at /pytorch/torch/csrc/jit/passes/onnx/constant_fold.cpp:178.)
+  _C._jit_pass_onnx_node_shape_type_inference(node, params_dict, opset_version)
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/utils.py:714: UserWarning: Constant folding - Only steps=1 can be constant folded for opset >= 10 onnx::Slice op. Constant folding not applied. (Triggered internally at /pytorch/torch/csrc/jit/passes/onnx/constant_fold.cpp:178.)
+  _C._jit_pass_onnx_graph_shape_type_inference(
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torch/onnx/_internal/torchscript_exporter/utils.py:1187: UserWarning: Constant folding - Only steps=1 can be constant folded for opset >= 10 onnx::Slice op. Constant folding not applied. (Triggered internally at /pytorch/torch/csrc/jit/passes/onnx/constant_fold.cpp:178.)
+  _C._jit_pass_onnx_graph_shape_type_inference(
+[ffs-trt build] 0 of 19693 layers in 11 InstanceNorm scopes forced fp32
+[11/12/2026-16:28:57] [TRT] [W] Detected layernorm nodes in FP16.
+[11/12/2026-16:28:57] [TRT] [W] Running layernorm after self-attention with FP16 Reduce or Pow may cause overflow. Forcing Reduce or Pow Layers in FP32 precision, or exporting the model to use INormalizationLayer (available with ONNX opset >= 17) can help preserving accuracy.
+[11/12/2026-16:30:24] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:24] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:24] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:24] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000001.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:24] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:24] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:24] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:24] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000001.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:25] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:25] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:25] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:25] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000001.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:25] [TRT] [W] Tactic Device request: 8662MB Available: 8187MB. Device memory is insufficient to use tactic.
+[11/12/2026-16:30:25] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 9083289600 detected for tactic 0x0000000000000001.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:34] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:34] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:34] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:34] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 0 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000000.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:34] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:34] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:34] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:34] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000001.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:34] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:34] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:34] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:34] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 2 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000002.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:34] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:34] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:34] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:34] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 3 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000003.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:34] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:34] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:34] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:34] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 4 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000004.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 5 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000005.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 6 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000006.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 7 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000007.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 8 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000008.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 9 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000009.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 10 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 0 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000000.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000001.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 2 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000002.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 3 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000003.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 4 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000004.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 5 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000005.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 6 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000006.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 7 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000007.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 8 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000008.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 9 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000009.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 10 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 0 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000000.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000001.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 2 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000002.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 3 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000003.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 4 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000004.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 5 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000005.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 6 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000006.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 7 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000007.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 8 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000008.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 9 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000009.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 10 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 0 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000000.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000001.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 2 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000002.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 3 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000003.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 4 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000004.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 5 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000005.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 6 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000006.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 7 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000007.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 8 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000008.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:35] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:35] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 9 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000009.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:36] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 10 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000a.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:36] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 11 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000b.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:36] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 12 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:36] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 13 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000d.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:36] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 14 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000e.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:36] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 15 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000f.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:36] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 16 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000010.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:36] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 17 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000011.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:36] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 18 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000012.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:36] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 19 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000013.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:36] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 20 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000014.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:36] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 21 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000015.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:36] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 22 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000016.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:36] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 23 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000017.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:36] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 24 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:36] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 25 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001d.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:36] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:36] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 26 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001e.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [W] Tactic Device request: 9450MB Available: 8187MB. Device memory is insufficient to use tactic.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 0 due to insufficient memory on requested size of 9909043200 detected for tactic 0x0000000000000018.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [W] Tactic Device request: 9450MB Available: 8187MB. Device memory is insufficient to use tactic.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 9909043200 detected for tactic 0x0000000000000019.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [W] Tactic Device request: 9450MB Available: 8187MB. Device memory is insufficient to use tactic.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 2 due to insufficient memory on requested size of 9909043200 detected for tactic 0x000000000000001a.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [W] Tactic Device request: 9450MB Available: 8187MB. Device memory is insufficient to use tactic.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 3 due to insufficient memory on requested size of 9909043200 detected for tactic 0x000000000000001b.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [W] Tactic Device request: 9450MB Available: 8187MB. Device memory is insufficient to use tactic.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 4 due to insufficient memory on requested size of 9909043200 detected for tactic 0x000000000000001f.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 0 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000000.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000001.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 2 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000002.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 3 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000003.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 4 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000004.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 5 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000005.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 6 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000006.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 7 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000007.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 8 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000008.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 9 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000009.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 10 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000a.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 11 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000b.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 12 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 13 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000d.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 14 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000e.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 15 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000f.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 16 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000010.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 17 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000011.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 18 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000012.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 19 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000013.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 20 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000014.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 21 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000015.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 22 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000016.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 23 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000017.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 24 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 25 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001d.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:30:37] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:30:37] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 26 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001e.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:10] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:10] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:10] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:10] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 0 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000000.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:10] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:10] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:10] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:10] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000001.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 2 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000002.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 3 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000003.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 4 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000004.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 5 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000005.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 6 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000006.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 7 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000007.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 8 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000008.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 9 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000009.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 10 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 0 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000000.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000001.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 2 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000002.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 3 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000003.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 4 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000004.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 5 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000005.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 6 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000006.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 7 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000007.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 8 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000008.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 9 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000009.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 10 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 0 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000000.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000001.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 2 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000002.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 3 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000003.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 4 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000004.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 5 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000005.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 6 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000006.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 7 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000007.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 8 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000008.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 9 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000009.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 10 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 0 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000000.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000001.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 2 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000002.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 3 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000003.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 4 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000004.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 5 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000005.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:11] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:11] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 6 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000006.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:12] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 7 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000007.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:12] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 8 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000008.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:12] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 9 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000009.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:12] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 10 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000a.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:12] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 11 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000b.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:12] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 12 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:12] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 13 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000d.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:12] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 14 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000e.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:12] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 15 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000f.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:12] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 16 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000010.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:12] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 17 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000011.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:12] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 18 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000012.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:12] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 19 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000013.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:12] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 20 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000014.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:12] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 21 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000015.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:12] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:12] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 22 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000016.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 23 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000017.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 24 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 25 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001d.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 26 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001e.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [W] Tactic Device request: 9450MB Available: 8187MB. Device memory is insufficient to use tactic.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 0 due to insufficient memory on requested size of 9909043200 detected for tactic 0x0000000000000018.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [W] Tactic Device request: 9450MB Available: 8187MB. Device memory is insufficient to use tactic.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 9909043200 detected for tactic 0x0000000000000019.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [W] Tactic Device request: 9450MB Available: 8187MB. Device memory is insufficient to use tactic.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 2 due to insufficient memory on requested size of 9909043200 detected for tactic 0x000000000000001a.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [W] Tactic Device request: 9450MB Available: 8187MB. Device memory is insufficient to use tactic.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 3 due to insufficient memory on requested size of 9909043200 detected for tactic 0x000000000000001b.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [W] Tactic Device request: 9450MB Available: 8187MB. Device memory is insufficient to use tactic.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 4 due to insufficient memory on requested size of 9909043200 detected for tactic 0x000000000000001f.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 0 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000000.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000001.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 2 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000002.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 3 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000003.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 4 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000004.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 5 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000005.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 6 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000006.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 7 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000007.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 8 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000008.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 9 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000009.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 10 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000a.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 11 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000b.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 12 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 13 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000d.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 14 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000e.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 15 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000f.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 16 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000010.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 17 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000011.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 18 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000012.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 19 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000013.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 20 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000014.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 21 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000015.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 22 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000016.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 23 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000017.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 24 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 25 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001d.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 26 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001e.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 0 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000000.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000001.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 2 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000002.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 3 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000003.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 4 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000004.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 5 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000005.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 6 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000006.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:13] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:13] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 7 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000007.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 8 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000008.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 9 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000009.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 10 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 0 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000000.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000001.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 2 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000002.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 3 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000003.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 4 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000004.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 5 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000005.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 6 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000006.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 7 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000007.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 8 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000008.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 9 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000009.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 10 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 0 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000000.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000001.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 2 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000002.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 3 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000003.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 4 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000004.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 5 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000005.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 6 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000006.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 7 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000007.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 8 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000008.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 9 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000009.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 10 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 0 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000000.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000001.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 2 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000002.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 3 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000003.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 4 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000004.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 5 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000005.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 6 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000006.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 7 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000007.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 8 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000008.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 9 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000009.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 10 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000a.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 11 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000b.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 12 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:14] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:14] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 13 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000d.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:15] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 14 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000e.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:15] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 15 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000f.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:15] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 16 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000010.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:15] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 17 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000011.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:15] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 18 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000012.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:15] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 19 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000013.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:15] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 20 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000014.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:15] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 21 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000015.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:15] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 22 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000016.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:15] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 23 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000017.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:15] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 24 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:15] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 25 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001d.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:15] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:15] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 26 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001e.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:15] [TRT] [W] Tactic Device request: 9450MB Available: 8187MB. Device memory is insufficient to use tactic.
+[11/12/2026-16:32:15] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 0 due to insufficient memory on requested size of 9909043200 detected for tactic 0x0000000000000018.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:15] [TRT] [W] Tactic Device request: 9450MB Available: 8187MB. Device memory is insufficient to use tactic.
+[11/12/2026-16:32:15] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 9909043200 detected for tactic 0x0000000000000019.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:15] [TRT] [W] Tactic Device request: 9450MB Available: 8187MB. Device memory is insufficient to use tactic.
+[11/12/2026-16:32:15] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 2 due to insufficient memory on requested size of 9909043200 detected for tactic 0x000000000000001a.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:15] [TRT] [W] Tactic Device request: 9450MB Available: 8187MB. Device memory is insufficient to use tactic.
+[11/12/2026-16:32:15] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 3 due to insufficient memory on requested size of 9909043200 detected for tactic 0x000000000000001b.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [W] Tactic Device request: 9450MB Available: 8187MB. Device memory is insufficient to use tactic.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 4 due to insufficient memory on requested size of 9909043200 detected for tactic 0x000000000000001f.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 0 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000000.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 1 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000001.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 2 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000002.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 3 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000003.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 4 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000004.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 5 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000005.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 6 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000006.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 7 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000007.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 8 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000008.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 9 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000009.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 10 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000a.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 11 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000b.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 12 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 13 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000d.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 14 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000e.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 15 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000000f.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 16 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000010.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 17 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000011.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 18 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000012.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 19 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000013.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 20 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000014.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 21 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000015.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 22 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000016.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 23 due to insufficient memory on requested size of 7432306688 detected for tactic 0x0000000000000017.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 24 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001c.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 25 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001d.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [E] [virtualMemoryBuffer.cpp::resizePhysical::153] Error Code 2: OutOfMemory (Requested size was 7432306688 bytes.)
+[11/12/2026-16:32:16] [TRT] [W] Requested amount of GPU memory (7432306688 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[11/12/2026-16:32:16] [TRT] [W] UNSUPPORTED_STATE: Skipping tactic 26 due to insufficient memory on requested size of 7432306688 detected for tactic 0x000000000000001e.Try decreasing the workspace size with IBuilderConfig::setMemoryPoolLimit().
+[11/12/2026-16:40:44] [TRT] [E] [resizingAllocator.cpp::allocateImpl::102] Error Code 1: Cuda Runtime (In allocateImpl at /_src/optimizer/builder/resizingAllocator.cpp:102)
+[11/12/2026-16:40:44] [TRT] [W] Requested amount of GPU memory (1714871048 bytes) could not be allocated. There may not be enough free memory for allocation to succeed.
+[ffs-trt build] ffs_c_it8_md192_544x960_dyn: {'onnx_s': 5.5, 'engine_s': 781.1}, 42 MB
+{
+ "made": "2026-11-12 16:41:56",
+ "trt": "10.16.1.11",
+ "torch": "2.11.0+cu128",
+ "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+ "ckpt": "model_best_bp2_serialize.pth:71105659:6f3a487418c1df10",
+ "valid_iters": 8,
+ "max_disp": 192,
+ "export_version": 1,
+ "precision": "fp16",
+ "export": "upstream scripts/make_single_onnx.py volume builders, opset 17, normalisation outside",
+ "engines": [
+  {
+   "H": 544,
+   "W": 960,
+   "file": "ffs_c_it8_md192_544x960_dyn.engine",
+   "sha": "da887d2f7e9dd34f",
+   "dynamic": true,
+   "min": [
+    256,
+    256
+   ],
+   "opt": [
+    544,
+    960
+   ],
+   "max": [
+    960,
+    960
+   ]
+  }
+ ],
+ "build_times": {
+  "ffs_c_it8_md192_544x960_dyn": {
+   "onnx_s": 5.5,
+   "engine_s": 781.1
+  }
+ },
+ "workspace_gb": 4.0,
+ "inorm": "decomposed_fp32",
+ "fp32_norm": false
+}

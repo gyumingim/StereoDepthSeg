@@ -1,0 +1,172 @@
+{
+ "made": "2026-11-12 15:39:56",
+ "inputs": {
+  "a": "/home/system/scanner/ffs_trt/dump_pt",
+  "b": "/home/system/scanner/ffs_trt/dump_trt",
+  "sa": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11trt/mesh_pt/summary.json",
+  "sb": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11trt/mesh_trt/summary.json",
+  "ka": "",
+  "kb": "",
+  "out": "scan3d/runs/laptop/20261112_121801_std60/fix_u13b/cmp_ptfull_vs_trtbucket.json"
+ },
+ "n_kf_both": 351,
+ "n_kf_only_a": 0,
+ "n_kf_only_b": 0,
+ "n_kf_same_partners": 351,
+ "n_kf_eval": 351,
+ "kf_absdz_med_mm_median": 0.49999999999994493,
+ "kf_absdz_p95_mm_median": 1.9000000000000128,
+ "kf_absdz_p95_mm_p90": 25.499999999999858,
+ "kf_rel_med_median": 0.0003714158371712561,
+ "kf_rel_p95_median": 0.001399717123157477,
+ "pooled_absdz_mm": {
+  "median": 0.500000000000056,
+  "p95": 7.200000000000095,
+  "p99": 61.70000000000009
+ },
+ "pooled_frac_absdz_gt_10mm": 0.040476068376068375,
+ "pooled_frac_absdz_gt_50mm": 0.012023646723646723,
+ "kf_frac_p95_gt_10mm": 0.1623931623931624,
+ "pooled_rel": {
+  "median": 0.0004087352563354811,
+  "p95": 0.00541672844931533
+ },
+ "valid_px_a": 76603165,
+ "valid_px_b": 76559557,
+ "valid_px_both": 76440742,
+ "mesh_vertices": [
+  1905456,
+  1915924
+ ],
+ "mesh_faces": [
+  3222587,
+  3237041
+ ],
+ "n_kf_depth": [
+  351,
+  351
+ ],
+ "runtime_s": [
+  164.6,
+  104.6
+ ],
+ "ffs_s_total": [
+  102.3,
+  46.3
+ ],
+ "ffs_ms": [
+  null,
+  null
+ ],
+ "gpu_max_alloc_gb": [
+  4.83,
+  3.77
+ ],
+ "gpu_max_reserved_gb": [
+  5.95,
+  5.9
+ ],
+ "board": [
+  {
+   "kf_board_absdZ_p50_cm_median": null,
+   "kf_board_dZ_bias_cm_median": null,
+   "mesh_board_z_rms_cm": null,
+   "mesh_board_cover_frac": null
+  },
+  {
+   "kf_board_absdZ_p50_cm_median": null,
+   "kf_board_dZ_bias_cm_median": null,
+   "mesh_board_z_rms_cm": null,
+   "mesh_board_cover_frac": null
+  }
+ ],
+ "ffs_trt": {
+  "engines": [
+   {
+    "H": 544,
+    "W": 960,
+    "calls": 263
+   },
+   {
+    "H": 448,
+    "W": 768,
+    "calls": 14
+   },
+   {
+    "H": 352,
+    "W": 576,
+    "calls": 8
+   },
+   {
+    "H": 256,
+    "W": 448,
+    "calls": 2
+   },
+   {
+    "H": 960,
+    "W": 544,
+    "calls": 59
+   },
+   {
+    "H": 768,
+    "W": 448,
+    "calls": 2
+   },
+   {
+    "H": 576,
+    "W": 352,
+    "calls": 3
+   },
+   {
+    "H": 448,
+    "W": 256,
+    "calls": 0
+   }
+  ],
+  "trt": "10.16.1.11",
+  "shapes": {
+   "247x440->256x448": 1,
+   "248x442->256x448": 1,
+   "263x468->352x576": 1,
+   "267x474->352x576": 1,
+   "287x510->352x576": 1,
+   "292x518->352x576": 1,
+   "298x530->352x576": 1,
+   "299x531->352x576": 1,
+   "322x572->352x576": 1,
+   "322x573->352x576": 1,
+   "325x577->448x768": 1,
+   "326x580->448x768": 1,
+   "342x609->448x768": 1,
+   "350x623->448x768": 1,
+   "356x633->448x768": 1,
+   "357x635->448x768": 1,
+   "371x660->448x768": 1,
+   "377x671->448x768": 1,
+   "384x684->448x768": 1,
+   "389x692->448x768": 2,
+   "403x717->448x768": 1,
+   "422x750->448x768": 1,
+   "428x761->448x768": 1,
+   "441x783->544x960": 1,
+   "448x796->544x960": 1,
+   "455x809->544x960": 1,
+   "472x266->576x352": 1,
+   "477x848->544x960": 1,
+   "488x868->544x960": 1,
+   "503x895->544x960": 1,
+   "519x923->544x960": 1,
+   "540x960->544x960": 256,
+   "556x313->576x352": 1,
+   "574x323->576x352": 1,
+   "662x373->768x448": 1,
+   "687x387->768x448": 1,
+   "804x453->960x544": 1,
+   "876x493->960x544": 1,
+   "878x494->960x544": 1,
+   "910x512->960x544": 1,
+   "960x540->960x544": 55
+  },
+  "manifest_made": "2026-11-12 15:00:49"
+ }
+}

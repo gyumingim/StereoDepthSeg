@@ -59,6 +59,8 @@ def main():
                kf_rel_med_median=float(np.median([r["rel_med"] for r in ev])) if ev else None,
                kf_rel_p95_median=float(np.median([r["rel_p95"] for r in ev])) if ev else None,
                pooled_absdz_mm=dict(median=float(np.median(P)), p95=float(np.percentile(P, 95)), p99=float(np.percentile(P, 99))),
+               pooled_frac_absdz_gt_10mm=float(np.mean(P > 10)), pooled_frac_absdz_gt_50mm=float(np.mean(P > 50)),
+               kf_frac_p95_gt_10mm=float(np.mean([r["absdz_p95_mm"] > 10 for r in ev])) if ev else None,
                pooled_rel=dict(median=float(np.median(PR)), p95=float(np.percentile(PR, 95))),
                valid_px_a=int(sum(r["n_a"] for r in per)), valid_px_b=int(sum(r["n_b"] for r in per)),
                valid_px_both=int(sum(r["n_both"] for r in per)),

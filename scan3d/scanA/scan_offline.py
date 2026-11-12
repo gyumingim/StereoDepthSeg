@@ -101,9 +101,11 @@ def main():
     ap.add_argument("--sigma-max", type=float, default=0.08, help="TSDF: drop pixels with depth sigma above this (m)")
     ap.add_argument("--sigma-ok", type=float, default=0.02, help="TSDF: weight of one observation at this sigma = mesh threshold (m)")
     # fixes 11-12 unit 11: FFS on TensorRT (opt-in; default pytorch = unchanged). Loud failure, never a silent PyTorch fallback.
-    ap.add_argument("--ffs-backend", choices=("pytorch", "trt"), default="pytorch",
-                    help="trt = scan3d/ffs_trt.py fp16 engines (fixed-size buckets, extra replicate padding; README runs/fixes_20261112 u11)")
+    ap.add_argument("--ffs-backend", choices=("pytorch", "trt", "pytorch_bucket", "pytorch_fp32"), default="pytorch",
+                    help="trt = scan3d/ffs_trt.py fp16 engines (export v3: exact /32 padding like lib_ffs; README runs/fixes_20261112 13). "
+                         "pytorch_bucket / pytorch_fp32 = unit 13b diagnostics")
     ap.add_argument("--ffs-engines", default="", help="engine dir with manifest.json (default ffs_trt.ENGINE_DIR)")
+    ap.add_argument("--kf-only", default="", help="diagnostic (unit 13b): json list of keyframe indices; only these get depth / TSDF")
     ap.add_argument("--dump-depth", default="", help="diagnostic: per keyframe fused depth (uint16, 0.1 mm, 0 = invalid) -> DIR/kf_XXXX.npz")
     a = ap.parse_args()
     if a.ffs_views is not None:
@@ -267,8 +269,17 @@ def main():
         trt_ffs = ffs_trt.TrtFFS(a.ffs_engines or ffs_trt.ENGINE_DIR, valid_iters=a.iters, max_disp=cfg.ffs_max_disp,
                                  ckpt=lib_ffs.DEFAULT_CKPT)
         model, ffs_infer = None, trt_ffs.infer
+    elif a.ffs_backend in ("pytorch_bucket", "pytorch_fp32"):     # unit 13b diagnostics: lib_ffs maths + bucket padding / fp32
+        import ffs_trt
+        model = lib_ffs.load(valid_iters=a.iters)
+        if a.ffs_backend == "pytorch_fp32":
+            model.args.mixed_precision = False
+        bk = ffs_trt.BUCKETS if a.ffs_backend == "pytorch_bucket" else None
+        fp32 = a.ffs_backend == "pytorch_fp32"
+        ffs_infer = lambda m, l_, r_, valid_iters=8, scale=1.0: ffs_trt.pt_infer_variant(m, l_, r_, valid_iters, scale, bk, fp32)
     else:
         model, ffs_infer = lib_ffs.load(valid_iters=a.iters), lib_ffs.infer
+    kf_only = set(json.loads(Path(a.kf_only).read_text())) if a.kf_only else None
     if a.dump_depth:
         Path(a.dump_depth).mkdir(parents=True, exist_ok=True)
     tsdf_msgs = []
@@ -291,7 +302,7 @@ def main():
     rows, dz_all = [], []
     integ_i = []                         # fixes 11-12: keyframes that went into the TSDF (for kf_poses.npz + vertex camera depth)
     for i in range(0, n, a.kf_step):
-        if not ok[i] or imgs[i] is None:
+        if not ok[i] or imgs[i] is None or (kf_only is not None and i not in kf_only):
             continue
         cands = []
         for j in (range(max(0, i - 150), min(n, i + 150)) if a.ffs_partners == "near" else range(n)):

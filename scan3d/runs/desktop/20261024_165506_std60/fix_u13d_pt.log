@@ -1,0 +1,253 @@
+== run_scanner 2026-11-12 17:32:16: REC /home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261024_165506_std60 (full recording) -> /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13d_pt
+   gt imu_gt_spl, input keyframes 1920 JPEG q90, BA cuda, SIFT cpu, TSDF alloc dense, kf motion 3cm/4deg win 4 gyro, git 13960cf6eb46
+   gt imu_gt_spl, input keyframes 1920 JPEG q90, BA cuda, SIFT cpu, TSDF alloc dense, git 13960cf6eb46
+   ffs views 2 (fuse auto, partners all), reuse vio/reduce/kfba from /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt
+[input] keyframe-only: /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/red/hs_20261024_165506_std60_kf/frames_kf (110 jpg, 1920x1080, 47M), cam5.mp4 absent: yes
+[kf] motion-selected keyframes: kf_ba --kf-list /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/red/hs_20261024_165506_std60_kf/manifest.json
+[reuse] BA poses /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/ba/poses_ba.jsonl.gz (kfba skipped)
+17:32:16 step mesh start (log /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13d_pt/mesh.log)
+17:32:55 step mesh done 38.5 s (rc 0)
+17:32:55 step board start (log /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13d_pt/board.log)
+17:32:59 step board done 4.8 s (rc 0)
+17:32:59 step mesh_board start (log /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13d_pt/mesh_board.log)
+17:33:28 step mesh_board done 28.2 s (rc 0)
+{
+ "made": "2026-11-12 17:33:28",
+ "commit": "13960cf6eb46efaf9485432f2f1c39b63041ee56-dirty",
+ "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261024_165506_std60",
+ "input": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/red/hs_20261024_165506_std60_kf",
+ "keyframe_only": true,
+ "kf_res": 1920,
+ "kf_quality": 90,
+ "live_poses": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/red/hs_20261024_165506_std60_kf/phone_live_poses.jsonl.gz",
+ "gt": "imu_gt_spl",
+ "vio_cfg": "/home/system/scanner/build_livepose/cfg_gen/c4f60",
+ "tsdf_alloc": "dense",
+ "ffs_views": 2,
+ "ffs_fuse": "auto",
+ "ffs_partners": "all",
+ "reuse": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt",
+ "ba_dir": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/ba",
+ "kfba_device_line": "[device] BA cuda, SIFT cpu, matcher auto",
+ "step_s": {
+  "mesh": 38.5,
+  "board": 4.9,
+  "mesh_board": 28.2
+ },
+ "total_s": 71.6,
+ "sent": {
+  "n_keyframes": 110,
+  "image_size": [
+   1920,
+   1080
+  ],
+  "jpeg_bytes": 48393455,
+  "duration_s": 30.875748203,
+  "jpeg_MB_per_min": 94.04168219372495,
+  "kf_per_min": 213.76000207692846,
+  "kf_select": {
+   "rule": "motion",
+   "dist_m": 0.03,
+   "rot_deg": 4.0,
+   "win": 4,
+   "blur": "gyro",
+   "max_gyro": 0.0,
+   "n_vio_frames": 1394,
+   "n_scored": 440,
+   "n_kf": 110,
+   "pos_in_window_hist": [
+    29,
+    19,
+    18,
+    44
+   ],
+   "gyro_kf_median": 0.4553513077236213,
+   "gyro_window_mean_median": 0.5779593084755681,
+   "moved_m_median": 0.037060861646737595,
+   "rot_deg_median": 3.3136992876985163,
+   "exposure_ns_median": 2000000.0,
+   "skew_ns_median": 6540750.0
+  }
+ },
+ "mesh": {
+  "absdZ_p90_cm": 2.941693067550659,
+  "k_pct": 1.3550521664808635,
+  "mesh_board_z_rms_cm": 0.058056578040122986,
+  "n_kf": 102,
+  "n_kf_depth": 99,
+  "n_kf_board_eval": 99,
+  "kf_absdZ_p90_cm_median": 1.2027142256528944,
+  "board_cover_frac": 0.8987654320987655,
+  "ffs_views": 2,
+  "ffs_fuse": "mean",
+  "ffs_partners": "all",
+  "ffs_s_total": 23.7,
+  "n_kf_by_pairs": {
+   "0": 3,
+   "1": 99
+  },
+  "n_kf_no_pair": 3,
+  "mesh_vertices": 140609,
+  "tsdf_full": false,
+  "tsdf_blocks": 7534,
+  "n_kf_gt_not_ok_dropped": 8,
+  "gt_ok_filter": true,
+  "depth_sigma": {
+   "rot_deg": 0.1,
+   "b_rel": 0.02,
+   "sigma_d_px": 0.5,
+   "sigma_max": 0.08,
+   "sigma_ok": 0.02,
+   "z_max": 2.0
+  },
+  "mesh_cam_depth_m": {
+   "n": 140609,
+   "p50": 0.6124931549023914,
+   "p90": 0.7753889227385907,
+   "p99": 0.9425024924374964,
+   "max": 1.0135937945991396,
+   "frac_gt_0p65": 0.4210256811441657,
+   "frac_gt_1p0": 0.00031292449274228536
+  },
+  "lib_ffs": {
+   "file": "/home/system/scanner/StereoDepthSeg/lib_ffs.py",
+   "sha": "9b820bc28df4caf7"
+  }
+ },
+ "board": {
+  "made": "2026-11-12 17:32:59",
+  "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/red/hs_20261024_165506_std60_kf",
+  "poses": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/ba/poses_ba.jsonl.gz",
+  "board": "/home/system/scanner/StereoDepthSeg/scan3d/config/charuco/board_laptop_5x3.json",
+  "square_mm": 60.4,
+  "square_src": "square_mm",
+  "square_estimated": false,
+  "lens": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/red/hs_20261024_165506_std60_kf/imu_gt_spl/gt.npz",
+  "lens_fx": 1286.1783265267652,
+  "args": {
+   "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/red/hs_20261024_165506_std60_kf",
+   "poses": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/ba/poses_ba.jsonl.gz",
+   "board": "/home/system/scanner/StereoDepthSeg/scan3d/config/charuco/board_laptop_5x3.json",
+   "lens": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/red/hs_20261024_165506_std60_kf/imu_gt_spl/gt.npz",
+   "out": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13d_pt/board",
+   "min_corners": 6,
+   "max_rep_px": 3.0,
+   "min_spread_deg": 2.0,
+   "max_sim_mm": 2.0,
+   "boot": 200,
+   "block": 10,
+   "seed": 0,
+   "check_gt_corners": ""
+  },
+  "n_poses": 110,
+  "n_kf_board": 102,
+  "c": 0.9847996674726816,
+  "best": {
+   "c": 0.9847996674726816,
+   "s": 1.0154349488828804,
+   "n_corners": 8,
+   "n_corners_tri": 8,
+   "n_obs": 722,
+   "sim_rms_mm": 0.2176089863930982,
+   "rep_px_median": 0.8869680761178504,
+   "rep_px_p90": 3.0622204945921623,
+   "dropped_corner_ids": []
+  },
+  "boot": {
+   "n": 200,
+   "sd": 0.00149574745335507,
+   "p2_5": 0.9807989177073925,
+   "p97_5": 0.9865594363464342,
+   "median": 0.9843601990829443
+  },
+  "pair2v": {
+   "n": 3502,
+   "median": 0.9843948059977735,
+   "p10": 0.9734288933540289,
+   "p90": 0.9974140490493527
+  },
+  "uses_gt_poses": false,
+  "runtime_s": 4.7
+ },
+ "mesh_board": {
+  "absdZ_p90_cm": 2.4224298000335693,
+  "k_pct": -0.18557832977332822,
+  "mesh_board_z_rms_cm": 5.647550106048584,
+  "n_kf": 102,
+  "n_kf_depth": 99,
+  "n_kf_board_eval": 99,
+  "kf_absdZ_p90_cm_median": 0.5984813354191432,
+  "board_cover_frac": 0.9012345679012346,
+  "ffs_views": 2,
+  "ffs_fuse": "mean",
+  "ffs_partners": "all",
+  "ffs_s_total": 13.9,
+  "n_kf_by_pairs": {
+   "0": 3,
+   "1": 99
+  },
+  "n_kf_no_pair": 3,
+  "mesh_vertices": 138181,
+  "tsdf_full": false,
+  "tsdf_blocks": 7196,
+  "n_kf_gt_not_ok_dropped": 8,
+  "gt_ok_filter": true,
+  "depth_sigma": {
+   "rot_deg": 0.1,
+   "b_rel": 0.02,
+   "sigma_d_px": 0.5,
+   "sigma_max": 0.08,
+   "sigma_ok": 0.02,
+   "z_max": 2.0
+  },
+  "mesh_cam_depth_m": {
+   "n": 138181,
+   "p50": 0.5923950490072222,
+   "p90": 0.7733389396081672,
+   "p99": 0.9855200604986696,
+   "max": 1.080364220594862,
+   "frac_gt_0p65": 0.354954733284605,
+   "frac_gt_1p0": 0.007453991503897062
+  },
+  "lib_ffs": {
+   "file": "/home/system/scanner/StereoDepthSeg/lib_ffs.py",
+   "sha": "9b820bc28df4caf7"
+  }
+ },
+ "status": "ok",
+ "steps_run": [
+  "board",
+  "mesh",
+  "mesh_board"
+ ],
+ "vio": null,
+ "vio_crashed": null,
+ "ba_quality": {
+  "n_kf": 110,
+  "kf_obs_min": 20,
+  "n_kf_vio_pose": 0,
+  "fixed_kf": [
+   315
+  ],
+  "final_med_px": 0.404725486120301,
+  "final_rmse_px": 0.9024354253161824,
+  "frac_inlier_1px": 0.8676561077063182,
+  "sim3_rms_cm": 1.310342498193333
+ },
+ "min_mesh_vertices": 1000,
+ "provenance": {
+  "commit": "13960cf6eb46efaf9485432f2f1c39b63041ee56-dirty",
+  "commit_dirty": true,
+  "main_commit": "e89c8da14c79edbb2b285147863fb6dfef0694fa-dirty",
+  "worktree": "/home/system/scanner/StereoDepthSeg-fixes",
+  "lens_file": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/red/hs_20261024_165506_std60_kf/imu_gt_spl/gt.npz",
+  "lens_sha": "94a4d65e51075c98",
+  "vio_cfg_sha": {
+   "estimator_config.yaml": "b81f2b377f76c84c",
+   "kalibr_imu_chain.yaml": "0f8eefa54043fc3e",
+   "kalibr_imucam_chain.yaml": "58b9a1af46461eb3"
+  }
+ },
+ "lens_only": null
+}
+== run_scanner done 17:33:28

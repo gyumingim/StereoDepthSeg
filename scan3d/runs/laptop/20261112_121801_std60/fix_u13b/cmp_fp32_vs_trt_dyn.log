@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/fixes_20261112/trt_compare.py", line 80, in <module>
+    main()
+  File "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/fixes_20261112/trt_compare.py", line 46, in main
+    sa, sb = json.loads(Path(a.sa).read_text()), json.loads(Path(a.sb).read_text())
+                                                            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/system/.local/share/uv/python/cpython-3.12.15-linux-x86_64-gnu/lib/python3.12/pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/system/.local/share/uv/python/cpython-3.12.15-linux-x86_64-gnu/lib/python3.12/pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'scan3d/runs/laptop/20261112_121801_std60/fix_u13b/mesh_trt_dyn/summary.json'

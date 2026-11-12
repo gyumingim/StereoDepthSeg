@@ -1,0 +1,174 @@
+{
+ "made": "2026-11-12 17:32:16",
+ "inputs": {
+  "a": "/home/system/scanner/ffs_trt/dump13d_desk_pt",
+  "b": "/home/system/scanner/ffs_trt/dump13d_desk_trt",
+  "sa": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261112_121801_std60/fix_u13d/kf40_pt/summary.json",
+  "sb": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261112_121801_std60/fix_u13d/kf40_trt/summary.json",
+  "ka": "",
+  "kb": "",
+  "out": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261112_121801_std60/fix_u13d/cmp_kf40_pt_vs_trtv2.json"
+ },
+ "n_kf_both": 40,
+ "n_kf_only_a": 0,
+ "n_kf_only_b": 0,
+ "n_kf_same_partners": 40,
+ "n_kf_eval": 40,
+ "kf_absdz_med_mm_median": 0.49999999999994493,
+ "kf_absdz_p95_mm_median": 2.100000000000102,
+ "kf_absdz_p95_mm_p90": 8.249999999999957,
+ "kf_rel_med_median": 0.0003478738163257393,
+ "kf_rel_p95_median": 0.0013008657143818627,
+ "pooled_absdz_mm": {
+  "median": 0.500000000000167,
+  "p95": 2.7999999999996916,
+  "p99": 10.79999999999992
+ },
+ "pooled_frac_absdz_gt_10mm": 0.0108625,
+ "pooled_frac_absdz_gt_50mm": 0.00122375,
+ "kf_frac_p95_gt_10mm": 0.05,
+ "pooled_rel": {
+  "median": 0.0003490401396160174,
+  "p95": 0.001687408567322935
+ },
+ "valid_px_a": 5061732,
+ "valid_px_b": 5062766,
+ "valid_px_both": 5058662,
+ "mesh_vertices": [
+  243491,
+  243589
+ ],
+ "mesh_faces": [
+  416512,
+  416261
+ ],
+ "n_kf_depth": [
+  40,
+  40
+ ],
+ "runtime_s": [
+  72.7,
+  15.1
+ ],
+ "ffs_s_total": [
+  58.8,
+  1.5
+ ],
+ "ffs_ms": [
+  null,
+  null
+ ],
+ "gpu_max_alloc_gb": [
+  4.02,
+  4.19
+ ],
+ "gpu_max_reserved_gb": [
+  11.84,
+  4.68
+ ],
+ "board": [
+  {
+   "kf_board_absdZ_p50_cm_median": null,
+   "kf_board_dZ_bias_cm_median": null,
+   "mesh_board_z_rms_cm": null,
+   "mesh_board_cover_frac": null
+  },
+  {
+   "kf_board_absdZ_p50_cm_median": null,
+   "kf_board_dZ_bias_cm_median": null,
+   "mesh_board_z_rms_cm": null,
+   "mesh_board_cover_frac": null
+  }
+ ],
+ "ffs_trt": {
+  "engines": [
+   {
+    "H": 544,
+    "W": 960,
+    "calls": 0,
+    "dynamic": false,
+    "min": null,
+    "max": null
+   },
+   {
+    "H": 960,
+    "W": 544,
+    "calls": 0,
+    "dynamic": false,
+    "min": null,
+    "max": null
+   },
+   {
+    "H": 384,
+    "W": 672,
+    "calls": 32,
+    "dynamic": true,
+    "min": [
+     128,
+     128
+    ],
+    "max": [
+     544,
+     960
+    ]
+   },
+   {
+    "H": 672,
+    "W": 384,
+    "calls": 8,
+    "dynamic": true,
+    "min": [
+     128,
+     128
+    ],
+    "max": [
+     960,
+     544
+    ]
+   }
+  ],
+  "trt": "10.16.1.11",
+  "shapes": {
+   "247x440->256x448": 1,
+   "248x442->256x448": 1,
+   "263x468->288x480": 1,
+   "267x474->288x480": 1,
+   "287x510->288x512": 1,
+   "292x518->320x544": 1,
+   "298x530->320x544": 1,
+   "299x531->320x544": 1,
+   "322x572->352x576": 1,
+   "322x573->352x576": 1,
+   "325x577->352x608": 1,
+   "326x580->352x608": 1,
+   "342x609->352x640": 1,
+   "350x623->352x640": 1,
+   "356x633->384x640": 1,
+   "357x635->384x640": 1,
+   "371x660->384x672": 1,
+   "377x671->384x672": 1,
+   "384x684->384x704": 1,
+   "389x692->416x704": 2,
+   "403x717->416x736": 1,
+   "422x750->448x768": 1,
+   "428x761->448x768": 1,
+   "441x783->448x800": 1,
+   "448x796->448x800": 1,
+   "455x809->480x832": 1,
+   "472x266->480x288": 1,
+   "477x848->480x864": 1,
+   "488x868->512x896": 1,
+   "503x895->512x896": 1,
+   "519x923->544x928": 1,
+   "556x313->576x320": 1,
+   "574x323->576x352": 1,
+   "662x373->672x384": 1,
+   "687x387->704x416": 1,
+   "804x453->832x480": 1,
+   "876x493->896x512": 1,
+   "878x494->896x512": 1,
+   "910x512->928x512": 1
+  },
+  "manifest_made": "2026-11-12 17:30:05"
+ }
+}
