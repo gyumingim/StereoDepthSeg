@@ -23,7 +23,8 @@
 # opts: --gt imu_gt_spl   --cfg DIR (VIO config, default build_livepose/cfg_gen/c4f60)   --vio FILE   --poses FILE
 #       --board FILE (board json, default by recording)   --send FILE|DIR (repeatable; copied to the same absolute path there)
 #       --tag NAME (results under O/NAME)   --keep (do not delete the recording there)   --args 'extra args for the step script'
-# Env: LAPTOP=user@host (default LAN cable 169.254.78.233, falls back to Wi-Fi 192.168.1.76), LOCK_WAIT_S (default 6 h), POLL_MAX_S (default 12 h).
+# Env: LAPTOP=user@host (default LAN cable 169.254.78.233, falls back to Wi-Fi 192.168.1.76), LOCK_WAIT_S (default 6 h), POLL_MAX_S (default 12 h),
+#      JOB_TIMEOUT_S (default 0 = off): kill a hung laptop job after that many s (rc 124; e.g. 14400 = 4 h; a normal scan takes 3-10 min).
 # Lock (fixes 11-12 H2/M8): holder = host:pid:date:job id. A lock whose orchestrator here is gone is removed only when no laptop
 # job (laptop_jobs/*/run.sh) runs; the EXIT trap does not wipe the recording / cache or unlock while its laptop job still runs
 # (SIGTERM / SIGHUP / dropped link) -> the orphan job finishes, the next job waits for it. Cache = laptop_cache/<job id> (per job).
@@ -82,7 +83,7 @@ ALIVE_RE="$JOBS/[^ ]*/run\\.sh"                            # any laptop job (fix
 holder_alive_here() {  # holder_alive_here HOLDER: 0 if its orchestrator is a live remote_laptop.sh on this host
   local hn pid; hn=${1%%:*}; pid=$(echo "$1" | cut -d: -f2)
   [ "$hn" = "$(hostname)" ] && [ -n "$pid" ] || return 2          # other host: unknown
-  ps -p "$pid" -o args= 2>/dev/null | grep -q remote_laptop.sh       # kill -0 alone is fooled by a reused pid (M8)
+  tr '\0' ' ' 2>/dev/null < "/proc/$pid/cmdline" | grep -q remote_laptop.sh   # kill -0 alone is fooled by a reused pid (M8); full cmdline, not ps (cut at $COLUMNS, N5)
 }
 lock() {  # mkdir lock there; holder = this host + pid + date + job id; waits up to LOCK_WAIT_S
   local t0=$SECONDS me="$(hostname):$$:$(date +%F_%T):$1"
@@ -123,8 +124,9 @@ cleanup() {  # EXIT trap of job(): never wipe cache / recording or unlock while 
     echo "!!   remote_laptop.sh pull <RID>[/TAG]; the next job waits for it, then removes the lock and this job's cache itself." >&2
     return 0
   fi
-  [ $KEEP = 1 ] || echo "rm -rf $R $JC" | rsh
-  unlock
+  # N6 (11-12): one command there; the recording is deleted (and the lock removed) only while the lock is still ours.
+  # The per-job cache $JC is only ours -> always removed.
+  echo "rm -rf $JC; cur=\$(cat $LOCK/holder 2>/dev/null); if [ \"\$cur\" = '${LOCK_ME:-}' ]; then $( [ $KEEP = 1 ] || echo "rm -rf $R;" ) rm -rf $LOCK && echo unlocked; else echo \"lock not ours (\$cur): recording $R and lock kept\"; fi" | rsh
 }
 
 step_cmd() {  # step_cmd STEP -> shell line run there (cwd WT); uses vars below
@@ -159,7 +161,9 @@ job() {
     for c in /home/system/scanner/build_livepose/cfg_gen_hs222/c4f60 "$CFG"; do [ -d "$c" ] && SENDS+=("$c"); done
   fi
   local steps=("$st"); [ "$st" = all ] && steps=(vio kfba mesh)
-  JOB_ID=$(date +%Y%m%d_%H%M%S)_${rid}_${st%%:*}; local id=$JOB_ID
+  # N3 (11-12): unique id (time + rec + step + tag + pid + random) -> two same-second jobs never share a job dir / rc file / cache
+  local tg=${TAG//[^A-Za-z0-9_.-]/_}
+  JOB_ID=$(date +%Y%m%d_%H%M%S)_${rid}_${st%%:*}${tg:+_$tg}_$$_$(od -An -N2 -tx2 /dev/urandom | tr -dc 0-9a-f); local id=$JOB_ID
   JC=$CACHE/$id                                # per-job cache dir there (fixes 11-12 H2: an orphan job keeps its own cache)
   echo "== job $id on $H: $name, steps '${steps[*]}', out $O"
   lock "$id"
@@ -178,7 +182,9 @@ job() {
     for s in "${steps[@]}"; do echo "echo \"\$(date +%T) step ${s%%:*} start\"; ( $(step_cmd "$s") ); echo \"\$(date +%T) step ${s%%:*} done\""; done
     echo "__RUN__"
     # setsid -f: a plain nohup/& child is killed when this wsl.exe session ends (tested 11-11)
-    echo "setsid -f bash -c 'bash $JOBS/$id/run.sh > $JOBS/$id/job.log 2>&1; echo \$? > $JOBS/$id/rc' >/dev/null 2>&1 < /dev/null"
+    # N4 (11-12): JOB_TIMEOUT_S > 0 -> the job is killed after that many seconds (timeout: TERM to its process group, KILL 60 s later), rc 124/137
+    local to=""; [ "${JOB_TIMEOUT_S:-0}" -gt 0 ] && to="timeout -k 60 ${JOB_TIMEOUT_S}"
+    echo "setsid -f bash -c '$to bash $JOBS/$id/run.sh > $JOBS/$id/job.log 2>&1; echo \$? > $JOBS/$id/rc' >/dev/null 2>&1 < /dev/null"
   } | rsh
   echo "running (log there: $JOBS/$id/job.log)"
   while :; do                                   # poll (ssh may drop; the job keeps running there under setsid)

@@ -76,7 +76,7 @@ FULLV=0; KRES=1920; KQ=90; BADEV=cuda; SIFTDEV=cpu; G=""; CFG=""; VIO=""; BOARD=
 LENS=""; SREF=""; REDSIZE=302.0x188.75; LENSONLY=0
 KFX=""; MSX=""; VIX=""; CACHE=""; KEEPC=0; TALLOC=dense; KFSEL=motion; KFD=3; KFR=4; KFW=4; KFB=gyro; FV=2; FF=auto; FP=all; REUSE=""
 G_SET=0; CFG_SET=0; PRE_REUSE=""; MINV=1000; DSIG=old     # fixes 11-12: --gt given explicitly (M5), flags ignored by --reuse (M6), mesh vertex gate (M3)
-while [ $# -gt 0 ]; do case $1 in
+while [ $# -gt 0 ]; do opt=$1; case $1 in      # opt: the 2nd case must see the NAME (the 1st case shifts past a value; N1 11-12)
   --full-video) FULLV=1;; --kf-res) KRES=$2; shift;; --kf-quality) KQ=$2; shift;;
   --ba-device) BADEV=$2; shift;; --sift-device) SIFTDEV=$2; shift;; --gt) G=$2; G_SET=1; shift;; --cfg) CFG=$2; CFG_SET=1; shift;;
   --min-mesh-vertices) MINV=$2; shift;; --depth-sigma) DSIG=$2; shift;;
@@ -88,8 +88,8 @@ while [ $# -gt 0 ]; do case $1 in
   --cache) CACHE=$(realpath -m "$2"); shift;; --keep-cache) KEEPC=1;;
   --lens) LENS=$(realpath -m "$2"); shift;; --scale-ref) SREF=$2; shift;; --red-size) REDSIZE=$2; shift;;
   *) echo "bad option $1" >&2; exit 1;; esac
-  case $1 in --full-video|--kf-res|--kf-quality|--ba-device|--sift-device|--kfba-args|--vio-args|--kf-select|--kf-dist|--kf-rot|--kf-win|--kf-blur|--vio|--cfg)
-    PRE_REUSE="$PRE_REUSE $1";; esac; shift; done
+  case $opt in --full-video|--kf-res|--kf-quality|--ba-device|--sift-device|--kfba-args|--vio-args|--kf-select|--kf-dist|--kf-rot|--kf-win|--kf-blur|--vio|--cfg)
+    PRE_REUSE="$PRE_REUSE $opt";; esac; shift; done
 case $KRES in 1920|960) ;; *) echo "--kf-res must be 1920 or 960" >&2; exit 1;; esac
 case $TALLOC in dense|sparse) ;; *) echo "--tsdf-alloc must be dense or sparse" >&2; exit 1;; esac
 case $KFSEL in interval|motion) ;; *) echo "--kf-select must be interval or motion" >&2; exit 1;; esac

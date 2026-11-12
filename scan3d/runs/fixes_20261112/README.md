@@ -16,7 +16,7 @@
 | M3 품질 문턱 | `run_scanner.sh`, `scan_offline.py`, `kf_ba.py` | 메시 정점 < `--min-mesh-vertices` (기본 1000) 이면 rc 5 + 요약 `status failed`. 요약에 `ba_quality.n_kf_vio_pose` (관측 15 개 미만이라 VIO 자세로 남은 키프레임 수), `final_med_px`, `mesh.tsdf_full` / `tsdf_blocks` (블록 한도 60000), TSDF 블록 한도 메시지를 로그·요약에 남김 (동작은 그대로) |
 | M1 GT ok 거르기 | `scan_offline.py`, `scanA/README.md` | 동작은 그대로. README 문장을 코드대로 고침. 빠진 수 `n_kf_gt_not_ok_dropped` 기록. 끄는 플래그 `--keep-gt-not-ok` (기본 꺼짐) |
 | M5 | `run_scanner.sh` | `--gt 이름` 을 직접 줬는데 폴더가 없으면 멈춤. lens-only 에서 `--cfg` 없으면 경고 |
-| M6 | `run_scanner.sh` | `--reuse` 와 무시되는 플래그를 같이 주면 경고 |
+| M6 | `run_scanner.sh` | `--reuse` 와 무시되는 플래그를 같이 주면 경고. **단위 1 에서는 실제로 `--full-video` 하나에만 떴음 (검토 N1) → 단위 5 에서 고침** |
 | M7 | `run_scanner.sh`, `remote_laptop.sh`, `scan_offline.py` | 요약 `provenance`: 커밋 + 작업 트리 전체 dirty, MAIN 커밋(+dirty), 렌즈 파일 sha, VIO 설정 yaml sha, 실제 import 된 `lib_ffs.py` 경로·sha |
 | M9 | `run_scanner.sh` | `frames_kf` 첫 영상 크기가 `--kf-res` 와 안 맞으면 멈춤 |
 | M10 | `kf_ba.py` | 영상 캐시 폴더 이름에 K·dist·크기·입력 해시 (`_L<hash>`) |
@@ -152,3 +152,28 @@ M4 (불확실 판정) 는 손대지 않음.
 - 보기: `changes_0620/fixes_20261112/scanner_220612_sigma_ba.ply` (33 MB), 목록 백업 `meshes.json.bak_fixes_u4_20261112_105408`.
 - 결과: `scan3d/runs/laptop/20261106_220612_std60/fix_u4ba/scan/`. 그림 스크립트: WSL `~/scanner/fixes_tmp/render_kf.py`, `plyio.py`.
 - 정리: ba 모델이면 방 녹화도 메시가 나온다 (0 → 88 만 정점). 다음 걸림돌은 **TSDF 블록 한도 60 000** (방 하나를 5 mm 로 다 못 담음) — 메인 세션 결정.
+
+## 5. 단위 5 — 검토 지적 (review_fixes.md N1–N6) 작은 고침, 결과 안 바뀜
+
+입력: `C:\Users\a3162\scan3d_handoff\review_20261112\review_fixes.md`. 줄 끝 (LF) 은 그대로, 다른 줄은 안 건드림.
+
+| 지적 | 고친 곳 | 내용 |
+|---|---|---|
+| N2 실행 권한 | `tools/remote_laptop.sh` | git 모드 100644 → 100755, 파일도 `chmod +x` (queue 스크립트의 `tools/remote_laptop.sh job ...` 이 다시 됨) |
+| N3 같은 초 작업 id | 같은 파일 | 작업 id = 시각 + 녹화 + 단계 + 태그 + 지시 셸 PID + 무작위 4 자리 16 진 (`..._cmd_tA_a_14680_b01b`). 같은 초·같은 녹화·같은 단계여도 작업 폴더·rc·캐시가 따로 |
+| N6 trap 지우기 | 같은 파일 | 끝 정리를 노트북 한 명령으로: 작업 캐시는 늘 지우고, **잠금이 아직 내 것일 때만** 녹화를 지우고 잠금을 푼다. 아니면 "lock not ours ... recording and lock kept" |
+| N5 `ps` 잘림 | 같은 파일 | 지시 셸 생존 확인을 `ps -o args=` 대신 `/proc/<pid>/cmdline` 전체로 |
+| N4 멈춘 작업 | 같은 파일 | 환경 변수 `JOB_TIMEOUT_S` (기본 0 = 꺼짐, 예전과 같음). 주면 노트북 작업을 `timeout -k 60` 으로 감싸 그 시간 뒤 끝냄 (rc 124). 권장 예: 14400 (4 시간; 보통 scan 3–10 분). gpu_guard 는 안 고침 |
+| N1 M6 경고 | `scanA/run_scanner.sh:79-92` | 둘째 `case` 가 값이 아니라 옵션 이름 (`opt=$1`, 첫 `case` 전에 잡음) 을 봄 |
+
+### 시험 (가짜 작업만, 실제 작업 안 죽임; 로그 WSL `~/scanner/fixes_tmp/logs/testA_n1n5.log`, `tA_*.log`)
+- N1 조각 (`run_scanner.sh` 75–92 줄만 떼어 실행): `--reuse /x --kf-select interval --kf-res 960 --ba-device cpu --full-video --kfba-args '--a b' --depth-sigma ba`
+  → 옛 코드 `PRE_REUSE=[ --full-video]`, 새 코드 `[ --kf-select --kf-res --ba-device --full-video --kfba-args]`. 무시 플래그 없을 때 둘 다 빈 칸. 값 읽기는 같음.
+- N5: 긴 경로 이름의 가짜 `remote_laptop.sh` 프로세스, `COLUMNS=40` → 옛 코드 "죽음" (틀림), 새 코드 "살아 있음". 죽은 PID → 새 코드 "죽음".
+- N3: 같은 초 (10:58:54) 에 `job calcap_20261025_205003 'cmd:sleep 25' --tag tA_a &` 와 `--tag tA_b &` → id 가 다름 (`..._tA_a_14680_b01b`, `..._tA_b_14681_9020`),
+  b 는 a 가 끝날 때까지 기다린 뒤 돎, 둘 다 rc 0, 각자 정상 해제.
+- N4: `JOB_TIMEOUT_S=15 job ... 'cmd:sleep 120'` → 21 s 뒤 `job rc 124`, 정리·해제 정상, 노트북에 `sleep` 안 남음.
+- N6: C (`sleep 90`) 도는 중 `FORCE=1 unlock` → D (`sleep 100; test -d $R`) 가 잠금을 잡음 → C 가 끝날 때 "lock not ours (… D …): recording … and lock kept",
+  D 는 끝에 `REC_OK` (녹화가 안 지워짐), D 가 정상 해제. 뒤에 노트북 `laptop_cache` 비어 있음, 녹화 지워짐.
+- 결과 숫자에 닿는 코드는 안 바뀜 (스캐너 계산 경로 변경 없음) → 메시 재실행 안 함.
+- 안 한 것: SIGKILL·링크 끊김·재부팅 시험, gpu_guard 대기 시간 제한 (N4 의 다른 길), N7 (출처 기록) 은 손대지 않음.
