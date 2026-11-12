@@ -1,0 +1,166 @@
+{
+ "made": "2026-11-12 12:51:55",
+ "commit": "a616b2634b25ac4035b58085c5cf76192a0347de",
+ "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/red/hs_20261112_121801_std60_kf",
+ "input": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/red/hs_20261112_121801_std60_kf",
+ "keyframe_only": true,
+ "kf_res": 1920,
+ "kf_quality": 90,
+ "live_poses": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/red/hs_20261112_121801_std60_kf/phone_live_poses.jsonl.gz",
+ "gt": "lensonly",
+ "vio_cfg": "/home/system/scanner/build_livepose/cfg_gen/c4f60",
+ "tsdf_alloc": "dense",
+ "ffs_views": 2,
+ "ffs_fuse": "auto",
+ "ffs_partners": "all",
+ "reuse": null,
+ "ba_dir": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u9salad/scan/ba",
+ "kfba_device_line": "[device] BA cuda, SIFT cpu, matcher auto",
+ "step_s": {
+  "lensonly": 0.2,
+  "kfba": 113.2,
+  "mesh": 184.5
+ },
+ "total_s": 297.9,
+ "sent": {
+  "n_keyframes": 494,
+  "image_size": [
+   1920,
+   1080
+  ],
+  "jpeg_bytes": 259875229,
+  "duration_s": 60.940395976000005,
+  "jpeg_MB_per_min": 255.86498890064252,
+  "kf_per_min": 486.3768855665631,
+  "kf_select": {
+   "rule": "motion",
+   "dist_m": 0.03,
+   "rot_deg": 4.0,
+   "win": 4,
+   "blur": "gyro",
+   "max_gyro": 0.0,
+   "n_vio_frames": 3218,
+   "n_scored": 1976,
+   "n_kf": 494,
+   "pos_in_window_hist": [
+    162,
+    86,
+    87,
+    159
+   ],
+   "gyro_kf_median": 0.28215998024661404,
+   "gyro_window_mean_median": 0.3575441512678943,
+   "moved_m_median": 0.04335949644588366,
+   "rot_deg_median": 1.8742277403817638,
+   "exposure_ns_median": 2000000.0,
+   "skew_ns_median": 6540750.0
+  }
+ },
+ "ba": {
+  "timing": {
+   "images_s": 5.3,
+   "features_s": 26.3,
+   "matching_s": 18.3,
+   "gpu_stage_s": 59.9,
+   "read_db_uf_s": 0.1,
+   "tracks_s": 2.1,
+   "tri_s": 4.6,
+   "tracks_tri_s": 7.0,
+   "ba_phases": {
+    "n_obs_pairs": 8039366,
+    "setup_s": 1.013,
+    "jac_s": 18.672,
+    "n_solves": 45,
+    "schur_s": 10.131,
+    "solve_s": 4.65,
+    "update_cost_s": 0.547,
+    "gpu_peak_gb": 2.16
+   },
+   "ba_device": "cuda",
+   "ba_s": 36.0
+  }
+ },
+ "mesh": {
+  "absdZ_p90_cm": null,
+  "k_pct": -4.440892098500626e-14,
+  "mesh_board_z_rms_cm": null,
+  "n_kf": 494,
+  "n_kf_depth": 350,
+  "n_kf_board_eval": null,
+  "kf_absdZ_p90_cm_median": null,
+  "board_cover_frac": null,
+  "ffs_views": 2,
+  "ffs_fuse": "mean",
+  "ffs_partners": "all",
+  "ffs_s_total": 103.2,
+  "n_kf_by_pairs": {
+   "0": 144,
+   "1": 350
+  },
+  "n_kf_no_pair": null,
+  "mesh_vertices": 1903622,
+  "tsdf_full": false,
+  "tsdf_blocks": 152750,
+  "n_kf_gt_not_ok_dropped": 0,
+  "gt_ok_filter": true,
+  "depth_sigma": {
+   "rot_deg": 0.1,
+   "b_rel": 0.02,
+   "sigma_d_px": 0.5,
+   "sigma_max": 0.08,
+   "sigma_ok": 0.02,
+   "z_max": 2.0
+  },
+  "mesh_cam_depth_m": {
+   "n": 1903622,
+   "p50": 1.0452572419707855,
+   "p90": 1.2911425807819645,
+   "p99": 1.4462245150232362,
+   "max": 1.5861716950824787,
+   "frac_gt_0p65": 0.9219172713910639,
+   "frac_gt_1p0": 0.5937302678788121
+  },
+  "lib_ffs": {
+   "file": "/home/system/scanner/StereoDepthSeg/lib_ffs.py",
+   "sha": "9b820bc28df4caf7"
+  },
+  "note": "lens-only stand-in GT: k_pct and board numbers meaningless"
+ },
+ "board": null,
+ "mesh_board": null,
+ "status": "ok",
+ "steps_run": [
+  "kfba",
+  "lensonly",
+  "mesh"
+ ],
+ "vio": null,
+ "vio_crashed": null,
+ "ba_quality": {
+  "n_kf": 494,
+  "kf_obs_min": 17,
+  "n_kf_vio_pose": 0,
+  "fixed_kf": [
+   279
+  ],
+  "final_med_px": 0.29388214270153046,
+  "final_rmse_px": 0.7085532418889516,
+  "frac_inlier_1px": 0.9157408710689294,
+  "sim3_rms_cm": 7.840551831722939
+ },
+ "min_mesh_vertices": 1000,
+ "provenance": {
+  "commit": "a616b2634b25ac4035b58085c5cf76192a0347de",
+  "commit_dirty": false,
+  "main_commit": "-dirty",
+  "worktree": "/home/system/scanner/StereoDepthSeg-fixes",
+  "lens_file": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json",
+  "lens_sha": "21b5f334c1bc210b",
+  "vio_cfg_sha": {
+   "estimator_config.yaml": "b81f2b377f76c84c",
+   "kalibr_imu_chain.yaml": "0f8eefa54043fc3e",
+   "kalibr_imucam_chain.yaml": "58b9a1af46461eb3"
+  }
+ },
+ "lens_only": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json"
+}

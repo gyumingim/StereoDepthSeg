@@ -281,3 +281,34 @@ M4 (불확실 판정) 는 손대지 않음.
   1.6 m 보다 먼 곳 (방 안쪽 책상줄·의자·문) 은 비거나 조각뿐이고, 검은 기계·바닥 일부는 번짐. 위에서 보면 카메라 길이 두 줄로 나란히 보임 (되돌아 걸었는지 VIO 드리프트인지 판정 못 함, 루프 없음).
 - 보기: `changes_0620/fixes_20261112/scanner_121801_office_ba_cap250k.ply`, 목록 백업 `meshes.json.bak_fixes_u8_20261112_123013`.
 - 결과: `scan3d/runs/laptop/20261112_121801_std60/fix_u8/` (mesh.ply·obj·키프레임 사진은 커밋 안 함).
+
+## 9. 단위 9 — 121801 + BA 루프 짝 (`--loop salad`, 노트북 1 회, 미검증). 기본값은 안 바꿈
+
+### 무엇을 바꿨나
+- fix_u8 이 만든 키프레임 폴더 (`fix_u8/scan/red/hs_20261112_121801_std60_kf`: 같은 VIO 자세, 같은 494 키프레임) 를 REC 로 그대로 넣어
+  vio·reduce 를 건너뛰고 **kfba 의 짝만** 바꿈: `--kfba-args "--loop salad"` (featloop 11-05 의 SALAD 전역 기술자로 키프레임마다 닮은 5 장을 더 짝지음).
+  나머지 플래그는 u8 과 같음 (`--depth-sigma ba --mesh-args "--tsdf-max-blocks 250000"`, 시드 0, CPU SIFT, GPU BA).
+- 명령: `remote_laptop.sh job 121801 'cmd:... run_scanner.sh <fix_u8 red 폴더> $WT/$O/scan --depth-sigma ba --mesh-args "--tsdf-max-blocks 250000" --kfba-args "--loop salad"' --tag fix_u9salad`
+  (SALAD 무게 `dino_salad.ckpt`, `dinov2_vitb14_pretrain.pth`, `facebookresearch_dinov2_main`, `~/scanner/featloop_ext/salad` 를 노트북에 `--send`; 노트북에 처음). 코드 a616b26 (dirty 아님).
+
+| 항목 | fix_u8 (루프 없음) | fix_u9salad (루프 SALAD) |
+|---|---|---|
+| rc / status | 0 / ok | 0 / ok |
+| 짝 (기본 / 검증) | 5 461 / 5 419 | 같음 5 461 / 5 419 |
+| 루프 짝 (제안 / 검증 ≥ 15 인라이어) | 0 | **1 881 / 1 593** (인라이어 중앙 272; VIO 거리 중앙 0.74 m, 각도 중앙 11°; 91.6 % 가 기존 공시 짝 조건 밖) |
+| 루프 짝으로 이어진 3D 점 / 관측 | — | 22 139 / 289 658 |
+| BA 재투영 중앙 / rmse / 1 px 안 | 0.292 / 0.702 px / 91.7 % | 0.294 / 0.709 px / 91.6 % |
+| BA-VIO 중심 rms | 7.98 cm | **7.84 cm** |
+| BA 자세 차 (u9 − u8, 같은 키프레임 494 개) | — | 중앙 0.24 cm, p90 0.53 cm, 최대 0.72 cm |
+| 메시 정점 / TSDF 블록 | 1 905 456 / 154 556 | 1 903 622 / 152 750 |
+| 정점 카메라 깊이 중앙 / p99 / 최대 | 1.04 / 1.44 / 1.59 m | 1.05 / 1.45 / 1.59 m |
+| kfba / mesh 시간 | 99.5 / 187.1 s | 113.2 (SALAD 14.3 s 포함) / 184.5 s |
+
+- 그림: `u9_121801_salad_kfviews.jpg` (kf 175 / 437, 왼쪽 사진·오른쪽 메시 점), `u9_121801_salad_kfviews_top.png` (위에서, 빨간 점 = 키프레임 카메라).
+- **두 줄 길은 그대로**: 아래쪽 복도에서 카메라 길이 약 0.5 m 떨어진 두 줄 (가는 길·오는 길). 키프레임마다 "100 개 넘게 떨어진 키프레임 중 가장 가까운 것" 의 수평 거리 중앙 49.2 → 49.0 cm.
+  루프 짝 1 593 개가 검증되고 2.2 만 점이 두 길을 이어 주는데도 BA 가 1 cm 도 안 움직였으므로, 드리프트가 아니라 **실제로 다른 줄로 걸어 돌아온 것** 으로 추정
+  (메시의 선반·공구판도 두 겹이 아님, 눈 확인). 단, 삼각측량이 VIO 자세로 하고 4 px 넘는 관측을 버리므로 큰 드리프트였다면 루프 점이 덜 남았을 수 있음 (미검사).
+- 반복성: featloop (11-05) 에서 SALAD 루프가 실행마다 달랐던 원인은 RANSAC 시드 (-1) 였음. 여기서는 시드 0 이지만 GPU 매처라 같은 결과가 또 나온다는 보장 없음 (한 번만 돌림).
+- 정리: 이 녹화에서는 루프 짝이 결과를 거의 안 바꿈 (+14 s). 기본값 그대로 (`--loop none`).
+- 보기: `changes_0620/fixes_20261112/scanner_121801_office_salad_loop.ply`, 목록 백업 `meshes.json.bak_fixes_u9_20261112_125424`.
+- 결과: `scan3d/runs/laptop/20261112_121801_std60/fix_u9salad/` (mesh.ply·obj·salad_sim.npy 는 커밋 안 함).
