@@ -64,6 +64,8 @@
 # Env: SCANNER_COMMIT (commit to record, default git rev-parse), P (python, default ~/scanner/StereoDepthSeg/venv_ffs/bin/python), FFS_ROOT (default ~/scanner/StereoDepthSeg).
 # Writes OUT/scan_summary.json (made, inputs, git commit, per-step seconds, |dZ| p90, k, ...) and prints it.
 set -euo pipefail
+# 11-12: fewer CUDA OOMs in the mesh step on the 8 GB laptop GPU (u10 mesh failed rc 3 without it); caller can override
+export PYTORCH_CUDA_ALLOC_CONF=${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}
 WT=$(cd "$(dirname "$0")/../.." && pwd)
 MAIN=/home/system/scanner/StereoDepthSeg
 P=${P:-$MAIN/venv_ffs/bin/python}

@@ -22,6 +22,8 @@
 #   --lens FILE              lens json for every part and the merged scan (default: the std 0.5 dpt app lens, like run_scanner)
 # Writes OUT/merge_summary.json (made, commit, inputs, per-step seconds, merge.json numbers, final scan status) and prints it.
 set -euo pipefail
+# 11-12: fewer CUDA OOMs in the mesh step on the 8 GB laptop GPU (u10 mesh failed rc 3 without it); caller can override
+export PYTORCH_CUDA_ALLOC_CONF=${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}
 WT=$(cd "$(dirname "$0")/../.." && pwd)
 MAIN=/home/system/scanner/StereoDepthSeg
 P=${P:-$MAIN/venv_ffs/bin/python}
