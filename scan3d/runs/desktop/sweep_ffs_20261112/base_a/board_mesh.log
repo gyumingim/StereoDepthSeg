@@ -1,0 +1,280 @@
+[sweep] scan_offline snapshot /home/system/scanner/sweep_ffs/snap/scanA/scan_offline.py, ffs_max_disp 192
+[gpu_guard] stale lock taken over: {'owner': 'scan_offline /home/system/scanner/sweep_ffs/runs/base_a/office', 'pid': 82781, 'host': 'rtx5080', 'time': 1794488600.1196976, 'time_str': '2026-11-12 22:03:20'}
+[gpu_guard] torch memory cap 0.75 x 15.9 GB = 11.9 GB
+[ffs] backend trt (from cli)
+VIO poses {'source': '/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/ba/poses_ba.jsonl.gz', 'n': 110, 'se3_rmse_cm': 0.9011531331047204, 'sim3_scale_would_be': 0.9866306401356775, 'free_scale_applied': False, 'rot_diff_deg_median': 1.0216118215044452}
+decoded 102 frames (960x540), gt rows 102, ok 102
+[ffs-trt] 4 engines [(544, 960), (960, 544), (384, 672), (672, 384)] from /home/system/scanner/ffs_trt/engines_v3, TensorRT 10.16.1.11, shared activation memory 3710 MB
+[tsdf] alloc dense
+[11/12/2026-22:03:47] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+[11/12/2026-22:03:49] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+kf 9/102: {'i': 9, 'pairs': 1, 'B_cm': [25.5], 'valid_frac': 0.22502507716049383, 'board_px': 53759, 'board_valid': 52979, 'ffs_ms': [62], 'board_dZ_mean_cm': 1.1447365723204461, 'board_dZ_p10_cm': 0.9116867438042275, 'board_dZ_p90_cm': 1.428092958157168, 'board_absdZ_mean_cm': 1.1447365723204461, 'board_dZ_med_cm': 1.11603776714837, 'board_absdZ_p50_cm': 1.11603776714837, 'board_absdZ_p90_cm': 1.428092958157168, 'board_Z_m': 0.588809262450865, 'frame': 387, 'n_cand': 34, 'partners': [65], 'rejected': []}
+[11/12/2026-22:03:50] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+kf 19/102: {'i': 19, 'pairs': 1, 'B_cm': [6.8], 'valid_frac': 0.43506944444444445, 'board_px': 26927, 'board_valid': 26927, 'ffs_ms': [36], 'board_dZ_mean_cm': 2.8123545341700558, 'board_dZ_p10_cm': 2.123808609876192, 'board_dZ_p90_cm': 3.6220790284259285, 'board_absdZ_mean_cm': 2.8123545341700558, 'board_dZ_med_cm': 2.7490775774374865, 'board_absdZ_p50_cm': 2.7490775774374865, 'board_absdZ_p90_cm': 3.6220790284259285, 'board_Z_m': 0.8305861123623092, 'frame': 472, 'n_cand': 45, 'partners': [0], 'rejected': []}
+kf 29/102: {'i': 29, 'pairs': 1, 'B_cm': [8.4], 'valid_frac': 0.7668171296296297, 'board_px': 29300, 'board_valid': 29300, 'ffs_ms': [31], 'board_dZ_mean_cm': 0.754094416592881, 'board_dZ_p10_cm': 0.5388728299231571, 'board_dZ_p90_cm': 0.9779106399772854, 'board_absdZ_mean_cm': 0.754094416592881, 'board_dZ_med_cm': 0.750410976828253, 'board_absdZ_p50_cm': 0.750410976828253, 'board_absdZ_p90_cm': 0.9779106399772854, 'board_Z_m': 0.7984201420481782, 'frame': 671, 'n_cand': 52, 'partners': [32], 'rejected': []}
+kf 39/102: {'i': 39, 'pairs': 1, 'B_cm': [9.6], 'valid_frac': 0.6583294753086419, 'board_px': 32186, 'board_valid': 32186, 'ffs_ms': [32], 'board_dZ_mean_cm': 0.31479291744974275, 'board_dZ_p10_cm': 0.010008098321229175, 'board_dZ_p90_cm': 0.5523668949628413, 'board_absdZ_mean_cm': 0.33293047152468286, 'board_dZ_med_cm': 0.3467856799361124, 'board_absdZ_p50_cm': 0.3467856799361124, 'board_absdZ_p90_cm': 0.5523668949628413, 'board_Z_m': 0.7624650877402274, 'frame': 778, 'n_cand': 50, 'partners': [54], 'rejected': []}
+kf 49/102: {'i': 49, 'pairs': 1, 'B_cm': [8.0], 'valid_frac': 0.6837364969135803, 'board_px': 25737, 'board_valid': 25737, 'ffs_ms': [32], 'board_dZ_mean_cm': 1.6412138523453899, 'board_dZ_p10_cm': 1.2794597866367052, 'board_dZ_p90_cm': 1.9773896266416502, 'board_absdZ_mean_cm': 1.6412138523453899, 'board_dZ_med_cm': 1.6521804012319619, 'board_absdZ_p50_cm': 1.6521804012319619, 'board_absdZ_p90_cm': 1.9773896266416502, 'board_Z_m': 0.8465836672874677, 'frame': 859, 'n_cand': 33, 'partners': [51], 'rejected': []}
+kf 59/102: {'i': 59, 'pairs': 1, 'B_cm': [8.9], 'valid_frac': 0.8024498456790123, 'board_px': 41419, 'board_valid': 41419, 'ffs_ms': [37], 'board_dZ_mean_cm': 0.9687940485093147, 'board_dZ_p10_cm': 0.85270608064415, 'board_dZ_p90_cm': 1.096484408805223, 'board_absdZ_mean_cm': 0.9687940485093147, 'board_dZ_med_cm': 0.9617960747306808, 'board_absdZ_p50_cm': 0.9617960747306808, 'board_absdZ_p90_cm': 1.096484408805223, 'board_Z_m': 0.672496587774741, 'frame': 926, 'n_cand': 78, 'partners': [61], 'rejected': []}
+kf 69/102: {'i': 69, 'pairs': 1, 'B_cm': [7.8], 'valid_frac': 0.5178780864197531, 'board_px': 70166, 'board_valid': 68531, 'ffs_ms': [32], 'board_dZ_mean_cm': 0.5191990884586012, 'board_dZ_p10_cm': 0.44237349200371145, 'board_dZ_p90_cm': 0.6026363052698547, 'board_absdZ_mean_cm': 0.5191990884586012, 'board_dZ_med_cm': 0.5163807728160719, 'board_absdZ_p50_cm': 0.5163807728160719, 'board_absdZ_p90_cm': 0.6026363052698547, 'board_Z_m': 0.5176507822255721, 'frame': 991, 'n_cand': 25, 'partners': [83], 'rejected': []}
+kf 79/102: {'i': 79, 'pairs': 1, 'B_cm': [8.6], 'valid_frac': 0.5246296296296297, 'board_px': 41776, 'board_valid': 40668, 'ffs_ms': [38], 'board_dZ_mean_cm': 0.5093796940566503, 'board_dZ_p10_cm': 0.23318809009123972, 'board_dZ_p90_cm': 0.7651825537127754, 'board_absdZ_mean_cm': 0.5093796940566503, 'board_dZ_med_cm': 0.5128323952446168, 'board_absdZ_p50_cm': 0.5128323952446168, 'board_absdZ_p90_cm': 0.7651825537127754, 'board_Z_m': 0.670865840841515, 'frame': 1054, 'n_cand': 58, 'partners': [90], 'rejected': []}
+kf 89/102: {'i': 89, 'pairs': 1, 'B_cm': [8.2], 'valid_frac': 0.6104533179012346, 'board_px': 50797, 'board_valid': 50729, 'ffs_ms': [33], 'board_dZ_mean_cm': 0.5607100460265451, 'board_dZ_p10_cm': 0.33989999534878024, 'board_dZ_p90_cm': 0.8871461103886482, 'board_absdZ_mean_cm': 0.6343213388156592, 'board_dZ_med_cm': 0.6039787495159987, 'board_absdZ_p50_cm': 0.6124628669086141, 'board_absdZ_p90_cm': 0.912250572940403, 'board_Z_m': 0.6098417385880263, 'frame': 1127, 'n_cand': 38, 'partners': [80], 'rejected': []}
+kf 99/102: {'i': 99, 'pairs': 1, 'B_cm': [6.9], 'valid_frac': 0.6122183641975308, 'board_px': 30781, 'board_valid': 30781, 'ffs_ms': [33], 'board_dZ_mean_cm': 1.1973549615402777, 'board_dZ_p10_cm': 1.1011360375101975, 'board_dZ_p90_cm': 1.5562315559777606, 'board_absdZ_mean_cm': 1.311428708006592, 'board_dZ_med_cm': 1.281904013167945, 'board_absdZ_p50_cm': 1.2893619584518068, 'board_absdZ_p90_cm': 1.580385253583616, 'board_Z_m': 0.781920093309315, 'frame': 1212, 'n_cand': 57, 'partners': [24], 'rejected': []}
+{
+ "poses": {
+  "source": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/ba/poses_ba.jsonl.gz",
+  "n": 110,
+  "se3_rmse_cm": 0.9011531331047204,
+  "sim3_scale_would_be": 0.9866306401356775,
+  "free_scale_applied": false,
+  "rot_diff_deg_median": 1.0216118215044452,
+  "compressed_rows": 102
+ },
+ "made": "2026-11-12 22:03:59",
+ "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/red/hs_20261024_165506_std60_kf",
+ "gt": "imu_gt_spl",
+ "args": {
+  "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/red/hs_20261024_165506_std60_kf",
+  "out": "/home/system/scanner/sweep_ffs/runs/base_a/board_mesh",
+  "gt": "imu_gt_spl",
+  "scale": 0.5,
+  "kf_step": 1,
+  "n_pairs": 1,
+  "iters": 8,
+  "voxel": 0.005,
+  "zmax": 2.0,
+  "tsdf_max_blocks": 250000,
+  "tsdf_evict_gpu_blocks": 0,
+  "tsdf_evict_dtype": "f32",
+  "tsdf_evict_dir": "",
+  "tsdf_evict_keep": false,
+  "b_target": 0.08,
+  "vio": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/ba/poses_ba.jsonl.gz",
+  "free_scale": false,
+  "pose_noise_cm": 0.0,
+  "allow_fullres": false,
+  "rows_from": "",
+  "compress": true,
+  "tsdf_alloc": "dense",
+  "ffs_views": 2,
+  "ffs_fuse": "auto",
+  "ffs_partners": "all",
+  "ffs_dt_max": null,
+  "pair_min_valid": null,
+  "pair_check": "auto",
+  "keep_gt_not_ok": false,
+  "far_pairs": "off",
+  "far_baseline": 0.35,
+  "far_b_tol": 0.3,
+  "far_rot_max": 15.0,
+  "far_dt_max": 30.0,
+  "far_min_overlap": 0.5,
+  "far_znear": 0.9,
+  "far_min_z": 1.6,
+  "far_zmax": 4.0,
+  "sigma_rot_deg": 0.1,
+  "sigma_b_rel": 0.02,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02,
+  "ffs_backend": "trt",
+  "ffs_engines": "/home/system/scanner/ffs_trt/engines_v3",
+  "kf_only": "",
+  "dump_depth": ""
+ },
+ "board_mm": [
+  302.0,
+  181.19999999999996
+ ],
+ "square_mm": 60.4,
+ "gt_corner_px_median": 0.09769907593727112,
+ "n_kf": 102,
+ "n_kf_depth": 99,
+ "mesh_vertices": 141208,
+ "mesh_faces": 244958,
+ "runtime_s": 16.0,
+ "image_size": [
+  960,
+  540
+ ],
+ "K_used": [
+  [
+   643.0891632633826,
+   0.0,
+   482.567347550798
+  ],
+  [
+   0.0,
+   644.0105966432322,
+   277.2129335844328
+  ],
+  [
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "gpu_max_alloc_gb": 4.0,
+ "gpu_max_reserved_gb": 4.23,
+ "ffs_views": 2,
+ "ffs_fuse": "mean",
+ "ffs_partners": "all",
+ "ffs_dt_max": 30.0,
+ "pair_min_valid": 0.0,
+ "pair_check": "dy",
+ "pair_check_n": 341,
+ "pair_check_rejected": 242,
+ "pair_check_s": 3.3,
+ "ffs_s_total": 3.7,
+ "ffs_s_used": 3.7,
+ "n_pairs_rejected": 0,
+ "n_kf_by_pairs": {
+  "0": 3,
+  "1": 99
+ },
+ "kf_board_absdZ_p50_cm_median": 0.9611973356834502,
+ "kf_board_absdZ_p90_cm_median": 1.1860180936993572,
+ "kf_board_dZ_bias_cm_median": 0.8749613906684439,
+ "kf_board_Z_m_median": 0.7169185607031142,
+ "n_kf_board_eval": 99,
+ "n_kf_no_pair": 3,
+ "kf_board_dZ_mean_cm_stats": {
+  "mean": 0.8025713187090397,
+  "median": 0.8768799571847977,
+  "p10": 0.2126009256713436,
+  "p90": 2.1529818226529365
+ },
+ "kf_board_dZ_med_cm_stats": {
+  "mean": 0.8632980498304085,
+  "median": 0.8749613906684439,
+  "p10": 0.21460332406868513,
+  "p90": 2.20039579953673
+ },
+ "kf_board_absdZ_p50_cm_stats": {
+  "mean": 1.4998900271855584,
+  "median": 0.9611973356834502,
+  "p10": 0.4167819525549455,
+  "p90": 3.514475468134296
+ },
+ "kf_board_absdZ_mean_cm_stats": {
+  "mean": 1.5047426012143272,
+  "median": 0.9621533483989518,
+  "p10": 0.41298191752703745,
+  "p90": 3.456900789324949
+ },
+ "pooled_dZ_cm": {
+  "n": 4041562,
+  "mean": 0.747657299041748,
+  "median": 0.7892932891845703,
+  "p10": 0.1569736748933792,
+  "p90": 2.0797722339630127
+ },
+ "pooled_absdZ_cm": {
+  "mean": 1.3668726682662964,
+  "median": 0.8616721630096436,
+  "p90": 2.894373893737793
+ },
+ "kf_frac_abs_bias_gt_1cm": 0.46464646464646464,
+ "mesh_board_vertices": 1484,
+ "mesh_board_z_med_cm": 1.0269051790237427,
+ "mesh_board_z_rms_cm": 0.057868264615535736,
+ "mesh_board_z_p5_p95_cm": [
+  0.8949273228645325,
+  1.0717493295669556
+ ],
+ "mesh_board_cover_frac": 0.8987654320987655,
+ "mesh_board_z_unique_mm": 34,
+ "tsdf_alloc": "dense",
+ "ffs_backend": "trt",
+ "ffs_backend_source": "cli",
+ "ffs_trt": {
+  "engines": [
+   {
+    "H": 544,
+    "W": 960,
+    "calls": 86,
+    "dynamic": false,
+    "min": null,
+    "max": null
+   },
+   {
+    "H": 960,
+    "W": 544,
+    "calls": 8,
+    "dynamic": false,
+    "min": null,
+    "max": null
+   },
+   {
+    "H": 384,
+    "W": 672,
+    "calls": 5,
+    "dynamic": true,
+    "min": [
+     128,
+     128
+    ],
+    "max": [
+     544,
+     960
+    ]
+   },
+   {
+    "H": 672,
+    "W": 384,
+    "calls": 0,
+    "dynamic": true,
+    "min": [
+     128,
+     128
+    ],
+    "max": [
+     960,
+     544
+    ]
+   }
+  ],
+  "trt": "10.16.1.11",
+  "shapes": {
+   "285x507->288x512": 1,
+   "291x517->320x544": 1,
+   "296x527->320x544": 1,
+   "297x528->320x544": 1,
+   "516x917->544x928": 1,
+   "526x936->544x960": 1,
+   "540x960->544x960": 85,
+   "960x540->960x544": 8
+  },
+  "manifest_made": "2026-11-12 21:09:55",
+  "export_code": "e427bc816a40d11d",
+  "bucket_calls": 0,
+  "nonfinite_frames": 0,
+  "nonfinite_px": 0
+ },
+ "depth_sigma": {
+  "rot_deg": 0.1,
+  "b_rel": 0.02,
+  "sigma_d_px": 0.5,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02,
+  "z_max": 2.0
+ },
+ "mesh_cam_depth_m": {
+  "n": 141208,
+  "p50": 0.6121176998987026,
+  "p90": 0.7759303943641633,
+  "p99": 0.942833774899298,
+  "max": 1.0152107850848173,
+  "frac_gt_0p65": 0.42053566370177325,
+  "frac_gt_1p0": 0.00033992408362132457
+ },
+ "tsdf_full": false,
+ "tsdf_blocks": 7517,
+ "tsdf_max_blocks": 250000,
+ "tsdf_log": [],
+ "gt_ok_filter": true,
+ "n_kf_gt_not_ok_dropped": 8,
+ "n_kf_gt_not_ok": 8,
+ "lib_ffs": {
+  "file": "/home/system/scanner/StereoDepthSeg/lib_ffs.py",
+  "sha": "9b820bc28df4caf7"
+ }
+}

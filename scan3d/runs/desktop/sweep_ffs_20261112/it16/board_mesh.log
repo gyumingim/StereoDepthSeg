@@ -1,0 +1,279 @@
+[sweep] scan_offline snapshot /home/system/scanner/sweep_ffs/snap/scanA/scan_offline.py, ffs_max_disp 192
+[gpu_guard] torch memory cap 0.75 x 15.9 GB = 11.9 GB
+[ffs] backend trt (from cli)
+VIO poses {'source': '/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/ba/poses_ba.jsonl.gz', 'n': 110, 'se3_rmse_cm': 0.9011531331047204, 'sim3_scale_would_be': 0.9866306401356775, 'free_scale_applied': False, 'rot_diff_deg_median': 1.0216118215044452}
+decoded 102 frames (960x540), gt rows 102, ok 102
+[ffs-trt] 4 engines [(544, 960), (960, 544), (384, 672), (672, 384)] from /home/system/scanner/sweep_ffs/engines/it16, TensorRT 10.16.1.11, shared activation memory 3710 MB
+[tsdf] alloc dense
+[11/12/2026-22:27:12] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+[11/12/2026-22:27:15] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+kf 9/102: {'i': 9, 'pairs': 1, 'B_cm': [25.5], 'valid_frac': 0.2293113425925926, 'board_px': 53759, 'board_valid': 52979, 'ffs_ms': [72], 'board_dZ_mean_cm': 1.1355187354383578, 'board_dZ_p10_cm': 0.8890297666387048, 'board_dZ_p90_cm': 1.4271695443496957, 'board_absdZ_mean_cm': 1.1355187354383578, 'board_dZ_med_cm': 1.1090619178727446, 'board_absdZ_p50_cm': 1.1090619178727446, 'board_absdZ_p90_cm': 1.4271695443496957, 'board_Z_m': 0.588809262450865, 'frame': 387, 'n_cand': 34, 'partners': [65], 'rejected': []}
+[11/12/2026-22:27:15] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+kf 19/102: {'i': 19, 'pairs': 1, 'B_cm': [6.8], 'valid_frac': 0.4354494598765432, 'board_px': 26927, 'board_valid': 26927, 'ffs_ms': [45], 'board_dZ_mean_cm': 2.8123227690802404, 'board_dZ_p10_cm': 2.1240763826971265, 'board_dZ_p90_cm': 3.6038929354516824, 'board_absdZ_mean_cm': 2.8123227690802404, 'board_dZ_med_cm': 2.769832124310767, 'board_absdZ_p50_cm': 2.769832124310767, 'board_absdZ_p90_cm': 3.6038929354516824, 'board_Z_m': 0.8305861123623092, 'frame': 472, 'n_cand': 45, 'partners': [0], 'rejected': []}
+kf 29/102: {'i': 29, 'pairs': 1, 'B_cm': [8.4], 'valid_frac': 0.7663175154320988, 'board_px': 29300, 'board_valid': 29300, 'ffs_ms': [40], 'board_dZ_mean_cm': 0.7567063712607502, 'board_dZ_p10_cm': 0.5482372074048225, 'board_dZ_p90_cm': 0.9816332815535036, 'board_absdZ_mean_cm': 0.7567063712607502, 'board_dZ_med_cm': 0.7520070812262414, 'board_absdZ_p50_cm': 0.7520070812262414, 'board_absdZ_p90_cm': 0.9816332815535036, 'board_Z_m': 0.7984201420481782, 'frame': 671, 'n_cand': 52, 'partners': [32], 'rejected': []}
+kf 39/102: {'i': 39, 'pairs': 1, 'B_cm': [9.6], 'valid_frac': 0.6582735339506173, 'board_px': 32186, 'board_valid': 32186, 'ffs_ms': [40], 'board_dZ_mean_cm': 0.3128111574568966, 'board_dZ_p10_cm': 0.010868121643325956, 'board_dZ_p90_cm': 0.5498834262884611, 'board_absdZ_mean_cm': 0.3314673755479805, 'board_dZ_med_cm': 0.3460053223686921, 'board_absdZ_p50_cm': 0.3460053223686921, 'board_absdZ_p90_cm': 0.5498834262884611, 'board_Z_m': 0.7624650877402274, 'frame': 778, 'n_cand': 50, 'partners': [54], 'rejected': []}
+kf 49/102: {'i': 49, 'pairs': 1, 'B_cm': [8.0], 'valid_frac': 0.6838059413580246, 'board_px': 25737, 'board_valid': 25737, 'ffs_ms': [40], 'board_dZ_mean_cm': 1.6431589424808657, 'board_dZ_p10_cm': 1.2746923553619416, 'board_dZ_p90_cm': 1.9791459095663912, 'board_absdZ_mean_cm': 1.6431589424808657, 'board_dZ_med_cm': 1.6627529443268951, 'board_absdZ_p50_cm': 1.6627529443268951, 'board_absdZ_p90_cm': 1.9791459095663912, 'board_Z_m': 0.8465836672874677, 'frame': 859, 'n_cand': 33, 'partners': [51], 'rejected': []}
+kf 59/102: {'i': 59, 'pairs': 1, 'B_cm': [8.9], 'valid_frac': 0.8022492283950617, 'board_px': 41419, 'board_valid': 41419, 'ffs_ms': [45], 'board_dZ_mean_cm': 0.973823951929607, 'board_dZ_p10_cm': 0.8549992100070347, 'board_dZ_p90_cm': 1.1030364292217687, 'board_absdZ_mean_cm': 0.973823951929607, 'board_dZ_med_cm': 0.9668659572313665, 'board_absdZ_p50_cm': 0.9668659572313665, 'board_absdZ_p90_cm': 1.1030364292217687, 'board_Z_m': 0.672496587774741, 'frame': 926, 'n_cand': 78, 'partners': [61], 'rejected': []}
+kf 69/102: {'i': 69, 'pairs': 1, 'B_cm': [7.8], 'valid_frac': 0.5184992283950617, 'board_px': 70166, 'board_valid': 68539, 'ffs_ms': [41], 'board_dZ_mean_cm': 0.5200339129463012, 'board_dZ_p10_cm': 0.44480665731889246, 'board_dZ_p90_cm': 0.606844452162807, 'board_absdZ_mean_cm': 0.5200339129463012, 'board_dZ_med_cm': 0.5140831079775809, 'board_absdZ_p50_cm': 0.5140831079775809, 'board_absdZ_p90_cm': 0.606844452162807, 'board_Z_m': 0.5176510145880832, 'frame': 991, 'n_cand': 25, 'partners': [83], 'rejected': []}
+kf 79/102: {'i': 79, 'pairs': 1, 'B_cm': [8.6], 'valid_frac': 0.5251774691358024, 'board_px': 41776, 'board_valid': 40670, 'ffs_ms': [44], 'board_dZ_mean_cm': 0.5097501723037673, 'board_dZ_p10_cm': 0.23544609047559173, 'board_dZ_p90_cm': 0.7657123808475264, 'board_absdZ_mean_cm': 0.5097501723037673, 'board_dZ_med_cm': 0.5145615166644024, 'board_absdZ_p50_cm': 0.5145615166644024, 'board_absdZ_p90_cm': 0.7657123808475264, 'board_Z_m': 0.670865840841515, 'frame': 1054, 'n_cand': 58, 'partners': [90], 'rejected': []}
+kf 89/102: {'i': 89, 'pairs': 1, 'B_cm': [8.2], 'valid_frac': 0.6103163580246913, 'board_px': 50797, 'board_valid': 50729, 'ffs_ms': [40], 'board_dZ_mean_cm': 0.5522596616370624, 'board_dZ_p10_cm': 0.3247466275364008, 'board_dZ_p90_cm': 0.9268578343006095, 'board_absdZ_mean_cm': 0.664521530128797, 'board_dZ_med_cm': 0.6077772901040279, 'board_absdZ_p50_cm': 0.6197162321731509, 'board_absdZ_p90_cm': 0.9763774905960966, 'board_Z_m': 0.6098417385880263, 'frame': 1127, 'n_cand': 38, 'partners': [80], 'rejected': []}
+kf 99/102: {'i': 99, 'pairs': 1, 'B_cm': [6.9], 'valid_frac': 0.6185243055555556, 'board_px': 30781, 'board_valid': 30781, 'ffs_ms': [40], 'board_dZ_mean_cm': 1.2801020870528015, 'board_dZ_p10_cm': 1.1228302390707712, 'board_dZ_p90_cm': 1.5498011264813094, 'board_absdZ_mean_cm': 1.2890639235922623, 'board_dZ_med_cm': 1.2723173652974706, 'board_absdZ_p50_cm': 1.272455918799964, 'board_absdZ_p90_cm': 1.5498011264813094, 'board_Z_m': 0.781920093309315, 'frame': 1212, 'n_cand': 57, 'partners': [24], 'rejected': []}
+{
+ "poses": {
+  "source": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/ba/poses_ba.jsonl.gz",
+  "n": 110,
+  "se3_rmse_cm": 0.9011531331047204,
+  "sim3_scale_would_be": 0.9866306401356775,
+  "free_scale_applied": false,
+  "rot_diff_deg_median": 1.0216118215044452,
+  "compressed_rows": 102
+ },
+ "made": "2026-11-12 22:27:26",
+ "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/red/hs_20261024_165506_std60_kf",
+ "gt": "imu_gt_spl",
+ "args": {
+  "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/red/hs_20261024_165506_std60_kf",
+  "out": "/home/system/scanner/sweep_ffs/runs/it16/board_mesh",
+  "gt": "imu_gt_spl",
+  "scale": 0.5,
+  "kf_step": 1,
+  "n_pairs": 1,
+  "iters": 16,
+  "voxel": 0.005,
+  "zmax": 2.0,
+  "tsdf_max_blocks": 250000,
+  "tsdf_evict_gpu_blocks": 0,
+  "tsdf_evict_dtype": "f32",
+  "tsdf_evict_dir": "",
+  "tsdf_evict_keep": false,
+  "b_target": 0.08,
+  "vio": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt/ba/poses_ba.jsonl.gz",
+  "free_scale": false,
+  "pose_noise_cm": 0.0,
+  "allow_fullres": false,
+  "rows_from": "",
+  "compress": true,
+  "tsdf_alloc": "dense",
+  "ffs_views": 2,
+  "ffs_fuse": "auto",
+  "ffs_partners": "all",
+  "ffs_dt_max": null,
+  "pair_min_valid": null,
+  "pair_check": "auto",
+  "keep_gt_not_ok": false,
+  "far_pairs": "off",
+  "far_baseline": 0.35,
+  "far_b_tol": 0.3,
+  "far_rot_max": 15.0,
+  "far_dt_max": 30.0,
+  "far_min_overlap": 0.5,
+  "far_znear": 0.9,
+  "far_min_z": 1.6,
+  "far_zmax": 4.0,
+  "sigma_rot_deg": 0.1,
+  "sigma_b_rel": 0.02,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02,
+  "ffs_backend": "trt",
+  "ffs_engines": "/home/system/scanner/sweep_ffs/engines/it16",
+  "kf_only": "",
+  "dump_depth": ""
+ },
+ "board_mm": [
+  302.0,
+  181.19999999999996
+ ],
+ "square_mm": 60.4,
+ "gt_corner_px_median": 0.09769907593727112,
+ "n_kf": 102,
+ "n_kf_depth": 99,
+ "mesh_vertices": 141308,
+ "mesh_faces": 245573,
+ "runtime_s": 17.4,
+ "image_size": [
+  960,
+  540
+ ],
+ "K_used": [
+  [
+   643.0891632633826,
+   0.0,
+   482.567347550798
+  ],
+  [
+   0.0,
+   644.0105966432322,
+   277.2129335844328
+  ],
+  [
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "gpu_max_alloc_gb": 4.0,
+ "gpu_max_reserved_gb": 4.24,
+ "ffs_views": 2,
+ "ffs_fuse": "mean",
+ "ffs_partners": "all",
+ "ffs_dt_max": 30.0,
+ "pair_min_valid": 0.0,
+ "pair_check": "dy",
+ "pair_check_n": 341,
+ "pair_check_rejected": 242,
+ "pair_check_s": 3.2,
+ "ffs_s_total": 4.4,
+ "ffs_s_used": 4.4,
+ "n_pairs_rejected": 0,
+ "n_kf_by_pairs": {
+  "0": 3,
+  "1": 99
+ },
+ "kf_board_absdZ_p50_cm_median": 0.9668659572313665,
+ "kf_board_absdZ_p90_cm_median": 1.1876671521256088,
+ "kf_board_dZ_bias_cm_median": 0.8740788084158013,
+ "kf_board_Z_m_median": 0.7169206963209507,
+ "n_kf_board_eval": 99,
+ "n_kf_no_pair": 3,
+ "kf_board_dZ_mean_cm_stats": {
+  "mean": 0.7936969695780712,
+  "median": 0.8657489043192058,
+  "p10": 0.20998999474832888,
+  "p90": 2.12272903410438
+ },
+ "kf_board_dZ_med_cm_stats": {
+  "mean": 0.8231290709642629,
+  "median": 0.8740788084158013,
+  "p10": 0.21149035590369628,
+  "p90": 2.1940519622068404
+ },
+ "kf_board_absdZ_p50_cm_stats": {
+  "mean": 1.5008740328839039,
+  "median": 0.9668659572313665,
+  "p10": 0.41322818499552,
+  "p90": 3.509373014504341
+ },
+ "kf_board_absdZ_mean_cm_stats": {
+  "mean": 1.4943638528506717,
+  "median": 0.9653066365537947,
+  "p10": 0.4097037013954501,
+  "p90": 3.4790174712404287
+ },
+ "pooled_dZ_cm": {
+  "n": 4041122,
+  "mean": 0.7429428696632385,
+  "median": 0.7893259525299072,
+  "p10": 0.15887729823589325,
+  "p90": 2.0721895694732666
+ },
+ "pooled_absdZ_cm": {
+  "mean": 1.3608078956604004,
+  "median": 0.8637831211090088,
+  "p90": 2.9129247665405273
+ },
+ "kf_frac_abs_bias_gt_1cm": 0.46464646464646464,
+ "mesh_board_vertices": 1484,
+ "mesh_board_z_med_cm": 1.0203102827072144,
+ "mesh_board_z_rms_cm": 0.054851144552230835,
+ "mesh_board_z_p5_p95_cm": [
+  0.8966932892799377,
+  1.0695710182189941
+ ],
+ "mesh_board_cover_frac": 0.8987654320987655,
+ "mesh_board_z_unique_mm": 31,
+ "tsdf_alloc": "dense",
+ "ffs_backend": "trt",
+ "ffs_backend_source": "cli",
+ "ffs_trt": {
+  "engines": [
+   {
+    "H": 544,
+    "W": 960,
+    "calls": 86,
+    "dynamic": false,
+    "min": null,
+    "max": null
+   },
+   {
+    "H": 960,
+    "W": 544,
+    "calls": 8,
+    "dynamic": false,
+    "min": null,
+    "max": null
+   },
+   {
+    "H": 384,
+    "W": 672,
+    "calls": 5,
+    "dynamic": true,
+    "min": [
+     128,
+     128
+    ],
+    "max": [
+     544,
+     960
+    ]
+   },
+   {
+    "H": 672,
+    "W": 384,
+    "calls": 0,
+    "dynamic": true,
+    "min": [
+     128,
+     128
+    ],
+    "max": [
+     960,
+     544
+    ]
+   }
+  ],
+  "trt": "10.16.1.11",
+  "shapes": {
+   "285x507->288x512": 1,
+   "291x517->320x544": 1,
+   "296x527->320x544": 1,
+   "297x528->320x544": 1,
+   "516x917->544x928": 1,
+   "526x936->544x960": 1,
+   "540x960->544x960": 85,
+   "960x540->960x544": 8
+  },
+  "manifest_made": "2026-11-12 22:27:02",
+  "export_code": "e427bc816a40d11d",
+  "bucket_calls": 0,
+  "nonfinite_frames": 0,
+  "nonfinite_px": 0
+ },
+ "depth_sigma": {
+  "rot_deg": 0.1,
+  "b_rel": 0.02,
+  "sigma_d_px": 0.5,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02,
+  "z_max": 2.0
+ },
+ "mesh_cam_depth_m": {
+  "n": 141308,
+  "p50": 0.614780094593445,
+  "p90": 0.7777999679211591,
+  "p99": 0.9437311671146027,
+  "max": 1.0144755383847925,
+  "frac_gt_0p65": 0.42347920853737936,
+  "frac_gt_1p0": 0.0004104509298836584
+ },
+ "tsdf_full": false,
+ "tsdf_blocks": 7440,
+ "tsdf_max_blocks": 250000,
+ "tsdf_log": [],
+ "gt_ok_filter": true,
+ "n_kf_gt_not_ok_dropped": 8,
+ "n_kf_gt_not_ok": 8,
+ "lib_ffs": {
+  "file": "/home/system/scanner/StereoDepthSeg/lib_ffs.py",
+  "sha": "9b820bc28df4caf7"
+ }
+}

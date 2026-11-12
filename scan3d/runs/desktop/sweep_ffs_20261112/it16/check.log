@@ -1,0 +1,10 @@
+[ffs-trt] 4 engines [(544, 960), (960, 544), (384, 672), (672, 384)] from /home/system/scanner/sweep_ffs/engines/it16, TensorRT 10.16.1.11, shared activation memory 3710 MB
+[11/12/2026-22:27:06] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+[ffs-trt check] ffs_c_it16_md192_544x960.engine: input 540x956, routed yes, finite 1.0000, disp median 12.01 (want 12 +- 0.5) -> OK
+[11/12/2026-22:27:06] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+[ffs-trt check] ffs_c_it16_md192_960x544.engine: input 956x540, routed yes, finite 1.0000, disp median 12.02 (want 12 +- 0.5) -> OK
+[11/12/2026-22:27:06] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+[ffs-trt check] ffs_c_it16_md192_384x672_dyn.engine: input 379x665, routed yes, finite 1.0000, disp median 12.00 (want 12 +- 0.5) -> OK
+[11/12/2026-22:27:06] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+[ffs-trt check] ffs_c_it16_md192_672x384_dyn.engine: input 667x377, routed yes, finite 1.0000, disp median 12.00 (want 12 +- 0.5) -> OK
+[ffs-trt check] PASS 4 engines in /home/system/scanner/sweep_ffs/engines/it16, 3.4 s

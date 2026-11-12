@@ -1,0 +1,285 @@
+[sweep] scan_offline snapshot /home/system/scanner/sweep_ffs/snap/scanA/scan_offline.py, ffs_max_disp 192
+[gpu_guard] torch memory cap 0.75 x 15.9 GB = 11.9 GB
+[ffs] backend trt (from cli)
+VIO poses {'source': '/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/ba/poses_ba.jsonl.gz', 'n': 494, 'se3_rmse_cm': 7.980164675328892, 'sim3_scale_would_be': 1.0000000000000002, 'free_scale_applied': False, 'rot_diff_deg_median': 0.5735983528932168}
+decoded 494 frames (960x540), gt rows 494, ok 494
+[ffs-trt] 4 engines [(544, 960), (960, 544), (384, 672), (672, 384)] from /home/system/scanner/ffs_trt/engines_v3, TensorRT 10.16.1.11, shared activation memory 3710 MB
+[tsdf] alloc dense
+[11/12/2026-22:04:27] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+[11/12/2026-22:04:28] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+kf 9/494: {'i': 9, 'pairs': 1, 'B_cm': [8.7], 'valid_frac': 0.5592380401234568, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [32], 'frame': 310, 'n_cand': 11, 'partners': [7], 'rejected': []}
+kf 19/494: {'i': 19, 'pairs': 1, 'B_cm': [7.8], 'valid_frac': 0.6994367283950618, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [36], 'frame': 380, 'n_cand': 14, 'partners': [22], 'rejected': []}
+[11/12/2026-22:04:30] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+kf 29/494: {'i': 29, 'pairs': 1, 'B_cm': [11.9], 'valid_frac': 0.6225096450617283, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [36], 'frame': 493, 'n_cand': 5, 'partners': [31], 'rejected': []}
+kf 39/494: {'i': 39, 'pairs': 1, 'B_cm': [6.7], 'valid_frac': 0.44122492283950615, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [32], 'frame': 563, 'n_cand': 11, 'partners': [37], 'rejected': []}
+kf 49/494: {'i': 49, 'pairs': 1, 'B_cm': [9.3], 'valid_frac': 0.0765162037037037, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [37], 'frame': 630, 'n_cand': 4, 'partners': [51], 'rejected': []}
+kf 99/494: {'i': 99, 'pairs': 1, 'B_cm': [8.6], 'valid_frac': 0.491304012345679, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [37], 'frame': 928, 'n_cand': 6, 'partners': [101], 'rejected': []}
+kf 119/494: {'i': 119, 'pairs': 1, 'B_cm': [9.7], 'valid_frac': 0.4587962962962963, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [33], 'frame': 1041, 'n_cand': 6, 'partners': [117], 'rejected': []}
+kf 129/494: {'i': 129, 'pairs': 1, 'B_cm': [9.2], 'valid_frac': 0.403533950617284, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [38], 'frame': 1113, 'n_cand': 8, 'partners': [131], 'rejected': []}
+kf 139/494: {'i': 139, 'pairs': 1, 'B_cm': [8.7], 'valid_frac': 0.5989371141975308, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [32], 'frame': 1184, 'n_cand': 12, 'partners': [137], 'rejected': []}
+kf 149/494: {'i': 149, 'pairs': 1, 'B_cm': [25.9], 'valid_frac': 0.20815972222222223, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [26], 'frame': 1248, 'n_cand': 2, 'partners': [155], 'rejected': []}
+kf 159/494: {'i': 159, 'pairs': 1, 'B_cm': [7.4], 'valid_frac': 0.6671412037037037, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [31], 'frame': 1308, 'n_cand': 11, 'partners': [157], 'rejected': []}
+kf 169/494: {'i': 169, 'pairs': 1, 'B_cm': [6.6], 'valid_frac': 0.7706114969135802, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [36], 'frame': 1366, 'n_cand': 11, 'partners': [171], 'rejected': []}
+kf 179/494: {'i': 179, 'pairs': 1, 'B_cm': [8.3], 'valid_frac': 0.6448283179012345, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [32], 'frame': 1430, 'n_cand': 10, 'partners': [177], 'rejected': []}
+kf 189/494: {'i': 189, 'pairs': 1, 'B_cm': [8.3], 'valid_frac': 0.5971064814814815, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [37], 'frame': 1504, 'n_cand': 10, 'partners': [192], 'rejected': []}
+kf 199/494: {'i': 199, 'pairs': 1, 'B_cm': [7.5], 'valid_frac': 0.4149729938271605, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [32], 'frame': 1582, 'n_cand': 4, 'partners': [195], 'rejected': []}
+kf 209/494: {'i': 209, 'pairs': 1, 'B_cm': [7.4], 'valid_frac': 0.5399903549382716, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [32], 'frame': 1662, 'n_cand': 9, 'partners': [207], 'rejected': []}
+kf 269/494: {'i': 269, 'pairs': 1, 'B_cm': [6.6], 'valid_frac': 0.49529128086419755, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [35], 'frame': 2075, 'n_cand': 5, 'partners': [271], 'rejected': []}
+[11/12/2026-22:04:49] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+kf 289/494: {'i': 289, 'pairs': 1, 'B_cm': [7.5], 'valid_frac': 0.18195408950617284, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [31], 'frame': 2274, 'n_cand': 13, 'partners': [287], 'rejected': []}
+kf 299/494: {'i': 299, 'pairs': 1, 'B_cm': [6.4], 'valid_frac': 0.33097993827160493, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [36], 'frame': 2371, 'n_cand': 2, 'partners': [304], 'rejected': []}
+kf 309/494: {'i': 309, 'pairs': 1, 'B_cm': [7.3], 'valid_frac': 0.25484375, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [31], 'frame': 2435, 'n_cand': 12, 'partners': [307], 'rejected': []}
+kf 349/494: {'i': 349, 'pairs': 1, 'B_cm': [10.2], 'valid_frac': 0.24346064814814813, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [36], 'frame': 2647, 'n_cand': 4, 'partners': [351], 'rejected': []}
+kf 359/494: {'i': 359, 'pairs': 1, 'B_cm': [21.2], 'valid_frac': 0.2062866512345679, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [30], 'frame': 2702, 'n_cand': 2, 'partners': [363], 'rejected': []}
+kf 369/494: {'i': 369, 'pairs': 1, 'B_cm': [10.2], 'valid_frac': 0.3895023148148148, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [36], 'frame': 2753, 'n_cand': 8, 'partners': [371], 'rejected': []}
+kf 379/494: {'i': 379, 'pairs': 1, 'B_cm': [8.2], 'valid_frac': 0.23623649691358026, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [36], 'frame': 2806, 'n_cand': 6, 'partners': [381], 'rejected': []}
+kf 389/494: {'i': 389, 'pairs': 1, 'B_cm': [9.0], 'valid_frac': 0.5281886574074074, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [33], 'frame': 2858, 'n_cand': 11, 'partners': [387], 'rejected': []}
+kf 399/494: {'i': 399, 'pairs': 1, 'B_cm': [8.4], 'valid_frac': 0.4299980709876543, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [37], 'frame': 2927, 'n_cand': 12, 'partners': [401], 'rejected': []}
+kf 409/494: {'i': 409, 'pairs': 1, 'B_cm': [7.3], 'valid_frac': 0.3297781635802469, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [38], 'frame': 2995, 'n_cand': 8, 'partners': [411], 'rejected': []}
+kf 419/494: {'i': 419, 'pairs': 1, 'B_cm': [8.8], 'valid_frac': 0.19399691358024693, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [33], 'frame': 3053, 'n_cand': 6, 'partners': [417], 'rejected': []}
+kf 429/494: {'i': 429, 'pairs': 1, 'B_cm': [12.6], 'valid_frac': 0.5170138888888889, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [37], 'frame': 3123, 'n_cand': 10, 'partners': [431], 'rejected': []}
+kf 439/494: {'i': 439, 'pairs': 1, 'B_cm': [8.7], 'valid_frac': 0.44883680555555555, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [37], 'frame': 3179, 'n_cand': 10, 'partners': [441], 'rejected': []}
+kf 449/494: {'i': 449, 'pairs': 1, 'B_cm': [10.2], 'valid_frac': 0.4420428240740741, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [33], 'frame': 3228, 'n_cand': 10, 'partners': [447], 'rejected': []}
+kf 459/494: {'i': 459, 'pairs': 1, 'B_cm': [19.9], 'valid_frac': 0.24958719135802468, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [23], 'frame': 3280, 'n_cand': 3, 'partners': [455], 'rejected': []}
+kf 469/494: {'i': 469, 'pairs': 1, 'B_cm': [9.4], 'valid_frac': 0.29061149691358024, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [36], 'frame': 3332, 'n_cand': 7, 'partners': [471], 'rejected': []}
+kf 479/494: {'i': 479, 'pairs': 1, 'B_cm': [12.5], 'valid_frac': 0.3585011574074074, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [32], 'frame': 3386, 'n_cand': 7, 'partners': [477], 'rejected': []}
+{
+ "poses": {
+  "source": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/ba/poses_ba.jsonl.gz",
+  "n": 494,
+  "se3_rmse_cm": 7.980164675328892,
+  "sim3_scale_would_be": 1.0000000000000002,
+  "free_scale_applied": false,
+  "rot_diff_deg_median": 0.5735983528932168,
+  "compressed_rows": 494
+ },
+ "made": "2026-11-12 22:05:16",
+ "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/red/hs_20261112_121801_std60_kf",
+ "gt": "lensonly",
+ "args": {
+  "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/red/hs_20261112_121801_std60_kf",
+  "out": "/home/system/scanner/sweep_ffs/runs/base_a/office",
+  "gt": "lensonly",
+  "scale": 0.5,
+  "kf_step": 1,
+  "n_pairs": 1,
+  "iters": 8,
+  "voxel": 0.005,
+  "zmax": 2.0,
+  "tsdf_max_blocks": 250000,
+  "tsdf_evict_gpu_blocks": 0,
+  "tsdf_evict_dtype": "f32",
+  "tsdf_evict_dir": "",
+  "tsdf_evict_keep": false,
+  "b_target": 0.08,
+  "vio": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/ba/poses_ba.jsonl.gz",
+  "free_scale": false,
+  "pose_noise_cm": 0.0,
+  "allow_fullres": false,
+  "rows_from": "",
+  "compress": true,
+  "tsdf_alloc": "dense",
+  "ffs_views": 2,
+  "ffs_fuse": "auto",
+  "ffs_partners": "all",
+  "ffs_dt_max": null,
+  "pair_min_valid": null,
+  "pair_check": "auto",
+  "keep_gt_not_ok": false,
+  "far_pairs": "off",
+  "far_baseline": 0.35,
+  "far_b_tol": 0.3,
+  "far_rot_max": 15.0,
+  "far_dt_max": 30.0,
+  "far_min_overlap": 0.5,
+  "far_znear": 0.9,
+  "far_min_z": 1.6,
+  "far_zmax": 4.0,
+  "sigma_rot_deg": 0.1,
+  "sigma_b_rel": 0.02,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02,
+  "ffs_backend": "trt",
+  "ffs_engines": "/home/system/scanner/ffs_trt/engines_v3",
+  "kf_only": "",
+  "dump_depth": ""
+ },
+ "board_mm": [
+  302.0,
+  181.19999999999996
+ ],
+ "square_mm": 60.4,
+ "gt_corner_px_median": null,
+ "n_kf": 494,
+ "n_kf_depth": 351,
+ "mesh_vertices": 1907522,
+ "mesh_faces": 3229373,
+ "runtime_s": 56.6,
+ "image_size": [
+  960,
+  540
+ ],
+ "K_used": [
+  [
+   643.1272697202457,
+   0.0,
+   482.59568880974615
+  ],
+  [
+   0.0,
+   643.2218309269573,
+   276.6095206454582
+  ],
+  [
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "gpu_max_alloc_gb": 5.21,
+ "gpu_max_reserved_gb": 7.33,
+ "ffs_views": 2,
+ "ffs_fuse": "mean",
+ "ffs_partners": "all",
+ "ffs_dt_max": 30.0,
+ "pair_min_valid": 0.0,
+ "pair_check": "dy",
+ "pair_check_n": 398,
+ "pair_check_rejected": 47,
+ "pair_check_s": 9.3,
+ "ffs_s_total": 12.3,
+ "ffs_s_used": 12.3,
+ "n_pairs_rejected": 0,
+ "n_kf_by_pairs": {
+  "0": 143,
+  "1": 351
+ },
+ "tsdf_alloc": "dense",
+ "ffs_backend": "trt",
+ "ffs_backend_source": "cli",
+ "ffs_trt": {
+  "engines": [
+   {
+    "H": 544,
+    "W": 960,
+    "calls": 256,
+    "dynamic": false,
+    "min": null,
+    "max": null
+   },
+   {
+    "H": 960,
+    "W": 544,
+    "calls": 55,
+    "dynamic": false,
+    "min": null,
+    "max": null
+   },
+   {
+    "H": 384,
+    "W": 672,
+    "calls": 32,
+    "dynamic": true,
+    "min": [
+     128,
+     128
+    ],
+    "max": [
+     544,
+     960
+    ]
+   },
+   {
+    "H": 672,
+    "W": 384,
+    "calls": 8,
+    "dynamic": true,
+    "min": [
+     128,
+     128
+    ],
+    "max": [
+     960,
+     544
+    ]
+   }
+  ],
+  "trt": "10.16.1.11",
+  "shapes": {
+   "247x440->256x448": 1,
+   "248x442->256x448": 1,
+   "263x468->288x480": 1,
+   "267x474->288x480": 1,
+   "287x510->288x512": 1,
+   "292x518->320x544": 1,
+   "298x530->320x544": 1,
+   "299x531->320x544": 1,
+   "322x572->352x576": 1,
+   "322x573->352x576": 1,
+   "325x577->352x608": 1,
+   "326x580->352x608": 1,
+   "342x609->352x640": 1,
+   "350x623->352x640": 1,
+   "356x633->384x640": 1,
+   "357x635->384x640": 1,
+   "371x660->384x672": 1,
+   "377x671->384x672": 1,
+   "384x684->384x704": 1,
+   "389x692->416x704": 2,
+   "403x717->416x736": 1,
+   "422x750->448x768": 1,
+   "428x761->448x768": 1,
+   "441x783->448x800": 1,
+   "448x796->448x800": 1,
+   "455x809->480x832": 1,
+   "472x266->480x288": 1,
+   "477x848->480x864": 1,
+   "488x868->512x896": 1,
+   "503x895->512x896": 1,
+   "519x923->544x928": 1,
+   "540x960->544x960": 256,
+   "556x313->576x320": 1,
+   "574x323->576x352": 1,
+   "662x373->672x384": 1,
+   "687x387->704x416": 1,
+   "804x453->832x480": 1,
+   "876x493->896x512": 1,
+   "878x494->896x512": 1,
+   "910x512->928x512": 1,
+   "960x540->960x544": 55
+  },
+  "manifest_made": "2026-11-12 21:09:55",
+  "export_code": "e427bc816a40d11d",
+  "bucket_calls": 0,
+  "nonfinite_frames": 0,
+  "nonfinite_px": 0
+ },
+ "depth_sigma": {
+  "rot_deg": 0.1,
+  "b_rel": 0.02,
+  "sigma_d_px": 0.5,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02,
+  "z_max": 2.0
+ },
+ "mesh_cam_depth_m": {
+  "n": 1907522,
+  "p50": 1.0444710847646894,
+  "p90": 1.2882510289690157,
+  "p99": 1.4436639651109,
+  "max": 1.5872481444494397,
+  "frac_gt_0p65": 0.9218336669249424,
+  "frac_gt_1p0": 0.5930741558944013
+ },
+ "tsdf_full": false,
+ "tsdf_blocks": 154607,
+ "tsdf_max_blocks": 250000,
+ "tsdf_log": [],
+ "gt_ok_filter": true,
+ "n_kf_gt_not_ok_dropped": 0,
+ "n_kf_gt_not_ok": 0,
+ "lib_ffs": {
+  "file": "/home/system/scanner/StereoDepthSeg/lib_ffs.py",
+  "sha": "9b820bc28df4caf7"
+ }
+}

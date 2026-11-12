@@ -1,0 +1,23 @@
+11-12 22:02:03 sweep start, git ead5796, snapshot f83693d62459533a, configs: base_a base_b it4 it16 r1280 md256 base_rb it12
+11-12 22:02:14 sweep start, git ead5796, snapshot f83693d62459533a, configs: base_a base_b it4 it16 r1280 md256 base_rb it12
+11-12 22:03:42 two sweep copies had started (waiter + manual); both stopped, partial base_a removed, one copy restarted
+11-12 22:03:42 sweep start, git ead5796, snapshot f83693d62459533a, configs: base_a base_b it4 it16 r1280 md256 base_rb it12
+11-12 22:05:29 base_a done in 107 s: board_mesh rc 0 wall 18 s GPU 5641 MiB; board_meshb rc 0 wall 19 s GPU 5589 MiB; office rc 0 wall 70 s GPU 8821 MiB; board p90 2.894 kfp90 1.186 cm | office v 1907522 ffs 12.3 s runtime 56.6 s full False. 1/8 configs, ETA ~23:20 (est. ~10 min per config incl. engine build + eval)
+11-12 22:07:17 base_b done in 108 s: board_mesh rc 0 wall 18 s GPU 5641 MiB; board_meshb rc 0 wall 17 s GPU 5589 MiB; office rc 0 wall 72 s GPU 8821 MiB; board p90 2.894 kfp90 1.186 cm | office v 1907522 ffs 12.3 s runtime 56.9 s full False. 2/8 configs, ETA ~23:12 (est. ~10 min per config incl. engine build + eval)
+11-12 22:14:39 it4 engines built 442 s (GPU peak 8385 MiB), check: [ffs-trt check] PASS 4 engines in /home/system/scanner/sweep_ffs/engines/it4, 3.6 s
+11-12 22:16:23 it4 done in 546 s: board_mesh rc 0 wall 18 s GPU 5657 MiB; board_meshb rc 0 wall 18 s GPU 5629 MiB; office rc 0 wall 68 s GPU 8835 MiB; board p90 2.939 kfp90 1.181 cm | office v 1947273 ffs 10.9 s runtime 54.5 s full False. 3/8 configs, ETA ~23:11 (est. ~10 min per config incl. engine build + eval)
+11-12 22:27:07 it16 engines built 644 s (GPU peak 8385 MiB), check: [ffs-trt check] PASS 4 engines in /home/system/scanner/sweep_ffs/engines/it16, 3.4 s
+11-12 22:29:00 it16 done in 757 s: board_mesh rc 0 wall 20 s GPU 5655 MiB; board_meshb rc 0 wall 19 s GPU 5591 MiB; office rc 0 wall 74 s GPU 8829 MiB; board p90 2.913 kfp90 1.188 cm | office v 1892594 ffs 15.0 s runtime 58.9 s full False. 4/8 configs, ETA ~23:14 (est. ~10 min per config incl. engine build + eval)
+11-12 22:31:16 r1280 build with workspace 4 GB failed (tail:     raise CalledProcessError(retcode, process.args, subprocess.CalledProcessError: Command '['/home/system/scanner/StereoDepthSeg/venv_ffs/bin/python', '/home/system/scanner/StereoDepthSeg-fixes/scan3)
+11-12 22:40:11 r1280 engines built 671 s (GPU peak 14137 MiB), check: [ffs-trt check] PASS 4 engines in /home/system/scanner/sweep_ffs/engines/r1280, 4.3 s
+11-12 22:42:47 r1280 done in 827 s: board_mesh rc 0 wall 26 s GPU 8727 MiB; board_meshb rc 0 wall 27 s GPU 8765 MiB; office rc 0 wall 103 s GPU 12125 MiB; board p90 2.812 kfp90 1.201 cm | office v 1978490 ffs 19.9 s runtime 87.9 s full False. 5/8 configs, ETA ~23:17 (est. ~10 min per config incl. engine build + eval)
+11-12 22:48:22 md256 build with workspace 4 GB failed (tail:     raise CalledProcessError(retcode, process.args, subprocess.CalledProcessError: Command '['/home/system/scanner/StereoDepthSeg/venv_ffs/bin/python', '/home/system/scanner/StereoDepthSeg-fixes/scan3)
+11-12 22:53:41 md256 engines built 654 s (GPU peak 10941 MiB), check: [ffs-trt check] PASS 4 engines in /home/system/scanner/sweep_ffs/engines/md256, 4.0 s
+11-12 22:55:34 md256 done in 767 s: board_mesh rc 0 wall 19 s GPU 6955 MiB; board_meshb rc 0 wall 18 s GPU 6935 MiB; office rc 0 wall 76 s GPU 10125 MiB; board p90 2.851 kfp90 1.189 cm | office v 1904000 ffs 14.4 s runtime 60.4 s full False. 6/8 configs, ETA ~23:20 (est. ~10 min per config incl. engine build + eval)
+11-12 23:03:55 base_rb engines built 501 s (GPU peak 8385 MiB), check: [ffs-trt check] PASS 4 engines in /home/system/scanner/sweep_ffs/engines/base_rb, 3.8 s
+11-12 23:05:41 base_rb done in 607 s: board_mesh rc 0 wall 17 s GPU 5641 MiB; board_meshb rc 0 wall 18 s GPU 5597 MiB; office rc 0 wall 71 s GPU 8823 MiB; board p90 2.918 kfp90 1.187 cm | office v 1909380 ffs 12.2 s runtime 56.4 s full False. 7/8 configs, ETA ~23:20 (est. ~10 min per config incl. engine build + eval)
+11-12 23:15:02 it12 engines built 561 s (GPU peak 8385 MiB), check: [ffs-trt check] PASS 4 engines in /home/system/scanner/sweep_ffs/engines/it12, 3.9 s
+11-12 23:16:51 it12 done in 670 s: board_mesh rc 0 wall 18 s GPU 5649 MiB; board_meshb rc 0 wall 19 s GPU 5591 MiB; office rc 0 wall 71 s GPU 8823 MiB; board p90 2.930 kfp90 1.184 cm | office v 1903792 ffs 13.7 s runtime 56.8 s full False. 8/8 configs, ETA ~23:21 (est. ~10 min per config incl. engine build + eval)
+11-12 23:16:51 all configs run; evaluation next
+11-12 23:18:23 eval done: /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/desktop/sweep_ffs_20261112/sweep_results.json
+11-12 23:18:23 sweep job done
