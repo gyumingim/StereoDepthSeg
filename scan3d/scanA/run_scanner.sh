@@ -66,6 +66,10 @@
 set -euo pipefail
 # 11-12: fewer CUDA OOMs in the mesh step on the 8 GB laptop GPU (u10 mesh failed rc 3 without it); caller can override
 export PYTORCH_CUDA_ALLOC_CONF=${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}
+# review 11-12: per-machine settings outside git (desktop: export SCAN3D_FFS_BACKEND=trt). scan_offline takes its --ffs-backend
+# default from SCAN3D_FFS_BACKEND (else pytorch); --mesh-args '--ffs-backend pytorch' overrides. No auto-detect, no fallback.
+HOST_ENV=$HOME/scanner/host.env
+if [ -f "$HOST_ENV" ]; then . "$HOST_ENV"; echo "[host.env] $HOST_ENV sourced (SCAN3D_FFS_BACKEND=${SCAN3D_FFS_BACKEND:-})"; fi
 WT=$(cd "$(dirname "$0")/../.." && pwd)
 MAIN=/home/system/scanner/StereoDepthSeg
 P=${P:-$MAIN/venv_ffs/bin/python}
@@ -159,7 +163,8 @@ def mesh(d):
                 n_kf_by_pairs=m.get("n_kf_by_pairs"), n_kf_no_pair=m.get("n_kf_no_pair"),
                 mesh_vertices=m.get("mesh_vertices"), tsdf_full=m.get("tsdf_full"), tsdf_blocks=m.get("tsdf_blocks"),
                 n_kf_gt_not_ok_dropped=m.get("n_kf_gt_not_ok_dropped"), gt_ok_filter=m.get("gt_ok_filter"),
-                depth_sigma=m.get("depth_sigma"), mesh_cam_depth_m=m.get("mesh_cam_depth_m"), lib_ffs=m.get("lib_ffs"))
+                depth_sigma=m.get("depth_sigma"), mesh_cam_depth_m=m.get("mesh_cam_depth_m"), lib_ffs=m.get("lib_ffs"),
+                ffs_backend=m.get("ffs_backend"), ffs_backend_source=m.get("ffs_backend_source"))
 kl = (Path(reuse) if reuse else out) / "kfba.log"
 dev = next((l.strip() for l in open(kl) if l.startswith("[device]")), None) if kl.exists() else None
 ba = json.loads((Path(badir) / "ba.json").read_text()) if (("kfba" in ran or reuse) and (Path(badir) / "ba.json").exists()) else {}
@@ -243,6 +248,18 @@ echo "== run_scanner $(date '+%F %T'): REC $REC ($([ $REDUCED = 1 ] && echo keyf
 echo "   gt $G, input $([ $FULLV = 1 ] && echo 'full video (old)' || echo "keyframes ${KRES} JPEG q${KQ}"), BA $BADEV, SIFT $SIFTDEV, TSDF alloc $TALLOC, kf $KFSEL$([ $KFSEL = motion ] && echo " ${KFD}cm/${KFR}deg win $KFW $KFB"), git ${COMMIT:0:12}"
 echo "   gt $G, input $([ $FULLV = 1 ] && echo 'full video (old)' || echo "keyframes ${KRES} JPEG q${KQ}"), BA $BADEV, SIFT $SIFTDEV, TSDF alloc $TALLOC, git ${COMMIT:0:12}"
 echo "   ffs views $FV (fuse $FF, partners $FP)${REUSE:+, reuse vio/reduce/kfba from $REUSE}"
+
+# ---- FFS backend preflight (review 11-12): the mesh step's backend = --mesh-args --ffs-backend, else env, else pytorch.
+# trt -> ffs_trt.py check (manifest / versions / export code + a synthetic 12 px pair per engine, a few s) BEFORE vio / BA.
+FFSB=$(echo " $MSX " | sed -n 's/.* --ffs-backend[ =]\([a-z_0-9]*\).*/\1/p'); FFSB_SRC=cli
+[ -n "$FFSB" ] || { FFSB=${SCAN3D_FFS_BACKEND:-}; FFSB_SRC=env; }
+[ -n "$FFSB" ] || { FFSB=pytorch; FFSB_SRC=default; }
+FFSE=$(echo " $MSX " | sed -n 's/.* --ffs-engines[ =]\([^ ]*\).*/\1/p')
+echo "   ffs backend $FFSB (from $FFSB_SRC)${FFSE:+, engines $FFSE}"
+if [ "$FFSB" = trt ] && [ "$STOPAFTER" != reduce ]; then
+  T ffs_check "$OUT/ffs_check.log" $P "$WT/scan3d/ffs_trt.py" check ${FFSE:+--engines "$FFSE"}
+  tail -n 1 "$OUT/ffs_check.log"
+fi
 
 # ---- vio (stand-in for the phone's live poses)
 BADIR=$OUT/ba; IN=$REC

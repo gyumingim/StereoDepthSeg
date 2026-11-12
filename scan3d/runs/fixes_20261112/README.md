@@ -579,3 +579,54 @@ M4 (불확실 판정) 는 손대지 않음.
   남은 위험: 1 회씩, 보드 녹화 하나 (165506), 엔진 만들기 7 분 필요, GPU·TensorRT 버전 바뀌면 다시 만들기 (안 맞으면 큰 소리로 실패).
 - **노트북 (RTX 4060) 은 아직 기본값 아님**: v3 엔진을 그 GPU 에서 만들고 같은 시험 (40 키프레임 + 165506 보드) 한 번 통과한 뒤 결정.
 - 기본값 자체는 이 커밋에서 바꾸지 않음 (`scan_offline` 기본 pytorch 그대로).
+
+## 13e. 리뷰 (`scan3d_handoff/review_20261112/trt_review.md`) 고침 + **데스크톱만 TRT 기본** (데스크톱 RTX 5080, 각 1 회, 미검증)
+
+### 고친 것 (`scan3d/ffs_trt.py`)
+- 발견 1 (출력 검사): 출력 버퍼를 NaN 으로 채우고 시작, `set_input_shape`·`set_tensor_address` 반환값, 출력 모양 (1,1,Hb,Wb), 입출력 dtype float32,
+  `execute_async_v3` 반환값, 실행 뒤 스트림 동기화 (CUDA 오류 → RuntimeError) 검사. 잘라낸 영역의 비유한 화소 > 1 % (`FFS_TRT_MAX_NONFINITE`) 면 RuntimeError,
+  그 이하는 `stats()` 의 `nonfinite_frames` / `nonfinite_px` 에 남김. 대체 경로 없음.
+- 발견 3/4 (엔진 신원): manifest 와 재사용 recipe 에 TensorRT·torch 버전, GPU, **내보내기 코드 해시** (`build`·`build_engine` 소스 + 상위
+  `make_single_onnx.py`, `core/foundation_stereo.py`, `core/submodule.py`), 정밀도, inorm, 엔진마다 실제로 fp32 로 강제한 층 수 (`fp32_forced`) 기록.
+  실행 때 전부 검사 (precision 은 fp16, inorm 은 decomposed_fp32 이어야 함, 강제 층 수 0 이면 거부). 빌드에서 ReduceL2 0 개면 예외.
+  → 옛 `engines_v3` 는 export_code 가 없어 거부됨 (확인). 옛 폴더는 `~/scanner/ffs_trt/engines_v3_old_unlogged` 로 옮겨 둠.
+- 발견 5: 버킷 (넓은 패딩) 대체는 기본 RuntimeError, `FFS_TRT_ALLOW_BUCKET=1` 일 때만, `bucket_calls` 기록.
+- 발견 6: `_cur` 상태값 없앰 (엔진을 `run(tl, tr, e)` 로 넘김) + 락.
+- `ffs_trt.py check`: manifest 검사 + 엔진마다 합성 12 px 짝 한 번 (그 엔진으로 가는지, 유한, 중앙 12±0.5). 약 4 s.
+- 진단용 `FFS_TRT_PRECISION=fp32` (fp32 엔진을 받아들이는 실행 검사, 기본 fp16).
+
+### 엔진 다시 만듦 (발견 3)
+- 빈 `engines_v3` 에 4 개를 한 번의 빌드로: 518 s, 각 엔진 ReduceL2 30 개 + InstanceNorm 110 층 fp32. check PASS (중앙 12.01–12.02).
+  로그 `u13e_build/` (build.log, check.log, engine_manifest.json). 스크립트 `u13e_build.sh`.
+
+### 발견 2: kf_0283–0290 (121801) 누가 틀렸나 — 같은 입력 (fix_u8 키프레임·BA 자세, `--kf-only`), 1 회, 미검증
+| 비교 (8 키프레임) | \|dZ\| > 50 mm 화소 | 키프레임 p95 (mm) |
+|---|---|---|
+| PyTorch fp16 1 차 vs 2 차 | 0 % (비트 같음) | 0 |
+| PyTorch fp16 vs PyTorch fp32 | 0.8–28.4 % | 23–420 |
+| PyTorch fp16 vs TRT fp16 (새 엔진) | 1.9–30.7 % | 32–495 |
+| PyTorch fp32 vs TRT fp16 | 0.8–34.0 % | 24–297 |
+| PyTorch fp32 vs **TRT fp32** (진단 엔진) | 0.2–23.9 % | 12–323 |
+| 옛 TRT (재사용 544x960) vs 새 TRT | 0–5.8 % | 6–54 |
+- 판정: **TRT 탓 아님**. 이 프레임들은 어떤 수치 변화에도 (fp16↔fp32, PyTorch↔TRT, 둘 다 fp32 여도) 같은 크기로 흔들린다 (깊이 약 1.5–2.4 m).
+  TRT fp16 의 차이는 PyTorch fp16↔fp32 차이의 약 1.3–1.5 배 (같은 자릿수). 어느 쪽이 "맞다" 고 할 기준 (GT) 은 없다.
+- 덤으로: 오늘 PyTorch fp16 vs 17 시 PyTorch (dump13d_full_pt) 도 kf_0283 에서 11 % 가 > 10 mm (다른 프로세스·같은 코드) — 세션 사이 재현성도 이 프레임에선 약함.
+- 결과 `scan3d/runs/desktop/20261112_121801_std60/fix_u13e_kf283/` (`kf283_table*.json`, `cmp_*.json`), 표 스크립트 `kf283_table.py`,
+  실행 `u13e_kf283.sh`, `u13e_kf283_fp32trt.sh`. 덤프는 `~/scanner/ffs_trt/dump13e_kf283` (커밋 안 함).
+
+### 기본값 (데스크톱만)
+- `scan_offline.py --ffs-backend` 기본 = env `SCAN3D_FFS_BACKEND` (없으면 pytorch), summary 에 `ffs_backend_source` (cli / env / default).
+- git 밖 `~/scanner/host.env` (데스크톱에만): `export SCAN3D_FFS_BACKEND=trt`. `run_scanner.sh` 가 읽음 (`run_merge.sh` 는 run_scanner 를 부르므로 따라옴).
+- `run_scanner.sh`: mesh 단계 백엔드가 trt 면 VIO 전에 `ffs_trt.py check` (단계 `ffs_check`, 실패하면 멈춤). `--stop-after reduce` 때는 안 함.
+- 자동 감지·PyTorch 대체 없음. 한 번만 되돌리기: `--mesh-args '--ffs-backend pytorch'`. 노트북은 host.env 가 없어 pytorch 그대로.
+
+### 165506 보드 확인 (새 기본값, 플래그 없이, 같은 BA 자세 fix_u13c_pt), 1 회, 미검증
+| | PyTorch (fix_u13d_pt) | TRT 옛 엔진 (fix_u13d_trt) | **새 기본 (fix_u13e_default, trt from env)** |
+|---|---|---|---|
+| mesh \|dZ\| p90 (cm) | 2.94 | 2.94 | **2.89** |
+| mesh_board \|dZ\| p90 (cm) | 2.42 | 2.42 | 2.42 |
+| 보드 z RMS (cm) / 덮인 비율 | 0.058 / 0.899 | 0.058 / 0.899 | 0.058 / 0.899 |
+| 메시 정점 | 140 609 | 140 674 | 141 208 |
+| FFS 합계 (s) | 23.7 | 3.4 | 3.6 (+ 사전 검사 4.9 s) |
+- 실행 `u13e_board165506.sh`. 메시 ply/obj 커밋 안 함.
+- 남은 것: 다른 장면의 GT 는 165506 하나뿐 (0.7 m 근거리). 기준선 비교 때 summary 의 `ffs_backend` 를 표에 적을 것 (자가 바뀜).

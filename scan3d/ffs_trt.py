@@ -4,8 +4,10 @@ Same job as lib_ffs.infer (rectified RGB pair -> disparity px at the input resol
   - resize both images to dsize = round(W0*s), round(H0*s) (INTER_AREA), un-resize with the REAL ratio W/W0  (= lib_ffs.infer)
   - padding: lib_ffs pads (replicate, 'sintel' split) to the next multiple of 32; here the same /32 size and split (unit 13d):
     a static engine of exactly that size (544x960 / 960x544 = the full 960x540 frame), else a dynamic-shape engine whose
-    profile holds it. Only without either: the smallest static "bucket" that holds it (wider replicate border -> on the
-    downscaled pairs p95 |dZ| 28 mm vs PyTorch, README unit 13b; avoid).
+    profile holds it. Without either: RuntimeError (review 11-12); the old smallest-static-"bucket" fallback (wider replicate
+    border -> p95 |dZ| 28 mm vs PyTorch, README unit 13b) only with FFS_TRT_ALLOW_BUCKET=1.
+  - output checks (review 11-12): output buffer starts NaN, set_input_shape / output shape / enqueue / stream sync checked,
+    > FFS_TRT_MAX_NONFINITE (1 %) non-finite px in a frame -> RuntimeError. Preflight: python scan3d/ffs_trt.py check.
   - ImageNet normalisation is done here in fp32 (the single-ONNX export strips it from the graph, upstream make_single_onnx.py).
 Loud failures, no fallback: no engine dir / manifest, engine built for another TensorRT version, GPU, checkpoint, iters,
 max_disp or export version, or an input larger than every engine -> RuntimeError.
@@ -59,6 +61,32 @@ def _gpu_name():
     return torch.cuda.get_device_name(0)
 
 
+def _lib_ffs():
+    p = os.environ.get("FFS_ROOT", str(Path(__file__).resolve().parents[1]))
+    if p not in sys.path:
+        sys.path.insert(0, p)
+    import lib_ffs
+    return lib_ffs
+
+
+def _export_code_id():
+    """Hash of the code that defines the engine graph (review 11-12 finding 3: the recipe named constants, it did not prove the
+    code): source of build() + build_engine() here + upstream scripts/make_single_onnx.py + core/foundation_stereo.py +
+    core/submodule.py. Any edit there -> engines must be rebuilt (TrtFFS refuses them)."""
+    import inspect
+    h = hashlib.sha256()
+    h.update(inspect.getsource(build).encode())
+    h.update(inspect.getsource(build_engine).encode())
+    fd = Path(_lib_ffs().FFS_DIR)
+    for rel in ("scripts/make_single_onnx.py", "core/foundation_stereo.py", "core/submodule.py"):
+        h.update(rel.encode()); h.update((fd / rel).read_bytes())
+    return h.hexdigest()[:16]
+
+
+ALLOW_BUCKET = os.environ.get("FFS_TRT_ALLOW_BUCKET") == "1"   # review finding 5: wide-padding bucket = error unless this is set
+MAX_NONFINITE = float(os.environ.get("FFS_TRT_MAX_NONFINITE", "0.01"))   # finding 1: > 1 % non-finite px in a frame -> error
+
+
 def pad_split(h, w, Hb, Wb):
     """InputPadder 'sintel' split for a total pad of (Hb-h, Wb-w): [left, right, top, bottom]."""
     ph, pw = Hb - h, Wb - w
@@ -110,14 +138,19 @@ class TrtFFS:
             raise RuntimeError(f"--ffs-backend trt: no engine manifest {man_p} (build: python scan3d/ffs_trt.py build ...)")
         man = json.loads(man_p.read_text())
         if ckpt is None:
-            sys.path.insert(0, os.environ.get("FFS_ROOT", str(Path(__file__).resolve().parents[1])))
-            import lib_ffs
-            ckpt = lib_ffs.DEFAULT_CKPT
-        want = dict(trt=trt.__version__, gpu=_gpu_name(), ckpt=_ckpt_id(ckpt), valid_iters=valid_iters, max_disp=max_disp,
-                    export_version=EXPORT_VERSION)
+            ckpt = _lib_ffs().DEFAULT_CKPT
+        # review 11-12 finding 3/4: also torch version, export-code hash, precision and the InstanceNorm / ReduceL2 recipe
+        want = dict(trt=trt.__version__, torch=torch.__version__, gpu=_gpu_name(), ckpt=_ckpt_id(ckpt), valid_iters=valid_iters,
+                    max_disp=max_disp, export_version=EXPORT_VERSION, export_code=_export_code_id(),
+                    precision=os.environ.get("FFS_TRT_PRECISION", "fp16"),      # fp32 = diagnostic engines only (unit 13e)
+                    inorm="decomposed_fp32", fp32_layers="ReduceL2*")
         bad = {k: (man.get(k), v) for k, v in want.items() if man.get(k) != v}
         if bad:
             raise RuntimeError(f"--ffs-backend trt: engines in {d} do not match this run (manifest, wanted): {bad}. Rebuild them.")
+        for e in man["engines"]:          # forced-fp32 layer counts written by build_engine (0 = NaN-prone v1-like engine)
+            fc = e.get("fp32_forced") or {}
+            if not fc.get("reducel2", 0) > 0 or not fc.get("inorm", 0) > 0:
+                raise RuntimeError(f"--ffs-backend trt: engine {e['file']} has no / zero forced-fp32 layer counts {fc}. Rebuild.")
         self.logger = trt.Logger(trt.Logger.WARNING)
         rt = trt.Runtime(self.logger)
         self.eng = []
@@ -131,8 +164,13 @@ class TrtFFS:
                 raise RuntimeError(f"--ffs-backend trt: could not deserialize {p}")
             ctx = engine.create_execution_context(trt.ExecutionContextAllocationStrategy.USER_MANAGED)
             mem = max(mem, engine.device_memory_size_v2)
+            for nm, mode in (("left_image", trt.TensorIOMode.INPUT), ("right_image", trt.TensorIOMode.INPUT),
+                             ("disparity", trt.TensorIOMode.OUTPUT)):
+                if engine.get_tensor_mode(nm) != mode or engine.get_tensor_dtype(nm) != trt.float32:
+                    raise RuntimeError(f"--ffs-backend trt: engine {p} tensor {nm}: mode {engine.get_tensor_mode(nm)} "
+                                       f"dtype {engine.get_tensor_dtype(nm)} (want {mode}, float32)")
             self.eng.append(dict(H=e["H"], W=e["W"], engine=engine, ctx=ctx, n=0, dynamic=bool(e.get("dynamic")),
-                                 min=e.get("min"), max=e.get("max")))
+                                 min=e.get("min"), max=e.get("max"), file=e["file"]))
         # one shared activation buffer for all contexts (only one runs at a time), owned by torch
         self.mem = torch.empty(max(mem, 1), dtype=torch.uint8, device="cuda")
         for e in self.eng:
@@ -141,6 +179,11 @@ class TrtFFS:
         self.std = torch.tensor(STD, device="cuda").view(1, 3, 1, 1)
         self.manifest = man
         self.shapes = {}                  # (h, w, Hb, Wb) -> count, for the summary
+        self.bucket_calls = 0             # wide-padding fallback (only with FFS_TRT_ALLOW_BUCKET=1)
+        self.nonfinite_frames = 0         # frames with >= 1 non-finite px (all <= MAX_NONFINITE, else RuntimeError)
+        self.nonfinite_px = 0
+        import threading
+        self._lock = threading.Lock()     # one shared activation buffer: one infer at a time (finding 6)
         log(f"[ffs-trt] {len(self.eng)} engines {[(e['H'], e['W']) for e in self.eng]} from {d}, TensorRT {trt.__version__}, "
             f"shared activation memory {mem / 2 ** 20:.0f} MB")
 
@@ -154,29 +197,48 @@ class TrtFFS:
         for e in self.eng:
             if e["dynamic"] and e["min"][0] <= H32 <= e["max"][0] and e["min"][1] <= W32 <= e["max"][1]:
                 return dict(H=H32, W=W32, dyn=e)
+        # review 11-12 finding 5: the smallest static bucket pads wide (README 13b: p95 |dZ| 28 mm vs PyTorch) -> error by default
         fit = [e for e in self.eng if not e["dynamic"] and e["H"] >= h and e["W"] >= w]
+        if not ALLOW_BUCKET:
+            raise RuntimeError(f"--ffs-backend trt: input {w}x{h} (/32 {W32}x{H32}) has no exact static engine and no dynamic "
+                               f"profile holds it {[(e['W'], e['H'], e['min'], e['max']) for e in self.eng]}; build one "
+                               f"(wide-padding bucket fallback only with FFS_TRT_ALLOW_BUCKET=1, gave 28 mm errors)")
         if not fit:
             raise RuntimeError(f"--ffs-backend trt: input {w}x{h} is larger than every engine "
                                f"{[(e['W'], e['H']) for e in self.eng]} (build a bigger bucket)")
+        self.bucket_calls += 1
         return min(fit, key=lambda e: e["H"] * e["W"])
 
-    def run(self, tl, tr):
-        """tl, tr: float32 cuda [1,3,Hb,Wb] 0-255 -> disparity [Hb,Wb] float32 cuda."""
+    def run(self, tl, tr, e):
+        """tl, tr: float32 cuda [1,3,Hb,Wb] 0-255, e = engine entry (static, or the dynamic one) -> disparity [Hb,Wb] float32 cuda.
+        Review 11-12 finding 1: output starts as NaN (never stale memory), shapes / enqueue / stream are checked, errors raise."""
         torch = self.torch
-        Hb, Wb = tl.shape[-2:]
-        e = getattr(self, "_cur", None) or [x for x in self.eng if x["H"] == Hb and x["W"] == Wb][0]
+        Hb, Wb = (int(v) for v in tl.shape[-2:])
+        if tuple(tl.shape) != (1, 3, Hb, Wb) or tuple(tr.shape) != (1, 3, Hb, Wb):
+            raise RuntimeError(f"--ffs-backend trt: input shapes {tuple(tl.shape)} {tuple(tr.shape)}")
+        if not e["dynamic"] and (e["H"], e["W"]) != (Hb, Wb):
+            raise RuntimeError(f"--ffs-backend trt: {Hb}x{Wb} input on the static {e['H']}x{e['W']} engine")
         xl = ((tl / 255.0 - self.mean / 255.0) / (self.std / 255.0)).contiguous()   # = (img/255 - mean)/std of normalize_image
         xr = ((tr / 255.0 - self.mean / 255.0) / (self.std / 255.0)).contiguous()
-        out = torch.empty((1, 1, Hb, Wb), dtype=torch.float32, device="cuda")
+        out = torch.full((1, 1, Hb, Wb), float("nan"), dtype=torch.float32, device="cuda")
         ctx = e["ctx"]
         if e["dynamic"]:
-            ctx.set_input_shape("left_image", (1, 3, Hb, Wb)); ctx.set_input_shape("right_image", (1, 3, Hb, Wb))
-        ctx.set_tensor_address("left_image", xl.data_ptr())
-        ctx.set_tensor_address("right_image", xr.data_ptr())
-        ctx.set_tensor_address("disparity", out.data_ptr())
+            for nm in ("left_image", "right_image"):
+                if not ctx.set_input_shape(nm, (1, 3, Hb, Wb)):
+                    raise RuntimeError(f"--ffs-backend trt: set_input_shape({nm}, {Hb}x{Wb}) refused by {e['file']}")
+        oshape = tuple(ctx.get_tensor_shape("disparity"))
+        if oshape != (1, 1, Hb, Wb):
+            raise RuntimeError(f"--ffs-backend trt: engine {e['file']} output shape {oshape} != (1, 1, {Hb}, {Wb})")
+        for nm, t in (("left_image", xl), ("right_image", xr), ("disparity", out)):
+            if not ctx.set_tensor_address(nm, t.data_ptr()):
+                raise RuntimeError(f"--ffs-backend trt: set_tensor_address({nm}) failed")
         st = torch.cuda.current_stream()
         if not ctx.execute_async_v3(st.cuda_stream):
-            raise RuntimeError("--ffs-backend trt: execute_async_v3 failed")
+            raise RuntimeError(f"--ffs-backend trt: execute_async_v3 failed ({e['file']}, {Hb}x{Wb})")
+        try:
+            st.synchronize()             # a CUDA error during the run surfaces here (torch raises)
+        except Exception as ex:
+            raise RuntimeError(f"--ffs-backend trt: CUDA error after execute ({e['file']}, {Hb}x{Wb}): {ex!r}") from ex
         e["n"] += 1
         return out[0, 0]
 
@@ -196,18 +258,26 @@ class TrtFFS:
             l = cv2.resize(l, dsize, interpolation=cv2.INTER_AREA)
             r = cv2.resize(r, dsize, interpolation=cv2.INTER_AREA)
         H, W = l.shape[:2]
-        e = self.bucket(H, W)
-        k = (H, W, e["H"], e["W"]); self.shapes[k] = self.shapes.get(k, 0) + 1
-        pad = pad_split(H, W, e["H"], e["W"])
-        tl = torch.as_tensor(np.ascontiguousarray(l)).cuda().float()[None].permute(0, 3, 1, 2)
-        tr = torch.as_tensor(np.ascontiguousarray(r)).cuda().float()[None].permute(0, 3, 1, 2)
-        F = torch.nn.functional
-        tl = F.pad(tl, pad, mode="replicate"); tr = F.pad(tr, pad, mode="replicate")
-        self._cur = e.get("dyn")
-        with torch.no_grad():
-            d = self.run(tl, tr)
-        self._cur = None
-        disp = d[pad[2]:e["H"] - pad[3], pad[0]:e["W"] - pad[1]].cpu().numpy().reshape(H, W).clip(0, None)
+        with self._lock:                 # finding 6: no shared "current engine" state; the engine is passed to run()
+            e = self.bucket(H, W)
+            k = (H, W, e["H"], e["W"]); self.shapes[k] = self.shapes.get(k, 0) + 1
+            pad = pad_split(H, W, e["H"], e["W"])
+            tl = torch.as_tensor(np.ascontiguousarray(l)).cuda().float()[None].permute(0, 3, 1, 2)
+            tr = torch.as_tensor(np.ascontiguousarray(r)).cuda().float()[None].permute(0, 3, 1, 2)
+            F = torch.nn.functional
+            tl = F.pad(tl, pad, mode="replicate"); tr = F.pad(tr, pad, mode="replicate")
+            with torch.no_grad():
+                d = self.run(tl, tr, e.get("dyn") or e)
+            dc = d[pad[2]:e["H"] - pad[3], pad[0]:e["W"] - pad[1]]
+            nbad = int((~torch.isfinite(dc)).sum().item())
+            if nbad:
+                frac = nbad / dc.numel()
+                if frac > MAX_NONFINITE:
+                    raise RuntimeError(f"--ffs-backend trt: {frac:.1%} non-finite disparity px ({nbad}) at {W}x{H} -> "
+                                       f"{e['W']}x{e['H']} (limit FFS_TRT_MAX_NONFINITE={MAX_NONFINITE})")
+                self.nonfinite_frames += 1
+                self.nonfinite_px += nbad
+            disp = dc.cpu().numpy().reshape(H, W).clip(0, None)
         if (H, W) != (H0, W0):
             disp = cv2.resize(disp, (W0, H0), interpolation=cv2.INTER_LINEAR) / (W / W0)
         return disp.astype(np.float32)
@@ -216,7 +286,8 @@ class TrtFFS:
         return dict(engines=[dict(H=e["H"], W=e["W"], calls=e["n"], dynamic=e["dynamic"], min=e["min"], max=e["max"])
                              for e in self.eng], trt=self.trt.__version__,
                     shapes={f"{h}x{w}->{hb}x{wb}": n for (h, w, hb, wb), n in sorted(self.shapes.items())},
-                    manifest_made=self.manifest.get("made"))
+                    manifest_made=self.manifest.get("made"), export_code=self.manifest.get("export_code"),
+                    bucket_calls=self.bucket_calls, nonfinite_frames=self.nonfinite_frames, nonfinite_px=self.nonfinite_px)
 
 
 # ------------------------------------------------------------------ build (export ONNX per bucket -> TensorRT fp16 engine)
@@ -292,9 +363,12 @@ def build(out, sizes, valid_iters=8, max_disp=192, workspace_gb=4.0, ckpt=None, 
     # dynamic = list of (min, opt, max) profiles, one engine each (unit 13d: landscape + portrait; ONE 960x960 box needed > 4 GB
     # builder workspace and sizes the shared activation memory for 960x960)
     jobs = [(H, W, None) for (H, W) in sizes] + [(p[1][0], p[1][1], p) for p in (dynamic or [])]
+    # review 11-12 finding 3: the reuse key also holds TensorRT / torch versions, GPU and the export-code hash
     recipe = dict(export_version=EXPORT_VERSION, inorm="decomposed_fp32" if decomp else "native", fp32_layers="ReduceL2*",
                   precision="fp32" if os.environ.get("FFS_TRT_FP32") == "1" else "fp16", valid_iters=valid_iters,
-                  max_disp=max_disp, ckpt=_ckpt_id(ckpt))
+                  max_disp=max_disp, ckpt=_ckpt_id(ckpt), trt=_trt().__version__, torch=torch.__version__, gpu=_gpu_name(),
+                  export_code=_export_code_id())
+    print(f"[ffs-trt build] recipe {recipe}", flush=True)
     for (H, W, dyn) in jobs:
         assert H % 32 == 0 and W % 32 == 0, (H, W)
         name = f"ffs_c_it{valid_iters}_md{max_disp}_{H}x{W}" + ("_dyn" if dyn else "")
@@ -334,11 +408,16 @@ def build(out, sizes, valid_iters=8, max_disp=192, workspace_gb=4.0, ckpt=None, 
             (out / f"{name}.engine.json").write_text(json.dumps(dict(recipe, profile=[list(x) for x in dyn] if dyn else None)))
             (out / f"{name}.onnx").unlink()                                      # big; re-exportable
             (out / f"{name}.fp32scopes.json").unlink(missing_ok=True)
-        print(f"[ffs-trt build] {name}: {times[name]}, {ep.stat().st_size / 2 ** 20:.0f} MB", flush=True)
-        engines.append(dict(H=H, W=W, file=ep.name, sha=_sha16(ep)) if not dyn else
-                       dict(H=H, W=W, file=ep.name, sha=_sha16(ep), dynamic=True, min=list(dyn[0]), opt=list(dyn[1]),
-                            max=list(dyn[2])))
+        lc_p = Path(str(ep) + ".layers.json")                                    # forced-fp32 counts from build_engine
+        if not lc_p.exists():
+            raise RuntimeError(f"{lc_p} missing (engine built by older code?): rebuild into an empty folder")
+        fc = json.loads(lc_p.read_text())
+        print(f"[ffs-trt build] {name}: {times[name]}, {ep.stat().st_size / 2 ** 20:.0f} MB, fp32 forced {fc}", flush=True)
+        engines.append(dict(H=H, W=W, file=ep.name, sha=_sha16(ep), fp32_forced=fc) if not dyn else
+                       dict(H=H, W=W, file=ep.name, sha=_sha16(ep), fp32_forced=fc, dynamic=True, min=list(dyn[0]),
+                            opt=list(dyn[1]), max=list(dyn[2])))
     man = dict(made=time.strftime("%Y-%m-%d %H:%M:%S"), trt=trt.__version__, torch=torch.__version__, gpu=gpu,
+               export_code=recipe["export_code"],
                ckpt=_ckpt_id(ckpt), valid_iters=valid_iters, max_disp=max_disp, export_version=EXPORT_VERSION, precision=("fp32" if os.environ.get("FFS_TRT_FP32") == "1" else "fp16"),
                export="upstream scripts/make_single_onnx.py volume builders, opset 17, normalisation outside", engines=engines,
                build_times=times, workspace_gb=workspace_gb,
@@ -371,9 +450,11 @@ def build_engine(onnx_p, engine_p, workspace_gb, profile=None):
                 if L.get_output_type(oi) in (trt.float32, trt.float16):
                     L.set_output_type(oi, trt.float32)
             nl2 += 1
-    if nl2:
-        cfg.set_flag(trt.BuilderFlag.OBEY_PRECISION_CONSTRAINTS)
+    if nl2 == 0:                       # review 11-12 finding 4: 0 = the gwc normalisation is fp16 again (v1 NaN engine)
+        raise RuntimeError(f"no ReduceL2 layer found to force fp32 in {onnx_p} (layer names changed?)")
+    cfg.set_flag(trt.BuilderFlag.OBEY_PRECISION_CONSTRAINTS)
     print(f"[ffs-trt build] {nl2} ReduceL2 layers forced fp32", flush=True)
+    n32 = 0
     sp = Path(str(onnx_p)[:-len(".onnx")] + ".fp32scopes.json")
     if sp.exists():                                             # unit 13d: decomposed InstanceNorm layers -> fp32
         scopes = tuple(json.loads(sp.read_text()))
@@ -405,6 +486,33 @@ def build_engine(onnx_p, engine_p, workspace_gb, profile=None):
     if ser is None:
         raise RuntimeError(f"TensorRT build failed for {onnx_p}")
     Path(engine_p).write_bytes(bytes(ser))
+    Path(str(engine_p) + ".layers.json").write_text(json.dumps(dict(reducel2=nl2, inorm=n32, layers=net.num_layers)))
+
+
+def check(engine_dir=ENGINE_DIR, valid_iters=8, max_disp=192, tol=0.5):
+    """Preflight (review 11-12 'default' step 4, from runs/fixes_20261112/trt_dyn_probe.py): manifest / version / export-code checks
+    (TrtFFS init) + per engine one synthetic pair with a 12 px shift at a size routed to that engine; finite and median ~12.
+    Returns 0 when all pass, raises / returns 1 otherwise. A few seconds on the RTX 5080."""
+    import cv2
+    t0 = time.time()
+    t = TrtFFS(engine_dir, valid_iters=valid_iters, max_disp=max_disp)
+    rng = np.random.default_rng(0)
+    bad = 0
+    for e in t.eng:
+        m = next(x for x in t.manifest["engines"] if x["file"] == e["file"])
+        H, W = (e["H"] - 4, e["W"] - 4) if not e["dynamic"] else (m["opt"][0] - 5, m["opt"][1] - 7)
+        base = (rng.random((H // 8 + 1, W // 8 + 1, 3)) * 255).astype(np.uint8)
+        L = cv2.resize(base, (W, H), interpolation=cv2.INTER_CUBIC)
+        R = np.roll(L, -12, axis=1)                                     # 12 px disparity everywhere
+        n0 = e["n"]
+        d = t.infer(None, L, R)
+        med = float(np.median(d[:, 16:-16]))
+        ok = e["n"] == n0 + 1 and bool(np.isfinite(d).all()) and abs(med - 12.0) < tol
+        bad += not ok
+        print(f"[ffs-trt check] {e['file']}: input {H}x{W}, routed {'yes' if e['n'] == n0 + 1 else 'NO'}, finite "
+              f"{np.isfinite(d).mean():.4f}, disp median {med:.2f} (want 12 +- {tol}) -> {'OK' if ok else 'FAIL'}", flush=True)
+    print(f"[ffs-trt check] {'PASS' if not bad else 'FAIL'} {len(t.eng)} engines in {engine_dir}, {time.time() - t0:.1f} s", flush=True)
+    return 1 if bad else 0
 
 
 if __name__ == "__main__":
@@ -420,10 +528,16 @@ if __name__ == "__main__":
     e = sub.add_parser("engine", help="internal: one ONNX -> fp16 engine (fresh process, no torch on the GPU)")
     e.add_argument("onnx"); e.add_argument("engine"); e.add_argument("workspace_gb", type=float)
     e.add_argument("--profile", default="", help="min,opt,max HxW (dynamic engine)")
+    c = sub.add_parser("check", help="preflight: manifest checks + synthetic 12 px pair per engine (exit 0 = PASS)")
+    c.add_argument("--engines", default=ENGINE_DIR)
+    c.add_argument("--iters", type=int, default=8)
+    c.add_argument("--max-disp", type=int, default=192)
     b.add_argument("--dynamic", default="", help="min,opt,max HxW[;min,opt,max ...]: dynamic-shape engines (one per profile), "
                                                  "used for every input whose /32 size has no exact static engine")
     a = ap.parse_args()
     hw = lambda txt: [tuple(int(v) for v in t.split("x")) for t in txt.split(",")] if txt else []
+    if a.cmd == "check":
+        sys.exit(check(a.engines, a.iters, a.max_disp))
     if a.cmd == "engine":
         build_engine(a.onnx, a.engine, a.workspace_gb, hw(a.profile) or None)
     if a.cmd == "build":

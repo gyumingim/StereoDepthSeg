@@ -101,13 +101,25 @@ def main():
     ap.add_argument("--sigma-max", type=float, default=0.08, help="TSDF: drop pixels with depth sigma above this (m)")
     ap.add_argument("--sigma-ok", type=float, default=0.02, help="TSDF: weight of one observation at this sigma = mesh threshold (m)")
     # fixes 11-12 unit 11: FFS on TensorRT (opt-in; default pytorch = unchanged). Loud failure, never a silent PyTorch fallback.
-    ap.add_argument("--ffs-backend", choices=("pytorch", "trt", "pytorch_bucket", "pytorch_fp32"), default="pytorch",
+    # review 11-12: default from env SCAN3D_FFS_BACKEND (machine file ~/scanner/host.env, sourced by run_scanner.sh; desktop = trt),
+    # else pytorch. The CLI wins over the env. No auto-detect, no fallback.
+    FFS_BACKENDS = ("pytorch", "trt", "pytorch_bucket", "pytorch_fp32")
+    ap.add_argument("--ffs-backend", choices=FFS_BACKENDS, default=None,
                     help="trt = scan3d/ffs_trt.py fp16 engines (export v3: exact /32 padding like lib_ffs; README runs/fixes_20261112 13). "
-                         "pytorch_bucket / pytorch_fp32 = unit 13b diagnostics")
+                         "pytorch_bucket / pytorch_fp32 = unit 13b diagnostics. Default: env SCAN3D_FFS_BACKEND, else pytorch")
     ap.add_argument("--ffs-engines", default="", help="engine dir with manifest.json (default ffs_trt.ENGINE_DIR)")
     ap.add_argument("--kf-only", default="", help="diagnostic (unit 13b): json list of keyframe indices; only these get depth / TSDF")
     ap.add_argument("--dump-depth", default="", help="diagnostic: per keyframe fused depth (uint16, 0.1 mm, 0 = invalid) -> DIR/kf_XXXX.npz")
     a = ap.parse_args()
+    if a.ffs_backend is not None:
+        ffs_backend_source = "cli"
+    elif os.environ.get("SCAN3D_FFS_BACKEND"):
+        a.ffs_backend, ffs_backend_source = os.environ["SCAN3D_FFS_BACKEND"], "env"
+        if a.ffs_backend not in FFS_BACKENDS:
+            sys.exit(f"env SCAN3D_FFS_BACKEND={a.ffs_backend!r} is not one of {FFS_BACKENDS}")
+    else:
+        a.ffs_backend, ffs_backend_source = "pytorch", "default"
+    print(f"[ffs] backend {a.ffs_backend} (from {ffs_backend_source})", flush=True)
     if a.ffs_views is not None:
         if not 2 <= a.ffs_views <= 8:
             sys.exit("--ffs-views must be 2..8")
@@ -426,6 +438,7 @@ def main():
             summ["mesh_board_z_unique_mm"] = int(len(np.unique(np.round(z * 1000, 1))))   # sub-voxel check (many = interpolated)
     summ["tsdf_alloc"] = a.tsdf_alloc
     summ["ffs_backend"] = a.ffs_backend
+    summ["ffs_backend_source"] = ffs_backend_source          # cli | env (SCAN3D_FFS_BACKEND, ~/scanner/host.env) | default
     if trt_ffs is not None:
         summ["ffs_trt"] = trt_ffs.stats()
     summ["depth_sigma"] = dict(rot_deg=cfg.sigma_rot_deg_free, b_rel=cfg.sigma_b_rel_free, sigma_d_px=cfg.sigma_d_px,
