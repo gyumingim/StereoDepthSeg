@@ -1,0 +1,114 @@
+{
+ "inputs": [
+  "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/part1/red/hs_20261112_121801_std60_kf",
+  "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/part2/red/hs_20261112_131328_std60_kf"
+ ],
+ "args": {
+  "parts": [
+   "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/part1/red/hs_20261112_121801_std60_kf",
+   "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/part2/red/hs_20261112_131328_std60_kf"
+  ],
+  "out": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/merged/hs_20261112_121801_std60_merged_kf",
+  "gt": "lensonly",
+  "max_sub": 80,
+  "min_kf": 5,
+  "min_pnp": 30,
+  "min_cross_inl": 30,
+  "gap_s": 100.0,
+  "max_features": 6000,
+  "scale": 0.5
+ },
+ "parts": [
+  {
+   "part": 1,
+   "dir": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/part2/red/hs_20261112_131328_std60_kf",
+   "n_ref": 80,
+   "n_new": 80,
+   "n_cross_pairs": 6400,
+   "n_cross_verified": 337,
+   "n_ref_points": 2774,
+   "n_pnp_ok": 22,
+   "pnp_inliers_median": 76.5,
+   "n_consensus": 17,
+   "consensus_frac": 0.7727272727272727,
+   "yaw_deg": -4.213850789301114,
+   "t_m": [
+    -0.01018770571160833,
+    -0.031064553914169363,
+    -0.016008645195124384
+   ],
+   "M": [
+    [
+     0.9972967433442689,
+     0.07347928765928217,
+     0.0,
+     -0.01018770571160833
+    ],
+    [
+     -0.07347928765928217,
+     0.9972967433442689,
+     0.0,
+     -0.031064553914169363
+    ],
+    [
+     0.0,
+     0.0,
+     1.0,
+     -0.016008645195124384
+    ],
+    [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   ],
+   "centre_err_cm_median": 3.5878975990758857,
+   "centre_err_cm_max": 7.803187092340849,
+   "rot_err_deg_median": 0.8422926003674372,
+   "tilt_deg_median": 0.5001221217739742,
+   "tilt_deg_max": 1.1444595135256768,
+   "centre_spread_m": 1.658350002067706,
+   "sim3_scale_ratio": 1.020351568684881,
+   "consensus_frames": [
+    256,
+    299,
+    334,
+    377,
+    1020,
+    1049,
+    1093,
+    2035,
+    2081,
+    2520,
+    2559,
+    2772,
+    2945,
+    2994,
+    3066,
+    3188,
+    3224
+   ]
+  }
+ ],
+ "status": "ok",
+ "made": "2026-11-12 13:21:12",
+ "out": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/merged/hs_20261112_121801_std60_merged_kf",
+ "frame_offset": [
+  0,
+  3466
+ ],
+ "time_shift_ns": [
+  0,
+  -3169945364061
+ ],
+ "n_keyframes": 992,
+ "n_keyframes_per_part": [
+  494,
+  498
+ ],
+ "n_extra_pairs": 103,
+ "extra_pairs_same_source_frame": 0,
+ "runtime_s": 36.9,
+ "note": "M[k] maps part-k VIO world into part-0 world (4-DoF yaw + translation); poses of part k in the folder = M[k] * VIO"
+}

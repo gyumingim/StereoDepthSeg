@@ -1,0 +1,208 @@
+{
+ "made": "2026-11-12 13:31:49",
+ "commit": "7acaca725d17d4c31a5c3b8f3da476b00096d0b1",
+ "status": "ok",
+ "recordings": [
+  "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261112_121801_std60",
+  "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261112_131328_std60"
+ ],
+ "steps": {
+  "part1": {
+   "s": 55.1,
+   "rc": 0
+  },
+  "part2": {
+   "s": 54.8,
+   "rc": 0
+  },
+  "align": {
+   "s": 37.3,
+   "rc": 0
+  },
+  "scan": {
+   "s": 637.2,
+   "rc": 0
+  }
+ },
+ "merge": {
+  "inputs": [
+   "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/part1/red/hs_20261112_121801_std60_kf",
+   "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/part2/red/hs_20261112_131328_std60_kf"
+  ],
+  "args": {
+   "parts": [
+    "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/part1/red/hs_20261112_121801_std60_kf",
+    "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/part2/red/hs_20261112_131328_std60_kf"
+   ],
+   "out": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/merged/hs_20261112_121801_std60_merged_kf",
+   "gt": "lensonly",
+   "max_sub": 80,
+   "min_kf": 5,
+   "min_pnp": 30,
+   "min_cross_inl": 30,
+   "gap_s": 100.0,
+   "max_features": 6000,
+   "scale": 0.5
+  },
+  "parts": [
+   {
+    "part": 1,
+    "dir": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/part2/red/hs_20261112_131328_std60_kf",
+    "n_ref": 80,
+    "n_new": 80,
+    "n_cross_pairs": 6400,
+    "n_cross_verified": 337,
+    "n_ref_points": 2774,
+    "n_pnp_ok": 22,
+    "pnp_inliers_median": 76.5,
+    "n_consensus": 17,
+    "consensus_frac": 0.7727272727272727,
+    "yaw_deg": -4.213850789301114,
+    "t_m": [
+     -0.01018770571160833,
+     -0.031064553914169363,
+     -0.016008645195124384
+    ],
+    "M": [
+     [
+      0.9972967433442689,
+      0.07347928765928217,
+      0.0,
+      -0.01018770571160833
+     ],
+     [
+      -0.07347928765928217,
+      0.9972967433442689,
+      0.0,
+      -0.031064553914169363
+     ],
+     [
+      0.0,
+      0.0,
+      1.0,
+      -0.016008645195124384
+     ],
+     [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+     ]
+    ],
+    "centre_err_cm_median": 3.5878975990758857,
+    "centre_err_cm_max": 7.803187092340849,
+    "rot_err_deg_median": 0.8422926003674372,
+    "tilt_deg_median": 0.5001221217739742,
+    "tilt_deg_max": 1.1444595135256768,
+    "centre_spread_m": 1.658350002067706,
+    "sim3_scale_ratio": 1.020351568684881,
+    "consensus_frames": [
+     256,
+     299,
+     334,
+     377,
+     1020,
+     1049,
+     1093,
+     2035,
+     2081,
+     2520,
+     2559,
+     2772,
+     2945,
+     2994,
+     3066,
+     3188,
+     3224
+    ]
+   }
+  ],
+  "status": "ok",
+  "made": "2026-11-12 13:21:12",
+  "out": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/merged/hs_20261112_121801_std60_merged_kf",
+  "frame_offset": [
+   0,
+   3466
+  ],
+  "time_shift_ns": [
+   0,
+   -3169945364061
+  ],
+  "n_keyframes": 992,
+  "n_keyframes_per_part": [
+   494,
+   498
+  ],
+  "n_extra_pairs": 103,
+  "extra_pairs_same_source_frame": 0,
+  "runtime_s": 36.9,
+  "note": "M[k] maps part-k VIO world into part-0 world (4-DoF yaw + translation); poses of part k in the folder = M[k] * VIO"
+ },
+ "scan": {
+  "status": "ok",
+  "ba_quality": {
+   "n_kf": 992,
+   "kf_obs_min": 4,
+   "n_kf_vio_pose": 1,
+   "fixed_kf": [
+    279,
+    248
+   ],
+   "final_med_px": 0.3116560943560832,
+   "final_rmse_px": 0.7241634143577559,
+   "frac_inlier_1px": 0.9119039925206904,
+   "sim3_rms_cm": 4.8587411367295665
+  },
+  "mesh": {
+   "absdZ_p90_cm": null,
+   "k_pct": -2.220446049250313e-14,
+   "mesh_board_z_rms_cm": null,
+   "n_kf": 992,
+   "n_kf_depth": 804,
+   "n_kf_board_eval": null,
+   "kf_absdZ_p90_cm_median": null,
+   "board_cover_frac": null,
+   "ffs_views": 2,
+   "ffs_fuse": "mean",
+   "ffs_partners": "all",
+   "ffs_s_total": 201.1,
+   "n_kf_by_pairs": {
+    "0": 188,
+    "1": 804
+   },
+   "n_kf_no_pair": null,
+   "mesh_vertices": 3791137,
+   "tsdf_full": true,
+   "tsdf_blocks": 250000,
+   "n_kf_gt_not_ok_dropped": 0,
+   "gt_ok_filter": true,
+   "depth_sigma": {
+    "rot_deg": 0.1,
+    "b_rel": 0.02,
+    "sigma_d_px": 0.5,
+    "sigma_max": 0.08,
+    "sigma_ok": 0.02,
+    "z_max": 2.0
+   },
+   "mesh_cam_depth_m": {
+    "n": 3791137,
+    "p50": 0.963613560521419,
+    "p90": 1.2576908074563424,
+    "p99": 1.4511926751322717,
+    "max": 1.672314012461863,
+    "frac_gt_0p65": 0.8421062071879756,
+    "frac_gt_1p0": 0.4362253329278261
+   },
+   "lib_ffs": {
+    "file": "/home/system/scanner/StereoDepthSeg/lib_ffs.py",
+    "sha": "9b820bc28df4caf7"
+   },
+   "note": "lens-only stand-in GT: k_pct and board numbers meaningless"
+  },
+  "step_s": {
+   "lensonly": 0.2,
+   "kfba": 191.6,
+   "mesh": 444.9
+  }
+ }
+}

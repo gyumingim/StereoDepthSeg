@@ -361,3 +361,44 @@ M4 (불확실 판정) 는 손대지 않음.
 - 보기: `changes_0620/fixes_20261112/scanner_121801_merged_2parts.ply`, 목록 백업 `meshes.json.bak_fixes_u10_20261112_130731`.
 - 결과: `scan3d/runs/laptop/20261112_121801_std60/fix_u10split/` (merge, BA), `fix_u10split_mesh2/` (메시), `fix_u10refuse/`, ATE `fix_u10split/ate_vs_fix_u8.json`
   (계산 스크립트 `runs/fixes_20261112/ate_merge.py`). 메시·키프레임 사진은 커밋 안 함.
+
+## 11. 단위 11 — 실제 이어 찍기: 121801 + 새 녹화 131328 (`run_merge.sh`, 노트북 1 회, 미검증)
+
+### 녹화
+- `hs_20261112_131328_std60` (S24, 60 fps, 0.5 dpt, 3437 프레임, complete true, 60 s; 121801 과 같은 설정). 안내: 0–5 s 바닥에 두고 멈춤,
+  5–15 s 121801 이 끝난 곳의 주황/노랑 부품 상자를 다시 비춤 (겹침), 15–55 s 새 곳, 55–60 s 멈춤.
+- 폰에서 `adb pull` 만 → `C:\Users\a3162\scan3d_handoff\browser_upload\in\hs_20261112_131328_std60` (6 파일 크기 폰과 같음, cam5.mp4 1 140 920 348 B)
+  → WSL `~/scanner/StereoDepthSeg/scan3d/recordings/hs_20261112_131328_std60` (`cmp` 6 개 같음, OpenCV 3437 프레임·끝 프레임 읽힘). 녹화는 커밋 안 함.
+
+### 실행
+`remote_laptop.sh job 121801 'cmd:SCANNER_COMMIT=7acaca7 bash scan3d/scanA/run_merge.sh $WT/$O/merge $R <131328> --depth-sigma ba --mesh-args "--tsdf-max-blocks 250000" ...' --tag fix_u11merge --send <131328>`
+(코드 7acaca7, dirty 아님; run_merge 가 `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` 기본). 두 녹화 모두 **정지 초기화** (동적 초기화 안 씀), 121801 도 처음부터 다시 VIO (run_merge 는 u8 결과 재사용 기능 없음).
+노트북에 보낸 131328 은 작업 끝에 지움.
+
+| 항목 | 값 |
+|---|---|
+| rc / status | **0 / ok** (job 835 s: part1 55 + part2 55 + align 37 + scan 637 s (kfba 192, mesh 445)) |
+| VIO A / B | 둘 다 정지 초기화 4.13 / 4.22 s, 3466 / 3437 자세 (B 의 lp_score "diverged" 는 시작·끝 거리 3.2 m 기준이라 의미 없음) |
+| 키프레임 A / B | 494 / 498 (합 992) |
+| 녹화 사이 짝 (A 80 × B 80) | 6400 중 **337 검증** (≥ 15 인라이어) |
+| B 쪽에서 보인 A 의 삼각측량 점 | 2 774 |
+| PnP 성공 / 한 변환에 동의 | 22 / **17** 키프레임 |
+| 4 자유도 변환 | 방향각 −4.21°, 이동 (−0.010, −0.031, −0.016) m — 거의 그대로. 121801 이 시작한 책상 자리로 돌아와 끝났고 (시작·끝 16 cm), 131328 도 그 자리에서 시작해서 두 VIO 원점이 거의 같은 곳으로 추정 |
+| 동의한 키프레임 중심 오차 중앙 / 회전 오차 중앙 | **3.6 cm** / 0.84° |
+| 검사: 남은 기울기 중앙 / Sim(3) 축척비 | 0.50° / 1.020 (중심 퍼짐 1.66 m) |
+| kf_ba 녹화 사이 짝 (extra) | 92 개 모두 검증, 인라이어 중앙 73, 이어진 점 172 (관측 1 761) |
+| 합친 BA | 0.312 px (rmse 0.724, 1 px 안 91.2 %), BA-VIO rms 4.86 cm, VIO 자세로 남은 키프레임 1 |
+| 메시 정점 | **3 791 137** (u8 한 녹화 1 905 456) |
+| TSDF 블록 | **250 000 / 한도 250 000 → 걸림** (`tsdf_full true`): 일부가 빠졌을 수 있음 |
+| 깊이 있는 키프레임 | 804 / 992 (짝 없음 188) |
+| 정점 카메라 깊이 중앙 / p90 / p99 / 최대 | 0.96 / 1.26 / 1.45 / 1.67 m |
+| 범위 (위에서) | 약 10.4 × 7.4 m |
+
+- 그림 (`render_merge.py`, 창 없이 numpy): `u11_merge_121801_131328_top.png` (왼쪽 위에서 본 색, 오른쪽 바닥 위 0.4–1.2 m 단면; 빨강 = 121801 카메라, 파랑 = 131328),
+  `u11_merge_121801_131328_overlap_zoom.png` (겹친 곳 확대 5 mm 칸), `u11_merge_121801_131328_kfviews.jpg` (131328 의 10 s·14 s 키프레임과 가장 비슷한 121801 키프레임; 왼쪽 사진, 오른쪽 같은 카메라에서 본 메시 점).
+  메시는 VIO 세계 + z 1000 m (lensonly 대역 GT) 라 그림에서 1000 을 뺌.
+- 눈 확인: 주황/노랑 부품 상자, 의자, 캐비닛, 선반의 테두리가 **한 겹** (위에서 본 단면에 두 겹 벽 안 보임), 131328 사진의 상자와 메시가 같은 자리에 겹침.
+  카메라 사진 위 메시 그림의 방사형 줄무늬는 그림 방식 (z 버퍼 없이 점 찍기) 탓으로 추정.
+- 할 일 후보: 두 녹화를 합치면 블록 한도 250 000 에 걸림 → 더 큰 한도 또는 먼 곳 1 cm 복셀 (7 절) 이 필요할 수 있음 (메인 세션 결정).
+- 보기: `changes_0620/fixes_20261112/scanner_121801_131328_merged.ply`, 목록 백업 `meshes.json.bak_fixes_u11_20261112_133441`.
+- 결과: `scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/` (mesh·키프레임 사진·imu·db 는 커밋 안 함). 중간 보고 `review_20261112/interim_u11.txt`.
