@@ -63,6 +63,10 @@ import java.util.Locale;
  * 0.6.30 (appnpu-20261028): intent npu_loop 1 (default 0 = 0.6.29 behaviour) -> XFeat + LighterGlue on the NPU in the loop
  *   verification (NpuLoop, needs loop on); options npu_xf, npu_lg, npu_lg_in, npu_lg_pad, npu_topk, npu_cpus, npu_nice,
  *   npu_perf, npu_cache_mb, npu_cfg, npu_timeout_ms.
+ * 0.6.40 (phonevio 11-12): mode replay (intent rec FOLDER [cfg c4f60] [max_battery_c 42]) = OFFLINE VIO of a finished
+ *   recording on the phone (ReplayVio: decodes cam5.mp4 + imu.csv, same bridge settings as the PC lp_replay.py, no frame
+ *   dropped, no camera, no sensors) -> REC/phonevio_<stamp>/ (poses.jsonl.gz, loop.jsonl, run.json, temps.csv). Keeps running
+ *   through onPause (screen off), stopped by onDestroy / force-stop; never from a history relaunch, once per activity.
  * arcore: a GL thread loops Session.update() and per new frame logs/streams
  *   {"src":"arcore","t_sensor":android camera ts,"t_frame":ARCore ts,"t_call":..,"t_out":update() return,"status":..,"p":[..],"q":[..]}
  * also written to files/arlat_<ms>.csv. Latency = t_out - t_sensor (phone clock).
@@ -86,6 +90,8 @@ public class MainActivity extends Activity {
     private HsPreview hsPrev;
     private Streamer streamer;
     private ViopImuSender imuTx;                    // 0.6.20 mode imu_tx
+    private ReplayVio replay;                       // 0.6.40 mode replay (phonevio)
+    private boolean replayStartedOnce;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -104,6 +110,7 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
         uiH.removeCallbacksAndMessages(null);   // 0.6.38b
         if (ov != null) { ov.stop(); ov = null; }   // 0.6.35d: a replay kept through onPause
+        if (replay != null) { replay.stop(); replay = null; }   // 0.6.40 phonevio
         if (streamer != null) streamer.close();
         super.onDestroy();
     }
@@ -125,6 +132,29 @@ public class MainActivity extends Activity {
                 status.setText("실행 끝 — 다시 하려면 PC 에서 시작");
                 return;
             }
+        }
+        if ("replay".equals(mode)) {        // 0.6.40 phonevio: offline VIO of a recording, no camera
+            if ((getIntent().getFlags() & android.content.Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) {
+                status.setText("기록에서 다시 열림 — 실행하지 않음 (PC 에서 시작)");
+                return;
+            }
+            if (replayStartedOnce) return;
+            replayStartedOnce = true;
+            String rec = getIntent().getStringExtra("rec");
+            String cfg = getIntent().getStringExtra("cfg");
+            if (cfg == null) cfg = "c4f60";
+            if (rec == null || !rec.matches("[A-Za-z0-9_.-]+") || rec.contains("..") || !cfg.matches("[A-Za-z0-9_]+")) {
+                status.setText("rec 폴더 이름이 없거나 잘못됨: " + rec);
+                return;
+            }
+            replay = new ReplayVio(this, rec, cfg, this::show, r -> {
+                show(r);
+                uiH.postDelayed(this::finish, 5000);
+            });
+            replay.maxBatteryTenthC = Math.round(getIntent().getFloatExtra("max_battery_c", 42f) * 10);
+            show("폰에서 VIO 시작: " + rec);
+            replay.start();
+            return;
         }
         if ("cam2".equals(mode)) {          // camera2 delivery latency of the VIO lens instead of ARCore
             if (cam2 == null) {
