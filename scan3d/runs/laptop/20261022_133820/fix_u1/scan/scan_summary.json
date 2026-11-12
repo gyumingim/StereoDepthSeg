@@ -1,0 +1,167 @@
+{
+ "made": "2026-11-12 10:35:12",
+ "commit": "b48e088e8e692a9f7244e41460d5a283a768c01e",
+ "rec": "/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261022_133820",
+ "input": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261022_133820/fix_u1/scan/red/hs_20261022_133820_kf",
+ "keyframe_only": true,
+ "kf_res": 1920,
+ "kf_quality": 90,
+ "live_poses": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261022_133820/fix_u1/scan/red/hs_20261022_133820_kf/phone_live_poses.jsonl.gz",
+ "gt": "imu_gt_spl_cal1022",
+ "vio_cfg": "/home/system/scanner/build_livepose/cfg_gen_hs222/c4f60",
+ "tsdf_alloc": "dense",
+ "ffs_views": 2,
+ "ffs_fuse": "auto",
+ "ffs_partners": "all",
+ "reuse": null,
+ "ba_dir": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261022_133820/fix_u1/scan/ba",
+ "kfba_device_line": "[device] BA cuda, SIFT cpu, matcher auto",
+ "step_s": {
+  "vio": 85.1,
+  "reduce": 20.8,
+  "kfba": 40.0,
+  "mesh": 65.1
+ },
+ "total_s": 211.0,
+ "sent": {
+  "n_keyframes": 203,
+  "image_size": [
+   1920,
+   1080
+  ],
+  "jpeg_bytes": 76569624,
+  "duration_s": 69.200800547,
+  "jpeg_MB_per_min": 66.38907937025546,
+  "kf_per_min": 176.00952451016158,
+  "kf_select": {
+   "rule": "motion",
+   "dist_m": 0.03,
+   "rot_deg": 4.0,
+   "win": 4,
+   "blur": "gyro",
+   "max_gyro": 0.0,
+   "n_vio_frames": 3413,
+   "n_scored": 812,
+   "n_kf": 203,
+   "pos_in_window_hist": [
+    69,
+    20,
+    27,
+    87
+   ],
+   "gyro_kf_median": 0.9573036260217168,
+   "gyro_window_mean_median": 1.118979816142007,
+   "moved_m_median": 0.011208485847847503,
+   "rot_deg_median": 5.7541223508024615,
+   "exposure_ns_median": 4002000.0,
+   "skew_ns_median": 2938614.0
+  }
+ },
+ "ba": {
+  "timing": {
+   "images_s": 1.9,
+   "features_s": 9.0,
+   "matching_s": 7.1,
+   "gpu_stage_s": 16.2,
+   "read_db_uf_s": 0.0,
+   "tracks_s": 0.9,
+   "tri_s": 1.5,
+   "tracks_tri_s": 2.4,
+   "ba_phases": {
+    "n_obs_pairs": 5847394,
+    "setup_s": 1.078,
+    "jac_s": 2.885,
+    "n_solves": 40,
+    "schur_s": 7.699,
+    "solve_s": 0.522,
+    "update_cost_s": 0.094,
+    "gpu_peak_gb": 1.3
+   },
+   "ba_device": "cuda",
+   "ba_s": 13.2
+  }
+ },
+ "mesh": {
+  "absdZ_p90_cm": 0.6144232749938965,
+  "k_pct": -1.2863658255328314,
+  "mesh_board_z_rms_cm": 0.21107502281665802,
+  "n_kf": 196,
+  "n_kf_depth": 160,
+  "n_kf_board_eval": 160,
+  "kf_absdZ_p90_cm_median": 0.4494065787718826,
+  "board_cover_frac": 1.0,
+  "ffs_views": 2,
+  "ffs_fuse": "mean",
+  "ffs_partners": "all",
+  "ffs_s_total": 34.8,
+  "n_kf_by_pairs": {
+   "0": 36,
+   "1": 160
+  },
+  "n_kf_no_pair": 36,
+  "mesh_vertices": 12590,
+  "tsdf_full": false,
+  "tsdf_blocks": 3285,
+  "n_kf_gt_not_ok_dropped": 7,
+  "gt_ok_filter": true,
+  "depth_sigma": null,
+  "mesh_cam_depth_m": {
+   "n": 12590,
+   "p50": 0.39710751470049876,
+   "p90": 0.5132922636270971,
+   "p99": 0.5320772898861194,
+   "max": 0.567785323834523,
+   "frac_gt_0p65": 0.0,
+   "frac_gt_1p0": 0.0
+  },
+  "lib_ffs": {
+   "file": "/home/system/scanner/StereoDepthSeg/lib_ffs.py",
+   "sha": "9b820bc28df4caf7"
+  }
+ },
+ "board": null,
+ "mesh_board": null,
+ "status": "ok",
+ "steps_run": [
+  "kfba",
+  "mesh",
+  "reduce",
+  "vio"
+ ],
+ "vio": {
+  "crashed": null,
+  "bridge_rc": 0,
+  "frames_selected": 3838,
+  "frames_fed": 3838,
+  "poses": 3833,
+  "wall_s": 83.9
+ },
+ "vio_crashed": null,
+ "ba_quality": {
+  "n_kf": 203,
+  "kf_obs_min": 57,
+  "n_kf_vio_pose": 0,
+  "fixed_kf": [
+   1808
+  ],
+  "final_med_px": 0.31417926787519046,
+  "final_rmse_px": 0.7177925841700277,
+  "frac_inlier_1px": 0.9155531705571952,
+  "sim3_rms_cm": 0.6272786188068731
+ },
+ "min_mesh_vertices": 1000,
+ "provenance": {
+  "commit": "b48e088e8e692a9f7244e41460d5a283a768c01e",
+  "commit_dirty": false,
+  "main_commit": "e89c8da14c79edbb2b285147863fb6dfef0694fa-dirty",
+  "worktree": "/home/system/scanner/StereoDepthSeg-fixes",
+  "lens_file": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261022_133820/fix_u1/scan/red/hs_20261022_133820_kf/imu_gt_spl_cal1022/gt.npz",
+  "lens_sha": "388f35111f169bb9",
+  "vio_cfg_sha": {
+   "estimator_config.yaml": "b81f2b377f76c84c",
+   "kalibr_imu_chain.yaml": "0f8eefa54043fc3e",
+   "kalibr_imucam_chain.yaml": "69e58e2a65667130"
+  }
+ },
+ "lens_only": null
+}
