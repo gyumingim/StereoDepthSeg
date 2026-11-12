@@ -40,6 +40,9 @@ def main():
     ap.add_argument("--iters", type=int, default=8)
     ap.add_argument("--voxel", type=float, default=0.005)
     ap.add_argument("--zmax", type=float, default=2.0)
+    ap.add_argument("--tsdf-max-blocks", type=int, default=60000,
+                    help="TSDF block limit (8^3 voxels each, ~6.0 KiB GPU per block; default 60000 = tsdf_map default, ~0.37 GB). "
+                         "fixes 11-12 C: a room scan at 5 mm hits 60000 (runs/fixes_20261112 README)")
     ap.add_argument("--b-target", type=float, default=0.08)
     ap.add_argument("--vio", default="", help="VIO poses.jsonl.gz (T_world_cam0 per frame); rigid SE(3) align to GT (scale NOT fixed)")
     ap.add_argument("--free-scale", action="store_true",
@@ -250,7 +253,7 @@ def main():
     def tsdf_log(m):                     # M3 (fixes 11-12): block-limit message printed + kept for the summary (no behaviour change)
         print(m, flush=True); tsdf_msgs.append(str(m))
     tsdf = tsdf_map.TSDFMap(voxel_m=a.voxel, z_max=a.zmax, sigma_max=a.sigma_max, sigma_ok=a.sigma_ok, min_obs=2,
-                            alloc_dense=(a.tsdf_alloc == "dense"), log=tsdf_log)
+                            alloc_dense=(a.tsdf_alloc == "dense"), log=tsdf_log, max_blocks=a.tsdf_max_blocks)
     print(f"[tsdf] alloc {a.tsdf_alloc}", flush=True)
 
     # board quad in the undistorted keyframe grid -> GT plane depth per pixel
