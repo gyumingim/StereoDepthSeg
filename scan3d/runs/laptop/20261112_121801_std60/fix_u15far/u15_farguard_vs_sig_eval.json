@@ -1,0 +1,156 @@
+{
+ "made": "2026-11-13 10:52:30",
+ "base": "scan3d/runs/laptop/20261112_121801_std60/fix_u15/mesh_sig",
+ "far": "scan3d/runs/laptop/20261112_121801_std60/fix_u15far/mesh_farguard",
+ "rec": "scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/red/hs_20261112_121801_std60_kf",
+ "results": {
+  "base": {
+   "path": "scan3d/runs/laptop/20261112_121801_std60/fix_u15/mesh_sig/mesh.ply",
+   "vertices": 1898053,
+   "faces": 3212472,
+   "cam_depth_m": {
+    "p50": 1.0439460277557373,
+    "p90": 1.2868708372116089,
+    "p99": 1.4412469863891602,
+    "max": 1.5794562101364136,
+    "frac_not_in_view": 0.0
+   },
+   "v_gt_1p6": 0,
+   "v_gt_2p0": 0,
+   "v_gt_2p5": 0,
+   "top_area_m2": 11.76,
+   "top_area_gt_1p6_m2": 0.0,
+   "top_area_gt_2p5_m2": 0.0,
+   "components": 8378,
+   "floater_frac_lt500": 0.038746020263923084,
+   "floater_frac_lt5000": 0.06002150624877177,
+   "floater_v_lt500": 73542,
+   "floater_v_lt5000": 113924,
+   "components_lt500": 8337,
+   "components_lt5000": 8361,
+   "gt_1p6_floater_frac_lt500": null,
+   "gt_1p6_floater_frac_lt5000": null,
+   "runtime_s": 154.4,
+   "ffs_s_total": 93.2,
+   "far_pairs": null,
+   "tsdf_blocks": 154633,
+   "tsdf_full": false,
+   "ffs_backend": "pytorch"
+  },
+  "far": {
+   "path": "scan3d/runs/laptop/20261112_121801_std60/fix_u15far/mesh_farguard/mesh.ply",
+   "vertices": 2286673,
+   "faces": 3858650,
+   "cam_depth_m": {
+    "p50": 1.0832852125167847,
+    "p90": 1.3810930252075195,
+    "p99": 1.8937984704971313,
+    "max": 2.58727765083313,
+    "frac_not_in_view": 0.0
+   },
+   "v_gt_1p6": 63173,
+   "v_gt_2p0": 11978,
+   "v_gt_2p5": 456,
+   "top_area_m2": 15.13,
+   "top_area_gt_1p6_m2": 1.26,
+   "top_area_gt_2p5_m2": 0.02,
+   "components": 9189,
+   "floater_frac_lt500": 0.03610922943507883,
+   "floater_frac_lt5000": 0.05994298266520836,
+   "floater_v_lt500": 82570,
+   "floater_v_lt5000": 137070,
+   "components_lt500": 9145,
+   "components_lt5000": 9175,
+   "gt_1p6_floater_frac_lt500": 0.024013423456223388,
+   "gt_1p6_floater_frac_lt5000": 0.19869247938201448,
+   "runtime_s": 266.9,
+   "ffs_s_total": 79.8,
+   "far_pairs": {
+    "kf_tried": 351,
+    "kf_with_partner": 240,
+    "no_geom_cand": 80,
+    "low_overlap": 2,
+    "dy_rejected": 125,
+    "px_added": 3023717,
+    "px_replaced": 8651442,
+    "px_conflict_kept_near": 150874,
+    "ffs_s": 94.5,
+    "select_s": 4.6,
+    "merge_s": 1.2,
+    "px_wide_only_cand": 4589912,
+    "px_wide_only_rejected": 1566195,
+    "px_rej_lr": 1502157,
+    "px_rej_sat": 158643,
+    "px_rej_p2": 0,
+    "px_repl_below_min_z": 224663,
+    "kf_partner2": 0,
+    "kf_no_partner2": 0,
+    "ffs2_s": 0.0,
+    "B_cm_p10_p50_p90": [
+     27.39,
+     33.6,
+     36.71
+    ],
+    "cfg": {
+     "baseline": 0.35,
+     "b_tol": 0.3,
+     "rot_max": 15.0,
+     "dt_max": 30.0,
+     "min_overlap": 0.5,
+     "znear": 0.9,
+     "min_z": 1.6,
+     "zmax": 4.0,
+     "guard": "lr+sat",
+     "lr_tol": 1.0,
+     "sat_frac": 0.85,
+     "sat_dilate": 15,
+     "partner2": "off",
+     "repl_min_z": "on"
+    }
+   },
+   "tsdf_blocks": 191271,
+   "tsdf_full": false,
+   "ffs_backend": "pytorch",
+   "top_area_new_vs_base_m2": 3.39
+  },
+  "near_lt_1p2m": {
+   "base_vertices": 1508972,
+   "far_vertices": 1606570,
+   "far_to_base_median_mm": 0.0016689300537109375,
+   "far_to_base_p90_mm": 5.433548599700311,
+   "far_to_base_frac_gt_2cm": 0.0404974573158966,
+   "base_to_far_median_mm": 0.000476837158203125,
+   "base_to_far_p90_mm": 3.1636110756876135,
+   "base_covered_frac_2cm": 0.9975791465978162,
+   "base_to_far_exact_frac_0p1mm": 0.6727116208915739
+  },
+  "band_1p2_1p6m": {
+   "base_vertices": 389081,
+   "base_to_far_median_mm": 0.8985996246337891,
+   "base_to_far_p90_mm": 7.147844035801305
+  },
+  "kfviews_rows": [
+   {
+    "i": 453,
+    "frame": 3252,
+    "far_add": 71966,
+    "far_partner": 446,
+    "far_B_cm": 34.0
+   },
+   {
+    "i": 40,
+    "frame": 570,
+    "far_add": 61909,
+    "far_partner": 32,
+    "far_B_cm": 32.9
+   },
+   {
+    "i": 150,
+    "frame": 1257,
+    "far_add": 40530,
+    "far_partner": 156,
+    "far_B_cm": 25.4
+   }
+  ]
+ }
+}

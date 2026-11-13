@@ -1,0 +1,272 @@
+[gpu_guard] torch memory cap 0.75 x 8.0 GB = 6.0 GB
+[ffs] backend pytorch (from cli)
+VIO poses {'source': '/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/ba/poses_ba.jsonl.gz', 'n': 494, 'se3_rmse_cm': 7.980164675328892, 'sim3_scale_would_be': 1.0000000000000002, 'free_scale_applied': False, 'rot_diff_deg_median': 0.5735983528932168}
+decoded 494 frames (960x540), gt rows 494, ok 494
+[tsdf] evict on: GPU 60000 blocks, spill scan3d/runs/laptop/20261112_121801_std60/fix_u15far/mesh_farnone/tsdf_spill (f32)
+[tsdf] alloc dense
+/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/geometry.py:76: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+kf 9/494: {'i': 9, 'pairs': 1, 'B_cm': [8.7], 'valid_frac': 0.5912538580246913, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [182], 'frame': 310, 'n_cand': 11, 'partners': [7], 'rejected': [], 'far_partner': 17, 'far_B_cm': 33.7, 'far_overlap': 0.735, 'far_scale': 0.733, 'far_valid_frac': 0.5401, 'far_ffs_ms': 110, 'far_add': 16375, 'far_repl': 3396, 'far_conflict': 300}
+kf 19/494: {'i': 19, 'pairs': 1, 'B_cm': [7.8], 'valid_frac': 0.7006539351851852, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [184], 'frame': 380, 'n_cand': 14, 'partners': [22], 'rejected': [], 'far_partner': 28, 'far_B_cm': 31.4, 'far_overlap': 0.717, 'far_scale': 0.786, 'far_valid_frac': 0.3136, 'far_ffs_ms': 1453, 'far_add': 643, 'far_repl': 25318, 'far_conflict': 23}
+W1113 10:35:11.525000 4910 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8] torch._dynamo hit config.recompile_limit (8)
+W1113 10:35:11.525000 4910 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8]    function: 'build_gwc_volume_optimized_pytorch1' (/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:376)
+W1113 10:35:11.525000 4910 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8]    last reason: 0/4: tensor 'refimg_fea' size mismatch at index 3. expected 240, actual 208
+W1113 10:35:11.525000 4910 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1113 10:35:11.525000 4910 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1113 10:35:11.549000 4910 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8] torch._dynamo hit config.recompile_limit (8)
+W1113 10:35:11.549000 4910 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8]    function: 'build_concat_volume_optimized_pytorch1' (/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:492)
+W1113 10:35:11.549000 4910 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8]    last reason: 1/4: tensor 'refimg_fea' size mismatch at index 3. expected 240, actual 208
+W1113 10:35:11.549000 4910 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1113 10:35:11.549000 4910 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+kf 29/494: {'i': 29, 'pairs': 1, 'B_cm': [11.9], 'valid_frac': 0.6223321759259259, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [184], 'frame': 493, 'n_cand': 5, 'partners': [31], 'rejected': [], 'far_partner': None}
+kf 39/494: {'i': 39, 'pairs': 1, 'B_cm': [6.7], 'valid_frac': 0.5977893518518519, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [184], 'frame': 563, 'n_cand': 11, 'partners': [37], 'rejected': [], 'far_partner': 32, 'far_B_cm': 30.7, 'far_overlap': 0.822, 'far_scale': 0.805, 'far_valid_frac': 0.4395, 'far_ffs_ms': 128, 'far_add': 80849, 'far_repl': 3861, 'far_conflict': 0}
+kf 49/494: {'i': 49, 'pairs': 1, 'B_cm': [9.3], 'valid_frac': 0.135210262345679, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [186], 'frame': 630, 'n_cand': 4, 'partners': [51], 'rejected': [], 'far_partner': 54, 'far_B_cm': 26.5, 'far_overlap': 0.585, 'far_scale': 0.933, 'far_valid_frac': 0.238, 'far_ffs_ms': 1114, 'far_add': 30424, 'far_repl': 6445, 'far_conflict': 0}
+kf 99/494: {'i': 99, 'pairs': 1, 'B_cm': [8.6], 'valid_frac': 0.4942650462962963, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [187], 'frame': 928, 'n_cand': 6, 'partners': [101], 'rejected': [], 'far_partner': 106, 'far_B_cm': 34.7, 'far_overlap': 0.772, 'far_scale': 0.712, 'far_valid_frac': 0.2794, 'far_ffs_ms': 103, 'far_add': 1538, 'far_repl': 111715, 'far_conflict': 110}
+kf 119/494: {'i': 119, 'pairs': 1, 'B_cm': [9.7], 'valid_frac': 0.45904706790123456, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [183], 'frame': 1041, 'n_cand': 6, 'partners': [117], 'rejected': [], 'far_partner': 110, 'far_B_cm': 36.7, 'far_overlap': 1.0, 'far_scale': 0.673, 'far_valid_frac': 0.272, 'far_ffs_ms': 93, 'far_add': 125, 'far_repl': 22220, 'far_conflict': 2697}
+kf 129/494: {'i': 129, 'pairs': 1, 'B_cm': [9.2], 'valid_frac': 0.4526176697530864, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [185], 'frame': 1113, 'n_cand': 8, 'partners': [131], 'rejected': [], 'far_partner': 137, 'far_B_cm': 29.9, 'far_overlap': 0.732, 'far_scale': 0.826, 'far_valid_frac': 0.3872, 'far_ffs_ms': 130, 'far_add': 25439, 'far_repl': 16879, 'far_conflict': 218}
+kf 139/494: {'i': 139, 'pairs': 1, 'B_cm': [8.7], 'valid_frac': 0.6418885030864198, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [182], 'frame': 1184, 'n_cand': 12, 'partners': [137], 'rejected': [], 'far_partner': 130, 'far_B_cm': 34.0, 'far_overlap': 0.924, 'far_scale': 0.728, 'far_valid_frac': 0.5823, 'far_ffs_ms': 107, 'far_add': 22245, 'far_repl': 46782, 'far_conflict': 3223}
+kf 149/494: {'i': 149, 'pairs': 1, 'B_cm': [25.9], 'valid_frac': 0.21317515432098766, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [946], 'frame': 1248, 'n_cand': 2, 'partners': [155], 'rejected': [], 'far_partner': 155, 'far_B_cm': 25.9, 'far_overlap': 1.0, 'far_scale': 0.956, 'far_valid_frac': 0.2075, 'far_ffs_ms': 300, 'far_add': 2620, 'far_repl': 76422, 'far_conflict': 35}
+kf 159/494: {'i': 159, 'pairs': 1, 'B_cm': [7.4], 'valid_frac': 0.7766435185185185, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [187], 'frame': 1308, 'n_cand': 11, 'partners': [157], 'rejected': [], 'far_partner': 152, 'far_B_cm': 31.0, 'far_overlap': 0.998, 'far_scale': 0.797, 'far_valid_frac': 0.6553, 'far_ffs_ms': 125, 'far_add': 56856, 'far_repl': 103953, 'far_conflict': 1}
+kf 169/494: {'i': 169, 'pairs': 1, 'B_cm': [6.6], 'valid_frac': 0.8166126543209876, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [193], 'frame': 1366, 'n_cand': 11, 'partners': [171], 'rejected': [], 'far_partner': 160, 'far_B_cm': 35.9, 'far_overlap': 0.999, 'far_scale': 0.688, 'far_valid_frac': 0.6023, 'far_ffs_ms': 97, 'far_add': 23890, 'far_repl': 60789, 'far_conflict': 1}
+kf 179/494: {'i': 179, 'pairs': 1, 'B_cm': [8.3], 'valid_frac': 0.6446990740740741, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [188], 'frame': 1430, 'n_cand': 10, 'partners': [177], 'rejected': [], 'far_partner': None}
+kf 189/494: {'i': 189, 'pairs': 1, 'B_cm': [8.3], 'valid_frac': 0.5970679012345679, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [182], 'frame': 1504, 'n_cand': 10, 'partners': [192], 'rejected': [], 'far_partner': None}
+kf 199/494: {'i': 199, 'pairs': 1, 'B_cm': [7.5], 'valid_frac': 0.4150366512345679, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [180], 'frame': 1582, 'n_cand': 4, 'partners': [195], 'rejected': [], 'far_partner': None}
+kf 209/494: {'i': 209, 'pairs': 1, 'B_cm': [7.4], 'valid_frac': 0.5400038580246913, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [180], 'frame': 1662, 'n_cand': 9, 'partners': [207], 'rejected': [], 'far_partner': None}
+kf 269/494: {'i': 269, 'pairs': 1, 'B_cm': [6.6], 'valid_frac': 0.49192901234567904, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [182], 'frame': 2075, 'n_cand': 5, 'partners': [271], 'rejected': [], 'far_partner': None}
+kf 289/494: {'i': 289, 'pairs': 1, 'B_cm': [7.5], 'valid_frac': 0.1845138888888889, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [189], 'frame': 2274, 'n_cand': 13, 'partners': [287], 'rejected': [], 'far_partner': None}
+kf 299/494: {'i': 299, 'pairs': 1, 'B_cm': [6.4], 'valid_frac': 0.3308526234567901, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [190], 'frame': 2371, 'n_cand': 2, 'partners': [304], 'rejected': [], 'far_partner': None}
+kf 309/494: {'i': 309, 'pairs': 1, 'B_cm': [7.3], 'valid_frac': 0.25481867283950616, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [183], 'frame': 2435, 'n_cand': 12, 'partners': [307], 'rejected': [], 'far_partner': None}
+kf 349/494: {'i': 349, 'pairs': 1, 'B_cm': [10.2], 'valid_frac': 0.24401234567901234, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [191], 'frame': 2647, 'n_cand': 4, 'partners': [351], 'rejected': [], 'far_partner': 354, 'far_B_cm': 26.8, 'far_overlap': 0.952, 'far_scale': 0.921, 'far_valid_frac': 0.1882, 'far_ffs_ms': 268, 'far_add': 269, 'far_repl': 64386, 'far_conflict': 636}
+kf 359/494: {'i': 359, 'pairs': 1, 'B_cm': [21.2], 'valid_frac': 0.2148360339506173, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [133], 'frame': 2702, 'n_cand': 2, 'partners': [363], 'rejected': [], 'far_partner': 366, 'far_B_cm': 37.0, 'far_overlap': 0.897, 'far_scale': 0.667, 'far_valid_frac': 0.1427, 'far_ffs_ms': 141, 'far_add': 4416, 'far_repl': 34327, 'far_conflict': 3}
+kf 369/494: {'i': 369, 'pairs': 1, 'B_cm': [10.2], 'valid_frac': 0.41328125, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [183], 'frame': 2753, 'n_cand': 8, 'partners': [371], 'rejected': [], 'far_partner': 362, 'far_B_cm': 33.9, 'far_overlap': 1.0, 'far_scale': 0.73, 'far_valid_frac': 0.3112, 'far_ffs_ms': 108, 'far_add': 12148, 'far_repl': 7591, 'far_conflict': 2192}
+kf 379/494: {'i': 379, 'pairs': 1, 'B_cm': [8.2], 'valid_frac': 0.23858989197530864, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [184], 'frame': 2806, 'n_cand': 6, 'partners': [381], 'rejected': [], 'far_partner': 388, 'far_B_cm': 36.2, 'far_overlap': 0.942, 'far_scale': 0.683, 'far_valid_frac': 0.1609, 'far_ffs_ms': 98, 'far_add': 1132, 'far_repl': 223, 'far_conflict': 176}
+kf 389/494: {'i': 389, 'pairs': 1, 'B_cm': [9.0], 'valid_frac': 0.5281751543209876, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [180], 'frame': 2858, 'n_cand': 11, 'partners': [387], 'rejected': [], 'far_partner': 382, 'far_B_cm': 27.3, 'far_overlap': 1.0, 'far_scale': 0.906, 'far_valid_frac': 0.3899, 'far_ffs_ms': 255, 'far_add': 17, 'far_repl': 5, 'far_conflict': 620}
+kf 399/494: {'i': 399, 'pairs': 1, 'B_cm': [8.4], 'valid_frac': 0.43199652777777775, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [193], 'frame': 2927, 'n_cand': 12, 'partners': [401], 'rejected': [], 'far_partner': 406, 'far_B_cm': 29.8, 'far_overlap': 0.566, 'far_scale': 0.83, 'far_valid_frac': 0.1314, 'far_ffs_ms': 132, 'far_add': 978, 'far_repl': 8, 'far_conflict': 0}
+kf 409/494: {'i': 409, 'pairs': 1, 'B_cm': [7.3], 'valid_frac': 0.34065007716049384, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [192], 'frame': 2995, 'n_cand': 8, 'partners': [411], 'rejected': [], 'far_partner': 418, 'far_B_cm': 35.4, 'far_overlap': 0.939, 'far_scale': 0.698, 'far_valid_frac': 0.2604, 'far_ffs_ms': 103, 'far_add': 5376, 'far_repl': 0, 'far_conflict': 0}
+kf 419/494: {'i': 419, 'pairs': 1, 'B_cm': [8.8], 'valid_frac': 0.2795273919753086, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [187], 'frame': 3053, 'n_cand': 6, 'partners': [417], 'rejected': [], 'far_partner': 411, 'far_B_cm': 33.4, 'far_overlap': 1.0, 'far_scale': 0.741, 'far_valid_frac': 0.2945, 'far_ffs_ms': 180, 'far_add': 44249, 'far_repl': 14538, 'far_conflict': 3316}
+kf 429/494: {'i': 429, 'pairs': 1, 'B_cm': [12.6], 'valid_frac': 0.6368576388888889, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [181], 'frame': 3123, 'n_cand': 10, 'partners': [431], 'rejected': [], 'far_partner': 436, 'far_B_cm': 34.5, 'far_overlap': 0.993, 'far_scale': 0.717, 'far_valid_frac': 0.4926, 'far_ffs_ms': 108, 'far_add': 62110, 'far_repl': 47314, 'far_conflict': 0}
+kf 439/494: {'i': 439, 'pairs': 1, 'B_cm': [8.7], 'valid_frac': 0.44861689814814815, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [180], 'frame': 3179, 'n_cand': 10, 'partners': [441], 'rejected': [], 'far_partner': None}
+kf 449/494: {'i': 449, 'pairs': 1, 'B_cm': [10.2], 'valid_frac': 0.596815200617284, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [179], 'frame': 3228, 'n_cand': 10, 'partners': [447], 'rejected': [], 'far_partner': 442, 'far_B_cm': 35.5, 'far_overlap': 0.942, 'far_scale': 0.695, 'far_valid_frac': 0.5328, 'far_ffs_ms': 94, 'far_add': 80387, 'far_repl': 89348, 'far_conflict': 17}
+kf 459/494: {'i': 459, 'pairs': 1, 'B_cm': [19.9], 'valid_frac': 0.28616319444444444, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [152], 'frame': 3280, 'n_cand': 3, 'partners': [455], 'rejected': [], 'far_partner': 451, 'far_B_cm': 37.2, 'far_overlap': 1.0, 'far_scale': 0.664, 'far_valid_frac': 0.2567, 'far_ffs_ms': 997, 'far_add': 18955, 'far_repl': 100556, 'far_conflict': 0}
+kf 469/494: {'i': 469, 'pairs': 1, 'B_cm': [9.4], 'valid_frac': 0.3488541666666667, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [191], 'frame': 3332, 'n_cand': 7, 'partners': [471], 'rejected': [], 'far_partner': 462, 'far_B_cm': 36.4, 'far_overlap': 0.997, 'far_scale': 0.679, 'far_valid_frac': 0.2522, 'far_ffs_ms': 152, 'far_add': 30249, 'far_repl': 27928, 'far_conflict': 0}
+kf 479/494: {'i': 479, 'pairs': 1, 'B_cm': [12.5], 'valid_frac': 0.35944058641975307, 'board_px': 0, 'board_valid': 0, 'ffs_ms': [191], 'frame': 3386, 'n_cand': 7, 'partners': [477], 'rejected': [], 'far_partner': 473, 'far_B_cm': 34.1, 'far_overlap': 1.0, 'far_scale': 0.725, 'far_valid_frac': 0.0928, 'far_ffs_ms': 108, 'far_add': 162, 'far_repl': 22, 'far_conflict': 1433}
+{
+ "poses": {
+  "source": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/ba/poses_ba.jsonl.gz",
+  "n": 494,
+  "se3_rmse_cm": 7.980164675328892,
+  "sim3_scale_would_be": 1.0000000000000002,
+  "free_scale_applied": false,
+  "rot_diff_deg_median": 0.5735983528932168,
+  "compressed_rows": 494
+ },
+ "made": "2026-11-13 10:38:21",
+ "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/red/hs_20261112_121801_std60_kf",
+ "gt": "lensonly",
+ "args": {
+  "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/red/hs_20261112_121801_std60_kf",
+  "out": "scan3d/runs/laptop/20261112_121801_std60/fix_u15far/mesh_farnone",
+  "gt": "lensonly",
+  "scale": 0.5,
+  "kf_step": 1,
+  "n_pairs": 1,
+  "iters": 8,
+  "voxel": 0.005,
+  "zmax": 2.0,
+  "tsdf_max_blocks": 600000,
+  "tsdf_evict_gpu_blocks": 60000,
+  "tsdf_evict_dtype": "f32",
+  "tsdf_evict_dir": "",
+  "tsdf_evict_keep": false,
+  "b_target": 0.08,
+  "vio": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/ba/poses_ba.jsonl.gz",
+  "free_scale": false,
+  "pose_noise_cm": 0.0,
+  "allow_fullres": false,
+  "rows_from": "",
+  "compress": true,
+  "tsdf_alloc": "dense",
+  "ffs_views": 2,
+  "ffs_fuse": "auto",
+  "ffs_partners": "all",
+  "ffs_dt_max": null,
+  "pair_min_valid": null,
+  "pair_check": "auto",
+  "keep_gt_not_ok": false,
+  "far_pairs": "wide",
+  "far_baseline": 0.35,
+  "far_b_tol": 0.3,
+  "far_rot_max": 15.0,
+  "far_dt_max": 30.0,
+  "far_min_overlap": 0.5,
+  "far_znear": 0.9,
+  "far_min_z": 1.6,
+  "far_zmax": 4.0,
+  "far_guard": "none",
+  "far_lr_tol": 1.0,
+  "far_sat_frac": 0.85,
+  "far_sat_dilate": 15,
+  "far_partner2": "off",
+  "far_repl_min_z": "off",
+  "sigma_scale_aware": "on",
+  "sigma_rot_deg": 0.1,
+  "sigma_b_rel": 0.02,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02,
+  "ffs_backend": "pytorch",
+  "ffs_engines": "",
+  "kf_only": "",
+  "dump_depth": ""
+ },
+ "board_mm": [
+  302.0,
+  181.19999999999996
+ ],
+ "square_mm": 60.4,
+ "gt_corner_px_median": null,
+ "n_kf": 494,
+ "n_kf_depth": 351,
+ "mesh_vertices": 2397691,
+ "mesh_faces": 4038176,
+ "runtime_s": 221.7,
+ "image_size": [
+  960,
+  540
+ ],
+ "K_used": [
+  [
+   643.1272697202457,
+   0.0,
+   482.59568880974615
+  ],
+  [
+   0.0,
+   643.2218309269573,
+   276.6095206454582
+  ],
+  [
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "gpu_max_alloc_gb": 4.36,
+ "gpu_max_reserved_gb": 5.18,
+ "ffs_views": 2,
+ "ffs_fuse": "mean",
+ "ffs_partners": "all",
+ "ffs_dt_max": 30.0,
+ "pair_min_valid": 0.0,
+ "pair_check": "dy",
+ "pair_check_n": 759,
+ "pair_check_rejected": 171,
+ "pair_check_s": 12.1,
+ "ffs_s_total": 78.5,
+ "ffs_s_used": 78.5,
+ "n_pairs_rejected": 0,
+ "n_kf_by_pairs": {
+  "0": 143,
+  "1": 351
+ },
+ "far_pairs": {
+  "kf_tried": 351,
+  "kf_with_partner": 240,
+  "no_geom_cand": 80,
+  "low_overlap": 2,
+  "dy_rejected": 125,
+  "px_added": 4589912,
+  "px_replaced": 8876105,
+  "px_conflict_kept_near": 150874,
+  "ffs_s": 58.6,
+  "select_s": 4.6,
+  "merge_s": 1.1,
+  "px_wide_only_cand": 4589912,
+  "px_wide_only_rejected": 0,
+  "px_rej_lr": 0,
+  "px_rej_sat": 0,
+  "px_rej_p2": 0,
+  "px_repl_below_min_z": 224663,
+  "kf_partner2": 0,
+  "kf_no_partner2": 0,
+  "ffs2_s": 0.0,
+  "B_cm_p10_p50_p90": [
+   27.39,
+   33.6,
+   36.71
+  ],
+  "cfg": {
+   "baseline": 0.35,
+   "b_tol": 0.3,
+   "rot_max": 15.0,
+   "dt_max": 30.0,
+   "min_overlap": 0.5,
+   "znear": 0.9,
+   "min_z": 1.6,
+   "zmax": 4.0,
+   "guard": "none",
+   "lr_tol": 1.0,
+   "sat_frac": 0.85,
+   "sat_dilate": 15,
+   "partner2": "off",
+   "repl_min_z": "off"
+  }
+ },
+ "tsdf_alloc": "dense",
+ "ffs_backend": "pytorch",
+ "ffs_backend_source": "cli",
+ "depth_sigma": {
+  "rot_deg": 0.1,
+  "b_rel": 0.02,
+  "sigma_d_px": 0.5,
+  "sigma_max": 0.08,
+  "sigma_ok": 0.02,
+  "z_max": 2.0,
+  "scale_aware": true,
+  "near_ffs_calls": 351,
+  "near_ffs_calls_downscaled": 40
+ },
+ "mesh_cam_depth_m": {
+  "n": 2397691,
+  "p50": 1.09254416828829,
+  "p90": 1.4120162264647929,
+  "p99": 1.9505149265536137,
+  "max": 2.5872726316141055,
+  "frac_gt_0p65": 0.9357027239957109,
+  "frac_gt_1p0": 0.6634532973598349
+ },
+ "tsdf_full": false,
+ "tsdf_blocks": 223180,
+ "tsdf_max_blocks": 600000,
+ "tsdf_log": [],
+ "gt_ok_filter": true,
+ "n_kf_gt_not_ok_dropped": 0,
+ "n_kf_gt_not_ok": 0,
+ "tsdf_evict": {
+  "evict_events": 12,
+  "evicted": 223203,
+  "reloaded": 23,
+  "evict_s": 6.42,
+  "reload_s": 0.01,
+  "gpu_peak_blocks": 59984,
+  "cpu_peak_blocks": 223180,
+  "cpu_peak_bytes": 1551671424,
+  "mesh_groups": 7,
+  "mesh_s": 8.78,
+  "store_write_s": 5.71,
+  "store_read_s": 4.02,
+  "spill_bytes": 1376632832,
+  "spill_gb": 1.282,
+  "gpu_budget_blocks": 60000,
+  "cpu_dtype": "f32",
+  "disk": "scan3d/runs/laptop/20261112_121801_std60/fix_u15far/mesh_farnone/tsdf_spill",
+  "blocks_total": 223180,
+  "blocks_gpu": 0,
+  "blocks_cpu": 223180,
+  "cpu_peak_gb": 1.445,
+  "gpu_store_gb": 0.343
+ },
+ "lib_ffs": {
+  "file": "/home/system/scanner/StereoDepthSeg/lib_ffs.py",
+  "sha": "9b820bc28df4caf7"
+ }
+}

@@ -1,0 +1,16 @@
+== job 20261113_103420_20261112_121801_std60_cmd_fix_u15far_5296_63e3 on a3162@169.254.78.233: hs_20261112_121801_std60, steps 'cmd:VARIANTS='farnone farguard farp2' OFFICE_EXTRA='--tsdf-evict-gpu-blocks 60000' bash scan3d/runs/fixes_20261112/u15_laptop.sh office $R $O $P', out scan3d/runs/laptop/20261112_121801_std60/fix_u15far
+push /home/system/scanner/StereoDepthSeg-fixes done 1 s
+send rec 12 s (1.1G)
+send /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/red/hs_20261112_121801_std60_kf /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/ba/poses_ba.jsonl.gz done 8 s
+running (log there: /home/system/scanner/laptop_jobs/20261113_103420_20261112_121801_std60_cmd_fix_u15far_5296_63e3/job.log)
+== job rc 0 (970 s total)
+10:34:37 step cmd start
+11-13 10:34:37 u15 laptop office start, gpu NVIDIA GeForce RTX 4060 Laptop GPU, 8 MiB, 0 %
+11-13 10:38:53 office farnone rc 0 256 s GPU peak 5451 MiB v 2397691 runtime_s 221.7 ffs_s 78.5 blocks 223180 full False backend pytorch aware True far {'kf_with_partner': 240, 'px_added': 4589912, 'px_replaced': 8876105, 'px_conflict_kept_near': 150874, 'px_wide_only_cand': 4589912, 'px_wide_only_rejected': 0, 'px_rej_lr': 0, 'px_rej_sat': 0, 'px_rej_p2': 0, 'px_repl_below_min_z': 224663, 'kf_partner2': 0, 'kf_no_partner2': 0, 'ffs_s': 58.6, 'ffs2_s': 0.0}
+11-13 10:43:52 office farguard rc 0 299 s GPU peak 5451 MiB v 2286673 runtime_s 266.9 ffs_s 79.8 blocks 191271 full False backend pytorch aware True far {'kf_with_partner': 240, 'px_added': 3023717, 'px_replaced': 8651442, 'px_conflict_kept_near': 150874, 'px_wide_only_cand': 4589912, 'px_wide_only_rejected': 1566195, 'px_rej_lr': 1502157, 'px_rej_sat': 158643, 'px_rej_p2': 0, 'px_repl_below_min_z': 224663, 'kf_partner2': 0, 'kf_no_partner2': 0, 'ffs_s': 94.5, 'ffs2_s': 0.0}
+11-13 10:50:11 office farp2 rc 0 379 s GPU peak 6283 MiB v 2258923 runtime_s 342.7 ffs_s 105.3 blocks 188302 full False backend pytorch aware True far {'kf_with_partner': 242, 'px_added': 2374654, 'px_replaced': 8739660, 'px_conflict_kept_near': 151445, 'px_wide_only_cand': 4634273, 'px_wide_only_rejected': 2259619, 'px_rej_lr': 1505064, 'px_rej_sat': 158739, 'px_rej_p2': 1229684, 'px_repl_below_min_z': 225571, 'kf_partner2': 217, 'kf_no_partner2': 25, 'ffs_s': 76.8, 'ffs2_s': 56.1}
+11-13 10:50:11 u15 laptop office done
+10:50:11 step cmd done
+pulled scan3d/runs/laptop/20261112_121801_std60/fix_u15far (9 s) -> /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u15far
+== cleanup
+unlocked

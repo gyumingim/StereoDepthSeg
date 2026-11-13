@@ -91,6 +91,16 @@ class MSConfig:
     sigma_d_px: float = SIGMA_D_PX
     sigma_rot_deg_free: float = 0.5   # anchor 없을 때 회전 오차 (E·VIO·자이로 차이 0.3~1°, 실측)
     sigma_b_rel_free: float = 0.1
+    # fixes 11-13 unit 15 (default off = old): sigma_d_px is FFS-input px; a pair downscaled by s before FFS has 1/s of it
+    # in full-res px (lib_ffs.infer divides the disparity by the real ratio W'/W). True -> sigma uses sigma_d_px / s.
+    sigma_scale_aware: bool = False
+    # fixes 11-13 unit 15 (default off): extra per-pixel masks for the caller (not applied to 'valid'):
+    # guard_lr_ok = left-right check (reverse FFS, |d_R(u - d) - d| < guard_lr_tol_ffs_px FFS-input px),
+    # guard_sat_ok = no raw disparity >= guard_sat_frac x max_disp (FFS-input px) within guard_sat_dilate_px (full-res px).
+    guard_masks: bool = False
+    guard_lr_tol_ffs_px: float = 1.0
+    guard_sat_frac: float = 0.85
+    guard_sat_dilate_px: int = 15
     # 합치기
     k_sigma: float = 3.0
     motion_only_min_z: float = 1.0
@@ -359,8 +369,9 @@ def pair_depth(model, infer, bgr_i, bgr_j, R, t, K1, dist1, rp, cfg, Z2=None, V2
     rgbL = cv2.cvtColor(np.ascontiguousarray(L), cv2.COLOR_BGR2RGB)
     rgbR = cv2.cvtColor(np.ascontiguousarray(Rr), cv2.COLOR_BGR2RGB)
     disp = infer(model, rgbL, rgbR, valid_iters=iters, scale=s)
+    s_eff = (max(1, int(round(W * s))) / W) if s != 1.0 else 1.0    # the real ratio lib_ffs / ffs_trt un-resize with
     dR = None
-    if cfg.lr_check:                                       # 오른쪽(j) 기준 시차: 뒤집어서 j 를 왼쪽으로
+    if cfg.lr_check or cfg.guard_masks:                    # 오른쪽(j) 기준 시차: 뒤집어서 j 를 왼쪽으로
         dR = infer(model, np.ascontiguousarray(rgbR[:, ::-1]), np.ascontiguousarray(rgbL[:, ::-1]),
                    valid_iters=iters, scale=s)[:, ::-1]
     if flip:
@@ -376,7 +387,14 @@ def pair_depth(model, infer, bgr_i, bgr_j, R, t, K1, dist1, rp, cfg, Z2=None, V2
     ok = np.isfinite(disp) & (disp > 0.5) & (disp < d_cap) & (uj >= 0) & (uj <= W - 1) & vi
     ok &= vj[vv, uji]
     lr_frac = None
-    if dR is not None:
+    g_lr = g_sat = None
+    if cfg.guard_masks:                                    # unit 15: masks only, 'ok' unchanged (caller decides where to use them)
+        with np.errstate(invalid="ignore"):
+            g_lr = np.abs(dR[vv, uji] - disp) < cfg.guard_lr_tol_ffs_px / s_eff
+            sat = np.nan_to_num(disp, nan=0.0) >= cfg.guard_sat_frac * cfg.ffs_max_disp / s_eff
+        k_ = 2 * int(cfg.guard_sat_dilate_px) + 1
+        g_sat = ~(cv2.dilate(sat.astype(np.uint8), np.ones((k_, k_), np.uint8)) > 0)
+    if cfg.lr_check and dR is not None:
         lr = np.abs(dR[vv, uji] - disp) < cfg.lr_tol_px
         lr_frac = float(lr[ok].mean()) if ok.any() else None
         ok &= lr
@@ -392,21 +410,24 @@ def pair_depth(model, infer, bgr_i, bgr_j, R, t, K1, dist1, rp, cfg, Z2=None, V2
     with np.errstate(divide="ignore", invalid="ignore"):
         Zm = (f * B / dcor).astype(np.float32)
     ok &= np.isfinite(Zm) & (dcor > 0.5) & (Zm >= cfg.z_min) & (Zm <= cfg.z_max)
-    Z0, V0, _ = warp_depth(Zm, ok, Km, R_m_from_0, rect0_K(rp), (W0, H0))
+    Z0, V0, gx = warp_depth(Zm, ok, Km, R_m_from_0, rect0_K(rp), (W0, H0),
+                            extra=((g_lr.astype(np.float32), g_sat.astype(np.float32)) if cfg.guard_masks else ()))
     # 오차: anchor 되면 시차 잡음 (FFS + 맞춤 잔차), 아니면 회전·기선 오차 포함
+    sdpx = cfg.sigma_d_px / s_eff if cfg.sigma_scale_aware else cfg.sigma_d_px    # unit 15: FFS-input px -> full-res px
     Zs = np.nan_to_num(Z0, nan=1.0)
     Beff = B * (anc["c"] if anc.get("ok") else 1.0)
     if anc.get("ok"):
         # 맞춤 불확실성: 두 렌즈 잡음은 공간적으로 이어져 있어 유효 표본 ≈ 50 개로 봄 (추정)
-        sd = np.hypot(cfg.sigma_d_px, anc["mad_rel"] * float(np.median(dcor[ok])) / np.sqrt(50) if ok.any() else 0.0)
+        sd = np.hypot(sdpx, anc["mad_rel"] * float(np.median(dcor[ok])) / np.sqrt(50) if ok.any() else 0.0)
         sig = Zs * Zs * sd / (f * Beff)
     else:
-        sdp = np.hypot(cfg.sigma_d_px, f * np.radians(cfg.sigma_rot_deg_free))
+        sdp = np.hypot(sdpx, f * np.radians(cfg.sigma_rot_deg_free))
         sig = np.hypot(Zs * Zs * sdp / (f * B), Zs * cfg.sigma_b_rel_free)
     t3 = time.perf_counter()
     return dict(Z=Z0, valid=V0, sigma=sig.astype(np.float32), anchor=anc, B=B, f=f, Km=Km, Rm=Rm, scale=s, flip=flip,
                 roll_deg=g["roll_deg"], perp_deg=g["perp_deg"], rot_deg=g["rot_deg"], d_cap=float(d_cap), z_near=zn,
-                rect_mrect=ri, lr_frac=lr_frac,
+                rect_mrect=ri, lr_frac=lr_frac, s_eff=s_eff, sigma_d_px_used=sdpx,
+                guard_lr_ok=(gx[0] > 0.5) if cfg.guard_masks else None, guard_sat_ok=(gx[1] > 0.5) if cfg.guard_masks else None,
                 ms=dict(rect=1000 * (t1 - t0), ffs=1000 * (t2 - t1), post=1000 * (t3 - t2)))
 
 
