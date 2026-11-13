@@ -4,7 +4,10 @@
 cd /home/system/scanner/StereoDepthSeg-fixes
 L=scan3d/runs/fixes_20261112/u15_laptop_logs; mkdir -p $L
 W=${1:-both}
-C='cmd:bash scan3d/runs/fixes_20261112/u15_laptop.sh'
+# audit 11-13: log the code state here and pass the commit to the laptop run (u15_laptop.sh also logs the laptop file shas)
+GITC="$(git rev-parse --short HEAD)$(git diff --quiet HEAD -- scan3d/scanA/scan_offline.py scan3d/motion_stereo.py || echo -dirty)"
+echo "$(date '+%m-%d %T') launch $W git $GITC scan_offline $(sha256sum scan3d/scanA/scan_offline.py | cut -c1-16) motion_stereo $(sha256sum scan3d/motion_stereo.py | cut -c1-16)" >> $L/launch.txt
+C="cmd:SCANNER_COMMIT=$GITC bash scan3d/runs/fixes_20261112/u15_laptop.sh"
 if [ "$W" != office ]; then
   bash scan3d/tools/remote_laptop.sh job 165506 "$C board \$R \$O \$P" --tag fix_u15 \
     --send scan3d/runs/desktop/20261024_165506_std60/fix_u13c_pt > $L/board.log 2>&1

@@ -111,7 +111,9 @@ def main():
     ap.add_argument("--far-zmax", type=float, default=4.0, help="depth limit of the wide pair and the TSDF (near pair keeps --zmax)")
     # fixes 11-13 unit 15 (README section 15): guard for wide-only pixels (no near depth there -> no cross-check before)
     # Defaults (unit 15b, laptop PyTorch 121801, README 15b): lr+sat with --far-lr-tol 1.5, partner2 OFF, repl-min-z on.
-    # vs no guard: small pieces < 5000 v 139 827 -> 127 735, > 1.6 m small pieces 6 776 -> 5 487, > 1.6 m vertices 93 318 -> 69 006.
+    # tol 1.5 vs 1.0 = less conservative, no sign of harm (same inputs, only the tolerance differs): > 1.6 m vertices 63 173 -> 69 006,
+    # floor loss the same, near p90 slightly worse (3.16 -> 3.18 mm). Not "better": the < 5000 small-piece drop (137 070 -> 127 735)
+    # is a threshold effect (3 pieces join one 15 078-vertex component); at < 20 000 tol 1.5 is worse (179 760 -> 186 685).
     # partner2 (direction >= 20 deg) found a partner for only 30/240 keyframes and did not cut far small pieces (12 515). No far GT.
     ap.add_argument("--far-guard", choices=("none", "lr", "sat", "lr+sat"), default="lr+sat",
                     help="wide-only pixels (near pair invalid) must pass: lr = left-right check of the wide FFS (reverse FFS run, "

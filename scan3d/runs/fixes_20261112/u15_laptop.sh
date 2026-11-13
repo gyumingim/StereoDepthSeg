@@ -14,6 +14,10 @@ note() { echo "$(date '+%m-%d %T') $*" | tee -a "$O/u15_times.txt"; }
 gpumon() { nvidia-smi --query-gpu=timestamp,memory.used,utilization.gpu --format=csv,noheader,nounits -lms 500 > "$1" 2>/dev/null & echo $!; }
 peak() { awk -F', ' 'NR==1||$2>m{m=$2} END{print m}' "$1"; }
 note "u15 laptop $what start, gpu $(nvidia-smi --query-gpu=name,memory.used,utilization.gpu --format=csv,noheader)"
+# audit 11-13 (u15b_verify.md): record the code that actually runs here (the laptop copy pushed by remote_laptop.sh has no .git)
+note "code sha256[:16] (laptop copy): $(for f in scan3d/scanA/scan_offline.py scan3d/motion_stereo.py scan3d/tsdf_map.py scan3d/tsdf_evict.py \
+  scan3d/scanA/run_scanner.sh scan3d/runs/fixes_20261112/u15_laptop.sh; do printf '%s=%s ' "${f##*/}" "$(sha256sum "$f" 2>/dev/null | cut -c1-16)"; done)\
+ desktop git ${SCANNER_COMMIT:-unknown}"
 if [ "$what" = board ]; then
   D=$WT/scan3d/runs/desktop/20261024_165506_std60
   for v in base sig; do
