@@ -1,0 +1,8 @@
+[ WARN:0@1.843] global loadsave.cpp:278 findDecoder imread_('/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_u11b/merge/merged/hs_20261112_121801_std60_kf_merged_kf/frames_kf/03349.jpg'): can't open/read file: check file path/integrity
+Traceback (most recent call last):
+  File "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/fixes_20261112/render_merge.py", line 108, in <module>
+    main()
+  File "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/fixes_20261112/render_merge.py", line 90, in main
+    Hh, Ww = im.shape[:2]; r = np.full_like(im, 255); zb = np.full((Hh, Ww), np.inf)
+             ^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'shape'

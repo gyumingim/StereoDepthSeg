@@ -1,0 +1,30 @@
+== job 20261113_122206_20261112_121801_std60_cmd_fix_u16_x095_28635_be2a on a3162@169.254.78.233: hs_20261112_121801_std60, steps 'cmd:bash scan3d/runs/fixes_20261112/u16_full.sh $WT/$O x095 ', out scan3d/runs/laptop/20261112_121801_std60/fix_u16_x095
+push /home/system/scanner/StereoDepthSeg-fixes done 1 s
+send rec 10 s (1.1G)
+send /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/part1/red /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/part2/red done 15 s
+running (log there: /home/system/scanner/laptop_jobs/20261113_122206_20261112_121801_std60_cmd_fix_u16_x095_28635_be2a/job.log)
+== job rc 0 (798 s total)
+  {
+   "n_cross_verified": 337,
+   "n_pnp_ok": 22,
+   "n_consensus": 19,
+   "yaw_deg": -4.139804691924557,
+   "centre_err_cm_median": 2.5985106568950394,
+   "tilt_deg_median": 0.4770041463636809,
+   "sim3_scale_ratio": 1.0705855131307034,
+   "sim3_scale_boot_sd": 0.0028321624011663363,
+   "consensus_frac": 0.8636363636363636,
+   "grid_cells_union": 16,
+   "inlier_extent_m": 7.525429750103218,
+   "consensus_span_s": 49.467059805000005,
+   "second_n": 1
+  }
+ ],
+ "mesh_vertices": 3694168
+}
+== run_merge done 12:35:12 (ok)
+12:35:12 step cmd done
+pulled scan3d/runs/laptop/20261112_121801_std60/fix_u16_x095 (5 s) -> /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_x095
+== cleanup
+unlocked
+EXIT 0

@@ -1,0 +1,30 @@
+== job 20261113_121354_20261112_121801_std60_cmd_fix_u16_u10_26498_d219 on a3162@169.254.78.233: hs_20261112_121801_std60, steps 'cmd:bash scan3d/runs/fixes_20261112/u16_full.sh $WT/$O u10 ', out scan3d/runs/laptop/20261112_121801_std60/fix_u16_u10
+push /home/system/scanner/StereoDepthSeg-fixes done 1 s
+send rec 10 s (1.1G)
+send /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/part1/red /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u10split/merge/part2/red /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/ba/poses_ba.jsonl.gz done 9 s
+running (log there: /home/system/scanner/laptop_jobs/20261113_121354_20261112_121801_std60_cmd_fix_u16_u10_26498_d219/job.log)
+== job rc 0 (426 s total)
+   "per_part_rms_cm": [
+    6.718851627088941,
+    16.684345552615444
+   ]
+  },
+  "n": 552,
+  "n_per_part": [
+   272,
+   280
+  ],
+  "n_exact_frame": 487
+ },
+ "poses_ba_round1": {
+  "se3": {
+   "scale": 1.0,
+   "rms_cm": 9.834377289576496,
+   "median_cm": 7.2039251542144385,
+   "max_cm": 20.80354336987618,
+   "per_part_rms_cm": [
+    7.991182819782900512:20:43 step cmd done
+pulled scan3d/runs/laptop/20261112_121801_std60/fix_u16_u10 (3 s) -> /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_u10
+== cleanup
+unlocked
+EXIT 0

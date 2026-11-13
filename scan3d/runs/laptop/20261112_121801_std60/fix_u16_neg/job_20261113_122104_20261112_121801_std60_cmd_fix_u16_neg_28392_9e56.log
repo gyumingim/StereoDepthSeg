@@ -1,0 +1,44 @@
+12:21:21 step cmd start
+12:21:21 u16 neg: A /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_neg/in/a/hs_20261112_121801_std60_kf B /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_neg/in/b/hs_20261024_165506_std60_kf, args , gpu 8 MiB, 0 %
+12:21:55 u16 neg run_merge rc 6
+12:21:55 align done 32 s (rc 6)
+{
+ "status": "failed: align rc 6 -- MERGE FAILED (exit 6): part 1 (hs_20261024_165506_std60_kf): only 0 keyframes could be placed in the earlier recordings by PnP (need 5); verified cross pairs 2/6400 -- the recordings do not overlap (start the next recording looking at what the end of the previous one saw)",
+ "exit_code": 6,
+ "link_gate": null,
+ "steps": {
+  "part1": {
+   "s": 0.5,
+   "rc": 0
+  },
+  "part2": {
+   "s": 0.4,
+   "rc": 0
+  },
+  "align": {
+   "s": 32.5,
+   "rc": 6
+  }
+ },
+ "n_kf": null,
+ "parts": [
+  {
+   "n_cross_verified": 2,
+   "n_pnp_ok": 0,
+   "n_consensus": null,
+   "yaw_deg": null,
+   "centre_err_cm_median": null,
+   "tilt_deg_median": null,
+   "sim3_scale_ratio": null,
+   "sim3_scale_boot_sd": null,
+   "consensus_frac": null,
+   "grid_cells_union": null,
+   "inlier_extent_m": null,
+   "consensus_span_s": null,
+   "second_n": null
+  }
+ ],
+ "mesh_vertices": null
+}
+!!!! run_merge: the recordings could not be merged (align rc 6). Log /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_neg/merge/align.log
+12:21:55 step cmd done

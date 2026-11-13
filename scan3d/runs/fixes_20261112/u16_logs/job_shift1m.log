@@ -1,0 +1,30 @@
+== job 20261113_123545_20261112_121801_std60_cmd_fix_u16_shift1m_31139_fe46 on a3162@169.254.78.233: hs_20261112_121801_std60, steps 'cmd:bash scan3d/runs/fixes_20261112/u16_full.sh $WT/$O shift --align-args "--test-offset-m 1.0"', out scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift1m
+push /home/system/scanner/StereoDepthSeg-fixes done 1 s
+send rec 12 s (1.1G)
+send /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/part1/red /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/part2/red done 13 s
+running (log there: /home/system/scanner/laptop_jobs/20261113_123545_20261112_121801_std60_cmd_fix_u16_shift1m_31139_fe46/job.log)
+== job rc 0 (353 s total)
+   "n_cross_verified": 337,
+   "n_pnp_ok": 22,
+   "n_consensus": 18,
+   "yaw_deg": -4.172291302350989,
+   "centre_err_cm_median": 2.8705784798442844,
+   "tilt_deg_median": 0.4815757194717384,
+   "sim3_scale_ratio": 1.0194378233107684,
+   "sim3_scale_boot_sd": 0.0025716074744676406,
+   "consensus_frac": 0.8181818181818182,
+   "grid_cells_union": 16,
+   "inlier_extent_m": 7.497119212862669,
+   "consensus_span_s": 49.467059805000005,
+   "second_n": 1
+  }
+ ],
+ "mesh_vertices": null
+}
+== run_merge done 12:41:28 (failed: link gate (rc 17) -- failed: only 26 points re-triangulated with the BA poses are seen by two recordings (need 500): the BA did not join them (ba.json merge_link)
+failed: only 26 points re-triangulated with the BA poses are seen by two recordings (need 500): the BA did not join them (ba.json merge_link))
+12:41:28 step cmd done
+pulled scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift1m (0 s) -> /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift1m
+== cleanup
+unlocked
+EXIT 0

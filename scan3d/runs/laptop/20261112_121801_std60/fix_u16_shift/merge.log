@@ -1,0 +1,83 @@
+== run_merge 2026-11-13 11:34:07: 2 recordings -> /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift/merge (git unknown)
+[part 0] /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift/in/a/hs_20261112_121801_std60_kf: 494 keyframes with a VIO pose, 3466 frames, focus 0.5 dpt, camera ['5']
+[part 1] /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift/in/b/hs_20261112_131328_std60_kf: 498 keyframes with a VIO pose, 3437 frames, focus 0.5 dpt, camera ['5']
+[part 1] 80 reference + 80 new keyframes, 6400 cross + 157 reference pairs, features + matching 34 s
+[part 1] triangulated reference points seen by part 1: 2774; PnP ok on 21/80 keyframes (>= 30 inliers); verified cross pairs (>= 15 inl) 337/6400
+[part 1] 4-DoF: 20/21 keyframes agree (0.95), yaw -4.16 deg, t [-0.009, 0.048, -0.032] m, centre err median 3.0 cm, rot err median 0.98 deg, tilt median 0.47 deg, Sim3 scale ratio 1.0162 (boot sd 0.0023, centre spread 1.61 m), points scale ratio 1.0251 (boot sd 0.0018, 665 points), grid cells 16/16 (per kf median 6), inlier extent 7.53 m, span 49.5 s, second transform 0 kf (dt None, dyaw None)
+[part 1] TEST: transform shifted by 0.2 m in x (--test-offset-m)
+[merge] 992 keyframes ([494, 498]), extra pairs 118, -> /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift/merge/merged/hs_20261112_121801_std60_kf_merged_kf (36 s)
+{
+ "status": "ok",
+ "exit_code": 0,
+ "link_gate": {
+  "status": "ok",
+  "gate_value": 14117,
+  "min_link": 500,
+  "init": 651,
+  "after_ba": 651,
+  "retri1": 10971,
+  "after_ba2": 10971,
+  "retri2": 14117,
+  "part_move": [
+   {
+    "part": 0,
+    "n": 494,
+    "centre_move_cm_median": 5.442967720009836,
+    "centre_move_cm_max": 18.95223217598858,
+    "rigid_t_cm": 5.957546549522812,
+    "rigid_rot_deg": 0.5117663486738111,
+    "sim3_scale": 0.9842820993939069
+   },
+   {
+    "part": 1,
+    "n": 498,
+    "centre_move_cm_median": 6.8169969162451105,
+    "centre_move_cm_max": 10.52749667149177,
+    "rigid_t_cm": 5.909694770008503,
+    "rigid_rot_deg": 0.7456092355721047,
+    "sim3_scale": 0.9808786150166903
+   }
+  ]
+ },
+ "steps": {
+  "part1": {
+   "s": 0.5,
+   "rc": 0
+  },
+  "part2": {
+   "s": 0.5,
+   "rc": 0
+  },
+  "align": {
+   "s": 36.3,
+   "rc": 0
+  },
+  "scan": {
+   "s": 730.3,
+   "rc": 0
+  }
+ },
+ "n_kf": [
+  494,
+  498
+ ],
+ "parts": [
+  {
+   "n_cross_verified": 337,
+   "n_pnp_ok": 21,
+   "n_consensus": 20,
+   "yaw_deg": -4.164837174928013,
+   "centre_err_cm_median": 3.0473913089958353,
+   "tilt_deg_median": 0.47438065560710796,
+   "sim3_scale_ratio": 1.0162275125769917,
+   "sim3_scale_boot_sd": 0.002296096671763119,
+   "consensus_frac": 0.9523809523809523,
+   "grid_cells_union": 16,
+   "inlier_extent_m": 7.527577088227095,
+   "consensus_span_s": 49.467059805000005,
+   "second_n": 0
+  }
+ ],
+ "mesh_vertices": 3844906
+}
+== run_merge done 11:46:54 (ok)

@@ -1,0 +1,119 @@
+{
+ "made": "2026-11-13 12:41:28",
+ "commit": "unknown",
+ "rec": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift1m/merge/merged/hs_20261112_121801_std60_kf_merged_kf",
+ "input": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift1m/merge/merged/hs_20261112_121801_std60_kf_merged_kf",
+ "keyframe_only": true,
+ "kf_res": 1920,
+ "kf_quality": 90,
+ "live_poses": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift1m/merge/merged/hs_20261112_121801_std60_kf_merged_kf/phone_live_poses.jsonl.gz",
+ "gt": "lensonly",
+ "vio_cfg": "/home/system/scanner/build_livepose/cfg_gen/c4f60",
+ "tsdf_alloc": "dense",
+ "ffs_views": 2,
+ "ffs_fuse": "auto",
+ "ffs_partners": "all",
+ "reuse": null,
+ "ba_dir": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift1m/merge/scan/ba",
+ "kfba_device_line": "[device] BA cuda, SIFT cpu, matcher auto",
+ "step_s": {
+  "lensonly": 0.2,
+  "kfba": 280.7
+ },
+ "total_s": 280.9,
+ "sent": {
+  "n_keyframes": 992,
+  "image_size": [
+   1920,
+   1080
+  ],
+  "jpeg_bytes": 516390571,
+  "duration_s": 122.07007445300002,
+  "jpeg_MB_per_min": 253.8167884212226,
+  "kf_per_min": 487.58879083764845,
+  "kf_select": {
+   "rule": "motion",
+   "dist_m": 0.03,
+   "rot_deg": 4.0,
+   "win": 4,
+   "blur": "gyro",
+   "max_gyro": 0.0,
+   "n_vio_frames": 3218,
+   "n_scored": 1976,
+   "n_kf": 494,
+   "pos_in_window_hist": [
+    162,
+    86,
+    87,
+    159
+   ],
+   "gyro_kf_median": 0.28215998024661404,
+   "gyro_window_mean_median": 0.3575441512678943,
+   "moved_m_median": 0.04335949644588366,
+   "rot_deg_median": 1.8742277403817638,
+   "exposure_ns_median": 2000000.0,
+   "skew_ns_median": 6540750.0
+  }
+ },
+ "ba": {
+  "timing": {
+   "images_s": 12.9,
+   "features_s": 50.3,
+   "matching_s": 25.3,
+   "gpu_stage_s": 79.3,
+   "read_db_uf_s": 0.2,
+   "tracks_s": 3.6,
+   "tri_s": 7.6,
+   "tracks_tri_s": 11.8,
+   "ba_phases": {
+    "n_obs_pairs": 10669202,
+    "setup_s": 1.602,
+    "jac_s": 34.53,
+    "n_solves": 44,
+    "schur_s": 16.394,
+    "solve_s": 28.032,
+    "update_cost_s": 0.843,
+    "gpu_peak_gb": 2.99
+   },
+   "ba_device": "cuda",
+   "ba_s": 173.1
+  }
+ },
+ "mesh": null,
+ "board": null,
+ "mesh_board": null,
+ "status": "failed: step kfba rc 17",
+ "steps_run": [
+  "kfba",
+  "lensonly"
+ ],
+ "vio": null,
+ "vio_crashed": null,
+ "ba_quality": {
+  "n_kf": 992,
+  "kf_obs_min": 47,
+  "n_kf_vio_pose": 0,
+  "fixed_kf": [
+   279
+  ],
+  "final_med_px": 0.3280575478192976,
+  "final_rmse_px": 0.7508414469093556,
+  "frac_inlier_1px": 0.9005503696445452,
+  "sim3_rms_cm": 7.807498040738473
+ },
+ "min_mesh_vertices": 1000,
+ "provenance": {
+  "commit": "unknown",
+  "commit_dirty": false,
+  "main_commit": "-dirty",
+  "worktree": "/home/system/scanner/StereoDepthSeg-fixes",
+  "lens_file": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json",
+  "lens_sha": "21b5f334c1bc210b",
+  "vio_cfg_sha": {
+   "estimator_config.yaml": "b81f2b377f76c84c",
+   "kalibr_imu_chain.yaml": "0f8eefa54043fc3e",
+   "kalibr_imucam_chain.yaml": "58b9a1af46461eb3"
+  }
+ },
+ "lens_only": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json"
+}

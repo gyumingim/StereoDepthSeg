@@ -1,0 +1,179 @@
+{
+ "inputs": [
+  "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_x095/in/a/hs_20261112_121801_std60_kf",
+  "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_x095/in/b/hs_20261112_131328_std60_kf"
+ ],
+ "args": {
+  "parts": [
+   "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_x095/in/a/hs_20261112_121801_std60_kf",
+   "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_x095/in/b/hs_20261112_131328_std60_kf"
+  ],
+  "out": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_x095/merge/merged/hs_20261112_121801_std60_kf_merged_kf",
+  "gt": "lensonly",
+  "max_sub": 80,
+  "min_kf": 5,
+  "min_pnp": 30,
+  "min_cross_inl": 30,
+  "gap_s": 100.0,
+  "max_features": 6000,
+  "scale": 0.5,
+  "lens": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json",
+  "min_consensus_frac": 0.5,
+  "min_cells": 8,
+  "min_extent_m": 1.0,
+  "min_span_s": 2.0,
+  "max_second_frac": 0.5,
+  "scale_mode": "sim3",
+  "min_scale_pts": 100,
+  "max_scale_dev": 0.03,
+  "max_scale_sim3": 0.1,
+  "scale_min_spread": 0.5,
+  "max_tilt_deg": 1.5,
+  "test_offset_m": 0.0
+ },
+ "parts": [
+  {
+   "part": 1,
+   "dir": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_x095/in/b/hs_20261112_131328_std60_kf",
+   "n_ref": 80,
+   "n_new": 80,
+   "n_cross_pairs": 6400,
+   "n_cross_verified": 337,
+   "n_ref_points": 2774,
+   "n_pnp_ok": 22,
+   "pnp_inliers_median": 75.5,
+   "n_consensus": 19,
+   "consensus_frac": 0.8636363636363636,
+   "yaw_deg": -4.139804691924557,
+   "t_m": [
+    -0.009219976632525767,
+    0.045759194391846655,
+    -0.03414552807043662
+   ],
+   "M": [
+    [
+     0.9973908713184185,
+     0.07219037200822469,
+     0.0,
+     -0.009219976632525767
+    ],
+    [
+     -0.07219037200822469,
+     0.9973908713184185,
+     0.0,
+     0.045759194391846655
+    ],
+    [
+     0.0,
+     0.0,
+     1.0,
+     -0.03414552807043662
+    ],
+    [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   ],
+   "scale_applied": 1.0767130670332352,
+   "centre_err_cm_median": 2.5985106568950394,
+   "centre_err_cm_max": 6.835642746656447,
+   "rot_err_deg_median": 0.8794283695527935,
+   "tilt_deg_median": 0.4770041463636809,
+   "tilt_deg_max": 1.1444585928691116,
+   "centre_spread_m": 1.571242465311486,
+   "sim3_scale_ratio": 1.0705855131307034,
+   "sim3_scale_boot_sd": 0.0028321624011663363,
+   "scale_checked": true,
+   "pts_scale_ratio": 1.0767130670332352,
+   "pts_scale_boot_sd": 0.0017461330844262101,
+   "pts_scale_n": 665,
+   "scale_used": 1.0767130670332352,
+   "scale_source": "points",
+   "grid_cells_union": 16,
+   "grid_cells_kf_median": 6.0,
+   "inlier_extent_m": 7.525429750103218,
+   "consensus_span_s": 49.467059805000005,
+   "second_n": 1,
+   "second_dt_m": 0.1516069746282441,
+   "second_dyaw_deg": 0.2761782927893686,
+   "ambiguous": false,
+   "consensus_frames": [
+    256,
+    299,
+    334,
+    377,
+    446,
+    1020,
+    1049,
+    1093,
+    2035,
+    2081,
+    2449,
+    2520,
+    2559,
+    2772,
+    2945,
+    3034,
+    3066,
+    3188,
+    3224
+   ]
+  }
+ ],
+ "lens_meta": [
+  {
+   "width": 1920,
+   "height": 1080,
+   "logical": "0",
+   "physical": [
+    "5"
+   ],
+   "focus_dpt_request": 0.5,
+   "af_mode_request": -1,
+   "focus_sweep_dpt": "none",
+   "focus_locked_dpt": -1,
+   "active_array": "Rect(0, 0 - 4080, 3060)"
+  },
+  {
+   "width": 1920,
+   "height": 1080,
+   "logical": "0",
+   "physical": [
+    "5"
+   ],
+   "focus_dpt_request": 0.5,
+   "af_mode_request": -1,
+   "focus_sweep_dpt": "none",
+   "focus_locked_dpt": -1,
+   "active_array": "Rect(0, 0 - 4080, 3060)"
+  }
+ ],
+ "lens_focus_dpt": 0.5,
+ "status": "ok",
+ "made": "2026-11-13 12:23:07",
+ "out": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_x095/merge/merged/hs_20261112_121801_std60_kf_merged_kf",
+ "frame_offset": [
+  0,
+  3466
+ ],
+ "time_shift_ns": [
+  0,
+  -3169945364061
+ ],
+ "n_keyframes": 992,
+ "n_keyframes_per_part": [
+  494,
+  498
+ ],
+ "n_extra_pairs": 108,
+ "extra_pairs_same_source_frame": 0,
+ "runtime_s": 36.9,
+ "scale_per_part": [
+  1.0,
+  1.0767130670332352
+ ],
+ "exit_code": 0,
+ "note": "M[k] maps part-k VIO world into part-0 world (4-DoF yaw + translation, + scale with --scale-mode sim3); poses of part k in the folder: R = R_M R_vio, c = s R_M c_vio + t_M"
+}

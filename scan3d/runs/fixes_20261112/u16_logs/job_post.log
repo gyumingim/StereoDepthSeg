@@ -1,0 +1,30 @@
+== job 20261113_124146_20261112_121801_std60_cmd_fix_u16_post_32075_fd9c on a3162@169.254.78.233: hs_20261112_121801_std60, steps 'cmd:bash scan3d/runs/fixes_20261112/u16_post.sh $WT/$O', out scan3d/runs/laptop/20261112_121801_std60/fix_u16_post
+push /home/system/scanner/StereoDepthSeg-fixes done 1 s
+send rec 12 s (1.1G)
+send /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/scan/ba/poses_ba.jsonl.gz /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_u11b/merge/scan/ba/poses_ba.jsonl.gz /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_x105/merge/scan/ba/poses_ba.jsonl.gz /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_u11/merge/scan/ba/poses_ba.jsonl.gz /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/scan/mesh/mesh.ply /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/merged/hs_20261112_121801_std60_merged_kf_align/merge.json /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_u11b/merge/scan/mesh/mesh.ply /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_u11b/merge/merged/hs_20261112_121801_std60_kf_merged_kf_align/merge.json done 5 s
+running (log there: /home/system/scanner/laptop_jobs/20261113_124146_20261112_121801_std60_cmd_fix_u16_post_32075_fd9c/job.log)
+== job rc 0 (36 s total)
+  "raw_max_cm": 0.9509343661033096
+ },
+ {
+  "a": "fix_u11merge",
+  "b": "fix_u16_u11b",
+  "n": 992,
+  "raw_rms_cm": 2.2758982517780235,
+  "raw_median_cm": 1.7718402539236124,
+  "raw_max_cm": 6.366945677710592
+ },
+ {
+  "a": "fix_u16_u11",
+  "b": "fix_u16_u11b",
+  "n": 992,
+  "raw_rms_cm": 1.4776307035588419,
+  "raw_median_cm": 1.2990250476717051,
+  "raw_max_cm": 6.366945677710592
+ }
+]
+12:42:13 step cmd done
+pulled scan3d/runs/laptop/20261112_121801_std60/fix_u16_post (1 s) -> /home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_post
+== cleanup
+unlocked
+EXIT 0

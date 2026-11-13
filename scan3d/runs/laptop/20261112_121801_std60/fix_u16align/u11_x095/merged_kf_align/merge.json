@@ -1,0 +1,79 @@
+{
+ "inputs": [
+  "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/part1/red/hs_20261112_121801_std60_kf",
+  "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16align/u11B_x095"
+ ],
+ "args": {
+  "parts": [
+   "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u11merge/merge/part1/red/hs_20261112_121801_std60_kf",
+   "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16align/u11B_x095"
+  ],
+  "out": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16align/u11_x095/merged_kf",
+  "gt": "lensonly",
+  "max_sub": 80,
+  "min_kf": 5,
+  "min_pnp": 30,
+  "min_cross_inl": 30,
+  "gap_s": 100.0,
+  "max_features": 6000,
+  "scale": 0.5,
+  "lens": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json",
+  "min_consensus_frac": 0.5,
+  "min_cells": 0,
+  "min_extent_m": 0.0,
+  "min_span_s": 0.0,
+  "max_second_frac": 0.5,
+  "scale_mode": "refuse",
+  "max_scale_dev": 0.03,
+  "max_scale_sim3": 0.1,
+  "scale_min_spread": 0.5,
+  "max_tilt_deg": 1.5
+ },
+ "parts": [
+  {
+   "part": 1,
+   "dir": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16align/u11B_x095",
+   "n_ref": 80,
+   "n_new": 80,
+   "n_cross_pairs": 6400,
+   "n_cross_verified": 337,
+   "n_ref_points": 2774,
+   "n_pnp_ok": 23,
+   "pnp_inliers_median": 73.0,
+   "n_consensus": 10,
+   "consensus_frac": 0.43478260869565216
+  }
+ ],
+ "lens_meta": [
+  {
+   "width": 1920,
+   "height": 1080,
+   "logical": "0",
+   "physical": [
+    "5"
+   ],
+   "focus_dpt_request": 0.5,
+   "af_mode_request": -1,
+   "focus_sweep_dpt": "none",
+   "focus_locked_dpt": -1,
+   "active_array": "Rect(0, 0 - 4080, 3060)"
+  },
+  {
+   "width": 1920,
+   "height": 1080,
+   "logical": "0",
+   "physical": [
+    "5"
+   ],
+   "focus_dpt_request": 0.5,
+   "af_mode_request": -1,
+   "focus_sweep_dpt": "none",
+   "focus_locked_dpt": -1,
+   "active_array": "Rect(0, 0 - 4080, 3060)"
+  }
+ ],
+ "lens_focus_dpt": 0.5,
+ "status": "failed: part 1 (u11B_x095): PnP poses of 23 keyframes do not agree on one transform (best 10 = 0.43 within 10 cm / 3 deg, need 5 and 0.50) -- matches are probably wrong (no real overlap)",
+ "exit_code": 12,
+ "made": "2026-11-13 10:54:58"
+}

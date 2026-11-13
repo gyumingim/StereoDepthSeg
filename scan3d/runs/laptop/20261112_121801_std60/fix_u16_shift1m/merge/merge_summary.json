@@ -1,0 +1,391 @@
+{
+ "made": "2026-11-13 12:41:28",
+ "commit": "unknown",
+ "status": "failed: link gate (rc 17) -- failed: only 26 points re-triangulated with the BA poses are seen by two recordings (need 500): the BA did not join them (ba.json merge_link)\nfailed: only 26 points re-triangulated with the BA poses are seen by two recordings (need 500): the BA did not join them (ba.json merge_link)",
+ "exit_code": 17,
+ "recordings": [
+  "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift1m/in/a/hs_20261112_121801_std60_kf",
+  "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift1m/in/b/hs_20261112_131328_std60_kf"
+ ],
+ "steps": {
+  "part1": {
+   "s": 0.6,
+   "rc": 0
+  },
+  "part2": {
+   "s": 0.5,
+   "rc": 0
+  },
+  "align": {
+   "s": 37.5,
+   "rc": 0
+  },
+  "scan": {
+   "s": 281.3,
+   "rc": 17
+  }
+ },
+ "merge_link": {
+  "merge_json": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift1m/merge/merged/hs_20261112_121801_std60_kf_merged_kf/merge.json",
+  "frame_offset": [
+   0,
+   3466
+  ],
+  "rounds": 2,
+  "min_link": 500,
+  "kf_per_part": [
+   494,
+   498
+  ],
+  "init": {
+   "linked_points": 10,
+   "linked_obs": 20,
+   "linked_points_min_part": 10,
+   "kf_seeing_linked_min_part": 6,
+   "linked_obs_px_median": 0.7518855524771819,
+   "linked_obs_px_p90": 2.9246831808130955,
+   "other_obs_px_median": 0.8172508739485641,
+   "per_part": [
+    {
+     "part": 0,
+     "linked_points": 10,
+     "linked_obs": 10,
+     "kf_seeing_linked": 6,
+     "kf_total": 494
+    },
+    {
+     "part": 1,
+     "linked_points": 10,
+     "linked_obs": 10,
+     "kf_seeing_linked": 8,
+     "kf_total": 498
+    }
+   ]
+  },
+  "round1": {
+   "linked_points": 10,
+   "linked_obs": 20,
+   "linked_points_min_part": 10,
+   "kf_seeing_linked_min_part": 6,
+   "linked_obs_px_median": 0.7190179034659495,
+   "linked_obs_px_p90": 1.6642681898110827,
+   "other_obs_px_median": 0.3124953120180004,
+   "per_part": [
+    {
+     "part": 0,
+     "linked_points": 10,
+     "linked_obs": 10,
+     "kf_seeing_linked": 6,
+     "kf_total": 494
+    },
+    {
+     "part": 1,
+     "linked_points": 10,
+     "linked_obs": 10,
+     "kf_seeing_linked": 8,
+     "kf_total": 498
+    }
+   ]
+  },
+  "retri1": {
+   "linked_points": 13,
+   "linked_obs": 29,
+   "linked_points_min_part": 13,
+   "kf_seeing_linked_min_part": 11,
+   "linked_obs_px_median": 0.8497392914394974,
+   "linked_obs_px_p90": 2.810342292600091,
+   "other_obs_px_median": 0.3456335750932613,
+   "per_part": [
+    {
+     "part": 0,
+     "linked_points": 13,
+     "linked_obs": 16,
+     "kf_seeing_linked": 12,
+     "kf_total": 494
+    },
+    {
+     "part": 1,
+     "linked_points": 13,
+     "linked_obs": 13,
+     "kf_seeing_linked": 11,
+     "kf_total": 498
+    }
+   ],
+   "points": 313660,
+   "obs": 1446119,
+   "s": 5.0
+  },
+  "round2": {
+   "linked_points": 13,
+   "linked_obs": 29,
+   "linked_points_min_part": 13,
+   "kf_seeing_linked_min_part": 11,
+   "linked_obs_px_median": 0.2693078627869484,
+   "linked_obs_px_p90": 1.194214352876638,
+   "other_obs_px_median": 0.3280582886383113,
+   "per_part": [
+    {
+     "part": 0,
+     "linked_points": 13,
+     "linked_obs": 16,
+     "kf_seeing_linked": 12,
+     "kf_total": 494
+    },
+    {
+     "part": 1,
+     "linked_points": 13,
+     "linked_obs": 13,
+     "kf_seeing_linked": 11,
+     "kf_total": 498
+    }
+   ]
+  },
+  "round2_s": 80.3,
+  "retri2": {
+   "linked_points": 26,
+   "linked_obs": 65,
+   "linked_points_min_part": 26,
+   "kf_seeing_linked_min_part": 12,
+   "linked_obs_px_median": 0.7456976035660806,
+   "linked_obs_px_p90": 3.1680495200449665,
+   "other_obs_px_median": 0.3341658831725286,
+   "per_part": [
+    {
+     "part": 0,
+     "linked_points": 26,
+     "linked_obs": 39,
+     "kf_seeing_linked": 23,
+     "kf_total": 494
+    },
+    {
+     "part": 1,
+     "linked_points": 26,
+     "linked_obs": 26,
+     "kf_seeing_linked": 12,
+     "kf_total": 498
+    }
+   ]
+  },
+  "part_move": [
+   {
+    "part": 0,
+    "n": 494,
+    "centre_move_cm_median": 6.126631070097363,
+    "centre_move_cm_max": 22.062492043788364,
+    "rigid_t_cm": 2.0532515754109792,
+    "rigid_rot_deg": 0.27956700328129314,
+    "sim3_scale": 0.988695136587386
+   },
+   {
+    "part": 1,
+    "n": 498,
+    "centre_move_cm_median": 4.07074587020137,
+    "centre_move_cm_max": 12.304386540969546,
+    "rigid_t_cm": 2.0367595948855963,
+    "rigid_rot_deg": 1.389348298154057,
+    "sim3_scale": 1.025673532483356
+   }
+  ],
+  "gate_value": 26,
+  "status": "failed: only 26 points re-triangulated with the BA poses are seen by two recordings (need 500): the BA did not join them"
+ },
+ "merge": {
+  "inputs": [
+   "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift1m/in/a/hs_20261112_121801_std60_kf",
+   "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift1m/in/b/hs_20261112_131328_std60_kf"
+  ],
+  "args": {
+   "parts": [
+    "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift1m/in/a/hs_20261112_121801_std60_kf",
+    "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift1m/in/b/hs_20261112_131328_std60_kf"
+   ],
+   "out": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift1m/merge/merged/hs_20261112_121801_std60_kf_merged_kf",
+   "gt": "lensonly",
+   "max_sub": 80,
+   "min_kf": 5,
+   "min_pnp": 30,
+   "min_cross_inl": 30,
+   "gap_s": 100.0,
+   "max_features": 6000,
+   "scale": 0.5,
+   "lens": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json",
+   "min_consensus_frac": 0.5,
+   "min_cells": 8,
+   "min_extent_m": 1.0,
+   "min_span_s": 2.0,
+   "max_second_frac": 0.5,
+   "scale_mode": "sim3",
+   "min_scale_pts": 100,
+   "max_scale_dev": 0.03,
+   "max_scale_sim3": 0.1,
+   "scale_min_spread": 0.5,
+   "max_tilt_deg": 1.5,
+   "test_offset_m": 1.0
+  },
+  "parts": [
+   {
+    "part": 1,
+    "dir": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift1m/in/b/hs_20261112_131328_std60_kf",
+    "n_ref": 80,
+    "n_new": 80,
+    "n_cross_pairs": 6400,
+    "n_cross_verified": 337,
+    "n_ref_points": 2774,
+    "n_pnp_ok": 22,
+    "pnp_inliers_median": 76.5,
+    "n_consensus": 18,
+    "consensus_frac": 0.8181818181818182,
+    "yaw_deg": -4.172291302350989,
+    "t_m": [
+     -0.013547678934850229,
+     0.048070142800240884,
+     -0.02892346324286352
+    ],
+    "M": [
+     [
+      0.997349779177202,
+      0.0727558793169761,
+      0.0,
+      -0.013547678934850229
+     ],
+     [
+      -0.0727558793169761,
+      0.997349779177202,
+      0.0,
+      0.048070142800240884
+     ],
+     [
+      0.0,
+      0.0,
+      1.0,
+      -0.02892346324286352
+     ],
+     [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+     ]
+    ],
+    "scale_applied": 1.0262858235105414,
+    "centre_err_cm_median": 2.8705784798442844,
+    "centre_err_cm_max": 6.555639050765614,
+    "rot_err_deg_median": 0.7948518220157367,
+    "tilt_deg_median": 0.4815757194717384,
+    "tilt_deg_max": 1.1444587341589878,
+    "centre_spread_m": 1.6432436046134775,
+    "sim3_scale_ratio": 1.0194378233107684,
+    "sim3_scale_boot_sd": 0.0025716074744676406,
+    "scale_checked": true,
+    "pts_scale_ratio": 1.0262858235105414,
+    "pts_scale_boot_sd": 0.0015868802109181206,
+    "pts_scale_n": 665,
+    "scale_used": 1.0262858235105414,
+    "scale_source": "points",
+    "grid_cells_union": 16,
+    "grid_cells_kf_median": 7.0,
+    "inlier_extent_m": 7.497119212862669,
+    "consensus_span_s": 49.467059805000005,
+    "second_n": 1,
+    "second_dt_m": 0.15219392487497582,
+    "second_dyaw_deg": 0.590327727989088,
+    "ambiguous": false,
+    "consensus_frames": [
+     256,
+     299,
+     334,
+     377,
+     446,
+     1020,
+     1049,
+     1093,
+     1848,
+     2035,
+     2081,
+     2520,
+     2559,
+     2772,
+     2945,
+     3066,
+     3188,
+     3224
+    ],
+    "test_offset_m": 1.0
+   }
+  ],
+  "lens_meta": [
+   {
+    "width": 1920,
+    "height": 1080,
+    "logical": "0",
+    "physical": [
+     "5"
+    ],
+    "focus_dpt_request": 0.5,
+    "af_mode_request": -1,
+    "focus_sweep_dpt": "none",
+    "focus_locked_dpt": -1,
+    "active_array": "Rect(0, 0 - 4080, 3060)"
+   },
+   {
+    "width": 1920,
+    "height": 1080,
+    "logical": "0",
+    "physical": [
+     "5"
+    ],
+    "focus_dpt_request": 0.5,
+    "af_mode_request": -1,
+    "focus_sweep_dpt": "none",
+    "focus_locked_dpt": -1,
+    "active_array": "Rect(0, 0 - 4080, 3060)"
+   }
+  ],
+  "lens_focus_dpt": 0.5,
+  "status": "ok",
+  "made": "2026-11-13 12:36:47",
+  "out": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u16_shift1m/merge/merged/hs_20261112_121801_std60_kf_merged_kf",
+  "frame_offset": [
+   0,
+   3466
+  ],
+  "time_shift_ns": [
+   0,
+   -3169945364061
+  ],
+  "n_keyframes": 992,
+  "n_keyframes_per_part": [
+   494,
+   498
+  ],
+  "n_extra_pairs": 109,
+  "extra_pairs_same_source_frame": 0,
+  "runtime_s": 37.1,
+  "scale_per_part": [
+   1.0,
+   1.0262858235105414
+  ],
+  "exit_code": 0,
+  "note": "M[k] maps part-k VIO world into part-0 world (4-DoF yaw + translation, + scale with --scale-mode sim3); poses of part k in the folder: R = R_M R_vio, c = s R_M c_vio + t_M"
+ },
+ "scan": {
+  "status": "failed: step kfba rc 17",
+  "ba_quality": {
+   "n_kf": 992,
+   "kf_obs_min": 47,
+   "n_kf_vio_pose": 0,
+   "fixed_kf": [
+    279
+   ],
+   "final_med_px": 0.3280575478192976,
+   "final_rmse_px": 0.7508414469093556,
+   "frac_inlier_1px": 0.9005503696445452,
+   "sim3_rms_cm": 7.807498040738473
+  },
+  "mesh": null,
+  "step_s": {
+   "lensonly": 0.2,
+   "kfba": 280.7
+  }
+ }
+}
