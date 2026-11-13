@@ -19,7 +19,8 @@ def umeyama(A, B, scale):
     R = U @ D @ Vt; s = float(np.trace(np.diag(S) @ D) / ((A - ma) ** 2).sum()) if scale else 1.0
     return s, R, mb - s * R @ ma
 out = {}
-for nm in ("poses_ba", "poses_vio_kf"):
+import os
+for nm in ("poses_ba", "poses_vio_kf") + (("poses_ba_round1",) if os.path.exists(merge_dir + "/scan/ba/poses_ba_round1.jsonl.gz") else ()):  # u16
     M = ld(merge_dir + f"/scan/ba/{nm}.jsonl.gz")
     rows = []
     for f, T in sorted(M.items()):

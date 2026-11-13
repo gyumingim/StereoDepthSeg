@@ -306,6 +306,31 @@ def tri_fast(tracks, kfi, kps, Rcw, tcw, Pm, Kr, C, kfs, min_tri_deg):
     return res
 
 
+def merge_link_stats(cam, pt, uv, R, t, X, Kr, kpart, nparts):
+    """merge 11-13 (u16): how strongly the BA ties the recordings together. Points observed by keyframes of >= 2 parts
+    (= "linked points"); per part: linked points it observes and keyframes that see them; reprojection of linked obs."""
+    pt = np.asarray(pt); cam = np.asarray(cam)
+    o = np.argsort(pt, kind="stable"); pt_s, cam_s = pt[o], cam[o]
+    st = np.r_[0, np.flatnonzero(np.diff(pt_s)) + 1]
+    pp = kpart[cam_s]
+    lo, hi = np.minimum.reduceat(pp, st), np.maximum.reduceat(pp, st)
+    cross_pt = np.zeros(int(pt.max()) + 1 if len(pt) else 0, bool); cross_pt[pt_s[st][lo != hi]] = True
+    co = cross_pt[pt]
+    Xc = np.einsum("nij,nj->ni", R[cam], X[pt]) + t[cam]
+    e = np.linalg.norm(Xc[:, :2] / Xc[:, 2:] * Kr[0, 0] + Kr[:2, 2] - uv, axis=1)
+    per = []
+    for k in range(nparts):
+        m = co & (kpart[cam] == k)
+        per.append(dict(part=k, linked_points=int(len(np.unique(pt[m]))), linked_obs=int(m.sum()),
+                        kf_seeing_linked=int(len(np.unique(cam[m]))), kf_total=int((kpart == k).sum())))
+    return dict(linked_points=int(cross_pt.sum()), linked_obs=int(co.sum()),
+                linked_points_min_part=int(min(q["linked_points"] for q in per[1:])) if nparts > 1 else 0,
+                kf_seeing_linked_min_part=int(min(q["kf_seeing_linked"] for q in per)) if nparts > 1 else 0,
+                linked_obs_px_median=float(np.median(e[co])) if co.any() else None,
+                linked_obs_px_p90=float(np.percentile(e[co], 90)) if co.any() else None,
+                other_obs_px_median=float(np.median(e[~co])) if (~co).any() else None, per_part=per)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("rec"); ap.add_argument("--vio", required=True); ap.add_argument("--out", required=True)
@@ -340,6 +365,15 @@ def main():
                     "(run_merge.sh: cross-recording pairs from merge_align.py); matched + verified like the loop pairs and counted "
                     "with them in pair_stats (default none = unchanged)")
     ap.add_argument("--loop-min-sim", type=float, default=0.0)
+    ap.add_argument("--merge-json", default="", help="merge 11-13 (u16, run_merge.sh): merge.json of merge_align.py (frame_offset per "
+                    "part) -> ba.json 'merge_link' = points seen by >= 2 recordings, their reprojection, how far the BA moved each "
+                    "part from its merge_align init, and the same count after re-triangulating every track with the BA poses. "
+                    "Gate: fewer than --merge-min-link linked points (re-triangulated count) for some part -> exit 17 after ba.json "
+                    "(default none = unchanged)")
+    ap.add_argument("--merge-min-link", type=int, default=500)
+    ap.add_argument("--merge-rounds", type=int, default=1, choices=[1, 2], help="2 = after the BA re-triangulate every track with "
+                    "the BA poses and run the BA again (cross-recording observations dropped at the first triangulation, > 4 px "
+                    "with the 4-DoF init, can come back); needs --merge-json, no --rs-skew-ms")
     ap.add_argument("--seed", type=int, default=-1, help="RANSAC random_seed of the two-view verification (-1 = COLMAP default = "
                     "not repeatable run to run; featloop found inlier sets differ on 1838/1844 pairs between identical runs)")
     ap.add_argument("--db-from", default="", help="reuse features + raw matches (db.db, pairs.txt, loop_pairs.txt) of an earlier run dir: "
@@ -760,6 +794,64 @@ def main():
         R1, t1, X1, st = ba_lm(Rcw, tcw, X0, cam, pt, uv, Kr, fixed=fixed, iters=a.iters, log=log, rs=rs, tmr=tba)
     tm["ba_phases"] = tba
     tm["ba_device"] = a.ba_device
+    mlink = None
+    if a.merge_json:                                # merge 11-13 (u16): link strength between the recordings
+        mj_ = json.loads(Path(a.merge_json).read_text())
+        offs = np.array(mj_["frame_offset"], np.int64)
+        kpart = np.searchsorted(offs, np.array(kfs), side="right") - 1
+        npart = len(offs)
+        mlink = dict(merge_json=str(Path(a.merge_json).resolve()), frame_offset=offs.tolist(), rounds=a.merge_rounds,
+                     min_link=a.merge_min_link, kf_per_part=[int((kpart == k).sum()) for k in range(npart)])
+        mlink["init"] = merge_link_stats(cam, pt, uv, Rcw, tcw, X0, Kr, kpart, npart)
+        mlink["round1"] = merge_link_stats(cam, pt, uv, R1, t1, X1, Kr, kpart, npart)
+
+        def retri(Rb, tb):
+            Pb = np.array([Kr @ np.hstack([Rb[k], tb[k][:, None]]) for k in range(len(kfs))])
+            Cb_ = {i: -Rb[k].T @ tb[k] for k, i in enumerate(kfs)}
+            Xs_, cl_, pl_, ul_ = [], [], [], []
+            for r_ in tri_fast(tracks, kfi, kps, Rb, tb, Pb, Kr, Cb_, kfs, a.min_tri_deg):
+                if r_ is None:
+                    continue
+                X_, ks_, q_ = r_
+                p_ = len(Xs_); Xs_.append(X_); cl_ += ks_; pl_ += [p_] * len(ks_); ul_.append(q_)
+            return np.array(Xs_), np.array(cl_), np.array(pl_), np.concatenate(ul_)
+        tr0 = time.time()
+        R1 = np.asarray(R1); t1 = np.asarray(t1)
+        X2, cam2, pt2, uv2 = retri(R1, t1)
+        mlink["retri1"] = merge_link_stats(cam2, pt2, uv2, R1, t1, X2, Kr, kpart, npart)
+        mlink["retri1"].update(points=int(len(X2)), obs=int(len(cam2)), s=round(time.time() - tr0, 1))
+        log(f"[merge-link] init {mlink['init']['linked_points']} linked points, after BA {mlink['round1']['linked_points']} "
+            f"(linked obs median {mlink['round1']['linked_obs_px_median']} px), re-triangulated with BA poses {mlink['retri1']['linked_points']} "
+            f"(min per part {mlink['retri1']['linked_points_min_part']}, {mlink['retri1']['s']} s)")
+        if a.merge_rounds == 2:
+            if rs is not None:
+                raise SystemExit("--merge-rounds 2 with --rs-skew-ms is not supported")
+            t6 = time.time()
+            Cb1 = np.array([-R1[k].T @ t1[k] for k in range(len(kfs))])   # round-1 poses kept for comparison (same Sim3 rule as below)
+            fr1 = np.array([k not in set(fixed) or k == fixed[0] for k in range(len(kfs))])
+            s1_, Ra1, ta1 = umeyama(Cb1[fr1], np.array([C[i] for i in kfs])[fr1])
+            with gzip.open(out / "poses_ba_round1.jsonl.gz", "wt") as f:
+                for k, i in enumerate(kfs):
+                    Tw1 = np.eye(4); Tw1[:3, :3] = Ra1 @ R1[k].T; Tw1[:3, 3] = s1_ * Ra1 @ Cb1[k] + ta1
+                    f.write(json.dumps(dict(type="pose", status="tracking", t_ns=int(t_ns[i]), frame=i,
+                                            T_world_cam0=(Tw1 if fr1[k] else Tv[i]).ravel().tolist())) + "\n")
+            X0, cam, pt, uv = X2, cam2, pt2, uv2
+            obs_per_kf = np.bincount(cam, minlength=len(kfs))
+            fixed = [int(np.argmax(obs_per_kf[:5]))] + [k for k in range(len(kfs)) if obs_per_kf[k] < 15]
+            if a.ba_device == "cuda":
+                gpu_job = gpu_guard.job(f"kf_ba(gpuba round 2) {out}", out_dir=str(out), torch_cap=True); gpu_job.__enter__(); _GJ[0] = gpu_job
+                R1, t1, X1, st = ba_torch.ba_lm_torch(R1, t1, X0, cam, pt, uv, Kr, fixed=fixed, iters=a.iters, log=log, rs=None, tmr={})
+                _GJ[0] = None
+                gpu_job.__exit__(None, None, None)
+            else:
+                R1, t1, X1, st = ba_lm(R1, t1, X0, cam, pt, uv, Kr, fixed=fixed, iters=a.iters, log=log, rs=None, tmr={})
+            R1 = np.asarray(R1); t1 = np.asarray(t1)
+            mlink["round2"] = merge_link_stats(cam, pt, uv, R1, t1, X1, Kr, kpart, npart)
+            mlink["round2_s"] = round(time.time() - t6, 1)
+            X2b, cam2b, pt2b, uv2b = retri(R1, t1)
+            mlink["retri2"] = merge_link_stats(cam2b, pt2b, uv2b, R1, t1, X2b, Kr, kpart, npart)
+            log(f"[merge-link] round 2 BA: {mlink['round2']['linked_points']} linked points (obs median "
+                f"{mlink['round2']['linked_obs_px_median']} px), re-triangulated again {mlink['retri2']['linked_points']}, {mlink['round2_s']} s")
     # ---- Sim(3) BA centres -> VIO centres (free keyframes only)
     Cb = np.array([-R1[k].T @ t1[k] for k in range(len(kfs))])
     Cv = np.array([C[i] for i in kfs])
@@ -770,6 +862,26 @@ def main():
     log(f"[sim3] scale {sc:.5f}, BA-vs-VIO centre rms {np.sqrt((res[fr] ** 2).mean()) * 100:.2f} cm")
     if (~fr).any():
         log(f"[warn] {int((~fr).sum())} keyframes have < 15 BA observations and keep their VIO pose: {[kfs[k] for k in np.flatnonzero(~fr)][:20]}")
+    if mlink is not None:                           # how far the BA moved each part from its init (VIO world, after the Sim3)
+        Cf = (sc * (Ra @ Cb.T).T + ta)
+        mv = []
+        for k in range(len(mlink["frame_offset"])):
+            m = (kpart == k) & fr
+            if m.sum() < 3:
+                mv.append(dict(part=k, n=int(m.sum()))); continue
+            s_k, _, _ = umeyama(Cv[m], Cf[m])
+            _, R_r, _ = umeyama(Cv[m], Cf[m], with_scale=False)
+            d_ = np.linalg.norm(Cf[m] - Cv[m], axis=1)
+            mv.append(dict(part=k, n=int(m.sum()), centre_move_cm_median=float(np.median(d_) * 100), centre_move_cm_max=float(d_.max() * 100),
+                           rigid_t_cm=float(np.linalg.norm(Cf[m].mean(0) - Cv[m].mean(0)) * 100),
+                           rigid_rot_deg=float(np.degrees(np.arccos(np.clip((np.trace(R_r) - 1) / 2, -1, 1)))), sim3_scale=float(s_k)))
+        mlink["part_move"] = mv
+        fin = mlink.get("retri2") or mlink["retri1"]
+        nl = fin["linked_points_min_part"]
+        mlink["gate_value"] = nl
+        mlink["status"] = "ok" if nl >= a.merge_min_link else (f"failed: only {nl} points re-triangulated with the BA poses are seen by "
+                                                               f"two recordings (need {a.merge_min_link}): the BA did not join them")
+        log(f"[merge-link] part move {mv}; gate {mlink['status']}")
     Tba = {}
     for k, i in enumerate(kfs):
         Twc = np.eye(4)
@@ -788,10 +900,15 @@ def main():
                 kf_obs_min=int(obs_per_kf.min()), sim3_scale=sc, sim3_rms_cm=float(np.sqrt((res[fr] ** 2).mean()) * 100),
                 runtime_s=round(time.time() - t0, 1), timing=tm, pair_stats=pair_stats, loop=loop_info,
                 points_per_kf_median=float(np.median(obs_per_kf)), n_raw={f"{x} {y}": v for (x, y), v in n_raw.items()}, track_edges_skipped=n_skip, **{k: v for k, v in st.items() if k != "hist"}, hist=st["hist"])
+    if mlink is not None:
+        info["merge_link"] = mlink
     (out / "ba.json").write_text(json.dumps(info, indent=1))
     if not a.keep_db and db_path.exists():
         db_path.unlink()
     log(json.dumps({k: v for k, v in info.items() if k != "hist"}))
+    if mlink is not None and mlink["status"] != "ok":
+        print(f"!!!! MERGE LINK GATE: {mlink['status']} (ba.json merge_link)", file=sys.stderr, flush=True)
+        sys.exit(17)
 
 
 def _out_arg():
