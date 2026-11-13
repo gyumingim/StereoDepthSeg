@@ -110,18 +110,23 @@ def main():
                          "121801: 1.2 moved the < 1.2 m mesh more (p90 5.6 vs 3.6 mm) and added more small pieces for the same > 1.6 m gain")
     ap.add_argument("--far-zmax", type=float, default=4.0, help="depth limit of the wide pair and the TSDF (near pair keeps --zmax)")
     # fixes 11-13 unit 15 (README section 15): guard for wide-only pixels (no near depth there -> no cross-check before)
-    # Defaults (lr+sat, partner2 on, repl-min-z on) from the laptop PyTorch 121801 comparison, README section 15: fewest small pieces
-    # (< 5000 v: 139 827 -> 128 452; > 1.6 m ones 6 776 -> 2 684) for half the > 1.6 m gain (93 318 -> 48 000 v). No GT for far depth.
+    # Defaults (unit 15b, laptop PyTorch 121801, README 15b): lr+sat with --far-lr-tol 1.5, partner2 OFF, repl-min-z on.
+    # vs no guard: small pieces < 5000 v 139 827 -> 127 735, > 1.6 m small pieces 6 776 -> 5 487, > 1.6 m vertices 93 318 -> 69 006.
+    # partner2 (direction >= 20 deg) found a partner for only 30/240 keyframes and did not cut far small pieces (12 515). No far GT.
     ap.add_argument("--far-guard", choices=("none", "lr", "sat", "lr+sat"), default="lr+sat",
                     help="wide-only pixels (near pair invalid) must pass: lr = left-right check of the wide FFS (reverse FFS run, "
                          "|d_R(u-d) - d| < --far-lr-tol FFS-input px); sat = no wide disparity >= --far-sat-frac x max_disp within "
                          "--far-sat-dilate px (an object nearer than ~0.87 m overflows the wide FFS range). none = unit 14 behaviour")
-    ap.add_argument("--far-lr-tol", type=float, default=1.0, help="--far-guard lr: tolerance in FFS-input px")
+    ap.add_argument("--far-lr-tol", type=float, default=1.5, help="--far-guard lr: tolerance in FFS-input px (unit 15b: 1.5; 1.0 = unit 15)")
     ap.add_argument("--far-sat-frac", type=float, default=0.85, help="--far-guard sat: saturation level (fraction of FFS max_disp)")
     ap.add_argument("--far-sat-dilate", type=int, default=15, help="--far-guard sat: dilation radius of the saturated mask (full-res px)")
-    ap.add_argument("--far-partner2", choices=("off", "on"), default="on",
-                    help="on = a 2nd wide partner (next dy-passing candidate, 3rd FFS run); wide-only pixels must be valid in it and agree "
-                         "within k sigma (keyframes without a 2nd partner add no wide-only pixels)")
+    ap.add_argument("--far-partner2", choices=("off", "on"), default="off",
+                    help="on = a 2nd wide partner whose baseline direction differs from the 1st by >= --far-p2-min-dir-deg (dy-checked, "
+                         "3rd FFS run); wide-only pixels must be valid in it and agree within k sigma. Keyframes without such a partner "
+                         "keep --far-guard only (unit 15b; unit 15 took the next candidate, ~1.7 deg away, and dropped keyframes without one)")
+    ap.add_argument("--far-p2-min-dir-deg", type=float, default=20.0,
+                    help="--far-partner2: min angle between the two wide baselines (deg). 121801: only 16.5 %% of keyframes with a 1st "
+                         "partner have any geometric candidate >= 20 deg (36 %% >= 10 deg), u15b_p2_geom.py")
     ap.add_argument("--far-repl-min-z", choices=("off", "on"), default="on",
                     help="on = a near pixel is replaced by the wide depth only if the wide Z >= --far-min-z too (unit 14 could put a "
                          "replaced pixel below it); off = unit 14 behaviour")
@@ -380,17 +385,25 @@ def main():
             good = [c for c in cl if c[3] >= a.far_min_overlap]
             if not good:
                 far_stat["low_overlap"] += 1
-            j2 = None
-            for sc, j, gg, ov in good[:cfg.max_tries + (1 if a.far_partner2 == "on" else 0)]:
+            j2, g1 = None, None
+            for sc, j, gg, ov in good[:cfg.max_tries]:      # 1st partner: unit 14 rule unchanged
                 if dy_ok(i, j):
-                    if res_ is None:
-                        res_ = (j, ov)
-                        if a.far_partner2 != "on":
-                            break
-                    else:                          # unit 15 --far-partner2 on: next dy-passing candidate
+                    res_, g1 = (j, ov), gg
+                    break
+                far_stat["dy_rejected"] += 1
+            if res_ is not None and a.far_partner2 == "on":
+                # unit 15b: 2nd partner = best candidate whose baseline direction differs from the 1st by >= --far-p2-min-dir-deg
+                # (unit 15 took the next candidate: median 1.7 deg from the 1st = the same view, not an independent check)
+                tried = 0
+                for sc, j, gg, ov in good:
+                    if j == res_[0] or not ms.dir_differs(gg, g1, a.far_p2_min_dir_deg):
+                        continue
+                    if tried >= cfg.max_tries:
+                        break
+                    tried += 1
+                    if dy_ok(i, j):
                         j2 = j
                         break
-                else:
                     far_stat["dy_rejected"] += 1
             if res_ is not None:
                 res_ = res_ + (j2,)
@@ -416,8 +429,8 @@ def main():
         if a.far_guard in ("sat", "lr+sat"):
             r_sat = add0 & ~rw["guard_sat_ok"]; g &= rw["guard_sat_ok"]
         if a.far_partner2 == "on":
-            if rw2 is None:
-                g2 = np.zeros_like(add0)
+            if rw2 is None:                    # unit 15b: no valid 2nd partner -> --far-guard only (unit 15 dropped all wide-only px)
+                g2 = np.ones_like(add0)
             else:
                 Z2_, S2_ = rw2["Z"], rw2["sigma"]
                 V2_ = rw2["valid"] & np.isfinite(Z2_) & (S2_ <= a.sigma_max)
@@ -608,7 +621,7 @@ def main():
                                  cfg=dict(baseline=a.far_baseline, b_tol=a.far_b_tol, rot_max=a.far_rot_max, dt_max=a.far_dt_max,
                                           min_overlap=a.far_min_overlap, znear=a.far_znear, min_z=a.far_min_z, zmax=cfg_far.z_max,
                                           guard=a.far_guard, lr_tol=a.far_lr_tol, sat_frac=a.far_sat_frac, sat_dilate=a.far_sat_dilate,
-                                          partner2=a.far_partner2, repl_min_z=a.far_repl_min_z),
+                                          partner2=a.far_partner2, p2_min_dir_deg=a.far_p2_min_dir_deg, repl_min_z=a.far_repl_min_z),
                                  ffs2_s=round(far_stat["ffs2_s"], 1))
     ev = [r for r in rows if "board_absdZ_p50_cm" in r]
     if ev:

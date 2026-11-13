@@ -39,9 +39,15 @@ else
     case $v in
       base) x="--sigma-scale-aware off";;
       sig) x="--sigma-scale-aware on";;
-      farnone) x="--sigma-scale-aware on $F --far-guard none --far-repl-min-z off";;
-      farguard) x="--sigma-scale-aware on $F --far-guard lr+sat --far-repl-min-z on";;
-      farp2) x="--sigma-scale-aware on $F --far-guard lr+sat --far-repl-min-z on --far-partner2 on";;
+      # every far flag explicit (audit 11-13: farnone / farguard of the unit 15 run had --far-partner2 off only by the then default)
+      farnone) x="--sigma-scale-aware on $F --far-guard none --far-repl-min-z off --far-partner2 off";;
+      farguard) x="--sigma-scale-aware on $F --far-guard lr+sat --far-lr-tol 1.0 --far-repl-min-z on --far-partner2 off";;
+      # farp2: the unit 15 run used the OLD p2 rule of b20ad79 (next candidate); the current code runs the 15b rule instead
+      farp2) x="--sigma-scale-aware on $F --far-guard lr+sat --far-lr-tol 1.0 --far-repl-min-z on --far-partner2 on";;
+      # unit 15b
+      farnone_sigoff) x="--sigma-scale-aware off $F --far-guard none --far-repl-min-z off --far-partner2 off";;
+      farp2dir) x="--sigma-scale-aware on $F --far-guard lr+sat --far-repl-min-z on --far-partner2 on --far-p2-min-dir-deg 20 --far-lr-tol 1.0";;
+      farlr15) x="--sigma-scale-aware on $F --far-guard lr+sat --far-lr-tol 1.5 --far-repl-min-z on --far-partner2 off";;
     esac
     t0=$SECONDS; m=$(gpumon "$O/gpu_office_$v.csv")
     $P scan3d/scanA/scan_offline.py "$U8/red/hs_20261112_121801_std60_kf" --out "$O/mesh_$v" $ARGS $x > "$O/mesh_$v.log" 2>&1; rc=$?
