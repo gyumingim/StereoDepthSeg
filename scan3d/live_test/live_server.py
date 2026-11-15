@@ -315,12 +315,20 @@ class Hub:
         self.set(phase="building", msg="노트북에서 메시 만드는 중 (보통 4~6 분)", step="보내는 중")
         self.say(f"노트북 작업 시작: {rec} (run_scanner.sh 기본값)")
         lg, rcf = f"{WLOG}/{rec}.log", f"{WLOG}/{rec}.rc"
+        rid0 = rec[3:] if rec.startswith("hs_") else rec
+        # results of an earlier build of the same recording must not look like this one's (seen on a cancelled re-run):
+        # move them aside (kept, not deleted)
+        ts = time.strftime("%Y%m%d_%H%M%S")
+        self.wsl(f"d={WT}/scan3d/runs/laptop/{rid0}; [ -d $d/live ] && mv $d/live $d/live_prev_{ts} || true", timeout=60)
+        old = LOCAL / "meshes" / rec
+        if old.exists():
+            old.rename(old.with_name(f"{rec}_prev_{ts}"))
         rc, out = self.wsl(f"mkdir -p {WLOG}; [ -d {RECS}/{rec} ] || {{ echo 'no recording {RECS}/{rec}'; exit 3; }}; rm -f {rcf}; cd {WT}/scan3d && "
                            f"setsid -f bash -c 'WT={WT} tools/remote_laptop.sh job {rec} scan --tag live > {lg} 2>&1; echo $? > {rcf}' "
                            f"< /dev/null > /dev/null 2>&1; echo started", timeout=60)
         if rc != 0:
             raise RuntimeError(out[-200:])
-        t0, last_q = time.time(), 0
+        t0, last_q, last_kill = time.time(), 0, time.time()
         rid = rec[3:] if rec.startswith("hs_") else rec
         while True:
             time.sleep(4)
@@ -332,10 +340,14 @@ class Hub:
             if lines and lines[0].strip().isdigit():
                 brc = int(lines[0])
                 break
+            if self.cancel.is_set() and jid and time.time() - last_kill > 15:   # STOP before run.sh existed: try again
+                last_kill = time.time()
+                self._cancel_laptop()
             if jid and time.time() - last_q > 20:                   # laptop step (vio / reduce / kfba / mesh)
                 last_q = time.time()
-                _, s = self.wsl(f"cd {WT}/scan3d && timeout 60 tools/remote_laptop.sh sh 'tail -n 40 $(ls -d runs/laptop/{rid}/live/scan.log 2>/dev/null | head -1) 2>/dev/null "
-                                f"| grep -o \"step [a-z_]* [a-z]*\" | tail -1'", timeout=90)
+                _, s = self.wsl(f"cd {WT}/scan3d && timeout 60 tools/remote_laptop.sh sh 'f=runs/laptop/{rid}/live/scan.log; "
+                                f"[ $f -nt ~/scanner/laptop_jobs/{jid}/started ] && tail -n 40 $f | grep -o \"step [a-z_]* [a-z]*\" | tail -1'",
+                                timeout=90)
                 stp = next((l for l in reversed(s.splitlines()) if l.startswith("step ")), None)
                 if stp:
                     self.set(step=stp, msg=f"노트북: {stp} ({(time.time() - t0) / 60:.1f} 분)")
@@ -474,7 +486,17 @@ def main():
     ap.add_argument("--port", type=int, default=8797)
     ap.add_argument("--adb", default=r"C:\Users\a3162\AppData\Local\Microsoft\WinGet\Packages\Genymobile.scrcpy_Microsoft.Winget.Source_8wekyb3d8bbwe"
                                      r"\scrcpy-win64-v4.1\adb.exe")
+    ap.add_argument("--detach", action="store_true", help="start a copy of this server with no window and no inherited handles, then exit")
     a = ap.parse_args()
+    if a.detach:                      # a Start-Process child kept the caller's pipe open (start script hung until timeout)
+        import sys
+        (LOCAL / "logs").mkdir(parents=True, exist_ok=True)
+        lf = open(LOCAL / "logs" / time.strftime("stdout_%Y%m%d_%H%M%S.txt"), "ab")
+        args = [sys.executable, "-u", str(Path(__file__)), "--port", str(a.port), "--adb", a.adb]
+        p = subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=lf, stderr=subprocess.STDOUT, close_fds=True,
+                             creationflags=NOWIN | getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
+        print(f"server pid {p.pid}")
+        return
     hub = Hub(a)
     hub.say(f"live_server 켜짐: http://localhost:{a.port}  (adb {a.adb})")
     ThreadingHTTPServer(("127.0.0.1", a.port), make_handler(hub)).serve_forever()

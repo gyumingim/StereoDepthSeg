@@ -54,4 +54,12 @@ powershell -ExecutionPolicy Bypass -File C:\Users\a3162\scan3d_handoff\live_test
 - 서버 끄기: 작업 관리자에서 python (live_server.py) 를 끈다. 또는 PowerShell 에서
   `Get-CimInstance Win32_Process -Filter "Name='python.exe'" | ? CommandLine -like '*live_server.py*' | % { Stop-Process -Id $_.ProcessId }`
 
+## 폰 없이 확인한 것 (11-15)
+- 녹화본 hs_20261112_131328_std60 (61 s) 을 페이지 "폰 없이 시험" 으로 끝까지 돌렸다. 노트북에서 rc 0, 6.1 분 걸렸다.
+  단계별 시간: vio 58 s, reduce 10 s, kfba 82 s, mesh 195 s, 보내기 약 11 s.
+  만든 결과: 키프레임 498 장 (1920 JPEG q90), BA cuda / SIFT cpu, 메시 53 k 꼭짓점. 페이지에서 메시 파일을 받는 것까지 확인했다.
+- STOP 을 노트북 작업 중에 두 번 눌러 봤다. 한 번은 vio 단계, 한 번은 보내는 중(작업 시작 전)이었다.
+  두 번 모두 노트북 프로세스가 0 개가 되고 잠금이 풀렸으며 결과 폴더를 가져왔다.
+- 폰 쪽(녹화 시작, HOME/force-stop, adb pull)은 **한 번도 실행하지 않았다** (카메라 금지 규칙).
+
 코드: 저장소 StereoDepthSeg, 브랜치 `livetest-20261115`, `scan3d/live_test/` (live_server.py, live.html). 진행 기록은 `progress.txt` 에 있다.

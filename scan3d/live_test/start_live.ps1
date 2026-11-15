@@ -23,8 +23,8 @@ if ($Stop) { $r = Post "/api/stop" @{}; Write-Output "STOP: $($r.msg)"; exit 0 }
 
 if (-not (Get-State)) {
   $ts = Get-Date -Format "yyyyMMdd_HHmmss"
-  Start-Process -FilePath $Py -ArgumentList @("-u", "`"$Server`"", "--port", "$Port") -WindowStyle Hidden `
-    -RedirectStandardOutput "$LogDir\stdout_$ts.txt" -RedirectStandardError "$LogDir\stderr_$ts.txt"
+  # --detach: the server re-starts itself with no window and no inherited handles (Start-Process kept the caller's pipe open)
+  & $Py $Server --detach --port $Port 2> "$LogDir\stderr_$ts.txt"
   for ($i = 0; $i -lt 30 -and -not (Get-State); $i++) { Start-Sleep -Milliseconds 500 }
   if (-not (Get-State)) { Write-Output "서버가 안 켜짐 — $LogDir\stderr_$ts.txt 확인"; exit 1 }
   Write-Output "서버 켜짐: http://localhost:$Port"
