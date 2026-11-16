@@ -17,6 +17,9 @@ What it does (the phone app cannot send keyframes live yet, so "live" = capture 
          (= scan3d/scanA/run_scanner.sh defaults on the laptop: VIO c4f60 replay -> motion keyframes as 1920 JPEG q90
          -> 960 compute, kf_ba GPU BA -> FFS + TSDF 5 mm) -> mesh.ply copied to C:\Users\a3162\scan3d_live\meshes\<rec>\.
   replay /api/replay {rec}: build only, from a recording already in WSL scan3d/recordings (no phone) - the dry check.
+  res    rec960 11-16: /api/start {res: 960} -> app 0.6.41 `session std960` (the same 1920x1080 camera stream halved on the phone
+         GPU before the encoder, 40 Mbps default = same bits per pixel; folder hs_<time>_std60_960, ~4x smaller pull). Needs app
+         >= 0.6.41 on the phone (checked in preflight). The laptop scanner detects 960x540 and uses 960 keyframes.
 """
 import argparse
 import json
@@ -33,7 +36,11 @@ HERE = Path(__file__).resolve().parent
 PKG = "com.scan3d.arlat"
 PHONE_FILES = f"/sdcard/Android/data/{PKG}/files"
 DISTRO, WSL_USER = "Ubuntu-22.04", "system"
-WT = "/home/system/scanner/StereoDepthSeg-livetest"            # worktree pushed to the laptop (run_scanner.sh + remote_laptop.sh)
+# worktree pushed to the laptop (run_scanner.sh + remote_laptop.sh) = the one holding this file (rec960 11-16; was fixed to
+# StereoDepthSeg-livetest), from \\wsl.localhost\Ubuntu-22.04\home\system\scanner\<wt>\scan3d\live_test
+_m = re.search(r"[\\/](home[\\/]system[\\/]scanner[\\/][^\\/]+)[\\/]scan3d[\\/]live_test$", str(HERE))
+WT = "/" + _m.group(1).replace("\\", "/") if _m else "/home/system/scanner/StereoDepthSeg-livetest"
+FEATURES = ["res960"]                                           # /api/state: start_live.ps1 -Res 960 refuses an older server
 RECS = "/home/system/scanner/StereoDepthSeg/scan3d/recordings"  # remote_laptop.sh resolves recordings here
 WLOG = "/home/system/scanner/live_test_logs"                    # build logs (WSL side)
 LOCAL = Path(r"C:\Users\a3162\scan3d_live")                      # Windows side: pulled recordings (temporary), meshes, server log
@@ -118,12 +125,12 @@ class Hub:
         self.say("폰 앱 멈춤 (HOME + force-stop)")
 
     # ---------- commands from the page ----------
-    def start(self, secs, kbps):
+    def start(self, secs, kbps, res=1920):
         if self.phase() not in ("idle", "done", "failed", "canceled"):
             return "이미 진행 중"
         self.cancel.clear()
         self.set(phase="preflight", msg="준비 확인 중…", rec=None, t0=None, secs=secs, pull=None, job=None, step=None, mesh=None)
-        self.worker = threading.Thread(target=self._run_capture, args=(secs, kbps), daemon=True)
+        self.worker = threading.Thread(target=self._run_capture, args=(secs, kbps, res), daemon=True)
         self.worker.start()
         return "시작"
 
@@ -163,9 +170,9 @@ class Hub:
         return "진행 중인 일 없음 (폰 앱 force-stop 만)"
 
     # ---------- capture ----------
-    def _run_capture(self, secs, kbps):
+    def _run_capture(self, secs, kbps, res=1920):
         try:
-            rec = self._capture(secs, kbps)
+            rec = self._capture(secs, kbps, res)
             if rec:
                 self._pull(rec)
                 if not self.cancel.is_set():
@@ -178,7 +185,7 @@ class Hub:
             except Exception:
                 pass
 
-    def _capture(self, secs, kbps):
+    def _capture(self, secs, kbps, res=1920):
         if not self.pick_serial():
             raise RuntimeError("폰이 adb 에 안 보임 (adb devices)")
         self.say(f"폰: {self.st['serial']} ({self.st['link']})")
@@ -186,6 +193,10 @@ class Hub:
         if "versionName" not in ver:
             raise RuntimeError(f"폰에 {PKG} 앱이 없음")
         self.say("앱 " + ver.strip())
+        if res == 960:                                              # std960 exists from app 0.6.41 (older apps would record 1920)
+            m = re.search(r"versionName=(\d+)\.(\d+)\.(\d+)", ver)
+            if not m or tuple(int(g) for g in m.groups()) < (0, 6, 41):
+                raise RuntimeError(f"960 녹화는 앱 0.6.41 이상이 필요 (폰: {ver.strip()})")
         self.preflight_laptop()
         if self.cancel.is_set():
             self.set(phase="canceled", msg="시작 전에 멈춤 (폰 카메라 안 켬)")
@@ -196,15 +207,17 @@ class Hub:
         a = 5 if secs >= 20 else 2
         guide = GUIDE.format(a=a, b=max(1, secs - 2 * a))
         self.adb("shell", "input", "keyevent", "KEYCODE_WAKEUP", timeout=15)
-        cmd = ["shell", "am", "start", "-n", f"{PKG}/.MainActivity", "--es", "mode", "hs", "--es", "session", "std",
+        sess = "std960" if res == 960 else "std"
+        cmd = ["shell", "am", "start", "-n", f"{PKG}/.MainActivity", "--es", "mode", "hs", "--es", "session", sess,
                "--ei", "fps", "60", "--ef", "focus_dpt", "0.5", "--ei", "kbps", str(int(kbps)),
                "--es", "guide", f"'{guide}'", "--ei", "guide_secs", str(int(secs))]
         self.set(phase="starting", msg="폰 카메라 켜는 중…")
-        self.say("폰 녹화 시작: 1920x1080 60 fps, 초점 0.5 dpt, " + f"{kbps // 1000} Mbps, {secs} s 안내 후 자동 멈춤")
+        size = "960x540 (1920x1080 카메라를 폰 GPU 에서 절반으로)" if res == 960 else "1920x1080"
+        self.say(f"폰 녹화 시작: {size} 60 fps, 초점 0.5 dpt, " + f"{kbps // 1000} Mbps, {secs} s 안내 후 자동 멈춤")
         self.say(self.adb(*cmd, timeout=30)[-200:])
         t_start = time.time()
         rec = None
-        while time.time() - t_start < 25 and rec is None:          # the app makes files/hs_<time>_std60 when recording starts
+        while time.time() - t_start < 25 and rec is None:          # the app makes files/hs_<time>_std60[_960] when recording starts
             if self.phase() == "stopping":
                 break
             new = [d for d in self.phone_dirs() if d not in before]
@@ -390,7 +403,7 @@ class Hub:
         self.say("노트북 작업 멈춤: " + out[-150:] + " (remote_laptop.sh 가 만든 데까지 가져옴)")
 
     def recordings(self):
-        rc, out = self.wsl(f"cd {RECS} && ls -d hs_*_std60 2>/dev/null | sort | tail -12", timeout=60)
+        rc, out = self.wsl(f"cd {RECS} && ls -d hs_*_std60 hs_*_std60_960 2>/dev/null | sort | tail -12", timeout=60)
         return out.split() if rc == 0 else []
 
     def meshes(self):
@@ -406,6 +419,7 @@ class Hub:
         if s.get("t0"):
             s["elapsed"] = round(time.time() - s["t0"], 1)
         s["log"] = list(self.log)[-30:]
+        s["features"], s["wt"] = FEATURES, WT
         return s
 
 
@@ -466,14 +480,15 @@ def make_handler(hub):
                 body = {}
             if self.path == "/api/start":
                 secs = max(10, min(120, int(body.get("secs", 30))))
-                kbps = int(body.get("kbps", 160000))
-                kbps = kbps if kbps in (40000, 80000, 160000) else 160000
-                self._json({"msg": hub.start(secs, kbps)})
+                res = 960 if int(body.get("res", 1920)) == 960 else 1920
+                kbps = int(body.get("kbps", 40000 if res == 960 else 160000))
+                kbps = kbps if kbps in (10000, 20000, 40000, 80000, 160000) else (40000 if res == 960 else 160000)
+                self._json({"msg": hub.start(secs, kbps, res)})
             elif self.path == "/api/stop":
                 self._json({"msg": hub.stop()})
             elif self.path == "/api/replay":
                 rec = str(body.get("rec", ""))
-                if not re.fullmatch(r"hs_\d{8}_\d{6}_std60", rec):
+                if not re.fullmatch(r"hs_\d{8}_\d{6}_std60(_960)?", rec):
                     return self._json({"msg": "녹화 이름이 이상함"}, 400)
                 self._json({"msg": hub.replay(rec)})
             else:

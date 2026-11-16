@@ -202,7 +202,9 @@ public class MainActivity extends Activity {
             if (hs == null) {
                 hs = new HsRecorder(this, this::show);
                 String sess = getIntent().getStringExtra("session");       // "hs" (default) | "std" (regular session, 1080p60)
-                hs.session = "std".equals(sess) ? "std" : "hs";
+                // 0.6.41: "std960" = std, the same 1920x1080 camera stream halved on the GPU before the encoder (GlDownscale)
+                hs.session = "std".equals(sess) || "std960".equals(sess) ? "std" : "hs";
+                hs.encDiv = "std960".equals(sess) ? 2 : 1;
                 hs.wantFps = getIntent().getIntExtra("fps", hs.isStd() ? 60 : 120);
                 // 0.6.11 (user 2026-10-24): std = exposure fixed (exp_us, default 2000) + ISO chosen ONCE at start from AE, then
                 // locked (auto_iso 1, default). iso > 0 = that ISO (no auto); auto_iso 0 = old behaviour (AE unless exp_us/iso given).
@@ -211,7 +213,8 @@ public class MainActivity extends Activity {
                 hs.expUs = getIntent().getIntExtra("exp_us", hs.isStd() && hs.autoIso ? 2000 : 0);   // std: manual exposure (AE off) in microseconds
                 hs.iso = getIntent().getIntExtra("iso", 0);                    // std: manual ISO (AE off)
                 hs.evComp = getIntent().getIntExtra("ev", 0);
-                hs.wantKbps = getIntent().getIntExtra("kbps", 160_000);
+                // std960 default 40 Mbps = the same bits per pixel as 160 Mbps at 1920x1080
+                hs.wantKbps = getIntent().getIntExtra("kbps", hs.encDiv > 1 ? 40_000 : 160_000);
                 hs.focusDpt = getIntent().getFloatExtra("focus_dpt", 0.5f);
                 hs.afRegion = getIntent().getStringExtra("af_region");      // "full" | "center:0.3" (with af_mode)
                 hs.afMode = getIntent().getIntExtra("af_mode", -1);          // CONTROL_AF_MODE value instead of fixed focus

@@ -54,10 +54,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * (default 60), optionally with manual exposure (exp_us / iso -> AE off), to compare its field of view (sensor crop /
  * binning) with the 240 fps high-speed mode. Both sessions log SCALER_CROP_REGION per frame (results_cam5.csv last
  * column crop_region = "left top width height") and the stream configuration in meta.json (session, stream_config).
+ * Since hs-20261116-std960 (v0.6.41): intent session "std960" = session "std" (same camera stream 1920x1080, same requests)
+ * but the encoder gets 960x540 from GlDownscale (GPU 2x2 box, exact x0.5 geometry); folder hs_<time>_std<fps>_960, meta
+ * width/height 960x540 + "downscale" block. The camera offers no native 960x540 MediaCodec stream (stream_config).
  */
 class HsRecorder implements SensorEventListener {
     interface Status { void show(String s); }
-    static final String VERSION = "hs-20261024-autoiso";        // written to meta.json app_version + status line (nroff: NR/edge OFF requested; ae: AE/ISO/AWB/colour logged)
+    static final String VERSION = "hs-20261116-std960";        // written to meta.json app_version + status line (nroff: NR/edge OFF requested; ae: AE/ISO/AWB/colour logged)
 
     static boolean has(int[] modes, int m) {
         if (modes == null) return false;
@@ -111,7 +114,11 @@ class HsRecorder implements SensorEventListener {
     private long focusLockNs;
     int wantKbps = 160_000;                     // S24 1080p240: 160 Mbps no dropped frames, 240 Mbps (encoder max) dropped 7 %; 0 = max
     int bitrate;                              // AE exposure compensation steps (high-speed sessions allow only AE controls)
-    Size size;
+    Size size;                                  // camera stream size (std: 1920x1080)
+    int encDiv = 1;                              // 0.6.41 std960: 2 = encoder gets size / 2 through GlDownscale (1 = direct, unchanged)
+    Size encSize;                                // encoder / mp4 size (= size unless encDiv > 1)
+    private GlDownscale gl;                      // non-null only for encDiv > 1
+    private Surface camTarget;                   // what the camera renders into: encSurface, or gl.camSurface
     Range<Integer> range;
     private CameraCharacteristics chars;
     // IMU on its own thread (the hs thread also serves the encoder + 240 capture results/s); writes under imuLock
@@ -189,6 +196,15 @@ class HsRecorder implements SensorEventListener {
                     .put("mediacodec_sizes", sz.toString().trim()).put("ae_target_fps_ranges", fr.toString().trim());
             if (sizeOk) streamCfg.put("min_frame_duration_ns", map.getOutputMinFrameDuration(MediaCodec.class, size))
                     .put("stall_duration_ns", map.getOutputStallDuration(MediaCodec.class, size));
+            if (encDiv > 1) {
+                Size small = new Size(size.getWidth() / encDiv, size.getHeight() / encDiv);
+                boolean smallOk = false, stOk = false;
+                if (out != null) for (Size s : out) smallOk |= s.equals(small);
+                Size[] sts = map.getOutputSizes(android.graphics.SurfaceTexture.class);
+                if (sts != null) for (Size s : sts) stOk |= s.equals(size);
+                streamCfg.put("encoder_size", String.valueOf(small)).put("encoder_size_offered_by_camera", smallOk)
+                        .put("camera_target", "SurfaceTexture (GlDownscale)").put("surfacetexture_size_offered", stOk);
+            }
             android.util.Log.i("arlat", "std stream config " + streamCfg);
         } catch (Exception e) { try { streamCfg.put("std_error", e.toString()); } catch (Exception ignored) { } }
     }
@@ -236,10 +252,12 @@ class HsRecorder implements SensorEventListener {
     void start() throws Exception {
         String cfgs = choose();
         if (size == null) throw new IllegalStateException("no " + wantFps + " fps high-speed mode: " + cfgs);
+        if (encDiv > 1 && !isStd()) throw new IllegalStateException("std960 needs the std session");
+        encSize = encDiv > 1 ? new Size(size.getWidth() / encDiv, size.getHeight() / encDiv) : size;
         running = true;
         th = new HandlerThread("hs"); th.start(); h = new Handler(th.getLooper());
         dir = new File(ctx.getExternalFilesDir(null), "hs_" + new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new java.util.Date())
-                + (isStd() ? "_std" + wantFps : ""));
+                + (isStd() ? "_std" + wantFps : "") + (encDiv > 1 ? "_" + encSize.getWidth() : ""));
         dir.mkdirs();
         imuW = new BufferedWriter(new FileWriter(new File(dir, "imu.csv")), 1 << 16);
         imuW.write("type,t_ns,v0,v1,v2,v3,v4,v5\n");
@@ -264,7 +282,7 @@ class HsRecorder implements SensorEventListener {
         if (gu != null) sm.registerListener(this, gu, SensorManager.SENSOR_DELAY_FASTEST, imuH);
         if (au != null) sm.registerListener(this, au, SensorManager.SENSOR_DELAY_FASTEST, imuH);
 
-        MediaFormat f = MediaFormat.createVideoFormat("video/avc", size.getWidth(), size.getHeight());
+        MediaFormat f = MediaFormat.createVideoFormat("video/avc", encSize.getWidth(), encSize.getHeight());
         f.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
         // bitrate: the encoder's maximum for this size/rate unless 'kbps' asks for less. 40 Mbps at 1080p240 was
         // ~0.08 bit/pixel (8x the compression of the 60 fps recorder) and blurs marker corners.
@@ -276,7 +294,7 @@ class HsRecorder implements SensorEventListener {
                 if (ci.getName().equals(encName)) vc = ci.getCapabilitiesForType("video/avc").getVideoCapabilities();
             maxBps = vc.getBitrateRange().getUpper();
             android.util.Log.i("arlat", "hs encoder " + encName + " bitrate max " + maxBps + " size/rate ok "
-                    + vc.areSizeAndRateSupported(size.getWidth(), size.getHeight(), wantFps));
+                    + vc.areSizeAndRateSupported(encSize.getWidth(), encSize.getHeight(), wantFps));
         } catch (Exception e) { android.util.Log.w("arlat", "encoder caps", e); }
         bitrate = wantKbps > 0 ? Math.min(maxBps, wantKbps * 1000) : maxBps;
         f.setInteger(MediaFormat.KEY_BIT_RATE, bitrate);
@@ -303,7 +321,7 @@ class HsRecorder implements SensorEventListener {
                         frW.write(nFrames + "," + (ts + exp / 2 + skew / 2) + "," + ts + "," + ts + "," + exp + "," + skew + "," + info.presentationTimeUs + "\n");
                         nFrames++;
                         if (nFrames % 120 == 0) status.show(String.format(Locale.US, "%s %s@%d recording\nframes %d imu %d\n%s",
-                                isStd() ? "STD" : "HS", size, wantFps, nFrames, nImu, dir.getName()));
+                                isStd() ? "STD" : "HS", encSize, wantFps, nFrames, nImu, dir.getName()));
                     }
                     c.releaseOutputBuffer(i, false);
                     if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) finish();
@@ -316,6 +334,11 @@ class HsRecorder implements SensorEventListener {
         }, h);
         enc.configure(f, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
         encSurface = enc.createInputSurface();
+        camTarget = encSurface;
+        if (encDiv > 1) {                // 0.6.41 std960: camera -> GPU 2x2 box -> encoder (GlDownscale doc)
+            gl = new GlDownscale(size.getWidth(), size.getHeight(), encSize.getWidth(), encSize.getHeight(), clockOffset);
+            camTarget = gl.start(encSurface);
+        }
         mux = new MediaMuxer(new File(dir, "cam5.mp4").getAbsolutePath(), MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
         enc.start();
 
@@ -342,14 +365,14 @@ class HsRecorder implements SensorEventListener {
     /** The recording session (encoder [+ preview]) and its repeating request; after AutoIso when that is active. */
     private void openSession(final CameraDevice d) {
                 try {
-                    List<Surface> outs = previewSurface == null ? Arrays.asList(encSurface) : Arrays.asList(encSurface, previewSurface);
+                    List<Surface> outs = previewSurface == null ? Arrays.asList(camTarget) : Arrays.asList(camTarget, previewSurface);
                     try { streamCfg.put("outputs", previewSurface == null ? "encoder" : "encoder+preview"); } catch (Exception ignored) { }
                     CameraCaptureSession.StateCallback scb = new CameraCaptureSession.StateCallback() {
                         @Override public void onConfigured(CameraCaptureSession s) {
                             sess = isStd() ? s : (CameraConstrainedHighSpeedCaptureSession) s;
                             try {
                                 CaptureRequest.Builder rb = d.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
-                                rb.addTarget(encSurface);
+                                rb.addTarget(camTarget);
                                 if (previewSurface != null) rb.addTarget(previewSurface);
                                 rb.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, range);
                                 rb.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_OFF);
@@ -410,7 +433,7 @@ class HsRecorder implements SensorEventListener {
                                 if (sweepDpt != null) h.postDelayed(() -> sweepStep(rb, cb), SWEEP_HOLD_MS);
                                 else if (afMode < 0 && focusDpt == -2) h.postDelayed(() -> lockFocus(rb, cb), 1500);   // autofocus 1.5 s, then hold it
                                 h.postDelayed(heatCheck, 2000);
-                                status.show((isStd() ? "STD " : "HS ") + size + "@" + wantFps + " recording -> " + dir.getName() + "\n" + VERSION);
+                                status.show((isStd() ? "STD " : "HS ") + encSize + (encDiv > 1 ? " (from " + size + ")" : "") + "@" + wantFps + " recording -> " + dir.getName() + "\n" + VERSION);
                             } catch (Exception e) { status.show("hs request: " + e); }
                         }
                         @Override public void onConfigureFailed(CameraCaptureSession s) { status.show("hs configure failed"); }
@@ -837,6 +860,7 @@ class HsRecorder implements SensorEventListener {
         try { ((SensorManager) ctx.getSystemService(Context.SENSOR_SERVICE)).unregisterListener(this); } catch (Exception ignored) { }
         stopTemps();
         try { if (sess != null) sess.stopRepeating(); } catch (Exception ignored) { }
+        if (gl != null) gl.stopFeeding();         // no GL frame may reach the encoder after end of stream
         try { enc.signalEndOfInputStream(); } catch (Exception e) { finish(); }
     }
 
@@ -845,6 +869,8 @@ class HsRecorder implements SensorEventListener {
         if (finished) return;
         finished = true;
         try { if (dev != null) dev.close(); } catch (Exception ignored) { }
+        JSONObject glInfo = gl != null ? gl.json() : null;
+        if (gl != null) gl.release();
         try { enc.stop(); enc.release(); } catch (Exception ignored) { }
         try { if (track >= 0) mux.stop(); mux.release(); } catch (Exception ignored) { }
         synchronized (imuLock) { try { imuW.close(); } catch (Exception ignored) { } imuW = null; }
@@ -853,7 +879,7 @@ class HsRecorder implements SensorEventListener {
         try {
             JSONObject m = new JSONObject();
             m.put("format", "scan3d-phone-rec/1").put("mode", "hs").put("folder", dir.getName()).put("logical", "0")
-                    .put("physical", new JSONArray(Arrays.asList("5"))).put("width", size.getWidth()).put("height", size.getHeight())
+                    .put("physical", new JSONArray(Arrays.asList("5"))).put("width", encSize.getWidth()).put("height", encSize.getHeight())
                     .put("fps", wantFps).put("save_fps", wantFps).put("frames", nFrames).put("imu_samples", nImu)
                     .put("timestamp_ref", "mid_exposure").put("start_elapsed_ns", t0Elapsed).put("end_elapsed_ns", SystemClock.elapsedRealtimeNanos())
                     .put("start_wall_ms", t0Wall).put("complete", true).put("app", "arlat hs")
@@ -866,6 +892,9 @@ class HsRecorder implements SensorEventListener {
                     .put("app_version", VERSION).put("temp_rows", nTemps).put("temp_sources", tempSources)
                     .put("capture", capInfo).put("imu_thread", "dedicated")
                     .put("session", session).put("stream_config", streamCfg)
+                    .put("session_option", encDiv > 1 ? session + encSize.getWidth() : session)   // 0.6.41: "std960" (session stays "std")
+                    .put("camera_size", String.valueOf(size))
+                    .put("downscale", glInfo != null ? glInfo : new JSONObject().put("method", "none (encoder = camera stream)"))
                     .put("pixel_array", String.valueOf(chars.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)))
                     .put("pre_correction_active_array", String.valueOf(chars.get(CameraCharacteristics.SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE)))
                     .put("exp_us_request", expUs).put("iso_request", iso)

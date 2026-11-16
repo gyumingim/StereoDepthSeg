@@ -46,7 +46,9 @@
     </div>
     <div class="row"><label>영상 <select id="kbps">
       <option value="160000" selected>160 Mbps (검증된 기본)</option>
-      <option value="40000">40 Mbps (전송 4배 빠름, 미검증)</option></select></label></div>
+      <option value="40000">40 Mbps (전송 4배 빠름, 미검증)</option></select></label>
+      <label>크기 <select id="res"><option value="1920" selected>1920x1080 (기본)</option>
+      <option value="960">960x540 (40 Mbps, 앱 0.6.41 필요, 미검증)</option></select></label></div>
     <small>폰 화면 안내: 가만히 → 천천히 둘러보기 → 가만히 → 자동 멈춤. 처음엔 폰을 바닥/책상에 둔 채 시작.</small>
   </div>
   <div class="box" id="pullbox" style="display:none">
@@ -74,7 +76,7 @@ const COLORS = { recording: "#b3261e", done: "#2f6f3e", failed: "#7a2a2a", build
 const post = (u, b) => fetch(u, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b || {}) })
   .then(r => r.json()).then(d => { if (d.msg) $("msg").textContent = d.msg; });
 $("stop").onclick = () => post("/api/stop");
-$("start").onclick = () => { if (confirm("폰 카메라를 켜고 녹화를 시작할까요?")) post("/api/start", { secs: +$("secs").value, kbps: +$("kbps").value }); };
+$("start").onclick = () => { if (confirm("폰 카메라를 켜고 녹화를 시작할까요?")) post("/api/start", { secs: +$("secs").value, res: +$("res").value, kbps: +$("res").value === 960 && +$("kbps").value === 160000 ? 40000 : +$("kbps").value }); };
 $("replay").onclick = () => { if ($("recs").value) post("/api/replay", { rec: $("recs").value }); };
 const fmt = s => s == null ? "-" : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 let lastMesh = null;

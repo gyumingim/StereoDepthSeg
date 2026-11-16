@@ -39,6 +39,23 @@ def sha(p):
     return hashlib.sha256(Path(p).read_bytes()).hexdigest()[:16]
 
 
+def remap_half(src_map, dst):
+    """v2 remap file for 1920x1080 sources -> the same map for 960x540 sources (exact 2x, pixel-centre convention)."""
+    b = open(src_map, "rb").read()
+    w, h = np.frombuffer(b[:8], np.int32)
+    n = int(w) * int(h)
+    mx = np.frombuffer(b[8:8 + 4 * n], np.float32)
+    my = np.frombuffer(b[8 + 4 * n:8 + 8 * n], np.float32)
+    tail = np.frombuffer(b[8 + 8 * n:], np.int32)
+    if tail.size != 2 or tuple(tail) != (1920, 1080):
+        sys.exit(f"{src_map}: not a v2 remap for 1920x1080 sources (tail {tail})")
+    mx2 = ((mx.astype(np.float64) + 0.5) / 2 - 0.5).astype(np.float32)
+    my2 = ((my.astype(np.float64) + 0.5) / 2 - 0.5).astype(np.float32)
+    with open(dst, "wb") as f:
+        f.write(np.array([w, h], np.int32).tobytes() + mx2.tobytes() + my2.tobytes() + np.array([960, 540], np.int32).tobytes())
+    return dst, f"derived from {Path(src_map).name} sha {sha(src_map)}: x960 = (x1920 + 0.5) / 2 - 0.5, source 960x540"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("rec"); ap.add_argument("cfg"); ap.add_argument("out")
@@ -71,6 +88,15 @@ def main():
         if f.suffix == ".yaml":
             (cfg / f.name).write_text(f.read_text())
     remap = Path(x.remap) if x.remap else src / "remap_1920x1080.bin"
+    remap_note = "as is"
+    W, H = int(meta["width"]), int(meta["height"])
+    if (W, H) == (960, 540) and not x.remap:
+        # rec960 11-16: app 0.6.41 std960 = the 1920x1080 camera stream halved on the phone GPU (exact 2x2 box), so the
+        # calibrated 1920 remap is re-expressed in 960 source pixels: x960 = (x1920 + 0.5) / 2 - 0.5 (pixel centres at
+        # integers). Output map size, rectified intrinsics and the yaml stay those of c4f60. No lens value is fitted.
+        remap, remap_note = remap_half(remap, cfg / "remap_960x540_from_1920.bin")
+    elif (W, H) != (1920, 1080) and not x.remap:
+        sys.exit(f"recording is {W}x{H}: only 1920x1080 and 960x540 (std960) have a remap")
     est = (cfg / "estimator_config.yaml").read_text()
     est = re.sub(r'"/storage/emulated/0/Android/data/com.scan3d.arlat/files/ov/[A-Za-z0-9_]+/', f'"{cfg}/', est)
     for kv in filter(None, x.yaml.split(",")):
@@ -143,7 +169,6 @@ def main():
                 poses.append(m)
     th = threading.Thread(target=reader, daemon=True); th.start()
     cap = cv2.VideoCapture(str(rec / "cam5.mp4"), cv2.CAP_FFMPEG, [cv2.CAP_PROP_N_THREADS, x.decode_threads])
-    W, H = int(meta["width"]), int(meta["height"])
     ii = int(np.searchsorted(t_imu, fs["t_start"] - shift - int(2.0 * 1e9)))
     n_fed, n_sel, crashed, t0 = 0, 0, None, time.time()
     try:
@@ -188,8 +213,8 @@ def main():
                yaml_sha={f.name: sha(f) for f in sorted(cfg.glob("*.yaml"))},
                imucam_intrinsics=re.search(r"intrinsics:.*", cam_y).group(0),
                timeshift_yaml=re.search(r"timeshift_cam_imu:.*", cam_y).group(0),
-               input_path=dict(decode="cam5.mp4 OpenCV-FFmpeg H.264 -> BGR -> GRAY 1920x1080 (phone: camera Y plane, no codec)",
-                               remap="bridge --remap " + remap.name + " sha " + sha(remap),
+               input_path=dict(decode=f"cam5.mp4 OpenCV-FFmpeg H.264 -> BGR -> GRAY {W}x{H} (phone: camera Y plane, no codec)",
+                               remap="bridge --remap " + remap.name + " sha " + sha(remap) + " (" + remap_note + ")",
                                imu=("uncalibrated 35/16 v0..2, no rebias (= phone)" if x.imu == "raw" else "Android calibrated 1/4 (!= phone)"),
                                time=("t_mid, no shift (= phone)" if x.time == "live" else f"t_mid - GT dt {dt_gt / 1e6:.3f} ms, yaml timeshift 0 (oracle)"),
                                offline="drop-late 0, loop-sync 1, idle-spin 0, predict 0",

@@ -28,6 +28,9 @@
 # Options (old behaviour by flags)
 #   --full-video        old path: no reduce, kf_ba + mesh decode REC/cam5.mp4 (A in kfonly)
 #   --kf-res 1920|960   resolution of the sent keyframes (default 1920; 960 = kfonly B)      --kf-quality Q (default 90)
+#               rec960 11-16: a 960x540 recording (app 0.6.41 session std960, meta width/height) sets --kf-res 960 by itself
+#               (keyframes are then 960 JPEG; lens = the 1920 calibration, x0.5 like every 960 compute step; board / redscreen /
+#               objscan 1920 crops do not apply). VIO: lp_replay.py derives the 960-source remap from the 1920 one.
 #   --ba-device cuda|cpu (default cuda; cpu = featloop/kfonly BA)   --sift-device cpu|auto (default cpu; auto = old GPU SIFT)
 #   --gt NAME   GT/lens dir in REC (default: imu_gt_spl_cal1022 if present, else imu_gt_spl). Lens K/dist + scoring, AND its 'ok' flag drops
 #               keyframes from the mesh input (M1; scan_offline --keep-gt-not-ok via --mesh-args turns that off)
@@ -79,12 +82,12 @@ COMMIT=${SCANNER_COMMIT:-$(git -C "$WT" rev-parse HEAD 2>/dev/null || echo unkno
 MAIN_COMMIT=${SCANNER_MAIN_COMMIT:-$(git -C "$MAIN" rev-parse HEAD 2>/dev/null)$(git -C "$MAIN" diff --quiet HEAD 2>/dev/null || echo -dirty)}   # lib_ffs / FFS come from MAIN (M7)   # remote_laptop.sh pushes code without .git -> passes it
 [ $# -ge 2 ] || { sed -n '2,/^set -euo/p' "$0" | grep '^#'; exit 1; }
 REC=$(realpath -m "$1"); OUT=$(realpath -m "$2"); shift 2
-FULLV=0; KRES=1920; KQ=90; BADEV=cuda; SIFTDEV=cpu; G=""; CFG=""; VIO=""; BOARD=""; BOARD_MESH=1
+KRES_SET=0; FULLV=0; KRES=1920; KQ=90; BADEV=cuda; SIFTDEV=cpu; G=""; CFG=""; VIO=""; BOARD=""; BOARD_MESH=1
 LENS=""; SREF=""; REDSIZE=302.0x188.75; LENSONLY=0
 KFX=""; MSX=""; VIX=""; CACHE=""; KEEPC=0; TALLOC=dense; KFSEL=motion; KFD=3; KFR=4; KFW=4; KFB=gyro; FV=2; FF=auto; FP=all; REUSE=""
 G_SET=0; CFG_SET=0; PRE_REUSE=""; MINV=1000; DSIG=old; STOPAFTER=""     # fixes 11-12: --gt given explicitly (M5), flags ignored by --reuse (M6), mesh vertex gate (M3)
 while [ $# -gt 0 ]; do opt=$1; case $1 in      # opt: the 2nd case must see the NAME (the 1st case shifts past a value; N1 11-12)
-  --full-video) FULLV=1;; --kf-res) KRES=$2; shift;; --kf-quality) KQ=$2; shift;;
+  --full-video) FULLV=1;; --kf-res) KRES=$2; KRES_SET=1; shift;; --kf-quality) KQ=$2; shift;;
   --ba-device) BADEV=$2; shift;; --sift-device) SIFTDEV=$2; shift;; --gt) G=$2; G_SET=1; shift;; --cfg) CFG=$2; CFG_SET=1; shift;;
   --min-mesh-vertices) MINV=$2; shift;; --depth-sigma) DSIG=$2; shift;; --stop-after) STOPAFTER=$2; shift;;
   --vio) VIO=$(realpath -m "$2"); shift;; --board) BOARD=$2; shift;; --board-no-mesh) BOARD_MESH=0;;
@@ -98,6 +101,13 @@ while [ $# -gt 0 ]; do opt=$1; case $1 in      # opt: the 2nd case must see the 
   case $opt in --full-video|--kf-res|--kf-quality|--ba-device|--sift-device|--kfba-args|--vio-args|--kf-select|--kf-dist|--kf-rot|--kf-win|--kf-blur|--vio|--cfg)
     PRE_REUSE="$PRE_REUSE $opt";; esac; shift; done
 case $KRES in 1920|960) ;; *) echo "--kf-res must be 1920 or 960" >&2; exit 1;; esac
+# rec960 11-16: recording resolution from meta.json (full recordings only; a keyframe-only REC is checked by M9 below)
+RECRES=$($P -c "import json;m=json.load(open('$REC/meta.json'));print(f\"{m['width']}x{m['height']}\")" 2>/dev/null || echo unknown)
+if [ "$RECRES" = 960x540 ] && [ ! -d "$REC/frames_kf" ]; then
+  [ $FULLV = 1 ] && { echo "960x540 recording: --full-video (1920 decode path) not supported" >&2; exit 1; }
+  [ "$KRES_SET" = 1 ] && [ "$KRES" = 1920 ] && { echo "960x540 recording but --kf-res 1920 asked: no 1920 frames exist" >&2; exit 1; }
+  KRES=960; echo "[res] 960x540 recording (std960) -> keyframes 960 JPEG (--kf-res 960)"
+fi
 case $TALLOC in dense|sparse) ;; *) echo "--tsdf-alloc must be dense or sparse" >&2; exit 1;; esac
 case $KFSEL in interval|motion) ;; *) echo "--kf-select must be interval or motion" >&2; exit 1;; esac
 [ $KFSEL = motion ] && [ $FULLV = 1 ] && { echo "--kf-select motion needs the keyframe path (not --full-video)" >&2; exit 1; }
