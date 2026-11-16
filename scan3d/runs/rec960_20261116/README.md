@@ -12,10 +12,13 @@ Branch `rec960-20261116` (from `livetest-20261115` + app commits 0.6.38d / 0.6.3
   960x540 = exact 2x2 box average (same as cv2.INTER_AREA 2x). Geometry: `x960 = (x1920 + 0.5)/2 - 0.5` (pixel centres at integers).
   Default 40 Mbps (= same bits per pixel as 160 Mbps at 1920). Folder `hs_<time>_std60_960`; meta `width/height 960x540`,
   `session "std"`, `session_option "std960"`, `camera_size`, `downscale` (texture matrix + pure check, buffer clock, frames drawn).
-- Checks the app writes but nobody has seen yet (first real recording): `downscale.matrix_pure` must be true, `buffer_clock`
+- Review 11-16 (2nd agent): the SurfaceTexture matrix likely carries the 90 deg sensor rotation -> sampling now uses a FIXED flip-only
+  matrix (= raw sensor orientation like the direct encoder path); the real matrix is logged, crop/scale -> `downscale.matrix_ok false`
+  and lp_replay.py refuses the recording. Also: swap failures counted, EGL released before the encoder, cleanup if GL setup fails.
+- Checks the app writes but nobody has seen yet (first real recording): `downscale.matrix_ok` must be true, `buffer_clock`
   decides the pts shift (frames_unmatched must stay ~0), `stream_config.encoder_size_offered_by_camera` false (expected),
   colour path camera YUV -> GPU RGB -> encoder YUV (luma range may differ slightly from the direct path).
-- APK: `~/scanner/android/apk_backup/arlat_0.6.41_rec960.apk` (sha256 de319f6a...; same ov_bridge .so as 0.6.39, sha d5c0e585...).
+- APK: `~/scanner/android/apk_backup/arlat_0.6.41_rec960.apk` (sha256 4a38a373... (rebuilt after review); same ov_bridge .so as 0.6.39, sha d5c0e585...).
   Build: `build_apk.sh` (log `apk_build.log`).
 
 ## Pipeline

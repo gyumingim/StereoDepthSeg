@@ -34,8 +34,12 @@ import java.util.concurrent.TimeUnit;
  * Path: camera -> SurfaceTexture (1920x1080, GL_OES external) -> one full-screen quad, GL_LINEAR, highp texture coordinates,
  * viewport 960x540 -> MediaCodec input surface (EGL_RECORDABLE_ANDROID). Every output pixel centre lands exactly between four
  * input texel centres, so bilinear = the 2x2 box average (= cv2.INTER_AREA for an exact 2x downscale); the coordinate map is
- * x960 = (x1920 + 0.5) / 2 - 0.5 (pixel centres at integers), same for y. That holds only if the SurfaceTexture transform
- * matrix is a pure identity / flip; the first matrix and the check go to meta.json (downscale.matrix_pure).
+ * x960 = (x1920 + 0.5) / 2 - 0.5 (pixel centres at integers), same for y.
+ * Orientation (review 11-16): the SurfaceTexture transform matrix of a Camera2 output usually carries the SENSOR_ORIENTATION
+ * rotation (90 deg), which the direct MediaCodec path does not apply. So the matrix is NOT used for sampling: a fixed flip-only
+ * matrix (s = x, t = 1 - y) = what an untransformed buffer gives = the same raw sensor orientation as the direct encoder path.
+ * The real matrix is logged; if it is not a pure rotation/flip (any crop or scale), downscale.matrix_ok = false and
+ * lp_replay.py refuses the recording.
  * Timestamps: eglPresentationTimeANDROID = the buffer timestamp moved into the clock the direct encoder path used
  * (CLOCK_MONOTONIC), so HsRecorder's pts -> SENSOR_TIMESTAMP matching is unchanged; the clock decision goes to meta.json.
  * Colour: camera YUV -> RGB in the GPU sampler -> RGB -> YUV in the encoder (not bit-identical to the direct YUV path; luma
@@ -57,7 +61,10 @@ class GlDownscale {
     private volatile boolean stopped;
     private volatile int nDrawn, nSkipped;
     private String firstMatrix = "none", clock = "unknown", err = null;
-    private boolean matrixPure = true;
+    private boolean matrixOk = true;
+    // column-major flip-only matrix: s = x, t = 1 - y (sampling never uses the SurfaceTexture matrix, see doc)
+    private static final float[] FLIP = {1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1};
+    private volatile int nSwapFail;
     private long tsShiftNs;                  // pts_ns = buffer ts - tsShiftNs
     private boolean clockKnown;
     private final long clockOffsetNs;        // BOOTTIME - MONOTONIC at the recording start (HsRecorder.clockOffset)
@@ -149,31 +156,35 @@ class GlDownscale {
             long ts = st.getTimestamp();
             if (!clockKnown) {                             // which clock is the SurfaceTexture timestamp in?
                 long boot = SystemClock.elapsedRealtimeNanos(), mono = System.nanoTime();
-                boolean isBoot = Math.abs(boot - ts) < Math.abs(mono - ts);
+                // the frame was exposed shortly BEFORE now: pick the clock where now - ts is in [0, 0.5 s] (review R3)
+                boolean bootOk = boot - ts >= 0 && boot - ts < 500_000_000L, monoOk = mono - ts >= 0 && mono - ts < 500_000_000L;
+                boolean isBoot = bootOk && !monoOk ? true : monoOk && !bootOk ? false : Math.abs(boot - ts) < Math.abs(mono - ts);
                 tsShiftNs = isBoot ? clockOffsetNs : 0;     // pts must be MONOTONIC like the direct camera -> encoder path
                 clock = (isBoot ? "BOOTTIME" : "MONOTONIC") + String.format(Locale.US, " (ts-boot %.1f ms, ts-mono %.1f ms)",
                         (ts - boot) / 1e6, (ts - mono) / 1e6);
                 StringBuilder sb = new StringBuilder();
                 for (int i = 0; i < 16; i++) sb.append(i > 0 ? " " : "").append(m[i]);
                 firstMatrix = sb.toString();
-                // pure = column-major [sx 0 0 0, 0 sy 0 0, 0 0 1 0, tx ty 0 1] with sx,sy = +-1 and tx,ty = 0 / 1 matching
-                matrixPure = Math.abs(Math.abs(m[0]) - 1) < 1e-6 && Math.abs(Math.abs(m[5]) - 1) < 1e-6
-                        && Math.abs(m[1]) < 1e-6 && Math.abs(m[4]) < 1e-6
-                        && Math.abs(m[12] - (m[0] < 0 ? 1 : 0)) < 1e-6 && Math.abs(m[13] - (m[5] < 0 ? 1 : 0)) < 1e-6;
+                // ok = the 2x2 block is a rotation/flip (entries 0 / +-1) and the translation 0 / 1: no crop, no scale
+                matrixOk = true;
+                for (int k : new int[]{0, 1, 4, 5}) matrixOk &= Math.abs(m[k]) < 1e-6 || Math.abs(Math.abs(m[k]) - 1) < 1e-6;
+                for (int k : new int[]{12, 13}) matrixOk &= Math.abs(m[k]) < 1e-6 || Math.abs(m[k] - 1) < 1e-6;
+                matrixOk &= Math.abs(Math.abs(m[0] * m[5] - m[1] * m[4]) - 1) < 1e-6;
+                if (!matrixOk && err == null) err = "SurfaceTexture matrix has crop/scale: " + firstMatrix;
                 clockKnown = true;
-                android.util.Log.i("arlat", "gl downscale first frame: clock " + clock + " matrix " + firstMatrix + " pure " + matrixPure);
+                android.util.Log.i("arlat", "gl downscale first frame: clock " + clock + " matrix " + firstMatrix + " ok " + matrixOk);
             }
             GLES20.glViewport(0, 0, outW, outH);
             GLES20.glUseProgram(prog);
             GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
             GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, tex);
-            GLES20.glUniformMatrix4fv(uTexM, 1, false, m, 0);
+            GLES20.glUniformMatrix4fv(uTexM, 1, false, FLIP, 0);
             GLES20.glEnableVertexAttribArray(aPos);
             GLES20.glVertexAttribPointer(aPos, 2, GLES20.GL_FLOAT, false, 8, quad);
             GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
-            EGLExt.eglPresentationTimeANDROID(dpy, surf, ts - tsShiftNs);
-            EGL14.eglSwapBuffers(dpy, surf);
-            nDrawn++;
+            boolean ok = EGLExt.eglPresentationTimeANDROID(dpy, surf, ts - tsShiftNs) & EGL14.eglSwapBuffers(dpy, surf);
+            if (ok) nDrawn++;
+            else if (nSwapFail++ == 0 && err == null) err = "eglSwapBuffers/eglPresentationTime failed: 0x" + Integer.toHexString(EGL14.eglGetError());
         } catch (Throwable e) {
             if (err == null) { err = e.toString(); android.util.Log.e("arlat", "gl downscale", e); }
         }
@@ -188,9 +199,11 @@ class GlDownscale {
         try { done.await(500, TimeUnit.MILLISECONDS); } catch (InterruptedException ignored) { }
     }
 
+    /** Frees EGL + SurfaceTexture on the GL thread and WAITS for it (max 1 s) so the encoder is released after its EGL surface. */
     void release() {
         stopped = true;
         if (h == null) return;
+        final CountDownLatch done = new CountDownLatch(1);
         h.post(() -> {
             try {
                 if (camSurface != null) camSurface.release();
@@ -204,7 +217,9 @@ class GlDownscale {
                 }
             } catch (Throwable ignored) { }
             dpy = EGL14.EGL_NO_DISPLAY;
+            done.countDown();
         });
+        try { done.await(1, TimeUnit.SECONDS); } catch (InterruptedException ignored) { }
         th.quitSafely();
     }
 
@@ -214,9 +229,10 @@ class GlDownscale {
             j.put("method", "camera " + inW + "x" + inH + " -> SurfaceTexture -> GLES2 bilinear at output pixel centres (= 2x2 box) -> encoder "
                     + outW + "x" + outH).put("camera_size", inW + "x" + inH).put("output_size", outW + "x" + outH)
                     .put("coord_map", "x_out = (x_in + 0.5) * " + ((double) outW / inW) + " - 0.5 (pixel centres at integers), same for y")
-                    .put("texture_matrix_first", firstMatrix).put("matrix_pure", matrixPure)
+                    .put("texture_matrix_first", firstMatrix).put("matrix_ok", matrixOk)
+                    .put("sampling_matrix", "fixed flip-only s=x t=1-y (SurfaceTexture matrix logged, not used)")
                     .put("buffer_clock", clock).put("pts_shift_ns", tsShiftNs)
-                    .put("frames_drawn", nDrawn).put("frames_after_stop", nSkipped).put("error", err == null ? "none" : err);
+                    .put("frames_drawn", nDrawn).put("swap_failures", nSwapFail).put("frames_after_stop", nSkipped).put("error", err == null ? "none" : err);
         } catch (Exception ignored) { }
         return j;
     }

@@ -90,6 +90,9 @@ def main():
     remap = Path(x.remap) if x.remap else src / "remap_1920x1080.bin"
     remap_note = "as is"
     W, H = int(meta["width"]), int(meta["height"])
+    ds = meta.get("downscale") or {}
+    if isinstance(ds, dict) and "frames_drawn" in ds and (ds.get("matrix_ok") is False or ds.get("error", "none") != "none"):
+        sys.exit(f"std960 recording with a bad phone downscale (matrix_ok {ds.get('matrix_ok')}, error {ds.get('error')}): refused")
     if (W, H) == (960, 540) and not x.remap:
         # rec960 11-16: app 0.6.41 std960 = the 1920x1080 camera stream halved on the phone GPU (exact 2x2 box), so the
         # calibrated 1920 remap is re-expressed in 960 source pixels: x960 = (x1920 + 0.5) / 2 - 0.5 (pixel centres at

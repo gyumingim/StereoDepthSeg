@@ -337,7 +337,16 @@ class HsRecorder implements SensorEventListener {
         camTarget = encSurface;
         if (encDiv > 1) {                // 0.6.41 std960: camera -> GPU 2x2 box -> encoder (GlDownscale doc)
             gl = new GlDownscale(size.getWidth(), size.getHeight(), encSize.getWidth(), encSize.getHeight(), clockOffset);
-            camTarget = gl.start(encSurface);
+            try { camTarget = gl.start(encSurface); }
+            catch (Exception e) {        // review R6: free everything already opened, then report
+                running = false;
+                try { gl.release(); } catch (Exception ignored) { }
+                try { enc.release(); } catch (Exception ignored) { }
+                try { mux.release(); } catch (Exception ignored) { }
+                try { ((SensorManager) ctx.getSystemService(Context.SENSOR_SERVICE)).unregisterListener(this); } catch (Exception ignored) { }
+                stopTemps();
+                throw e;
+            }
         }
         mux = new MediaMuxer(new File(dir, "cam5.mp4").getAbsolutePath(), MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
         enc.start();
@@ -893,7 +902,7 @@ class HsRecorder implements SensorEventListener {
                     .put("capture", capInfo).put("imu_thread", "dedicated")
                     .put("session", session).put("stream_config", streamCfg)
                     .put("session_option", encDiv > 1 ? session + encSize.getWidth() : session)   // 0.6.41: "std960" (session stays "std")
-                    .put("camera_size", String.valueOf(size))
+                    .put("camera_size", String.valueOf(size)).put("capture_results", nRes)   // vs frames: silently replaced GL frames
                     .put("downscale", glInfo != null ? glInfo : new JSONObject().put("method", "none (encoder = camera stream)"))
                     .put("pixel_array", String.valueOf(chars.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)))
                     .put("pre_correction_active_array", String.valueOf(chars.get(CameraCharacteristics.SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE)))
