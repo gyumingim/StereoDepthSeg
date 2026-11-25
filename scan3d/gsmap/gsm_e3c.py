@@ -36,6 +36,7 @@ def mode_height(y, top=False):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("inp"); ap.add_argument("out"); ap.add_argument("--cell", type=float, default=0.04)
     ap.add_argument("--no-ceiling", action="store_true"); ap.add_argument("--see-max", type=int, default=3)
+    ap.add_argument("--ceil-y", type=float, default=None)
     a = ap.parse_args()
     import open3d as o3d
     t0 = time.time(); info = {}
@@ -47,6 +48,8 @@ def main():
     yf, nf = mode_height(V[hz & (V[:, 1] > camy.max() + 0.3), 1]); planes["floor"] = yf; info["floor"] = dict(y_m=round(yf, 3), inliers=nf)
     if not a.no_ceiling:
         yc, nc = mode_height(V[hz & (V[:, 1] < camy.min() - 0.2), 1], top=True); planes["ceiling"] = yc; info["ceiling"] = dict(y_m=round(yc, 3), inliers=nc)
+        if a.ceil_y is not None:   # fixed ceiling height (audit 2: DA3 normal histogram + photo-consistency sweep)
+            planes["ceiling"] = a.ceil_y; info["ceiling"] = dict(y_m=a.ceil_y, inliers=nc, source="--ceil-y", mode_y=round(yc, 3))
     rp = json.loads((R / "eval2" / "ref" / "room_poly.json").read_text()); poly = np.array(rp["poly_xz"]); lo = poly.min(0)
     gsz = np.ceil((poly.max(0) - lo) / a.cell).astype(int) + 1; pm = np.zeros((gsz[1], gsz[0]), np.uint8)
     cv2.fillPoly(pm, [np.round((poly - lo) / a.cell).astype(np.int32)], 1)

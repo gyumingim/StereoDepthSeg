@@ -184,3 +184,11 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
   ROI RMS panel 8.13 / cabinet 6.20 (second layer 15.7 %) / door 2.19 / wall538 1.42 / floor 0.39 cm. Visual: ceiling chunks gone,
   ceiling + floor closed, desk top much cleaner; cabinet front has see-through patches (worse than v4), ceiling height unverified.
   Stopped after E8.
+- 02:27 audit 2 ceiling fix: gsm_e3c --ceil-y (audit: true ceiling y ~ -1.855 from DA3 horizontal-normal histogram + photo-consistency
+  sweep over 7 pairs). e8/c1855 (e3c on e8/carve.ply with --ceil-y -1.855, texture no gains, kf 0 dropped; e8/c1855/eval.json):
+  P2a 8.74 / P2b 2.76 / P2c 10.58 (sum 22.08 vs 22.04), P3 88.25 (=), S1 9.29 / 2.46, area 234.9 m2. Crop e8/c1855/ceiling_cmp.jpg:
+  lamp single and sharp in "ceiling +20" -> KEPT. splat_demo/tex_121801_final.glb = c1855; old one kept as tex_121801_final_c181.glb.
+- Audit 2 corrected numbers (Fable audit, scratchpad audit2/): like-for-like P2 sum v4 + E3c 24.8 vs final 22.0 (the 28.6 -> 22.0 gain
+  above mixes in E3c); REAL (not generated) floor / ceiling coverage of the room polygon 35.6 / 8.5 %; real (not generated) mesh area
+  154 m2; cabinet and panel REGRESSED vs v4 (hit share 0.72 / 0.69 on those ROIs).
+- Stopped (no retrains).
