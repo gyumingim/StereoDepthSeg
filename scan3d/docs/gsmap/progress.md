@@ -141,3 +141,13 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
 - E1b (e1b/eval.json; v4 + delete components < 0.25 m2 with no gold-FFS-agreeing view): removed 10,820 components = 15.1 % area.
   P2b 5.99 -> 0.97 (-84 %), P2a 7.55, P2c 16.92 (+3.5), P3 83.81, hit share 0.949 -> 0.919 (-3 pt), hit-only 19.655 -> 19.51 (-0.145 dB)
   -> FAIL (hit share and hit-only limits). Most unsupported pieces are real surfaces beyond FFS range (> 2 m).
+- 23:05 E6 pre-check (e6/precheck.json, 60 FFS keyframes, fit near half / test far half): far-half median rel. error
+  MoGe affine 5.6 %, MoGe scale-only pooled +-12 6.35 %, DA3 pose-conditioned raw 2.0 % (-64 %), DA3 scale pooled 2.2 %. -> E6 with DA3 raw.
+  DA3 run: depth_da3 (494 views, chunks 100 / overlap 20, ~30 s, 8.3 GB).
+- 23:36 E6 (e6/run_e6.sh: fuse = filtered FFS + DA3 raw fill, gate >= 2 kf >= 10 cm baseline within 3 %, zmax 5 (kept 91.5 % of AI px);
+  retrain 12k; mesh t4 zmax 5 + depth sigma; v3fix; carve) e6/eval.json:
+  P2a 9.21 -> 8.60, P2b 5.99 -> 2.45 (P2a+b -27 % rel), P2c 13.66 (+0.26), P3 83.50 (-0.28), P4 18.455 -> 16.939 dB
+  (hit-only 18.13, colour-fit 20.27 vs v4 20.36, hit share 0.930), S1 front 12.35 / hole 4.15, area 181.5 m2.
+  ROI RMS: door 9.07 -> 3.85, wall538 4.52 -> 3.90, panel 4.41 -> 5.97, cabinet 3.48 -> 5.80 cm.
+  Keep rule FAILS (P4 -1.5 dB; P2a+b -27 % < 30 %). But the texture per-view gains hit the clip (0.74..1.60 vs v4 0.90..1.50) and the
+  colour-fitted PSNR is equal -> P4 drop looks like a texture-gain artifact. Diagnostic e6/nogain (both meshes textured without gains) running.

@@ -59,6 +59,7 @@ def fill_small_holes(V, F, max_perim):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("mesh"); ap.add_argument("out"); ap.add_argument("--atlas", type=int, default=8192)
+    ap.add_argument("--no-gain", type=int, default=0)
     ap.add_argument("--drop-views", default="", help="comma list of keyframe indices never used (121801: 0 = mis-posed)")
     ap.add_argument("--skip-held", type=int, default=0, help="1: do not use keyframes with index mod 8 == 0 (held-out views for eval2 P4)")
     ap.add_argument("--fill-all", type=int, default=0, help="1: every unseen face gets the nearest textured colour (no magenta)")
@@ -148,6 +149,8 @@ def main():
                 gain[j] = np.median(r[mm], 0)
         gain /= np.exp(np.log(gain).mean(0))
     gain = np.clip(gain, 0.6, 1.6)
+    if a.no_gain:   # diagnostic: no per-view colour levelling
+        gain = np.ones_like(gain)
     # unseen components -> small ones get neighbour colour
     import scipy.sparse as sp
     from scipy.sparse.csgraph import connected_components
