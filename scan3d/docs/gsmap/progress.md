@@ -151,3 +151,6 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
   ROI RMS: door 9.07 -> 3.85, wall538 4.52 -> 3.90, panel 4.41 -> 5.97, cabinet 3.48 -> 5.80 cm.
   Keep rule FAILS (P4 -1.5 dB; P2a+b -27 % < 30 %). But the texture per-view gains hit the clip (0.74..1.60 vs v4 0.90..1.50) and the
   colour-fitted PSNR is equal -> P4 drop looks like a texture-gain artifact. Diagnostic e6/nogain (both meshes textured without gains) running.
+- 00:00 E6 no-gain diagnostic (e6/nogain/eval_{v4,e6}.json, textures without per-view gains): v4 18.544 dB (hit-only 19.755,
+  hit 0.949), E6 17.929 (hit-only 19.391, hit 0.930). Part of the 1.5 dB was the gain solve, but E6 is still -0.6 dB (-0.36 hit-only)
+  -> E6 NOT kept. E7 runs on the v2 fuse (fuse/moge_f), v4 mesh settings (zmax 3). e7/run_e7.sh.
