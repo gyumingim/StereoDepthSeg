@@ -33,3 +33,7 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
   pixels "violate" -> rule too strict; with ">= 2 views AND >= 30 % of checkable views": FFS 12 %, DA3 fill 18 %, MoGe fill 24 % dropped.
   -> the check separates fill from FFS only weakly (finding, n=1).
 - 11:17 `run_de.sh`: D = DA3 fill after the check (fuse/da3c_0.3), E = DA3 fill with no depth loss on fill (--fill-w 0).
+- 11:20 D done (floaters 5.8 %, but dark opaque Gaussians still 119k). Cause guess: black undistortion border (4.6 % of pixels) -> trainer got
+  --mask-border (photo/depth/init/eval ignore it). E (--fill-w 0) killed unfinished. v2 run (run_v2.sh: A2,B2,D2,C2) started 11:23 and
+  STOPPED by user order during A2 (gsA2_stopped/, incomplete). Report: scratchpad splat_demo/result_165506.html (media in m165506/).
+- Resume: `bash scan3d/runs/gsmap_20261125/run_v2.sh` (delete gsA2_stopped first or leave; it trains gsA2 fresh).

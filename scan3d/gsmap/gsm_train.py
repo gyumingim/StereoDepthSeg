@@ -8,7 +8,7 @@ Input: gsplat dump (134 keyframes 960x540 undistorted, BA poses T = cam->world, 
 Init: back-project train keyframes (stride 3 px), voxel 1 cm, colour = mean. Loss: 0.8 L1 + 0.2 D-SSIM
 + depth_w * weighted L1(expected depth, Z) with weight 1 on FFS pixels, --fill-w (default 0.1) on filled pixels.
 Densification = gsplat DefaultStrategy (3DGS), refine 500..steps/2, opacity reset every 3000.
-Eval: held-out PSNR / SSIM / LPIPS(alex), render depth vs FFS on held-out views, free-space (floater) check vs FFS.
+Eval: held-out PSNR / SSIM / LPIPS(alex) on valid pixels (+ *_full incl. the black border), render depth vs FFS on held-out views, free-space (floater) check vs FFS.
 Saves OUT/splat.ply (INRIA 3DGS layout, loads in common splat viewers), OUT/gaussians.pt (params + cams, to refine later),
 OUT/summary.json, OUT/train.log.
 """
@@ -55,6 +55,7 @@ def main():
     ap.add_argument("--depth-w", type=float, default=0.1); ap.add_argument("--fill-w", type=float, default=0.1)
     ap.add_argument("--hold", type=int, default=8); ap.add_argument("--stride", type=int, default=3)
     ap.add_argument("--voxel", type=float, default=0.01); ap.add_argument("--max-gs", type=int, default=3_000_000)
+    ap.add_argument("--mask-border", type=int, default=1, help="1 = ignore the black undistortion border (photo, depth, init, eval)")
     a = ap.parse_args()
     import torch
     from gsplat import rasterization
@@ -72,6 +73,18 @@ def main():
     fz = [np.load(fused / f"{i:05d}.npz") for i in kf]
     Zf = [d["Z"] for d in fz]; Ff = [d["F"] for d in fz]
     ffs = [np.where(F == 1, Z, np.nan) for Z, F in zip(Zf, Ff)]   # FFS reference for the checks (same in every variant)
+    # valid-pixel mask of the undistorted images (black border where the source image has no pixel), eroded 3 px.
+    # Added 11-25 after v1: without it the photo loss fits black Gaussians to the border and AI fill puts points there.
+    if a.mask_border:
+        mx, my = cv2.initUndistortRectifyMap(cams["K"], cams["dist"], None, Kr, (W, H), cv2.CV_32FC1)
+        vm_ = ((mx >= 0) & (mx <= W - 1) & (my >= 0) & (my <= H - 1)).astype(np.uint8)
+        vmask = cv2.erode(vm_, np.ones((7, 7), np.uint8)).astype(bool)
+    else:
+        vmask = np.ones((H, W), bool)
+    Ff = [np.where(vmask, F, 0).astype(np.uint8) for F in Ff]
+    Zf = [np.where(F > 0, Z, np.nan) for Z, F in zip(Zf, Ff)]
+    mt = torch.from_numpy(vmask).float().to("cuda")[None, ..., None]   # (1, H, W, 1)
+    print(f"valid pixel mask: {vmask.mean():.4f} (mask_border={a.mask_border})", flush=True)
     print(f"keyframes {n} ({W}x{H}) train {len(train)} test {len(test)}; train px FFS {np.mean([(Ff[c] == 1).mean() for c in train]):.3f} "
           f"fill {np.mean([(Ff[c] == 2).mean() for c in train]):.3f}", flush=True)
     gt = torch.stack([torch.from_numpy(cv2.cvtColor(im, cv2.COLOR_BGR2RGB)) for im in imgs]).float().div(255).to(dev)
@@ -135,6 +148,7 @@ def main():
         rgb, ed = rc[..., :3], rc[0, ..., 3]
         if not stopped:
             strat.step_pre_backward(params, opts, sstate, step, info)
+        rgb = rgb * mt + gt[c:c + 1] * (1 - mt)   # invalid border pixels: no photo gradient
         l1 = (rgb - gt[c:c + 1]).abs().mean()
         ss = 1 - ssim(rgb.permute(0, 3, 1, 2), gt[c:c + 1].permute(0, 3, 1, 2))
         loss = 0.8 * l1 + 0.2 * ss
@@ -173,11 +187,16 @@ def main():
             rc, ra, _ = render(torch.tensor([int(c)], device=dev), sh_deg)
             rgb = rc[0, ..., :3].clamp(0, 1); ed = rc[0, ..., 3].cpu().numpy(); al = ra[0, ..., 0].cpu().numpy()
             g = gt[int(c)]
-            mse = ((rgb - g) ** 2).mean()
-            e = dict(c=int(c), kf=int(kf[c]), test=bool(c in test), psnr=float(-10 * torch.log10(mse)))
+            mse_full = ((rgb - g) ** 2).mean()
+            m0 = mt[0]
+            mse = (m0 * (rgb - g) ** 2).sum() / (m0.sum() * 3)   # = mse_full when mask_border 0
+            e = dict(c=int(c), kf=int(kf[c]), test=bool(c in test), psnr=float(-10 * torch.log10(mse)),
+                     psnr_full=float(-10 * torch.log10(mse_full)))
             if c in test:
                 x, y = rgb.permute(2, 0, 1)[None], g.permute(2, 0, 1)[None]
-                e["ssim"] = float(ssim(x, y)); e["lpips"] = float(lp(x * 2 - 1, y * 2 - 1))
+                e["ssim_full"] = float(ssim(x, y)); e["lpips_full"] = float(lp(x * 2 - 1, y * 2 - 1))
+                xm = (rgb * m0 + g * (1 - m0)).permute(2, 0, 1)[None]
+                e["ssim"] = float(ssim(xm, y)); e["lpips"] = float(lp(xm * 2 - 1, y * 2 - 1))
                 cv2.imwrite(str(out / "test" / f"{kf[c]:05d}.jpg"), cv2.cvtColor((rgb.cpu().numpy() * 255).astype(np.uint8), cv2.COLOR_RGB2BGR),
                             [cv2.IMWRITE_JPEG_QUALITY, 92])
                 np.savez_compressed(out / "test" / f"{kf[c]:05d}_depth.npz", ED=ed.astype(np.float16), A=al.astype(np.float16))
@@ -209,6 +228,8 @@ def main():
                 n_init=N, init_fill_share=fillfrac_init, n_gauss=int(len(M)),
                 test_psnr=float(np.mean([e["psnr"] for e in te])), test_ssim=float(np.mean([e["ssim"] for e in te])),
                 test_lpips=float(np.mean([e["lpips"] for e in te])), train_psnr=float(np.mean([e["psnr"] for e in tr])),
+                test_psnr_full=float(np.mean([e["psnr_full"] for e in te])), test_ssim_full=float(np.mean([e["ssim_full"] for e in te])),
+                test_lpips_full=float(np.mean([e["lpips_full"] for e in te])), valid_px=float(vmask.mean()),
                 test_depth_vs_ffs=dict(med_cm=float(np.median([d["med_cm"] for d in depth_ev])) if depth_ev else None,
                                        p90_cm=float(np.median([d["p90_cm"] for d in depth_ev])) if depth_ev else None,
                                        frac_gt3cm=float(np.mean([d["gt3cm"] for d in depth_ev])) if depth_ev else None,
