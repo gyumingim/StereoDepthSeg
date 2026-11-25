@@ -53,15 +53,18 @@ def run_moge(imgs, T, Kr, a):
     m = MoGeModel.from_pretrained("Ruicheng/moge-2-vitl-normal").to("cuda").eval()
     W = imgs[0].shape[1]
     fov_x = float(np.degrees(2 * np.arctan(W / 2 / Kr[0, 0])))
-    Zs, Cs = [], []
+    Zs, Cs = [], []; NORMALS = {}
     for k, im in enumerate(imgs):
         x = torch.from_numpy(cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).float().div(255).permute(2, 0, 1).cuda()
         with torch.no_grad():
             o = m.infer(x, fov_x=fov_x)
         Z = o["depth"].float().cpu().numpy(); M = o["mask"].cpu().numpy().astype(bool)
         Zs.append(np.where(M & np.isfinite(Z), Z, np.nan).astype(np.float32)); Cs.append(M.astype(np.float32))
+        if "normal" in o:   # camera-frame normals (MoGe: x right, y down, z forward), for the E7 normal prior
+            NORMALS[k] = o["normal"].float().cpu().numpy().astype(np.float16)
         if k % 20 == 0:
             print(f"moge {k}/{len(imgs)} gpu {torch.cuda.max_memory_allocated() / 2**30:.2f} GB", flush=True)
+    globals()["NORMALS_OUT"] = NORMALS
     return Zs, Cs, dict(model="Ruicheng/moge-2-vitl-normal", fov_x_deg=fov_x, metric=True)
 
 
@@ -83,7 +86,10 @@ def main():
     for i, Z, C in zip(kf, Zs, Cs):
         if Z.shape != (H, W):
             Z = cv2.resize(Z, (W, H), interpolation=cv2.INTER_NEAREST); C = cv2.resize(C, (W, H), interpolation=cv2.INTER_NEAREST)
-        np.savez_compressed(out / f"{i:05d}.npz", Z=Z.astype(np.float32), C=C.astype(np.float16))
+        extra = {}
+        if "NORMALS_OUT" in globals() and list(kf).index(i) in NORMALS_OUT:
+            extra["N"] = NORMALS_OUT[list(kf).index(i)]
+        np.savez_compressed(out / f"{i:05d}.npz", Z=Z.astype(np.float32), C=C.astype(np.float16), **extra)
     meta.update(made=time.strftime("%F %T"), dump=str(dump), n_kf=int(len(kf)), runtime_s=round(time.time() - t0, 1),
                 gpu_max_alloc_gb=round(torch.cuda.max_memory_allocated() / 2**30, 2))
     (out / "meta.json").write_text(json.dumps(meta, indent=1))

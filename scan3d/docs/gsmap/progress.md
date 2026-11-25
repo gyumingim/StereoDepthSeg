@@ -135,3 +135,9 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
   | mo4 only + drop floaters (alpha 0.5, no edge) | 8.72 | 6.05 | 15.91 | 84.18 | 17.716 / 0.929 / 19.434 | 11.91 / 3.91 | 157.6 | 13.1 |
   Keep rule (P2a + P2b -30 % rel, P3 not -0.5 pt): best is -16 % (mo4) with P3 -2.6 and P4 -4.2 dB -> all FAIL. min_obs and the
   alpha/edge flags mainly open holes (P2c up, hit share down); flakes barely change. E2 stopped (2 attempts).
+- 23:03 E4 (e4/eval.json; mesh zmax 5 m + sigma x max(1, Z/3), then v3fix + carve): P2a 9.52, P2b 5.99, P2c 13.40 -> 11.90 (-1.5 pt),
+  P3 83.56 (-0.22), P4 18.455 -> 19.016 dB (hit share 0.949 -> 0.965, hit-only 19.645), area 194.3 m2. E4 rule needs P2c -2 pt -> FAIL
+  (narrow; P4 +0.56 dB). Not kept standalone; E6 re-fuse/mesh uses zmax 5 + depth-weighted sigma as the plan defines.
+- E1b (e1b/eval.json; v4 + delete components < 0.25 m2 with no gold-FFS-agreeing view): removed 10,820 components = 15.1 % area.
+  P2b 5.99 -> 0.97 (-84 %), P2a 7.55, P2c 16.92 (+3.5), P3 83.81, hit share 0.949 -> 0.919 (-3 pt), hit-only 19.655 -> 19.51 (-0.145 dB)
+  -> FAIL (hit share and hit-only limits). Most unsupported pieces are real surfaces beyond FFS range (> 2 m).

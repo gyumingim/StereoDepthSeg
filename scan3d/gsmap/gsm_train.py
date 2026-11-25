@@ -82,6 +82,9 @@ def main():
     ap.add_argument("--aniso-w", type=float, default=1.0)
     ap.add_argument("--gs-per-m2", type=float, default=200000.0,
                     help=">0: stop growth at area_m2 x this (area = coarse 2 cm TSDF mesh area of the fused depth, coarse_area())")
+    ap.add_argument("--exposure", type=int, default=0, help="E7: per-image RGB gain + offset (reg 0.01, train loss only)")
+    ap.add_argument("--normals", default="", help="E7: dir with MoGe camera-frame normals N (depth_ai.py moge)")
+    ap.add_argument("--normal-w", type=float, default=0.05)
     ap.add_argument("--surfel", type=int, default=0, help="1 = 2DGS (gsplat rasterization_2dgs) surfels + normal/distortion losses")
     ap.add_argument("--max-scale", type=float, default=0, help=">0: clamp every axis scale to <= this (m) after each step")
     ap.add_argument("--mask-border", type=int, default=1, help="1 = ignore the black undistortion border (photo, depth, init, eval)")
@@ -169,6 +172,17 @@ def main():
         from gsplat import rasterization_2dgs
     strat.check_sanity(params, opts); sstate = strat.initialize_state(scene_scale=scene_scale)
     zt = [torch.from_numpy(np.nan_to_num(z, nan=0.0)).half().to(dev) for z in Zf]   # half: big runs
+    expo = torch.nn.Parameter(torch.zeros(n, 6, device=dev)) if a.exposure else None
+    expo_opt = torch.optim.Adam([expo], lr=1e-3) if a.exposure else None
+    nrm_t = None
+    if a.normals:   # MoGe normals -> world frame, kept where the fused depth exists (edge-cut pixels)
+        nrm_t = []
+        for c_, i_ in enumerate(kf):
+            q_ = Path(a.normals) / f"{i_:05d}.npz"; d_ = np.load(q_) if q_.exists() else None
+            if d_ is None or "N" not in d_.files:
+                nrm_t.append(None); continue
+            Nc = d_["N"].astype(np.float32); Nw = Nc @ T[c_][:3, :3].T; Nw[~(Ff[c_] > 0)] = 0
+            nrm_t.append(torch.from_numpy(Nw).half().to(dev))
     wt = [torch.from_numpy(np.where(F == 1, 1.0, np.where(F == 2, a.fill_w, 0.0)).astype(np.float16)).to(dev) for F in Ff]
 
     extra = {}
@@ -195,6 +209,8 @@ def main():
         if not stopped:
             strat.step_pre_backward(params, opts, sstate, step, info)
         gc = gtf(slice(c, c + 1))
+        if expo is not None:
+            rgb = rgb * (1 + expo[c, :3]) + expo[c, 3:]
         rgb = rgb * mt + gc * (1 - mt)   # invalid border pixels: no photo gradient
         l1 = (rgb - gc).abs().mean()
         ss = 1 - ssim(rgb.permute(0, 3, 1, 2), gc.permute(0, 3, 1, 2))
@@ -216,6 +232,12 @@ def main():
             ls = params["scales"][:, :2] if a.surfel else params["scales"]   # 2DGS: only the two in-plane axes exist
             anl = torch.relu(ls.max(1).values - ls.min(1).values - math.log(a.aniso_max)).mean()
             loss = loss + a.aniso_w * anl
+        if expo is not None:
+            loss = loss + 0.01 * (expo[c] ** 2).sum()
+        if nrm_t is not None and a.surfel and nrm_t[c] is not None and step >= 1000:
+            nm_ = nrm_t[c].float(); vm_ = (nm_.abs().sum(-1) > 0).float()
+            nl_ = (1 - (extra["rn"][0] * nm_).sum(-1).abs()) * vm_ * ra[0, ..., 0].detach()
+            loss = loss + a.normal_w * nl_.sum() / vm_.sum().clamp(min=1)
         loss.backward()
         if not stopped:
             strat.step_post_backward(params, opts, sstate, step, info, packed=False)
@@ -225,6 +247,8 @@ def main():
                 print(f"step {step}: {len(params['means'])} > max-gs {a.max_gs}, growth stopped (pruning continues)", flush=True)
         for o in opts.values():
             o.step(); o.zero_grad(set_to_none=True)
+        if expo_opt is not None:
+            expo_opt.step(); expo_opt.zero_grad(set_to_none=True)
         sched.step()
         if a.max_scale > 0:
             with torch.no_grad():
