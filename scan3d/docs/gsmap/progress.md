@@ -175,3 +175,12 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
   (ceiling cells are rarely inside any keyframe frustum, so the guard can hardly act there).
   P2a 8.34, P2b 2.65, P2c 15.45 -> 11.06 (sum 26.42 -> 22.05), P3 88.06 (=), P4 17.54 -> 17.63 (hit-only 19.20 -> 19.10, hit 0.916 -> 0.929),
   S1 unchanged 9.26 / 2.68 -> KEPT (generic rule). E8 started (e8/run_e8.sh, E3C=1, all 494 views, 30k steps).
+- 02:11 E8 FINAL (e8/run_e8.sh, e8/eval.json): E7 settings on the E6 DA3 fuse, ALL 494 views (hold 0), 30k steps (1581 s, 1.71 M
+  Gaussians, train PSNR 27.75), mesh zmax 5 + depth sigma, v3fix, carve mv5, E3c (floor y 0.821, ceiling y -1.812, filled 32.2 + 45.7 m2),
+  texture all views except kf 0, no gains -> splat_demo/tex_121801_final.glb (66.7 MB), sheet splat_demo/final_121801.jpg (v4 / v5 / final).
+  P2a 8.74, P2b 2.76, P2c 10.54 (sum 22.04; v4 28.60), P3 88.25 (v4 83.78), S1 front 9.29 / hole 2.46, S4 floor 98.0 / ceiling 19.9 %
+  (S4 ceiling uses the old tilted v3 plane), area 233.6 m2, no-photo 15.4 % (nearest colour), magenta 0. P4 not measurable
+  (no held-out views); last held-out build = v5 + E3c: 17.63 dB (hit-only 19.10).
+  ROI RMS panel 8.13 / cabinet 6.20 (second layer 15.7 %) / door 2.19 / wall538 1.42 / floor 0.39 cm. Visual: ceiling chunks gone,
+  ceiling + floor closed, desk top much cleaner; cabinet front has see-through patches (worse than v4), ceiling height unverified.
+  Stopped after E8.
