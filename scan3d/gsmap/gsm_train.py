@@ -100,7 +100,7 @@ def main():
     kf, T, Kr = cams["kf"], cams["T"], cams["Kr"].astype(np.float64)
     W, H = [int(v) for v in cams["size"]]
     n = len(kf)
-    test = np.arange(n)[np.arange(n) % a.hold == 0]; train = np.setdiff1d(np.arange(n), test)
+    test = np.arange(n)[np.arange(n) % a.hold == 0] if a.hold > 0 else np.array([], int); train = np.setdiff1d(np.arange(n), test)   # hold 0 = E8 final (all views)
     imgs = [cv2.imread(str(dump / "img" / f"{i:05d}.png")) for i in kf]
     fz = [np.load(fused / f"{i:05d}.npz") for i in kf]
     Zf = [d["Z"] for d in fz]; Ff = [d["F"] for d in fz]
