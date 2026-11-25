@@ -34,6 +34,29 @@ def ssim(x, y, C1=0.01 ** 2, C2=0.03 ** 2):
     return (((2 * mx * my + C1) * (2 * sxy + C2)) / ((mx * mx + my * my + C1) * (sxx + syy + C2))).mean()
 
 
+def coarse_area(Zf, T, Kr, views, W, H, device=None):
+    """Surface area (m2) of a 2 cm TSDF (scanA tsdf_map, sigma 2 cm, min_obs 2, depth <= 4 m) of the given views' fused depth.
+    Calibration 11-25 (coarse_area units): 165506 2DM 543k Gaussians / 2.57 m2 = 211k per m2 (mesh2d area 2.82 m2);
+    121801 (big room, 494 kf) 2.51M (hit --max-gs 2.5M) / 168.4 m2 = 15k per m2. Default --gs-per-m2 200k = about the 165506
+    density (does not bind small scenes; big scenes are still bound by --max-gs). Not tested in a run yet."""
+    sys.path.insert(0, str(HERE.parent))
+    import tsdf_map
+    tm = tsdf_map.TSDFMap(voxel_m=0.02, z_max=4.0, sigma_max=0.2, sigma_ok=0.04, min_obs=2, trunc_max=0.06, max_blocks=200000,
+                          device=device)
+    img = np.zeros((H, W, 3), np.uint8)
+    for c in views:
+        Z = Zf[c]; V = np.isfinite(Z) & (Z <= 4.0)
+        if V.any():
+            tm.integrate(np.where(V, Z, np.nan).astype(np.float32), V, img, float(Kr[0, 0]), float(Kr[0, 2]), float(Kr[1, 2]), 0.08,
+                         T[c], sigma=np.where(V, 0.02, np.inf).astype(np.float32))
+    tm.update_mesh(force=True)
+    Vm, _, Fm = tm.mesh_arrays()
+    if len(Fm) == 0:
+        return 0.0
+    P = np.asarray(Vm, np.float64)[np.asarray(Fm)]
+    return float(0.5 * np.linalg.norm(np.cross(P[:, 1] - P[:, 0], P[:, 2] - P[:, 0]), axis=1).sum())
+
+
 def write_ply(path, p):
     """INRIA 3DGS ply: x y z nx ny nz f_dc_0..2 f_rest_0..(3*(K-1)-1) opacity scale_0..2 rot_0..3 (logit / log / wxyz)."""
     means = p["means"].numpy(); n = len(means)
@@ -51,12 +74,14 @@ def write_ply(path, p):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("dump"); ap.add_argument("--fused", required=True); ap.add_argument("--out", required=True)
-    ap.add_argument("--steps", type=int, default=20000); ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--steps", type=int, default=12000)   # 12000 default from 11-25 (was 20000); ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--depth-w", type=float, default=0.1); ap.add_argument("--fill-w", type=float, default=0.1)
     ap.add_argument("--hold", type=int, default=8); ap.add_argument("--stride", type=int, default=3)
     ap.add_argument("--voxel", type=float, default=0.01); ap.add_argument("--max-gs", type=int, default=3_000_000)
     ap.add_argument("--aniso-max", type=float, default=0, help=">0: penalise log(max_scale/min_scale) above log(this) (anti-spike)")
     ap.add_argument("--aniso-w", type=float, default=1.0)
+    ap.add_argument("--gs-per-m2", type=float, default=200000.0,
+                    help=">0: stop growth at area_m2 x this (area = coarse 2 cm TSDF mesh area of the fused depth, coarse_area())")
     ap.add_argument("--surfel", type=int, default=0, help="1 = 2DGS (gsplat rasterization_2dgs) surfels + normal/distortion losses")
     ap.add_argument("--max-scale", type=float, default=0, help=">0: clamp every axis scale to <= this (m) after each step")
     ap.add_argument("--mask-border", type=int, default=1, help="1 = ignore the black undistortion border (photo, depth, init, eval)")
@@ -120,6 +145,11 @@ def main():
     d, _ = cKDTree(P).query(P, k=4)
     sc0 = np.log(np.clip(d[:, 1:].mean(1), 1e-4, 0.05))
     scene_scale = float(np.linalg.norm(cen - cen.mean(0), axis=1).max() * 1.1)
+    area_m2 = None
+    if a.gs_per_m2 > 0:   # captured surface area = marching-cubes area of a coarse 2 cm TSDF of the train views fused depth
+        area_m2 = coarse_area(Zf, T, Kr, train, W, H)
+        a.max_gs = int(min(a.max_gs, area_m2 * a.gs_per_m2))
+        print(f"area cap: area_m2 {area_m2:.3f} x {a.gs_per_m2:.0f}/m2 -> max_gs {a.max_gs}", flush=True)
     print(f"init: {N} points (voxel {a.voxel} m, fill share {fillfrac_init:.3f}), scene_scale {scene_scale:.3f} m", flush=True)
     sh_deg = 3
     params = torch.nn.ParameterDict(dict(
@@ -156,7 +186,7 @@ def main():
                              torch.sigmoid(params["opacities"]), torch.cat([params["sh0"], params["shN"]], 1), vm, K, W, H,
                              sh_degree=deg, render_mode=mode, near_plane=0.02, far_plane=20.0, packed=False)
 
-    log = open(out / "train.log", "w"); hist = []; stopped = False
+    log = open(out / "train.log", "w"); hist = []; stopped = False; capped_at = None
     for step in range(a.steps):
         deg = min(sh_deg, step // 1000)
         c = int(train[rng.integers(len(train))])
@@ -189,8 +219,10 @@ def main():
         loss.backward()
         if not stopped:
             strat.step_post_backward(params, opts, sstate, step, info, packed=False)
-            if len(params["means"]) > a.max_gs:
-                stopped = True; print(f"step {step}: > max-gs, densification stopped", flush=True)
+            if len(params["means"]) > a.max_gs and strat.grow_grad2d != float("inf"):
+                # cap reached: no more split/clone (grow threshold -> inf); pruning and opacity resets continue
+                strat.grow_grad2d = float("inf"); capped_at = step
+                print(f"step {step}: {len(params['means'])} > max-gs {a.max_gs}, growth stopped (pruning continues)", flush=True)
         for o in opts.values():
             o.step(); o.zero_grad(set_to_none=True)
         sched.step()
@@ -263,7 +295,7 @@ def main():
                 n_aniso5_opaque=int(((op > 0.3) & (np.exp(params["scales"].detach().cpu().numpy()[:, :2 if a.surfel else 3]).max(1) / np.exp(params["scales"].detach().cpu().numpy()[:, :2 if a.surfel else 3]).min(1) > 5)).sum()),
                 n_dark_opaque=int(((op > 0.3) & ((params["sh0"][:, 0].detach().cpu().numpy() * C0 + 0.5).mean(1) < 0.1)).sum()),
                 n_scale_gt5cm=int((np.exp(params["scales"].detach().cpu().numpy()).max(1) > 0.05).sum()),
-                n_init=N, init_fill_share=fillfrac_init, n_gauss=int(len(M)),
+                area_m2=area_m2, gs_cap=int(a.max_gs), capped_at_step=capped_at, n_init=N, init_fill_share=fillfrac_init, n_gauss=int(len(M)),
                 test_psnr=float(np.mean([e["psnr"] for e in te])), test_ssim=float(np.mean([e["ssim"] for e in te])),
                 test_lpips=float(np.mean([e["lpips"] for e in te])), train_psnr=float(np.mean([e["psnr"] for e in tr])),
                 test_psnr_full=float(np.mean([e["psnr_full"] for e in te])), test_ssim_full=float(np.mean([e["ssim_full"] for e in te])),

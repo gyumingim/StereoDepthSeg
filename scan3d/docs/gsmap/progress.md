@@ -64,3 +64,9 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
   replaced by border mask + voxel-mean downsample to the DUSt3R point count.
   Report: scratchpad splat_demo/viewcrafter_165506.html (media vc165506/).
 - Not done: 1024 model, other seeds, chaining clips > 25 frames, fp16/SDPA vs fp32/xformers equivalence.
+- 11-25 16:16-17:03 run gsmap_20261125_121801 (hs_20261112_121801_std60, run.sh): 494 BA kf (fixes fix_u8), lensonly stand-in = raw VIO +1000 m z
+  (se3_rmse 7.98 cm = BA vs raw VIO, not a GT); dump reframed to VIO world y-down (gsm_reframe.py). 2DGS OOM at 8.8M init points ->
+  init voxel 2.5 cm, max-gs 2.5M, uint8/half GPU buffers. Result: PSNR(valid) 26.9, 2.51M Gaussians (cap hit), floaters 2.4 %,
+  train 24 min, mesh 17.3M tri -> decimated 1.5M, texture 385 s, GLB 80 MB (atlas 14k -> 8192). Black cracks in renders = mesh holes.
+- gsm_train: --gs-per-m2 (coarse 2 cm TSDF area cap; growth stops, pruning continues; default 200k/m2 from 165506 = 211k/m2),
+  --steps default 12000. Not run yet (user: later).
