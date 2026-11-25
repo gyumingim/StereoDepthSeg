@@ -59,6 +59,7 @@ def fill_small_holes(V, F, max_perim):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("mesh"); ap.add_argument("out"); ap.add_argument("--atlas", type=int, default=8192)
+    ap.add_argument("--chunk", type=float, default=0.0, help=">0: xatlas per spatial chunk of this size (m), packed together")
     ap.add_argument("--consistency", type=float, default=0.0, help=">0: down-weight views whose face colour is far from the median over views (glare); scale in grey levels")
     ap.add_argument("--hole-max", type=float, default=0.10); ap.add_argument("--unseen-max", type=float, default=0.0025)
     ap.add_argument("--dump", default=str(RUN / "dump_ba")); ap.add_argument("--gt", default="imu_gt_spl")
@@ -173,10 +174,24 @@ def main():
         nw = n_ > 0; vc[nw] = s_[nw] / n_[nw, None]; has |= nw
     tm["labels"] = time.time() - t0
     # xatlas charts
-    atl = xatlas.Atlas(); atl.add_mesh(V.astype(np.float32), F.astype(np.uint32))
+    atl = xatlas.Atlas()
+    if a.chunk > 0:   # xatlas charting is very slow on big welded meshes (70+ min): chart per spatial chunk, pack jointly
+        cen_ = (V[F[:, 0]] + V[F[:, 1]] + V[F[:, 2]]) / 3; ck = np.floor(cen_ / a.chunk).astype(np.int64)
+        _, cid = np.unique(ck, axis=0, return_inverse=True); cid = cid.ravel(); perm = np.argsort(cid, kind="stable")
+        F = F[perm]; best = best[perm]; fill_face = fill_face[perm]; magenta_face = magenta_face[perm]; cid = cid[perm]
+        bounds = np.flatnonzero(np.diff(np.r_[-1, cid, cid.max() + 1]))
+        chunks = []
+        for b0, b1 in zip(bounds[:-1], bounds[1:]):
+            Fc = F[b0:b1]; uv_, inv_ = np.unique(Fc.ravel(), return_inverse=True)
+            atl.add_mesh(V[uv_].astype(np.float32), inv_.reshape(-1, 3).astype(np.uint32)); chunks.append(uv_)
+    else:
+        atl.add_mesh(V.astype(np.float32), F.astype(np.uint32)); chunks = [np.arange(len(V))]
     co = xatlas.ChartOptions(); po = xatlas.PackOptions(); po.resolution = a.atlas; po.padding = 4; po.bilinear = True
     atl.generate(co, po)
-    vmap, Fi, UV = atl[0]
+    Vout, Fis, UVs, off = [], [], [], 0
+    for k_, uv_ in enumerate(chunks):
+        vm_, Fi_, UV_ = atl[k_]; Vout.append(V[uv_[vm_]]); Fis.append(Fi_.astype(np.int64) + off); UVs.append(UV_); off += len(vm_)
+    Vout = np.concatenate(Vout); Fi = np.concatenate(Fis); UV = np.concatenate(UVs)
     A = atl.width; Ah = atl.height
     tm["xatlas"] = time.time() - t0
     # rasterise triangles in UV space -> texel face id + barycentrics
@@ -225,7 +240,7 @@ def main():
         new = dm & ~filled; tex[new] = d[new]; filled |= new
     tm["texels"] = time.time() - t0
     ok_, jpg = cv2.imencode(".jpg", tex, [cv2.IMWRITE_JPEG_QUALITY, 88])
-    write_glb(a.out, V[vmap], UV, Fi, jpg.tobytes())
+    write_glb(a.out, Vout, UV, Fi, jpg.tobytes())
     cv2.imwrite(str(Path(a.out).with_suffix(".atlas_preview.jpg")), cv2.resize(tex, (2048, int(2048 * Ah / A)), interpolation=cv2.INTER_AREA))
     info = dict(made=time.strftime("%F %T"), mesh=a.mesh, faces_in=int(nf0), faces=int(nf), holes_filled=int(nholes),
                 atlas=[int(A), int(Ah)], unseen_pct=float(un.mean() * 100), filled_from_neighbours_pct=float(fill_face.mean() * 100),

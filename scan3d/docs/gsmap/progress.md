@@ -83,3 +83,8 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
 - (c) v2 run dir scan3d/runs/gsmap_20261125_121801_v2 (dump_ba = symlinks: old img, ffs hybrid 361 old + 50 dense). run_v2.sh part 1
   (align, align_nb, filter, train 12k, mesh weld + trunc 4/6 cm with render_cache) started 18:33. Resume = rerun run_v2.sh.
   Then: gsm_eval_mesh.py (ref = old run FFS) on old glb, planes glb, t4, t6 -> pick -> texture2 -> atlas8k -> tex_121801_v2.glb.
+- 19:08 part1 done. eval (gsm_eval_mesh, ref = old FFS): t4 picked (holes 4.5 vs t6 4.1 %, front vs own 2DGS 1.8 vs 3.2 %); planes step skipped (old planes: holes 10.1 -> 12.7 %, side empty 18.3 -> 25.6 %). texture t4 started.
+- 20:18 texture2 (xatlas) on welded t4 mesh killed after 70 min (xatlas is slow on welded meshes: v1 unwelded 77 s, planes 29 min). Fallback: per-face atlas gsm_texture.py 8192.
+- 20:22 texture2 --chunk 0.75 (xatlas per 0.75 m chunk, packed together): 50 s instead of 70+ min. tex_121801_v2.glb 68 MB.
+- (d) eval (gsm_eval_mesh, ref old FFS): holes 10.1 -> 4.5 %, side empty 18.3 -> 10.8 %, panel RMS 11.3 -> 4.4 cm, walls 5.6 -> 5.3 cm,
+  front 13.6 -> 17.5 % (worse), PSNR 26.9 -> 26.3 (12k vs 20k steps). Crops v2_121801.jpg. (e) report_121801_v2.html. DONE, stopped.
