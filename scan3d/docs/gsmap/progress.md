@@ -98,3 +98,18 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
   by eye once); 6 ROIs (roi_pick.jpg); 24 inside poses). gsm_eval2.py = P1-P4, S1-S7. eval2/run_e0.sh: held-out textures
   (texture2 --skip-held) + eval for old / v2 / v3 -> eval2/{old,v2,v3}.json.
 - E1 gsm_carve.py (free-space carve + islands + < 200 tri), e1/run_e1.sh sweeps min-viol 3/5/10 after E0 -> e1/eval_carve_mv*.json.
+- 21:11 E0 baselines (eval2/{old,v2,v3}.json; P4 from eval2/held/*.glb built without held-out views):
+  | | old | v2 | v3 |
+  | P1 floater area % N3/N5/N10 | 6.60/6.11/4.79 | 0.71/0.59/0.42 | 0.83/0.71/0.51 |
+  | P2 islands count / area % | 0 / 0 (old mesh is all < 1 m2 pieces: P2 undefined) | 5748 / 14.16 | 5233 / 14.91 |
+  | P3 correct % | 82.21 | 83.74 | 83.74 |
+  | P4 held-out PSNR / SSIM / LPIPS / hit / hit-only PSNR | 14.99/0.440/0.572/0.902/18.01 | 17.59/0.581/0.363/0.965/18.78 | 17.60/0.582/0.361/0.965/18.78 |
+  | S1 front / hole % | 9.33/8.47 | 12.72/3.55 | 12.72/3.55 |
+  | S4 floor / ceiling coverage of room_poly % | 19.8/3.8 | 23.0/5.8 | 29.3/6.5 |
+  | S5 empty / backface % | 22.2/13.7 | 17.3/12.9 | 17.0/12.9 |
+  | S7 area m2 / components | 131.9/84086 | 176.4/11424 | 179.7/10323 |
+- 21:25 E1 sweep (e1/eval_carve_mv{3,5,10}.json): carve + islands + small comps removes 16.7-16.9 pct area (islands 14.4-14.5):
+  P1 N5 0.71 -> 0.06, P2 -> 0, but P3 83.74 -> 83.08 (-0.66 pt) and P4 17.60 -> 16.18 dB (hit share 0.965 -> 0.927): all FAIL.
+  Extra variant carve only (mv5, no island / small step, e1/eval_carve_mv5_aonly.json): removes 0.69 pct area, P1 N5 0.71 -> 0.077,
+  P3 83.78, P4 17.58 (-0.02 dB = noise), P2 unchanged 14.7 pct -> passes the generic keep rule, not the E1 rule (P2 not down).
+  Adopted as v4 (e1/tex_121801_v4.glb, full-view texture). Island step reverted: the islands are mostly real fragmented surfaces.
