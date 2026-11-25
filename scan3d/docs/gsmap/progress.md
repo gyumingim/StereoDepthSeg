@@ -154,3 +154,17 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
 - 00:00 E6 no-gain diagnostic (e6/nogain/eval_{v4,e6}.json, textures without per-view gains): v4 18.544 dB (hit-only 19.755,
   hit 0.949), E6 17.929 (hit-only 19.391, hit 0.930). Part of the 1.5 dB was the gain solve, but E6 is still -0.6 dB (-0.36 hit-only)
   -> E6 NOT kept. E7 runs on the v2 fuse (fuse/moge_f), v4 mesh settings (zmax 3). e7/run_e7.sh.
+- 01:15 judge round 3: E7 (30k steps, exposure affine, MoGe normal prior 0.05) on both fuses; evaluated with texture gains OFF
+  (e7/eval_ng.json, e7da3/eval_ng.json):
+  | | E7-MoGe (v2 fuse, zmax 3) | E7-DA3 (e6 fuse, mesh zmax 5) |
+  | 2DGS test PSNR | 26.20 | 27.01 |
+  | P2a / P2b / P2c (sum) | 8.98 / 5.52 / 16.12 (30.62) | 8.34 / 2.63 / 15.45 (26.42) |
+  | P3 | 88.55 | 88.06 |
+  | P4 psnr / hit-only / colour-fit / hit share | 16.88 / 19.29 / 20.01 / 0.901 | 17.54 / 19.20 / 20.18 / 0.916 |
+  | S1 front / hole | 9.22 / 2.23 | 9.26 / 2.68 |
+  | ROI RMS panel / cabinet / door / wall538 (cm) | 5.01 / 3.78 / 4.61 / 3.80 | 8.07 / 8.17 / 3.76 / 1.57 |
+  | area m2 / no-photo % | 138.0 / 13.4 | 155.0 / 11.3 |
+  Pick (round-3 order): a. P2 sum 26.42 vs 30.62 (gap 4.2 > 1) -> DA3; b. P3 within 1 pt (0.49); c. hit-only within 0.5 dB (0.09)
+  -> WINNER E7-DA3 = v5, E7-MoGe = v6. Known cost: panel 8.1 / cabinet 8.2 cm RMS (cabinet second layer 14 %).
+  vs v4: P3 83.78 -> 88.06, P2 sum 28.60 -> 26.42, S1 front 12.6 -> 9.3. final/run_final.sh: v5/v6 full textures (no gains, kf 0
+  dropped) + inside sheet + E3c.
