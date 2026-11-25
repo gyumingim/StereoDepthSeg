@@ -44,3 +44,23 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
 - 11:41 gs2D (user order): gsm_train --surfel 1 (gsplat rasterization_2dgs, normal 0.05 from 7000, distortion 0.01 from 3000), FFS only,
   border mask, no anti-spike. 380 s, 528k surfels, masked PSNR 33.72, dark 8.0k, floaters 0.5 %, but 89.5k opaque discs with
   in-plane aspect > 5 (needle discs). Export: scale_2 = log(1e-4). Copied as gs2D.ply. Script run_2d.sh.
+
+## ViewCrafter test (12:10-13:10, generative novel views from the side)
+- Env `~/scanner/viewcrafter_env/` (own venv py3.12, torch 2.11 cu128 from uv cache, pytorch3d 0.7.9 built from source for sm_120
+  with `env/build_p3d.sh` (needs NVCC_FLAGS -I for pip nvidia headers, no trailing space), open-clip-torch 2.17.1 (2.24 breaks:
+  no input_patchnorm), PL 1.9.5, transformers 4.40). Repo clone `ViewCrafter/` @97cdb86 + local patch `env/viewcrafter_local.patch`
+  (xformers -> torch SDPA shim; must pass 4-D tensors or SDPA falls back to the math kernel and OOMs).
+  Weights: ViewCrafter_25_512 (HF, apache-2.0, 10.4 GB), ViewCrafter_25_sparse (1024, downloaded, NOT run: 23.5 GB official),
+  DUSt3R ViT-L 512 dpt from HF safetensors converted by `env/hf_dust3r_to_pth.py` (naverlabs server ~1 MB/s, stalled; DUSt3R = CC BY-NC-SA 4.0),
+  open_clip ViT-H-14 laion2b in ~/.cache/huggingface.
+- Scripts `scan3d/viewcrafter/`: vc_traj.py (side orbit 60 deg about up axis through a point 0.80 m in front of kf 540; off-path
+  0 -> 49 deg), vc_splat.py (gsA2 along the path), vc_run.py (DUSt3R or our fused FFS+DA3 point cloud -> ViewCrafter renderer ->
+  512 diffusion, fp16 sub-network weights, cap 0.85), run_vc.sh (4 runs), vc_compose.py (grid videos, stats), run_check.sh +
+  vc_check.py (known-answer path kf 540 -> held-out kf 970). Outputs in ~/scanner/viewcrafter_env/work/ (not in git).
+- Result (n=1): runs on the 5080 at 320x512x25 frames, ~41 s diffusion + 15 s DUSt3R + ~45 s model load, peak 10.9 GB (nvidia-smi).
+  Side views look clean (no spikes/holes) but content is invented (AprilTags turn into other pictograms, extra objects).
+  Held-out kf 970: gsA2 splat PSNR 26.8 / LPIPS 0.061 vs ViewCrafter 16.3 / 0.292 (DUSt3R PC), 15.5 / 0.355 (our PC).
+  Our PC vs DUSt3R PC: no clear winner. First our-PC run used random subsampling + black border points (kept as *_v1random) ->
+  replaced by border mask + voxel-mean downsample to the DUSt3R point count.
+  Report: scratchpad splat_demo/viewcrafter_165506.html (media vc165506/).
+- Not done: 1024 model, other seeds, chaining clips > 25 frames, fp16/SDPA vs fp32/xformers equivalence.

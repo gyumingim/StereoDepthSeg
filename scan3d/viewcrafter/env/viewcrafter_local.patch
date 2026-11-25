@@ -1,0 +1,17 @@
+diff --git a/lvdm/modules/attention.py b/lvdm/modules/attention.py
+index 176885d..7460921 100644
+--- a/lvdm/modules/attention.py
++++ b/lvdm/modules/attention.py
+@@ -8,7 +8,11 @@ try:
+     import xformers.ops
+     XFORMERS_IS_AVAILBLE = True
+ except:
+-    XFORMERS_IS_AVAILBLE = False
++    # local patch 2026-11-25: no xformers wheel for torch 2.11/sm_120 -> same call via torch SDPA (default scale 1/sqrt(d))
++    import types
++    xformers = types.SimpleNamespace(ops=types.SimpleNamespace(
++        memory_efficient_attention=lambda q, k, v, attn_bias=None, op=None: F.scaled_dot_product_attention(q[None], k[None], v[None])[0]))  # 4-D -> fused kernels
++    XFORMERS_IS_AVAILBLE = True
+ from lvdm.common import (
+     checkpoint,
+     exists,
