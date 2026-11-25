@@ -29,7 +29,14 @@ def main():
     import os
     trunc = float(os.environ.get("GSMAP_TRUNC", "0.02")); weld = os.environ.get("GSMAP_WELD", "0") == "1"   # 11-25 diag fixes
     sig = trunc / 2.0   # tsdf_map: trunc = clip(2 sigma, 2.5 voxel, trunc_max)
-    vol = tsdf_map.TSDFMap(voxel_m=0.005, z_max=3.0, sigma_max=max(0.08, 2 * sig), sigma_ok=0.02, min_obs=2, trunc_max=trunc, max_blocks=400000)
+    min_obs = int(os.environ.get("GSMAP_MINOBS", "2")); amin = float(os.environ.get("GSMAP_ALPHA", "0.5"))   # E2 flags
+    edge = os.environ.get("GSMAP_EDGE", "0") == "1"; dropf = os.environ.get("GSMAP_DROP_FLOATERS", "0") == "1"
+    zmax = float(os.environ.get("GSMAP_ZMAX", "3.0"))
+    vol = tsdf_map.TSDFMap(voxel_m=0.005, z_max=zmax, sigma_max=max(0.08, 2 * sig), sigma_ok=0.02, min_obs=min_obs, trunc_max=trunc, max_blocks=400000)
+    if dropf and (run / "floater_mask.npy").exists():   # Gaussians flagged by the FFS free-space check in gsm_train
+        fm = torch.from_numpy(np.load(run / "floater_mask.npy")).long().cuda(); keepg = torch.ones(len(p["means"]), dtype=torch.bool, device="cuda"); keepg[fm] = False
+        p = {k: v[keepg] for k, v in p.items()}
+    import cv2
     cache = os.environ.get("GSMAP_CACHE")   # save 2DGS median depth + alpha of every 6th keyframe (eval ruler)
     cZ, cA, cI = [], [], []
     with torch.no_grad():
@@ -40,7 +47,12 @@ def main():
                                    sh_degree=ck["sh_degree"], render_mode="RGB+ED", near_plane=0.02, far_plane=20.0)
             rgb = (r[0][0, ..., :3].clamp(0, 1).cpu().numpy() * 255).astype(np.uint8)
             A = r[1][0, ..., 0].cpu().numpy(); Z = r[5][0, ..., 0].float().cpu().numpy()
-            Z = np.where((A > 0.5) & np.isfinite(Z) & (Z > 0.05), Z, 0).astype(np.float32)
+            Z = np.where((A > amin) & np.isfinite(Z) & (Z > 0.05), Z, 0).astype(np.float32)
+            if edge:   # drop pixels within 2 px of a rendered-depth jump > 3 % (edge skirts)
+                Zp = np.pad(Z, 1, mode="edge"); jump = np.zeros(Z.shape, bool)
+                for dy, dx in ((0, 1), (2, 1), (1, 0), (1, 2)):
+                    Nb = Zp[dy:dy + Z.shape[0], dx:dx + Z.shape[1]]; jump |= (Nb > 0) & (Z > 0) & (np.abs(Nb - Z) / np.maximum(Z, 1e-3) > 0.03)
+                Z[cv2.dilate(jump.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)] = 0
             V = Z > 0
             vol.integrate(np.where(V, Z, np.nan).astype(np.float32), V, np.ascontiguousarray(rgb[..., ::-1]), float(Kr[0, 0]),
                           float(Kr[0, 2]), float(Kr[1, 2]), 0.08, T[c], sigma=np.where(V, sig, np.inf).astype(np.float32))
@@ -62,7 +74,7 @@ def main():
     o3d.io.write_triangle_mesh(str(outp), m, write_ascii=False, compressed=False, write_vertex_normals=False,
                                write_vertex_colors=True, write_triangle_uvs=False)
     info = dict(made=time.strftime("%F %T"), run=str(run), n_views=len(T), tri_before=n0, tri=len(m.triangles), verts=len(m.vertices),
-                runtime_s=round(time.time() - t0, 1), voxel=0.005, trunc=trunc, weld=weld, verts_unwelded=n_unwelded, depth_trunc=3.0, alpha_min=0.5)
+                runtime_s=round(time.time() - t0, 1), voxel=0.005, trunc=trunc, weld=weld, verts_unwelded=n_unwelded, depth_trunc=zmax, alpha_min=amin, min_obs=min_obs, edge=edge, drop_floaters=dropf)
     (Path(str(outp)).with_suffix(".json") if os.environ.get("GSMAP_TRUNC") else run / "mesh2d.json").write_text(json.dumps(info, indent=1)); print(json.dumps(info), flush=True)
 
 

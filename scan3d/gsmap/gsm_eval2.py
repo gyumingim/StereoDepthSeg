@@ -115,10 +115,11 @@ def main():
     P0, P1_, P2 = V[F[:, 0]], V[F[:, 1]], V[F[:, 2]]; area = 0.5 * np.linalg.norm(np.cross(P1_ - P0, P2 - P0), axis=1); A = area.sum()
     # P1
     viol, agr, cen = face_votes(V, F, T, K, w, h, gold, ZM, AL)
-    res["P1_floater_area_pct"] = {f"N{N}": round(float(area[(viol >= N) & (viol > 2 * agr)].sum() / A * 100), 3) for N in (3, 5, 10)}
+    res["S9_floater_area_pct"] = res_p1 = {f"N{N}": round(float(area[(viol >= N) & (viol > 2 * agr)].sum() / A * 100), 3) for N in (3, 5, 10)}
     # P2 + S7
     cl, nt, ar = components(V, F); isl = islands(V, F, cl, ar, cen)
-    res["P2_islands"] = dict(count=int(isl.sum()), area_pct=round(float(ar[isl].sum() / A * 100), 3))
+    res["S8_islands"] = dict(count=int(isl.sum()), area_pct=round(float(ar[isl].sum() / A * 100), 3))
+    small_face = (ar < 0.25)[cl] if len(cl) == len(F) else np.zeros(len(F), bool)
     res["S7"] = dict(area_m2=round(float(A), 2), faces=int(len(F)), components=int(len(nt)), comp_lt_0p05m2=int((ar < 0.05).sum()))
     tm1 = time.time() - t0
     # ray-cast helpers
@@ -161,14 +162,18 @@ def main():
         q = pts[dd < 0.05][:, [0, 2]]; g = np.floor((q - lo) / 0.04).astype(int); ok = (g[:, 0] >= 0) & (g[:, 0] < gsz[0]) & (g[:, 1] >= 0) & (g[:, 1] < gsz[1])
         cov = np.zeros_like(pm); cov[g[ok, 1], g[ok, 0]] = 1
         res["S4"][nm + "_coverage_pct"] = round(float((cov & pm).sum() / pm.sum() * 100), 2)
-    # S5
-    nov = json.loads((REF / "novel_poses.json").read_text()); emp = bf = tot = 0
-    F32 = F
-    for nv in nov:
-        Tc = np.array(nv["T"]); d = ray[::2, ::2].reshape(-1, 3); r = cast(Tc, d); t1 = r["t_hit"].numpy(); hit = np.isfinite(t1) & (t1 < 8.0)
+    # P2 (judge round 1): inside-view defects at 48 poses = the 24 novel poses + the same positions at pitch 0
+    nov = json.loads((REF / "novel_poses.json").read_text())
+    sys.path.insert(0, str(Path(__file__).resolve().parent)); from gsm_eval2_ref import rot
+    poses = [np.array(nv["T"]) for nv in nov] + [rot(T[nv["idx"]], nv["yaw"], 0) for nv in nov]
+    emp = bf = smf = tot = 0
+    for Tc in poses:
+        d = ray.reshape(-1, 3); r = cast(Tc, d); t1 = r["t_hit"].numpy(); hit = np.isfinite(t1) & (t1 < 8.0)
         pid = r["primitive_ids"].numpy()[hit]; nr = np.cross(P1_[pid] - P0[pid], P2[pid] - P0[pid]); dw = (d @ Tc[:3, :3].T)[hit]
-        bf += int(((nr * dw).sum(1) > 0).sum()); emp += int((~hit).sum()); tot += len(t1)
-    res["S5"] = dict(empty_pct=round(emp / tot * 100, 2), backface_pct=round(bf / tot * 100, 2), n_poses=len(nov))
+        back = (nr * dw).sum(1) > 0
+        bf += int(back.sum()); smf += int((~back & small_face[pid]).sum()); emp += int((~hit).sum()); tot += len(t1)
+    res["P2_inside"] = dict(P2a_backface_pct=round(bf / tot * 100, 2), P2b_small_component_front_pct=round(smf / tot * 100, 2),
+                            P2c_empty_pct=round(emp / tot * 100, 2), n_poses=len(poses), res="480x270", small="welded component < 0.25 m2")
     # S6
     tj = arg("--tex-json")
     if tj:
@@ -183,25 +188,36 @@ def main():
         mx, my = cv2.initUndistortRectifyMap(c["K"], c["dist"], None, Kf, (w * 2, h * 2), cv2.CV_32FC1)
         vm = cv2.erode(((mx >= 0) & (mx <= w * 2 - 1) & (my >= 0) & (my <= h * 2 - 1)).astype(np.uint8), np.ones((7, 7), np.uint8))
         vm = cv2.resize(vm, (w, h), interpolation=cv2.INTER_NEAREST).astype(bool)
-        lp = lpips.LPIPS(net="alex", verbose=False); ps, ph, hs, ss, ls = [], [], [], [], []
-        Ah, Aw = tex.shape[:2]
-        for ci in range(0, len(kf), 8):
-            r = s2.cast_rays(o3d.core.Tensor(np.concatenate([np.broadcast_to(T[ci][:3, 3], (h * w, 3)), ray.reshape(-1, 3) @ T[ci][:3, :3].T], 1).astype(np.float32)))
+        lp = lpips.LPIPS(net="alex", verbose=False); ps, ph, hs, ss, ls, pl, pc = [], [], [], [], [], [], []
+        Ah, Aw = tex.shape[:2]; W2, H2 = w * 2, h * 2
+        uf, vf = np.meshgrid(np.arange(W2) + 0.5, np.arange(H2) + 0.5)
+        rayf = np.stack([(uf - Kf[0, 2]) / Kf[0, 0], (vf - Kf[1, 2]) / Kf[1, 1], np.ones_like(uf)], -1).reshape(-1, 3)
+        for ci in range(8, len(kf), 8):   # judge round 1: kf index 0 dropped (mis-posed)
+            r = s2.cast_rays(o3d.core.Tensor(np.concatenate([np.broadcast_to(T[ci][:3, 3], (H2 * W2, 3)), rayf @ T[ci][:3, :3].T], 1).astype(np.float32)))
             pid = r["primitive_ids"].numpy(); hit = pid != 4294967295; bu = r["primitive_uvs"].numpy()
-            img = np.zeros((h * w, 3), np.uint8); p = pid[hit]; b1, b2 = bu[hit, 0], bu[hit, 1]; b0 = 1 - b1 - b2
+            img = np.zeros((H2 * W2, 3), np.uint8); p = pid[hit]; b1, b2 = bu[hit, 0], bu[hit, 1]; b0 = 1 - b1 - b2
             uvp = b0[:, None] * UV[Fg[p, 0]] + b1[:, None] * UV[Fg[p, 1]] + b2[:, None] * UV[Fg[p, 2]]
             img[hit] = tex[np.clip((uvp[:, 1] * Ah).astype(int), 0, Ah - 1), np.clip((uvp[:, 0] * Aw).astype(int), 0, Aw - 1)]
-            img = img.reshape(h, w, 3); hit = hit.reshape(h, w)
+            img = cv2.resize(img.reshape(H2, W2, 3), (w, h), interpolation=cv2.INTER_AREA)   # 960x540 render -> area downsample
+            hit = cv2.resize(hit.reshape(H2, W2).astype(np.float32), (w, h), interpolation=cv2.INTER_AREA) > 0.99
             gt = cv2.resize(cv2.imread(str(R / "dump_ba" / "img" / f"{kf[ci]:05d}.png")), (w, h), interpolation=cv2.INTER_AREA)
             a_, b_ = img.astype(np.float64) / 255, gt.astype(np.float64) / 255
             mse = ((a_ - b_) ** 2)[vm].mean(); ps.append(-10 * np.log10(mse)); mh = vm & hit
             ph.append(-10 * np.log10(((a_ - b_) ** 2)[mh].mean()) if mh.any() else np.nan); hs.append(mh.sum() / vm.sum())
+            if mh.sum() > 100:   # per-image colour fit (3x3 + bias, least squares on hit pixels), hit-only
+                Xa = np.c_[a_[mh], np.ones(mh.sum())]; M_ = np.linalg.lstsq(Xa, b_[mh], rcond=None)[0]
+                pc.append(-10 * np.log10(((Xa @ M_ - b_[mh]) ** 2).mean()))
+                a4 = cv2.resize(a_, (w // 2, h // 2), interpolation=cv2.INTER_AREA); b4 = cv2.resize(b_, (w // 2, h // 2), interpolation=cv2.INTER_AREA)
+                m4 = cv2.resize(mh.astype(np.float32), (w // 2, h // 2), interpolation=cv2.INTER_AREA) > 0.99
+                pl.append(-10 * np.log10(((a4 - b4) ** 2)[m4].mean()) if m4.any() else np.nan)
             am = np.where(vm[..., None], a_, b_); xa = torch.from_numpy(am[..., ::-1].copy()).permute(2, 0, 1)[None].float(); xb = torch.from_numpy(b_[..., ::-1].copy()).permute(2, 0, 1)[None].float()
             ss.append(ssim(xa, xb))
             with torch.no_grad():
                 ls.append(float(lp(xa * 2 - 1, xb * 2 - 1)))
         res["P4_heldout"] = dict(glb=hg, n_views=len(ps), psnr=round(float(np.mean(ps)), 3), ssim=round(float(np.mean(ss)), 4), lpips=round(float(np.mean(ls)), 4),
-                                 hit_share=round(float(np.mean(hs)), 4), psnr_hit_only=round(float(np.nanmean(ph)), 3), res="480x270")
+                                 hit_share=round(float(np.mean(hs)), 4), psnr_hit_only=round(float(np.nanmean(ph)), 3),
+                                 psnr_hit_colourfit=round(float(np.nanmean(pc)), 3), psnr_hit_lowres=round(float(np.nanmean(pl)), 3),
+                                 res="render 960x540 -> area 480x270; lowres = 240x135 (4x fewer px); kf index 0 dropped")
     res["runtime_s"] = round(time.time() - t0, 1); res["p1p2_s"] = round(tm1, 1)
     Path(outp).write_text(json.dumps(res, indent=1)); print(json.dumps(res), flush=True)
 

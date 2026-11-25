@@ -59,6 +59,7 @@ def fill_small_holes(V, F, max_perim):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("mesh"); ap.add_argument("out"); ap.add_argument("--atlas", type=int, default=8192)
+    ap.add_argument("--drop-views", default="", help="comma list of keyframe indices never used (121801: 0 = mis-posed)")
     ap.add_argument("--skip-held", type=int, default=0, help="1: do not use keyframes with index mod 8 == 0 (held-out views for eval2 P4)")
     ap.add_argument("--fill-all", type=int, default=0, help="1: every unseen face gets the nearest textured colour (no magenta)")
     ap.add_argument("--chunk", type=float, default=0.0, help=">0: xatlas per spatial chunk of this size (m), packed together")
@@ -89,9 +90,10 @@ def main():
     sharp = np.array([cv2.Laplacian(cv2.cvtColor(s, cv2.COLOR_BGR2GRAY), cv2.CV_64F).var() for s in small])
     sharp = np.clip(sharp / np.median(sharp), 0.5, 1.5)
     score = np.zeros((nf, nv_), np.float32)
+    drop_v = set(int(x) for x in a.drop_views.split(",") if x.strip())
     sf, sv, scol = [], [], []
     for j in range(nv_):
-        if a.skip_held and j % 8 == 0:   # E0 P4: build the texture without the held-out keyframes
+        if (a.skip_held and j % 8 == 0) or j in drop_v:   # E0 P4 held-out views; judge round 1: drop mis-posed views (121801: index 0)
             continue
         R, t = T[j][:3, :3], T[j][:3, 3]
         rays = np.concatenate([np.broadcast_to(t, dcam.shape), dcam @ R.T], 1).astype(np.float32)
