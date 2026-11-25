@@ -59,6 +59,7 @@ def fill_small_holes(V, F, max_perim):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("mesh"); ap.add_argument("out"); ap.add_argument("--atlas", type=int, default=8192)
+    ap.add_argument("--consistency", type=float, default=0.0, help=">0: down-weight views whose face colour is far from the median over views (glare); scale in grey levels")
     ap.add_argument("--hole-max", type=float, default=0.10); ap.add_argument("--unseen-max", type=float, default=0.0025)
     ap.add_argument("--dump", default=str(RUN / "dump_ba"))
     ap.add_argument("--rec", default="/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261024_165506_std60")
@@ -102,6 +103,15 @@ def main():
         score[:, j] = np.where(ok, cs / np.maximum(z, 1e-3) * sharp[j], 0)
         idx = np.nonzero(ok)[0]; sf.append(idx); sv.append(np.full(len(idx), j)); scol.append(small[j][vi[idx], ui[idx]].astype(np.float64) + 1)
     sf, sv, scol = np.concatenate(sf), np.concatenate(sv), np.concatenate(scol)
+    if a.consistency > 0:   # glare: weight exp(-|lum - median lum over the views that see the face| / k), plus a penalty for brighter
+        lum = scol.mean(1); o_ = np.argsort(sf, kind="stable"); sfo, lo = sf[o_], lum[o_]
+        st_ = np.searchsorted(sfo, np.arange(nf)); en_ = np.searchsorted(sfo, np.arange(nf), side="right")
+        med = np.zeros(nf)
+        for f_ in np.nonzero(en_ > st_)[0]:
+            med[f_] = np.median(lo[st_[f_]:en_[f_]])
+        dev = lum - med[sf]
+        wgt = np.exp(-np.abs(dev) / a.consistency) * np.where(dev > 0, np.exp(-dev / a.consistency), 1.0)
+        score[sf, sv] *= wgt.astype(np.float32)
     tm["vis"] = time.time() - t0
     # face adjacency (shared edges)
     E = np.sort(np.concatenate([F[:, [0, 1]], F[:, [1, 2]], F[:, [2, 0]]]), 1); fid = np.tile(np.arange(nf), 3)
