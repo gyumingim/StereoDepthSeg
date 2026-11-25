@@ -74,7 +74,7 @@ def write_ply(path, p):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("dump"); ap.add_argument("--fused", required=True); ap.add_argument("--out", required=True)
-    ap.add_argument("--steps", type=int, default=12000)   # 12000 default from 11-25 (was 20000); ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--steps", type=int, default=12000); ap.add_argument("--seed", type=int, default=0)   # steps default 12000 from 11-25 (was 20000)
     ap.add_argument("--depth-w", type=float, default=0.1); ap.add_argument("--fill-w", type=float, default=0.1)
     ap.add_argument("--hold", type=int, default=8); ap.add_argument("--stride", type=int, default=3)
     ap.add_argument("--voxel", type=float, default=0.01); ap.add_argument("--max-gs", type=int, default=3_000_000)
