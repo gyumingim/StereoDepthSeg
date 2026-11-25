@@ -31,7 +31,7 @@ def main():
     sig = trunc / 2.0   # tsdf_map: trunc = clip(2 sigma, 2.5 voxel, trunc_max)
     min_obs = int(os.environ.get("GSMAP_MINOBS", "2")); amin = float(os.environ.get("GSMAP_ALPHA", "0.5"))   # E2 flags
     edge = os.environ.get("GSMAP_EDGE", "0") == "1"; dropf = os.environ.get("GSMAP_DROP_FLOATERS", "0") == "1"
-    zmax = float(os.environ.get("GSMAP_ZMAX", "3.0"))
+    zmax = float(os.environ.get("GSMAP_ZMAX", "3.0")); zsig = os.environ.get("GSMAP_ZSIG", "0") == "1"   # E4: sigma x max(1, Z/3)
     vol = tsdf_map.TSDFMap(voxel_m=0.005, z_max=zmax, sigma_max=max(0.08, 2 * sig), sigma_ok=0.02, min_obs=min_obs, trunc_max=trunc, max_blocks=400000)
     if dropf and (run / "floater_mask.npy").exists():   # Gaussians flagged by the FFS free-space check in gsm_train
         fm = torch.from_numpy(np.load(run / "floater_mask.npy")).long().cuda(); keepg = torch.ones(len(p["means"]), dtype=torch.bool, device="cuda"); keepg[fm] = False
@@ -55,7 +55,7 @@ def main():
                 Z[cv2.dilate(jump.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)] = 0
             V = Z > 0
             vol.integrate(np.where(V, Z, np.nan).astype(np.float32), V, np.ascontiguousarray(rgb[..., ::-1]), float(Kr[0, 0]),
-                          float(Kr[0, 2]), float(Kr[1, 2]), 0.08, T[c], sigma=np.where(V, sig, np.inf).astype(np.float32))
+                          float(Kr[0, 2]), float(Kr[1, 2]), 0.08, T[c], sigma=np.where(V, sig * (np.maximum(1.0, Z / 3.0) if zsig else 1.0), np.inf).astype(np.float32))
             if cache and c % 6 == 2:
                 cZ.append(np.where(A > 0.5, r[5][0, ..., 0].float().cpu().numpy(), 0).astype(np.float16)); cA.append((A * 255).astype(np.uint8)); cI.append(c)
     vol.update_mesh(force=True)

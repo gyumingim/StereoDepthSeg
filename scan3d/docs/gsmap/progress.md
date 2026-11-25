@@ -126,3 +126,12 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
   E3b (ceiling y -2.117 = v3 fit height) r2/eval_e3b.json: P2c 10.13 (-3.27), P3 82.37, P4 18.442.
   Both FAIL (need P2c -5 pt; P3 -1.41 pt). Likely cause of the P3 drop: the floor plane (fit on a 14.8 m2 patch, 0.8 % tilt)
   is not the floor everywhere, so generated floor sits above the real floor in places (S1 front +1.45 pt). E3 stopped (2 fails).
+- 22:45 E2 (e2/run_e2.sh, e2/run_e2_plain.sh; e2/mo*/eval.json, mesh.json): TSDF re-extraction -> v3fix -> carve mv5 a-only.
+  | variant | P2a | P2b | P2c | P3 | P4 PSNR / hit / hit-only | S1 front / hole | area m2 | no-photo % |
+  | v4 base | 9.21 | 5.99 | 13.40 | 83.78 | 18.455 / 0.949 / 19.655 | 12.61 / 3.61 | 178.6 | 15.7 |
+  | mo4 + alpha 0.7 + edge + drop floaters | 7.47 | 5.33 | 25.22 | 81.20 | 14.295 / 0.820 / 18.284 | 10.91 / 7.89 | 99.7 | 5.4 |
+  | mo8 (same flags) | 6.47 | 7.56 | 31.22 | 78.36 | 13.026 / 0.749 / 17.792 | 10.26 / 11.38 | 78.2 | 4.1 |
+  | mo12 (same flags) | 5.62 | 9.38 | 37.26 | 73.96 | 12.044 / 0.674 / 17.591 | 9.45 / 16.59 | 60.8 | 3.2 |
+  | mo4 only + drop floaters (alpha 0.5, no edge) | 8.72 | 6.05 | 15.91 | 84.18 | 17.716 / 0.929 / 19.434 | 11.91 / 3.91 | 157.6 | 13.1 |
+  Keep rule (P2a + P2b -30 % rel, P3 not -0.5 pt): best is -16 % (mo4) with P3 -2.6 and P4 -4.2 dB -> all FAIL. min_obs and the
+  alpha/edge flags mainly open holes (P2c up, hit share down); flakes barely change. E2 stopped (2 attempts).

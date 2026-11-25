@@ -20,6 +20,7 @@ from gsm_eval2 import load_mesh, cams, ref_depth, face_votes, components, island
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("inp"); ap.add_argument("out"); ap.add_argument("--min-viol", type=int, default=5); ap.add_argument("--ratio", type=float, default=2.0)
+    ap.add_argument("--e1b", type=float, default=0.0, help=">0: delete components < this m2 with NO gold-FFS-agreeing view (E1b)")
     ap.add_argument("--island-area", type=float, default=0.25); ap.add_argument("--island-gap", type=float, default=0.05); ap.add_argument("--min-tri", type=int, default=200)
     a = ap.parse_args()
     import open3d as o3d
@@ -30,6 +31,17 @@ def main():
     fl = (viol >= a.min_viol) & (viol > a.ratio * agr)
     info["a_floater_faces"] = int(fl.sum()); info["a_floater_area_pct"] = round(float(ar_f(V, F)[fl].sum() / A0 * 100), 3)
     F = F[~fl]; cen = cen[~fl]
+    if a.e1b > 0:   # E1b: support-based fragment removal (independent evidence = gold FFS only)
+        P0, P1, P2 = V[F[:, 0]], V[F[:, 1]], V[F[:, 2]]; c32 = ((P0 + P1 + P2) / 3).astype(np.float32); ga = np.zeros(len(F), np.int16)
+        for j in range(len(T)):
+            Rm, t = T[j][:3, :3].astype(np.float32), T[j][:3, 3].astype(np.float32); Xc = (c32 - t) @ Rm; z = Xc[:, 2]; ok = z > 0.1
+            u = np.floor(K[0, 0] * Xc[:, 0] / np.where(ok, z, 1) + K[0, 2]).astype(np.int32); v = np.floor(K[1, 1] * Xc[:, 1] / np.where(ok, z, 1) + K[1, 2]).astype(np.int32)
+            ok &= (u >= 0) & (u < w) & (v >= 0) & (v < h); idx = np.nonzero(ok)[0]
+            gz = gold[j][v[idx], u[idx]].astype(np.float32); ga[idx] += ((gz > 0) & (np.abs(gz - z[idx]) <= np.maximum(0.05, 0.04 * z[idx]))).astype(np.int16)
+        cl, nt, ar = components(V, F); sup = np.bincount(cl, weights=(ga > 0).astype(float), minlength=len(ar)) > 0
+        rmc = (ar < a.e1b) & ~sup; rmf = rmc[cl]
+        info["e1b_components"] = int(rmc.sum()); info["e1b_area_pct"] = round(float(ar_f(V, F)[rmf].sum() / A0 * 100), 3)
+        F = F[~rmf]; cen = cen[~rmf]
     cl, nt, ar = components(V, F); isl = islands(V, F, cl, ar, cen, small=a.island_area, gap=a.island_gap)
     rm = isl[cl]; info["b_islands"] = int(isl.sum()); info["b_island_area_pct"] = round(float(ar_f(V, F)[rm].sum() / A0 * 100), 3)
     F = F[~rm]
