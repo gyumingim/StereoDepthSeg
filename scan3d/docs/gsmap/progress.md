@@ -168,3 +168,10 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
   -> WINNER E7-DA3 = v5, E7-MoGe = v6. Known cost: panel 8.1 / cabinet 8.2 cm RMS (cabinet second layer 14 %).
   vs v4: P3 83.78 -> 88.06, P2 sum 28.60 -> 26.42, S1 front 12.6 -> 9.3. final/run_final.sh: v5/v6 full textures (no gains, kf 0
   dropped) + inside sheet + E3c.
+- 01:33 v5 = E7-DA3 (final/tex_121801_v5.glb, 63 MB), v6 = E7-MoGe (final/tex_121801_v6.glb, 65 MB), both textured with all views
+  except kf 0, no gains; inside sheet final/inside_121801_v5_v6.jpg (v4 / v5 / v6). All copied to splat_demo.
+- E3c on v5 (final/e3c.json, final/eval_e3c.json): floor y 0.819 (gravity normal, median of 42,965 inliers), ceiling y -1.810 (topmost
+  mode, 2.63 m above floor, NOT verified); filled floor 31.9 m2 / ceiling 45.6 m2; see-through guard blocked only 234 + 331 cells
+  (ceiling cells are rarely inside any keyframe frustum, so the guard can hardly act there).
+  P2a 8.34, P2b 2.65, P2c 15.45 -> 11.06 (sum 26.42 -> 22.05), P3 88.06 (=), P4 17.54 -> 17.63 (hit-only 19.20 -> 19.10, hit 0.916 -> 0.929),
+  S1 unchanged 9.26 / 2.68 -> KEPT (generic rule). E8 started (e8/run_e8.sh, E3C=1, all 494 views, 30k steps).
