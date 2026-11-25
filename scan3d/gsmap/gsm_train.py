@@ -91,7 +91,8 @@ def main():
     print(f"valid pixel mask: {vmask.mean():.4f} (mask_border={a.mask_border})", flush=True)
     print(f"keyframes {n} ({W}x{H}) train {len(train)} test {len(test)}; train px FFS {np.mean([(Ff[c] == 1).mean() for c in train]):.3f} "
           f"fill {np.mean([(Ff[c] == 2).mean() for c in train]):.3f}", flush=True)
-    gt = torch.stack([torch.from_numpy(cv2.cvtColor(im, cv2.COLOR_BGR2RGB)) for im in imgs]).float().div(255).to(dev)
+    gt8 = torch.stack([torch.from_numpy(cv2.cvtColor(im, cv2.COLOR_BGR2RGB)) for im in imgs]).to(dev)   # uint8 on GPU (big runs)
+    gtf = lambda i: gt8[i].float().div(255)  # noqa: E731
     viewmats = torch.from_numpy(np.linalg.inv(T)).float().to(dev)
     Ks = torch.from_numpy(Kr).float().to(dev)
     fx, fy, cx, cy = Kr[0, 0], Kr[1, 1], Kr[0, 2], Kr[1, 2]
@@ -137,8 +138,8 @@ def main():
     if a.surfel:
         from gsplat import rasterization_2dgs
     strat.check_sanity(params, opts); sstate = strat.initialize_state(scene_scale=scene_scale)
-    zt = [torch.from_numpy(np.nan_to_num(z, nan=0.0)).to(dev) for z in Zf]
-    wt = [torch.from_numpy(np.where(F == 1, 1.0, np.where(F == 2, a.fill_w, 0.0)).astype(np.float32)).to(dev) for F in Ff]
+    zt = [torch.from_numpy(np.nan_to_num(z, nan=0.0)).half().to(dev) for z in Zf]   # half: big runs
+    wt = [torch.from_numpy(np.where(F == 1, 1.0, np.where(F == 2, a.fill_w, 0.0)).astype(np.float16)).to(dev) for F in Ff]
 
     extra = {}
 
@@ -163,15 +164,16 @@ def main():
         rgb, ed = rc[..., :3], rc[0, ..., 3]
         if not stopped:
             strat.step_pre_backward(params, opts, sstate, step, info)
-        rgb = rgb * mt + gt[c:c + 1] * (1 - mt)   # invalid border pixels: no photo gradient
-        l1 = (rgb - gt[c:c + 1]).abs().mean()
-        ss = 1 - ssim(rgb.permute(0, 3, 1, 2), gt[c:c + 1].permute(0, 3, 1, 2))
+        gc = gtf(slice(c, c + 1))
+        rgb = rgb * mt + gc * (1 - mt)   # invalid border pixels: no photo gradient
+        l1 = (rgb - gc).abs().mean()
+        ss = 1 - ssim(rgb.permute(0, 3, 1, 2), gc.permute(0, 3, 1, 2))
         loss = 0.8 * l1 + 0.2 * ss
         dpl = torch.zeros((), device=dev)
         if a.depth_w > 0:
             w = wt[c]
             if w.sum() > 0:
-                dpl = (w * (ed - zt[c]).abs()).sum() / (w > 0).sum()
+                dpl = (w.float() * (ed - zt[c].float()).abs()).sum() / (w > 0).sum()
                 loss = loss + a.depth_w * dpl
         if a.surfel:   # gsplat 2DGS example defaults: normal consistency 0.05 from 7000, distortion 0.01 from 3000
             if step >= 7000:
@@ -219,7 +221,7 @@ def main():
         for c in list(test) + list(train):
             rc, ra, _ = render(torch.tensor([int(c)], device=dev), sh_deg)
             rgb = rc[0, ..., :3].clamp(0, 1); ed = rc[0, ..., 3].cpu().numpy(); al = ra[0, ..., 0].cpu().numpy()
-            g = gt[int(c)]
+            g = gtf(int(c))
             mse_full = ((rgb - g) ** 2).mean()
             m0 = mt[0]
             mse = (m0 * (rgb - g) ** 2).sum() / (m0.sum() * 3)   # = mse_full when mask_border 0

@@ -16,7 +16,8 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent)); sys.path.insert(0, str(HERE.parent / "gsplat"))
-R = HERE.parent / "runs" / "gsmap_20261125"
+import os
+R = Path(os.environ.get("GSMAP_RUN", str(HERE.parent / "runs" / "gsmap_20261125")))
 
 
 def main():
@@ -66,11 +67,16 @@ def main():
         for k_, x in dict(ffs=val, mv=mv, edge=edge, far=far, drop=drop).items():
             st[k_] += int(x.sum())
         st["px_ffs"] += int((Fo == 1).sum()); st["px_moge"] += int((Fo == 2).sum())
+        if os.environ.get("GSMAP_NO_MESH"):
+            continue
         img = cv2.imread(str(R / "dump_ba" / "img" / f"{kf[c_]:05d}.png"))
         tsdf.integrate(Zo, Vv, img, fx, cx, cy, 0.08, T[c_], sigma=np.where(Vv, 0.01, np.inf).astype(np.float32))
-    tsdf.update_mesh(force=True)
-    Vm, Cm, Fm = tsdf.mesh_arrays()
-    tsdf_map.write_mesh_ply(outp, Vm, Cm, Fm)
+    if os.environ.get("GSMAP_NO_MESH"):
+        Vm, Fm = np.zeros((0, 3)), np.zeros((0, 3))
+    else:
+        tsdf.update_mesh(force=True)
+        Vm, Cm, Fm = tsdf.mesh_arrays()
+        tsdf_map.write_mesh_ply(outp, Vm, Cm, Fm)
     info = dict(made=time.strftime("%F %T"), faces=int(len(Fm)), verts=int(len(Vm)), runtime_s=round(time.time() - t0, 1),
                 drop_share_of_ffs={k: round(st[k] / max(1, st["ffs"]), 4) for k in ("mv", "edge", "far", "drop")},
                 px_moge_share=round(st["px_moge"] / max(1, st["px_ffs"] + st["px_moge"]), 4))

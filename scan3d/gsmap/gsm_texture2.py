@@ -61,7 +61,7 @@ def main():
     ap.add_argument("mesh"); ap.add_argument("out"); ap.add_argument("--atlas", type=int, default=8192)
     ap.add_argument("--consistency", type=float, default=0.0, help=">0: down-weight views whose face colour is far from the median over views (glare); scale in grey levels")
     ap.add_argument("--hole-max", type=float, default=0.10); ap.add_argument("--unseen-max", type=float, default=0.0025)
-    ap.add_argument("--dump", default=str(RUN / "dump_ba"))
+    ap.add_argument("--dump", default=str(RUN / "dump_ba")); ap.add_argument("--gt", default="imu_gt_spl")
     ap.add_argument("--rec", default="/home/system/scanner/StereoDepthSeg/scan3d/recordings/hs_20261024_165506_std60")
     a = ap.parse_args()
     import open3d as o3d, xatlas
@@ -72,7 +72,7 @@ def main():
     V, F, nholes = fill_small_holes(V, F, a.hole_max)
     nf = len(F); tm["holes"] = time.time() - t0
     c = np.load(Path(a.dump) / "cams.npz"); kf, T = c["kf"], c["T"]
-    imgs, Kr1, valid1 = load_frames(Path(a.dump), Path(a.rec), kf); nv_ = len(kf)
+    imgs, Kr1, valid1 = load_frames(Path(a.dump), Path(a.rec), kf, a.gt); nv_ = len(kf)
     tm["decode"] = time.time() - t0
     P0, P1, P2 = V[F[:, 0]], V[F[:, 1]], V[F[:, 2]]
     cen = (P0 + P1 + P2) / 3

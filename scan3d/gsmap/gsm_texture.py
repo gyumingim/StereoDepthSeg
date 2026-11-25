@@ -22,11 +22,12 @@ import cv2
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-RUN = HERE.parent / "runs" / "gsmap_20261125"
+import os
+RUN = Path(os.environ.get("GSMAP_RUN", str(HERE.parent / "runs" / "gsmap_20261125")))
 
 
-def load_frames(dump, rec, need):
-    g = np.load(rec / "imu_gt_spl" / "gt.npz")
+def load_frames(dump, rec, need, gt="imu_gt_spl"):
+    g = np.load(rec / gt / "gt.npz")
     K1 = g["K"].astype(np.float64); dist = g["dist"].astype(np.float64)
     c = np.load(dump / "cams.npz"); Kr1 = c["Kr"].copy(); Kr1[:2] *= 2
     mx, my = cv2.initUndistortRectifyMap(K1, dist, np.eye(3), Kr1, (1920, 1080), cv2.CV_32FC1)

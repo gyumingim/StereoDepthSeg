@@ -17,7 +17,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-R = Path(__file__).resolve().parent.parent / "runs" / "gsmap_20261125"
+import os
+R = Path(os.environ.get("GSMAP_RUN", str(Path(__file__).resolve().parent.parent / "runs" / "gsmap_20261125")))
 
 
 def main():
