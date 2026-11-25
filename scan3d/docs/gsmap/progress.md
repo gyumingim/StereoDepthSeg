@@ -113,3 +113,4 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
   Extra variant carve only (mv5, no island / small step, e1/eval_carve_mv5_aonly.json): removes 0.69 pct area, P1 N5 0.71 -> 0.077,
   P3 83.78, P4 17.58 (-0.02 dB = noise), P2 unchanged 14.7 pct -> passes the generic keep rule, not the E1 rule (P2 not down).
   Adopted as v4 (e1/tex_121801_v4.glb, full-view texture). Island step reverted: the islands are mostly real fragmented surfaces.
+- 21:40 v4 delivered: splat_demo/tex_121801_v4.glb (66.7 MB, e1/tex_121801_v4.json: unseen 15.7 pct nearest-colour, magenta 0), sheet v4_121801.jpg (8 crops v3 vs v4: fewer specks on walls/floor; ceiling chunks remain). Stopped after E1 for the Fable judge.
