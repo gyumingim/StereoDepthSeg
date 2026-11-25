@@ -77,3 +77,9 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
   275-279, 316-321, 332-345. Multi-view fail of the new FFS 27.7 % (old FFS 7.5 % same rule) -> new pairs noisier.
   Decision for (c): old FFS for the 361 old kf, new FFS only for the 50 new kf (ffs_hybrid).
 - next: (b) planes texture -> (c) mesh fixes + retrain v2 -> (d) eval with scratchpad diag scripts -> (e) HTML.
+- (b) planes done 18:32: gsm_planes (weld 6 mm: decimated mesh was 84k pieces; components < 200 tri / 0.005 m2 removed = 29.8 % faces,
+  < 3 views 0.34 %; 65 plane regions, 6.8 % vertices snapped, 2 boxes, 1109 plane holes 0.075 m2) + texture2 (xatlas 29 min!) ->
+  splat_demo/tex_121801_planes.glb (50.6 MB), planes_121801.jpg.
+- (c) v2 run dir scan3d/runs/gsmap_20261125_121801_v2 (dump_ba = symlinks: old img, ffs hybrid 361 old + 50 dense). run_v2.sh part 1
+  (align, align_nb, filter, train 12k, mesh weld + trunc 4/6 cm with render_cache) started 18:33. Resume = rerun run_v2.sh.
+  Then: gsm_eval_mesh.py (ref = old run FFS) on old glb, planes glb, t4, t6 -> pick -> texture2 -> atlas8k -> tex_121801_v2.glb.

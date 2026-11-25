@@ -26,7 +26,12 @@ def main():
     T, Kr, (W, H) = ck["T"], ck["Kr"], ck["size"]
     K = torch.from_numpy(Kr).float().cuda()
     import tsdf_map
-    vol = tsdf_map.TSDFMap(voxel_m=0.005, z_max=3.0, sigma_max=0.08, sigma_ok=0.02, min_obs=2, trunc_max=0.02, max_blocks=400000)
+    import os
+    trunc = float(os.environ.get("GSMAP_TRUNC", "0.02")); weld = os.environ.get("GSMAP_WELD", "0") == "1"   # 11-25 diag fixes
+    sig = trunc / 2.0   # tsdf_map: trunc = clip(2 sigma, 2.5 voxel, trunc_max)
+    vol = tsdf_map.TSDFMap(voxel_m=0.005, z_max=3.0, sigma_max=max(0.08, 2 * sig), sigma_ok=0.02, min_obs=2, trunc_max=trunc, max_blocks=400000)
+    cache = os.environ.get("GSMAP_CACHE")   # save 2DGS median depth + alpha of every 6th keyframe (eval ruler)
+    cZ, cA, cI = [], [], []
     with torch.no_grad():
         for c in range(len(T)):
             vm = torch.from_numpy(np.linalg.inv(T[c])).float().cuda()[None]
@@ -38,20 +43,27 @@ def main():
             Z = np.where((A > 0.5) & np.isfinite(Z) & (Z > 0.05), Z, 0).astype(np.float32)
             V = Z > 0
             vol.integrate(np.where(V, Z, np.nan).astype(np.float32), V, np.ascontiguousarray(rgb[..., ::-1]), float(Kr[0, 0]),
-                          float(Kr[0, 2]), float(Kr[1, 2]), 0.08, T[c], sigma=np.where(V, 0.01, np.inf).astype(np.float32))
+                          float(Kr[0, 2]), float(Kr[1, 2]), 0.08, T[c], sigma=np.where(V, sig, np.inf).astype(np.float32))
+            if cache and c % 6 == 2:
+                cZ.append(np.where(A > 0.5, r[5][0, ..., 0].float().cpu().numpy(), 0).astype(np.float16)); cA.append((A * 255).astype(np.uint8)); cI.append(c)
     vol.update_mesh(force=True)
     Vm, Cm, Fm = vol.mesh_arrays()
     m = o3d.geometry.TriangleMesh(o3d.utility.Vector3dVector(np.asarray(Vm, np.float64)), o3d.utility.Vector3iVector(np.asarray(Fm, np.int32)))
     cm = np.asarray(Cm, np.float64); m.vertex_colors = o3d.utility.Vector3dVector(cm / 255.0 if cm.max() > 1.5 else cm)
+    n_unwelded = len(m.vertices)
+    if weld:   # TSDF blocks are not welded -> decimation opened cracks at every block seam (diag 11-25: holes 12.6 -> 8.0 %)
+        m.merge_close_vertices(1e-5); m.remove_degenerate_triangles(); m.remove_duplicated_triangles()
     n0 = len(m.triangles)
+    if cache:
+        np.savez_compressed(cache, ZM=np.stack(cZ), AL=np.stack(cA), idx=np.array(cI), T=T, Kr=Kr)
     if n0 > max_tri:
         m = m.simplify_quadric_decimation(max_tri)
     m.remove_unreferenced_vertices()
     o3d.io.write_triangle_mesh(str(outp), m, write_ascii=False, compressed=False, write_vertex_normals=False,
                                write_vertex_colors=True, write_triangle_uvs=False)
     info = dict(made=time.strftime("%F %T"), run=str(run), n_views=len(T), tri_before=n0, tri=len(m.triangles), verts=len(m.vertices),
-                runtime_s=round(time.time() - t0, 1), voxel=0.005, trunc=0.02, depth_trunc=3.0, alpha_min=0.5)
-    (run / "mesh2d.json").write_text(json.dumps(info, indent=1)); print(json.dumps(info), flush=True)
+                runtime_s=round(time.time() - t0, 1), voxel=0.005, trunc=trunc, weld=weld, verts_unwelded=n_unwelded, depth_trunc=3.0, alpha_min=0.5)
+    (Path(str(outp)).with_suffix(".json") if os.environ.get("GSMAP_TRUNC") else run / "mesh2d.json").write_text(json.dumps(info, indent=1)); print(json.dumps(info), flush=True)
 
 
 if __name__ == "__main__":
