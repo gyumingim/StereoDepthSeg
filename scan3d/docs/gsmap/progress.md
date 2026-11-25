@@ -40,3 +40,7 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
 - 11:30 v3 (user order): run_v3.sh = border mask + anti-spike (relu(log(smax/smin) - log 5) mean, w 1.0; scales clamped <= 5 cm).
   A2 done 11:35 (masked test PSNR 33.9, full-frame 19.3 - not comparable with A 25.5 full-frame; dark opaque 5.5k vs A 13.6k;
   aniso>5 opaque 363 vs A 359k; floaters 0.8 % vs 6.0 %). ply copied to scratchpad splat_demo/gsA2.ply. B2 running, auto-copies gsB2.ply.
+- 11:40 B2 done (masked PSNR 33.93, dark 7.7k, aniso>5 305, floaters 0.9 %), gsB2.ply copied.
+- 11:41 gs2D (user order): gsm_train --surfel 1 (gsplat rasterization_2dgs, normal 0.05 from 7000, distortion 0.01 from 3000), FFS only,
+  border mask, no anti-spike. 380 s, 528k surfels, masked PSNR 33.72, dark 8.0k, floaters 0.5 %, but 89.5k opaque discs with
+  in-plane aspect > 5 (needle discs). Export: scale_2 = log(1e-4). Copied as gs2D.ply. Script run_2d.sh.

@@ -57,6 +57,7 @@ def main():
     ap.add_argument("--voxel", type=float, default=0.01); ap.add_argument("--max-gs", type=int, default=3_000_000)
     ap.add_argument("--aniso-max", type=float, default=0, help=">0: penalise log(max_scale/min_scale) above log(this) (anti-spike)")
     ap.add_argument("--aniso-w", type=float, default=1.0)
+    ap.add_argument("--surfel", type=int, default=0, help="1 = 2DGS (gsplat rasterization_2dgs) surfels + normal/distortion losses")
     ap.add_argument("--max-scale", type=float, default=0, help=">0: clamp every axis scale to <= this (m) after each step")
     ap.add_argument("--mask-border", type=int, default=1, help="1 = ignore the black undistortion border (photo, depth, init, eval)")
     a = ap.parse_args()
@@ -131,14 +132,25 @@ def main():
     lrs = dict(means=1.6e-4 * scene_scale, scales=5e-3, quats=1e-3, opacities=5e-2, sh0=2.5e-3, shN=2.5e-3 / 20)
     opts = {k: torch.optim.Adam([{"params": params[k], "lr": lr, "name": k}], eps=1e-15) for k, lr in lrs.items()}
     sched = torch.optim.lr_scheduler.ExponentialLR(opts["means"], gamma=0.01 ** (1.0 / a.steps))
-    strat = DefaultStrategy(verbose=False, refine_start_iter=500, refine_stop_iter=a.steps // 2, reset_every=3000, refine_every=100)
+    strat = DefaultStrategy(verbose=False, refine_start_iter=500, refine_stop_iter=a.steps // 2, reset_every=3000, refine_every=100,
+                            **(dict(key_for_gradient="gradient_2dgs") if a.surfel else {}))
+    if a.surfel:
+        from gsplat import rasterization_2dgs
     strat.check_sanity(params, opts); sstate = strat.initialize_state(scene_scale=scene_scale)
     zt = [torch.from_numpy(np.nan_to_num(z, nan=0.0)).to(dev) for z in Zf]
     wt = [torch.from_numpy(np.where(F == 1, 1.0, np.where(F == 2, a.fill_w, 0.0)).astype(np.float32)).to(dev) for F in Ff]
 
-    def render(ids, deg, mode="RGB+ED", vm=None, K=None):
+    extra = {}
+
+    def render(ids, deg, mode="RGB+ED", vm=None, K=None, distloss=False):
         vm = viewmats[ids] if vm is None else vm
         K = Ks[None].expand(len(vm), 3, 3) if K is None else K
+        if a.surfel:   # 2DGS: returns rgb+ED, alpha, normals, surf normals, distortion, median depth, info
+            r = rasterization_2dgs(params["means"], torch.nn.functional.normalize(params["quats"], dim=-1), torch.exp(params["scales"]),
+                                   torch.sigmoid(params["opacities"]), torch.cat([params["sh0"], params["shN"]], 1), vm, K, W, H,
+                                   sh_degree=deg, render_mode=mode, near_plane=0.02, far_plane=20.0, distloss=distloss)
+            extra.update(rn=r[2], sn=r[3], rd=r[4])
+            return r[0], r[1], r[6]
         return rasterization(params["means"], torch.nn.functional.normalize(params["quats"], dim=-1), torch.exp(params["scales"]),
                              torch.sigmoid(params["opacities"]), torch.cat([params["sh0"], params["shN"]], 1), vm, K, W, H,
                              sh_degree=deg, render_mode=mode, near_plane=0.02, far_plane=20.0, packed=False)
@@ -147,7 +159,7 @@ def main():
     for step in range(a.steps):
         deg = min(sh_deg, step // 1000)
         c = int(train[rng.integers(len(train))])
-        rc, ra, info = render(torch.tensor([c], device=dev), deg)
+        rc, ra, info = render(torch.tensor([c], device=dev), deg, distloss=a.surfel and step >= 3000)
         rgb, ed = rc[..., :3], rc[0, ..., 3]
         if not stopped:
             strat.step_pre_backward(params, opts, sstate, step, info)
@@ -161,6 +173,12 @@ def main():
             if w.sum() > 0:
                 dpl = (w * (ed - zt[c]).abs()).sum() / (w > 0).sum()
                 loss = loss + a.depth_w * dpl
+        if a.surfel:   # gsplat 2DGS example defaults: normal consistency 0.05 from 7000, distortion 0.01 from 3000
+            if step >= 7000:
+                n_ = extra["rn"][0].permute(2, 0, 1); sn_ = (extra["sn"] * ra.detach())[0].permute(2, 0, 1)
+                loss = loss + 0.05 * ((1 - (n_ * sn_).sum(0)) * mt[0, ..., 0]).mean()
+            if step >= 3000:
+                loss = loss + 0.01 * extra["rd"].mean()
         anl = torch.zeros((), device=dev)
         if a.aniso_max > 0:
             ls = params["scales"]
@@ -186,7 +204,11 @@ def main():
     # ---- save (before eval so a crash in eval keeps the map)
     pc = {k: v.detach().cpu() for k, v in params.items()}
     torch.save(dict(params=pc, sh_degree=sh_deg, T=T, Kr=Kr, size=(W, H), kf=kf, test=test, args=vars(a)), out / "gaussians.pt")
-    write_ply(out / "splat.ply", pc)
+    if a.surfel:   # 3DGS-compatible export: surfel normal = 3rd rotation axis -> flat 3rd scale
+        pe = dict(pc); sc = pe["scales"].clone(); sc[:, 2] = math.log(1e-4); pe["scales"] = sc
+        write_ply(out / "splat.ply", pe)
+    else:
+        write_ply(out / "splat.ply", pc)
 
     # ---- eval
     import lpips
@@ -236,7 +258,7 @@ def main():
         floater = (viol >= 2) & (viol > 0.5 * seen)
     tr = [e for e in ev if not e["test"]]; te = [e for e in ev if e["test"]]
     summ = dict(made=time.strftime("%F %T"), dump=str(dump), fused=str(fused), args=vars(a), n_kf=n, n_train=len(train), n_test=len(test),
-                n_aniso5_opaque=int(((op > 0.3) & (np.exp(params["scales"].detach().cpu().numpy()).max(1) / np.exp(params["scales"].detach().cpu().numpy()).min(1) > 5)).sum()),
+                n_aniso5_opaque=int(((op > 0.3) & (np.exp(params["scales"].detach().cpu().numpy()[:, :2 if a.surfel else 3]).max(1) / np.exp(params["scales"].detach().cpu().numpy()[:, :2 if a.surfel else 3]).min(1) > 5)).sum()),
                 n_dark_opaque=int(((op > 0.3) & ((params["sh0"][:, 0].detach().cpu().numpy() * C0 + 0.5).mean(1) < 0.1)).sum()),
                 n_scale_gt5cm=int((np.exp(params["scales"].detach().cpu().numpy()).max(1) > 0.05).sum()),
                 n_init=N, init_fill_share=fillfrac_init, n_gauss=int(len(M)),
