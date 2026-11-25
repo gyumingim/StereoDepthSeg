@@ -59,6 +59,7 @@ def fill_small_holes(V, F, max_perim):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("mesh"); ap.add_argument("out"); ap.add_argument("--atlas", type=int, default=8192)
+    ap.add_argument("--fill-all", type=int, default=0, help="1: every unseen face gets the nearest textured colour (no magenta)")
     ap.add_argument("--chunk", type=float, default=0.0, help=">0: xatlas per spatial chunk of this size (m), packed together")
     ap.add_argument("--consistency", type=float, default=0.0, help=">0: down-weight views whose face colour is far from the median over views (glare); scale in grey levels")
     ap.add_argument("--hole-max", type=float, default=0.10); ap.add_argument("--unseen-max", type=float, default=0.0025)
@@ -149,7 +150,7 @@ def main():
     G = sp.coo_matrix((np.ones(len(ua)), (ua[:, 0], ua[:, 1])), shape=(nf, nf))
     _, lab = connected_components(G, directed=False)
     comp_area = np.bincount(lab[un], weights=area[un], minlength=lab.max() + 1)
-    fill_face = un & (comp_area[lab] < a.unseen_max); magenta_face = un & ~fill_face
+    fill_face = un & ((comp_area[lab] < a.unseen_max) | bool(a.fill_all)); magenta_face = un & ~fill_face
     # vertex colours (for the filled faces): from seen faces' chosen view at the vertex, gain applied, then diffusion
     vc = np.zeros((len(V), 3)); vn = np.zeros(len(V))
     for j in range(nv_):
@@ -172,6 +173,10 @@ def main():
         ok = has[Ev[:, 1]] & miss[Ev[:, 0]]
         np.add.at(s_, Ev[ok, 0], vc[Ev[ok, 1]]); np.add.at(n_, Ev[ok, 0], 1)
         nw = n_ > 0; vc[nw] = s_[nw] / n_[nw, None]; has |= nw
+    n_nearest_v = 0
+    if a.fill_all and (~has).any() and has.any():   # vertices the edge diffusion did not reach (e.g. separate patches): nearest coloured vertex
+        from scipy.spatial import cKDTree
+        miss = ~has; _, nn_ = cKDTree(V[has]).query(V[miss]); vc[miss] = vc[has][nn_]; n_nearest_v = int(miss.sum()); has[:] = True
     tm["labels"] = time.time() - t0
     # xatlas charts
     atl = xatlas.Atlas()
@@ -244,7 +249,7 @@ def main():
     cv2.imwrite(str(Path(a.out).with_suffix(".atlas_preview.jpg")), cv2.resize(tex, (2048, int(2048 * Ah / A)), interpolation=cv2.INTER_AREA))
     info = dict(made=time.strftime("%F %T"), mesh=a.mesh, faces_in=int(nf0), faces=int(nf), holes_filled=int(nholes),
                 atlas=[int(A), int(Ah)], unseen_pct=float(un.mean() * 100), filled_from_neighbours_pct=float(fill_face.mean() * 100),
-                magenta_pct=float(magenta_face.mean() * 100), gain_min=gain.min(0).round(3).tolist(), gain_max=gain.max(0).round(3).tolist(),
+                magenta_pct=float(magenta_face.mean() * 100), filled_faces=int(fill_face.sum()), nearest_colour_vertices=n_nearest_v, gain_min=gain.min(0).round(3).tolist(), gain_max=gain.max(0).round(3).tolist(),
                 times_s={k: round(v, 1) for k, v in tm.items()}, total_s=round(time.time() - t0, 1),
                 glb_mb=round(Path(a.out).stat().st_size / 2 ** 20, 2), jpg_mb=round(len(jpg) / 2 ** 20, 2))
     Path(a.out).with_suffix(".json").write_text(json.dumps(info, indent=1)); print(json.dumps(info), flush=True)

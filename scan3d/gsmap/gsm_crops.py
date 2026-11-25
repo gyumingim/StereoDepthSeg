@@ -23,6 +23,7 @@ def rot(Tv, yaw=0.0, pitch=0.0, piv_d=1.2):
 
 def main():
     import open3d as o3d
+    import os
     ref, outp = sys.argv[1], sys.argv[2]; specs = [s.split("=", 1) for s in sys.argv[3:]]
     c = np.load(ref + "/dump_ba/cams.npz"); T, K, kf = c["T"], c["Kr"], c["kf"]; w, h = 960, 540
     uu, vv = np.meshgrid(np.arange(w) + 0.0, np.arange(h) + 0.0)
@@ -41,6 +42,8 @@ def main():
         return img.reshape(h, w, 3)
     spots = [(72, 0, 0, "sticker cabinet"), (72, 25, 0, "cabinet, 25 deg side view"), (24, 0, 0, "white bin"), (48, 0, 0, "wavy wall"),
              (52, 0, 20, "ceiling chunks (pitched up 20 deg)")]
+    if os.environ.get("GSMAP_SPOTS"):   # "idx:yaw:pitch:name;..."
+        spots = [(int(x.split(":")[0]), float(x.split(":")[1]), float(x.split(":")[2]), x.split(":", 3)[3]) for x in os.environ["GSMAP_SPOTS"].split(";")]
     rows = []
     for j, yaw, pitch, name in spots:
         Tv = rot(T[j], yaw, pitch); ph = cv2.imread(ref + "/dump_ba/img/%05d.png" % kf[j])

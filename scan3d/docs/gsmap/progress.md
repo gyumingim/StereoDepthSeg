@@ -88,3 +88,8 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
 - 20:22 texture2 --chunk 0.75 (xatlas per 0.75 m chunk, packed together): 50 s instead of 70+ min. tex_121801_v2.glb 68 MB.
 - (d) eval (gsm_eval_mesh, ref old FFS): holes 10.1 -> 4.5 %, side empty 18.3 -> 10.8 %, panel RMS 11.3 -> 4.4 cm, walls 5.6 -> 5.3 cm,
   front 13.6 -> 17.5 % (worse), PSNR 26.9 -> 26.3 (12k vs 20k steps). Crops v2_121801.jpg. (e) report_121801_v2.html. DONE, stopped.
+- 20:35-20:50 v3 (v2 mesh edit only): gsm_v3fix.py (floor y 0.816 / ceiling y -2.117 planes, footprint close 0.8 m, 4 cm cells:
+  floor coverage 78.8 -> 100 % (+3.11 m2), ceiling 87.5 -> 100 % (+0.37 m2); islands removed 0.13 % faces) -> runs/..._v2/v3/mesh_v3.json.
+  texture2 --chunk 0.75 --fill-all 1: magenta 0 %, 245,862 faces (15.8 %) nearest-colour filled -> v3/tex_121801_v3.json.
+  eval eval/v3_glb.json: holes 4.49 %, front 17.49 %, side empty 10.6 %, panel 4.4 cm, walls 5.46 cm. Ceiling chunks remain.
+  splat_demo: tex_121801_v3.glb, v3_121801.jpg, report v3 section.
