@@ -181,7 +181,7 @@ def main():
                 loss = loss + 0.01 * extra["rd"].mean()
         anl = torch.zeros((), device=dev)
         if a.aniso_max > 0:
-            ls = params["scales"]
+            ls = params["scales"][:, :2] if a.surfel else params["scales"]   # 2DGS: only the two in-plane axes exist
             anl = torch.relu(ls.max(1).values - ls.min(1).values - math.log(a.aniso_max)).mean()
             loss = loss + a.aniso_w * anl
         loss.backward()
