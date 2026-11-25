@@ -93,3 +93,8 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
   texture2 --chunk 0.75 --fill-all 1: magenta 0 %, 245,862 faces (15.8 %) nearest-colour filled -> v3/tex_121801_v3.json.
   eval eval/v3_glb.json: holes 4.49 %, front 17.49 %, side empty 10.6 %, panel 4.4 cm, walls 5.46 cm. Ceiling chunks remain.
   splat_demo: tex_121801_v3.glb, v3_121801.jpg, report v3 section.
+- 20:50 E0 (plan C:/Users/a3162/scan3d_handoff/ideas/gsmap_perfect_plan_20261125.md): gsm_eval2_ref.py -> runs/..._v2/eval2/ref
+  (gold FFS 13.07M px = 82.6 % of old filtered FFS, 353 kf; 2DGS depth all 494 kf 480x270; room_poly 49.7 m2 (room_poly.png checked
+  by eye once); 6 ROIs (roi_pick.jpg); 24 inside poses). gsm_eval2.py = P1-P4, S1-S7. eval2/run_e0.sh: held-out textures
+  (texture2 --skip-held) + eval for old / v2 / v3 -> eval2/{old,v2,v3}.json.
+- E1 gsm_carve.py (free-space carve + islands + < 200 tri), e1/run_e1.sh sweeps min-viol 3/5/10 after E0 -> e1/eval_carve_mv*.json.

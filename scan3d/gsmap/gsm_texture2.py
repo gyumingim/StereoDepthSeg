@@ -59,6 +59,7 @@ def fill_small_holes(V, F, max_perim):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("mesh"); ap.add_argument("out"); ap.add_argument("--atlas", type=int, default=8192)
+    ap.add_argument("--skip-held", type=int, default=0, help="1: do not use keyframes with index mod 8 == 0 (held-out views for eval2 P4)")
     ap.add_argument("--fill-all", type=int, default=0, help="1: every unseen face gets the nearest textured colour (no magenta)")
     ap.add_argument("--chunk", type=float, default=0.0, help=">0: xatlas per spatial chunk of this size (m), packed together")
     ap.add_argument("--consistency", type=float, default=0.0, help=">0: down-weight views whose face colour is far from the median over views (glare); scale in grey levels")
@@ -90,6 +91,8 @@ def main():
     score = np.zeros((nf, nv_), np.float32)
     sf, sv, scol = [], [], []
     for j in range(nv_):
+        if a.skip_held and j % 8 == 0:   # E0 P4: build the texture without the held-out keyframes
+            continue
         R, t = T[j][:3, :3], T[j][:3, 3]
         rays = np.concatenate([np.broadcast_to(t, dcam.shape), dcam @ R.T], 1).astype(np.float32)
         zb = sc.cast_rays(o3d.core.Tensor(rays))["t_hit"].numpy().reshape(h, w)
