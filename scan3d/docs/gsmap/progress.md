@@ -114,3 +114,15 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
   P3 83.78, P4 17.58 (-0.02 dB = noise), P2 unchanged 14.7 pct -> passes the generic keep rule, not the E1 rule (P2 not down).
   Adopted as v4 (e1/tex_121801_v4.glb, full-view texture). Island step reverted: the islands are mostly real fragmented surfaces.
 - 21:40 v4 delivered: splat_demo/tex_121801_v4.glb (66.7 MB, e1/tex_121801_v4.json: unseen 15.7 pct nearest-colour, magenta 0), sheet v4_121801.jpg (8 crops v3 vs v4: fewer specks on walls/floor; ceiling chunks remain). Stopped after E1 for the Fable judge.
+- 21:45 judge round 1 (plan section 5). gsm_eval2 updated: P2 = inside defects at 48 poses (P2a back-face, P2b front px on welded
+  components < 0.25 m2, P2c empty), P4 rendered 960x540 -> area 480x270 + lowres 240x135 + per-image colour fit, kf index 0 dropped
+  (also from texturing: texture2 --drop-views 0). P1 -> S9, old P2 -> S8.
+  v4 re-baseline r2/eval_v4.json: P2a 9.21, P2b 5.99, P2c 13.40 %, P3 83.78, P4 18.455 dB (hit-only 19.655, colour-fit 20.362,
+  lowres 20.691, hit share 0.949), S1 front 12.61 / hole 3.61, S4 floor 29.1 / ceiling 6.2 % (v3 planes), area 178.6 m2.
+- E3 gsm_e3planes.py on v4 (floor = v3 fit, ceiling parallel to floor, shards within 0.6 m below ceiling removed, both planes filled
+  over room_poly, floor snap +-3 cm). Photo-consistency height sweep NOT implemented (fallback histogram mode).
+  E3a (ceiling = topmost mode y -1.842, 2.66 m above floor) r2/eval_e3.json: P2c 13.40 -> 9.35 (-4.05 pt), P2a 9.22, P2b 6.27,
+  P3 83.78 -> 82.37 (-1.41), P4 18.485, S1 front 14.06.
+  E3b (ceiling y -2.117 = v3 fit height) r2/eval_e3b.json: P2c 10.13 (-3.27), P3 82.37, P4 18.442.
+  Both FAIL (need P2c -5 pt; P3 -1.41 pt). Likely cause of the P3 drop: the floor plane (fit on a 14.8 m2 patch, 0.8 % tilt)
+  is not the floor everywhere, so generated floor sits above the real floor in places (S1 front +1.45 pt). E3 stopped (2 fails).

@@ -25,6 +25,7 @@ R = Path(os.environ.get("GSMAP_RUN", ""))
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("inp"); ap.add_argument("out"); ap.add_argument("--cell", type=float, default=0.04)
     ap.add_argument("--shard-band", type=float, default=0.6); ap.add_argument("--shard-off", type=float, default=0.04); ap.add_argument("--snap", type=float, default=0.03)
+    ap.add_argument("--ceil-y", type=float, default=None)
     a = ap.parse_args()
     import open3d as o3d
     t0 = time.time(); info = {}
@@ -44,6 +45,8 @@ def main():
     while j + 1 < len(hist) and hist[j + 1] >= hist[j]:   # climb to the local peak of that cluster
         j += 1
     sc = float((edges[j] + edges[j + 1]) / 2); dc = df - sc   # ceiling plane: n.x + dc = 0
+    if a.ceil_y is not None:   # fixed ceiling height (world y) instead of the histogram mode; still parallel to the floor
+        sc = float(np.array([0, a.ceil_y, 0]) @ n + df); dc = df - sc
     info["floor"] = dict(normal=n.round(4).tolist(), y_m=yf); info["ceiling"] = dict(normal=n.round(4).tolist(), dist_above_floor_m=round(-sc, 3),
                                                                                        y_m=round(float(-dc / n[1]), 3), hist_peak=int(pk), mode_count=int(hist[j]),
                                                                                        method="topmost supported mode (>= 20 % of the largest peak), parallel to floor")
