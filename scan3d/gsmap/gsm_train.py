@@ -55,6 +55,9 @@ def main():
     ap.add_argument("--depth-w", type=float, default=0.1); ap.add_argument("--fill-w", type=float, default=0.1)
     ap.add_argument("--hold", type=int, default=8); ap.add_argument("--stride", type=int, default=3)
     ap.add_argument("--voxel", type=float, default=0.01); ap.add_argument("--max-gs", type=int, default=3_000_000)
+    ap.add_argument("--aniso-max", type=float, default=0, help=">0: penalise log(max_scale/min_scale) above log(this) (anti-spike)")
+    ap.add_argument("--aniso-w", type=float, default=1.0)
+    ap.add_argument("--max-scale", type=float, default=0, help=">0: clamp every axis scale to <= this (m) after each step")
     ap.add_argument("--mask-border", type=int, default=1, help="1 = ignore the black undistortion border (photo, depth, init, eval)")
     a = ap.parse_args()
     import torch
@@ -158,6 +161,11 @@ def main():
             if w.sum() > 0:
                 dpl = (w * (ed - zt[c]).abs()).sum() / (w > 0).sum()
                 loss = loss + a.depth_w * dpl
+        anl = torch.zeros((), device=dev)
+        if a.aniso_max > 0:
+            ls = params["scales"]
+            anl = torch.relu(ls.max(1).values - ls.min(1).values - math.log(a.aniso_max)).mean()
+            loss = loss + a.aniso_w * anl
         loss.backward()
         if not stopped:
             strat.step_post_backward(params, opts, sstate, step, info, packed=False)
@@ -166,8 +174,11 @@ def main():
         for o in opts.values():
             o.step(); o.zero_grad(set_to_none=True)
         sched.step()
+        if a.max_scale > 0:
+            with torch.no_grad():
+                params["scales"].clamp_(max=math.log(a.max_scale))
         if step % 500 == 0 or step == a.steps - 1:
-            s_ = dict(step=step, n=len(params["means"]), l1=round(float(l1), 4), dssim=round(float(ss), 4), depth=round(float(dpl), 4),
+            s_ = dict(step=step, n=len(params["means"]), l1=round(float(l1), 4), dssim=round(float(ss), 4), depth=round(float(dpl), 4), aniso=round(float(anl), 4),
                       gpu_gb=round(torch.cuda.max_memory_allocated() / 2 ** 30, 2), t=round(time.time() - t0, 1))
             hist.append(s_); print(json.dumps(s_), flush=True); log.write(json.dumps(s_) + "\n"); log.flush()
     t_train = time.time() - t0
@@ -225,6 +236,9 @@ def main():
         floater = (viol >= 2) & (viol > 0.5 * seen)
     tr = [e for e in ev if not e["test"]]; te = [e for e in ev if e["test"]]
     summ = dict(made=time.strftime("%F %T"), dump=str(dump), fused=str(fused), args=vars(a), n_kf=n, n_train=len(train), n_test=len(test),
+                n_aniso5_opaque=int(((op > 0.3) & (np.exp(params["scales"].detach().cpu().numpy()).max(1) / np.exp(params["scales"].detach().cpu().numpy()).min(1) > 5)).sum()),
+                n_dark_opaque=int(((op > 0.3) & ((params["sh0"][:, 0].detach().cpu().numpy() * C0 + 0.5).mean(1) < 0.1)).sum()),
+                n_scale_gt5cm=int((np.exp(params["scales"].detach().cpu().numpy()).max(1) > 0.05).sum()),
                 n_init=N, init_fill_share=fillfrac_init, n_gauss=int(len(M)),
                 test_psnr=float(np.mean([e["psnr"] for e in te])), test_ssim=float(np.mean([e["ssim"] for e in te])),
                 test_lpips=float(np.mean([e["lpips"] for e in te])), train_psnr=float(np.mean([e["psnr"] for e in tr])),

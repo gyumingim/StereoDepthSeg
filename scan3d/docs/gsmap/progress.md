@@ -37,3 +37,6 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
   --mask-border (photo/depth/init/eval ignore it). E (--fill-w 0) killed unfinished. v2 run (run_v2.sh: A2,B2,D2,C2) started 11:23 and
   STOPPED by user order during A2 (gsA2_stopped/, incomplete). Report: scratchpad splat_demo/result_165506.html (media in m165506/).
 - Resume: `bash scan3d/runs/gsmap_20261125/run_v2.sh` (delete gsA2_stopped first or leave; it trains gsA2 fresh).
+- 11:30 v3 (user order): run_v3.sh = border mask + anti-spike (relu(log(smax/smin) - log 5) mean, w 1.0; scales clamped <= 5 cm).
+  A2 done 11:35 (masked test PSNR 33.9, full-frame 19.3 - not comparable with A 25.5 full-frame; dark opaque 5.5k vs A 13.6k;
+  aniso>5 opaque 363 vs A 359k; floaters 0.8 % vs 6.0 %). ply copied to scratchpad splat_demo/gsA2.ply. B2 running, auto-copies gsB2.ply.
