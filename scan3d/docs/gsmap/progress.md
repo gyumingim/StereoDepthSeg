@@ -70,3 +70,10 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
   train 24 min, mesh 17.3M tri -> decimated 1.5M, texture 385 s, GLB 80 MB (atlas 14k -> 8192). Black cracks in renders = mesh holes.
 - gsm_train: --gs-per-m2 (coarse 2 cm TSDF area cap; growth stops, pruning continues; default 200k/m2 from 165506 = 211k/m2),
   --steps default 12000. Not run yet (user: later).
+- 17:52 PC power-off (FFS dense GPU + planes texture CPU ran together). Rule now: strictly one heavy job, nice, OMP 8.
+- (a) ffs_dense done (gsm_ffs_dense.py, partners from full 60 fps video +-2 s, VIO-relative poses on BA kf, <= 3 partners,
+  B 3-25 cm, perp >= 30): 411/494 kf with FFS (old 361; all old 361 + 50 new). valid_frac median 0.40 (old 0.42).
+  83 still fail: 78 "baseline" (< 3 cm motion within 2 s), 5 "forward"; idx runs 55-79, 88-92, 217-226, 233-246, 259-262,
+  275-279, 316-321, 332-345. Multi-view fail of the new FFS 27.7 % (old FFS 7.5 % same rule) -> new pairs noisier.
+  Decision for (c): old FFS for the 361 old kf, new FFS only for the 50 new kf (ffs_hybrid).
+- next: (b) planes texture -> (c) mesh fixes + retrain v2 -> (d) eval with scratchpad diag scripts -> (e) HTML.
