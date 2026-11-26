@@ -1,0 +1,168 @@
+{
+ "made": "2026-11-26 23:51:25",
+ "n_recordings": 1,
+ "f1_json": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w4/f1.json",
+ "f1_filter": {
+  "points_total": 226009,
+  "obs_total": 2071852,
+  "obs_src_ba": 2071843,
+  "pts_nobs_ge": 183063,
+  "pts_reproj_ok": 118777,
+  "pts_kept": 87576,
+  "obs_kept": 984671,
+  "tri_deg_med_kept": 4.808541831078149,
+  "args": {
+   "reproj_max_px": 1.0,
+   "min_obs": 3,
+   "min_tri_deg": 2.0,
+   "min_kf_obs": 0
+  }
+ },
+ "frame_check": {
+  "nobs_match_poses_all": true,
+  "sim3_scale": 0.997922902016658,
+  "sim3_centre_resid_mm_max": 7.1822077128462185e-12,
+  "sim3_rot_resid_deg_max": 0.003145296551137593,
+  "map_frame_reproj_minus_ba_px_absmax": 0.0024802150140644692
+ },
+ "test": "area share of FFS-supported faces (agree >= 2, per-face votes of gsm_ffs_support.py) that are F1-pierced (even tracks, >= 3 segs, >= 2 cams); pass < 1 %",
+ "meshes": {
+  "ffsonly2_e3c": {
+   "supported_ge2/whole": {
+    "area_m2": 58.465,
+    "pierced_even_pct": 0.559,
+    "pierced_odd_pct": 0.564
+   },
+   "supported_ge2/roi": {
+    "area_m2": 5.846,
+    "pierced_even_pct": 0.417,
+    "pierced_odd_pct": 0.463
+   },
+   "agree1/whole": {
+    "area_m2": 9.169,
+    "pierced_even_pct": 0.672,
+    "pierced_odd_pct": 0.679
+   },
+   "agree1/roi": {
+    "area_m2": 0.53,
+    "pierced_even_pct": 0.344,
+    "pierced_odd_pct": 0.87
+   },
+   "agree0/whole": {
+    "area_m2": 150.082,
+    "pierced_even_pct": 0.28,
+    "pierced_odd_pct": 0.3
+   },
+   "agree0/roi": {
+    "area_m2": 16.093,
+    "pierced_even_pct": 0.316,
+    "pierced_odd_pct": 0.343
+   },
+   "pass": true,
+   "votes": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w2/aisle/ffsonly2_e3c/support_votes.npz"
+  },
+  "ffsonly2_carve": {
+   "supported_ge2/whole": {
+    "area_m2": 58.426,
+    "pierced_even_pct": 0.559,
+    "pierced_odd_pct": 0.565
+   },
+   "supported_ge2/roi": {
+    "area_m2": 5.842,
+    "pierced_even_pct": 0.417,
+    "pierced_odd_pct": 0.463
+   },
+   "agree1/whole": {
+    "area_m2": 9.077,
+    "pierced_even_pct": 0.676,
+    "pierced_odd_pct": 0.686
+   },
+   "agree1/roi": {
+    "area_m2": 0.525,
+    "pierced_even_pct": 0.347,
+    "pierced_odd_pct": 0.879
+   },
+   "agree0/whole": {
+    "area_m2": 70.12,
+    "pierced_even_pct": 0.637,
+    "pierced_odd_pct": 0.686
+   },
+   "agree0/roi": {
+    "area_m2": 7.045,
+    "pierced_even_pct": 0.745,
+    "pierced_odd_pct": 0.805
+   },
+   "pass": true,
+   "votes": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/support/support_votes.npz"
+  },
+  "W2_final": {
+   "supported_ge2/whole": {
+    "area_m2": 58.632,
+    "pierced_even_pct": 0.55,
+    "pierced_odd_pct": 0.557
+   },
+   "supported_ge2/roi": {
+    "area_m2": 5.85,
+    "pierced_even_pct": 0.416,
+    "pierced_odd_pct": 0.464
+   },
+   "agree1/whole": {
+    "area_m2": 9.027,
+    "pierced_even_pct": 0.624,
+    "pierced_odd_pct": 0.623
+   },
+   "agree1/roi": {
+    "area_m2": 0.524,
+    "pierced_even_pct": 0.302,
+    "pierced_odd_pct": 0.773
+   },
+   "agree0/whole": {
+    "area_m2": 147.772,
+    "pierced_even_pct": 0.261,
+    "pierced_odd_pct": 0.278
+   },
+   "agree0/roi": {
+    "area_m2": 15.884,
+    "pierced_even_pct": 0.276,
+    "pierced_odd_pct": 0.306
+   },
+   "pass": true,
+   "votes": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w2/aisle/w2_e3c/support_votes.npz"
+  },
+  "W3A_fill": {
+   "supported_ge2/whole": {
+    "area_m2": 58.505,
+    "pierced_even_pct": 0.558,
+    "pierced_odd_pct": 0.564
+   },
+   "supported_ge2/roi": {
+    "area_m2": 5.846,
+    "pierced_even_pct": 0.417,
+    "pierced_odd_pct": 0.463
+   },
+   "agree1/whole": {
+    "area_m2": 9.211,
+    "pierced_even_pct": 0.669,
+    "pierced_odd_pct": 0.676
+   },
+   "agree1/roi": {
+    "area_m2": 0.53,
+    "pierced_even_pct": 0.344,
+    "pierced_odd_pct": 0.87
+   },
+   "agree0/whole": {
+    "area_m2": 151.989,
+    "pierced_even_pct": 0.277,
+    "pierced_odd_pct": 0.296
+   },
+   "agree0/roi": {
+    "area_m2": 16.093,
+    "pierced_even_pct": 0.316,
+    "pierced_odd_pct": 0.343
+   },
+   "pass": true,
+   "votes": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w4/votes_w3A/support_votes.npz"
+  }
+ },
+ "all_pass": true
+}

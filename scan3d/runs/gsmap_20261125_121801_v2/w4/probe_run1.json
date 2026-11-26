@@ -1,0 +1,172 @@
+{
+ "made": "2026-11-26 23:53:37",
+ "n_recordings": 1,
+ "mesh": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/carve.ply",
+ "votes": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/support/support_votes.npz",
+ "roi": {
+  "x": [
+   -0.3,
+   3.3
+  ],
+  "z": [
+   -5.0,
+   -3.2
+  ]
+ },
+ "images": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/cache/rec/kflist1592_248_3464_s0.5_vio_lensonly_L602eadd1",
+ "cams": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/run/dump_ba/cams.npz",
+ "f1": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w4/f1_ffsonly2_carve.npz",
+ "noise": {
+  "method": "Immerkaer Laplacian estimate on grey 0-255 JPEG keyframes (every 5th), median",
+  "sigma_n": 1.404,
+  "thr_multipliers": [
+   1.5,
+   2.5,
+   4.0
+  ],
+  "thresholds_grey": [
+   2.106,
+   3.511,
+   5.617
+  ],
+  "main_threshold_grey": 3.511
+ },
+ "rule": {
+  "seeing_keyframe": "face centre in frame (4 px border), z > 0.1, |cos| > 0.15, not occluded by the mesh itself (z-buffer + max(2 cm, 1 %))",
+  "textureless_view": "9x9 luminance std at the projected pixel < threshold",
+  "textureless_face": "textureless share >= 0.5 of seeing keyframes (>= 1 seeing)",
+  "colour_std": "per-face std over seeing keyframes of the 3x3-mean BGR at the projected pixel, mean over channels (faces with >= 2 views)",
+  "odd_pierced": "odd-track segments through the face >= 3 (also reported with >= 2 cams)"
+ },
+ "roi_faces": 129428,
+ "groups": {
+  "agree0": {
+   "area_m2": 7.045,
+   "faces": 73302,
+   "seen_ge1_area_pct": 78.3,
+   "textureless_share_areaweighted_mean": [
+    0.045,
+    0.119,
+    0.211
+   ],
+   "textureless_face_area_pct": [
+    3.5,
+    11.2,
+    21.2
+   ],
+   "odd_seg_ge3_area_pct": 0.8,
+   "odd_pierced_ge3_2cams_area_pct": 0.8,
+   "odd_seg_ge1_area_pct": 1.83,
+   "even_seg_ge3_area_pct": 0.74,
+   "colour_std_p25_50_75": [
+    8.19,
+    14.63,
+    23.17
+   ]
+  },
+  "agree1": {
+   "area_m2": 0.525,
+   "faces": 5201,
+   "seen_ge1_area_pct": 100.0,
+   "textureless_share_areaweighted_mean": [
+    0.042,
+    0.138,
+    0.283
+   ],
+   "textureless_face_area_pct": [
+    3.1,
+    12.5,
+    27.9
+   ],
+   "odd_seg_ge3_area_pct": 0.88,
+   "odd_pierced_ge3_2cams_area_pct": 0.88,
+   "odd_seg_ge1_area_pct": 1.67,
+   "even_seg_ge3_area_pct": 0.35,
+   "colour_std_p25_50_75": [
+    6.89,
+    14.07,
+    22.02
+   ]
+  },
+  "supported_ge2": {
+   "area_m2": 5.842,
+   "faces": 50925,
+   "seen_ge1_area_pct": 100.0,
+   "textureless_share_areaweighted_mean": [
+    0.051,
+    0.172,
+    0.38
+   ],
+   "textureless_face_area_pct": [
+    4.1,
+    14.6,
+    38.0
+   ],
+   "odd_seg_ge3_area_pct": 0.46,
+   "odd_pierced_ge3_2cams_area_pct": 0.46,
+   "odd_seg_ge1_area_pct": 1.16,
+   "even_seg_ge3_area_pct": 0.42,
+   "colour_std_p25_50_75": [
+    8.09,
+    13.39,
+    18.8
+   ]
+  }
+ },
+ "go_probe": {
+  "thr1.5x/odd_seg_ge3": {
+   "unsupported_agree0_caught_pct": 4.3,
+   "unsupported_agree_lt2_caught_pct": 4.0,
+   "supported_caught_pct": 0.46,
+   "textureless_only_agree0_pct": 3.5,
+   "pierce_only_agree0_pct": 0.8,
+   "go": false
+  },
+  "thr1.5x/odd_seg_ge3_2cams": {
+   "unsupported_agree0_caught_pct": 4.3,
+   "unsupported_agree_lt2_caught_pct": 4.0,
+   "supported_caught_pct": 0.46,
+   "textureless_only_agree0_pct": 3.5,
+   "pierce_only_agree0_pct": 0.8,
+   "go": false
+  },
+  "thr2.5x/odd_seg_ge3": {
+   "unsupported_agree0_caught_pct": 12.0,
+   "unsupported_agree_lt2_caught_pct": 11.2,
+   "supported_caught_pct": 0.46,
+   "textureless_only_agree0_pct": 11.2,
+   "pierce_only_agree0_pct": 0.8,
+   "go": false
+  },
+  "thr2.5x/odd_seg_ge3_2cams": {
+   "unsupported_agree0_caught_pct": 12.0,
+   "unsupported_agree_lt2_caught_pct": 11.2,
+   "supported_caught_pct": 0.46,
+   "textureless_only_agree0_pct": 11.2,
+   "pierce_only_agree0_pct": 0.8,
+   "go": false
+  },
+  "thr4.0x/odd_seg_ge3": {
+   "unsupported_agree0_caught_pct": 21.9,
+   "unsupported_agree_lt2_caught_pct": 20.4,
+   "supported_caught_pct": 0.46,
+   "textureless_only_agree0_pct": 21.2,
+   "pierce_only_agree0_pct": 0.8,
+   "go": false
+  },
+  "thr4.0x/odd_seg_ge3_2cams": {
+   "unsupported_agree0_caught_pct": 21.9,
+   "unsupported_agree_lt2_caught_pct": 20.4,
+   "supported_caught_pct": 0.46,
+   "textureless_only_agree0_pct": 21.2,
+   "pierce_only_agree0_pct": 0.8,
+   "go": false
+  }
+ },
+ "decision": {
+  "main_cell": "thr2.5x/odd_seg_ge3",
+  "go": false,
+  "rule": "GO if >= 40 % of aisle agree==0 area caught and < 1 % of supported (agree>=2) area caught"
+ },
+ "runtime_s": 16.3
+}

@@ -1,0 +1,253 @@
+{
+ "made": "2026-11-26 23:54:53",
+ "n_recordings": 1,
+ "script": "scan3d/gsmap/gsm_f_ruler.py",
+ "inputs": {
+  "ba_state": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/ba/ba_state.npz",
+  "poses": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/poses_all.npz",
+  "meshes": {
+   "ffsonly2_e3c": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/e3c.ply",
+   "ffsonly2_carve": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/carve.ply",
+   "W2_final": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w2/final/e3c.ply",
+   "W3A_fill": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w3/fill/w3.ply"
+  }
+ },
+ "frame_check": {
+  "nobs_match_poses_all": true,
+  "sim3_scale": 0.997922902016658,
+  "sim3_centre_resid_mm_max": 7.1822077128462185e-12,
+  "sim3_rot_resid_deg_max": 0.003145296551137593,
+  "map_frame_reproj_minus_ba_px_absmax": 0.0024802150140644692
+ },
+ "filter": {
+  "points_total": 226009,
+  "obs_total": 2071852,
+  "obs_src_ba": 2071843,
+  "pts_nobs_ge": 183063,
+  "pts_reproj_ok": 118777,
+  "pts_kept": 87576,
+  "obs_kept": 984671,
+  "tri_deg_med_kept": 4.808541831078149,
+  "args": {
+   "reproj_max_px": 1.0,
+   "min_obs": 3,
+   "min_tri_deg": 2.0,
+   "min_kf_obs": 0
+  }
+ },
+ "f1_rule": "segment cam centre -> BA point, shortened by max(5 cm, 3 %) at the point end; pierced face = >= 3 segments from >= 2 cameras (even tracks)",
+ "f2_rule": "mesh area with face centre within 15 cm of any posed camera centre (all frames of poses_all)",
+ "f3_rule": "9 views: audit view (eye (-0.9, -0.25, -3.75), target (1.5, 0.55, -4.45), f 520 px, 960x540, from audit7/an2.py) + 7 keyframe poses (own pose solution, f 520 px); red px = hit pixels on faces with FFS agree < 2 (per-face votes); split no_evidence (front+behind == 0 or not contradicted) / contradicted (front+behind >= 3 and > 2*agree, audit7 rule); tex_red_px_audit = audit7 texture-red count on the GLB (R > 140, G < 90, B < 90)",
+ "view_frames": [
+  506,
+  952,
+  1403,
+  1909,
+  2503,
+  2880,
+  3307
+ ],
+ "sanity": {
+  "test": "area share of FFS-supported faces (agree >= 2, per-face votes of gsm_ffs_support.py) that are F1-pierced (even tracks, >= 3 segs, >= 2 cams); pass < 1 %",
+  "all_pass": true,
+  "meshes": {
+   "ffsonly2_e3c": {
+    "supported_ge2/whole": {
+     "area_m2": 58.465,
+     "pierced_even_pct": 0.559,
+     "pierced_odd_pct": 0.564
+    },
+    "supported_ge2/roi": {
+     "area_m2": 5.846,
+     "pierced_even_pct": 0.417,
+     "pierced_odd_pct": 0.463
+    },
+    "agree1/whole": {
+     "area_m2": 9.169,
+     "pierced_even_pct": 0.672,
+     "pierced_odd_pct": 0.679
+    },
+    "agree1/roi": {
+     "area_m2": 0.53,
+     "pierced_even_pct": 0.344,
+     "pierced_odd_pct": 0.87
+    },
+    "agree0/whole": {
+     "area_m2": 150.082,
+     "pierced_even_pct": 0.28,
+     "pierced_odd_pct": 0.3
+    },
+    "agree0/roi": {
+     "area_m2": 16.093,
+     "pierced_even_pct": 0.316,
+     "pierced_odd_pct": 0.343
+    },
+    "pass": true,
+    "votes": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w2/aisle/ffsonly2_e3c/support_votes.npz"
+   },
+   "ffsonly2_carve": {
+    "supported_ge2/whole": {
+     "area_m2": 58.426,
+     "pierced_even_pct": 0.559,
+     "pierced_odd_pct": 0.565
+    },
+    "supported_ge2/roi": {
+     "area_m2": 5.842,
+     "pierced_even_pct": 0.417,
+     "pierced_odd_pct": 0.463
+    },
+    "agree1/whole": {
+     "area_m2": 9.077,
+     "pierced_even_pct": 0.676,
+     "pierced_odd_pct": 0.686
+    },
+    "agree1/roi": {
+     "area_m2": 0.525,
+     "pierced_even_pct": 0.347,
+     "pierced_odd_pct": 0.879
+    },
+    "agree0/whole": {
+     "area_m2": 70.12,
+     "pierced_even_pct": 0.637,
+     "pierced_odd_pct": 0.686
+    },
+    "agree0/roi": {
+     "area_m2": 7.045,
+     "pierced_even_pct": 0.745,
+     "pierced_odd_pct": 0.805
+    },
+    "pass": true,
+    "votes": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/support/support_votes.npz"
+   },
+   "W2_final": {
+    "supported_ge2/whole": {
+     "area_m2": 58.632,
+     "pierced_even_pct": 0.55,
+     "pierced_odd_pct": 0.557
+    },
+    "supported_ge2/roi": {
+     "area_m2": 5.85,
+     "pierced_even_pct": 0.416,
+     "pierced_odd_pct": 0.464
+    },
+    "agree1/whole": {
+     "area_m2": 9.027,
+     "pierced_even_pct": 0.624,
+     "pierced_odd_pct": 0.623
+    },
+    "agree1/roi": {
+     "area_m2": 0.524,
+     "pierced_even_pct": 0.302,
+     "pierced_odd_pct": 0.773
+    },
+    "agree0/whole": {
+     "area_m2": 147.772,
+     "pierced_even_pct": 0.261,
+     "pierced_odd_pct": 0.278
+    },
+    "agree0/roi": {
+     "area_m2": 15.884,
+     "pierced_even_pct": 0.276,
+     "pierced_odd_pct": 0.306
+    },
+    "pass": true,
+    "votes": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w2/aisle/w2_e3c/support_votes.npz"
+   },
+   "W3A_fill": {
+    "supported_ge2/whole": {
+     "area_m2": 58.505,
+     "pierced_even_pct": 0.558,
+     "pierced_odd_pct": 0.564
+    },
+    "supported_ge2/roi": {
+     "area_m2": 5.846,
+     "pierced_even_pct": 0.417,
+     "pierced_odd_pct": 0.463
+    },
+    "agree1/whole": {
+     "area_m2": 9.211,
+     "pierced_even_pct": 0.669,
+     "pierced_odd_pct": 0.676
+    },
+    "agree1/roi": {
+     "area_m2": 0.53,
+     "pierced_even_pct": 0.344,
+     "pierced_odd_pct": 0.87
+    },
+    "agree0/whole": {
+     "area_m2": 151.989,
+     "pierced_even_pct": 0.277,
+     "pierced_odd_pct": 0.296
+    },
+    "agree0/roi": {
+     "area_m2": 16.093,
+     "pierced_even_pct": 0.316,
+     "pierced_odd_pct": 0.343
+    },
+    "pass": true,
+    "votes": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w4/votes_w3A/support_votes.npz"
+   }
+  }
+ },
+ "voxel_variant_rejected": "pierce counts pooled per 5 / 10 cm voxel: supported faces 6.4 / 19.4 % pierced in the aisle (fails the < 1 % sanity), agree0 10.1 / 24.0 % -> not used",
+ "ray_coverage": {
+  "mesh": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/carve.ply",
+  "tracks": "even + odd kept tracks",
+  "groups": {
+   "agree0/roi": {
+    "area_m2": 7.05,
+    "any_ray_pct": 17.1,
+    "through_ge1_pct": 3.1,
+    "through_ge3_pct": 1.5,
+    "near_point_ge1_pct": 3.8,
+    "behind_point_ge1_pct": 11.6,
+    "behind_point_ge3_pct": 6.1
+   },
+   "agree0/whole": {
+    "area_m2": 70.12,
+    "any_ray_pct": 16.0,
+    "through_ge1_pct": 3.0,
+    "through_ge3_pct": 1.3,
+    "near_point_ge1_pct": 2.3,
+    "behind_point_ge1_pct": 11.8,
+    "behind_point_ge3_pct": 4.5
+   },
+   "agree1/roi": {
+    "area_m2": 0.52,
+    "any_ray_pct": 17.6,
+    "through_ge1_pct": 2.5,
+    "through_ge3_pct": 1.1,
+    "near_point_ge1_pct": 8.4,
+    "behind_point_ge1_pct": 8.4,
+    "behind_point_ge3_pct": 3.7
+   },
+   "agree1/whole": {
+    "area_m2": 9.08,
+    "any_ray_pct": 18.2,
+    "through_ge1_pct": 2.6,
+    "through_ge3_pct": 1.3,
+    "near_point_ge1_pct": 5.1,
+    "behind_point_ge1_pct": 12.2,
+    "behind_point_ge3_pct": 4.4
+   },
+   "supported_ge2/roi": {
+    "area_m2": 5.84,
+    "any_ray_pct": 15.9,
+    "through_ge1_pct": 2.1,
+    "through_ge3_pct": 0.9,
+    "near_point_ge1_pct": 11.3,
+    "behind_point_ge1_pct": 4.1,
+    "behind_point_ge3_pct": 1.7
+   },
+   "supported_ge2/whole": {
+    "area_m2": 58.43,
+    "any_ray_pct": 26.3,
+    "through_ge1_pct": 2.1,
+    "through_ge3_pct": 1.1,
+    "near_point_ge1_pct": 11.5,
+    "behind_point_ge1_pct": 16.2,
+    "behind_point_ge3_pct": 5.8
+   }
+  }
+ }
+}

@@ -1,0 +1,167 @@
+{
+ "made": "2026-11-26 23:50:22",
+ "n_recordings": 1,
+ "inputs": {
+  "ba_state": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/ba/ba_state.npz",
+  "poses": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/poses_all.npz",
+  "meshes": {
+   "ffsonly2_e3c": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/e3c.ply",
+   "ffsonly2_carve": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/carve.ply",
+   "W2_final": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w2/final/e3c.ply",
+   "W3A_fill": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w3/fill/w3.ply"
+  }
+ },
+ "frame_check": {
+  "nobs_match_poses_all": true,
+  "sim3_scale": 0.997922902016658,
+  "sim3_centre_resid_mm_max": 7.1822077128462185e-12,
+  "sim3_rot_resid_deg_max": 0.003145296551137593,
+  "map_frame_reproj_minus_ba_px_absmax": 0.0024802150140644692
+ },
+ "filter": {
+  "points_total": 226009,
+  "obs_total": 2071852,
+  "obs_src_ba": 2071843,
+  "pts_nobs_ge": 183063,
+  "pts_reproj_ok": 118777,
+  "pts_kept": 87576,
+  "obs_kept": 984671,
+  "tri_deg_med_kept": 4.808541831078149,
+  "args": {
+   "reproj_max_px": 1.0,
+   "min_obs": 3,
+   "min_tri_deg": 2.0,
+   "min_kf_obs": 0
+  }
+ },
+ "n_seg_even": 488827,
+ "n_seg_odd": 495844,
+ "rule": "segment cam centre -> BA point, shortened by max(5 cm, 3 %) at the point end; pierced face = >= 3 segments from >= 2 cameras (even tracks)",
+ "meshes": {
+  "ffsonly2_e3c": {
+   "even": {
+    "n_seg": 488827,
+    "blocked_frac": 0.08805,
+    "faces_hit": 15423,
+    "pierced_faces": 6114,
+    "pierced_area_m2": 0.809,
+    "pierced_area_roi_m2": 0.077,
+    "hit_area_m2": 1.894,
+    "hit_area_roi_m2": 0.197
+   },
+   "odd": {
+    "n_seg": 495844,
+    "blocked_frac": 0.08747,
+    "faces_hit": 16023,
+    "pierced_faces": 6414,
+    "pierced_area_m2": 0.842,
+    "pierced_area_roi_m2": 0.087,
+    "hit_area_m2": 1.957,
+    "hit_area_roi_m2": 0.198
+   },
+   "even_point_to_mesh_cm_p25_50_75": [
+    0.33,
+    0.79,
+    1.71
+   ],
+   "even_points_within_3cm_pct": 87.6,
+   "area_m2": 217.72,
+   "area_roi_m2": 22.47,
+   "faces": 1333442
+  },
+  "ffsonly2_carve": {
+   "even": {
+    "n_seg": 488827,
+    "blocked_frac": 0.09314,
+    "faces_hit": 16861,
+    "pierced_faces": 6442,
+    "pierced_area_m2": 0.835,
+    "pierced_area_roi_m2": 0.079,
+    "hit_area_m2": 2.023,
+    "hit_area_roi_m2": 0.202
+   },
+   "odd": {
+    "n_seg": 495844,
+    "blocked_frac": 0.09255,
+    "faces_hit": 17528,
+    "pierced_faces": 6756,
+    "pierced_area_m2": 0.874,
+    "pierced_area_roi_m2": 0.088,
+    "hit_area_m2": 2.104,
+    "hit_area_roi_m2": 0.205
+   },
+   "even_point_to_mesh_cm_p25_50_75": [
+    0.33,
+    0.8,
+    1.75
+   ],
+   "even_points_within_3cm_pct": 86.7,
+   "area_m2": 137.62,
+   "area_roi_m2": 13.41,
+   "faces": 1318240
+  },
+  "W2_final": {
+   "even": {
+    "n_seg": 488827,
+    "blocked_frac": 0.08422,
+    "faces_hit": 14189,
+    "pierced_faces": 5637,
+    "pierced_area_m2": 0.764,
+    "pierced_area_roi_m2": 0.07,
+    "hit_area_m2": 1.787,
+    "hit_area_roi_m2": 0.178
+   },
+   "odd": {
+    "n_seg": 495844,
+    "blocked_frac": 0.08378,
+    "faces_hit": 14735,
+    "pierced_faces": 5934,
+    "pierced_area_m2": 0.794,
+    "pierced_area_roi_m2": 0.08,
+    "hit_area_m2": 1.84,
+    "hit_area_roi_m2": 0.18
+   },
+   "even_point_to_mesh_cm_p25_50_75": [
+    0.33,
+    0.79,
+    1.72
+   ],
+   "even_points_within_3cm_pct": 87.5,
+   "area_m2": 215.43,
+   "area_roi_m2": 22.26,
+   "faces": 1306177
+  },
+  "W3A_fill": {
+   "even": {
+    "n_seg": 488827,
+    "blocked_frac": 0.08805,
+    "faces_hit": 15423,
+    "pierced_faces": 6114,
+    "pierced_area_m2": 0.809,
+    "pierced_area_roi_m2": 0.077,
+    "hit_area_m2": 1.894,
+    "hit_area_roi_m2": 0.197
+   },
+   "odd": {
+    "n_seg": 495844,
+    "blocked_frac": 0.08747,
+    "faces_hit": 16023,
+    "pierced_faces": 6414,
+    "pierced_area_m2": 0.842,
+    "pierced_area_roi_m2": 0.087,
+    "hit_area_m2": 1.957,
+    "hit_area_roi_m2": 0.198
+   },
+   "even_point_to_mesh_cm_p25_50_75": [
+    0.33,
+    0.79,
+    1.71
+   ],
+   "even_points_within_3cm_pct": 87.6,
+   "area_m2": 219.71,
+   "area_roi_m2": 22.47,
+   "faces": 1335930
+  }
+ },
+ "runtime_s": 6.7
+}

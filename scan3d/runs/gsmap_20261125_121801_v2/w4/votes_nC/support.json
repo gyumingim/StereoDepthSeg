@@ -1,0 +1,63 @@
+{
+ "made": "2026-11-26 23:49:01",
+ "inp": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba/support_test/nC/e3c.ply",
+ "fused": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba/fused",
+ "cams": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners/run/dump_ba/cams.npz",
+ "args": {
+  "inp": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba/support_test/nC/e3c.ply",
+  "outdir": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w4/votes_nC",
+  "fused": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba/fused",
+  "cams": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners/run/dump_ba/cams.npz",
+  "n": "2",
+  "k_sig": 3.0,
+  "tol_min": 0.03,
+  "tol_max": 0.15,
+  "occ_eps": 0.02,
+  "occ_rel": 0.01,
+  "cos_min": 0.15,
+  "island": 0.01,
+  "votes": "",
+  "comp_area": 0.0
+ },
+ "faces_in": 1263570,
+ "area_in_m2": 204.69,
+ "n_keyframes": 494,
+ "n_views_with_ffs": 457,
+ "ffs_valid_px_mean": 0.2954,
+ "rule": {
+  "tol": "clip(3.0*S, 0.03, 0.15) m",
+  "occlusion": "mesh z-buffer, visible if z <= zbuf + max(0.02, 0.01*z)",
+  "grazing": "|cos| > 0.15",
+  "z_min": 0.1,
+  "pixel": "face centre, floor(u), full res"
+ },
+ "sanity_dz_agree_m": {
+  "median": -0.0044,
+  "p05": -0.0402,
+  "p95": 0.0222
+ },
+ "face_view_area_pct": {
+  "never_ffs_seen": 67.568,
+  "any_agree": 25.505,
+  "any_wrong_view": 15.134,
+  "never_visible_in_any_kf": 32.389
+ },
+ "per_N": {
+  "N2": {
+   "supported_area_pct": 22.15,
+   "unsupported_area_pct": 77.85,
+   "never_seen_area_pct": 67.568,
+   "wrong_area_pct": 8.03,
+   "wrong_front_major_area_pct": 3.122,
+   "wrong_behind_major_area_pct": 4.908,
+   "weak_area_pct": 2.253,
+   "islands_removed": 7513,
+   "island_area_pct": 0.934,
+   "faces_out": 402807,
+   "area_out_m2": 43.42,
+   "removed_area_pct": 78.785,
+   "out": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w4/votes_nC/support_N2.ply"
+  }
+ },
+ "runtime_s": 43.3
+}
