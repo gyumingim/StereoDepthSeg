@@ -1,0 +1,55 @@
+{
+ "floor": {
+  "normal": [
+   0.004,
+   1.0,
+   0.007
+  ],
+  "y_m": 0.841,
+  "inliers": 31376,
+  "footprint_m2": 7.02,
+  "coverage_before": 0.8832,
+  "footprint_cells_m2": 6.94,
+  "filled_cells": 507,
+  "filled_m2": 0.81,
+  "coverage_after": 1.0
+ },
+ "ceiling": {
+  "normal": [
+   0.01,
+   1.0,
+   0.029
+  ],
+  "y_m": -1.917,
+  "inliers": 8323,
+  "footprint_m2": 2.69,
+  "coverage_before": 0.8809,
+  "footprint_cells_m2": 2.65,
+  "filled_cells": 197,
+  "filled_m2": 0.32,
+  "coverage_after": 1.0
+ },
+ "islands": {
+  "n_components": 5660,
+  "small": 5610,
+  "small_not_near_floor_ceiling": 5484,
+  "removed_components": 800,
+  "removed_faces_pct": 0.09,
+  "rule": "(area < 0.05 m2 or < 200 tri) and > 5 cm from floor/ceiling and seen by <= 2 kf"
+ },
+ "made": "2026-11-26 20:18:08",
+ "inp": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/gs/mesh.ply",
+ "faces_in": 1499999,
+ "faces_out": 1500065,
+ "runtime_s": 19.6,
+ "args": {
+  "inp": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/gs/mesh.ply",
+  "out": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/v3fix.ply",
+  "cell": 0.04,
+  "close": 0.8,
+  "thr": 0.04,
+  "island_area": 0.05,
+  "island_tri": 200,
+  "max_views": 2
+ }
+}

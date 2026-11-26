@@ -1,0 +1,78 @@
+{
+ "made": "2026-11-26 20:19:20",
+ "inp": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/carve.ply",
+ "fused": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/fused",
+ "cams": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/run/dump_ba/cams.npz",
+ "args": {
+  "inp": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/carve.ply",
+  "outdir": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/support",
+  "fused": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/fused",
+  "cams": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/run/dump_ba/cams.npz",
+  "n": "1,2",
+  "k_sig": 3.0,
+  "tol_min": 0.03,
+  "tol_max": 0.15,
+  "occ_eps": 0.02,
+  "occ_rel": 0.01,
+  "cos_min": 0.15,
+  "island": 0.01,
+  "votes": "",
+  "comp_area": 0.0
+ },
+ "faces_in": 1318240,
+ "area_in_m2": 137.62,
+ "n_keyframes": 494,
+ "n_views_with_ffs": 492,
+ "ffs_valid_px_mean": 0.338,
+ "rule": {
+  "tol": "clip(3.0*S, 0.03, 0.15) m",
+  "occlusion": "mesh z-buffer, visible if z <= zbuf + max(0.02, 0.01*z)",
+  "grazing": "|cos| > 0.15",
+  "z_min": 0.1,
+  "pixel": "face centre, floor(u), full res"
+ },
+ "sanity_dz_agree_m": {
+  "median": -0.0038,
+  "p05": -0.0421,
+  "p95": 0.0283
+ },
+ "face_view_area_pct": {
+  "never_ffs_seen": 44.781,
+  "any_agree": 49.049,
+  "any_wrong_view": 22.567,
+  "never_visible_in_any_kf": 9.916
+ },
+ "per_N": {
+  "N1": {
+   "supported_area_pct": 49.049,
+   "unsupported_area_pct": 50.951,
+   "never_seen_area_pct": 44.781,
+   "wrong_area_pct": 6.171,
+   "wrong_front_major_area_pct": 3.373,
+   "wrong_behind_major_area_pct": 2.798,
+   "weak_area_pct": 0.0,
+   "islands_removed": 13296,
+   "island_area_pct": 2.589,
+   "faces_out": 558735,
+   "area_out_m2": 63.94,
+   "removed_area_pct": 53.54,
+   "out": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/support/support_N1.ply"
+  },
+  "N2": {
+   "supported_area_pct": 42.454,
+   "unsupported_area_pct": 57.546,
+   "never_seen_area_pct": 44.781,
+   "wrong_area_pct": 8.256,
+   "wrong_front_major_area_pct": 4.71,
+   "wrong_behind_major_area_pct": 3.546,
+   "weak_area_pct": 4.51,
+   "islands_removed": 9864,
+   "island_area_pct": 1.888,
+   "faces_out": 479441,
+   "area_out_m2": 55.83,
+   "removed_area_pct": 59.434,
+   "out": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/support/support_N2.ply"
+  }
+ },
+ "runtime_s": 46.7
+}

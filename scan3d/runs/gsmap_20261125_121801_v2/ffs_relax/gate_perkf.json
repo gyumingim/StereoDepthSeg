@@ -1,0 +1,6 @@
+{"made": "2026-11-26 19:47:24", "inputs": {"set": "ffs_relax/s4m_r", "judge": "ba_partners2/run/dump_ba/cams.npz", "old": "ffsonly_ba/s4m"},
+ "rule": "gsm_ffs_4m measure rule on NEW pixels only (not in old s4m), per target keyframe with >= 200 new 2x-grid px",
+ "n_kf": 155, "new_fail_pct_per_kf_p50_p90_max": [3.73, 20.61, 69.63],
+ "new_fail_pct_by_depth_m": {"0-1": [10.5, 144757], "1-1.5": [7.1, 385156], "1.5-2": [6.49, 856639], "2-3": [6.87, 1308707], "3-4": [3.66, 71537]},
+ "kf_idx_gt20pct": [[78, 804, 21.1], [236, 26187, 22.1], [238, 9031, 38.7], [240, 9118, 24.0], [251, 2477, 36.9], [259, 9102, 26.6], [260, 10386, 39.5], [261, 7020, 26.8], [264, 7970, 29.7], [295, 10057, 26.4], [296, 11447, 69.6], [317, 16707, 22.1], [318, 18720, 24.5], [319, 20918, 28.0], [321, 22046, 29.3], [332, 36700, 23.5]],
+ "decision": "overall new-pixel fail 6.89 % < 10 % gate -> keep; revert to old depth only the kf idx with new fail > 30 %: 238, 251, 260, 296 (~33k of 2.77M new px). Aisle kf 317-321 (22-29 %) kept: they are the target of the fix; caveat in report."}

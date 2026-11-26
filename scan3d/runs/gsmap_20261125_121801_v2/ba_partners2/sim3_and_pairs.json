@@ -1,0 +1,5 @@
+{"made": "", "inputs": ["ba_partners/run/dump_ba/cams.npz", "ba_partners2/run/dump_ba/cams.npz", "ba_partners/poses_all.npz", "ba_partners2/poses_all.npz", "ba_partners/ffs_pairs2/pairs", "ba_partners/ffs_pairs3/extra"],
+ "kf_sim3_ba2_onto_bap": {"scale": 1.00012, "rot_deg": 0.0057, "resid_cm_med": 3.75, "resid_cm_p95": 7.01, "resid_cm_max": 7.48, "rot_deg_med": 0.301, "rot_deg_p95": 0.879, "worst": "last keyframes 486-493 (smooth drift along the trajectory)"},
+ "consecutive_kf_baseline_ratio_p5_50_95": [0.9866, 1.0010, 1.0129],
+ "old_ffs_pairs_relative_pose_ba2_vs_bap": {"n": 1410, "B_ratio_p5_50_95": [0.9858, 0.9992, 1.0121], "B_ratio_absdev_med": 0.0068, "rel_rot_deg_p50_95": [0.0041, 0.0607], "baseline_dir_deg_p50_95": [0.037, 0.524]},
+ "note": "keyframe shift is a smooth low-frequency deformation of the whole trajectory; kf-partner relative geometry (what the existing FFS depths depend on) is unchanged within ~1 %"}
