@@ -1,0 +1,563 @@
+{
+ "made": "2026-11-27 00:44:41",
+ "n_recordings": 1,
+ "f2_rule": "mesh area with face centre within 15 cm of any posed camera centre (all frames of poses_all)",
+ "f3_rule": "9 views: audit view (eye (-0.9, -0.25, -3.75), target (1.5, 0.55, -4.45), f 520 px, 960x540, from audit7/an2.py) + 7 keyframe poses (own pose solution, f 520 px); red px = hit pixels on faces with FFS agree < 2 (per-face votes); split no_evidence (front+behind == 0 or not contradicted) / contradicted (front+behind >= 3 and > 2*agree, audit7 rule); tex_red_px_audit = audit7 texture-red count on the GLB (R > 140, G < 90, B < 90)",
+ "view_frames": [
+  506,
+  952,
+  1403,
+  1909,
+  2503,
+  2880,
+  3307
+ ],
+ "inputs": {
+  "ffsonly2_e3c": {
+   "ply": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/e3c.ply",
+   "votes": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w2/aisle/ffsonly2_e3c/support_votes.npz",
+   "frame": "ba2",
+   "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/tex_121801_ffsonly2.glb"
+  },
+  "ffsonly2_carve": {
+   "ply": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/carve.ply",
+   "votes": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/support/support_votes.npz",
+   "frame": "ba2"
+  },
+  "W2_final": {
+   "ply": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w2/final/e3c.ply",
+   "votes": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w2/aisle/w2_e3c/support_votes.npz",
+   "frame": "ba2",
+   "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w2/final/tex_121801_w2.glb"
+  },
+  "W3A_fill": {
+   "ply": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w3/fill/w3.ply",
+   "votes": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w4/votes_w3A/support_votes.npz",
+   "frame": "ba2",
+   "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w3/fill/tex_121801_w3.glb"
+  },
+  "nC": {
+   "ply": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba/support_test/nC/e3c.ply",
+   "votes": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w4/votes_nC/support_votes.npz",
+   "frame": "bap",
+   "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba/support_test/nC/tex_121801_ffssupport_NC.glb"
+  },
+  "W5_e3c": {
+   "ply": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w5/b/e3c.ply",
+   "votes": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w5/aisle/w5_e3c/support_votes.npz",
+   "frame": "ba2",
+   "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w5/b/tex_121801_w5.glb"
+  },
+  "W5_carve": {
+   "ply": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w5/b/carve.ply",
+   "votes": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w5/b/support/support_votes.npz",
+   "frame": "ba2"
+  }
+ },
+ "meshes": {
+  "ffsonly2_e3c": {
+   "frame": "ba2",
+   "n_cam_centres": 1592,
+   "area_m2": 217.72,
+   "area_roi_m2": 22.47,
+   "f2_tube_area_m2": 0.0188,
+   "f2_tube_area_roi_m2": 0.0,
+   "unsupported_area_m2": 159.25,
+   "unsupported_area_roi_m2": 16.62,
+   "views": {
+    "audit": {
+     "hit_px": 489739,
+     "red_px": 281562,
+     "red_pct_of_hit": 57.49,
+     "red_noevidence_px": 266610,
+     "red_contradicted_px": 14952
+    },
+    "kf506": {
+     "hit_px": 504873,
+     "red_px": 91043,
+     "red_pct_of_hit": 18.03,
+     "red_noevidence_px": 74435,
+     "red_contradicted_px": 16608
+    },
+    "kf952": {
+     "hit_px": 480198,
+     "red_px": 142982,
+     "red_pct_of_hit": 29.78,
+     "red_noevidence_px": 132845,
+     "red_contradicted_px": 10137
+    },
+    "kf1403": {
+     "hit_px": 513800,
+     "red_px": 65768,
+     "red_pct_of_hit": 12.8,
+     "red_noevidence_px": 45985,
+     "red_contradicted_px": 19783
+    },
+    "kf1909": {
+     "hit_px": 472366,
+     "red_px": 190954,
+     "red_pct_of_hit": 40.43,
+     "red_noevidence_px": 157354,
+     "red_contradicted_px": 33600
+    },
+    "kf2503": {
+     "hit_px": 463695,
+     "red_px": 180939,
+     "red_pct_of_hit": 39.02,
+     "red_noevidence_px": 165289,
+     "red_contradicted_px": 15650
+    },
+    "kf2880": {
+     "hit_px": 448990,
+     "red_px": 160615,
+     "red_pct_of_hit": 35.77,
+     "red_noevidence_px": 145913,
+     "red_contradicted_px": 14702
+    },
+    "kf3307": {
+     "hit_px": 467551,
+     "red_px": 148702,
+     "red_pct_of_hit": 31.8,
+     "red_noevidence_px": 133238,
+     "red_contradicted_px": 15464
+    }
+   },
+   "red_px_total_9views": 1262565,
+   "tex_red_px_audit": 12671,
+   "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/tex_121801_ffsonly2.glb",
+   "sheet": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w5/fruler/sheet_ffsonly2_e3c.jpg"
+  },
+  "ffsonly2_carve": {
+   "frame": "ba2",
+   "n_cam_centres": 1592,
+   "area_m2": 137.62,
+   "area_roi_m2": 13.41,
+   "f2_tube_area_m2": 0.0252,
+   "f2_tube_area_roi_m2": 0.0057,
+   "unsupported_area_m2": 79.2,
+   "unsupported_area_roi_m2": 7.57,
+   "views": {
+    "audit": {
+     "hit_px": 420825,
+     "red_px": 214292,
+     "red_pct_of_hit": 50.92,
+     "red_noevidence_px": 209282,
+     "red_contradicted_px": 5010
+    },
+    "kf506": {
+     "hit_px": 505482,
+     "red_px": 93134,
+     "red_pct_of_hit": 18.42,
+     "red_noevidence_px": 76241,
+     "red_contradicted_px": 16893
+    },
+    "kf952": {
+     "hit_px": 479808,
+     "red_px": 144064,
+     "red_pct_of_hit": 30.03,
+     "red_noevidence_px": 134136,
+     "red_contradicted_px": 9928
+    },
+    "kf1403": {
+     "hit_px": 497671,
+     "red_px": 49740,
+     "red_pct_of_hit": 9.99,
+     "red_noevidence_px": 31159,
+     "red_contradicted_px": 18581
+    },
+    "kf1909": {
+     "hit_px": 476150,
+     "red_px": 194914,
+     "red_pct_of_hit": 40.94,
+     "red_noevidence_px": 160769,
+     "red_contradicted_px": 34145
+    },
+    "kf2503": {
+     "hit_px": 443379,
+     "red_px": 164837,
+     "red_pct_of_hit": 37.18,
+     "red_noevidence_px": 154589,
+     "red_contradicted_px": 10248
+    },
+    "kf2880": {
+     "hit_px": 427787,
+     "red_px": 140348,
+     "red_pct_of_hit": 32.81,
+     "red_noevidence_px": 129982,
+     "red_contradicted_px": 10366
+    },
+    "kf3307": {
+     "hit_px": 440684,
+     "red_px": 121905,
+     "red_pct_of_hit": 27.66,
+     "red_noevidence_px": 112101,
+     "red_contradicted_px": 9804
+    }
+   },
+   "red_px_total_9views": 1123234,
+   "tex_red_px_audit": null,
+   "sheet": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w5/fruler/sheet_ffsonly2_carve.jpg"
+  },
+  "W2_final": {
+   "frame": "ba2",
+   "n_cam_centres": 1592,
+   "area_m2": 215.43,
+   "area_roi_m2": 22.26,
+   "f2_tube_area_m2": 0.0188,
+   "f2_tube_area_roi_m2": 0.0,
+   "unsupported_area_m2": 156.8,
+   "unsupported_area_roi_m2": 16.41,
+   "views": {
+    "audit": {
+     "hit_px": 489358,
+     "red_px": 278954,
+     "red_pct_of_hit": 57.0,
+     "red_noevidence_px": 265297,
+     "red_contradicted_px": 13657
+    },
+    "kf506": {
+     "hit_px": 503749,
+     "red_px": 85527,
+     "red_pct_of_hit": 16.98,
+     "red_noevidence_px": 73936,
+     "red_contradicted_px": 11591
+    },
+    "kf952": {
+     "hit_px": 478674,
+     "red_px": 136797,
+     "red_pct_of_hit": 28.58,
+     "red_noevidence_px": 130973,
+     "red_contradicted_px": 5824
+    },
+    "kf1403": {
+     "hit_px": 512411,
+     "red_px": 61085,
+     "red_pct_of_hit": 11.92,
+     "red_noevidence_px": 49510,
+     "red_contradicted_px": 11575
+    },
+    "kf1909": {
+     "hit_px": 471738,
+     "red_px": 187942,
+     "red_pct_of_hit": 39.84,
+     "red_noevidence_px": 156617,
+     "red_contradicted_px": 31325
+    },
+    "kf2503": {
+     "hit_px": 462161,
+     "red_px": 176508,
+     "red_pct_of_hit": 38.19,
+     "red_noevidence_px": 162988,
+     "red_contradicted_px": 13520
+    },
+    "kf2880": {
+     "hit_px": 447541,
+     "red_px": 156718,
+     "red_pct_of_hit": 35.02,
+     "red_noevidence_px": 144079,
+     "red_contradicted_px": 12639
+    },
+    "kf3307": {
+     "hit_px": 467241,
+     "red_px": 147786,
+     "red_pct_of_hit": 31.63,
+     "red_noevidence_px": 132464,
+     "red_contradicted_px": 15322
+    }
+   },
+   "red_px_total_9views": 1231317,
+   "tex_red_px_audit": 12541,
+   "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w2/final/tex_121801_w2.glb",
+   "sheet": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w5/fruler/sheet_W2_final.jpg"
+  },
+  "W3A_fill": {
+   "frame": "ba2",
+   "n_cam_centres": 1592,
+   "area_m2": 219.71,
+   "area_roi_m2": 22.47,
+   "f2_tube_area_m2": 0.0188,
+   "f2_tube_area_roi_m2": 0.0,
+   "unsupported_area_m2": 161.2,
+   "unsupported_area_roi_m2": 16.62,
+   "views": {
+    "audit": {
+     "hit_px": 489739,
+     "red_px": 281562,
+     "red_pct_of_hit": 57.49,
+     "red_noevidence_px": 266610,
+     "red_contradicted_px": 14952
+    },
+    "kf506": {
+     "hit_px": 509869,
+     "red_px": 95910,
+     "red_pct_of_hit": 18.81,
+     "red_noevidence_px": 78714,
+     "red_contradicted_px": 17196
+    },
+    "kf952": {
+     "hit_px": 480198,
+     "red_px": 142982,
+     "red_pct_of_hit": 29.78,
+     "red_noevidence_px": 132845,
+     "red_contradicted_px": 10137
+    },
+    "kf1403": {
+     "hit_px": 513800,
+     "red_px": 65768,
+     "red_pct_of_hit": 12.8,
+     "red_noevidence_px": 45985,
+     "red_contradicted_px": 19783
+    },
+    "kf1909": {
+     "hit_px": 472366,
+     "red_px": 190954,
+     "red_pct_of_hit": 40.43,
+     "red_noevidence_px": 157354,
+     "red_contradicted_px": 33600
+    },
+    "kf2503": {
+     "hit_px": 466030,
+     "red_px": 183202,
+     "red_pct_of_hit": 39.31,
+     "red_noevidence_px": 167451,
+     "red_contradicted_px": 15751
+    },
+    "kf2880": {
+     "hit_px": 449943,
+     "red_px": 161544,
+     "red_pct_of_hit": 35.9,
+     "red_noevidence_px": 146458,
+     "red_contradicted_px": 15086
+    },
+    "kf3307": {
+     "hit_px": 467551,
+     "red_px": 148702,
+     "red_pct_of_hit": 31.8,
+     "red_noevidence_px": 133238,
+     "red_contradicted_px": 15464
+    }
+   },
+   "red_px_total_9views": 1270624,
+   "tex_red_px_audit": 12601,
+   "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w3/fill/tex_121801_w3.glb",
+   "sheet": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w5/fruler/sheet_W3A_fill.jpg"
+  },
+  "nC": {
+   "frame": "bap",
+   "n_cam_centres": 1458,
+   "area_m2": 204.69,
+   "area_roi_m2": 20.08,
+   "f2_tube_area_m2": 0.0,
+   "f2_tube_area_roi_m2": 0.0,
+   "unsupported_area_m2": 159.35,
+   "unsupported_area_roi_m2": 16.56,
+   "views": {
+    "audit": {
+     "hit_px": 474889,
+     "red_px": 300305,
+     "red_pct_of_hit": 63.24,
+     "red_noevidence_px": 285278,
+     "red_contradicted_px": 15027
+    },
+    "kf506": {
+     "hit_px": 501353,
+     "red_px": 139298,
+     "red_pct_of_hit": 27.78,
+     "red_noevidence_px": 102570,
+     "red_contradicted_px": 36728
+    },
+    "kf952": {
+     "hit_px": 476648,
+     "red_px": 177698,
+     "red_pct_of_hit": 37.28,
+     "red_noevidence_px": 168408,
+     "red_contradicted_px": 9290
+    },
+    "kf1403": {
+     "hit_px": 516658,
+     "red_px": 73729,
+     "red_pct_of_hit": 14.27,
+     "red_noevidence_px": 52188,
+     "red_contradicted_px": 21541
+    },
+    "kf1909": {
+     "hit_px": 475070,
+     "red_px": 282390,
+     "red_pct_of_hit": 59.44,
+     "red_noevidence_px": 263877,
+     "red_contradicted_px": 18513
+    },
+    "kf2503": {
+     "hit_px": 450999,
+     "red_px": 217415,
+     "red_pct_of_hit": 48.21,
+     "red_noevidence_px": 203866,
+     "red_contradicted_px": 13549
+    },
+    "kf2880": {
+     "hit_px": 446921,
+     "red_px": 164836,
+     "red_pct_of_hit": 36.88,
+     "red_noevidence_px": 148459,
+     "red_contradicted_px": 16377
+    },
+    "kf3307": {
+     "hit_px": 474391,
+     "red_px": 158865,
+     "red_pct_of_hit": 33.49,
+     "red_noevidence_px": 144532,
+     "red_contradicted_px": 14333
+    }
+   },
+   "red_px_total_9views": 1514536,
+   "tex_red_px_audit": 5249,
+   "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba/support_test/nC/tex_121801_ffssupport_NC.glb",
+   "sheet": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w5/fruler/sheet_nC.jpg"
+  },
+  "W5_e3c": {
+   "frame": "ba2",
+   "n_cam_centres": 1592,
+   "area_m2": 218.12,
+   "area_roi_m2": 22.67,
+   "f2_tube_area_m2": 0.0023,
+   "f2_tube_area_roi_m2": 0.0,
+   "unsupported_area_m2": 159.79,
+   "unsupported_area_roi_m2": 16.84,
+   "views": {
+    "audit": {
+     "hit_px": 485925,
+     "red_px": 271750,
+     "red_pct_of_hit": 55.92,
+     "red_noevidence_px": 256306,
+     "red_contradicted_px": 15444
+    },
+    "kf506": {
+     "hit_px": 502772,
+     "red_px": 89262,
+     "red_pct_of_hit": 17.75,
+     "red_noevidence_px": 72355,
+     "red_contradicted_px": 16907
+    },
+    "kf952": {
+     "hit_px": 477653,
+     "red_px": 141648,
+     "red_pct_of_hit": 29.66,
+     "red_noevidence_px": 131777,
+     "red_contradicted_px": 9871
+    },
+    "kf1403": {
+     "hit_px": 515371,
+     "red_px": 67816,
+     "red_pct_of_hit": 13.16,
+     "red_noevidence_px": 47069,
+     "red_contradicted_px": 20747
+    },
+    "kf1909": {
+     "hit_px": 471922,
+     "red_px": 191490,
+     "red_pct_of_hit": 40.58,
+     "red_noevidence_px": 157342,
+     "red_contradicted_px": 34148
+    },
+    "kf2503": {
+     "hit_px": 461751,
+     "red_px": 177626,
+     "red_pct_of_hit": 38.47,
+     "red_noevidence_px": 162070,
+     "red_contradicted_px": 15556
+    },
+    "kf2880": {
+     "hit_px": 453456,
+     "red_px": 163870,
+     "red_pct_of_hit": 36.14,
+     "red_noevidence_px": 151279,
+     "red_contradicted_px": 12591
+    },
+    "kf3307": {
+     "hit_px": 471591,
+     "red_px": 152934,
+     "red_pct_of_hit": 32.43,
+     "red_noevidence_px": 138609,
+     "red_contradicted_px": 14325
+    }
+   },
+   "red_px_total_9views": 1256396,
+   "tex_red_px_audit": 11327,
+   "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w5/b/tex_121801_w5.glb",
+   "sheet": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w5/fruler/sheet_W5_e3c.jpg"
+  },
+  "W5_carve": {
+   "frame": "ba2",
+   "n_cam_centres": 1592,
+   "area_m2": 137.78,
+   "area_roi_m2": 13.59,
+   "f2_tube_area_m2": 0.0028,
+   "f2_tube_area_roi_m2": 0.0,
+   "unsupported_area_m2": 79.49,
+   "unsupported_area_roi_m2": 7.76,
+   "views": {
+    "audit": {
+     "hit_px": 419178,
+     "red_px": 216250,
+     "red_pct_of_hit": 51.59,
+     "red_noevidence_px": 211487,
+     "red_contradicted_px": 4763
+    },
+    "kf506": {
+     "hit_px": 503520,
+     "red_px": 91579,
+     "red_pct_of_hit": 18.19,
+     "red_noevidence_px": 74161,
+     "red_contradicted_px": 17418
+    },
+    "kf952": {
+     "hit_px": 480483,
+     "red_px": 145473,
+     "red_pct_of_hit": 30.28,
+     "red_noevidence_px": 135883,
+     "red_contradicted_px": 9590
+    },
+    "kf1403": {
+     "hit_px": 500736,
+     "red_px": 53263,
+     "red_pct_of_hit": 10.64,
+     "red_noevidence_px": 33515,
+     "red_contradicted_px": 19748
+    },
+    "kf1909": {
+     "hit_px": 473767,
+     "red_px": 193565,
+     "red_pct_of_hit": 40.86,
+     "red_noevidence_px": 159449,
+     "red_contradicted_px": 34116
+    },
+    "kf2503": {
+     "hit_px": 445199,
+     "red_px": 164728,
+     "red_pct_of_hit": 37.0,
+     "red_noevidence_px": 154720,
+     "red_contradicted_px": 10008
+    },
+    "kf2880": {
+     "hit_px": 431756,
+     "red_px": 143394,
+     "red_pct_of_hit": 33.21,
+     "red_noevidence_px": 134551,
+     "red_contradicted_px": 8843
+    },
+    "kf3307": {
+     "hit_px": 445704,
+     "red_px": 127469,
+     "red_pct_of_hit": 28.6,
+     "red_noevidence_px": 117854,
+     "red_contradicted_px": 9615
+    }
+   },
+   "red_px_total_9views": 1135721,
+   "tex_red_px_audit": null,
+   "sheet": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w5/fruler/sheet_W5_carve.jpg"
+  }
+ },
+ "compare_sheet": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w5/fruler/sheet_compare_ffsonly2_W2_W3A.jpg",
+ "runtime_s": 19.9
+}

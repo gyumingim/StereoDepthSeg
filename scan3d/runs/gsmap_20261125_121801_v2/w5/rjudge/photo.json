@@ -1,0 +1,201 @@
+{
+ "made": "2026-11-27 00:44:22",
+ "n_recordings": 1,
+ "inputs": {
+  "maps": {
+   "ffsonly2": {
+    "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/tex_121801_ffsonly2.glb",
+    "own_poses": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/poses_all.npz"
+   },
+   "W5": {
+    "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w5/b/tex_121801_w5.glb",
+    "own_poses": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/poses_all.npz"
+   }
+  },
+  "images": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w1/ba3/cache/rec/kflist1847_248_3465_s0.5_vio_lensonly_L602eadd1"
+ },
+ "note": "textured mesh ray-cast at 960x540 (nearest texel, eval2 P4 rule) from the map's OWN pose of the frame, area-downsampled to 480x270, vs the undistorted photo. kf = every 4th keyframe (texture sources: NOT held out, tests self-consistency). partner = non-keyframe BA frames present in all three pose solutions, every 6th (never used for texture or 2DGS training = held out; they sit a few cm from keyframes). common = pixels hit by all four maps (same pixel set for every map). colourfit = per-image 3x3 + bias. SSIM = grey, 11 px gaussian, on the eroded common mask. se = standard error over frames of the paired per-frame difference.",
+ "n_frames": {
+  "kf": 123,
+  "partner": 161
+ },
+ "table": {
+  "kf": {
+   "ffsonly2": {
+    "hit_share": 0.9227,
+    "psnr_hit": 19.2626,
+    "psnr_common": 19.3163,
+    "psnr_common_colourfit": 20.1712,
+    "ssim_common": 0.6795,
+    "common_share": 0.9064
+   },
+   "W5": {
+    "hit_share": 0.9236,
+    "psnr_hit": 19.2585,
+    "psnr_common": 19.3318,
+    "psnr_common_colourfit": 20.2102,
+    "ssim_common": 0.6815,
+    "common_share": 0.9064
+   }
+  },
+  "partner": {
+   "ffsonly2": {
+    "hit_share": 0.9264,
+    "psnr_hit": 19.2185,
+    "psnr_common": 19.2728,
+    "psnr_common_colourfit": 20.1617,
+    "ssim_common": 0.6812,
+    "common_share": 0.9101
+   },
+   "W5": {
+    "hit_share": 0.9267,
+    "psnr_hit": 19.2148,
+    "psnr_common": 19.2806,
+    "psnr_common_colourfit": 20.182,
+    "ssim_common": 0.6827,
+    "common_share": 0.9101
+   }
+  }
+ },
+ "diffs": {
+  "kf": {
+   "W5-ffsonly2": {
+    "hit_share": {
+     "diff": 0.0009,
+     "se": 0.0006,
+     "z": 1.5,
+     "halves": [
+      0.001,
+      0.0008
+     ],
+     "n": 123
+    },
+    "psnr_hit": {
+     "diff": -0.0041,
+     "se": 0.0234,
+     "z": -0.2,
+     "halves": [
+      0.0023,
+      -0.0105
+     ],
+     "n": 123
+    },
+    "psnr_common": {
+     "diff": 0.0154,
+     "se": 0.0221,
+     "z": 0.7,
+     "halves": [
+      0.0176,
+      0.0132
+     ],
+     "n": 123
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.039,
+     "se": 0.0191,
+     "z": 2.0,
+     "halves": [
+      0.0386,
+      0.0394
+     ],
+     "n": 123
+    },
+    "ssim_common": {
+     "diff": 0.0019,
+     "se": 0.0005,
+     "z": 3.7,
+     "halves": [
+      0.0018,
+      0.002
+     ],
+     "n": 123
+    }
+   }
+  },
+  "partner": {
+   "W5-ffsonly2": {
+    "hit_share": {
+     "diff": 0.0003,
+     "se": 0.0005,
+     "z": 0.6,
+     "halves": [
+      0.0004,
+      0.0002
+     ],
+     "n": 161
+    },
+    "psnr_hit": {
+     "diff": -0.0037,
+     "se": 0.0192,
+     "z": -0.2,
+     "halves": [
+      -0.02,
+      0.0128
+     ],
+     "n": 161
+    },
+    "psnr_common": {
+     "diff": 0.0079,
+     "se": 0.0187,
+     "z": 0.4,
+     "halves": [
+      -0.0073,
+      0.0232
+     ],
+     "n": 161
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.0202,
+     "se": 0.0163,
+     "z": 1.2,
+     "halves": [
+      0.0067,
+      0.034
+     ],
+     "n": 161
+    },
+    "ssim_common": {
+     "diff": 0.0014,
+     "se": 0.0004,
+     "z": 3.3,
+     "halves": [
+      0.0016,
+      0.0012
+     ],
+     "n": 161
+    }
+   }
+  }
+ },
+ "halves": {
+  "kf": {
+   "ffsonly2": {
+    "psnr_common": [
+     19.332,
+     19.301
+    ]
+   },
+   "W5": {
+    "psnr_common": [
+     19.349,
+     19.314
+    ]
+   }
+  },
+  "partner": {
+   "ffsonly2": {
+    "psnr_common": [
+     19.318,
+     19.227
+    ]
+   },
+   "W5": {
+    "psnr_common": [
+     19.31,
+     19.25
+    ]
+   }
+  }
+ },
+ "runtime_s": 67.0
+}

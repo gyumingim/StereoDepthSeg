@@ -79,6 +79,8 @@ def main():
     ap.add_argument("--depth-w", type=float, default=0.1); ap.add_argument("--fill-w", type=float, default=0.1)
     ap.add_argument("--depth-sigma", default="", help="off by default. 'fused' = key S in the fused npz, or a dir of KF.npz files with key S "
                     "(e.g. ffs_4m/s4m): FFS pixel depth weight (median S of the view / S)^2 clipped to [0.05, 4]")
+    ap.add_argument("--sparse-depth", default="", help="W5 11-27: dir of KF.npz (Z, S) BA sparse depth targets (gsm_w5_sparse.py), used only on "
+                    "pixels without FFS, weight (sigma_ref/S)^2 clip [0.05, 4] with sigma_ref = view median FFS sigma (same scheme as --depth-sigma)")
     ap.add_argument("--hold", type=int, default=8); ap.add_argument("--stride", type=int, default=3)
     ap.add_argument("--voxel", type=float, default=0.01); ap.add_argument("--max-gs", type=int, default=3_000_000)
     ap.add_argument("--aniso-max", type=float, default=0, help=">0: penalise log(max_scale/min_scale) above log(this) (anti-spike)")
@@ -199,6 +201,23 @@ def main():
             ref = np.median(S[ok]); wnp[c_] = np.where(ok, np.clip((ref / np.where(ok, S, 1.0)) ** 2, 0.05, 4.0), wnp[c_])
         print(f"depth sigma weights from {a.depth_sigma}: mean FFS w "
               f"{np.mean([wnp[c][Ff[c] == 1].mean() for c in train if (Ff[c] == 1).any()]):.3f}", flush=True)
+    if a.sparse_depth:   # W5 11-27: BA sparse depth targets on non-FFS pixels only (FFS pixels keep FFS), same weighting as --depth-sigma
+        nsp, nkf_sp = 0, 0
+        for c_, i in enumerate(kf):
+            q_ = Path(a.sparse_depth) / f"{i:05d}.npz"
+            if not q_.exists():
+                continue
+            d_ = np.load(q_); Zs = d_["Z"]; Ss = d_["S"].astype(np.float64)
+            ok = np.isfinite(Zs) & (Zs > 0) & (Ff[c_] == 0) & vmask & np.isfinite(Ss) & (Ss > 0)
+            if not ok.any():
+                continue
+            S0 = np.load(fused / f"{i:05d}.npz")["S"].astype(np.float64); okf = (Ff[c_] == 1) & np.isfinite(S0) & (S0 > 0)
+            ref = np.median(S0[okf]) if okf.sum() >= 10 else np.median(Ss[ok])
+            wnp[c_] = np.where(ok, np.clip((ref / np.where(ok, Ss, 1.0)) ** 2, 0.05, 4.0), wnp[c_])
+            zt[c_] = torch.from_numpy(np.where(ok, Zs, np.nan_to_num(Zf[c_], nan=0.0))).half().to(dev)
+            nsp += int(ok.sum()); nkf_sp += 1
+        print(f"sparse depth from {a.sparse_depth}: {nsp} px in {nkf_sp} views, mean sparse w "
+              f"{np.mean([wnp[c][np.isfinite(np.load(Path(a.sparse_depth) / f'{kf[c]:05d}.npz')['Z']) & (Ff[c] == 0) & vmask].mean() for c in train[:50]]):.3f} (first 50 views)", flush=True)
     wt = [torch.from_numpy(w_.astype(np.float16)).to(dev) for w_ in wnp]
 
     extra = {}
