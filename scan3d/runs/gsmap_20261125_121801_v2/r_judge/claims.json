@@ -1,0 +1,106 @@
+{
+ "made": "2026-11-26 22:19:44",
+ "n_recordings": 1,
+ "inputs": {
+  "inventory": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w1/inventory.json",
+  "wide_old": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba/wide_poses.npz",
+  "ba3": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w1/ba3/poses_all.npz",
+  "bap": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners/poses_all.npz"
+ },
+ "note": "independent recomputation (own code) of the W1 worker numbers. wide pair old pose = bap keyframe + ffsonly_ba/wide_poses partner (matched by frame and anchor keyframe); new = BA3 keyframe + BA3 partner.",
+ "wide_poses_src_counts": {
+  "ba": 327,
+  "vio_anchor": 294
+ },
+ "wide_vio_anchor": {
+  "n": 294,
+  "anchor_not_matched": 294,
+  "B_ratio_absdev_med_pct": 0.464,
+  "B_ratio_p5_50_95": [
+   0.9873,
+   1.0012,
+   1.0139
+  ],
+  "frac_off_gt_1pct": 0.2687,
+  "frac_off_gt_2pct": 0.017,
+  "rel_rot_deg_p50_p95": [
+   0.0281,
+   0.1734
+  ],
+  "rel_rot_as_px_p50_p95": [
+   0.32,
+   1.95
+  ]
+ },
+ "wide_ba": {
+  "n": 327,
+  "anchor_not_matched": 327,
+  "B_ratio_absdev_med_pct": 0.442,
+  "B_ratio_p5_50_95": [
+   0.9859,
+   1.0023,
+   1.0129
+  ],
+  "frac_off_gt_1pct": 0.2171,
+  "frac_off_gt_2pct": 0.0306,
+  "rel_rot_deg_p50_p95": [
+   0.0104,
+   0.2226
+  ],
+  "rel_rot_as_px_p50_p95": [
+   0.12,
+   2.5
+  ]
+ },
+ "ba3_vs_ba2": {
+  "shift_cm_med": 0.278,
+  "p95": 0.565,
+  "max": 1.074,
+  "n": 494,
+  "note": "both solutions were Sim3-aligned to the same old keyframe centres; no extra alignment here"
+ },
+ "ba3_vs_bap": {
+  "shift_cm_med": 3.892,
+  "p95": 7.086,
+  "max": 7.499,
+  "n": 494,
+  "note": "both solutions were Sim3-aligned to the same old keyframe centres; no extra alignment here"
+ },
+ "ba2_vs_bap": {
+  "shift_cm_med": 3.775,
+  "p95": 7.001,
+  "max": 7.475,
+  "n": 494,
+  "note": "both solutions were Sim3-aligned to the same old keyframe centres; no extra alignment here"
+ },
+ "gate": {
+  "w1_s4m_rg_all": {
+   "fail_pct": 3.95,
+   "px_2x": 21634878
+  },
+  "w1_s4m_rg_new": {
+   "fail_pct": 6.25,
+   "px_2x": 2760119
+  },
+  "w1_s4m_rg_aisle": {
+   "fail_pct": 12.68,
+   "px_2x": 391255
+  },
+  "w1_s4m_all": {
+   "fail_pct": 3.61,
+   "px_2x": 18890680
+  },
+  "nC_s4m_judge_bap": {
+   "fail_pct": 3.55,
+   "px_2x": 18898521
+  },
+  "ffsonly2_s4m_r_judge_ba2": {
+   "fail_pct": 4.01,
+   "px_2x": 21649691
+  },
+  "files": [
+   "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w1/measure_w1.json",
+   "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffs_relax/measure_relax.json"
+  ]
+ }
+}

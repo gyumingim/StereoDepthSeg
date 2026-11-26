@@ -1,0 +1,577 @@
+{
+ "made": "2026-11-26 22:23:43",
+ "n_recordings": 1,
+ "inputs": {
+  "maps": {
+   "np": {
+    "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba/newpose/tex_121801_ffsonly_np.glb",
+    "own_poses": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners/poses_all.npz"
+   },
+   "nC": {
+    "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba/support_test/nC/tex_121801_ffssupport_NC.glb",
+    "own_poses": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners/poses_all.npz"
+   },
+   "ffsonly2": {
+    "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/tex_121801_ffsonly2.glb",
+    "own_poses": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/poses_all.npz"
+   },
+   "W1": {
+    "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w1/b/tex_121801_w1.glb",
+    "own_poses": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w1/ba3/poses_all.npz"
+   }
+  },
+  "images": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w1/ba3/cache/rec/kflist1847_248_3465_s0.5_vio_lensonly_L602eadd1"
+ },
+ "note": "textured mesh ray-cast at 960x540 (nearest texel, eval2 P4 rule) from the map's OWN pose of the frame, area-downsampled to 480x270, vs the undistorted photo. kf = every 4th keyframe (texture sources: NOT held out, tests self-consistency). partner = non-keyframe BA frames present in all three pose solutions, every 6th (never used for texture or 2DGS training = held out; they sit a few cm from keyframes). common = pixels hit by all four maps (same pixel set for every map). colourfit = per-image 3x3 + bias. SSIM = grey, 11 px gaussian, on the eroded common mask. se = standard error over frames of the paired per-frame difference.",
+ "n_frames": {
+  "kf": 123,
+  "partner": 161
+ },
+ "table": {
+  "kf": {
+   "np": {
+    "hit_share": 0.9052,
+    "psnr_hit": 19.1359,
+    "psnr_common": 19.2939,
+    "psnr_common_colourfit": 20.1705,
+    "ssim_common": 0.6762,
+    "common_share": 0.8598
+   },
+   "nC": {
+    "hit_share": 0.896,
+    "psnr_hit": 19.0615,
+    "psnr_common": 19.1871,
+    "psnr_common_colourfit": 20.0872,
+    "ssim_common": 0.6747,
+    "common_share": 0.8598
+   },
+   "ffsonly2": {
+    "hit_share": 0.9227,
+    "psnr_hit": 19.2626,
+    "psnr_common": 19.3239,
+    "psnr_common_colourfit": 20.2282,
+    "ssim_common": 0.6805,
+    "common_share": 0.8598
+   },
+   "W1": {
+    "hit_share": 0.9186,
+    "psnr_hit": 19.3331,
+    "psnr_common": 19.3922,
+    "psnr_common_colourfit": 20.2735,
+    "ssim_common": 0.6822,
+    "common_share": 0.8598
+   }
+  },
+  "partner": {
+   "np": {
+    "hit_share": 0.9135,
+    "psnr_hit": 19.131,
+    "psnr_common": 19.2887,
+    "psnr_common_colourfit": 20.19,
+    "ssim_common": 0.6789,
+    "common_share": 0.8693
+   },
+   "nC": {
+    "hit_share": 0.9058,
+    "psnr_hit": 19.0691,
+    "psnr_common": 19.1946,
+    "psnr_common_colourfit": 20.1178,
+    "ssim_common": 0.6778,
+    "common_share": 0.8693
+   },
+   "ffsonly2": {
+    "hit_share": 0.9264,
+    "psnr_hit": 19.2185,
+    "psnr_common": 19.3033,
+    "psnr_common_colourfit": 20.2397,
+    "ssim_common": 0.6829,
+    "common_share": 0.8693
+   },
+   "W1": {
+    "hit_share": 0.9213,
+    "psnr_hit": 19.3018,
+    "psnr_common": 19.377,
+    "psnr_common_colourfit": 20.2868,
+    "ssim_common": 0.6836,
+    "common_share": 0.8693
+   }
+  }
+ },
+ "diffs": {
+  "kf": {
+   "W1-nC": {
+    "hit_share": {
+     "diff": 0.0226,
+     "se": 0.0059,
+     "z": 3.9,
+     "halves": [
+      0.0223,
+      0.0229
+     ],
+     "n": 123
+    },
+    "psnr_hit": {
+     "diff": 0.2716,
+     "se": 0.0343,
+     "z": 7.9,
+     "halves": [
+      0.2864,
+      0.2565
+     ],
+     "n": 123
+    },
+    "psnr_common": {
+     "diff": 0.2051,
+     "se": 0.029,
+     "z": 7.1,
+     "halves": [
+      0.2149,
+      0.1951
+     ],
+     "n": 123
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.1863,
+     "se": 0.0285,
+     "z": 6.5,
+     "halves": [
+      0.1895,
+      0.183
+     ],
+     "n": 123
+    },
+    "ssim_common": {
+     "diff": 0.0075,
+     "se": 0.0015,
+     "z": 5.1,
+     "halves": [
+      0.007,
+      0.0081
+     ],
+     "n": 123
+    }
+   },
+   "ffsonly2-nC": {
+    "hit_share": {
+     "diff": 0.0268,
+     "se": 0.0058,
+     "z": 4.6,
+     "halves": [
+      0.0266,
+      0.027
+     ],
+     "n": 123
+    },
+    "psnr_hit": {
+     "diff": 0.2011,
+     "se": 0.0373,
+     "z": 5.4,
+     "halves": [
+      0.2079,
+      0.1942
+     ],
+     "n": 123
+    },
+    "psnr_common": {
+     "diff": 0.1368,
+     "se": 0.0295,
+     "z": 4.6,
+     "halves": [
+      0.1356,
+      0.1381
+     ],
+     "n": 123
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.141,
+     "se": 0.0295,
+     "z": 4.8,
+     "halves": [
+      0.1371,
+      0.1448
+     ],
+     "n": 123
+    },
+    "ssim_common": {
+     "diff": 0.0058,
+     "se": 0.0015,
+     "z": 3.9,
+     "halves": [
+      0.0055,
+      0.0062
+     ],
+     "n": 123
+    }
+   },
+   "W1-ffsonly2": {
+    "hit_share": {
+     "diff": -0.0042,
+     "se": 0.0007,
+     "z": -5.6,
+     "halves": [
+      -0.0042,
+      -0.0041
+     ],
+     "n": 123
+    },
+    "psnr_hit": {
+     "diff": 0.0705,
+     "se": 0.0181,
+     "z": 3.9,
+     "halves": [
+      0.0786,
+      0.0623
+     ],
+     "n": 123
+    },
+    "psnr_common": {
+     "diff": 0.0683,
+     "se": 0.02,
+     "z": 3.4,
+     "halves": [
+      0.0793,
+      0.057
+     ],
+     "n": 123
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.0453,
+     "se": 0.0187,
+     "z": 2.4,
+     "halves": [
+      0.0523,
+      0.0382
+     ],
+     "n": 123
+    },
+    "ssim_common": {
+     "diff": 0.0017,
+     "se": 0.0007,
+     "z": 2.4,
+     "halves": [
+      0.0015,
+      0.0019
+     ],
+     "n": 123
+    }
+   },
+   "nC-np": {
+    "hit_share": {
+     "diff": -0.0092,
+     "se": 0.001,
+     "z": -9.6,
+     "halves": [
+      -0.0091,
+      -0.0093
+     ],
+     "n": 123
+    },
+    "psnr_hit": {
+     "diff": -0.0744,
+     "se": 0.0124,
+     "z": -6.0,
+     "halves": [
+      -0.0777,
+      -0.0711
+     ],
+     "n": 123
+    },
+    "psnr_common": {
+     "diff": -0.1068,
+     "se": 0.0132,
+     "z": -8.1,
+     "halves": [
+      -0.1107,
+      -0.1029
+     ],
+     "n": 123
+    },
+    "psnr_common_colourfit": {
+     "diff": -0.0833,
+     "se": 0.0106,
+     "z": -7.9,
+     "halves": [
+      -0.0886,
+      -0.0779
+     ],
+     "n": 123
+    },
+    "ssim_common": {
+     "diff": -0.0015,
+     "se": 0.0004,
+     "z": -3.7,
+     "halves": [
+      -0.0015,
+      -0.0014
+     ],
+     "n": 123
+    }
+   }
+  },
+  "partner": {
+   "W1-nC": {
+    "hit_share": {
+     "diff": 0.0156,
+     "se": 0.0042,
+     "z": 3.7,
+     "halves": [
+      0.0168,
+      0.0143
+     ],
+     "n": 161
+    },
+    "psnr_hit": {
+     "diff": 0.2327,
+     "se": 0.0313,
+     "z": 7.4,
+     "halves": [
+      0.2334,
+      0.232
+     ],
+     "n": 161
+    },
+    "psnr_common": {
+     "diff": 0.1824,
+     "se": 0.0283,
+     "z": 6.4,
+     "halves": [
+      0.1799,
+      0.1849
+     ],
+     "n": 161
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.169,
+     "se": 0.0275,
+     "z": 6.2,
+     "halves": [
+      0.1689,
+      0.1692
+     ],
+     "n": 161
+    },
+    "ssim_common": {
+     "diff": 0.0059,
+     "se": 0.0013,
+     "z": 4.7,
+     "halves": [
+      0.0055,
+      0.0062
+     ],
+     "n": 161
+    }
+   },
+   "ffsonly2-nC": {
+    "hit_share": {
+     "diff": 0.0206,
+     "se": 0.0042,
+     "z": 5.0,
+     "halves": [
+      0.0219,
+      0.0193
+     ],
+     "n": 161
+    },
+    "psnr_hit": {
+     "diff": 0.1495,
+     "se": 0.0335,
+     "z": 4.5,
+     "halves": [
+      0.1538,
+      0.1451
+     ],
+     "n": 161
+    },
+    "psnr_common": {
+     "diff": 0.1087,
+     "se": 0.0303,
+     "z": 3.6,
+     "halves": [
+      0.1094,
+      0.108
+     ],
+     "n": 161
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.122,
+     "se": 0.0296,
+     "z": 4.1,
+     "halves": [
+      0.1203,
+      0.1236
+     ],
+     "n": 161
+    },
+    "ssim_common": {
+     "diff": 0.0052,
+     "se": 0.0013,
+     "z": 4.1,
+     "halves": [
+      0.0048,
+      0.0056
+     ],
+     "n": 161
+    }
+   },
+   "W1-ffsonly2": {
+    "hit_share": {
+     "diff": -0.005,
+     "se": 0.0007,
+     "z": -6.9,
+     "halves": [
+      -0.0051,
+      -0.005
+     ],
+     "n": 161
+    },
+    "psnr_hit": {
+     "diff": 0.0832,
+     "se": 0.0194,
+     "z": 4.3,
+     "halves": [
+      0.0796,
+      0.0869
+     ],
+     "n": 161
+    },
+    "psnr_common": {
+     "diff": 0.0737,
+     "se": 0.0203,
+     "z": 3.6,
+     "halves": [
+      0.0705,
+      0.0769
+     ],
+     "n": 161
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.0471,
+     "se": 0.0179,
+     "z": 2.6,
+     "halves": [
+      0.0485,
+      0.0456
+     ],
+     "n": 161
+    },
+    "ssim_common": {
+     "diff": 0.0007,
+     "se": 0.0006,
+     "z": 1.1,
+     "halves": [
+      0.0008,
+      0.0006
+     ],
+     "n": 161
+    }
+   },
+   "nC-np": {
+    "hit_share": {
+     "diff": -0.0078,
+     "se": 0.0008,
+     "z": -10.0,
+     "halves": [
+      -0.0078,
+      -0.0077
+     ],
+     "n": 161
+    },
+    "psnr_hit": {
+     "diff": -0.0619,
+     "se": 0.01,
+     "z": -6.2,
+     "halves": [
+      -0.059,
+      -0.0649
+     ],
+     "n": 161
+    },
+    "psnr_common": {
+     "diff": -0.0941,
+     "se": 0.0106,
+     "z": -8.8,
+     "halves": [
+      -0.0955,
+      -0.0927
+     ],
+     "n": 161
+    },
+    "psnr_common_colourfit": {
+     "diff": -0.0723,
+     "se": 0.0086,
+     "z": -8.4,
+     "halves": [
+      -0.0734,
+      -0.0712
+     ],
+     "n": 161
+    },
+    "ssim_common": {
+     "diff": -0.0011,
+     "se": 0.0003,
+     "z": -3.8,
+     "halves": [
+      -0.0012,
+      -0.0011
+     ],
+     "n": 161
+    }
+   }
+  }
+ },
+ "halves": {
+  "kf": {
+   "np": {
+    "psnr_common": [
+     19.311,
+     19.277
+    ]
+   },
+   "nC": {
+    "psnr_common": [
+     19.2,
+     19.174
+    ]
+   },
+   "ffsonly2": {
+    "psnr_common": [
+     19.336,
+     19.312
+    ]
+   },
+   "W1": {
+    "psnr_common": [
+     19.415,
+     19.369
+    ]
+   }
+  },
+  "partner": {
+   "np": {
+    "psnr_common": [
+     19.331,
+     19.246
+    ]
+   },
+   "nC": {
+    "psnr_common": [
+     19.235,
+     19.153
+    ]
+   },
+   "ffsonly2": {
+    "psnr_common": [
+     19.345,
+     19.261
+    ]
+   },
+   "W1": {
+    "psnr_common": [
+     19.415,
+     19.338
+    ]
+   }
+  }
+ },
+ "runtime_s": 130.1
+}

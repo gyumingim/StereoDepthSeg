@@ -1,0 +1,524 @@
+{
+ "made": "2026-11-26 22:24:53",
+ "n_recordings": 1,
+ "inputs": {
+  "sets": {
+   "old_vio_pairs": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801/fuse/moge_f",
+   "s4m_bap": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba/s4m",
+   "s4m_ba3": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w1/s4m",
+   "s4m_r_ba2": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffs_relax/s4m_r",
+   "s4m_rg_ba3": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w1/s4m_rg"
+  },
+  "poses": {
+   "bap": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners/run/dump_ba/cams.npz",
+   "ba2": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/run/dump_ba/cams.npz",
+   "ba3": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w1/ba3/run/dump_ba/cams.npz"
+  }
+ },
+ "note": "the SAME keyframe depth set is checked under each keyframe pose solution. fail = gsm_ffs_4m measure rule (2x grid; point seen in front of another view's depth by > max(3 cm, 3 %) in >= 2 views and >= 30 % of checking views). agreement = over all (pixel, other view) checks with |dz| < 10 cm: share within 1 cm / 2 cm and median |dz| (1 mm bins); this is the sensitive number for a smooth pose bend. se = bootstrap over keyframes. halves = even / odd keyframe index. kf_scale = per keyframe median of (depth of the keyframe's point seen in another view / that view's own depth - 1) over the |dz| < 10 cm checks (0.1 % bins); its spread over keyframes (robust sd = 1.4826 MAD, %) measures how well the per-keyframe stereo scale (set by the keyframe-partner baseline of the pose solution that made the depth) agrees with the keyframe-keyframe geometry of the judging pose solution.",
+ "cells": {
+  "old_vio_pairs@bap": {
+   "kf_scale_robust_sd_pct": 0.23,
+   "kf_scale_robust_sd_se": 0.0174,
+   "kf_scale_median_pct": 0.0247,
+   "kf_scale_p5_p95_pct": [
+    -0.471,
+    0.571
+   ],
+   "kf_scale_n": 353,
+   "kf_scale_halves_sd": [
+    0.2451,
+    0.1975
+   ],
+   "fail_pct": 1.317,
+   "fail_se": 0.138,
+   "px_2x": 15820977,
+   "agree_1cm_pct": 57.566,
+   "agree_1cm_se": 0.494,
+   "agree_2cm_pct": 80.167,
+   "agree_2cm_se": 0.353,
+   "med_abs_dz_mm": 8.5,
+   "checks": 273021220,
+   "halves": {
+    "fail_pct": [
+     1.2,
+     1.43
+    ],
+    "agree_1cm_pct": [
+     57.74,
+     57.39
+    ]
+   }
+  },
+  "old_vio_pairs@ba2": {
+   "kf_scale_robust_sd_pct": 0.2356,
+   "kf_scale_robust_sd_se": 0.0152,
+   "kf_scale_median_pct": 0.0124,
+   "kf_scale_p5_p95_pct": [
+    -0.447,
+    0.575
+   ],
+   "kf_scale_n": 353,
+   "kf_scale_halves_sd": [
+    0.2523,
+    0.2263
+   ],
+   "fail_pct": 1.689,
+   "fail_se": 0.153,
+   "px_2x": 15820977,
+   "agree_1cm_pct": 56.532,
+   "agree_1cm_se": 0.429,
+   "agree_2cm_pct": 79.441,
+   "agree_2cm_se": 0.333,
+   "med_abs_dz_mm": 8.5,
+   "checks": 271858788,
+   "halves": {
+    "fail_pct": [
+     1.55,
+     1.83
+    ],
+    "agree_1cm_pct": [
+     56.74,
+     56.32
+    ]
+   }
+  },
+  "old_vio_pairs@ba3": {
+   "kf_scale_robust_sd_pct": 0.2459,
+   "kf_scale_robust_sd_se": 0.0151,
+   "kf_scale_median_pct": 0.0202,
+   "kf_scale_p5_p95_pct": [
+    -0.471,
+    0.581
+   ],
+   "kf_scale_n": 353,
+   "kf_scale_halves_sd": [
+    0.264,
+    0.2265
+   ],
+   "fail_pct": 1.692,
+   "fail_se": 0.15,
+   "px_2x": 15820977,
+   "agree_1cm_pct": 56.603,
+   "agree_1cm_se": 0.461,
+   "agree_2cm_pct": 79.481,
+   "agree_2cm_se": 0.348,
+   "med_abs_dz_mm": 8.5,
+   "checks": 272084710,
+   "halves": {
+    "fail_pct": [
+     1.55,
+     1.84
+    ],
+    "agree_1cm_pct": [
+     56.79,
+     56.41
+    ]
+   }
+  },
+  "s4m_bap@bap": {
+   "kf_scale_robust_sd_pct": 0.203,
+   "kf_scale_robust_sd_se": 0.0169,
+   "kf_scale_median_pct": 0.0458,
+   "kf_scale_p5_p95_pct": [
+    -0.503,
+    0.593
+   ],
+   "kf_scale_n": 438,
+   "kf_scale_halves_sd": [
+    0.2086,
+    0.203
+   ],
+   "fail_pct": 3.547,
+   "fail_se": 0.394,
+   "px_2x": 18898521,
+   "agree_1cm_pct": 60.557,
+   "agree_1cm_se": 0.558,
+   "agree_2cm_pct": 80.085,
+   "agree_2cm_se": 0.442,
+   "med_abs_dz_mm": 7.5,
+   "checks": 394838399,
+   "halves": {
+    "fail_pct": [
+     3.58,
+     3.52
+    ],
+    "agree_1cm_pct": [
+     60.76,
+     60.35
+    ]
+   }
+  },
+  "s4m_bap@ba2": {
+   "kf_scale_robust_sd_pct": 0.21,
+   "kf_scale_robust_sd_se": 0.0172,
+   "kf_scale_median_pct": 0.044,
+   "kf_scale_p5_p95_pct": [
+    -0.458,
+    0.596
+   ],
+   "kf_scale_n": 438,
+   "kf_scale_halves_sd": [
+    0.214,
+    0.2088
+   ],
+   "fail_pct": 3.607,
+   "fail_se": 0.38,
+   "px_2x": 18898521,
+   "agree_1cm_pct": 59.821,
+   "agree_1cm_se": 0.566,
+   "agree_2cm_pct": 79.715,
+   "agree_2cm_se": 0.457,
+   "med_abs_dz_mm": 7.5,
+   "checks": 393657875,
+   "halves": {
+    "fail_pct": [
+     3.65,
+     3.56
+    ],
+    "agree_1cm_pct": [
+     60.05,
+     59.59
+    ]
+   }
+  },
+  "s4m_bap@ba3": {
+   "kf_scale_robust_sd_pct": 0.2102,
+   "kf_scale_robust_sd_se": 0.016,
+   "kf_scale_median_pct": 0.0441,
+   "kf_scale_p5_p95_pct": [
+    -0.478,
+    0.583
+   ],
+   "kf_scale_n": 438,
+   "kf_scale_halves_sd": [
+    0.2108,
+    0.2091
+   ],
+   "fail_pct": 3.585,
+   "fail_se": 0.382,
+   "px_2x": 18898521,
+   "agree_1cm_pct": 59.919,
+   "agree_1cm_se": 0.564,
+   "agree_2cm_pct": 79.754,
+   "agree_2cm_se": 0.46,
+   "med_abs_dz_mm": 7.5,
+   "checks": 393938763,
+   "halves": {
+    "fail_pct": [
+     3.62,
+     3.55
+    ],
+    "agree_1cm_pct": [
+     60.13,
+     59.71
+    ]
+   }
+  },
+  "s4m_ba3@bap": {
+   "kf_scale_robust_sd_pct": 0.2233,
+   "kf_scale_robust_sd_se": 0.0158,
+   "kf_scale_median_pct": 0.0367,
+   "kf_scale_p5_p95_pct": [
+    -0.631,
+    0.777
+   ],
+   "kf_scale_n": 438,
+   "kf_scale_halves_sd": [
+    0.227,
+    0.2198
+   ],
+   "fail_pct": 3.649,
+   "fail_se": 0.428,
+   "px_2x": 18890680,
+   "agree_1cm_pct": 59.912,
+   "agree_1cm_se": 0.599,
+   "agree_2cm_pct": 80.068,
+   "agree_2cm_se": 0.458,
+   "med_abs_dz_mm": 7.5,
+   "checks": 394893996,
+   "halves": {
+    "fail_pct": [
+     3.77,
+     3.53
+    ],
+    "agree_1cm_pct": [
+     60.16,
+     59.67
+    ]
+   }
+  },
+  "s4m_ba3@ba2": {
+   "kf_scale_robust_sd_pct": 0.2359,
+   "kf_scale_robust_sd_se": 0.0156,
+   "kf_scale_median_pct": 0.0314,
+   "kf_scale_p5_p95_pct": [
+    -0.591,
+    0.823
+   ],
+   "kf_scale_n": 438,
+   "kf_scale_halves_sd": [
+    0.2387,
+    0.2337
+   ],
+   "fail_pct": 3.651,
+   "fail_se": 0.422,
+   "px_2x": 18890680,
+   "agree_1cm_pct": 59.32,
+   "agree_1cm_se": 0.595,
+   "agree_2cm_pct": 79.73,
+   "agree_2cm_se": 0.445,
+   "med_abs_dz_mm": 7.5,
+   "checks": 394187528,
+   "halves": {
+    "fail_pct": [
+     3.79,
+     3.51
+    ],
+    "agree_1cm_pct": [
+     59.61,
+     59.04
+    ]
+   }
+  },
+  "s4m_ba3@ba3": {
+   "kf_scale_robust_sd_pct": 0.2278,
+   "kf_scale_robust_sd_se": 0.0156,
+   "kf_scale_median_pct": 0.0339,
+   "kf_scale_p5_p95_pct": [
+    -0.589,
+    0.813
+   ],
+   "kf_scale_n": 438,
+   "kf_scale_halves_sd": [
+    0.2372,
+    0.2185
+   ],
+   "fail_pct": 3.61,
+   "fail_se": 0.424,
+   "px_2x": 18890680,
+   "agree_1cm_pct": 59.547,
+   "agree_1cm_se": 0.581,
+   "agree_2cm_pct": 79.87,
+   "agree_2cm_se": 0.44,
+   "med_abs_dz_mm": 7.5,
+   "checks": 394491079,
+   "halves": {
+    "fail_pct": [
+     3.74,
+     3.48
+    ],
+    "agree_1cm_pct": [
+     59.82,
+     59.27
+    ]
+   }
+  },
+  "s4m_r_ba2@bap": {
+   "kf_scale_robust_sd_pct": 0.2328,
+   "kf_scale_robust_sd_se": 0.025,
+   "kf_scale_median_pct": 0.0479,
+   "kf_scale_p5_p95_pct": [
+    -0.536,
+    0.589
+   ],
+   "kf_scale_n": 487,
+   "kf_scale_halves_sd": [
+    0.25,
+    0.2079
+   ],
+   "fail_pct": 3.997,
+   "fail_se": 0.373,
+   "px_2x": 21649691,
+   "agree_1cm_pct": 57.125,
+   "agree_1cm_se": 0.595,
+   "agree_2cm_pct": 77.282,
+   "agree_2cm_se": 0.512,
+   "med_abs_dz_mm": 7.5,
+   "checks": 461334833,
+   "halves": {
+    "fail_pct": [
+     4.08,
+     3.92
+    ],
+    "agree_1cm_pct": [
+     57.3,
+     56.95
+    ]
+   }
+  },
+  "s4m_r_ba2@ba2": {
+   "kf_scale_robust_sd_pct": 0.224,
+   "kf_scale_robust_sd_se": 0.0215,
+   "kf_scale_median_pct": 0.0488,
+   "kf_scale_p5_p95_pct": [
+    -0.538,
+    0.606
+   ],
+   "kf_scale_n": 487,
+   "kf_scale_halves_sd": [
+    0.2458,
+    0.2017
+   ],
+   "fail_pct": 4.009,
+   "fail_se": 0.375,
+   "px_2x": 21649691,
+   "agree_1cm_pct": 56.637,
+   "agree_1cm_se": 0.58,
+   "agree_2cm_pct": 77.138,
+   "agree_2cm_se": 0.463,
+   "med_abs_dz_mm": 8.5,
+   "checks": 460370489,
+   "halves": {
+    "fail_pct": [
+     4.1,
+     3.91
+    ],
+    "agree_1cm_pct": [
+     56.83,
+     56.44
+    ]
+   }
+  },
+  "s4m_r_ba2@ba3": {
+   "kf_scale_robust_sd_pct": 0.234,
+   "kf_scale_robust_sd_se": 0.0218,
+   "kf_scale_median_pct": 0.051,
+   "kf_scale_p5_p95_pct": [
+    -0.539,
+    0.592
+   ],
+   "kf_scale_n": 487,
+   "kf_scale_halves_sd": [
+    0.2519,
+    0.2072
+   ],
+   "fail_pct": 3.998,
+   "fail_se": 0.369,
+   "px_2x": 21649691,
+   "agree_1cm_pct": 56.723,
+   "agree_1cm_se": 0.589,
+   "agree_2cm_pct": 77.16,
+   "agree_2cm_se": 0.454,
+   "med_abs_dz_mm": 8.5,
+   "checks": 460742815,
+   "halves": {
+    "fail_pct": [
+     4.08,
+     3.91
+    ],
+    "agree_1cm_pct": [
+     56.9,
+     56.55
+    ]
+   }
+  },
+  "s4m_rg_ba3@bap": {
+   "kf_scale_robust_sd_pct": 0.2224,
+   "kf_scale_robust_sd_se": 0.018,
+   "kf_scale_median_pct": 0.0459,
+   "kf_scale_p5_p95_pct": [
+    -0.583,
+    0.596
+   ],
+   "kf_scale_n": 487,
+   "kf_scale_halves_sd": [
+    0.2525,
+    0.2158
+   ],
+   "fail_pct": 3.991,
+   "fail_se": 0.398,
+   "px_2x": 21634878,
+   "agree_1cm_pct": 57.322,
+   "agree_1cm_se": 0.597,
+   "agree_2cm_pct": 77.815,
+   "agree_2cm_se": 0.465,
+   "med_abs_dz_mm": 7.5,
+   "checks": 461466728,
+   "halves": {
+    "fail_pct": [
+     4.08,
+     3.91
+    ],
+    "agree_1cm_pct": [
+     57.57,
+     57.08
+    ]
+   }
+  },
+  "s4m_rg_ba3@ba2": {
+   "kf_scale_robust_sd_pct": 0.2439,
+   "kf_scale_robust_sd_se": 0.0155,
+   "kf_scale_median_pct": 0.0455,
+   "kf_scale_p5_p95_pct": [
+    -0.548,
+    0.596
+   ],
+   "kf_scale_n": 487,
+   "kf_scale_halves_sd": [
+    0.264,
+    0.2356
+   ],
+   "fail_pct": 3.982,
+   "fail_se": 0.408,
+   "px_2x": 21634878,
+   "agree_1cm_pct": 56.843,
+   "agree_1cm_se": 0.569,
+   "agree_2cm_pct": 77.52,
+   "agree_2cm_se": 0.448,
+   "med_abs_dz_mm": 8.5,
+   "checks": 461060752,
+   "halves": {
+    "fail_pct": [
+     4.07,
+     3.89
+    ],
+    "agree_1cm_pct": [
+     57.11,
+     56.57
+    ]
+   }
+  },
+  "s4m_rg_ba3@ba3": {
+   "kf_scale_robust_sd_pct": 0.239,
+   "kf_scale_robust_sd_se": 0.0131,
+   "kf_scale_median_pct": 0.0466,
+   "kf_scale_p5_p95_pct": [
+    -0.555,
+    0.594
+   ],
+   "kf_scale_n": 487,
+   "kf_scale_halves_sd": [
+    0.2597,
+    0.2299
+   ],
+   "fail_pct": 3.954,
+   "fail_se": 0.375,
+   "px_2x": 21634878,
+   "agree_1cm_pct": 57.038,
+   "agree_1cm_se": 0.612,
+   "agree_2cm_pct": 77.628,
+   "agree_2cm_se": 0.461,
+   "med_abs_dz_mm": 8.5,
+   "checks": 461461974,
+   "halves": {
+    "fail_pct": [
+     4.04,
+     3.87
+    ],
+    "agree_1cm_pct": [
+     57.3,
+     56.78
+    ]
+   }
+  }
+ },
+ "set_info": {
+  "old_vio_pairs": "old run FFS (VIO-anchored pairs), F == 1; source of eval2 gold",
+  "s4m_bap": "np/nC FFS set, baselines from bap (+ 294 VIO-anchored wide)",
+  "s4m_ba3": "same pair plan and tiers as s4m_bap (p2 + low + wide), baselines from BA3: like for like with s4m_bap",
+  "s4m_r_ba2": "ffsonly2 FFS set before its gate (bap + relax on BA2)",
+  "s4m_rg_ba3": "W1 FFS set, baselines from BA3"
+ },
+ "runtime_s": 171.5
+}

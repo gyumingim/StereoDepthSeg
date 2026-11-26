@@ -1,0 +1,977 @@
+{
+ "made": "2026-11-26 22:29:28",
+ "n_recordings": 1,
+ "inputs": [
+  "runs/gsmap_20261125_121801_v2/r_judge/geo.json",
+  "runs/gsmap_20261125_121801_v2/r_judge/photo.json",
+  "runs/gsmap_20261125_121801_v2/r_judge/pose_mv.json",
+  "runs/gsmap_20261125_121801_v2/r_judge/pose_xrep.json",
+  "runs/gsmap_20261125_121801_v2/r_judge/claims.json",
+  "runs/gsmap_20261125_121801_v2/r_judge/extra.json"
+ ],
+ "fair_table": {
+  "np": {
+   "own_poses": "bap",
+   "gold_correct3_pct": 85.803,
+   "gold_correct3_se": 0.489,
+   "gold_front_pct": 11.322,
+   "gold_hole_pct": 2.876,
+   "gold_correct3_scalefit_pct": 90.68,
+   "gold_correct1p5_pct": 60.263,
+   "consensus_correct3_pct": 84.368,
+   "consensus_front_pct": 11.104,
+   "consensus_hole_pct": 4.528,
+   "consensus_correct3_scalefit_pct": 85.935,
+   "heldout_partner_psnr_common_db": 19.2887,
+   "heldout_partner_ssim_common": 0.6789,
+   "heldout_partner_hit_share": 0.9135,
+   "kf_psnr_common_db": 19.2939,
+   "roi_rms_cm_mean6": 4.29,
+   "P2c_empty_pct": 12.15,
+   "P2b": 2.89,
+   "S9_N3": 1.015,
+   "S8_area": 5.957,
+   "S4_floor": 91.83,
+   "S4_ceil": 21.2
+  },
+  "nC": {
+   "own_poses": "bap",
+   "gold_correct3_pct": 85.851,
+   "gold_correct3_se": 0.506,
+   "gold_front_pct": 11.245,
+   "gold_hole_pct": 2.903,
+   "gold_correct3_scalefit_pct": 90.737,
+   "gold_correct1p5_pct": 60.291,
+   "consensus_correct3_pct": 84.4,
+   "consensus_front_pct": 11.024,
+   "consensus_hole_pct": 4.575,
+   "consensus_correct3_scalefit_pct": 85.969,
+   "heldout_partner_psnr_common_db": 19.1946,
+   "heldout_partner_ssim_common": 0.6778,
+   "heldout_partner_hit_share": 0.9058,
+   "kf_psnr_common_db": 19.1871,
+   "roi_rms_cm_mean6": 4.28,
+   "P2c_empty_pct": 13.34,
+   "P2b": 0.97,
+   "S9_N3": 0.572,
+   "S8_area": 1.564,
+   "S4_floor": 91.5,
+   "S4_ceil": 20.94
+  },
+  "ffsonly2": {
+   "own_poses": "ba2",
+   "gold_correct3_pct": 85.123,
+   "gold_correct3_se": 0.475,
+   "gold_front_pct": 11.732,
+   "gold_hole_pct": 3.145,
+   "gold_correct3_scalefit_pct": 91.766,
+   "gold_correct1p5_pct": 54.994,
+   "consensus_correct3_pct": 85.288,
+   "consensus_front_pct": 10.324,
+   "consensus_hole_pct": 4.387,
+   "consensus_correct3_scalefit_pct": 87.203,
+   "heldout_partner_psnr_common_db": 19.3033,
+   "heldout_partner_ssim_common": 0.6829,
+   "heldout_partner_hit_share": 0.9264,
+   "kf_psnr_common_db": 19.3239,
+   "roi_rms_cm_mean6": 3.46,
+   "P2c_empty_pct": 12.46,
+   "P2b": 0.77,
+   "S9_N3": 0.514,
+   "S8_area": 2.198,
+   "S4_floor": 91.21,
+   "S4_ceil": 21.85
+  },
+  "W1": {
+   "own_poses": "ba3",
+   "gold_correct3_pct": 83.197,
+   "gold_correct3_se": 0.577,
+   "gold_front_pct": 12.708,
+   "gold_hole_pct": 4.095,
+   "gold_correct3_scalefit_pct": 91.442,
+   "gold_correct1p5_pct": 50.295,
+   "consensus_correct3_pct": 84.641,
+   "consensus_front_pct": 10.685,
+   "consensus_hole_pct": 4.674,
+   "consensus_correct3_scalefit_pct": 86.871,
+   "heldout_partner_psnr_common_db": 19.377,
+   "heldout_partner_ssim_common": 0.6836,
+   "heldout_partner_hit_share": 0.9213,
+   "kf_psnr_common_db": 19.3922,
+   "roi_rms_cm_mean6": 3.57,
+   "P2c_empty_pct": 12.41,
+   "P2b": 0.82,
+   "S9_N3": 0.473,
+   "S8_area": 2.378,
+   "S4_floor": 91.37,
+   "S4_ceil": 21.9
+  }
+ },
+ "paired_diffs": {
+  "gold": {
+   "W1-nC": {
+    "correct3": {
+     "diff_pp": -2.654,
+     "se": 0.23,
+     "z": -11.5,
+     "halves_pp": [
+      -2.64,
+      -2.66
+     ]
+    },
+    "front": {
+     "diff_pp": 1.463,
+     "se": 0.194,
+     "z": 7.5,
+     "halves_pp": [
+      1.39,
+      1.54
+     ]
+    },
+    "hole": {
+     "diff_pp": 1.191,
+     "se": 0.183,
+     "z": 6.5,
+     "halves_pp": [
+      1.25,
+      1.13
+     ]
+    },
+    "correct3_scalefit": {
+     "diff_pp": 0.705,
+     "se": 0.091,
+     "z": 7.7,
+     "halves_pp": [
+      0.7,
+      0.71
+     ]
+    },
+    "correct1p5": {
+     "diff_pp": -9.996,
+     "se": 0.587,
+     "z": -17.0,
+     "halves_pp": [
+      -10.32,
+      -9.67
+     ]
+    }
+   },
+   "ffsonly2-nC": {
+    "correct3": {
+     "diff_pp": -0.728,
+     "se": 0.24,
+     "z": -3.0,
+     "halves_pp": [
+      -0.69,
+      -0.76
+     ]
+    },
+    "front": {
+     "diff_pp": 0.487,
+     "se": 0.214,
+     "z": 2.3,
+     "halves_pp": [
+      0.49,
+      0.48
+     ]
+    },
+    "hole": {
+     "diff_pp": 0.242,
+     "se": 0.096,
+     "z": 2.5,
+     "halves_pp": [
+      0.2,
+      0.28
+     ]
+    },
+    "correct3_scalefit": {
+     "diff_pp": 1.029,
+     "se": 0.114,
+     "z": 9.0,
+     "halves_pp": [
+      1.05,
+      1.01
+     ]
+    },
+    "correct1p5": {
+     "diff_pp": -5.297,
+     "se": 0.54,
+     "z": -9.8,
+     "halves_pp": [
+      -5.34,
+      -5.26
+     ]
+    }
+   },
+   "W1-ffsonly2": {
+    "correct3": {
+     "diff_pp": -1.926,
+     "se": 0.22,
+     "z": -8.8,
+     "halves_pp": [
+      -1.95,
+      -1.9
+     ]
+    },
+    "front": {
+     "diff_pp": 0.977,
+     "se": 0.172,
+     "z": 5.7,
+     "halves_pp": [
+      0.9,
+      1.05
+     ]
+    },
+    "hole": {
+     "diff_pp": 0.949,
+     "se": 0.129,
+     "z": 7.4,
+     "halves_pp": [
+      1.05,
+      0.85
+     ]
+    },
+    "correct3_scalefit": {
+     "diff_pp": -0.324,
+     "se": 0.077,
+     "z": -4.2,
+     "halves_pp": [
+      -0.35,
+      -0.3
+     ]
+    },
+    "correct1p5": {
+     "diff_pp": -4.699,
+     "se": 0.619,
+     "z": -7.6,
+     "halves_pp": [
+      -4.98,
+      -4.41
+     ]
+    }
+   },
+   "nC-np": {
+    "correct3": {
+     "diff_pp": 0.049,
+     "se": 0.012,
+     "z": 4.1,
+     "halves_pp": [
+      0.05,
+      0.05
+     ]
+    },
+    "front": {
+     "diff_pp": -0.077,
+     "se": 0.014,
+     "z": -5.5,
+     "halves_pp": [
+      -0.08,
+      -0.08
+     ]
+    },
+    "hole": {
+     "diff_pp": 0.028,
+     "se": 0.004,
+     "z": 7.0,
+     "halves_pp": [
+      0.03,
+      0.03
+     ]
+    },
+    "correct3_scalefit": {
+     "diff_pp": 0.056,
+     "se": 0.013,
+     "z": 4.3,
+     "halves_pp": [
+      0.06,
+      0.06
+     ]
+    },
+    "correct1p5": {
+     "diff_pp": 0.028,
+     "se": 0.007,
+     "z": 4.0,
+     "halves_pp": [
+      0.03,
+      0.03
+     ]
+    }
+   }
+  },
+  "consensus": {
+   "W1-nC": {
+    "correct3": {
+     "diff_pp": 0.24,
+     "se": 0.156,
+     "z": 1.5,
+     "halves_pp": [
+      0.3,
+      0.18
+     ]
+    },
+    "front": {
+     "diff_pp": -0.339,
+     "se": 0.158,
+     "z": -2.1,
+     "halves_pp": [
+      -0.4,
+      -0.28
+     ]
+    },
+    "hole": {
+     "diff_pp": 0.099,
+     "se": 0.074,
+     "z": 1.3,
+     "halves_pp": [
+      0.1,
+      0.1
+     ]
+    },
+    "correct3_scalefit": {
+     "diff_pp": 0.901,
+     "se": 0.122,
+     "z": 7.4,
+     "halves_pp": [
+      0.96,
+      0.84
+     ]
+    },
+    "correct1p5": {
+     "diff_pp": -0.837,
+     "se": 0.285,
+     "z": -2.9,
+     "halves_pp": [
+      -0.85,
+      -0.82
+     ]
+    }
+   },
+   "ffsonly2-nC": {
+    "correct3": {
+     "diff_pp": 0.888,
+     "se": 0.197,
+     "z": 4.5,
+     "halves_pp": [
+      0.91,
+      0.87
+     ]
+    },
+    "front": {
+     "diff_pp": -0.7,
+     "se": 0.183,
+     "z": -3.8,
+     "halves_pp": [
+      -0.75,
+      -0.65
+     ]
+    },
+    "hole": {
+     "diff_pp": -0.188,
+     "se": 0.076,
+     "z": -2.5,
+     "halves_pp": [
+      -0.16,
+      -0.22
+     ]
+    },
+    "correct3_scalefit": {
+     "diff_pp": 1.233,
+     "se": 0.138,
+     "z": 8.9,
+     "halves_pp": [
+      1.26,
+      1.21
+     ]
+    },
+    "correct1p5": {
+     "diff_pp": 0.197,
+     "se": 0.325,
+     "z": 0.6,
+     "halves_pp": [
+      0.13,
+      0.27
+     ]
+    }
+   },
+   "W1-ffsonly2": {
+    "correct3": {
+     "diff_pp": -0.648,
+     "se": 0.112,
+     "z": -5.8,
+     "halves_pp": [
+      -0.61,
+      -0.68
+     ]
+    },
+    "front": {
+     "diff_pp": 0.361,
+     "se": 0.095,
+     "z": 3.8,
+     "halves_pp": [
+      0.35,
+      0.37
+     ]
+    },
+    "hole": {
+     "diff_pp": 0.287,
+     "se": 0.058,
+     "z": 4.9,
+     "halves_pp": [
+      0.26,
+      0.31
+     ]
+    },
+    "correct3_scalefit": {
+     "diff_pp": -0.332,
+     "se": 0.067,
+     "z": -5.0,
+     "halves_pp": [
+      -0.3,
+      -0.37
+     ]
+    },
+    "correct1p5": {
+     "diff_pp": -1.034,
+     "se": 0.243,
+     "z": -4.3,
+     "halves_pp": [
+      -0.98,
+      -1.09
+     ]
+    }
+   },
+   "nC-np": {
+    "correct3": {
+     "diff_pp": 0.032,
+     "se": 0.004,
+     "z": 8.0,
+     "halves_pp": [
+      0.03,
+      0.03
+     ]
+    },
+    "front": {
+     "diff_pp": -0.08,
+     "se": 0.009,
+     "z": -8.9,
+     "halves_pp": [
+      -0.08,
+      -0.08
+     ]
+    },
+    "hole": {
+     "diff_pp": 0.048,
+     "se": 0.007,
+     "z": 6.9,
+     "halves_pp": [
+      0.05,
+      0.04
+     ]
+    },
+    "correct3_scalefit": {
+     "diff_pp": 0.035,
+     "se": 0.005,
+     "z": 7.0,
+     "halves_pp": [
+      0.03,
+      0.04
+     ]
+    },
+    "correct1p5": {
+     "diff_pp": 0.02,
+     "se": 0.002,
+     "z": 10.0,
+     "halves_pp": [
+      0.02,
+      0.02
+     ]
+    }
+   }
+  },
+  "photo_partner": {
+   "W1-nC": {
+    "hit_share": {
+     "diff": 0.0156,
+     "se": 0.0042,
+     "z": 3.7,
+     "halves": [
+      0.0168,
+      0.0143
+     ],
+     "n": 161
+    },
+    "psnr_hit": {
+     "diff": 0.2327,
+     "se": 0.0313,
+     "z": 7.4,
+     "halves": [
+      0.2334,
+      0.232
+     ],
+     "n": 161
+    },
+    "psnr_common": {
+     "diff": 0.1824,
+     "se": 0.0283,
+     "z": 6.4,
+     "halves": [
+      0.1799,
+      0.1849
+     ],
+     "n": 161
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.169,
+     "se": 0.0275,
+     "z": 6.2,
+     "halves": [
+      0.1689,
+      0.1692
+     ],
+     "n": 161
+    },
+    "ssim_common": {
+     "diff": 0.0059,
+     "se": 0.0013,
+     "z": 4.7,
+     "halves": [
+      0.0055,
+      0.0062
+     ],
+     "n": 161
+    }
+   },
+   "ffsonly2-nC": {
+    "hit_share": {
+     "diff": 0.0206,
+     "se": 0.0042,
+     "z": 5.0,
+     "halves": [
+      0.0219,
+      0.0193
+     ],
+     "n": 161
+    },
+    "psnr_hit": {
+     "diff": 0.1495,
+     "se": 0.0335,
+     "z": 4.5,
+     "halves": [
+      0.1538,
+      0.1451
+     ],
+     "n": 161
+    },
+    "psnr_common": {
+     "diff": 0.1087,
+     "se": 0.0303,
+     "z": 3.6,
+     "halves": [
+      0.1094,
+      0.108
+     ],
+     "n": 161
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.122,
+     "se": 0.0296,
+     "z": 4.1,
+     "halves": [
+      0.1203,
+      0.1236
+     ],
+     "n": 161
+    },
+    "ssim_common": {
+     "diff": 0.0052,
+     "se": 0.0013,
+     "z": 4.1,
+     "halves": [
+      0.0048,
+      0.0056
+     ],
+     "n": 161
+    }
+   },
+   "W1-ffsonly2": {
+    "hit_share": {
+     "diff": -0.005,
+     "se": 0.0007,
+     "z": -6.9,
+     "halves": [
+      -0.0051,
+      -0.005
+     ],
+     "n": 161
+    },
+    "psnr_hit": {
+     "diff": 0.0832,
+     "se": 0.0194,
+     "z": 4.3,
+     "halves": [
+      0.0796,
+      0.0869
+     ],
+     "n": 161
+    },
+    "psnr_common": {
+     "diff": 0.0737,
+     "se": 0.0203,
+     "z": 3.6,
+     "halves": [
+      0.0705,
+      0.0769
+     ],
+     "n": 161
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.0471,
+     "se": 0.0179,
+     "z": 2.6,
+     "halves": [
+      0.0485,
+      0.0456
+     ],
+     "n": 161
+    },
+    "ssim_common": {
+     "diff": 0.0007,
+     "se": 0.0006,
+     "z": 1.1,
+     "halves": [
+      0.0008,
+      0.0006
+     ],
+     "n": 161
+    }
+   },
+   "nC-np": {
+    "hit_share": {
+     "diff": -0.0078,
+     "se": 0.0008,
+     "z": -10.0,
+     "halves": [
+      -0.0078,
+      -0.0077
+     ],
+     "n": 161
+    },
+    "psnr_hit": {
+     "diff": -0.0619,
+     "se": 0.01,
+     "z": -6.2,
+     "halves": [
+      -0.059,
+      -0.0649
+     ],
+     "n": 161
+    },
+    "psnr_common": {
+     "diff": -0.0941,
+     "se": 0.0106,
+     "z": -8.8,
+     "halves": [
+      -0.0955,
+      -0.0927
+     ],
+     "n": 161
+    },
+    "psnr_common_colourfit": {
+     "diff": -0.0723,
+     "se": 0.0086,
+     "z": -8.4,
+     "halves": [
+      -0.0734,
+      -0.0712
+     ],
+     "n": 161
+    },
+    "ssim_common": {
+     "diff": -0.0011,
+     "se": 0.0003,
+     "z": -3.8,
+     "halves": [
+      -0.0012,
+      -0.0011
+     ],
+     "n": 161
+    }
+   }
+  }
+ },
+ "noise": "paired bootstrap over keyframes: se of a map-vs-map difference ~0.1-0.25 pp (correct %), ~0.03 dB (PSNR); even/odd halves agree within ~0.1 pp. Systematic choice of reference moves the ranking by more than that (gold raw vs scale-fit vs consensus).",
+ "pose_quality": {
+  "mv_paired": {
+   "old_vio_pairs: bap-ba3": {
+    "agree_1cm_diff_pp": 0.964,
+    "agree_se": 0.071,
+    "fail_diff_pp": -0.375,
+    "fail_se": 0.048,
+    "halves_agree": [
+     0.951,
+     0.976
+    ],
+    "halves_fail": [
+     -0.345,
+     -0.404
+    ]
+   },
+   "old_vio_pairs: bap-ba2": {
+    "agree_1cm_diff_pp": 1.035,
+    "agree_se": 0.077,
+    "fail_diff_pp": -0.372,
+    "fail_se": 0.05,
+    "halves_agree": [
+     1.006,
+     1.064
+    ],
+    "halves_fail": [
+     -0.347,
+     -0.397
+    ]
+   },
+   "old_vio_pairs: ba2-ba3": {
+    "agree_1cm_diff_pp": -0.071,
+    "agree_se": 0.032,
+    "fail_diff_pp": -0.003,
+    "fail_se": 0.01,
+    "halves_agree": [
+     -0.054,
+     -0.088
+    ],
+    "halves_fail": [
+     0.002,
+     -0.007
+    ]
+   },
+   "s4m_bap: bap-ba3": {
+    "agree_1cm_diff_pp": 0.638,
+    "agree_se": 0.061,
+    "fail_diff_pp": -0.039,
+    "fail_se": 0.037,
+    "halves_agree": [
+     0.634,
+     0.642
+    ],
+    "halves_fail": [
+     -0.039,
+     -0.038
+    ]
+   },
+   "s4m_bap: bap-ba2": {
+    "agree_1cm_diff_pp": 0.736,
+    "agree_se": 0.075,
+    "fail_diff_pp": -0.06,
+    "fail_se": 0.034,
+    "halves_agree": [
+     0.712,
+     0.76
+    ],
+    "halves_fail": [
+     -0.073,
+     -0.048
+    ]
+   },
+   "s4m_bap: ba2-ba3": {
+    "agree_1cm_diff_pp": -0.098,
+    "agree_se": 0.033,
+    "fail_diff_pp": 0.022,
+    "fail_se": 0.013,
+    "halves_agree": [
+     -0.078,
+     -0.118
+    ],
+    "halves_fail": [
+     0.034,
+     0.01
+    ]
+   },
+   "s4m_ba3: bap-ba3": {
+    "agree_1cm_diff_pp": 0.365,
+    "agree_se": 0.052,
+    "fail_diff_pp": 0.039,
+    "fail_se": 0.034,
+    "halves_agree": [
+     0.336,
+     0.394
+    ],
+    "halves_fail": [
+     0.035,
+     0.043
+    ]
+   },
+   "s4m_ba3: bap-ba2": {
+    "agree_1cm_diff_pp": 0.592,
+    "agree_se": 0.072,
+    "fail_diff_pp": -0.002,
+    "fail_se": 0.034,
+    "halves_agree": [
+     0.553,
+     0.631
+    ],
+    "halves_fail": [
+     -0.018,
+     0.014
+    ]
+   },
+   "s4m_ba3: ba2-ba3": {
+    "agree_1cm_diff_pp": -0.227,
+    "agree_se": 0.031,
+    "fail_diff_pp": 0.041,
+    "fail_se": 0.013,
+    "halves_agree": [
+     -0.217,
+     -0.237
+    ],
+    "halves_fail": [
+     0.053,
+     0.029
+    ]
+   },
+   "s4m_r_ba2: bap-ba3": {
+    "agree_1cm_diff_pp": 0.402,
+    "agree_se": 0.054,
+    "fail_diff_pp": -0.0,
+    "fail_se": 0.034,
+    "halves_agree": [
+     0.405,
+     0.399
+    ],
+    "halves_fail": [
+     -0.006,
+     0.005
+    ]
+   },
+   "s4m_r_ba2: bap-ba2": {
+    "agree_1cm_diff_pp": 0.489,
+    "agree_se": 0.072,
+    "fail_diff_pp": -0.012,
+    "fail_se": 0.032,
+    "halves_agree": [
+     0.474,
+     0.504
+    ],
+    "halves_fail": [
+     -0.027,
+     0.003
+    ]
+   },
+   "s4m_r_ba2: ba2-ba3": {
+    "agree_1cm_diff_pp": -0.087,
+    "agree_se": 0.03,
+    "fail_diff_pp": 0.012,
+    "fail_se": 0.011,
+    "halves_agree": [
+     -0.069,
+     -0.105
+    ],
+    "halves_fail": [
+     0.021,
+     0.002
+    ]
+   },
+   "s4m_rg_ba3: bap-ba3": {
+    "agree_1cm_diff_pp": 0.284,
+    "agree_se": 0.054,
+    "fail_diff_pp": 0.037,
+    "fail_se": 0.034,
+    "halves_agree": [
+     0.269,
+     0.3
+    ],
+    "halves_fail": [
+     0.041,
+     0.033
+    ]
+   },
+   "s4m_rg_ba3: bap-ba2": {
+    "agree_1cm_diff_pp": 0.479,
+    "agree_se": 0.072,
+    "fail_diff_pp": 0.009,
+    "fail_se": 0.033,
+    "halves_agree": [
+     0.453,
+     0.506
+    ],
+    "halves_fail": [
+     0.004,
+     0.015
+    ]
+   },
+   "s4m_rg_ba3: ba2-ba3": {
+    "agree_1cm_diff_pp": -0.195,
+    "agree_se": 0.029,
+    "fail_diff_pp": 0.028,
+    "fail_se": 0.01,
+    "halves_agree": [
+     -0.184,
+     -0.206
+    ],
+    "halves_fail": [
+     0.037,
+     0.018
+    ]
+   }
+  },
+  "xrep_kf_only_med_px": {
+   "tracks_bap@poses_bap/kf_only": 0.3012,
+   "tracks_bap@poses_ba2/kf_only": 0.3014,
+   "tracks_bap@poses_ba3/kf_only": 0.3017,
+   "tracks_ba2@poses_bap/kf_only": 0.2989,
+   "tracks_ba2@poses_ba2/kf_only": 0.2991,
+   "tracks_ba2@poses_ba3/kf_only": 0.2993,
+   "tracks_ba3@poses_bap/kf_only": 0.2966,
+   "tracks_ba3@poses_ba2/kf_only": 0.2968,
+   "tracks_ba3@poses_ba3/kf_only": 0.2969
+  },
+  "loop_tracks": {
+   "tracks_bap@poses_bap/all_common": 163,
+   "tracks_ba2@poses_ba2/all_common": 154,
+   "tracks_ba3@poses_ba3/all_common": 135
+  },
+  "ba_vs_vio": {
+   "bap": {
+    "sim3_vio_rms_cm": 6.321,
+    "sim3_vio_scale": 1.00063,
+    "final_med_px": 0.3256,
+    "n_frames": 1458,
+    "loop_pairs": 3852
+   },
+   "ba2": {
+    "sim3_vio_rms_cm": 3.551,
+    "sim3_vio_scale": 0.99859,
+    "final_med_px": 0.3265,
+    "n_frames": 1592,
+    "loop_pairs": 4369
+   },
+   "ba3": {
+    "sim3_vio_rms_cm": 3.41,
+    "sim3_vio_scale": 0.99798,
+    "final_med_px": 0.3281,
+    "n_frames": 1847,
+    "loop_pairs": 5296
+   }
+  },
+  "pose_vs_old": {
+   "bap": {
+    "vs_old_run_cm_med": 1.943,
+    "vs_v2_dump_ba_cm_med": 1.943
+   },
+   "ba2": {
+    "vs_old_run_cm_med": 5.574,
+    "vs_v2_dump_ba_cm_med": 5.574
+   },
+   "ba3": {
+    "vs_old_run_cm_med": 5.687,
+    "vs_v2_dump_ba_cm_med": 5.687
+   }
+  },
+  "conclusion": "feature tracks cannot tell the solutions apart (cross reprojection identical to 0.001-0.003 px; only ~130-160 tracks span > 300 frames, so the ~4 cm bend is a weakly constrained mode). Multi-view depth consistency is slightly but consistently better under bap than ba2/ba3 for every depth set, including the sets built and gated on BA3 (+0.28..+0.96 pp agreement within 1 cm, paired se 0.05-0.07). ba3 is NOT a better pose solution than bap."
+ },
+ "verdict": "No map wins on every fair metric and all gaps are small. nC (adopted) keeps the best raw gold correct % (85.85 vs ffsonly2 85.12 vs W1 83.20) but gold shares scale/selection with bap-like poses; after a per-keyframe scale fit and on the pose-independent consensus depth ffsonly2 is first (consensus 85.29 vs W1 84.64 vs nC 84.40), and held-out photos rank W1 19.38 > ffsonly2 19.30 > np 19.29 > nC 19.19 dB. W1 is not better than ffsonly2 (geometry -0.3..-1.9 pp, photo +0.07 dB). Keep nC as the whole-map best (no fair evidence that justifies a switch; bap poses test slightly better); W1 not adopted; ffsonly2 is the equal-quality alternative with far more aisle FFS evidence.",
+ "claims": {
+  "a": "correct: 0.464 % recomputed (claims.json wide_vio_anchor.B_ratio_absdev_med_pct); BA-posed wide pairs moved the same (0.442 %)",
+  "b": "correct: 0.278 cm median, p95 0.565, max 1.074 (claims.json ba3_vs_ba2)",
+  "c": "correct as a number: 3.954 % recomputed (pose_mv.json cells s4m_rg_ba3@ba3.fail_pct); but it is the whole-set fail AFTER the gate, higher than before relax (3.61), new pixels 6.25 %, aisle 12.68 % -> not an improvement"
+ }
+}

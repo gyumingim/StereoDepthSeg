@@ -1,0 +1,560 @@
+{
+ "made": "2026-11-26 22:19:44",
+ "n_recordings": 1,
+ "inputs": {
+  "tracks": {
+   "bap": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners/ba/ba_state.npz",
+   "ba2": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/ba/ba_state.npz",
+   "ba3": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w1/ba3/ba/ba_state.npz"
+  },
+  "poses": {
+   "bap": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners/poses_all.npz",
+   "ba2": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/poses_all.npz",
+   "ba3": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w1/ba3/poses_all.npz"
+  }
+ },
+ "note": "tracks (2D feature observations) of BA solution A; cameras = poses of solution B (frames with src == ba in B); observations of frames missing in B dropped, tracks with < 3 remaining observations dropped; points re-triangulated with B's poses (DLT + 3 GN), so the number depends only on B's camera poses. kf_only = keyframe observations only (the same 494 keyframes in every solution). loop = tracks whose observations span > 300 frames (revisits). own cell (A == B) is the reference; each BA was optimised on its own tracks, so the cross cells are the informative ones: a pose solution that is right must also fit the other solution's matches.",
+ "cells": {
+  "tracks_bap@poses_bap/all_common": {
+   "all": {
+    "n_obs": 1868198,
+    "n_tracks": 179076,
+    "med_px": 0.337,
+    "mean_px_clip10": 0.5003,
+    "p90_px": 1.075,
+    "frac_gt_1px": 0.1137,
+    "frac_gt_2px": 0.0263
+   },
+   "loop": {
+    "n_obs": 17976,
+    "n_tracks": 163,
+    "med_px": 0.3483,
+    "mean_px_clip10": 0.4512,
+    "p90_px": 0.858,
+    "frac_gt_1px": 0.0702,
+    "frac_gt_2px": 0.011
+   },
+   "local": {
+    "n_obs": 1850222,
+    "n_tracks": 178913,
+    "med_px": 0.3369,
+    "mean_px_clip10": 0.5008,
+    "p90_px": 1.078,
+    "frac_gt_1px": 0.1141,
+    "frac_gt_2px": 0.0265
+   },
+   "behind_cam_frac": 0.0
+  },
+  "tracks_bap@poses_bap/kf_only": {
+   "all": {
+    "n_obs": 513619,
+    "n_tracks": 80935,
+    "med_px": 0.3012,
+    "mean_px_clip10": 0.447,
+    "p90_px": 0.954,
+    "frac_gt_1px": 0.092,
+    "frac_gt_2px": 0.0189
+   },
+   "loop": {
+    "n_obs": 4839,
+    "n_tracks": 128,
+    "med_px": 0.3478,
+    "mean_px_clip10": 0.459,
+    "p90_px": 0.892,
+    "frac_gt_1px": 0.0789,
+    "frac_gt_2px": 0.0132
+   },
+   "local": {
+    "n_obs": 508780,
+    "n_tracks": 80807,
+    "med_px": 0.3007,
+    "mean_px_clip10": 0.4469,
+    "p90_px": 0.955,
+    "frac_gt_1px": 0.0921,
+    "frac_gt_2px": 0.0189
+   },
+   "behind_cam_frac": 1e-05
+  },
+  "tracks_bap@poses_ba2/all_common": {
+   "all": {
+    "n_obs": 1868198,
+    "n_tracks": 179076,
+    "med_px": 0.3371,
+    "mean_px_clip10": 0.5005,
+    "p90_px": 1.076,
+    "frac_gt_1px": 0.1137,
+    "frac_gt_2px": 0.0264
+   },
+   "loop": {
+    "n_obs": 17976,
+    "n_tracks": 163,
+    "med_px": 0.3484,
+    "mean_px_clip10": 0.451,
+    "p90_px": 0.855,
+    "frac_gt_1px": 0.07,
+    "frac_gt_2px": 0.011
+   },
+   "local": {
+    "n_obs": 1850222,
+    "n_tracks": 178913,
+    "med_px": 0.337,
+    "mean_px_clip10": 0.501,
+    "p90_px": 1.078,
+    "frac_gt_1px": 0.1142,
+    "frac_gt_2px": 0.0265
+   },
+   "behind_cam_frac": 1e-05
+  },
+  "tracks_bap@poses_ba2/kf_only": {
+   "all": {
+    "n_obs": 513619,
+    "n_tracks": 80935,
+    "med_px": 0.3014,
+    "mean_px_clip10": 0.4472,
+    "p90_px": 0.955,
+    "frac_gt_1px": 0.0921,
+    "frac_gt_2px": 0.0189
+   },
+   "loop": {
+    "n_obs": 4839,
+    "n_tracks": 128,
+    "med_px": 0.3469,
+    "mean_px_clip10": 0.4584,
+    "p90_px": 0.893,
+    "frac_gt_1px": 0.0785,
+    "frac_gt_2px": 0.013
+   },
+   "local": {
+    "n_obs": 508780,
+    "n_tracks": 80807,
+    "med_px": 0.3009,
+    "mean_px_clip10": 0.4471,
+    "p90_px": 0.956,
+    "frac_gt_1px": 0.0922,
+    "frac_gt_2px": 0.019
+   },
+   "behind_cam_frac": 1e-05
+  },
+  "tracks_bap@poses_ba3/all_common": {
+   "all": {
+    "n_obs": 1868198,
+    "n_tracks": 179076,
+    "med_px": 0.3375,
+    "mean_px_clip10": 0.5009,
+    "p90_px": 1.076,
+    "frac_gt_1px": 0.1139,
+    "frac_gt_2px": 0.0264
+   },
+   "loop": {
+    "n_obs": 17976,
+    "n_tracks": 163,
+    "med_px": 0.3491,
+    "mean_px_clip10": 0.4521,
+    "p90_px": 0.86,
+    "frac_gt_1px": 0.0704,
+    "frac_gt_2px": 0.011
+   },
+   "local": {
+    "n_obs": 1850222,
+    "n_tracks": 178913,
+    "med_px": 0.3373,
+    "mean_px_clip10": 0.5014,
+    "p90_px": 1.079,
+    "frac_gt_1px": 0.1143,
+    "frac_gt_2px": 0.0265
+   },
+   "behind_cam_frac": 1e-05
+  },
+  "tracks_bap@poses_ba3/kf_only": {
+   "all": {
+    "n_obs": 513619,
+    "n_tracks": 80935,
+    "med_px": 0.3017,
+    "mean_px_clip10": 0.4475,
+    "p90_px": 0.956,
+    "frac_gt_1px": 0.0922,
+    "frac_gt_2px": 0.0189
+   },
+   "loop": {
+    "n_obs": 4839,
+    "n_tracks": 128,
+    "med_px": 0.3499,
+    "mean_px_clip10": 0.4593,
+    "p90_px": 0.892,
+    "frac_gt_1px": 0.0802,
+    "frac_gt_2px": 0.013
+   },
+   "local": {
+    "n_obs": 508780,
+    "n_tracks": 80807,
+    "med_px": 0.3012,
+    "mean_px_clip10": 0.4474,
+    "p90_px": 0.957,
+    "frac_gt_1px": 0.0923,
+    "frac_gt_2px": 0.019
+   },
+   "behind_cam_frac": 1e-05
+  },
+  "tracks_ba2@poses_bap/all_common": {
+   "all": {
+    "n_obs": 1819235,
+    "n_tracks": 176184,
+    "med_px": 0.3355,
+    "mean_px_clip10": 0.4973,
+    "p90_px": 1.067,
+    "frac_gt_1px": 0.1121,
+    "frac_gt_2px": 0.0258
+   },
+   "loop": {
+    "n_obs": 17170,
+    "n_tracks": 153,
+    "med_px": 0.347,
+    "mean_px_clip10": 0.4522,
+    "p90_px": 0.861,
+    "frac_gt_1px": 0.0709,
+    "frac_gt_2px": 0.0116
+   },
+   "local": {
+    "n_obs": 1802065,
+    "n_tracks": 176031,
+    "med_px": 0.3354,
+    "mean_px_clip10": 0.4977,
+    "p90_px": 1.069,
+    "frac_gt_1px": 0.1125,
+    "frac_gt_2px": 0.0259
+   },
+   "behind_cam_frac": 1e-05
+  },
+  "tracks_ba2@poses_bap/kf_only": {
+   "all": {
+    "n_obs": 495393,
+    "n_tracks": 78881,
+    "med_px": 0.2989,
+    "mean_px_clip10": 0.4429,
+    "p90_px": 0.944,
+    "frac_gt_1px": 0.09,
+    "frac_gt_2px": 0.0183
+   },
+   "loop": {
+    "n_obs": 4525,
+    "n_tracks": 119,
+    "med_px": 0.3456,
+    "mean_px_clip10": 0.4615,
+    "p90_px": 0.899,
+    "frac_gt_1px": 0.0791,
+    "frac_gt_2px": 0.0139
+   },
+   "local": {
+    "n_obs": 490868,
+    "n_tracks": 78762,
+    "med_px": 0.2984,
+    "mean_px_clip10": 0.4427,
+    "p90_px": 0.944,
+    "frac_gt_1px": 0.0901,
+    "frac_gt_2px": 0.0184
+   },
+   "behind_cam_frac": 1e-05
+  },
+  "tracks_ba2@poses_ba2/all_common": {
+   "all": {
+    "n_obs": 1985960,
+    "n_tracks": 183063,
+    "med_px": 0.3374,
+    "mean_px_clip10": 0.5008,
+    "p90_px": 1.076,
+    "frac_gt_1px": 0.1138,
+    "frac_gt_2px": 0.0263
+   },
+   "loop": {
+    "n_obs": 18063,
+    "n_tracks": 154,
+    "med_px": 0.3439,
+    "mean_px_clip10": 0.4465,
+    "p90_px": 0.849,
+    "frac_gt_1px": 0.0686,
+    "frac_gt_2px": 0.0113
+   },
+   "local": {
+    "n_obs": 1967897,
+    "n_tracks": 182909,
+    "med_px": 0.3374,
+    "mean_px_clip10": 0.5013,
+    "p90_px": 1.078,
+    "frac_gt_1px": 0.1142,
+    "frac_gt_2px": 0.0265
+   },
+   "behind_cam_frac": 1e-05
+  },
+  "tracks_ba2@poses_ba2/kf_only": {
+   "all": {
+    "n_obs": 495393,
+    "n_tracks": 78881,
+    "med_px": 0.2991,
+    "mean_px_clip10": 0.4428,
+    "p90_px": 0.943,
+    "frac_gt_1px": 0.0901,
+    "frac_gt_2px": 0.0183
+   },
+   "loop": {
+    "n_obs": 4525,
+    "n_tracks": 119,
+    "med_px": 0.3458,
+    "mean_px_clip10": 0.4606,
+    "p90_px": 0.896,
+    "frac_gt_1px": 0.0787,
+    "frac_gt_2px": 0.0137
+   },
+   "local": {
+    "n_obs": 490868,
+    "n_tracks": 78762,
+    "med_px": 0.2986,
+    "mean_px_clip10": 0.4427,
+    "p90_px": 0.944,
+    "frac_gt_1px": 0.0902,
+    "frac_gt_2px": 0.0184
+   },
+   "behind_cam_frac": 1e-05
+  },
+  "tracks_ba2@poses_ba3/all_common": {
+   "all": {
+    "n_obs": 1985960,
+    "n_tracks": 183063,
+    "med_px": 0.3378,
+    "mean_px_clip10": 0.5011,
+    "p90_px": 1.076,
+    "frac_gt_1px": 0.1139,
+    "frac_gt_2px": 0.0264
+   },
+   "loop": {
+    "n_obs": 18063,
+    "n_tracks": 154,
+    "med_px": 0.3449,
+    "mean_px_clip10": 0.4475,
+    "p90_px": 0.852,
+    "frac_gt_1px": 0.0687,
+    "frac_gt_2px": 0.0112
+   },
+   "local": {
+    "n_obs": 1967897,
+    "n_tracks": 182909,
+    "med_px": 0.3377,
+    "mean_px_clip10": 0.5016,
+    "p90_px": 1.078,
+    "frac_gt_1px": 0.1143,
+    "frac_gt_2px": 0.0265
+   },
+   "behind_cam_frac": 1e-05
+  },
+  "tracks_ba2@poses_ba3/kf_only": {
+   "all": {
+    "n_obs": 495393,
+    "n_tracks": 78881,
+    "med_px": 0.2993,
+    "mean_px_clip10": 0.4431,
+    "p90_px": 0.944,
+    "frac_gt_1px": 0.0901,
+    "frac_gt_2px": 0.0184
+   },
+   "loop": {
+    "n_obs": 4525,
+    "n_tracks": 119,
+    "med_px": 0.3494,
+    "mean_px_clip10": 0.4612,
+    "p90_px": 0.897,
+    "frac_gt_1px": 0.0802,
+    "frac_gt_2px": 0.0141
+   },
+   "local": {
+    "n_obs": 490868,
+    "n_tracks": 78762,
+    "med_px": 0.2988,
+    "mean_px_clip10": 0.4429,
+    "p90_px": 0.945,
+    "frac_gt_1px": 0.0902,
+    "frac_gt_2px": 0.0184
+   },
+   "behind_cam_frac": 1e-05
+  },
+  "tracks_ba3@poses_bap/all_common": {
+   "all": {
+    "n_obs": 1716663,
+    "n_tracks": 169129,
+    "med_px": 0.3329,
+    "mean_px_clip10": 0.4924,
+    "p90_px": 1.054,
+    "frac_gt_1px": 0.1098,
+    "frac_gt_2px": 0.0249
+   },
+   "loop": {
+    "n_obs": 14536,
+    "n_tracks": 131,
+    "med_px": 0.3639,
+    "mean_px_clip10": 0.4741,
+    "p90_px": 0.895,
+    "frac_gt_1px": 0.078,
+    "frac_gt_2px": 0.0129
+   },
+   "local": {
+    "n_obs": 1702127,
+    "n_tracks": 168998,
+    "med_px": 0.3326,
+    "mean_px_clip10": 0.4926,
+    "p90_px": 1.055,
+    "frac_gt_1px": 0.1101,
+    "frac_gt_2px": 0.025
+   },
+   "behind_cam_frac": 3e-05
+  },
+  "tracks_ba3@poses_bap/kf_only": {
+   "all": {
+    "n_obs": 467779,
+    "n_tracks": 74934,
+    "med_px": 0.2966,
+    "mean_px_clip10": 0.439,
+    "p90_px": 0.934,
+    "frac_gt_1px": 0.0882,
+    "frac_gt_2px": 0.0179
+   },
+   "loop": {
+    "n_obs": 3904,
+    "n_tracks": 103,
+    "med_px": 0.3605,
+    "mean_px_clip10": 0.4782,
+    "p90_px": 0.929,
+    "frac_gt_1px": 0.084,
+    "frac_gt_2px": 0.0149
+   },
+   "local": {
+    "n_obs": 463875,
+    "n_tracks": 74831,
+    "med_px": 0.2961,
+    "mean_px_clip10": 0.4386,
+    "p90_px": 0.934,
+    "frac_gt_1px": 0.0883,
+    "frac_gt_2px": 0.0179
+   },
+   "behind_cam_frac": 1e-05
+  },
+  "tracks_ba3@poses_ba2/all_common": {
+   "all": {
+    "n_obs": 1879325,
+    "n_tracks": 175945,
+    "med_px": 0.3349,
+    "mean_px_clip10": 0.4962,
+    "p90_px": 1.063,
+    "frac_gt_1px": 0.1117,
+    "frac_gt_2px": 0.0255
+   },
+   "loop": {
+    "n_obs": 15242,
+    "n_tracks": 131,
+    "med_px": 0.3627,
+    "mean_px_clip10": 0.4696,
+    "p90_px": 0.886,
+    "frac_gt_1px": 0.076,
+    "frac_gt_2px": 0.0123
+   },
+   "local": {
+    "n_obs": 1864083,
+    "n_tracks": 175814,
+    "med_px": 0.3346,
+    "mean_px_clip10": 0.4964,
+    "p90_px": 1.065,
+    "frac_gt_1px": 0.112,
+    "frac_gt_2px": 0.0256
+   },
+   "behind_cam_frac": 2e-05
+  },
+  "tracks_ba3@poses_ba2/kf_only": {
+   "all": {
+    "n_obs": 467779,
+    "n_tracks": 74934,
+    "med_px": 0.2968,
+    "mean_px_clip10": 0.4389,
+    "p90_px": 0.934,
+    "frac_gt_1px": 0.0883,
+    "frac_gt_2px": 0.0179
+   },
+   "loop": {
+    "n_obs": 3904,
+    "n_tracks": 103,
+    "med_px": 0.3604,
+    "mean_px_clip10": 0.4769,
+    "p90_px": 0.925,
+    "frac_gt_1px": 0.0832,
+    "frac_gt_2px": 0.0149
+   },
+   "local": {
+    "n_obs": 463875,
+    "n_tracks": 74831,
+    "med_px": 0.2963,
+    "mean_px_clip10": 0.4386,
+    "p90_px": 0.934,
+    "frac_gt_1px": 0.0883,
+    "frac_gt_2px": 0.0179
+   },
+   "behind_cam_frac": 1e-05
+  },
+  "tracks_ba3@poses_ba3/all_common": {
+   "all": {
+    "n_obs": 2234505,
+    "n_tracks": 192833,
+    "med_px": 0.3384,
+    "mean_px_clip10": 0.5017,
+    "p90_px": 1.076,
+    "frac_gt_1px": 0.1137,
+    "frac_gt_2px": 0.0264
+   },
+   "loop": {
+    "n_obs": 18554,
+    "n_tracks": 135,
+    "med_px": 0.3626,
+    "mean_px_clip10": 0.4687,
+    "p90_px": 0.886,
+    "frac_gt_1px": 0.0761,
+    "frac_gt_2px": 0.0129
+   },
+   "local": {
+    "n_obs": 2215951,
+    "n_tracks": 192698,
+    "med_px": 0.3382,
+    "mean_px_clip10": 0.502,
+    "p90_px": 1.077,
+    "frac_gt_1px": 0.114,
+    "frac_gt_2px": 0.0265
+   },
+   "behind_cam_frac": 1e-05
+  },
+  "tracks_ba3@poses_ba3/kf_only": {
+   "all": {
+    "n_obs": 467779,
+    "n_tracks": 74934,
+    "med_px": 0.2969,
+    "mean_px_clip10": 0.4388,
+    "p90_px": 0.934,
+    "frac_gt_1px": 0.0881,
+    "frac_gt_2px": 0.0179
+   },
+   "loop": {
+    "n_obs": 3904,
+    "n_tracks": 103,
+    "med_px": 0.3599,
+    "mean_px_clip10": 0.476,
+    "p90_px": 0.921,
+    "frac_gt_1px": 0.0843,
+    "frac_gt_2px": 0.0151
+   },
+   "local": {
+    "n_obs": 463875,
+    "n_tracks": 74831,
+    "med_px": 0.2964,
+    "mean_px_clip10": 0.4385,
+    "p90_px": 0.934,
+    "frac_gt_1px": 0.0882,
+    "frac_gt_2px": 0.0179
+   },
+   "behind_cam_frac": 1e-05
+  }
+ },
+ "runtime_s": 31.2
+}
