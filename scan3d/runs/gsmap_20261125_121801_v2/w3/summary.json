@@ -1,0 +1,634 @@
+{
+ "made": "2026-11-26 23:40:01",
+ "worker": "W3",
+ "n_recordings": 1,
+ "base": "ffsonly2 (coordinator switch: W2 judged a wash). Input mesh = ffsonly_ba2/b/e3c.ply (= ffsonly2 pre-texture, E3c floor/ceiling already in; E3c heights 0.847 / -1.855 reused). Poses ba2, depth ffsonly_ba2/fused (FFS only).",
+ "inputs": {
+  "mesh": "runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/e3c.ply",
+  "fused": "runs/gsmap_20261125_121801_v2/ffsonly_ba2/fused",
+  "cams": "runs/gsmap_20261125_121801_v2/ba_partners2/run/dump_ba/cams.npz",
+  "room_poly": "runs/gsmap_20261125_121801_v2/ffsonly_ba2/evalrun_newcams2/eval2/ref/room_poly.json"
+ },
+ "chain": "gsm_w3wall -> gsm_texture2 (same args as ffsonly2 / W2) -> atlas8k -> seampad -> eval2 (ba2 evalrun_newcams2 + bap evalrun_newcams) -> gsm_w2judge geo + photo (ffsonly2, W2, W3) -> gsm_w2table -> gsm_w3pic",
+ "variants": {
+  "W3A": {
+   "dir": "runs/gsmap_20261125_121801_v2/w3/fill",
+   "args": "default",
+   "filled_m2": 1.99,
+   "planes": [
+    {
+     "id": 0,
+     "n": [
+      0.9555699499086651,
+      0.0,
+      -0.2947644327790437
+     ],
+     "off": -1.5019022495198573,
+     "rms_cm": 1.84,
+     "tilt_deg": 0.23,
+     "sup_m2": 4.15,
+     "xz_mid": [
+      -2.42,
+      -2.73
+     ],
+     "dist_poly_m": 0.09,
+     "cand_m2": 6.93,
+     "filled_m2": 1.99,
+     "blocked_m2": {
+      "ffs_see_through": 0.006,
+      "mesh_behind": 0.114,
+      "not_visible": 4.824
+     }
+    }
+   ]
+  },
+  "W3B": {
+   "dir": "runs/gsmap_20261125_121801_v2/w3/fillB",
+   "args": "--min-comp 0.25",
+   "filled_m2": 0.378,
+   "planes": [
+    {
+     "id": 0,
+     "n": [
+      0.9555699499086651,
+      0.0,
+      -0.2947644327790437
+     ],
+     "off": -1.5019022495198573,
+     "rms_cm": 1.84,
+     "tilt_deg": 0.23,
+     "sup_m2": 4.15,
+     "xz_mid": [
+      -2.42,
+      -2.73
+     ],
+     "dist_poly_m": 0.09,
+     "cand_m2": 6.93,
+     "filled_m2": 0.378,
+     "blocked_m2": {
+      "ffs_see_through": 0.006,
+      "mesh_behind": 0.114,
+      "not_visible": 4.824,
+      "small_patch": 1.613
+     }
+    }
+   ]
+  },
+  "diag_rms25": {
+   "dir": "runs/gsmap_20261125_121801_v2/w3/diag_rms25",
+   "args": "--max-rms 0.025 (outside the 2 cm rule, fill step only, NOT a candidate)",
+   "filled_m2": 5.925,
+   "planes": [
+    {
+     "id": 0,
+     "n": [
+      0.9555699499086651,
+      0.0,
+      -0.2947644327790437
+     ],
+     "off": -1.5019022495198573,
+     "rms_cm": 1.84,
+     "tilt_deg": 0.23,
+     "sup_m2": 4.15,
+     "xz_mid": [
+      -2.42,
+      -2.73
+     ],
+     "dist_poly_m": 0.09,
+     "cand_m2": 6.93,
+     "filled_m2": 1.99,
+     "blocked_m2": {
+      "ffs_see_through": 0.006,
+      "mesh_behind": 0.114,
+      "not_visible": 4.824,
+      "small_patch": 0.0
+     }
+    },
+    {
+     "id": 1,
+     "n": [
+      0.30294081049431676,
+      0.0,
+      0.9530093731632687
+     ],
+     "off": -5.184196184164857,
+     "rms_cm": 2.08,
+     "tilt_deg": 0.77,
+     "sup_m2": 2.96,
+     "xz_mid": [
+      1.56,
+      -5.94
+     ],
+     "dist_poly_m": 0.03,
+     "cand_m2": 6.627,
+     "filled_m2": 1.827,
+     "blocked_m2": {
+      "ffs_see_through": 0.066,
+      "mesh_behind": 0.035,
+      "not_visible": 4.72,
+      "small_patch": 0.0
+     }
+    },
+    {
+     "id": 2,
+     "n": [
+      0.3239842451407527,
+      0.0,
+      0.9460624762142175
+     ],
+     "off": -2.6670867751005645,
+     "rms_cm": 2.01,
+     "tilt_deg": 0.57,
+     "sup_m2": 1.06,
+     "xz_mid": [
+      2.16,
+      -3.55
+     ],
+     "dist_poly_m": 1.42,
+     "cand_m2": 3.821,
+     "filled_m2": 0.214,
+     "blocked_m2": {
+      "ffs_see_through": 0.222,
+      "mesh_behind": 0.826,
+      "not_visible": 2.734,
+      "small_patch": 0.0
+     }
+    },
+    {
+     "id": 4,
+     "n": [
+      0.34719189614514306,
+      0.0,
+      0.9377941070678255
+     ],
+     "off": -0.01289130814877689,
+     "rms_cm": 2.49,
+     "tilt_deg": 0.01,
+     "sup_m2": 1.08,
+     "xz_mid": [
+      5.79,
+      -2.15
+     ],
+     "dist_poly_m": 0.18,
+     "cand_m2": 6.877,
+     "filled_m2": 1.893,
+     "blocked_m2": {
+      "ffs_see_through": 0.734,
+      "mesh_behind": 1.971,
+      "not_visible": 2.944,
+      "small_patch": 0.0
+     }
+    }
+   ]
+  }
+ },
+ "planes_found": 32,
+ "planes_accepted": 1,
+ "rows": {
+  "ffsonly2": {
+   "eval2": "runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/eval_newcams2_ffsonly2.json",
+   "P3": 84.82,
+   "S1_front": 11.66,
+   "S1_hole": 3.53,
+   "P2b": 0.77,
+   "P2c": 12.46,
+   "S8_islands": 2.198,
+   "S9_N3": 0.514,
+   "area_m2": 218.61,
+   "roi_rms_cm": {
+    "wall_kf538": 1.59,
+    "wall_kf838": 11.31,
+    "door_kf625": 1.88
+   },
+   "roi_second_layer_pct": {
+    "wall_kf538": 2.71,
+    "wall_kf838": 16.54,
+    "door_kf625": 0.42
+   },
+   "gold": {
+    "correct3_pct": 85.123,
+    "correct3_se": 0.453,
+    "front_pct": 11.732,
+    "front_se": 0.536,
+    "hole_pct": 3.145,
+    "hole_se": 0.228,
+    "miss_pct": 0.529,
+    "miss_se": 0.065,
+    "correct3_scalefit_pct": 91.766,
+    "correct3_scalefit_se": 0.277,
+    "correct1p5_pct": 54.994,
+    "correct1p5_se": 0.795,
+    "behind_pct": 2.616,
+    "behind_se": 0.229
+   },
+   "consensus": {
+    "correct3_pct": 85.288,
+    "correct3_se": 0.41,
+    "front_pct": 10.324,
+    "front_se": 0.33,
+    "hole_pct": 4.387,
+    "hole_se": 0.258,
+    "miss_pct": 1.062,
+    "miss_se": 0.142,
+    "correct3_scalefit_pct": 87.203,
+    "correct3_scalefit_se": 0.378,
+    "correct1p5_pct": 68.649,
+    "correct1p5_se": 0.555,
+    "behind_pct": 3.326,
+    "behind_se": 0.193
+   },
+   "photo_partner": {
+    "hit_share": 0.9264,
+    "psnr_hit": 19.2185,
+    "psnr_common": 19.2285,
+    "psnr_common_colourfit": 20.1136,
+    "ssim_common": 0.679,
+    "common_share": 0.924
+   }
+  },
+  "W2": {
+   "eval2": "runs/gsmap_20261125_121801_v2/w2/final/eval_newcams2_w2.json",
+   "P3": 85.02,
+   "S1_front": 11.18,
+   "S1_hole": 3.8,
+   "P2b": 1.11,
+   "P2c": 13.11,
+   "S8_islands": 2.288,
+   "S9_N3": 0.487,
+   "area_m2": 216.45,
+   "roi_rms_cm": {
+    "wall_kf538": 1.26,
+    "wall_kf838": 11.51,
+    "door_kf625": 1.9
+   },
+   "roi_second_layer_pct": {
+    "wall_kf538": 2.06,
+    "wall_kf838": 14.81,
+    "door_kf625": 0.4
+   },
+   "gold": {
+    "correct3_pct": 85.339,
+    "correct3_se": 0.463,
+    "front_pct": 11.253,
+    "front_se": 0.5,
+    "hole_pct": 3.408,
+    "hole_se": 0.231,
+    "miss_pct": 0.598,
+    "miss_se": 0.065,
+    "correct3_scalefit_pct": 91.968,
+    "correct3_scalefit_se": 0.27,
+    "correct1p5_pct": 55.118,
+    "correct1p5_se": 0.787,
+    "behind_pct": 2.81,
+    "behind_se": 0.22
+   },
+   "consensus": {
+    "correct3_pct": 85.63,
+    "correct3_se": 0.43,
+    "front_pct": 9.689,
+    "front_se": 0.32,
+    "hole_pct": 4.681,
+    "hole_se": 0.264,
+    "miss_pct": 1.173,
+    "miss_se": 0.146,
+    "correct3_scalefit_pct": 87.525,
+    "correct3_scalefit_se": 0.376,
+    "correct1p5_pct": 68.857,
+    "correct1p5_se": 0.563,
+    "behind_pct": 3.508,
+    "behind_se": 0.193
+   },
+   "photo_partner": {
+    "hit_share": 0.924,
+    "psnr_hit": 19.1573,
+    "psnr_common": 19.1573,
+    "psnr_common_colourfit": 20.0419,
+    "ssim_common": 0.6748,
+    "common_share": 0.924
+   }
+  },
+  "W3A": {
+   "eval2": "runs/gsmap_20261125_121801_v2/w3/fill/eval_newcams2_w3.json",
+   "P3": 84.83,
+   "S1_front": 11.66,
+   "S1_hole": 3.51,
+   "P2b": 1.29,
+   "P2c": 11.9,
+   "S8_islands": 2.877,
+   "S9_N3": 0.509,
+   "area_m2": 220.6,
+   "roi_rms_cm": {
+    "wall_kf538": 1.59,
+    "wall_kf838": 11.31,
+    "door_kf625": 1.9
+   },
+   "roi_second_layer_pct": {
+    "wall_kf538": 3.14,
+    "wall_kf838": 16.54,
+    "door_kf625": 1.08
+   },
+   "gold": {
+    "correct3_pct": 85.149,
+    "correct3_se": 0.474,
+    "front_pct": 11.733,
+    "front_se": 0.513,
+    "hole_pct": 3.119,
+    "hole_se": 0.218,
+    "miss_pct": 0.338,
+    "miss_se": 0.042,
+    "correct3_scalefit_pct": 91.772,
+    "correct3_scalefit_se": 0.282,
+    "correct1p5_pct": 55.003,
+    "correct1p5_se": 0.768,
+    "behind_pct": 2.781,
+    "behind_se": 0.228
+   },
+   "consensus": {
+    "correct3_pct": 85.31,
+    "correct3_se": 0.418,
+    "front_pct": 10.325,
+    "front_se": 0.339,
+    "hole_pct": 4.365,
+    "hole_se": 0.254,
+    "miss_pct": 0.654,
+    "miss_se": 0.07,
+    "correct3_scalefit_pct": 87.217,
+    "correct3_scalefit_se": 0.362,
+    "correct1p5_pct": 68.659,
+    "correct1p5_se": 0.565,
+    "behind_pct": 3.711,
+    "behind_se": 0.217
+   },
+   "diff_vs_ffsonly2": {
+    "gold": {
+     "correct3": [
+      0.026,
+      0.006
+     ],
+     "front": [
+      0.001,
+      0.001
+     ],
+     "hole": [
+      -0.027,
+      0.007
+     ],
+     "correct3_scalefit": [
+      0.007,
+      0.003
+     ],
+     "correct1p5": [
+      0.01,
+      0.003
+     ]
+    },
+    "consensus": {
+     "correct3": [
+      0.022,
+      0.005
+     ],
+     "front": [
+      0.001,
+      0.0
+     ],
+     "hole": [
+      -0.023,
+      0.005
+     ],
+     "correct3_scalefit": [
+      0.014,
+      0.003
+     ],
+     "correct1p5": [
+      0.01,
+      0.003
+     ]
+    },
+    "photo_partner": {
+     "hit_share": [
+      0.0048,
+      0.0009
+     ],
+     "psnr_hit": [
+      -0.0304,
+      0.0083
+     ],
+     "psnr_common": [
+      0.0003,
+      0.0007
+     ],
+     "psnr_common_colourfit": [
+      -0.0,
+      0.0007
+     ],
+     "ssim_common": [
+      -0.0,
+      0.0001
+     ]
+    },
+    "photo_kf": {
+     "hit_share": [
+      0.0041,
+      0.0009
+     ],
+     "psnr_hit": [
+      -0.0228,
+      0.0082
+     ],
+     "psnr_common": [
+      0.0013,
+      0.0009
+     ],
+     "psnr_common_colourfit": [
+      0.0012,
+      0.0009
+     ],
+     "ssim_common": [
+      -0.0,
+      0.0001
+     ]
+    }
+   },
+   "photo_partner": {
+    "hit_share": 0.9312,
+    "psnr_hit": 19.1881,
+    "psnr_common": 19.2288,
+    "psnr_common_colourfit": 20.1136,
+    "ssim_common": 0.679,
+    "common_share": 0.924
+   },
+   "rjudge": "runs/gsmap_20261125_121801_v2/w3/rjudge"
+  },
+  "W3B": {
+   "eval2": "runs/gsmap_20261125_121801_v2/w3/fillB/eval_newcams2_w3.json",
+   "P3": 84.82,
+   "S1_front": 11.66,
+   "S1_hole": 3.53,
+   "P2b": 0.77,
+   "P2c": 12.41,
+   "S8_islands": 2.194,
+   "S9_N3": 0.513,
+   "area_m2": 218.98,
+   "roi_rms_cm": {
+    "wall_kf538": 1.59,
+    "wall_kf838": 11.31,
+    "door_kf625": 1.88
+   },
+   "roi_second_layer_pct": {
+    "wall_kf538": 2.71,
+    "wall_kf838": 16.54,
+    "door_kf625": 0.42
+   },
+   "gold": {
+    "correct3_pct": 85.123,
+    "correct3_se": 0.475,
+    "front_pct": 11.732,
+    "front_se": 0.513,
+    "hole_pct": 3.145,
+    "hole_se": 0.218,
+    "miss_pct": 0.529,
+    "miss_se": 0.065,
+    "correct3_scalefit_pct": 91.766,
+    "correct3_scalefit_se": 0.282,
+    "correct1p5_pct": 54.994,
+    "correct1p5_se": 0.768,
+    "behind_pct": 2.616,
+    "behind_se": 0.229
+   },
+   "consensus": {
+    "correct3_pct": 85.288,
+    "correct3_se": 0.42,
+    "front_pct": 10.324,
+    "front_se": 0.339,
+    "hole_pct": 4.387,
+    "hole_se": 0.256,
+    "miss_pct": 1.062,
+    "miss_se": 0.144,
+    "correct3_scalefit_pct": 87.203,
+    "correct3_scalefit_se": 0.363,
+    "correct1p5_pct": 68.649,
+    "correct1p5_se": 0.565,
+    "behind_pct": 3.326,
+    "behind_se": 0.197
+   },
+   "diff_vs_ffsonly2": {
+    "gold": {
+     "correct3": [
+      0.0,
+      0.0
+     ],
+     "front": [
+      0.0,
+      0.0
+     ],
+     "hole": [
+      0.0,
+      0.0
+     ],
+     "correct3_scalefit": [
+      0.0,
+      0.0
+     ],
+     "correct1p5": [
+      0.0,
+      0.0
+     ]
+    },
+    "consensus": {
+     "correct3": [
+      0.0,
+      0.0
+     ],
+     "front": [
+      0.0,
+      0.0
+     ],
+     "hole": [
+      0.0,
+      0.0
+     ],
+     "correct3_scalefit": [
+      0.0,
+      0.0
+     ],
+     "correct1p5": [
+      0.0,
+      0.0
+     ]
+    },
+    "photo_partner": {
+     "hit_share": [
+      0.0005,
+      0.0002
+     ],
+     "psnr_hit": [
+      -0.001,
+      0.0007
+     ],
+     "psnr_common": [
+      -0.0005,
+      0.0006
+     ],
+     "psnr_common_colourfit": [
+      -0.0006,
+      0.0007
+     ],
+     "ssim_common": [
+      -0.0,
+      0.0
+     ]
+    },
+    "photo_kf": {
+     "hit_share": [
+      0.0005,
+      0.0002
+     ],
+     "psnr_hit": [
+      -0.0003,
+      0.0009
+     ],
+     "psnr_common": [
+      -0.0003,
+      0.0007
+     ],
+     "psnr_common_colourfit": [
+      -0.0001,
+      0.0008
+     ],
+     "ssim_common": [
+      -0.0001,
+      0.0001
+     ]
+    }
+   },
+   "photo_partner": {
+    "hit_share": 0.9268,
+    "psnr_hit": 19.2176,
+    "psnr_common": 19.2279,
+    "psnr_common_colourfit": 20.113,
+    "ssim_common": 0.679,
+    "common_share": 0.924
+   },
+   "rjudge": "runs/gsmap_20261125_121801_v2/w3/rjudge_fillB"
+  }
+ },
+ "guards": {
+  "W3A": {
+   "P2c_down_meaningfully": true,
+   "wall_roi_rms_held": true,
+   "gold_front_not_up": false,
+   "cons_front_not_up": false,
+   "heldout_psnr_drop_le_0p05": true,
+   "P2b_not_up": false
+  },
+  "W3B": {
+   "P2c_down_meaningfully": false,
+   "wall_roi_rms_held": true,
+   "gold_front_not_up": true,
+   "cons_front_not_up": true,
+   "heldout_psnr_drop_le_0p05": true,
+   "P2b_not_up": true
+  }
+ },
+ "verdict": "NOT adopted. Only 1 of 32 RANSAC vertical planes passed RMS<2 cm (+area); 2.0 m2 filled (A). A: P2c -0.56 pt but P2b +0.52 pt and S8 islands +0.68 pt (the fill patches become small unwelded pieces); geo/photo flat. B (drop patches <0.25 m2): 0.38 m2, P2c -0.05 = no effect. Most hole cells (4.8 of 6.9 m2) are blocked because existing mesh sits in front (not visible from >= 2 keyframes)."
+}
