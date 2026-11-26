@@ -192,3 +192,7 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
   above mixes in E3c); REAL (not generated) floor / ceiling coverage of the room polygon 35.6 / 8.5 %; real (not generated) mesh area
   154 m2; cabinet and panel REGRESSED vs v4 (hit share 0.72 / 0.69 on those ROIs).
 - Stopped (no retrains).
+- 09:00 FFS free-space gate on the e8/c1855 final mesh (gsm_ffsgate.py mesh, reference = filtered FFS of e6/fuse F==1 = 361 old + 50 new kf,
+  violated = seen through by >= 2 FFS kf by > max(3 cm, 1.5 %), non-grazing faces): 111,201 of 1,500,082 faces = 7.41 % (5.34 % area).
+  First-hit share violated per ROI: cabinet_front_kf774 0.0, panel 0.0, door 0.0, wall538 13.2, wall838 8.8, floor 10.3 %.
+  > 5 % of faces -> NOT delivered (stop rule). No texture / crop made. ffsgate/mesh_gated.json.
