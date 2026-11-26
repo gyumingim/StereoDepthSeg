@@ -1,0 +1,424 @@
+{
+ "made": "2026-11-27 01:33:30",
+ "script": "gsm_w7_probe.py",
+ "inputs": {
+  "cams": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/run/dump_ba/cams.npz",
+  "fused": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/fused",
+  "mesh": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/carve.ply",
+  "base": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners/ffs_pairs2/pairs",
+  "low": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners/ffs_pairs3/extra",
+  "wide": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffs_relax/src/wide",
+  "ba": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/ba/ba_state.npz",
+  "b1": "/mnt/c/Users/a3162/AppData/Local/Temp/claude/b2ff6dea35ed22b8/92940a45-822d-4f2e-9a4d-643a3bbb683f/scratchpad/audit8/b1_faces.npz"
+ },
+ "kf_idx": [
+  314,
+  315,
+  316,
+  317,
+  318,
+  319,
+  320,
+  321,
+  322,
+  323,
+  324,
+  325,
+  326,
+  327,
+  328,
+  329,
+  330,
+  331,
+  332,
+  333,
+  336,
+  334,
+  337,
+  335,
+  338,
+  313,
+  339,
+  312
+ ],
+ "kf_frames": [
+  2471,
+  2476,
+  2482,
+  2489,
+  2494,
+  2499,
+  2503,
+  2510,
+  2516,
+  2519,
+  2525,
+  2528,
+  2532,
+  2539,
+  2543,
+  2546,
+  2550,
+  2554,
+  2558,
+  2565,
+  2580,
+  2568,
+  2583,
+  2574,
+  2590,
+  2464,
+  2595,
+  2457
+ ],
+ "ba_filter": {
+  "points_total": 226009,
+  "obs_total": 2071852,
+  "obs_src_ba": 2071843,
+  "pts_nobs_ge": 183063,
+  "pts_reproj_ok": 118777,
+  "pts_kept": 87576,
+  "obs_kept": 984671,
+  "tri_deg_med_kept": 4.808541831078149,
+  "args": {
+   "reproj_max_px": 1.0,
+   "min_obs": 3,
+   "min_tri_deg": 2.0,
+   "min_kf_obs": 0
+  }
+ },
+ "note": "gsmap W7 2026-11-27 probe: is the REJECTED stored per-pair FFS depth on the aisle objects accurate, and which fusion rule threw it away?\n\nKeyframes: idx 314-331 + the 10 others with the largest visible area of the audit8 b1 unsupported aisle clusters.\nRegions (per keyframe, raycast of ffsonly_ba2/b/carve.ply with the ba2 cams): aisle = hit point in ROI x -0.3..3.3, z -5..-3.2;\nobj = hit face in audit8 b1 sidx (C2-kept, FFS-unsupported aisle faces = the dark real objects); dark = blurred grey < 45.\nPair stack = exactly gsm_ffs_fix3.pairs_of inputs (base ffs_pairs2/pairs + sin_map, low ffs_pairs3/extra, wide ffs_relax/src/wide incl relax),\nstored Z of these files is ALREADY cut at sigma/Z <= 3 %, Z 0.3-4 m (pairs3.partial_depth) -> pixels cut there show up as \"no_stored\".\nClasses (pixel not in fused -> reason): fused (ffsonly_ba2/fused F==1); near (any pair Z <= 1.5, L domain); single (exactly 1 pair with\nfuse-cut Z, keyframe has >= 2 pairs -> never admitted, or 1 pair failing the neighbour check); disagree (>= 2 pairs valid, no k=2 agreement);\ncut_at_fuse (a stored value exists but fails the fuse cap/zmax); no_stored (no pair value).\nCandidate depth: fused Z / single pair Z / min-sigma pair Z.\nRef a: BA2 tracks (gsm_f_ruler.tracks filter, >= 3 obs, reproj < 1 px, tri > 2 deg), keyframe observations, rel err at the projected pixel.\nRef b: cross-view: back-project candidate, project into the other keyframes within +-12 idx; their depth = fused else min-sigma stored pair;\nper pixel median |zj - Dj| / Dj over views (occlusion not removed -> conservative), and share of views agreeing within 3 %.\n",
+ "pixels": {
+  "aisle": {
+   "fused": 1780734,
+   "near": 75466,
+   "single": 769770,
+   "disagree": 156675,
+   "cut_at_fuse": 201713,
+   "no_stored": 1732850
+  },
+  "obj": {
+   "fused": 43609,
+   "near": 7018,
+   "single": 175209,
+   "disagree": 7798,
+   "cut_at_fuse": 76917,
+   "no_stored": 804359
+  },
+  "obj_dark": {
+   "fused": 6792,
+   "near": 1989,
+   "single": 42797,
+   "disagree": 1463,
+   "cut_at_fuse": 18498,
+   "no_stored": 201922
+  },
+  "aisle_dark": {
+   "fused": 296598,
+   "near": 33182,
+   "single": 271786,
+   "disagree": 59281,
+   "cut_at_fuse": 66810,
+   "no_stored": 520583
+  }
+ },
+ "pixels_pct": {
+  "aisle": {
+   "fused": 37.75,
+   "near": 1.6,
+   "single": 16.32,
+   "disagree": 3.32,
+   "cut_at_fuse": 4.28,
+   "no_stored": 36.73
+  },
+  "obj": {
+   "fused": 3.91,
+   "near": 0.63,
+   "single": 15.72,
+   "disagree": 0.7,
+   "cut_at_fuse": 6.9,
+   "no_stored": 72.15
+  },
+  "obj_dark": {
+   "fused": 2.48,
+   "near": 0.73,
+   "single": 15.65,
+   "disagree": 0.53,
+   "cut_at_fuse": 6.76,
+   "no_stored": 73.84
+  },
+  "aisle_dark": {
+   "fused": 23.76,
+   "near": 2.66,
+   "single": 21.77,
+   "disagree": 4.75,
+   "cut_at_fuse": 5.35,
+   "no_stored": 41.71
+  }
+ },
+ "err": {
+  "ba_aisle": {
+   "fused": {
+    "n": 2054,
+    "med_pct": 0.78,
+    "p90_pct": 2.84,
+    "signed_med_pct": -0.21,
+    "within3pct": 91.4
+   },
+   "single": {
+    "n": 485,
+    "med_pct": 1.47,
+    "p90_pct": 19.64,
+    "signed_med_pct": -0.54,
+    "within3pct": 67.4
+   },
+   "cut_at_fuse": {
+    "n": 163,
+    "med_pct": 2.68,
+    "p90_pct": 18.32,
+    "signed_med_pct": -1.38,
+    "within3pct": 53.4
+   },
+   "disagree": {
+    "n": 194,
+    "med_pct": 8.86,
+    "p90_pct": 19.28,
+    "signed_med_pct": -8.21,
+    "within3pct": 12.4
+   },
+   "near": {
+    "n": 33,
+    "med_pct": 20.21,
+    "p90_pct": 31.99,
+    "signed_med_pct": -20.21,
+    "within3pct": 6.1
+   }
+  },
+  "ba_obj": {
+   "single": {
+    "n": 132,
+    "med_pct": 1.56,
+    "p90_pct": 12.5,
+    "signed_med_pct": -0.41,
+    "within3pct": 70.5
+   },
+   "cut_at_fuse": {
+    "n": 66,
+    "med_pct": 3.13,
+    "p90_pct": 18.9,
+    "signed_med_pct": -1.44,
+    "within3pct": 48.5
+   },
+   "fused": {
+    "n": 46,
+    "med_pct": 1.55,
+    "p90_pct": 13.58,
+    "signed_med_pct": 0.13,
+    "within3pct": 73.9
+   },
+   "near": {
+    "n": 3,
+    "med_pct": 24.71,
+    "p90_pct": 28.53,
+    "signed_med_pct": -24.71,
+    "within3pct": 0.0
+   },
+   "disagree": {
+    "n": 12,
+    "med_pct": 9.08,
+    "p90_pct": 18.37,
+    "signed_med_pct": -6.27,
+    "within3pct": 16.7
+   }
+  },
+  "ba_obj_dark": {
+   "single": {
+    "n": 38,
+    "med_pct": 1.55,
+    "p90_pct": 8.95,
+    "signed_med_pct": -1.47,
+    "within3pct": 68.4
+   },
+   "cut_at_fuse": {
+    "n": 34,
+    "med_pct": 3.13,
+    "p90_pct": 18.57,
+    "signed_med_pct": -2.21,
+    "within3pct": 47.1
+   },
+   "fused": {
+    "n": 2,
+    "med_pct": 11.08,
+    "p90_pct": 13.09,
+    "signed_med_pct": -11.08,
+    "within3pct": 0.0
+   }
+  },
+  "ba_aisle_dark": {
+   "fused": {
+    "n": 174,
+    "med_pct": 0.88,
+    "p90_pct": 3.9,
+    "signed_med_pct": -0.47,
+    "within3pct": 85.1
+   },
+   "single": {
+    "n": 107,
+    "med_pct": 1.72,
+    "p90_pct": 13.8,
+    "signed_med_pct": -0.78,
+    "within3pct": 66.4
+   },
+   "cut_at_fuse": {
+    "n": 53,
+    "med_pct": 2.8,
+    "p90_pct": 18.71,
+    "signed_med_pct": -1.51,
+    "within3pct": 54.7
+   },
+   "disagree": {
+    "n": 17,
+    "med_pct": 7.79,
+    "p90_pct": 22.07,
+    "signed_med_pct": -1.66,
+    "within3pct": 23.5
+   },
+   "near": {
+    "n": 1,
+    "med_pct": 4.54,
+    "p90_pct": 4.54,
+    "signed_med_pct": -4.54,
+    "within3pct": 0.0
+   }
+  },
+  "xv_aisle": {
+   "fused": {
+    "n": 445233,
+    "med_pct": 0.83,
+    "p90_pct": 2.19,
+    "view_agree3pct_mean": 85.9
+   },
+   "near": {
+    "n": 17514,
+    "med_pct": 5.59,
+    "p90_pct": 33.04,
+    "view_agree3pct_mean": 37.6
+   },
+   "single": {
+    "n": 189965,
+    "med_pct": 1.38,
+    "p90_pct": 11.61,
+    "view_agree3pct_mean": 68.8
+   },
+   "disagree": {
+    "n": 39074,
+    "med_pct": 7.19,
+    "p90_pct": 24.38,
+    "view_agree3pct_mean": 27.0
+   },
+   "cut_at_fuse": {
+    "n": 33297,
+    "med_pct": 5.88,
+    "p90_pct": 214.22,
+    "view_agree3pct_mean": 37.4
+   }
+  },
+  "xv_obj": {
+   "fused": {
+    "n": 10858,
+    "med_pct": 1.22,
+    "p90_pct": 7.08,
+    "view_agree3pct_mean": 70.0
+   },
+   "near": {
+    "n": 1369,
+    "med_pct": 23.51,
+    "p90_pct": 80.8,
+    "view_agree3pct_mean": 20.3
+   },
+   "single": {
+    "n": 42494,
+    "med_pct": 1.41,
+    "p90_pct": 14.24,
+    "view_agree3pct_mean": 68.3
+   },
+   "cut_at_fuse": {
+    "n": 14151,
+    "med_pct": 5.89,
+    "p90_pct": 242.12,
+    "view_agree3pct_mean": 37.7
+   },
+   "disagree": {
+    "n": 1917,
+    "med_pct": 8.6,
+    "p90_pct": 63.01,
+    "view_agree3pct_mean": 22.5
+   }
+  },
+  "xv_obj_dark": {
+   "fused": {
+    "n": 1665,
+    "med_pct": 1.9,
+    "p90_pct": 7.67,
+    "view_agree3pct_mean": 63.4
+   },
+   "single": {
+    "n": 10214,
+    "med_pct": 1.88,
+    "p90_pct": 19.21,
+    "view_agree3pct_mean": 61.3
+   },
+   "cut_at_fuse": {
+    "n": 4110,
+    "med_pct": 3.06,
+    "p90_pct": 147.45,
+    "view_agree3pct_mean": 47.7
+   },
+   "near": {
+    "n": 211,
+    "med_pct": 3.82,
+    "p90_pct": 8.26,
+    "view_agree3pct_mean": 57.2
+   },
+   "disagree": {
+    "n": 345,
+    "med_pct": 7.45,
+    "p90_pct": 22.16,
+    "view_agree3pct_mean": 26.3
+   }
+  },
+  "xv_aisle_dark": {
+   "fused": {
+    "n": 74147,
+    "med_pct": 1.42,
+    "p90_pct": 3.46,
+    "view_agree3pct_mean": 74.7
+   },
+   "near": {
+    "n": 7400,
+    "med_pct": 2.17,
+    "p90_pct": 7.06,
+    "view_agree3pct_mean": 60.8
+   },
+   "single": {
+    "n": 67068,
+    "med_pct": 2.07,
+    "p90_pct": 12.81,
+    "view_agree3pct_mean": 59.4
+   },
+   "cut_at_fuse": {
+    "n": 13237,
+    "med_pct": 3.0,
+    "p90_pct": 132.89,
+    "view_agree3pct_mean": 45.3
+   },
+   "disagree": {
+    "n": 14782,
+    "med_pct": 4.51,
+    "p90_pct": 20.42,
+    "view_agree3pct_mean": 40.8
+   }
+  }
+ },
+ "runtime_s": 18.1
+}

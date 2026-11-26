@@ -1,0 +1,454 @@
+{
+ "made": "2026-11-27 01:41:19",
+ "script": "gsm_w7_probe3.py",
+ "note": "gsmap W7 2026-11-27 probe 3 (= probe 2 + confirmation count >= 2 and a split of \"none\" into epipole cone / FFS no output): sub-classes of the rejected aisle-object FFS depth (same keyframes/regions/pair stack as gsm_w7_probe.py).\n\nsingle sub-classes: sigma/Z bins (<= 1 %, 1-2 %, 2-3 %) and cross-keyframe confirmation: projected into the ODD-offset keyframes within\n+-12 idx, confirmed if >= 1 of them has its own depth (fused, else min-sigma stored pair) within k=2 * hypot(sig_i, sig_j) (the fix3\nneighbour rule, extended to keyframes with >= 2 pairs). Cross-view error (ref b) is then measured on the EVEN-offset keyframes only\n(disjoint from the confirming views); BA error (ref a) is fully independent of the rule.\nno_stored sub-classes from w7/uncut (wide/relax pairs recomputed without sigma cap/zmax): sigma_cut (uncut finite, best sigma/Z > 3 %,\nZ <= 4 m; bins 3-5, 5-10, > 10 %), range_cut (uncut Z > 4 m only), none (no uncut value: epipole cone, no overlap, FFS uncertainty mask,\nor the keyframe has no wide/relax pair).\n",
+ "kf_idx": [
+  314,
+  315,
+  316,
+  317,
+  318,
+  319,
+  320,
+  321,
+  322,
+  323,
+  324,
+  325,
+  326,
+  327,
+  328,
+  329,
+  330,
+  331,
+  332,
+  333,
+  336,
+  334,
+  337,
+  335,
+  338,
+  313,
+  339,
+  312
+ ],
+ "inputs": {
+  "probe": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w7/probe.json",
+  "uncut": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w7/uncut",
+  "fused": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/fused",
+  "mesh": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/carve.ply",
+  "ba": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/ba/ba_state.npz"
+ },
+ "pixels": {
+  "aisle": {
+   "fused": 1780734,
+   "single_le1": 2023,
+   "single_1to2": 249572,
+   "single_2to3": 518175,
+   "sigcut_3to5": 128056,
+   "sigcut_5to10": 5085,
+   "sigcut_gt10": 0,
+   "range_cut": 206687,
+   "none": 1594735,
+   "other": 232141,
+   "single_conf": 711598,
+   "single_conf_le2": 225711,
+   "single_unconf": 58172,
+   "single_conf2": 671960,
+   "none_epipole_cone": 1273160,
+   "none_kf_without_wide_pair": 0
+  },
+  "obj": {
+   "fused": 43609,
+   "single_le1": 104,
+   "single_1to2": 19281,
+   "single_2to3": 155824,
+   "sigcut_3to5": 44542,
+   "sigcut_5to10": 2718,
+   "sigcut_gt10": 0,
+   "range_cut": 114660,
+   "none": 719356,
+   "other": 14816,
+   "single_conf": 159078,
+   "single_conf_le2": 15594,
+   "single_unconf": 16131,
+   "single_conf2": 147190,
+   "none_epipole_cone": 656797,
+   "none_kf_without_wide_pair": 0
+  },
+  "obj_dark": {
+   "fused": 6792,
+   "single_le1": 1,
+   "single_1to2": 6082,
+   "single_2to3": 36714,
+   "sigcut_3to5": 13391,
+   "sigcut_5to10": 480,
+   "sigcut_gt10": 0,
+   "range_cut": 11590,
+   "none": 194959,
+   "other": 3452,
+   "single_conf": 37168,
+   "single_conf_le2": 4614,
+   "single_unconf": 5629,
+   "single_conf2": 32608,
+   "none_epipole_cone": 182892,
+   "none_kf_without_wide_pair": 0
+  }
+ },
+ "ba": {
+  "aisle": {
+   "fused": {
+    "n": 2054,
+    "med_pct": 0.78,
+    "p90_pct": 2.84,
+    "signed_med_pct": -0.21
+   },
+   "single_1to2": {
+    "n": 172,
+    "med_pct": 2.04,
+    "p90_pct": 35.44,
+    "signed_med_pct": -0.64
+   },
+   "single_2to3": {
+    "n": 313,
+    "med_pct": 1.24,
+    "p90_pct": 9.96,
+    "signed_med_pct": -0.5
+   },
+   "sigcut_3to5": {
+    "n": 126,
+    "med_pct": 3.05,
+    "p90_pct": 26.24,
+    "signed_med_pct": -2.44
+   },
+   "range_cut": {
+    "n": 101,
+    "med_pct": 3.62,
+    "p90_pct": 32.95,
+    "signed_med_pct": -0.75
+   },
+   "single_conf": {
+    "n": 435,
+    "med_pct": 1.21,
+    "p90_pct": 11.89,
+    "signed_med_pct": -0.41
+   },
+   "single_conf_le2": {
+    "n": 140,
+    "med_pct": 1.52,
+    "p90_pct": 18.25,
+    "signed_med_pct": -0.2
+   },
+   "single_conf2": {
+    "n": 401,
+    "med_pct": 1.06,
+    "p90_pct": 7.35,
+    "signed_med_pct": -0.34
+   },
+   "sigcut_5to10": {
+    "n": 4,
+    "med_pct": 3.31,
+    "p90_pct": 3.89,
+    "signed_med_pct": -3.31
+   },
+   "single_unconf": {
+    "n": 50,
+    "med_pct": 25.91,
+    "p90_pct": 44.17,
+    "signed_med_pct": -22.34
+   }
+  },
+  "obj": {
+   "single_2to3": {
+    "n": 121,
+    "med_pct": 1.49,
+    "p90_pct": 8.3,
+    "signed_med_pct": -0.54
+   },
+   "range_cut": {
+    "n": 61,
+    "med_pct": 3.84,
+    "p90_pct": 32.95,
+    "signed_med_pct": -1.78
+   },
+   "single_conf": {
+    "n": 123,
+    "med_pct": 1.49,
+    "p90_pct": 7.18,
+    "signed_med_pct": -0.28
+   },
+   "single_conf2": {
+    "n": 116,
+    "med_pct": 1.48,
+    "p90_pct": 7.46,
+    "signed_med_pct": -0.27
+   },
+   "sigcut_3to5": {
+    "n": 51,
+    "med_pct": 8.91,
+    "p90_pct": 28.46,
+    "signed_med_pct": -8.91
+   },
+   "sigcut_5to10": {
+    "n": 4,
+    "med_pct": 3.31,
+    "p90_pct": 3.89,
+    "signed_med_pct": -3.31
+   },
+   "single_unconf": {
+    "n": 9,
+    "med_pct": 14.65,
+    "p90_pct": 35.97,
+    "signed_med_pct": -14.65
+   },
+   "single_1to2": {
+    "n": 11,
+    "med_pct": 6.73,
+    "p90_pct": 14.95,
+    "signed_med_pct": 2.62
+   },
+   "fused": {
+    "n": 46,
+    "med_pct": 1.55,
+    "p90_pct": 13.58,
+    "signed_med_pct": 0.13
+   },
+   "single_conf_le2": {
+    "n": 9,
+    "med_pct": 2.62,
+    "p90_pct": 14.53,
+    "signed_med_pct": 2.62
+   }
+  },
+  "obj_dark": {
+   "single_2to3": {
+    "n": 36,
+    "med_pct": 1.55,
+    "p90_pct": 7.4,
+    "signed_med_pct": -1.47
+   },
+   "range_cut": {
+    "n": 18,
+    "med_pct": 7.19,
+    "p90_pct": 42.3,
+    "signed_med_pct": 4.77
+   },
+   "single_conf": {
+    "n": 35,
+    "med_pct": 1.42,
+    "p90_pct": 5.82,
+    "signed_med_pct": -1.38
+   },
+   "single_conf2": {
+    "n": 32,
+    "med_pct": 1.4,
+    "p90_pct": 5.33,
+    "signed_med_pct": -0.77
+   },
+   "sigcut_3to5": {
+    "n": 21,
+    "med_pct": 2.48,
+    "p90_pct": 14.89,
+    "signed_med_pct": -1.75
+   },
+   "single_unconf": {
+    "n": 3,
+    "med_pct": 26.7,
+    "p90_pct": 39.03,
+    "signed_med_pct": -26.7
+   },
+   "single_1to2": {
+    "n": 2,
+    "med_pct": 21.44,
+    "p90_pct": 37.98,
+    "signed_med_pct": -21.44
+   },
+   "fused": {
+    "n": 2,
+    "med_pct": 11.08,
+    "p90_pct": 13.09,
+    "signed_med_pct": -11.08
+   },
+   "single_conf_le2": {
+    "n": 1,
+    "med_pct": 0.77,
+    "p90_pct": 0.77,
+    "signed_med_pct": -0.77
+   }
+  }
+ },
+ "xv_even": {
+  "aisle": {
+   "fused": {
+    "n": 445063,
+    "med_pct": 0.88,
+    "p90_pct": 2.47
+   },
+   "single_1to2": {
+    "n": 62196,
+    "med_pct": 1.4,
+    "p90_pct": 16.67
+   },
+   "single_2to3": {
+    "n": 123176,
+    "med_pct": 1.46,
+    "p90_pct": 11.3
+   },
+   "sigcut_3to5": {
+    "n": 23822,
+    "med_pct": 2.56,
+    "p90_pct": 44.92
+   },
+   "range_cut": {
+    "n": 18070,
+    "med_pct": 13.68,
+    "p90_pct": 340.14
+   },
+   "single_conf": {
+    "n": 173979,
+    "med_pct": 1.33,
+    "p90_pct": 7.33
+   },
+   "single_conf_le2": {
+    "n": 56321,
+    "med_pct": 1.23,
+    "p90_pct": 7.0
+   },
+   "single_unconf": {
+    "n": 11902,
+    "med_pct": 20.83,
+    "p90_pct": 46.97
+   },
+   "single_conf2": {
+    "n": 165961,
+    "med_pct": 1.27,
+    "p90_pct": 5.15
+   },
+   "sigcut_5to10": {
+    "n": 452,
+    "med_pct": 47.9,
+    "p90_pct": 280.76
+   },
+   "single_le1": {
+    "n": 509,
+    "med_pct": 1.88,
+    "p90_pct": 40.09
+   }
+  },
+  "obj": {
+   "fused": {
+    "n": 10756,
+    "med_pct": 1.29,
+    "p90_pct": 8.32
+   },
+   "single_1to2": {
+    "n": 4674,
+    "med_pct": 3.08,
+    "p90_pct": 30.9
+   },
+   "single_2to3": {
+    "n": 35768,
+    "med_pct": 1.45,
+    "p90_pct": 14.1
+   },
+   "sigcut_3to5": {
+    "n": 6421,
+    "med_pct": 3.45,
+    "p90_pct": 32.75
+   },
+   "range_cut": {
+    "n": 11158,
+    "med_pct": 6.69,
+    "p90_pct": 292.11
+   },
+   "single_conf": {
+    "n": 37857,
+    "med_pct": 1.43,
+    "p90_pct": 10.82
+   },
+   "single_conf_le2": {
+    "n": 3809,
+    "med_pct": 2.31,
+    "p90_pct": 16.34
+   },
+   "single_unconf": {
+    "n": 2609,
+    "med_pct": 20.49,
+    "p90_pct": 42.33
+   },
+   "single_conf2": {
+    "n": 35631,
+    "med_pct": 1.36,
+    "p90_pct": 6.78
+   },
+   "sigcut_5to10": {
+    "n": 188,
+    "med_pct": 93.45,
+    "p90_pct": 226.03
+   },
+   "single_le1": {
+    "n": 24,
+    "med_pct": 7.68,
+    "p90_pct": 68.62
+   }
+  },
+  "obj_dark": {
+   "fused": {
+    "n": 1649,
+    "med_pct": 1.99,
+    "p90_pct": 8.83
+   },
+   "single_1to2": {
+    "n": 1454,
+    "med_pct": 4.24,
+    "p90_pct": 30.21
+   },
+   "single_2to3": {
+    "n": 7890,
+    "med_pct": 1.88,
+    "p90_pct": 19.81
+   },
+   "sigcut_3to5": {
+    "n": 2239,
+    "med_pct": 2.96,
+    "p90_pct": 35.48
+   },
+   "range_cut": {
+    "n": 1362,
+    "med_pct": 89.46,
+    "p90_pct": 287.78
+   },
+   "single_conf": {
+    "n": 8407,
+    "med_pct": 1.81,
+    "p90_pct": 14.46
+   },
+   "single_conf_le2": {
+    "n": 1094,
+    "med_pct": 2.74,
+    "p90_pct": 17.82
+   },
+   "single_unconf": {
+    "n": 938,
+    "med_pct": 22.91,
+    "p90_pct": 41.24
+   },
+   "single_conf2": {
+    "n": 7579,
+    "med_pct": 1.63,
+    "p90_pct": 7.36
+   },
+   "sigcut_5to10": {
+    "n": 22,
+    "med_pct": 6.16,
+    "p90_pct": 221.64
+   },
+   "single_le1": {
+    "n": 1,
+    "med_pct": 33.19,
+    "p90_pct": 33.19
+   }
+  }
+ },
+ "runtime_s": 12.3
+}

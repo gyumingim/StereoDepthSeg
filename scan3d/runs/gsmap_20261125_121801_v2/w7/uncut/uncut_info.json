@@ -1,0 +1,568 @@
+{
+ "made": "2026-11-27 01:38:49",
+ "poses": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/poses_all.npz",
+ "src": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffs_relax/src/wide",
+ "args": {
+  "theta_min": 25.0,
+  "cap": 1000000000.0,
+  "zmax": 1000000000.0,
+  "z_near": 1.0,
+  "f_scale": 1.0,
+  "max_px": 1000000.0
+ },
+ "note": "gsmap W7 2026-11-27: recompute the wide/relax FFS pairs of the probe keyframes WITHOUT the per-pixel sigma cap and zmax\n(identical gsm_ffs_pairs3.partial_depth otherwise: 25 deg epipole cone, FFS uncertainty mask, Z >= 0.3 m, same model, BA2 poses),\nso the probe can split \"no stored pair value\" into sigma-cut / range-cut / truly no FFS output.\n  python gsm_w7_uncut.py   -> runs/.../w7/uncut/<kf>.npz (Z float32 uncut, sin, B, f, partner) + uncut_info.json\nSanity: where the stored pair value exists, the uncut value must match it (median |dz|/z reported).",
+ "per_kf": {
+  "2471": [
+   {
+    "j": 2419,
+    "uncut_valid": 0.345,
+    "stored_valid": 0.1668,
+    "stored_vs_uncut_med_rel_pct": 0.998,
+    "stored_not_in_uncut": 25045,
+    "B_cm": 34.65,
+    "pose": "vio"
+   }
+  ],
+  "2476": [
+   {
+    "j": 2427,
+    "uncut_valid": 0.348,
+    "stored_valid": 0.2407,
+    "stored_vs_uncut_med_rel_pct": 0.017,
+    "stored_not_in_uncut": 230,
+    "B_cm": 34.71,
+    "pose": "ba2"
+   },
+   {
+    "j": 2445,
+    "uncut_valid": 0.4614,
+    "stored_valid": 0.2686,
+    "stored_vs_uncut_med_rel_pct": 0.022,
+    "stored_not_in_uncut": 155,
+    "B_cm": 22.88,
+    "pose": "ba2"
+   }
+  ],
+  "2482": [
+   {
+    "j": 2431,
+    "uncut_valid": 0.2667,
+    "stored_valid": 0.2275,
+    "stored_vs_uncut_med_rel_pct": 0.017,
+    "stored_not_in_uncut": 73,
+    "B_cm": 37.33,
+    "pose": "ba2"
+   },
+   {
+    "j": 2521,
+    "uncut_valid": 0.3212,
+    "stored_valid": 0.2206,
+    "stored_vs_uncut_med_rel_pct": 0.029,
+    "stored_not_in_uncut": 91,
+    "B_cm": 36.41,
+    "pose": "ba2"
+   }
+  ],
+  "2489": [
+   {
+    "j": 2435,
+    "uncut_valid": 0.2734,
+    "stored_valid": 0.2384,
+    "stored_vs_uncut_med_rel_pct": 0.022,
+    "stored_not_in_uncut": 153,
+    "B_cm": 41.03,
+    "pose": "ba2"
+   },
+   {
+    "j": 2456,
+    "uncut_valid": 0.3305,
+    "stored_valid": 0.2184,
+    "stored_vs_uncut_med_rel_pct": 0.023,
+    "stored_not_in_uncut": 52,
+    "B_cm": 28.32,
+    "pose": "ba2"
+   }
+  ],
+  "2494": [
+   {
+    "j": 2439,
+    "uncut_valid": 0.3081,
+    "stored_valid": 0.2537,
+    "stored_vs_uncut_med_rel_pct": 0.027,
+    "stored_not_in_uncut": 129,
+    "B_cm": 43.02,
+    "pose": "ba2"
+   },
+   {
+    "j": 2463,
+    "uncut_valid": 0.3499,
+    "stored_valid": 0.2317,
+    "stored_vs_uncut_med_rel_pct": 0.023,
+    "stored_not_in_uncut": 152,
+    "B_cm": 28.09,
+    "pose": "ba2"
+   }
+  ],
+  "2499": [
+   {
+    "j": 2440,
+    "uncut_valid": 0.3367,
+    "stored_valid": 0.2907,
+    "stored_vs_uncut_med_rel_pct": 0.023,
+    "stored_not_in_uncut": 63,
+    "B_cm": 46.56,
+    "pose": "ba2"
+   },
+   {
+    "j": 2465,
+    "uncut_valid": 0.3703,
+    "stored_valid": 0.2758,
+    "stored_vs_uncut_med_rel_pct": 0.024,
+    "stored_not_in_uncut": 156,
+    "B_cm": 30.8,
+    "pose": "ba2"
+   }
+  ],
+  "2503": [
+   {
+    "j": 2440,
+    "uncut_valid": 0.3262,
+    "stored_valid": 0.2785,
+    "stored_vs_uncut_med_rel_pct": 0.021,
+    "stored_not_in_uncut": 116,
+    "B_cm": 50.34,
+    "pose": "ba2"
+   },
+   {
+    "j": 2467,
+    "uncut_valid": 0.361,
+    "stored_valid": 0.2707,
+    "stored_vs_uncut_med_rel_pct": 0.023,
+    "stored_not_in_uncut": 133,
+    "B_cm": 33.01,
+    "pose": "ba2"
+   }
+  ],
+  "2510": [
+   {
+    "j": 2461,
+    "uncut_valid": 0.3807,
+    "stored_valid": 0.3361,
+    "stored_vs_uncut_med_rel_pct": 0.021,
+    "stored_not_in_uncut": 12,
+    "B_cm": 43.77,
+    "pose": "ba2"
+   },
+   {
+    "j": 2479,
+    "uncut_valid": 0.3786,
+    "stored_valid": 0.2535,
+    "stored_vs_uncut_med_rel_pct": 0.027,
+    "stored_not_in_uncut": 68,
+    "B_cm": 28.48,
+    "pose": "ba2"
+   }
+  ],
+  "2516": [
+   {
+    "j": 2467,
+    "uncut_valid": 0.3545,
+    "stored_valid": 0.3091,
+    "stored_vs_uncut_med_rel_pct": 0.021,
+    "stored_not_in_uncut": 100,
+    "B_cm": 45.36,
+    "pose": "ba2"
+   },
+   {
+    "j": 2484,
+    "uncut_valid": 0.4265,
+    "stored_valid": 0.3092,
+    "stored_vs_uncut_med_rel_pct": 0.019,
+    "stored_not_in_uncut": 0,
+    "B_cm": 29.75,
+    "pose": "ba2"
+   }
+  ],
+  "2519": [
+   {
+    "j": 2471,
+    "uncut_valid": 0.394,
+    "stored_valid": 0.2946,
+    "stored_vs_uncut_med_rel_pct": 0.023,
+    "stored_not_in_uncut": 251,
+    "B_cm": 44.91,
+    "pose": "ba2"
+   },
+   {
+    "j": 2487,
+    "uncut_valid": 0.3412,
+    "stored_valid": 0.2298,
+    "stored_vs_uncut_med_rel_pct": 0.019,
+    "stored_not_in_uncut": 0,
+    "B_cm": 29.83,
+    "pose": "ba2"
+   }
+  ],
+  "2525": [
+   {
+    "j": 2473,
+    "uncut_valid": 0.3083,
+    "stored_valid": 0.2512,
+    "stored_vs_uncut_med_rel_pct": 0.017,
+    "stored_not_in_uncut": 0,
+    "B_cm": 49.28,
+    "pose": "ba2"
+   },
+   {
+    "j": 2491,
+    "uncut_valid": 0.3882,
+    "stored_valid": 0.29,
+    "stored_vs_uncut_med_rel_pct": 0.024,
+    "stored_not_in_uncut": 420,
+    "B_cm": 32.31,
+    "pose": "ba2"
+   }
+  ],
+  "2528": [
+   {
+    "j": 2476,
+    "uncut_valid": 0.3819,
+    "stored_valid": 0.2553,
+    "stored_vs_uncut_med_rel_pct": 0.021,
+    "stored_not_in_uncut": 303,
+    "B_cm": 49.6,
+    "pose": "ba2"
+   },
+   {
+    "j": 2494,
+    "uncut_valid": 0.4101,
+    "stored_valid": 0.2972,
+    "stored_vs_uncut_med_rel_pct": 0.029,
+    "stored_not_in_uncut": 490,
+    "B_cm": 33.01,
+    "pose": "ba2"
+   }
+  ],
+  "2532": [
+   {
+    "j": 2483,
+    "uncut_valid": 0.3404,
+    "stored_valid": 0.2634,
+    "stored_vs_uncut_med_rel_pct": 0.018,
+    "stored_not_in_uncut": 7,
+    "B_cm": 46.79,
+    "pose": "ba2"
+   },
+   {
+    "j": 2502,
+    "uncut_valid": 0.5637,
+    "stored_valid": 0.4162,
+    "stored_vs_uncut_med_rel_pct": 0.017,
+    "stored_not_in_uncut": 0,
+    "B_cm": 30.39,
+    "pose": "ba2"
+   }
+  ],
+  "2539": [
+   {
+    "j": 2488,
+    "uncut_valid": 0.5103,
+    "stored_valid": 0.4239,
+    "stored_vs_uncut_med_rel_pct": 0.018,
+    "stored_not_in_uncut": 0,
+    "B_cm": 49.54,
+    "pose": "ba2"
+   },
+   {
+    "j": 2508,
+    "uncut_valid": 0.5208,
+    "stored_valid": 0.3691,
+    "stored_vs_uncut_med_rel_pct": 0.018,
+    "stored_not_in_uncut": 0,
+    "B_cm": 32.71,
+    "pose": "ba2"
+   }
+  ],
+  "2543": [
+   {
+    "j": 2500,
+    "uncut_valid": 0.5429,
+    "stored_valid": 0.4261,
+    "stored_vs_uncut_med_rel_pct": 0.024,
+    "stored_not_in_uncut": 462,
+    "B_cm": 43.8,
+    "pose": "ba2"
+   },
+   {
+    "j": 2517,
+    "uncut_valid": 0.5723,
+    "stored_valid": 0.3776,
+    "stored_vs_uncut_med_rel_pct": 0.018,
+    "stored_not_in_uncut": 0,
+    "B_cm": 27.75,
+    "pose": "ba2"
+   }
+  ],
+  "2546": [
+   {
+    "j": 2498,
+    "uncut_valid": 0.5461,
+    "stored_valid": 0.4362,
+    "stored_vs_uncut_med_rel_pct": 0.017,
+    "stored_not_in_uncut": 0,
+    "B_cm": 48.59,
+    "pose": "ba2"
+   },
+   {
+    "j": 2517,
+    "uncut_valid": 0.5733,
+    "stored_valid": 0.4047,
+    "stored_vs_uncut_med_rel_pct": 0.018,
+    "stored_not_in_uncut": 0,
+    "B_cm": 30.84,
+    "pose": "ba2"
+   }
+  ],
+  "2550": [
+   {
+    "j": 2509,
+    "uncut_valid": 0.5459,
+    "stored_valid": 0.4178,
+    "stored_vs_uncut_med_rel_pct": 0.021,
+    "stored_not_in_uncut": 137,
+    "B_cm": 43.05,
+    "pose": "ba2"
+   },
+   {
+    "j": 2524,
+    "uncut_valid": 0.5705,
+    "stored_valid": 0.3813,
+    "stored_vs_uncut_med_rel_pct": 0.018,
+    "stored_not_in_uncut": 29,
+    "B_cm": 27.45,
+    "pose": "ba2"
+   }
+  ],
+  "2554": [
+   {
+    "j": 2513,
+    "uncut_valid": 0.5605,
+    "stored_valid": 0.4222,
+    "stored_vs_uncut_med_rel_pct": 0.019,
+    "stored_not_in_uncut": 16,
+    "B_cm": 43.04,
+    "pose": "ba2"
+   },
+   {
+    "j": 2529,
+    "uncut_valid": 0.5845,
+    "stored_valid": 0.3876,
+    "stored_vs_uncut_med_rel_pct": 0.017,
+    "stored_not_in_uncut": 0,
+    "B_cm": 25.83,
+    "pose": "ba2"
+   }
+  ],
+  "2558": [
+   {
+    "j": 2517,
+    "uncut_valid": 0.5543,
+    "stored_valid": 0.4323,
+    "stored_vs_uncut_med_rel_pct": 0.017,
+    "stored_not_in_uncut": 0,
+    "B_cm": 42.8,
+    "pose": "ba2"
+   },
+   {
+    "j": 2531,
+    "uncut_valid": 0.5879,
+    "stored_valid": 0.4135,
+    "stored_vs_uncut_med_rel_pct": 0.019,
+    "stored_not_in_uncut": 24,
+    "B_cm": 27.77,
+    "pose": "ba2"
+   }
+  ],
+  "2565": [
+   {
+    "j": 2523,
+    "uncut_valid": 0.5627,
+    "stored_valid": 0.4166,
+    "stored_vs_uncut_med_rel_pct": 0.021,
+    "stored_not_in_uncut": 75,
+    "B_cm": 43.82,
+    "pose": "ba2"
+   },
+   {
+    "j": 2537,
+    "uncut_valid": 0.5014,
+    "stored_valid": 0.3733,
+    "stored_vs_uncut_med_rel_pct": 0.018,
+    "stored_not_in_uncut": 123,
+    "B_cm": 28.78,
+    "pose": "ba2"
+   }
+  ],
+  "2580": [
+   {
+    "j": 2532,
+    "uncut_valid": 0.5057,
+    "stored_valid": 0.4493,
+    "stored_vs_uncut_med_rel_pct": 0.017,
+    "stored_not_in_uncut": 0,
+    "B_cm": 49.72,
+    "pose": "ba2"
+   },
+   {
+    "j": 2549,
+    "uncut_valid": 0.3987,
+    "stored_valid": 0.3489,
+    "stored_vs_uncut_med_rel_pct": 0.02,
+    "stored_not_in_uncut": 48,
+    "B_cm": 32.47,
+    "pose": "ba2"
+   }
+  ],
+  "2568": [
+   {
+    "j": 2523,
+    "uncut_valid": 0.5225,
+    "stored_valid": 0.4109,
+    "stored_vs_uncut_med_rel_pct": 0.017,
+    "stored_not_in_uncut": 0,
+    "B_cm": 46.86,
+    "pose": "ba2"
+   },
+   {
+    "j": 2538,
+    "uncut_valid": 0.4807,
+    "stored_valid": 0.3813,
+    "stored_vs_uncut_med_rel_pct": 0.018,
+    "stored_not_in_uncut": 0,
+    "B_cm": 30.89,
+    "pose": "ba2"
+   }
+  ],
+  "2583": [
+   {
+    "j": 2535,
+    "uncut_valid": 0.4639,
+    "stored_valid": 0.4243,
+    "stored_vs_uncut_med_rel_pct": 0.018,
+    "stored_not_in_uncut": 0,
+    "B_cm": 49.79,
+    "pose": "ba2"
+   },
+   {
+    "j": 2552,
+    "uncut_valid": 0.3893,
+    "stored_valid": 0.3381,
+    "stored_vs_uncut_med_rel_pct": 0.02,
+    "stored_not_in_uncut": 49,
+    "B_cm": 32.64,
+    "pose": "ba2"
+   }
+  ],
+  "2574": [
+   {
+    "j": 2526,
+    "uncut_valid": 0.5204,
+    "stored_valid": 0.436,
+    "stored_vs_uncut_med_rel_pct": 0.021,
+    "stored_not_in_uncut": 39,
+    "B_cm": 49.53,
+    "pose": "ba2"
+   },
+   {
+    "j": 2542,
+    "uncut_valid": 0.4527,
+    "stored_valid": 0.3895,
+    "stored_vs_uncut_med_rel_pct": 0.018,
+    "stored_not_in_uncut": 51,
+    "B_cm": 32.95,
+    "pose": "ba2"
+   }
+  ],
+  "2590": [
+   {
+    "j": 2543,
+    "uncut_valid": 0.3765,
+    "stored_valid": 0.3307,
+    "stored_vs_uncut_med_rel_pct": 0.018,
+    "stored_not_in_uncut": 3,
+    "B_cm": 50.2,
+    "pose": "ba2"
+   },
+   {
+    "j": 2560,
+    "uncut_valid": 0.366,
+    "stored_valid": 0.3212,
+    "stored_vs_uncut_med_rel_pct": 0.019,
+    "stored_not_in_uncut": 53,
+    "B_cm": 33.09,
+    "pose": "ba2"
+   }
+  ],
+  "2464": [
+   {
+    "j": 2410,
+    "uncut_valid": 0.3449,
+    "stored_valid": 0.1552,
+    "stored_vs_uncut_med_rel_pct": 1.228,
+    "stored_not_in_uncut": 19632,
+    "B_cm": 35.66,
+    "pose": "ba2"
+   },
+   {
+    "j": 2430,
+    "uncut_valid": 0.523,
+    "stored_valid": 0.1559,
+    "stored_vs_uncut_med_rel_pct": 1.361,
+    "stored_not_in_uncut": 6903,
+    "B_cm": 23.07,
+    "pose": "ba2"
+   }
+  ],
+  "2595": [
+   {
+    "j": 2556,
+    "uncut_valid": 0.3096,
+    "stored_valid": 0.2762,
+    "stored_vs_uncut_med_rel_pct": 0.018,
+    "stored_not_in_uncut": 0,
+    "B_cm": 43.82,
+    "pose": "ba2"
+   },
+   {
+    "j": 2571,
+    "uncut_valid": 0.3893,
+    "stored_valid": 0.3098,
+    "stored_vs_uncut_med_rel_pct": 0.019,
+    "stored_not_in_uncut": 49,
+    "B_cm": 28.09,
+    "pose": "ba2"
+   }
+  ],
+  "2457": [
+   {
+    "j": 2397,
+    "uncut_valid": 0.2967,
+    "stored_valid": 0.1223,
+    "stored_vs_uncut_med_rel_pct": 1.973,
+    "stored_not_in_uncut": 1285,
+    "B_cm": 34.86,
+    "pose": "vio"
+   },
+   {
+    "j": 2423,
+    "uncut_valid": 0.523,
+    "stored_valid": 0.2117,
+    "stored_vs_uncut_med_rel_pct": 1.289,
+    "stored_not_in_uncut": 5838,
+    "B_cm": 23.01,
+    "pose": "vio"
+   }
+  ]
+ },
+ "runtime_s": 181.2
+}

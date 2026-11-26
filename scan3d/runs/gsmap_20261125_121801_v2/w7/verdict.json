@@ -1,0 +1,236 @@
+{
+ "made": "2026-11-27 01:42:03",
+ "worker": "w7",
+ "decision": "NOGO",
+ "reason": "no class passes BA p90 <= 6 %: best single_conf2 (>= 2 neighbour keyframes confirm) median 1.48 % / p90 7.46 % on obj (n 116), 1.06 / 7.35 % on all aisle (n 401) vs fused 0.78 / 2.84 %; sigma-cut 3-5 % median 8.9 % on obj; range-cut median 3.8 % p90 33 %. 59 % of object pixels lie in the 25 deg epipole cone of every pair (no FFS output at all), so fusion rules cannot recover them.",
+ "inputs": {
+  "probe": "scan3d/runs/gsmap_20261125_121801_v2/w7/probe.json",
+  "probe2": "scan3d/runs/gsmap_20261125_121801_v2/w7/probe2.json",
+  "probe3": "scan3d/runs/gsmap_20261125_121801_v2/w7/probe3.json",
+  "uncut": "scan3d/runs/gsmap_20261125_121801_v2/w7/uncut/uncut_info.json"
+ },
+ "pixel_share_pct": {
+  "aisle": {
+   "fused": 37.7,
+   "single_le1": 0.0,
+   "single_1to2": 5.3,
+   "single_2to3": 11.0,
+   "sigcut_3to5": 2.7,
+   "sigcut_5to10": 0.1,
+   "sigcut_gt10": 0.0,
+   "range_cut": 4.4,
+   "none": 33.8,
+   "other": 4.9,
+   "single_conf": 15.1,
+   "single_conf_le2": 4.8,
+   "single_unconf": 1.2,
+   "single_conf2": 14.2,
+   "none_epipole_cone": 27.0,
+   "none_kf_without_wide_pair": 0.0
+  },
+  "obj": {
+   "fused": 3.9,
+   "single_le1": 0.0,
+   "single_1to2": 1.7,
+   "single_2to3": 14.0,
+   "sigcut_3to5": 4.0,
+   "sigcut_5to10": 0.2,
+   "sigcut_gt10": 0.0,
+   "range_cut": 10.3,
+   "none": 64.5,
+   "other": 1.3,
+   "single_conf": 14.3,
+   "single_conf_le2": 1.4,
+   "single_unconf": 1.4,
+   "single_conf2": 13.2,
+   "none_epipole_cone": 58.9,
+   "none_kf_without_wide_pair": 0.0
+  },
+  "obj_dark": {
+   "fused": 2.5,
+   "single_le1": 0.0,
+   "single_1to2": 2.2,
+   "single_2to3": 13.4,
+   "sigcut_3to5": 4.9,
+   "sigcut_5to10": 0.2,
+   "sigcut_gt10": 0.0,
+   "range_cut": 4.2,
+   "none": 71.3,
+   "other": 1.3,
+   "single_conf": 13.6,
+   "single_conf_le2": 1.7,
+   "single_unconf": 2.1,
+   "single_conf2": 11.9,
+   "none_epipole_cone": 66.9,
+   "none_kf_without_wide_pair": 0.0
+  }
+ },
+ "gate": {
+  "rule": "recoverable class: rejected single-pair or sigma-cut pixels with BA median <= 2 % and p90 <= 6 %, adding >= 2x the fused obj pixels",
+  "fused_obj_px": 43609,
+  "candidates": {
+   "single_conf2": {
+    "obj_px": 147190,
+    "x_fused": 3.38,
+    "ba_obj": {
+     "n": 116,
+     "med_pct": 1.48,
+     "p90_pct": 7.46,
+     "signed_med_pct": -0.27
+    },
+    "ba_aisle": {
+     "n": 401,
+     "med_pct": 1.06,
+     "p90_pct": 7.35,
+     "signed_med_pct": -0.34
+    },
+    "ba_obj_dark": {
+     "n": 32,
+     "med_pct": 1.4,
+     "p90_pct": 5.33,
+     "signed_med_pct": -0.77
+    },
+    "xv_obj": {
+     "n": 35631,
+     "med_pct": 1.36,
+     "p90_pct": 6.78
+    }
+   },
+   "single_conf": {
+    "obj_px": 159078,
+    "x_fused": 3.65,
+    "ba_obj": {
+     "n": 123,
+     "med_pct": 1.49,
+     "p90_pct": 7.18,
+     "signed_med_pct": -0.28
+    },
+    "ba_aisle": {
+     "n": 435,
+     "med_pct": 1.21,
+     "p90_pct": 11.89,
+     "signed_med_pct": -0.41
+    },
+    "ba_obj_dark": {
+     "n": 35,
+     "med_pct": 1.42,
+     "p90_pct": 5.82,
+     "signed_med_pct": -1.38
+    },
+    "xv_obj": {
+     "n": 37857,
+     "med_pct": 1.43,
+     "p90_pct": 10.82
+    }
+   },
+   "single_2to3": {
+    "obj_px": 155824,
+    "x_fused": 3.57,
+    "ba_obj": {
+     "n": 121,
+     "med_pct": 1.49,
+     "p90_pct": 8.3,
+     "signed_med_pct": -0.54
+    },
+    "ba_aisle": {
+     "n": 313,
+     "med_pct": 1.24,
+     "p90_pct": 9.96,
+     "signed_med_pct": -0.5
+    },
+    "ba_obj_dark": {
+     "n": 36,
+     "med_pct": 1.55,
+     "p90_pct": 7.4,
+     "signed_med_pct": -1.47
+    },
+    "xv_obj": {
+     "n": 35768,
+     "med_pct": 1.45,
+     "p90_pct": 14.1
+    }
+   },
+   "sigcut_3to5": {
+    "obj_px": 44542,
+    "x_fused": 1.02,
+    "ba_obj": {
+     "n": 51,
+     "med_pct": 8.91,
+     "p90_pct": 28.46,
+     "signed_med_pct": -8.91
+    },
+    "ba_aisle": {
+     "n": 126,
+     "med_pct": 3.05,
+     "p90_pct": 26.24,
+     "signed_med_pct": -2.44
+    },
+    "ba_obj_dark": {
+     "n": 21,
+     "med_pct": 2.48,
+     "p90_pct": 14.89,
+     "signed_med_pct": -1.75
+    },
+    "xv_obj": {
+     "n": 6421,
+     "med_pct": 3.45,
+     "p90_pct": 32.75
+    }
+   },
+   "range_cut": {
+    "obj_px": 114660,
+    "x_fused": 2.63,
+    "ba_obj": {
+     "n": 61,
+     "med_pct": 3.84,
+     "p90_pct": 32.95,
+     "signed_med_pct": -1.78
+    },
+    "ba_aisle": {
+     "n": 101,
+     "med_pct": 3.62,
+     "p90_pct": 32.95,
+     "signed_med_pct": -0.75
+    },
+    "ba_obj_dark": {
+     "n": 18,
+     "med_pct": 7.19,
+     "p90_pct": 42.3,
+     "signed_med_pct": 4.77
+    },
+    "xv_obj": {
+     "n": 11158,
+     "med_pct": 6.69,
+     "p90_pct": 292.11
+    }
+   }
+  },
+  "control_fused": {
+   "ba_obj": {
+    "n": 46,
+    "med_pct": 1.55,
+    "p90_pct": 13.58,
+    "signed_med_pct": 0.13
+   },
+   "ba_aisle": {
+    "n": 2054,
+    "med_pct": 0.78,
+    "p90_pct": 2.84,
+    "signed_med_pct": -0.21
+   },
+   "xv_obj": {
+    "n": 10756,
+    "med_pct": 1.29,
+    "p90_pct": 8.32
+   }
+  }
+ },
+ "correction": "audit7 an3 'raw FFS covers the whole image' (raw_none 0.0) is an artifact: (NaN <= 0) is False so invalid s4m pixels were counted as raw_other. Uncut per-pair FFS covers about 30-37 % of an aisle keyframe; stored after the 3 % cut 23-29 %.",
+ "caveats": [
+  "n = 1 recording, 28 keyframes (idx 312-339)",
+  "BA ruler on object pixels is noisy: even accepted fused depth there has p90 13.6 % (n 46)",
+  "obj region = rays hitting the audit8 b1 unsupported faces of the ffsonly2 carve mesh; that mesh shape is itself a guess there",
+  "uncut recompute only for wide/relax pairs; kf 2457/2464 old-wide partners without a BA2 pose used VIO-anchored poses (stored vs uncut 2 % off there, 0.02 % elsewhere)",
+  "cross-view ref does not remove occlusion (conservative)"
+ ]
+}
