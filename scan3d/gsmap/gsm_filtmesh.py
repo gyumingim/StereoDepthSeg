@@ -3,7 +3,7 @@
 
   ~/scanner/gsmap_env/venv/bin/python scan3d/gsmap/gsm_filtmesh.py OUT.ply
 FFS pixels dropped if: multi-view free-space check (>= 2 views and >= 30 % of checkable views, 3 cm / 3 %), within 3 px of a
-> 3 % depth jump, or > 2 m. MoGe-2 (aligned, fuse/moge Zai) fills dropped + missing pixels where it passes the 3 % edge cut
+> 3 % depth jump, or > GSMAP_FFS_ZMAX (default 2 m). MoGe-2 (aligned, fuse/moge Zai) fills dropped + missing pixels where it passes the 3 % edge cut
 (median5) and is < 4 m. Black undistortion border masked (eroded 3 px). Depth <= 3 m.
 TSDF: tsdf_map.TSDFMap voxel 5 mm, pixel sigma 1 cm -> trunc 2 cm (trunc_max 0.02), min_obs 2, all 134 keyframes, BA poses,
 colour from the 960 keyframes.
@@ -18,6 +18,9 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent)); sys.path.insert(0, str(HERE.parent / "gsplat"))
 import os
 R = Path(os.environ.get("GSMAP_RUN", str(HERE.parent / "runs" / "gsmap_20261125")))
+# 11-26: FFS far cut (was fixed 2 m). Default 2 m keeps old runs reproducible; the 4 m chain (gsm_ffs_4m.py) sets GSMAP_FFS_ZMAX=4
+# (or its capped value); the output depth / TSDF limit becomes max(3 m, this).
+ZMAX = float(os.environ.get("GSMAP_FFS_ZMAX", "2.0")); ZOUT = max(3.0, ZMAX)
 
 
 def main():
@@ -34,7 +37,7 @@ def main():
     Tw = torch.from_numpy(np.linalg.inv(T)).float().to(dev); Tc = torch.from_numpy(T).float().to(dev)
     k3 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
     od = R / "fuse" / "moge_f"; od.mkdir(exist_ok=True)
-    tsdf = tsdf_map.TSDFMap(voxel_m=0.005, z_max=3.0, sigma_max=0.08, sigma_ok=0.02, min_obs=2, trunc_max=0.02, max_blocks=400000)
+    tsdf = tsdf_map.TSDFMap(voxel_m=0.005, z_max=ZOUT, sigma_max=0.08, sigma_ok=0.02, min_obs=2, trunc_max=0.02, max_blocks=400000)
     st = dict(ffs=0, mv=0, edge=0, far=0, drop=0, px_ffs=0, px_moge=0)
     for c_ in range(n):
         Z = FF[c_]; val = np.isfinite(Z) & vm
@@ -56,12 +59,12 @@ def main():
             for dy, dx in [(0, 1), (2, 1), (1, 0), (1, 2)]:
                 N = Zp[dy:dy + H, dx:dx + W]; jump |= (N > 0) & (Z0 > 0) & (np.abs(N - Z0) / np.maximum(Z0, 1e-3) > 0.03)
             edge = cv2.dilate(jump.astype(np.uint8), k3).astype(bool) & val
-        far = val & (Z > 2.0); drop = val & (mv | edge | far); keep = val & ~drop
+        far = val & (Z > ZMAX); drop = val & (mv | edge | far); keep = val & ~drop
         Za = MG[c_]; med = cv2.medianBlur(np.nan_to_num(Za, nan=0).astype(np.float32), 5)
         mok = vm & np.isfinite(Za) & (Za > 0.05) & (Za < 4.0) & (np.abs(Za - med) / np.maximum(Za, 1e-3) < 0.03)
         Zo = np.where(keep, Z, np.where(mok, Za, np.nan)).astype(np.float32)
         Fo = np.where(keep, 1, np.where(mok, 2, 0)).astype(np.uint8)
-        Vv = np.isfinite(Zo) & (Zo <= 3.0) & vm
+        Vv = np.isfinite(Zo) & (Zo <= ZOUT) & vm
         Fo[~Vv] = 0; Zo[~Vv] = np.nan
         np.savez_compressed(od / f"{kf[c_]:05d}.npz", Z=Zo, F=Fo)
         for k_, x in dict(ffs=val, mv=mv, edge=edge, far=far, drop=drop).items():

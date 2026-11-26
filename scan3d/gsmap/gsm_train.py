@@ -7,6 +7,7 @@ Input: gsplat dump (134 keyframes 960x540 undistorted, BA poses T = cam->world, 
 (Z, F: 1 = FFS, 2 = AI fill). Hold-out: every 8th keyframe (index % 8 == 0) is never used (no photo, no depth, no init).
 Init: back-project train keyframes (stride 3 px), voxel 1 cm, colour = mean. Loss: 0.8 L1 + 0.2 D-SSIM
 + depth_w * weighted L1(expected depth, Z) with weight 1 on FFS pixels, --fill-w (default 0.1) on filled pixels.
+  --depth-sigma (off by default, 11-26): FFS pixel weight (sigma_ref/sigma)^2 clipped [0.05, 4], sigma = per-pixel S map, sigma_ref = view median.
 Densification = gsplat DefaultStrategy (3DGS), refine 500..steps/2, opacity reset every 3000.
 Eval: held-out PSNR / SSIM / LPIPS(alex) on valid pixels (+ *_full incl. the black border), render depth vs FFS on held-out views, free-space (floater) check vs FFS.
 Saves OUT/splat.ply (INRIA 3DGS layout, loads in common splat viewers), OUT/gaussians.pt (params + cams, to refine later),
@@ -76,6 +77,8 @@ def main():
     ap.add_argument("dump"); ap.add_argument("--fused", required=True); ap.add_argument("--out", required=True)
     ap.add_argument("--steps", type=int, default=12000); ap.add_argument("--seed", type=int, default=0)   # steps default 12000 from 11-25 (was 20000)
     ap.add_argument("--depth-w", type=float, default=0.1); ap.add_argument("--fill-w", type=float, default=0.1)
+    ap.add_argument("--depth-sigma", default="", help="off by default. 'fused' = key S in the fused npz, or a dir of KF.npz files with key S "
+                    "(e.g. ffs_4m/s4m): FFS pixel depth weight (median S of the view / S)^2 clipped to [0.05, 4]")
     ap.add_argument("--hold", type=int, default=8); ap.add_argument("--stride", type=int, default=3)
     ap.add_argument("--voxel", type=float, default=0.01); ap.add_argument("--max-gs", type=int, default=3_000_000)
     ap.add_argument("--aniso-max", type=float, default=0, help=">0: penalise log(max_scale/min_scale) above log(this) (anti-spike)")
@@ -183,7 +186,20 @@ def main():
                 nrm_t.append(None); continue
             Nc = d_["N"].astype(np.float32); Nw = Nc @ T[c_][:3, :3].T; Nw[~(Ff[c_] > 0)] = 0
             nrm_t.append(torch.from_numpy(Nw).half().to(dev))
-    wt = [torch.from_numpy(np.where(F == 1, 1.0, np.where(F == 2, a.fill_w, 0.0)).astype(np.float16)).to(dev) for F in Ff]
+    wnp = [np.where(F == 1, 1.0, np.where(F == 2, a.fill_w, 0.0)) for F in Ff]
+    if a.depth_sigma:   # 11-26: FFS pixels weighted (sigma_ref / sigma)^2, clip [0.05, 4], sigma_ref = median sigma of the view
+        for c_, i in enumerate(kf):
+            fs = (fused / f"{i:05d}.npz") if a.depth_sigma == "fused" else (Path(a.depth_sigma) / f"{i:05d}.npz")
+            d_ = np.load(fs) if fs.exists() else None
+            if d_ is None or "S" not in d_:
+                continue
+            S = d_["S"].astype(np.float64); ok = (Ff[c_] == 1) & np.isfinite(S) & (S > 0)
+            if ok.sum() < 10:
+                continue
+            ref = np.median(S[ok]); wnp[c_] = np.where(ok, np.clip((ref / np.where(ok, S, 1.0)) ** 2, 0.05, 4.0), wnp[c_])
+        print(f"depth sigma weights from {a.depth_sigma}: mean FFS w "
+              f"{np.mean([wnp[c][Ff[c] == 1].mean() for c in train if (Ff[c] == 1).any()]):.3f}", flush=True)
+    wt = [torch.from_numpy(w_.astype(np.float16)).to(dev) for w_ in wnp]
 
     extra = {}
 
