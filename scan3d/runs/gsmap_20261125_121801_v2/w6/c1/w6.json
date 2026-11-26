@@ -1,0 +1,54 @@
+{
+ "made": "2026-11-27 00:51:41",
+ "worker": "W6",
+ "variant": "C1",
+ "far_m": null,
+ "inp": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/carve.ply",
+ "vis": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w6/vis.npz",
+ "base_votes": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/support/support_votes.npz",
+ "rule": "cand = agree==0; C1 never visible (vis_any==0, no grazing cut); C2/C3 C1 | cand & dist to nearest agree>=2 face centre > far; then NC (comp < 0.25 m2, no agree>0)",
+ "faces_in": 1318240,
+ "area_in_m2": 137.62,
+ "roi": {
+  "x": [
+   -0.3,
+   3.3
+  ],
+  "z": [
+   -5.0,
+   -3.2
+  ]
+ },
+ "roi_area_in_m2": 13.412,
+ "ffsonly2_nc_area_m2": 129.07,
+ "variant_nc_area_m2": 127.846,
+ "ffsonly2_nc_roi_m2": 12.371,
+ "variant_nc_roi_m2": 12.341,
+ "removed_m2": {
+  "never_seen": {
+   "whole": 1.093,
+   "roi": 0.026
+  },
+  "far": {
+   "whole": 0.0,
+   "roi": 0.0
+  },
+  "extra_nc_island": {
+   "whole": 0.302,
+   "roi": 0.006
+  }
+ },
+ "removed_vs_ffsonly2_m2": {
+  "whole": 1.396,
+  "roi": 0.032
+ },
+ "removed_vs_ffsonly2_pct": {
+  "whole": 1.08,
+  "roi": 0.26
+ },
+ "removed_with_ffs_agree_ge1_m2": 0.0,
+ "removed_with_ffs_agree_ge2_m2": 0.0,
+ "faces_out_rule": 1311460,
+ "out": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w6/c1/w6.ply",
+ "runtime_s": 6.0
+}
