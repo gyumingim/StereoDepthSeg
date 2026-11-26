@@ -80,6 +80,10 @@ def main():
     ap.add_argument("--sharp-local", type=int, default=0); ap.add_argument("--robust-gain", type=int, default=0)
     ap.add_argument("--seam-level", type=int, default=0); ap.add_argument("--seam-iters", type=int, default=300)
     ap.add_argument("--seam-soft", type=float, default=0.0, help=">0: seam corrections become a soft prior of this weight (vs 1 per mesh-edge neighbour), field smoothed everywhere")
+    ap.add_argument("--seam-occl", type=int, default=0, help="W9 (1): seam targets only from labels whose camera sees the vertex (ray cast)")
+    ap.add_argument("--seam-mode", default="rgb", choices=["rgb", "luma", "gain"], help="W9 (2): rgb = per channel (W8); luma = one additive offset; gain = one multiplicative gain")
+    ap.add_argument("--seam-target", default="mean", choices=["mean", "w", "wr"], help="W9 (4): mean (W8); w = view-score weighted; wr = weighted + robust")
+    ap.add_argument("--seam-fill", type=int, default=0, help="W9 (3): neighbour-filled faces take the levelled border colour")
     ap.add_argument("--cap", type=int, default=0)
     a = ap.parse_args()
     import open3d as o3d, xatlas
@@ -235,6 +239,41 @@ def main():
         nlab = np.bincount(pv, minlength=len(V)); seamp = nlab[pv] >= 2
         tgt = np.stack([np.bincount(pv, weights=pc[:, k], minlength=len(V)) for k in range(3)], 1) / np.maximum(nlab, 1)[:, None]
         d = np.zeros((npair, 3)); d[seamp] = np.clip(tgt[pv[seamp]] - pc[seamp], -40, 40)
+        w9 = bool(a.seam_occl or a.seam_mode != "rgb" or a.seam_target != "mean")
+        if w9:   # W9 variants (all opt-in; defaults reproduce W8 SM/SM2 exactly because this block is skipped)
+            pw = np.ones(npair)
+            if a.seam_target in ("w", "wr"):   # view weight = sum of the label's view score (angle / distance / sharpness) over its faces at the vertex
+                pw = np.bincount(pinv.ravel(), weights=np.repeat(score[fs_, best[fs_]].astype(np.float64), 3), minlength=npair)
+                pw = pw / np.maximum(np.bincount(pv, weights=pw, minlength=len(V))[pv] / np.maximum(nlab[pv], 1), 1e-12)
+            vis_p = np.ones(npair, bool)
+            if a.seam_occl:   # (1) the vertex must be visible from the label's camera (ray cast to the vertex, same tolerance as the face test)
+                tc = T[pl][:, :3, 3]; dv = V[pv] - tc; dist = np.linalg.norm(dv, axis=1); dv /= np.maximum(dist, 1e-9)[:, None]
+                th = sc.cast_rays(o3d.core.Tensor(np.concatenate([tc, dv], 1).astype(np.float32)))["t_hit"].numpy()
+                vis_p = th > dist - (0.01 + 0.01 * dist)
+                for j in np.unique(pl):   # also inside the image and the valid (undistorted) area
+                    mm = np.nonzero(pl == j)[0]; R, t = T[j][:3, :3], T[j][:3, 3]; Xc = (V[pv[mm]] - t) @ R; zc = Xc[:, 2]
+                    ui = np.round(K[0, 0] * Xc[:, 0] / np.maximum(zc, 1e-6) + K[0, 2]).astype(int); vi = np.round(K[1, 1] * Xc[:, 1] / np.maximum(zc, 1e-6) + K[1, 2]).astype(int)
+                    inb = (zc > 0.05) & (ui >= 0) & (ui < w) & (vi >= 0) & (vi < h); inb[inb] &= valid[vi[inb], ui[inb]]; vis_p[mm] &= inb
+            lum_w = np.array([0.114, 0.587, 0.299])   # BGR
+            if a.seam_mode == "rgb":
+                q = pc.copy()
+            elif a.seam_mode == "luma":
+                q = np.repeat((pc @ lum_w)[:, None], 3, 1)
+            else:   # "gain": one common multiplicative gain for all channels, levelled in log luminance
+                q = np.repeat(np.log(np.maximum(pc @ lum_w, 1.0))[:, None], 3, 1)
+            wt = pw * vis_p
+            for it in range(3 if a.seam_target == "wr" else 1):
+                sw = np.bincount(pv, weights=wt, minlength=len(V))
+                tg = np.stack([np.bincount(pv, weights=wt * q[:, k], minlength=len(V)) for k in range(3)], 1) / np.maximum(sw, 1e-12)[:, None]
+                if a.seam_target == "wr":   # robust: Huber-like down-weighting of labels far from the target (scale 12 grey / 0.12 log)
+                    r_ = np.abs((q - tg[pv]).mean(1)); s_ = 0.12 if a.seam_mode == "gain" else 12.0
+                    wt = pw * vis_p * np.minimum(1.0, s_ / np.maximum(r_, 1e-9))
+            nvis = np.bincount(pv, weights=vis_p.astype(float), minlength=len(V))
+            seamp = (nlab[pv] >= 2) & (nvis[pv] >= 1)
+            cl = 0.4 if a.seam_mode == "gain" else 40
+            d = np.zeros((npair, 3)); d[seamp] = np.clip(tg[pv[seamp]] - q[seamp], -cl, cl)
+            seam_info["w9"] = dict(mode=a.seam_mode, target=a.seam_target, occl=a.seam_occl, occluded_pairs=int((~vis_p).sum()),
+                                   occluded_pct=round(float(100 * (~vis_p).mean()), 3))
         pe = np.concatenate([pinv[:, [0, 1]], pinv[:, [1, 2]], pinv[:, [2, 0]]]); pe = np.unique(np.sort(pe, 1), axis=0)
         pe = np.concatenate([pe, pe[:, ::-1]]); deg = np.bincount(pe[:, 0], minlength=npair).astype(np.float64)
         fixed = seamp.copy(); dfix = d[fixed].copy()
@@ -247,8 +286,23 @@ def main():
             else:
                 d = s_ / np.maximum(deg, 1)[:, None]; d[fixed] = dfix
         cp = np.full((nf, 3), -1, np.int64); cp[fs_] = pinv
-        seam_info = dict(pairs=int(npair), seam_pairs=int(seamp.sum()), seam_vertices=int((nlab >= 2).sum()),
-                         abs_corr_seam_mean=round(float(np.abs(dfix).mean()), 2), abs_corr_all_mean=round(float(np.abs(d).mean()), 2))
+        seam_info.update(pairs=int(npair), seam_pairs=int(seamp.sum()), seam_vertices=int((nlab >= 2).sum()),
+                         abs_corr_seam_mean=round(float(np.abs(dfix).mean()), 3), abs_corr_all_mean=round(float(np.abs(d).mean()), 3))
+        if a.seam_fill and fill_face.any():   # (3) neighbour-filled faces: border vertex colour = the LEVELLED colour, then re-diffuse
+            lev = pc * np.exp(d) if a.seam_mode == "gain" else pc + d
+            nv2 = np.bincount(pv, minlength=len(V)); has = nv2 > 0
+            vc = np.stack([np.bincount(pv, weights=lev[:, k], minlength=len(V)) for k in range(3)], 1) / np.maximum(nv2, 1)[:, None]
+            for _ in range(60):
+                miss = ~has
+                if not miss.any():
+                    break
+                s_ = np.zeros((len(V), 3)); n_ = np.zeros(len(V)); ok = has[Ev[:, 1]] & miss[Ev[:, 0]]
+                np.add.at(s_, Ev[ok, 0], vc[Ev[ok, 1]]); np.add.at(n_, Ev[ok, 0], 1)
+                nw = n_ > 0; vc[nw] = s_[nw] / n_[nw, None]; has |= nw
+            if a.fill_all and (~has).any() and has.any():
+                from scipy.spatial import cKDTree
+                miss = ~has; _, nn_ = cKDTree(V[has]).query(V[miss]); vc[miss] = vc[has][nn_]
+            seam_info["seam_fill"] = True
     tm["labels"] = time.time() - t0
     # xatlas charts
     atl = xatlas.Atlas()
@@ -308,7 +362,11 @@ def main():
                         borderMode=cv2.BORDER_REPLICATE).reshape(-1, 3)[:len(mm)].astype(np.float64)
         col = col * gain[j]
         if a.seam_level:
-            q_ = cp[ff[mm]]; col += b0[mm, None] * d[q_[:, 0]] + b1[mm, None] * d[q_[:, 1]] + b2[mm, None] * d[q_[:, 2]]
+            q_ = cp[ff[mm]]; dd_ = b0[mm, None] * d[q_[:, 0]] + b1[mm, None] * d[q_[:, 1]] + b2[mm, None] * d[q_[:, 2]]
+            if a.seam_mode == "gain":
+                col *= np.exp(dd_)
+            else:
+                col += dd_
         tex[yy[mm], xx[mm]] = np.clip(col, 0, 255).astype(np.uint8)
     mf = fill_face[ff]
     if mf.any():

@@ -1,0 +1,157 @@
+{
+ "made": "2026-11-27 03:46:33",
+ "script": "gsm_w9table.py",
+ "inp": "rjudge_f2/photo_perframe.npz",
+ "photo_json": {
+  "maps": {
+   "ffsonly2": {
+    "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/tex_121801_ffsonly2.glb",
+    "own_poses": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/poses_all.npz"
+   },
+   "F2W9": {
+    "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w9/f2/tex_121801_ffsonly2_w9.glb",
+    "own_poses": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/poses_all.npz"
+   }
+  },
+  "images": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w1/ba3/cache/rec/kflist1847_248_3465_s0.5_vio_lensonly_L602eadd1"
+ },
+ "n_recordings": 1,
+ "diffs": {
+  "partner": {
+   "F2W9-ffsonly2": {
+    "psnr_common": {
+     "diff": 0.6003,
+     "se": 0.0242,
+     "n": 161,
+     "halves": [
+      0.597,
+      0.6036
+     ]
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.4202,
+     "se": 0.0163,
+     "n": 161,
+     "halves": [
+      0.418,
+      0.4225
+     ]
+    },
+    "ssim_common": {
+     "diff": 0.0245,
+     "se": 0.0013,
+     "n": 161,
+     "halves": [
+      0.0244,
+      0.0245
+     ]
+    },
+    "psnr_hit": {
+     "diff": 0.6003,
+     "se": 0.0242,
+     "n": 161,
+     "halves": [
+      0.597,
+      0.6036
+     ]
+    },
+    "hit_share": {
+     "diff": 0.0,
+     "se": 0.0,
+     "n": 161,
+     "halves": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "kf": {
+   "F2W9-ffsonly2": {
+    "psnr_common": {
+     "diff": 0.629,
+     "se": 0.0288,
+     "n": 123,
+     "halves": [
+      0.6235,
+      0.6345
+     ]
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.4249,
+     "se": 0.0184,
+     "n": 123,
+     "halves": [
+      0.4264,
+      0.4233
+     ]
+    },
+    "ssim_common": {
+     "diff": 0.0242,
+     "se": 0.0015,
+     "n": 123,
+     "halves": [
+      0.0243,
+      0.0242
+     ]
+    },
+    "psnr_hit": {
+     "diff": 0.629,
+     "se": 0.0288,
+     "n": 123,
+     "halves": [
+      0.6235,
+      0.6345
+     ]
+    },
+    "hit_share": {
+     "diff": 0.0,
+     "se": 0.0,
+     "n": 123,
+     "halves": [
+      0.0,
+      0.0
+     ]
+    }
+   }
+  }
+ },
+ "abs": {
+  "partner": {
+   "ffsonly2": {
+    "hit_share": 0.9264,
+    "psnr_hit": 19.2185,
+    "psnr_common": 19.2185,
+    "psnr_common_colourfit": 20.1023,
+    "ssim_common": 0.6775,
+    "common_share": 0.9264
+   },
+   "F2W9": {
+    "hit_share": 0.9264,
+    "psnr_hit": 19.8188,
+    "psnr_common": 19.8188,
+    "psnr_common_colourfit": 20.5225,
+    "ssim_common": 0.7019,
+    "common_share": 0.9264
+   }
+  },
+  "kf": {
+   "ffsonly2": {
+    "hit_share": 0.9227,
+    "psnr_hit": 19.2626,
+    "psnr_common": 19.2626,
+    "psnr_common_colourfit": 20.1112,
+    "ssim_common": 0.676,
+    "common_share": 0.9227
+   },
+   "F2W9": {
+    "hit_share": 0.9227,
+    "psnr_hit": 19.8916,
+    "psnr_common": 19.8916,
+    "psnr_common_colourfit": 20.536,
+    "ssim_common": 0.7002,
+    "common_share": 0.9227
+   }
+  }
+ }
+}

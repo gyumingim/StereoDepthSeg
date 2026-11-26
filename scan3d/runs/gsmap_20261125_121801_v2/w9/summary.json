@@ -1,0 +1,27 @@
+{
+ "made": "2026-11-27 03:50",
+ "worker": "W9",
+ "n_recordings": 1,
+ "mesh_nC": "ffsonly_ba/support_test/nC/e3c.ply (unchanged), poses bap",
+ "mesh_ffsonly2": "ffsonly_ba2/b/e3c.ply (unchanged), poses ba2 (dump ba_partners2)",
+ "base_recipe": "gsm_texture3.py --chunk 0.75 --fill-all 1 --drop-views 0 --no-gain 1 --seam-level 1 --seam-soft 0.5 (SM2) + atlas8k",
+ "variants": {"o1": "--seam-occl 1", "lu": "--seam-mode luma", "ga": "--seam-mode gain", "wt": "--seam-target w", "wr": "--seam-target wr",
+              "fi": "--seam-fill 1", "c1": "o1 + fi", "c2": "o1 + wt"},
+ "rulers": {"photo": "gsm_rjudge photo via gsm_w2judge, 161 held-out partner frames 480x270, nC+SM2 re-measured in the same run (w9/rjudge1, w9/rjudge2; tables w9/table1.json, table2.json)",
+            "detail": "gsm_w9detail.py = audit9b slope + audit9 flat gradient + Lab chroma error, 27 partner frames 1920x1080 (w9/detail1.json, detail2.json)"},
+ "nC_vs_SM2_partner_psnr_common_dB": {"o1": [0.2073, 0.0178], "lu": [-0.0281, 0.0019], "ga": [-0.2245, 0.0207], "wt": [-0.0713, 0.0092], "wr": [-0.0923, 0.017], "fi": [-0.0003, 0.0001], "c1": [0.2089, 0.0178], "c2": [0.1113, 0.019]},
+ "nC_vs_SM2_detail_rel_pct": {
+  "o1": {"slope_tex": 0.52, "flat_grad": -0.31, "flat_hf_rms": 2.35, "psnr1920": 0.85, "chroma_err": -0.42},
+  "lu": {"slope_tex": -0.03, "flat_grad": 0.03, "flat_hf_rms": -0.03, "psnr1920": -0.12, "chroma_err": 2.84},
+  "ga": {"slope_tex": 0.61, "flat_grad": 4.97, "flat_hf_rms": 4.56, "psnr1920": -1.0, "chroma_err": 4.56},
+  "wt": {"slope_tex": 0.12, "flat_grad": 0.1, "flat_hf_rms": 0.9, "psnr1920": -0.32, "chroma_err": 0.4},
+  "wr": {"slope_tex": 0.27, "flat_grad": 0.88, "flat_hf_rms": 3.29, "psnr1920": -0.46, "chroma_err": 0.43},
+  "fi": {"slope_tex": -0.41, "flat_grad": -0.06, "flat_hf_rms": -0.07, "psnr1920": 0.0, "chroma_err": -0.01},
+  "c1": {"slope_tex": 0.15, "flat_grad": -0.42, "flat_hf_rms": 2.24, "psnr1920": 0.86, "chroma_err": -0.43},
+  "c2": {"slope_tex": 0.61, "flat_grad": 0.05, "flat_hf_rms": 3.21, "psnr1920": 0.41, "chroma_err": 0.2}},
+ "decision_nC": "ACCEPT o1 (SM2 + seam-vertex occlusion check): PSNR +0.207 dB >= +0.05, true detail +0.52 %, no new artifacts in w9_tex_121801.jpg -> splat_demo/tex_121801_nC_tex3.glb (key 121801_nC_tex3). c1 = same PSNR (+0.002) but detail -0.37 % vs o1 -> not taken.",
+ "ffsonly2": {"glb": "w9/f2/tex_121801_ffsonly2_w9.glb (+ seampad _pad.glb -> splat_demo/tex_121801_ffsonly2_tex.glb)", "vs": "ffsonly_ba2/b/tex_121801_ffsonly2.glb (texture2 chain, no seam levelling)",
+              "photo_partner_psnr_common_dB": [0.6003, 0.0242], "ssim_common": [0.0245, 0.0013], "inputs": ["w9/rjudge_f2/photo.json", "w9/table_f2.json", "w9/detail_f2.json"],
+              "detail_rel_pct": {"slope_tex": 0.02, "slope_tex5": 0.09, "flat_grad": -12.7, "flat_hf_rms": -14.52, "psnr1920": 3.13, "chroma_err": -2.74}},
+ "caveats": ["n = 1 recording", "flat_hf_rms of o1 is +2.35 % vs SM2 (flat_grad -0.31 %)", "16.7 % of (vertex,label) pairs are judged occluded/out of view (tolerance 1 cm + 1 %)", "SM2 reproducibility under the edited script not re-baked: the W9 block is skipped when all W9 flags are default"]
+}

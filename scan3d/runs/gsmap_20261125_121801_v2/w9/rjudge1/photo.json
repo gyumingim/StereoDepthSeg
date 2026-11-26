@@ -1,0 +1,1017 @@
+{
+ "made": "2026-11-27 03:21:05",
+ "n_recordings": 1,
+ "inputs": {
+  "maps": {
+   "nC": {
+    "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba/support_test/nC/tex_121801_ffssupport_NC.glb",
+    "own_poses": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners/poses_all.npz"
+   },
+   "SM2": {
+    "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w8/sm2/tex_121801_nC_sm2.glb",
+    "own_poses": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners/poses_all.npz"
+   },
+   "o1": {
+    "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w9/o1/tex_121801_nC_o1.glb",
+    "own_poses": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners/poses_all.npz"
+   },
+   "lu": {
+    "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w9/lu/tex_121801_nC_lu.glb",
+    "own_poses": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners/poses_all.npz"
+   },
+   "ga": {
+    "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w9/ga/tex_121801_nC_ga.glb",
+    "own_poses": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners/poses_all.npz"
+   },
+   "wt": {
+    "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w9/wt/tex_121801_nC_wt.glb",
+    "own_poses": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners/poses_all.npz"
+   },
+   "wr": {
+    "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w9/wr/tex_121801_nC_wr.glb",
+    "own_poses": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners/poses_all.npz"
+   },
+   "fi": {
+    "glb": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w9/fi/tex_121801_nC_fi.glb",
+    "own_poses": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners/poses_all.npz"
+   }
+  },
+  "images": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w1/ba3/cache/rec/kflist1847_248_3465_s0.5_vio_lensonly_L602eadd1"
+ },
+ "note": "textured mesh ray-cast at 960x540 (nearest texel, eval2 P4 rule) from the map's OWN pose of the frame, area-downsampled to 480x270, vs the undistorted photo. kf = every 4th keyframe (texture sources: NOT held out, tests self-consistency). partner = non-keyframe BA frames present in all three pose solutions, every 6th (never used for texture or 2DGS training = held out; they sit a few cm from keyframes). common = pixels hit by all four maps (same pixel set for every map). colourfit = per-image 3x3 + bias. SSIM = grey, 11 px gaussian, on the eroded common mask. se = standard error over frames of the paired per-frame difference.",
+ "n_frames": {
+  "kf": 123,
+  "partner": 161
+ },
+ "table": {
+  "kf": {
+   "nC": {
+    "hit_share": 0.896,
+    "psnr_hit": 19.0615,
+    "psnr_common": 19.0615,
+    "psnr_common_colourfit": 19.9579,
+    "ssim_common": 0.6683,
+    "common_share": 0.896
+   },
+   "SM2": {
+    "hit_share": 0.896,
+    "psnr_hit": 19.446,
+    "psnr_common": 19.446,
+    "psnr_common_colourfit": 20.2215,
+    "ssim_common": 0.6848,
+    "common_share": 0.896
+   },
+   "o1": {
+    "hit_share": 0.896,
+    "psnr_hit": 19.6834,
+    "psnr_common": 19.6834,
+    "psnr_common_colourfit": 20.3647,
+    "ssim_common": 0.6925,
+    "common_share": 0.896
+   },
+   "lu": {
+    "hit_share": 0.896,
+    "psnr_hit": 19.4182,
+    "psnr_common": 19.4182,
+    "psnr_common_colourfit": 20.2022,
+    "ssim_common": 0.6847,
+    "common_share": 0.896
+   },
+   "ga": {
+    "hit_share": 0.896,
+    "psnr_hit": 19.2077,
+    "psnr_common": 19.2077,
+    "psnr_common_colourfit": 20.096,
+    "ssim_common": 0.6767,
+    "common_share": 0.896
+   },
+   "wt": {
+    "hit_share": 0.896,
+    "psnr_hit": 19.362,
+    "psnr_common": 19.362,
+    "psnr_common_colourfit": 20.1918,
+    "ssim_common": 0.6855,
+    "common_share": 0.896
+   },
+   "wr": {
+    "hit_share": 0.896,
+    "psnr_hit": 19.3437,
+    "psnr_common": 19.3437,
+    "psnr_common_colourfit": 20.1837,
+    "ssim_common": 0.6864,
+    "common_share": 0.896
+   },
+   "fi": {
+    "hit_share": 0.896,
+    "psnr_hit": 19.4456,
+    "psnr_common": 19.4456,
+    "psnr_common_colourfit": 20.2199,
+    "ssim_common": 0.6848,
+    "common_share": 0.896
+   }
+  },
+  "partner": {
+   "nC": {
+    "hit_share": 0.9058,
+    "psnr_hit": 19.0691,
+    "psnr_common": 19.0691,
+    "psnr_common_colourfit": 19.9894,
+    "ssim_common": 0.6714,
+    "common_share": 0.9058
+   },
+   "SM2": {
+    "hit_share": 0.9058,
+    "psnr_hit": 19.4552,
+    "psnr_common": 19.4552,
+    "psnr_common_colourfit": 20.2599,
+    "ssim_common": 0.6884,
+    "common_share": 0.9058
+   },
+   "o1": {
+    "hit_share": 0.9058,
+    "psnr_hit": 19.6625,
+    "psnr_common": 19.6625,
+    "psnr_common_colourfit": 20.3963,
+    "ssim_common": 0.6958,
+    "common_share": 0.9058
+   },
+   "lu": {
+    "hit_share": 0.9058,
+    "psnr_hit": 19.4272,
+    "psnr_common": 19.4272,
+    "psnr_common_colourfit": 20.2417,
+    "ssim_common": 0.6883,
+    "common_share": 0.9058
+   },
+   "ga": {
+    "hit_share": 0.9058,
+    "psnr_hit": 19.2307,
+    "psnr_common": 19.2307,
+    "psnr_common_colourfit": 20.1389,
+    "ssim_common": 0.6811,
+    "common_share": 0.9058
+   },
+   "wt": {
+    "hit_share": 0.9058,
+    "psnr_hit": 19.3839,
+    "psnr_common": 19.3839,
+    "psnr_common_colourfit": 20.2381,
+    "ssim_common": 0.6893,
+    "common_share": 0.9058
+   },
+   "wr": {
+    "hit_share": 0.9058,
+    "psnr_hit": 19.363,
+    "psnr_common": 19.363,
+    "psnr_common_colourfit": 20.2304,
+    "ssim_common": 0.6903,
+    "common_share": 0.9058
+   },
+   "fi": {
+    "hit_share": 0.9058,
+    "psnr_hit": 19.455,
+    "psnr_common": 19.455,
+    "psnr_common_colourfit": 20.2584,
+    "ssim_common": 0.6884,
+    "common_share": 0.9058
+   }
+  }
+ },
+ "diffs": {
+  "kf": {
+   "SM2-nC": {
+    "hit_share": {
+     "diff": 0.0,
+     "se": 0.0,
+     "z": null,
+     "halves": [
+      0.0,
+      0.0
+     ],
+     "n": 123
+    },
+    "psnr_hit": {
+     "diff": 0.3845,
+     "se": 0.0263,
+     "z": 14.6,
+     "halves": [
+      0.3815,
+      0.3875
+     ],
+     "n": 123
+    },
+    "psnr_common": {
+     "diff": 0.3845,
+     "se": 0.0263,
+     "z": 14.6,
+     "halves": [
+      0.3815,
+      0.3875
+     ],
+     "n": 123
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.2636,
+     "se": 0.018,
+     "z": 14.6,
+     "halves": [
+      0.2659,
+      0.2612
+     ],
+     "n": 123
+    },
+    "ssim_common": {
+     "diff": 0.0165,
+     "se": 0.0015,
+     "z": 10.9,
+     "halves": [
+      0.0168,
+      0.0162
+     ],
+     "n": 123
+    }
+   },
+   "o1-nC": {
+    "hit_share": {
+     "diff": 0.0,
+     "se": 0.0,
+     "z": null,
+     "halves": [
+      0.0,
+      0.0
+     ],
+     "n": 123
+    },
+    "psnr_hit": {
+     "diff": 0.6218,
+     "se": 0.0315,
+     "z": 19.7,
+     "halves": [
+      0.6181,
+      0.6256
+     ],
+     "n": 123
+    },
+    "psnr_common": {
+     "diff": 0.6218,
+     "se": 0.0315,
+     "z": 19.7,
+     "halves": [
+      0.6181,
+      0.6256
+     ],
+     "n": 123
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.4068,
+     "se": 0.0204,
+     "z": 19.9,
+     "halves": [
+      0.4098,
+      0.4039
+     ],
+     "n": 123
+    },
+    "ssim_common": {
+     "diff": 0.0241,
+     "se": 0.0015,
+     "z": 16.0,
+     "halves": [
+      0.0244,
+      0.0239
+     ],
+     "n": 123
+    }
+   },
+   "lu-nC": {
+    "hit_share": {
+     "diff": 0.0,
+     "se": 0.0,
+     "z": null,
+     "halves": [
+      0.0,
+      0.0
+     ],
+     "n": 123
+    },
+    "psnr_hit": {
+     "diff": 0.3567,
+     "se": 0.0265,
+     "z": 13.5,
+     "halves": [
+      0.3542,
+      0.3591
+     ],
+     "n": 123
+    },
+    "psnr_common": {
+     "diff": 0.3567,
+     "se": 0.0265,
+     "z": 13.5,
+     "halves": [
+      0.3542,
+      0.3591
+     ],
+     "n": 123
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.2443,
+     "se": 0.0178,
+     "z": 13.7,
+     "halves": [
+      0.2463,
+      0.2422
+     ],
+     "n": 123
+    },
+    "ssim_common": {
+     "diff": 0.0164,
+     "se": 0.0015,
+     "z": 10.8,
+     "halves": [
+      0.0167,
+      0.0161
+     ],
+     "n": 123
+    }
+   },
+   "ga-nC": {
+    "hit_share": {
+     "diff": 0.0,
+     "se": 0.0,
+     "z": null,
+     "halves": [
+      0.0,
+      0.0
+     ],
+     "n": 123
+    },
+    "psnr_hit": {
+     "diff": 0.1462,
+     "se": 0.0233,
+     "z": 6.3,
+     "halves": [
+      0.1386,
+      0.1538
+     ],
+     "n": 123
+    },
+    "psnr_common": {
+     "diff": 0.1462,
+     "se": 0.0233,
+     "z": 6.3,
+     "halves": [
+      0.1386,
+      0.1538
+     ],
+     "n": 123
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.1381,
+     "se": 0.0189,
+     "z": 7.3,
+     "halves": [
+      0.1377,
+      0.1384
+     ],
+     "n": 123
+    },
+    "ssim_common": {
+     "diff": 0.0084,
+     "se": 0.0014,
+     "z": 6.0,
+     "halves": [
+      0.0085,
+      0.0082
+     ],
+     "n": 123
+    }
+   },
+   "wt-nC": {
+    "hit_share": {
+     "diff": 0.0,
+     "se": 0.0,
+     "z": null,
+     "halves": [
+      0.0,
+      0.0
+     ],
+     "n": 123
+    },
+    "psnr_hit": {
+     "diff": 0.3005,
+     "se": 0.0199,
+     "z": 15.1,
+     "halves": [
+      0.3027,
+      0.2983
+     ],
+     "n": 123
+    },
+    "psnr_common": {
+     "diff": 0.3005,
+     "se": 0.0199,
+     "z": 15.1,
+     "halves": [
+      0.3027,
+      0.2983
+     ],
+     "n": 123
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.2339,
+     "se": 0.0143,
+     "z": 16.4,
+     "halves": [
+      0.2383,
+      0.2293
+     ],
+     "n": 123
+    },
+    "ssim_common": {
+     "diff": 0.0171,
+     "se": 0.0014,
+     "z": 12.1,
+     "halves": [
+      0.0175,
+      0.0168
+     ],
+     "n": 123
+    }
+   },
+   "wr-nC": {
+    "hit_share": {
+     "diff": 0.0,
+     "se": 0.0,
+     "z": null,
+     "halves": [
+      0.0,
+      0.0
+     ],
+     "n": 123
+    },
+    "psnr_hit": {
+     "diff": 0.2822,
+     "se": 0.0143,
+     "z": 19.7,
+     "halves": [
+      0.286,
+      0.2783
+     ],
+     "n": 123
+    },
+    "psnr_common": {
+     "diff": 0.2822,
+     "se": 0.0143,
+     "z": 19.7,
+     "halves": [
+      0.286,
+      0.2783
+     ],
+     "n": 123
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.2258,
+     "se": 0.0132,
+     "z": 17.1,
+     "halves": [
+      0.2321,
+      0.2193
+     ],
+     "n": 123
+    },
+    "ssim_common": {
+     "diff": 0.0181,
+     "se": 0.0013,
+     "z": 13.9,
+     "halves": [
+      0.0184,
+      0.0178
+     ],
+     "n": 123
+    }
+   },
+   "fi-nC": {
+    "hit_share": {
+     "diff": 0.0,
+     "se": 0.0,
+     "z": null,
+     "halves": [
+      0.0,
+      0.0
+     ],
+     "n": 123
+    },
+    "psnr_hit": {
+     "diff": 0.384,
+     "se": 0.0263,
+     "z": 14.6,
+     "halves": [
+      0.3812,
+      0.3869
+     ],
+     "n": 123
+    },
+    "psnr_common": {
+     "diff": 0.384,
+     "se": 0.0263,
+     "z": 14.6,
+     "halves": [
+      0.3812,
+      0.3869
+     ],
+     "n": 123
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.262,
+     "se": 0.0181,
+     "z": 14.5,
+     "halves": [
+      0.2646,
+      0.2593
+     ],
+     "n": 123
+    },
+    "ssim_common": {
+     "diff": 0.0165,
+     "se": 0.0015,
+     "z": 10.8,
+     "halves": [
+      0.0167,
+      0.0162
+     ],
+     "n": 123
+    }
+   }
+  },
+  "partner": {
+   "SM2-nC": {
+    "hit_share": {
+     "diff": 0.0,
+     "se": 0.0,
+     "z": null,
+     "halves": [
+      0.0,
+      0.0
+     ],
+     "n": 161
+    },
+    "psnr_hit": {
+     "diff": 0.3861,
+     "se": 0.0215,
+     "z": 17.9,
+     "halves": [
+      0.3841,
+      0.3882
+     ],
+     "n": 161
+    },
+    "psnr_common": {
+     "diff": 0.3861,
+     "se": 0.0215,
+     "z": 17.9,
+     "halves": [
+      0.3841,
+      0.3882
+     ],
+     "n": 161
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.2704,
+     "se": 0.0155,
+     "z": 17.4,
+     "halves": [
+      0.2686,
+      0.2723
+     ],
+     "n": 161
+    },
+    "ssim_common": {
+     "diff": 0.0171,
+     "se": 0.0013,
+     "z": 12.9,
+     "halves": [
+      0.0169,
+      0.0173
+     ],
+     "n": 161
+    }
+   },
+   "o1-nC": {
+    "hit_share": {
+     "diff": 0.0,
+     "se": 0.0,
+     "z": null,
+     "halves": [
+      0.0,
+      0.0
+     ],
+     "n": 161
+    },
+    "psnr_hit": {
+     "diff": 0.5934,
+     "se": 0.0264,
+     "z": 22.5,
+     "halves": [
+      0.5945,
+      0.5923
+     ],
+     "n": 161
+    },
+    "psnr_common": {
+     "diff": 0.5934,
+     "se": 0.0264,
+     "z": 22.5,
+     "halves": [
+      0.5945,
+      0.5923
+     ],
+     "n": 161
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.4069,
+     "se": 0.018,
+     "z": 22.6,
+     "halves": [
+      0.406,
+      0.4078
+     ],
+     "n": 161
+    },
+    "ssim_common": {
+     "diff": 0.0244,
+     "se": 0.0014,
+     "z": 18.1,
+     "halves": [
+      0.0243,
+      0.0246
+     ],
+     "n": 161
+    }
+   },
+   "lu-nC": {
+    "hit_share": {
+     "diff": 0.0,
+     "se": 0.0,
+     "z": null,
+     "halves": [
+      0.0,
+      0.0
+     ],
+     "n": 161
+    },
+    "psnr_hit": {
+     "diff": 0.3581,
+     "se": 0.0217,
+     "z": 16.5,
+     "halves": [
+      0.356,
+      0.3601
+     ],
+     "n": 161
+    },
+    "psnr_common": {
+     "diff": 0.3581,
+     "se": 0.0217,
+     "z": 16.5,
+     "halves": [
+      0.356,
+      0.3601
+     ],
+     "n": 161
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.2523,
+     "se": 0.0151,
+     "z": 16.7,
+     "halves": [
+      0.2502,
+      0.2544
+     ],
+     "n": 161
+    },
+    "ssim_common": {
+     "diff": 0.0169,
+     "se": 0.0013,
+     "z": 12.8,
+     "halves": [
+      0.0167,
+      0.0171
+     ],
+     "n": 161
+    }
+   },
+   "ga-nC": {
+    "hit_share": {
+     "diff": 0.0,
+     "se": 0.0,
+     "z": null,
+     "halves": [
+      0.0,
+      0.0
+     ],
+     "n": 161
+    },
+    "psnr_hit": {
+     "diff": 0.1616,
+     "se": 0.0196,
+     "z": 8.2,
+     "halves": [
+      0.152,
+      0.1714
+     ],
+     "n": 161
+    },
+    "psnr_common": {
+     "diff": 0.1616,
+     "se": 0.0196,
+     "z": 8.2,
+     "halves": [
+      0.152,
+      0.1714
+     ],
+     "n": 161
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.1495,
+     "se": 0.0154,
+     "z": 9.7,
+     "halves": [
+      0.1394,
+      0.1597
+     ],
+     "n": 161
+    },
+    "ssim_common": {
+     "diff": 0.0097,
+     "se": 0.0012,
+     "z": 8.1,
+     "halves": [
+      0.0095,
+      0.01
+     ],
+     "n": 161
+    }
+   },
+   "wt-nC": {
+    "hit_share": {
+     "diff": 0.0,
+     "se": 0.0,
+     "z": null,
+     "halves": [
+      0.0,
+      0.0
+     ],
+     "n": 161
+    },
+    "psnr_hit": {
+     "diff": 0.3148,
+     "se": 0.0164,
+     "z": 19.2,
+     "halves": [
+      0.3144,
+      0.3153
+     ],
+     "n": 161
+    },
+    "psnr_common": {
+     "diff": 0.3148,
+     "se": 0.0164,
+     "z": 19.2,
+     "halves": [
+      0.3144,
+      0.3153
+     ],
+     "n": 161
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.2487,
+     "se": 0.0127,
+     "z": 19.7,
+     "halves": [
+      0.2485,
+      0.2489
+     ],
+     "n": 161
+    },
+    "ssim_common": {
+     "diff": 0.018,
+     "se": 0.0013,
+     "z": 14.3,
+     "halves": [
+      0.0177,
+      0.0182
+     ],
+     "n": 161
+    }
+   },
+   "wr-nC": {
+    "hit_share": {
+     "diff": 0.0,
+     "se": 0.0,
+     "z": null,
+     "halves": [
+      0.0,
+      0.0
+     ],
+     "n": 161
+    },
+    "psnr_hit": {
+     "diff": 0.2939,
+     "se": 0.0126,
+     "z": 23.3,
+     "halves": [
+      0.2951,
+      0.2927
+     ],
+     "n": 161
+    },
+    "psnr_common": {
+     "diff": 0.2939,
+     "se": 0.0126,
+     "z": 23.3,
+     "halves": [
+      0.2951,
+      0.2927
+     ],
+     "n": 161
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.241,
+     "se": 0.0121,
+     "z": 20.0,
+     "halves": [
+      0.2423,
+      0.2397
+     ],
+     "n": 161
+    },
+    "ssim_common": {
+     "diff": 0.0189,
+     "se": 0.0012,
+     "z": 16.0,
+     "halves": [
+      0.0187,
+      0.0191
+     ],
+     "n": 161
+    }
+   },
+   "fi-nC": {
+    "hit_share": {
+     "diff": 0.0,
+     "se": 0.0,
+     "z": null,
+     "halves": [
+      0.0,
+      0.0
+     ],
+     "n": 161
+    },
+    "psnr_hit": {
+     "diff": 0.3859,
+     "se": 0.0215,
+     "z": 17.9,
+     "halves": [
+      0.3838,
+      0.3879
+     ],
+     "n": 161
+    },
+    "psnr_common": {
+     "diff": 0.3859,
+     "se": 0.0215,
+     "z": 17.9,
+     "halves": [
+      0.3838,
+      0.3879
+     ],
+     "n": 161
+    },
+    "psnr_common_colourfit": {
+     "diff": 0.269,
+     "se": 0.0155,
+     "z": 17.3,
+     "halves": [
+      0.2671,
+      0.2709
+     ],
+     "n": 161
+    },
+    "ssim_common": {
+     "diff": 0.017,
+     "se": 0.0013,
+     "z": 12.9,
+     "halves": [
+      0.0168,
+      0.0172
+     ],
+     "n": 161
+    }
+   }
+  }
+ },
+ "halves": {
+  "kf": {
+   "nC": {
+    "psnr_common": [
+     19.071,
+     19.051
+    ]
+   },
+   "SM2": {
+    "psnr_common": [
+     19.453,
+     19.439
+    ]
+   },
+   "o1": {
+    "psnr_common": [
+     19.69,
+     19.677
+    ]
+   },
+   "lu": {
+    "psnr_common": [
+     19.426,
+     19.411
+    ]
+   },
+   "ga": {
+    "psnr_common": [
+     19.21,
+     19.205
+    ]
+   },
+   "wt": {
+    "psnr_common": [
+     19.374,
+     19.35
+    ]
+   },
+   "wr": {
+    "psnr_common": [
+     19.357,
+     19.33
+    ]
+   },
+   "fi": {
+    "psnr_common": [
+     19.453,
+     19.438
+    ]
+   }
+  },
+  "partner": {
+   "nC": {
+    "psnr_common": [
+     19.109,
+     19.029
+    ]
+   },
+   "SM2": {
+    "psnr_common": [
+     19.493,
+     19.417
+    ]
+   },
+   "o1": {
+    "psnr_common": [
+     19.704,
+     19.621
+    ]
+   },
+   "lu": {
+    "psnr_common": [
+     19.465,
+     19.389
+    ]
+   },
+   "ga": {
+    "psnr_common": [
+     19.261,
+     19.2
+    ]
+   },
+   "wt": {
+    "psnr_common": [
+     19.423,
+     19.344
+    ]
+   },
+   "wr": {
+    "psnr_common": [
+     19.404,
+     19.321
+    ]
+   },
+   "fi": {
+    "psnr_common": [
+     19.493,
+     19.417
+    ]
+   }
+  }
+ },
+ "runtime_s": 245.0
+}

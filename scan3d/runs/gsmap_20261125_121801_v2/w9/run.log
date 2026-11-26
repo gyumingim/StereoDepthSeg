@@ -1,0 +1,75 @@
+2026-11-27 02:45:48 START w9 (worker W9: SM2 + one fix at a time)
+2026-11-27 02:45:48 START w9 chain1 (singles o1 lu ga wt wr fi + judge1 + detail1)
+2026-11-27 02:45:48 START tex_o1
+2026-11-27 02:50:59 END tex_o1 rc 0
+2026-11-27 02:50:59 START atlas_o1
+2026-11-27 02:51:00 END atlas_o1 rc 0
+2026-11-27 02:51:00 STEP OK var o1 --seam-occl 1
+2026-11-27 02:51:01 START tex_lu
+2026-11-27 02:56:02 END tex_lu rc 0
+2026-11-27 02:56:03 START atlas_lu
+2026-11-27 02:56:04 END atlas_lu rc 0
+2026-11-27 02:56:04 STEP OK var lu --seam-mode luma
+2026-11-27 02:56:04 START tex_ga
+2026-11-27 03:01:13 END tex_ga rc 0
+2026-11-27 03:01:13 START atlas_ga
+2026-11-27 03:01:15 END atlas_ga rc 0
+2026-11-27 03:01:15 STEP OK var ga --seam-mode gain
+2026-11-27 03:01:15 START tex_wt
+2026-11-27 03:06:24 END tex_wt rc 0
+2026-11-27 03:06:24 START atlas_wt
+2026-11-27 03:06:26 END atlas_wt rc 0
+2026-11-27 03:06:26 STEP OK var wt --seam-target w
+2026-11-27 03:06:26 START tex_wr
+2026-11-27 03:11:37 END tex_wr rc 0
+2026-11-27 03:11:37 START atlas_wr
+2026-11-27 03:11:38 END atlas_wr rc 0
+2026-11-27 03:11:38 STEP OK var wr --seam-target wr
+2026-11-27 03:11:38 START tex_fi
+2026-11-27 03:16:58 END tex_fi rc 0
+2026-11-27 03:16:58 START atlas_fi
+2026-11-27 03:17:00 END atlas_fi rc 0
+2026-11-27 03:17:00 STEP OK var fi --seam-fill 1
+2026-11-27 03:17:00 START judge_rjudge1
+2026-11-27 03:21:05 END judge_rjudge1 rc 0
+2026-11-27 03:21:05 STEP OK judge o1 lu ga wt wr fi
+2026-11-27 03:21:05 START detail_detail1
+2026-11-27 03:23:01 END detail_detail1 rc 0
+2026-11-27 03:23:01 STEP OK detail o1 lu ga wt wr fi
+2026-11-27 03:23:01 END w9 chain1 ok: o1 lu ga wt wr fi
+2026-11-27 03:23:24 START w9 chain2 (combos c1 = o1+fi, c2 = o1+wt + judge2 + detail2)
+2026-11-27 03:23:24 START tex_c1
+2026-11-27 03:28:42 END tex_c1 rc 0
+2026-11-27 03:28:42 START atlas_c1
+2026-11-27 03:28:43 END atlas_c1 rc 0
+2026-11-27 03:28:43 STEP OK var c1 --seam-occl 1 --seam-fill 1
+2026-11-27 03:28:43 START tex_c2
+2026-11-27 03:34:06 END tex_c2 rc 0
+2026-11-27 03:34:06 START atlas_c2
+2026-11-27 03:34:08 END atlas_c2 rc 0
+2026-11-27 03:34:08 STEP OK var c2 --seam-occl 1 --seam-target w
+2026-11-27 03:34:08 START judge_rjudge2
+2026-11-27 03:36:44 END judge_rjudge2 rc 0
+2026-11-27 03:36:44 STEP OK judge o1 c1 c2
+2026-11-27 03:36:44 START detail_detail2
+2026-11-27 03:38:02 END detail_detail2 rc 0
+2026-11-27 03:38:02 STEP OK detail o1 c1 c2
+2026-11-27 03:38:02 END w9 chain2 ok:o1 c1 c2
+2026-11-27 03:38:18 START w9 chain3 (pic + ffsonly2 SM2+occl)
+2026-11-27 03:38:18 START pic
+2026-11-27 03:38:28 END pic rc 0
+2026-11-27 03:38:28 START tex_f2
+2026-11-27 03:44:02 END tex_f2 rc 0
+2026-11-27 03:44:02 START atlas_f2
+2026-11-27 03:44:04 END atlas_f2 rc 0
+2026-11-27 03:44:04 START pad_f2
+2026-11-27 03:44:38 END pad_f2 rc 0
+2026-11-27 03:44:38 STEP OK f2 --seam-occl 1
+2026-11-27 03:44:39 START judge_f2
+2026-11-27 03:45:47 END judge_f2 rc 0
+2026-11-27 03:45:47 START detail_f2
+2026-11-27 03:46:28 END detail_f2 rc 0
+2026-11-27 03:46:28 STEP OK f2judge 
+2026-11-27 03:46:28 END w9 chain3
+2026-11-27 03:47:23 END w9: o1 (SM2 + seam-vertex occlusion) accepted +0.207 dB vs SM2 -> nC_tex3; ffsonly2 +0.600 dB -> ffsonly2_tex
+2026-11-27 03:47:23 DONE w9
