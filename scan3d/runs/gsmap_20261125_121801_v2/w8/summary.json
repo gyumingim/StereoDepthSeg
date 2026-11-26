@@ -1,0 +1,112 @@
+{
+ "made": "2026-11-27 02:34:55",
+ "n_recordings": 1,
+ "mesh": "ffsonly_ba/support_test/nC/e3c.ply (unchanged)",
+ "poses": "bap (ba_partners)",
+ "baseline": "ffsonly_ba/support_test/nC/tex_121801_ffssupport_NC.glb; B0 = gsm_texture3 no option = bit-identical GLB (cmp)",
+ "ruler": "gsm_rjudge photo via gsm_w2judge: 161 held-out partner frames, 480x270, common pixels; se = std of per-frame paired diff / sqrt(n)",
+ "inputs": {
+  "run1": "scan3d/runs/gsmap_20261125_121801_v2/w8/rjudge/photo.json",
+  "run2": "scan3d/runs/gsmap_20261125_121801_v2/w8/rjudge2/photo.json",
+  "tables": [
+   "scan3d/runs/gsmap_20261125_121801_v2/w8/table.json",
+   "scan3d/runs/gsmap_20261125_121801_v2/w8/table2.json"
+  ]
+ },
+ "variants": {
+  "B0": "no option",
+  "SL": "--sharp-local 1",
+  "RG": "--robust-gain 1",
+  "SM": "--seam-level 1 (hard seam targets)",
+  "SM2": "--seam-level 1 --seam-soft 0.5",
+  "HR": "--atlas 12288 --cap 16384 (13.9k atlas, 79 MB)"
+ },
+ "partner_vs_nC": {
+  "B0": {
+   "psnr_common": [
+    0.0,
+    0.0
+   ],
+   "psnr_common_colourfit": [
+    0.0,
+    0.0
+   ],
+   "ssim_common": [
+    0.0,
+    0.0
+   ]
+  },
+  "SL": {
+   "psnr_common": [
+    -0.4516,
+    0.1186
+   ],
+   "psnr_common_colourfit": [
+    -0.6856,
+    0.103
+   ],
+   "ssim_common": [
+    -0.0819,
+    0.0043
+   ]
+  },
+  "RG": {
+   "psnr_common": [
+    -0.089,
+    0.0178
+   ],
+   "psnr_common_colourfit": [
+    0.0021,
+    0.0091
+   ],
+   "ssim_common": [
+    -0.0025,
+    0.0004
+   ]
+  },
+  "SM": {
+   "psnr_common": [
+    0.2213,
+    0.0247
+   ],
+   "psnr_common_colourfit": [
+    0.1346,
+    0.0172
+   ],
+   "ssim_common": [
+    -0.0099,
+    0.0016
+   ]
+  },
+  "HR": {
+   "psnr_common": [
+    -0.1308,
+    0.0059
+   ],
+   "psnr_common_colourfit": [
+    -0.0987,
+    0.0055
+   ],
+   "ssim_common": [
+    -0.0077,
+    0.0002
+   ]
+  },
+  "SM2": {
+   "psnr_common": [
+    0.3861,
+    0.0215
+   ],
+   "psnr_common_colourfit": [
+    0.2704,
+    0.0155
+   ],
+   "ssim_common": [
+    0.0171,
+    0.0013
+   ]
+  }
+ },
+ "visual": "scan3d/runs/gsmap_20261125_121801_v2/w8/w8_tex_121801.jpg: SM blotchy smears (rejected), SL black flecks + wrong views (rejected), SM2 more even walls/cabinet, stickers as sharp as nC, no new artifacts seen",
+ "decision": "ACCEPT SM2 -> splat_demo/tex_121801_nC_tex2.glb, tex.html key 121801_nC_tex2"
+}
