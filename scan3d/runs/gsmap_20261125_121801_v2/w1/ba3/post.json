@@ -1,0 +1,312 @@
+{
+ "made": "2026-11-26 21:12:55",
+ "inputs": {
+  "ba_state": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w1/ba3/ba/ba_state.npz",
+  "ba_json": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w1/ba3/ba/ba.json",
+  "old_cams": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801/dump_ba/cams.npz",
+  "vio": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/vio/B_o0.poses.jsonl.gz"
+ },
+ "ba": {
+  "runtime_s": 450.6,
+  "timing": {
+   "images_s": 16.9,
+   "features_s": 139.2,
+   "matching_s": 123.9,
+   "gpu_stage_s": 279.9,
+   "read_db_uf_s": 1.0,
+   "tracks_s": 11.8,
+   "tri_s": 14.8,
+   "tracks_tri_s": 27.5,
+   "ba_phases": {
+    "n_obs_pairs": 64535443,
+    "setup_s": 9.601,
+    "jac_s": 11.898,
+    "n_solves": 64,
+    "schur_s": 30.201,
+    "solve_s": 71.05,
+    "update_cost_s": 0.811,
+    "gpu_peak_gb": 6.24
+   },
+   "ba_device": "cuda",
+   "ba_s": 125.7
+  },
+  "n_frames": 1847,
+  "pairs": 27713,
+  "verified_pairs": 27665,
+  "points": 236168,
+  "obs": 2321175,
+  "n_vio_pose": 1,
+  "sim3_vio_scale": 0.9979775486840491,
+  "sim3_vio_rms_cm": 3.4103270139779442,
+  "final_med_px": 0.3281192303470162,
+  "final_rmse_px": 0.7413860592676184,
+  "pair_stats": {
+   "base_pairs": 22417,
+   "base_verified": 22417,
+   "base_inliers_median": 1466.0,
+   "loop_pairs": 5296,
+   "loop_verified": 5248,
+   "loop_inliers_median": 598.0,
+   "inliers_total": 36410411,
+   "raw_matches_median": null,
+   "loop_linked_points": 71863,
+   "loop_linked_obs": 1528755
+  }
+ },
+ "registered": {
+  "keyframes": 493,
+  "keyframes_total": 494,
+  "partners": 1353,
+  "partners_total": 1353
+ },
+ "reproj": {
+  "all": {
+   "n_cams": 1847,
+   "n_obs": 2321175,
+   "med_px": 0.328,
+   "rmse_px": 0.741,
+   "frac_le_1px": 0.9014,
+   "obs_per_cam_median": 1204.0
+  },
+  "keyframes": {
+   "n_cams": 494,
+   "n_obs": 630117,
+   "med_px": 0.318,
+   "rmse_px": 0.739,
+   "frac_le_1px": 0.9035,
+   "obs_per_cam_median": 1230.0
+  },
+  "partners": {
+   "n_cams": 1353,
+   "n_obs": 1691058,
+   "med_px": 0.332,
+   "rmse_px": 0.742,
+   "frac_le_1px": 0.9007,
+   "obs_per_cam_median": 1190.0
+  },
+  "n_kf_no_ba": 1,
+  "n_partner_no_ba": 0
+ },
+ "align_to_old_map": {
+  "sim3_scale": 0.99739,
+  "n_kf_used": 493,
+  "centre_rms_cm": 6.45,
+  "centre_med_cm": 5.699,
+  "centre_p95_cm": 10.957,
+  "rot_med_deg": 0.337,
+  "rot_p95_deg": 0.657
+ },
+ "pair_motion": {
+  "all": {
+   "n": 1410,
+   "B_ratio_p5_50_95": [
+    0.9029,
+    1.0073,
+    1.1
+   ],
+   "B_ratio_absdev_med": 0.0325,
+   "frac_B_ratio_off_gt_5pct": 0.3234,
+   "rel_rot_deg_p5_50_95": [
+    0.0252,
+    0.0893,
+    0.3706
+   ],
+   "rel_centre_dc_cm_p5_50_95": [
+    0.1704,
+    0.615,
+    1.998
+   ],
+   "baseline_dir_deg_p5_50_95": [
+    0.3325,
+    1.5456,
+    7.1526
+   ],
+   "abs_partner_rot_deg_p5_50_95": [
+    0.2129,
+    0.3394,
+    0.7304
+   ],
+   "abs_partner_move_cm_p5_50_95": [
+    1.1179,
+    5.671,
+    11.0571
+   ]
+  },
+  "p2_local": {
+   "n": 1076,
+   "B_ratio_p5_50_95": [
+    0.895,
+    1.0046,
+    1.1098
+   ],
+   "B_ratio_absdev_med": 0.035,
+   "frac_B_ratio_off_gt_5pct": 0.3513,
+   "rel_rot_deg_p5_50_95": [
+    0.0236,
+    0.0896,
+    0.4212
+   ],
+   "rel_centre_dc_cm_p5_50_95": [
+    0.1682,
+    0.6106,
+    2.0972
+   ],
+   "baseline_dir_deg_p5_50_95": [
+    0.369,
+    1.7168,
+    8.2016
+   ],
+   "abs_partner_rot_deg_p5_50_95": [
+    0.2063,
+    0.3306,
+    0.7685
+   ],
+   "abs_partner_move_cm_p5_50_95": [
+    1.4469,
+    6.1396,
+    11.228
+   ]
+  },
+  "p2_fallback": {
+   "n": 142,
+   "B_ratio_p5_50_95": [
+    0.9525,
+    1.0147,
+    1.0806
+   ],
+   "B_ratio_absdev_med": 0.0306,
+   "frac_B_ratio_off_gt_5pct": 0.2606,
+   "rel_rot_deg_p5_50_95": [
+    0.0293,
+    0.0884,
+    0.202
+   ],
+   "rel_centre_dc_cm_p5_50_95": [
+    0.1795,
+    0.6192,
+    1.3612
+   ],
+   "baseline_dir_deg_p5_50_95": [
+    0.3078,
+    1.437,
+    3.7135
+   ],
+   "abs_partner_rot_deg_p5_50_95": [
+    0.2173,
+    0.3683,
+    0.4962
+   ],
+   "abs_partner_move_cm_p5_50_95": [
+    0.7346,
+    4.4546,
+    8.75
+   ]
+  },
+  "low": {
+   "n": 192,
+   "B_ratio_p5_50_95": [
+    0.9682,
+    1.0136,
+    1.0753
+   ],
+   "B_ratio_absdev_med": 0.0197,
+   "frac_B_ratio_off_gt_5pct": 0.2135,
+   "rel_rot_deg_p5_50_95": [
+    0.0334,
+    0.0882,
+    0.1955
+   ],
+   "rel_centre_dc_cm_p5_50_95": [
+    0.191,
+    0.6518,
+    1.7723
+   ],
+   "baseline_dir_deg_p5_50_95": [
+    0.2051,
+    0.9259,
+    3.5926
+   ],
+   "abs_partner_rot_deg_p5_50_95": [
+    0.2376,
+    0.3533,
+    0.4556
+   ],
+   "abs_partner_move_cm_p5_50_95": [
+    0.6734,
+    2.6287,
+    7.7865
+   ]
+  },
+  "partner_is_kf": {
+   "n": 219,
+   "B_ratio_p5_50_95": [
+    0.9196,
+    1.007,
+    1.1076
+   ],
+   "B_ratio_absdev_med": 0.0303,
+   "frac_B_ratio_off_gt_5pct": 0.3059,
+   "rel_rot_deg_p5_50_95": [
+    0.028,
+    0.0873,
+    0.2895
+   ],
+   "rel_centre_dc_cm_p5_50_95": [
+    0.1695,
+    0.5677,
+    1.7796
+   ],
+   "baseline_dir_deg_p5_50_95": [
+    0.3005,
+    1.4393,
+    8.9271
+   ],
+   "abs_partner_rot_deg_p5_50_95": [
+    0.2195,
+    0.3322,
+    0.5499
+   ],
+   "abs_partner_move_cm_p5_50_95": [
+    1.219,
+    5.3574,
+    11.3263
+   ]
+  },
+  "partner_nonkf": {
+   "n": 1191,
+   "B_ratio_p5_50_95": [
+    0.9009,
+    1.0075,
+    1.0983
+   ],
+   "B_ratio_absdev_med": 0.0326,
+   "frac_B_ratio_off_gt_5pct": 0.3266,
+   "rel_rot_deg_p5_50_95": [
+    0.0249,
+    0.0902,
+    0.3719
+   ],
+   "rel_centre_dc_cm_p5_50_95": [
+    0.1712,
+    0.6228,
+    2.0466
+   ],
+   "baseline_dir_deg_p5_50_95": [
+    0.3362,
+    1.5837,
+    6.8451
+   ],
+   "abs_partner_rot_deg_p5_50_95": [
+    0.2124,
+    0.3402,
+    0.7345
+   ],
+   "abs_partner_move_cm_p5_50_95": [
+    1.0981,
+    5.7147,
+    10.9918
+   ]
+  }
+ },
+ "note": "pair motion = pose the adopted FFS used (VIO relative motion anchored on the old keyframe BA pose; 'ba' partners = old BA) vs new BA pose, both in the old map frame; B_ratio = new / old keyframe-partner baseline"
+}

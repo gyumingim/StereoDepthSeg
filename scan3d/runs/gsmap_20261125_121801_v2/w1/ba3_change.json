@@ -1,0 +1,241 @@
+{
+ "made": "2026-11-26 21:12:56",
+ "inputs": {
+  "ba3": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/w1/ba3/poses_all.npz",
+  "bap": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners/poses_all.npz",
+  "ba2": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ba_partners2/poses_all.npz",
+  "wide_old": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba/wide_poses.npz"
+ },
+ "registered": {
+  "keyframes": 493,
+  "keyframes_total": 494,
+  "partners": 1353,
+  "partners_total": 1353
+ },
+ "ba": {
+  "runtime_s": 450.6,
+  "n_frames": 1847,
+  "final_med_px": 0.3281192303470162,
+  "final_rmse_px": 0.7413860592676184
+ },
+ "reproj": {
+  "all": {
+   "n_cams": 1847,
+   "n_obs": 2321175,
+   "med_px": 0.328,
+   "rmse_px": 0.741,
+   "frac_le_1px": 0.9014,
+   "obs_per_cam_median": 1204.0
+  },
+  "keyframes": {
+   "n_cams": 494,
+   "n_obs": 630117,
+   "med_px": 0.318,
+   "rmse_px": 0.739,
+   "frac_le_1px": 0.9035,
+   "obs_per_cam_median": 1230.0
+  },
+  "partners": {
+   "n_cams": 1353,
+   "n_obs": 1691058,
+   "med_px": 0.332,
+   "rmse_px": 0.742,
+   "frac_le_1px": 0.9007,
+   "obs_per_cam_median": 1190.0
+  },
+  "n_kf_no_ba": 1,
+  "n_partner_no_ba": 0
+ },
+ "align_to_old_map": {
+  "sim3_scale": 0.99739,
+  "n_kf_used": 493,
+  "centre_rms_cm": 6.45,
+  "centre_med_cm": 5.699,
+  "centre_p95_cm": 10.957,
+  "rot_med_deg": 0.337,
+  "rot_p95_deg": 0.657
+ },
+ "partner_src_ba3": {
+  "ba": 2346,
+  "old_ba": 1
+ },
+ "kf_src_ba3": {
+  "old_ba": 4,
+  "ba": 2343
+ },
+ "kf_shift": {
+  "vs_ba_partners": {
+   "shift_cm_med": 3.892,
+   "shift_cm_p95": 7.086,
+   "shift_cm_max": 7.499,
+   "argmax_kf_idx": 493,
+   "aisle_med_cm": 1.263,
+   "rot_deg_med": 0.2901,
+   "rot_deg_max": 1.0791
+  },
+  "vs_ba_partners2": {
+   "shift_cm_med": 0.278,
+   "shift_cm_p95": 0.565,
+   "shift_cm_max": 1.074,
+   "argmax_kf_idx": 493,
+   "aisle_med_cm": 0.163,
+   "rot_deg_med": 0.0708,
+   "rot_deg_max": 0.1252
+  }
+ },
+ "tol": {
+  "B_ratio": 0.01,
+  "rot_deg": 0.1
+ },
+ "pair_change": {
+  "all": {
+   "n": 2347,
+   "B_ratio_p5_50_95": [
+    0.9844,
+    0.9997,
+    1.0129
+   ],
+   "B_ratio_absdev_med": 0.0041,
+   "B_ratio_absdev_max": 0.1982,
+   "frac_B_off_gt_1pct": 0.2663,
+   "frac_B_off_gt_5pct": 0.0149,
+   "rel_rot_deg_p5_50_95": [
+    0.002,
+    0.0098,
+    0.1066
+   ],
+   "n_changed": 667
+  },
+  "p2": {
+   "n": 1218,
+   "B_ratio_p5_50_95": [
+    0.983,
+    0.9993,
+    1.0126
+   ],
+   "B_ratio_absdev_med": 0.0051,
+   "B_ratio_absdev_max": 0.1982,
+   "frac_B_off_gt_1pct": 0.2923,
+   "frac_B_off_gt_5pct": 0.0271,
+   "rel_rot_deg_p5_50_95": [
+    0.0024,
+    0.0095,
+    0.0906
+   ],
+   "n_changed": 366
+  },
+  "low": {
+   "n": 192,
+   "B_ratio_p5_50_95": [
+    0.9845,
+    0.9965,
+    1.0132
+   ],
+   "B_ratio_absdev_med": 0.0122,
+   "B_ratio_absdev_max": 0.0163,
+   "frac_B_off_gt_1pct": 0.6042,
+   "frac_B_off_gt_5pct": 0.0,
+   "rel_rot_deg_p5_50_95": [
+    0.0035,
+    0.0102,
+    0.0317
+   ],
+   "n_changed": 116
+  },
+  "wide": {
+   "n": 621,
+   "B_ratio_p5_50_95": [
+    0.986,
+    1.0018,
+    1.0135
+   ],
+   "B_ratio_absdev_med": 0.0046,
+   "B_ratio_absdev_max": 0.0564,
+   "frac_B_off_gt_1pct": 0.2415,
+   "frac_B_off_gt_5pct": 0.0032,
+   "rel_rot_deg_p5_50_95": [
+    0.004,
+    0.0172,
+    0.2095
+   ],
+   "n_changed": 182
+  },
+  "relax": {
+   "n": 316,
+   "B_ratio_p5_50_95": [
+    0.9968,
+    1.0001,
+    1.0015
+   ],
+   "B_ratio_absdev_med": 0.001,
+   "B_ratio_absdev_max": 0.0401,
+   "frac_B_off_gt_1pct": 0.0095,
+   "frac_B_off_gt_5pct": 0.0,
+   "rel_rot_deg_p5_50_95": [
+    0.0,
+    0.0037,
+    0.0272
+   ],
+   "n_changed": 3
+  },
+  "wide_old_vio_anchor": {
+   "n": 294,
+   "B_ratio_p5_50_95": [
+    0.9873,
+    1.0012,
+    1.0139
+   ],
+   "B_ratio_absdev_med": 0.0046,
+   "B_ratio_absdev_max": 0.0564,
+   "frac_B_off_gt_1pct": 0.2687,
+   "frac_B_off_gt_5pct": 0.0034,
+   "rel_rot_deg_p5_50_95": [
+    0.0073,
+    0.0282,
+    0.1734
+   ],
+   "n_changed": 98
+  },
+  "wide_old_ba": {
+   "n": 327,
+   "B_ratio_p5_50_95": [
+    0.9859,
+    1.0023,
+    1.0129
+   ],
+   "B_ratio_absdev_med": 0.0044,
+   "B_ratio_absdev_max": 0.055,
+   "frac_B_off_gt_1pct": 0.2171,
+   "frac_B_off_gt_5pct": 0.0031,
+   "rel_rot_deg_p5_50_95": [
+    0.003,
+    0.0106,
+    0.2226
+   ],
+   "n_changed": 84
+  }
+ },
+ "seeds": {
+  "p2": {
+   "kf_files": 411,
+   "reused": 243,
+   "recompute": 168
+  },
+  "low": {
+   "kf_files": 118,
+   "reused": 49,
+   "recompute": 69
+  },
+  "wide": {
+   "kf_files": 328,
+   "reused": 204,
+   "recompute": 124
+  },
+  "relax": {
+   "kf_files": 162,
+   "reused": 160,
+   "recompute": 2
+  }
+ },
+ "note": "B_ratio = BA3 keyframe-partner baseline / baseline of the poses the existing depth file used (p2/low/wide: ba_partners keyframe + ba_partners or VIO-anchored partner; relax: BA2). A keyframe file is recomputed if ANY of its pairs changed."
+}
