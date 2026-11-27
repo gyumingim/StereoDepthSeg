@@ -1,0 +1,90 @@
+{
+ "made": "2026-11-27 22:51:24",
+ "note": "30 fps, --kf-win 2 (window 67 ms as 4 frames @ 60 fps), same 30 fps VIO",
+ "keyframes": {
+  "n_kf": 490,
+  "kf_without_vio_pose": 0,
+  "kf_select": {
+   "rule": "motion",
+   "dist_m": 0.03,
+   "rot_deg": 4.0,
+   "win": 2,
+   "blur": "gyro",
+   "max_gyro": 0.0,
+   "n_vio_frames": 1606,
+   "n_scored": 980,
+   "n_kf": 490,
+   "pos_in_window_hist": [
+    223,
+    267
+   ],
+   "gyro_kf_median": 0.3009771473314794,
+   "gyro_window_mean_median": 0.3547815515056132,
+   "moved_m_median": 0.0432359474478855,
+   "rot_deg_median": 1.8804366452869288,
+   "exposure_ns_median": 2000000.0,
+   "skew_ns_median": 6540750.0
+  },
+  "frames_in_lensonly": 1733
+ },
+ "plans": {
+  "A30w2_vio_legacy": {
+   "n_kf": 490,
+   "ge1": 411,
+   "ge2": 365,
+   "zero": 79,
+   "ge1_pct": 83.9,
+   "ge2_pct": 74.5,
+   "zero_pct": 16.1,
+   "fallback_kf": 73,
+   "pairs": 1213,
+   "pair_src": {
+    "local": 1061,
+    "fallback": 152
+   },
+   "strict_ge2": 311,
+   "strict_ge2_pct": 63.5,
+   "rate": {
+    "fps": 30.0,
+    "gap_frames": 6,
+    "win_frames": 60,
+    "profile": "legacy"
+   },
+   "covis_pts_src": {
+    "none": 490
+   },
+   "notes": [
+    "[rate] 30 fps, min partner gap 6 frames, profile legacy"
+   ]
+  },
+  "A30w2_vio_new": {
+   "n_kf": 490,
+   "ge1": 338,
+   "ge2": 311,
+   "zero": 152,
+   "ge1_pct": 69.0,
+   "ge2_pct": 63.5,
+   "zero_pct": 31.0,
+   "fallback_kf": 0,
+   "pairs": 1061,
+   "pair_src": {
+    "local": 1061
+   },
+   "strict_ge2": 311,
+   "strict_ge2_pct": 63.5,
+   "rate": {
+    "fps": 30.0,
+    "gap_frames": 6,
+    "win_frames": 60,
+    "profile": "new"
+   },
+   "covis_pts_src": {
+    "none": 490
+   },
+   "notes": [
+    "[profile new] --fb-perp 30.0 ignored: low-angle fallback is off (use --profile legacy to keep it)",
+    "[rate] 30 fps, min partner gap 6 frames, profile new"
+   ]
+  }
+ }
+}

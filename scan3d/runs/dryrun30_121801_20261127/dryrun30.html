@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>30 fps 마른 시험</title>
+<style>
+:root{--bg:#fbfaf7;--fg:#1d1d1b;--mut:#66635c;--line:#dedad2;--card:#fff;--ok:#1d7a46;--warn:#a3570b;--bad:#b3261e;--hi:#fff4d6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171716;--fg:#ecebe7;--mut:#a29f97;--line:#3a3935;--card:#211f1d;--ok:#5cc98a;--warn:#f0a959;--bad:#f2867d;--hi:#3a3220}}
+:root[data-theme="dark"]{--bg:#171716;--fg:#ecebe7;--mut:#a29f97;--line:#3a3935;--card:#211f1d;--ok:#5cc98a;--warn:#f0a959;--bad:#f2867d;--hi:#3a3220}
+body{background:var(--bg);color:var(--fg);font:15px/1.6 system-ui,-apple-system,"Malgun Gothic",sans-serif;margin:0;padding:20px 16px 60px}
+main{max-width:980px;margin:0 auto}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:28px 0 8px}
+.sub{color:var(--mut);font-size:13px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:12px 0}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;background:var(--card)}
+th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--mut);font-weight:600}
+tr.hi td{background:var(--hi)}
+.ok{color:var(--ok);font-weight:600}.warn{color:var(--warn);font-weight:600}.bad{color:var(--bad);font-weight:600}
+code{font-size:13px}
+li{margin:4px 0}
+</style>
+</head>
+<body><main>
+<h1>30 fps 마른 시험 (121801 을 반으로 솎음)</h1>
+<div class="sub">만든 시각 2026-11-27 22:55 · 녹화 121801 1개 (n=1) · CPU 만 · VIO + 키프레임 + 짝 계획까지 (FFS·학습·메시 없음) · 숫자는 전부 <code>runs/dryrun30_121801_20261127/dryrun30.json</code>, <code>dryrun30_kfwin2.json</code> 에서 읽음</div>
+
+<div class="box">
+<b>결론</b>
+<ol>
+<li><span class="ok">VIO 는 30 fps 에서도 끝까지 버틴다.</span> 추적 비율 92.7 % (60 fps 92.8 %). 다만 궤적이 60 fps 것과 <b>RMS 5.8 cm</b> 다르고 (크기 맞추면 4.1 cm, 크기 차 1.6 %), 루프 오차는 29.4 cm (60 fps 16.1 cm). 어느 쪽이 맞는지는 GT 가 없어 모른다.</li>
+<li><span class="bad">말없이 바뀐 것: 키프레임 수 494 → 339 (−31 %).</span> 키프레임 규칙(3 cm / 4°)이 고른 뒤 "4 장 창"에서 가장 덜 흔들린 장을 고르는데, 이 창이 <b>장 수</b>라서 30 fps 에서는 67 ms → 133 ms 로 늘어난다. 키프레임 사이 이동 중앙값 4.3 → 6.0 cm.
+  <code>--kf-win 2</code> 로 돌리면 490 장 (이동 4.3 cm) 으로 돌아온다 → <b>새 녹화(30 fps)는 <code>--kf-win 2</code> 로</b> (이 코드는 다른 작업 폴더라 고치지 않음, 아래 6번).</li>
+<li><span class="ok">짝 비율은 fps 와 거의 무관.</span> 짝 ≥1 키프레임 83.2 → 84.4 %, ≥2 75.1 → 76.4 %, 0 개 16.8 → 15.6 % (옛 규칙). 새 프로필(뒷문 끔)에서는 60/30 모두 ≥1 약 70 %, 0 개 약 30 %.</li>
+<li><b>60 fps 회귀 검사 통과</b>: 고친 코드로 옛 인자 그대로 다시 돌린 짝 계획이 <code>ffs_pairs2/plan.json</code> 과 <b>짝까지 똑같음</b> (494 kf, ≥1 411, ≥2 371, fallback 65, 짝 1218). pairs3 / 4m 계획도 동일.</li>
+</ol>
+</div>
+
+<h2>1. VIO (설정 cfg_gen/c4f60, 121801 과 같은 것)</h2>
+<div class="scroll"><table>
+<tr><th>실행</th><th>넣은 장</th><th>추적 장</th><th>추적 %</th><th>경로 m</th><th>루프 오차 cm</th><th>시간 s</th></tr>
+<tr><td>60 fps 공식 (노트북 11-12)</td><td>3466</td><td>3218</td><td>92.8</td><td>21.91</td><td>16.11</td><td>44.3</td></tr>
+<tr><td>60 fps 이 PC 다시</td><td>3466</td><td>3218</td><td>92.8</td><td>21.91</td><td>—</td><td>47.6</td></tr>
+<tr class="hi"><td>30 fps (솎음)</td><td>1733</td><td>1606</td><td>92.7</td><td>21.47</td><td>29.37</td><td>22.2</td></tr>
+</table></div>
+<div class="scroll"><table>
+<tr><th>궤적 차이 (같은 시각끼리)</th><th>맞춘 장</th><th>RMS cm</th><th>중앙 cm</th><th>최대 cm</th><th>회전 중앙 °</th><th>Sim3 RMS cm (크기)</th></tr>
+<tr><td>60 이 PC vs 60 공식</td><td>3218</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.000</td><td>0.00 (1.000)</td></tr>
+<tr class="hi"><td>30 vs 60 공식</td><td>1606</td><td>5.82</td><td>4.18</td><td>12.27</td><td>0.321</td><td>4.06 (1.0157)</td></tr>
+</table></div>
+<div class="sub">60 fps 를 이 PC 에서 다시 돌리면 공식 결과와 똑같다 (잡음 0) → 5.8 cm 는 전부 fps 차이. 영상은 무손실로 다시 만들어 화소가 원본과 같음 (19 장 검사, 차이 0).</div>
+
+<h2>2. 키프레임 (3 cm / 4° 규칙 + 4 장 창)</h2>
+<div class="scroll"><table>
+<tr><th>실행</th><th>키프레임</th><th>이동 중앙 cm</th><th>회전 중앙 °</th></tr>
+<tr><td>60 fps (공식 = 이 PC, 키프레임 목록 똑같음)</td><td>494</td><td>4.34</td><td>1.87</td></tr>
+<tr class="hi"><td>30 fps, 창 4 장 (133 ms)</td><td class="bad">339</td><td>6.03</td><td>2.66</td></tr>
+<tr><td>30 fps, 창 2 장 (67 ms)</td><td class="ok">490</td><td>4.32</td><td>1.88</td></tr>
+</table></div>
+
+<h2>3. 짝 계획 (gsm_ffs_pairs2 plan, FFS 없음)</h2>
+<div class="scroll"><table>
+<tr><th>조건</th><th>kf</th><th>짝 ≥1</th><th>≥2</th><th>0 개</th><th>fallback kf</th><th>짝 합계</th></tr>
+<tr><td>60 공식 (BA 자세 + 겹침 검사)</td><td>494</td><td>411 (83.2 %)</td><td>371 (75.1 %)</td><td>83 (16.8 %)</td><td>65</td><td>1218</td></tr>
+<tr><td>60, VIO 자세, 겹침 검사 없음, 옛 규칙</td><td>494</td><td>411 (83.2 %)</td><td>371 (75.1 %)</td><td>83 (16.8 %)</td><td>65</td><td>1237</td></tr>
+<tr class="hi"><td>30, 창 4, 옛 규칙</td><td>339</td><td>286 (84.4 %)</td><td>259 (76.4 %)</td><td>53 (15.6 %)</td><td>47</td><td>862</td></tr>
+<tr><td>30, 창 2, 옛 규칙</td><td>490</td><td>411 (83.9 %)</td><td>365 (74.5 %)</td><td>79 (16.1 %)</td><td>73</td><td>1213</td></tr>
+<tr><td>60, 새 프로필 (뒷문 끔)</td><td>494</td><td>346 (70.0 %)</td><td>318 (64.4 %)</td><td>148 (30.0 %)</td><td>0</td><td>1095</td></tr>
+<tr class="hi"><td>30, 창 4, 새 프로필</td><td>339</td><td>239 (70.5 %)</td><td>222 (65.5 %)</td><td>100 (29.5 %)</td><td>0</td><td>761</td></tr>
+<tr><td>30, 창 2, 새 프로필</td><td>490</td><td>338 (69.0 %)</td><td>311 (63.5 %)</td><td>152 (31.0 %)</td><td>0</td><td>1061</td></tr>
+</table></div>
+<div class="sub">옛 규칙 = run_ffs_pairs2.sh 인자 (perp 40, fb-perp 30, dir 10, 짝 4). 창·간격은 이제 초 단위: 2 초 = 60 fps 120 장 / 30 fps 60 장, 짝 사이 0.2 초 = 12 장 / 6 장.
+마른 시험은 BA 를 돌리지 않아 키프레임 자세 = VIO 자세, 겹침 검사(옛 FFS/MoGe 깊이)는 새 run 에 없음. 이 두 단순화의 몫은 60 fps 에서 짝 1218 → 1237 (+19), 키프레임 수 칸은 같음.
+121801 은 옛 걸음(앞으로 걷기)이라 새 프로필의 0 개 30 % 는 "새 녹화 합격선" 과 비교하는 값이 아니다.</div>
+
+<h2>4. 고친 코드 (커밋)</h2>
+<ul>
+<li><code>scan3d/gsmap/rec_profile.py</code> 새로: fps = meta.json 의 save_fps, 프레임 시각 중앙값으로 검산 (5 % 넘게 다르면 시각 쪽). 값이 없으면 멈춤 (60 기본값 없음).</li>
+<li><code>win_s × 60</code> → <code>win_s × fps</code>: pairs2 (3 곳), pairs3, dense, 4m, relax. 짝 간격 <code>≥ 12 장</code> → <code>≥ 0.2 초</code> (<code>--min-gap-s</code>): pairs2 (2 곳), pairs3 dirdiv (4m 도 씀), relax.</li>
+<li><code>--profile auto|legacy|new</code>: new = 뒷문 끔 (fb-perp 0 으로, pairs3 low 단 건너뜀, relax 계획 거부). auto = 2026-11-27 이전 녹화는 legacy, 이후는 new.</li>
+</ul>
+
+<h2>5. 말없이 바뀌거나 확인 못 한 것</h2>
+<ul>
+<li class="bad">키프레임 창 <code>--kf-win 4</code> 가 장 수 (위 2번). 위치: <code>StereoDepthSeg-fixes/scan3d/scanA/kf_select.py</code> (KFSel.due = 3 cm / 4°, win 장 수), 호출 <code>runs/kfonly_20261111/make_reduced.py</code>, 기본값 <code>scanA/run_scanner.sh</code> (KFD=3, KFR=4, KFW=4). 고치지 않음 — 30 fps 녹화는 <code>--kf-win 2</code> 로 돌리면 됨 (이번 시험으로 확인).</li>
+<li class="warn">VIO 설정: 121801 은 <code>config/base_nozupt</code> (track_frequency 15) 가 <b>아니라</b> <code>build_livepose/cfg_gen/c4f60</code> (track_frequency 60) 로 돌았다 (B_o0.json). base_nozupt 를 30 fps 에 쓰면 15 Hz 로만 추적할 것으로 보인다 (추정, 돌려 보지 않음). cfg_gen 에 <code>fps30</code> (track 30, clones 11) 도 있으나 이번엔 c4f60 그대로 씀 (fps 만 바꾸려고).</li>
+<li class="warn">lp_replay 가 브리지에 <code>--profile rec60</code> 을 고정으로 넘긴다. 그 안의 값이 60 fps 에 맞춘 것인지는 보지 않았다.</li>
+<li class="warn">짝 겹침 검사 점(<code>covis_points</code>)이 121801 폴더 이름(<code>run/ffs_dense</code>, <code>run_v2/fuse/moge</code>)에 묶여 있어 새 run 에서는 말없이 꺼진다 (모든 후보 통과). 121801 에서 몫은 +19 짝.</li>
+<li><code>gsm_ffs_relax.py</code>, <code>gsm_ba_partners.py</code> 는 121801 경로가 박혀 있다 (새 녹화에 그대로 못 씀). relax 계획은 옛 결과를 덮어쓰므로 회귀 실행은 하지 않았다 (문법 검사만).</li>
+<li>VIO 자세 ↔ 프레임 맞춤 허용 8 ms 는 그대로. 30 fps 에서도 키프레임 339/339 모두 자세 있음.</li>
+<li>렌즈·센서 모드·롤링셔터가 진짜 30 fps 녹화에서 같은지는 이 시험으로 알 수 없다 (솎은 영상이라 같음).</li>
+</ul>
+
+<h2>6. 파일</h2>
+<ul>
+<li>결과: WSL <code>~/scanner/StereoDepthSeg-gsmap/scan3d/runs/dryrun30_121801_20261127/</code> — dryrun30.json, dryrun30_kfwin2.json, video_check.json, regress60_pairs2/compare.json, regress60_pairs3_4m_compare.json, plans/*/plan.json, scan30/, scan30_kfwin2/, scan60/ (솎은 영상 2.4 GB 는 커밋 안 함)</li>
+<li>스크립트: <code>scan3d/gsmap/dryrun30/</code> (decimate.sh, video_check.py, scan.sh, dryrun30.py, kfwin2.sh, regress60_*.sh)</li>
+</ul>
+</main></body>
+</html>
