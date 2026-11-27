@@ -1,0 +1,575 @@
+{
+ "made": "2026-11-27 14:50:49",
+ "n_recordings": 1,
+ "n_keyframes": 10,
+ "kf_idx": "50,150,250,400,470 + aisle 314,318,322,326,330",
+ "inputs": [
+  "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/dc/probe/probe.json",
+  "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/dc/probe_g/probe.json",
+  "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/dc/probe_gdg/probe.json",
+  "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/dc/probe_mdc/probe.json",
+  "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/dc/probe_dist.json"
+ ],
+ "go_rule": "(set before the probe): pooled hidden-pixel AbsRel median <= 2 x the FFS reference (fused FFS vs BA2 on FFS pixels, 0.73 %)\nAND BA2-on-FFS-empty median AND > 5 % share both lower than DA3 affine by >= 25 % (relative), pooled over all 10 keyframes and in the aisle.",
+ "ffs_reference_med_pct": 0.734508888643986,
+ "variants": {
+  "probe": {
+   "desc": "PriorDA v1.1 vitb (frozen DA-v2 vitb)",
+   "all_hidden_dc": {
+    "n": 195757,
+    "med": 1.17,
+    "p90": 4.8,
+    "gt5": 9.3
+   },
+   "all_hidden_da3": {
+    "n": 195757,
+    "med": 1.18,
+    "p90": 5.2,
+    "gt5": 10.5
+   },
+   "all_ba_empty_dc": {
+    "n": 29967,
+    "med": 8.89,
+    "p90": 30.9,
+    "gt5": 63.5
+   },
+   "all_ba_empty_da3": {
+    "n": 29967,
+    "med": 3.31,
+    "p90": 12.2,
+    "gt5": 36.8
+   },
+   "aisle_hidden_dc": {
+    "n": 80560,
+    "med": 1.66,
+    "p90": 5.9,
+    "gt5": 13.7
+   },
+   "aisle_hidden_da3": {
+    "n": 80560,
+    "med": 1.42,
+    "p90": 4.8,
+    "gt5": 9.5
+   },
+   "aisle_ba_empty_dc": {
+    "n": 14305,
+    "med": 14.57,
+    "p90": 30.7,
+    "gt5": 79.0
+   },
+   "aisle_ba_empty_da3": {
+    "n": 14305,
+    "med": 5.5,
+    "p90": 17.1,
+    "gt5": 54.0
+   },
+   "other_hidden_dc": {
+    "n": 115197,
+    "med": 0.94,
+    "p90": 3.6,
+    "gt5": 6.2
+   },
+   "other_hidden_da3": {
+    "n": 115197,
+    "med": 0.97,
+    "p90": 5.4,
+    "gt5": 11.2
+   },
+   "other_ba_empty_dc": {
+    "n": 15662,
+    "med": 4.82,
+    "p90": 32.2,
+    "gt5": 49.4
+   },
+   "other_ba_empty_da3": {
+    "n": 15662,
+    "med": 1.81,
+    "p90": 7.6,
+    "gt5": 21.0
+   },
+   "gate": {
+    "hidden_le_2x_ffs": true,
+    "ba_empty_better_all": false,
+    "ba_empty_better_aisle": false
+   },
+   "GO": false
+  },
+  "probe_g": {
+   "desc": "PriorDA v1.1, geometric = DA3-LARGE depth",
+   "all_hidden_dc": {
+    "n": 195757,
+    "med": 1.13,
+    "p90": 5.1,
+    "gt5": 10.3
+   },
+   "all_hidden_da3": {
+    "n": 195757,
+    "med": 1.18,
+    "p90": 5.2,
+    "gt5": 10.5
+   },
+   "all_ba_empty_dc": {
+    "n": 29967,
+    "med": 8.17,
+    "p90": 33.3,
+    "gt5": 62.6
+   },
+   "all_ba_empty_da3": {
+    "n": 29967,
+    "med": 3.31,
+    "p90": 12.2,
+    "gt5": 36.8
+   },
+   "aisle_hidden_dc": {
+    "n": 80560,
+    "med": 1.6,
+    "p90": 6.3,
+    "gt5": 14.7
+   },
+   "aisle_hidden_da3": {
+    "n": 80560,
+    "med": 1.42,
+    "p90": 4.8,
+    "gt5": 9.5
+   },
+   "aisle_ba_empty_dc": {
+    "n": 14305,
+    "med": 13.77,
+    "p90": 33.6,
+    "gt5": 77.6
+   },
+   "aisle_ba_empty_da3": {
+    "n": 14305,
+    "med": 5.5,
+    "p90": 17.1,
+    "gt5": 54.0
+   },
+   "other_hidden_dc": {
+    "n": 115197,
+    "med": 0.93,
+    "p90": 3.9,
+    "gt5": 7.3
+   },
+   "other_hidden_da3": {
+    "n": 115197,
+    "med": 0.97,
+    "p90": 5.4,
+    "gt5": 11.2
+   },
+   "other_ba_empty_dc": {
+    "n": 15662,
+    "med": 4.81,
+    "p90": 31.9,
+    "gt5": 48.9
+   },
+   "other_ba_empty_da3": {
+    "n": 15662,
+    "med": 1.81,
+    "p90": 7.6,
+    "gt5": 21.0
+   },
+   "gate": {
+    "hidden_le_2x_ffs": true,
+    "ba_empty_better_all": false,
+    "ba_empty_better_aisle": false
+   },
+   "GO": false
+  },
+  "probe_gdg": {
+   "desc": "PriorDA v1.1, geometric = DA3, double_global",
+   "all_hidden_dc": {
+    "n": 195757,
+    "med": 1.66,
+    "p90": 7.3,
+    "gt5": 16.4
+   },
+   "all_hidden_da3": {
+    "n": 195757,
+    "med": 1.18,
+    "p90": 5.2,
+    "gt5": 10.5
+   },
+   "all_ba_empty_dc": {
+    "n": 29967,
+    "med": 4.54,
+    "p90": 17.3,
+    "gt5": 47.3
+   },
+   "all_ba_empty_da3": {
+    "n": 29967,
+    "med": 3.31,
+    "p90": 12.2,
+    "gt5": 36.8
+   },
+   "aisle_hidden_dc": {
+    "n": 80560,
+    "med": 2.27,
+    "p90": 7.6,
+    "gt5": 20.1
+   },
+   "aisle_hidden_da3": {
+    "n": 80560,
+    "med": 1.42,
+    "p90": 4.8,
+    "gt5": 9.5
+   },
+   "aisle_ba_empty_dc": {
+    "n": 14305,
+    "med": 6.19,
+    "p90": 20.1,
+    "gt5": 58.4
+   },
+   "aisle_ba_empty_da3": {
+    "n": 14305,
+    "med": 5.5,
+    "p90": 17.1,
+    "gt5": 54.0
+   },
+   "other_hidden_dc": {
+    "n": 115197,
+    "med": 1.35,
+    "p90": 6.9,
+    "gt5": 13.8
+   },
+   "other_hidden_da3": {
+    "n": 115197,
+    "med": 0.97,
+    "p90": 5.4,
+    "gt5": 11.2
+   },
+   "other_ba_empty_dc": {
+    "n": 15662,
+    "med": 2.9,
+    "p90": 14.0,
+    "gt5": 37.2
+   },
+   "other_ba_empty_da3": {
+    "n": 15662,
+    "med": 1.81,
+    "p90": 7.6,
+    "gt5": 21.0
+   },
+   "gate": {
+    "hidden_le_2x_ffs": false,
+    "ba_empty_better_all": false,
+    "ba_empty_better_aisle": false
+   },
+   "GO": false
+  },
+  "probe_mdc": {
+   "desc": "Marigold-DC (marigold-depth-v1-0, 50 steps, 768, bf16)",
+   "all_hidden_dc": {
+    "n": 195757,
+    "med": 0.66,
+    "p90": 2.6,
+    "gt5": 2.9
+   },
+   "all_hidden_da3": {
+    "n": 195757,
+    "med": 1.18,
+    "p90": 5.2,
+    "gt5": 10.5
+   },
+   "all_ba_empty_dc": {
+    "n": 29967,
+    "med": 7.95,
+    "p90": 34.2,
+    "gt5": 60.6
+   },
+   "all_ba_empty_da3": {
+    "n": 29967,
+    "med": 3.31,
+    "p90": 12.2,
+    "gt5": 36.8
+   },
+   "aisle_hidden_dc": {
+    "n": 80560,
+    "med": 0.88,
+    "p90": 2.9,
+    "gt5": 3.9
+   },
+   "aisle_hidden_da3": {
+    "n": 80560,
+    "med": 1.42,
+    "p90": 4.8,
+    "gt5": 9.5
+   },
+   "aisle_ba_empty_dc": {
+    "n": 14305,
+    "med": 11.06,
+    "p90": 31.7,
+    "gt5": 71.6
+   },
+   "aisle_ba_empty_da3": {
+    "n": 14305,
+    "med": 5.5,
+    "p90": 17.1,
+    "gt5": 54.0
+   },
+   "other_hidden_dc": {
+    "n": 115197,
+    "med": 0.52,
+    "p90": 2.4,
+    "gt5": 2.3
+   },
+   "other_hidden_da3": {
+    "n": 115197,
+    "med": 0.97,
+    "p90": 5.4,
+    "gt5": 11.2
+   },
+   "other_ba_empty_dc": {
+    "n": 15662,
+    "med": 5.14,
+    "p90": 35.7,
+    "gt5": 50.6
+   },
+   "other_ba_empty_da3": {
+    "n": 15662,
+    "med": 1.81,
+    "p90": 7.6,
+    "gt5": 21.0
+   },
+   "gate": {
+    "hidden_le_2x_ffs": true,
+    "ba_empty_better_all": false,
+    "ba_empty_better_aisle": false
+   },
+   "GO": false
+  }
+ },
+ "ba_empty_by_px_to_nearest_ffs": {
+  "probe": {
+   "dc": {
+    "0-24px": {
+     "n": 5230,
+     "med_pct": 4.16,
+     "gt5_pct": 45.6
+    },
+    "24-64px": {
+     "n": 5466,
+     "med_pct": 8.23,
+     "gt5_pct": 57.4
+    },
+    "64-128px": {
+     "n": 7059,
+     "med_pct": 7.3,
+     "gt5_pct": 58.1
+    },
+    "128-256px": {
+     "n": 7974,
+     "med_pct": 11.04,
+     "gt5_pct": 77.4
+    },
+    "256-2000px": {
+     "n": 4238,
+     "med_pct": 13.0,
+     "gt5_pct": 76.4
+    }
+   },
+   "da3": {
+    "0-24px": {
+     "n": 5230,
+     "med_pct": 2.96,
+     "gt5_pct": 34.3
+    },
+    "24-64px": {
+     "n": 5466,
+     "med_pct": 2.7,
+     "gt5_pct": 31.0
+    },
+    "64-128px": {
+     "n": 7059,
+     "med_pct": 2.21,
+     "gt5_pct": 25.1
+    },
+    "128-256px": {
+     "n": 7974,
+     "med_pct": 3.81,
+     "gt5_pct": 41.6
+    },
+    "256-2000px": {
+     "n": 4238,
+     "med_pct": 5.5,
+     "gt5_pct": 57.5
+    }
+   }
+  },
+  "probe_g": {
+   "dc": {
+    "0-24px": {
+     "n": 5230,
+     "med_pct": 4.68,
+     "gt5_pct": 47.8
+    },
+    "24-64px": {
+     "n": 5466,
+     "med_pct": 8.56,
+     "gt5_pct": 57.6
+    },
+    "64-128px": {
+     "n": 7059,
+     "med_pct": 7.58,
+     "gt5_pct": 59.6
+    },
+    "128-256px": {
+     "n": 7974,
+     "med_pct": 9.45,
+     "gt5_pct": 73.2
+    },
+    "256-2000px": {
+     "n": 4238,
+     "med_pct": 10.12,
+     "gt5_pct": 72.4
+    }
+   },
+   "da3": {
+    "0-24px": {
+     "n": 5230,
+     "med_pct": 2.96,
+     "gt5_pct": 34.3
+    },
+    "24-64px": {
+     "n": 5466,
+     "med_pct": 2.7,
+     "gt5_pct": 31.0
+    },
+    "64-128px": {
+     "n": 7059,
+     "med_pct": 2.21,
+     "gt5_pct": 25.1
+    },
+    "128-256px": {
+     "n": 7974,
+     "med_pct": 3.81,
+     "gt5_pct": 41.6
+    },
+    "256-2000px": {
+     "n": 4238,
+     "med_pct": 5.5,
+     "gt5_pct": 57.5
+    }
+   }
+  },
+  "probe_gdg": {
+   "dc": {
+    "0-24px": {
+     "n": 5230,
+     "med_pct": 3.84,
+     "gt5_pct": 42.5
+    },
+    "24-64px": {
+     "n": 5466,
+     "med_pct": 4.21,
+     "gt5_pct": 45.8
+    },
+    "64-128px": {
+     "n": 7059,
+     "med_pct": 3.66,
+     "gt5_pct": 43.2
+    },
+    "128-256px": {
+     "n": 7974,
+     "med_pct": 5.34,
+     "gt5_pct": 52.1
+    },
+    "256-2000px": {
+     "n": 4238,
+     "med_pct": 5.52,
+     "gt5_pct": 53.3
+    }
+   },
+   "da3": {
+    "0-24px": {
+     "n": 5230,
+     "med_pct": 2.96,
+     "gt5_pct": 34.3
+    },
+    "24-64px": {
+     "n": 5466,
+     "med_pct": 2.7,
+     "gt5_pct": 31.0
+    },
+    "64-128px": {
+     "n": 7059,
+     "med_pct": 2.21,
+     "gt5_pct": 25.1
+    },
+    "128-256px": {
+     "n": 7974,
+     "med_pct": 3.81,
+     "gt5_pct": 41.6
+    },
+    "256-2000px": {
+     "n": 4238,
+     "med_pct": 5.5,
+     "gt5_pct": 57.5
+    }
+   }
+  },
+  "probe_mdc": {
+   "dc": {
+    "0-24px": {
+     "n": 5230,
+     "med_pct": 3.24,
+     "gt5_pct": 41.4
+    },
+    "24-64px": {
+     "n": 5466,
+     "med_pct": 8.03,
+     "gt5_pct": 58.7
+    },
+    "64-128px": {
+     "n": 7059,
+     "med_pct": 7.32,
+     "gt5_pct": 57.2
+    },
+    "128-256px": {
+     "n": 7974,
+     "med_pct": 10.91,
+     "gt5_pct": 72.4
+    },
+    "256-2000px": {
+     "n": 4238,
+     "med_pct": 9.73,
+     "gt5_pct": 70.5
+    }
+   },
+   "da3": {
+    "0-24px": {
+     "n": 5230,
+     "med_pct": 2.96,
+     "gt5_pct": 34.3
+    },
+    "24-64px": {
+     "n": 5466,
+     "med_pct": 2.7,
+     "gt5_pct": 31.0
+    },
+    "64-128px": {
+     "n": 7059,
+     "med_pct": 2.21,
+     "gt5_pct": 25.1
+    },
+    "128-256px": {
+     "n": 7974,
+     "med_pct": 3.81,
+     "gt5_pct": 41.6
+    },
+    "256-2000px": {
+     "n": 4238,
+     "med_pct": 5.5,
+     "gt5_pct": 57.5
+    }
+   }
+  }
+ },
+ "verdict": "NO-GO",
+ "notes": [
+  "DA3 affine = last night's fill rule (per-kf robust scale+shift of DA3-LARGE to FFS, align_fuse.robust_fit), same pixels",
+  "BA2 targets = w5/sparse (3x3 splat of BA2 track points, F == 0 only); the same targets score both methods",
+  "hidden pixels = 20 % of valid FFS in random 24x24 blocks (seed 0); these lie inside FFS-covered surfaces, easier than true FFS holes",
+  "probe_mdc pictures were made before the label fix: their panels say 'PriorDA' but show Marigold-DC",
+  "n = 1 recording, 10 keyframes; one seed per variant"
+ ]
+}
