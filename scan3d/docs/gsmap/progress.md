@@ -196,3 +196,38 @@ Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/St
   violated = seen through by >= 2 FFS kf by > max(3 cm, 1.5 %), non-grazing faces): 111,201 of 1,500,082 faces = 7.41 % (5.34 % area).
   First-hit share violated per ROI: cabinet_front_kf774 0.0, panel 0.0, door 0.0, wall538 13.2, wall838 8.8, floor 10.3 %.
   > 5 % of faces -> NOT delivered (stop rule). No texture / crop made. ffsgate/mesh_gated.json.
+
+## 2026-11-26 09:00 -> 11-27 22:40 — FFS-only maps, W1-W9, diagnostics, decision to re-record (121801 stopped)
+
+Summary written 11-27 22:40 from the commit log, `report_20261127.html`, the diagnostic pages and their JSONs (all n = 1 recording).
+Pages (durable copy): `C:\Users\a3162\scan3d_handoff\pages_20261127\` (manifest.txt lists the big .glb/.splat left in the served Temp folder).
+Next-steps note: `C:\Users\a3162\scan3d_handoff\ideas\fable_next_steps_20261127.md`.
+
+- 11-26 day: FFS pairs2 (perp >= 40 deg + epipole outside + whole-video pose search + fallback), pairs3 low-angle tier, FFS 4 m wide pairs,
+  BA with FFS partner frames, FFS-only map on BA poses (ffsonly_np), then relaxed low-angle partners for the 166 no-wide-partner keyframes
+  + BA2 + retrain = **ffsonly2**. Fair judge R (`gsm_rjudge.py`, each map on its own poses): nC 85.85 / ffsonly2 85.12 / W1 83.20 % correct3.
+- Overnight W1-W9 (`report_20261127.html`; JSONs under V2/w1..w9, r_judge):
+  W1 one BA over all partners: slightly worse, not kept. W2 aisle sheet cleanup: no gain. W3 wall plane fill: 1 of 32 planes passed, not kept.
+  W4 F ruler + aisle probe: NO-GO (12 % picked vs 40 % target). W5 retrain with BA2 sparse depth: noise-level, not kept.
+  W6 clean variants C1-C3: removed real objects / more holes, not kept. W7 rescue rejected FFS on aisle objects: NO-GO (59 % of object px in the epipole cone).
+  W8 texture seam levelling SM2: kept (+0.39 dB held-out PSNR, SSIM +0.017). W9 occlusion check o1 on SM2: kept (+0.21 dB).
+- **Final pick (audit10 + user eye): `tex_121801_ffsonly2_tex.glb`** (ffsonly2 mesh + SM2 + o1 texture). 2nd: nC_tex3. vs nC_tex3: held-out PSNR
+  +0.109 +- 0.031 dB, SSIM +0.0049, screen fill 92.6 vs 90.6 %. Known weak spots: aisle black objects (no FFS depth), white wall / ceiling holes,
+  small holes on the cabinet front. Ceiling height 2.70 m is an estimate.
+- 11-27 day, all NO-GO (no retrain):
+  - AI depth completion (Prior Depth Anything x3, Marigold-DC) vs DA3 affine fill (dc/verdict.json): FFS-empty error 4.54 % vs 3.31 %.
+  - Plane diagnostic (`diag_plane_20261127/plane_diag.json`, ROIs cabinet kf774 / wall kf538 / floor kf3205): per-pair FFS pixel noise is small
+    (in-frame RMS 0.08-0.67 cm) but frame-to-frame plane offset is 4-10x larger (cabinet 3.61, wall 1.49, floor 0.96 cm SD), mostly between pairs of the same keyframe.
+  - P1 anchor (per-pair disparity offset fitted to BA points) and RS (rolling-shutter) correction (`diag_plane_fix_20261127/plane_fix*.json`):
+    cabinet pair SD 3.57 -> 3.57, wall 1.48 -> 1.41 cm; almost no BA points inside textureless ROIs. RS is real (Pearson 0.40) but small; no consistent gain.
+  - Pair diagnostic + filter rules (`diag_pairs_20261127/{pairs_table,analysis,rules}.json`): no rule helps all three ROIs
+    (best no_wide_vio: floor b SD 0.79 -> 0.64, cabinet unchanged; no_relax: wall better, cabinet 1.78 -> 2.51 cm).
+- **Root cause: low-angle pairs from walking forward** (optical-axis-to-baseline 10-30 deg, epipole in frame, partial rectification: `low`, `relax`):
+  disparity error robust SD 1.0-1.4 px vs sideways pairs (`base`, `wide`) 0.16-0.21 px, and ROI pixels sit 28-35 deg from the baseline so 1 px = 2-4 cm.
+  All 18 cabinet-front pairs are low-angle. Fix = recording method, not filters.
+- **Decision (user, 11-27): re-record with the new method at 30 fps** (one lens cam5, 2 s still at start, walk with the phone turned 30-45 deg
+  off the walking direction, >= 3 s per 90 deg turn, stop right after). 121801 is frozen. For the new recording the low-angle backdoors
+  (pairs3 low tier, relax pairs, --fb-perp fallback) start OFF.
+- Code/data committed 11-27: `gsm_ffs_pairs2.py` plan4/ffs4/fuse4 (4 m wide extension), diag scripts in `scan3d/gsmap/diag_20261127/`
+  (plane, plane_fix, pairs; they were run from the runs/ scripts folders), small result JSONs in the runs/ diag folders
+  (plane_fix.json 3.2 MB not committed). Frame-rate aware pair selection + 30 fps dry run: see the next entry.
