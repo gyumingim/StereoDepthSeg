@@ -1,0 +1,426 @@
+{
+ "made": "2026-11-27 22:48:40",
+ "script": "/mnt/c/Users/a3162/AppData/Local/Temp/claude/b2ff6dea35ed22b8/31001698-6223-4dd7-82f9-f55fa47c7773/scratchpad/s/dryrun30.py",
+ "dir": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/dryrun30_121801_20261127",
+ "inputs": {
+  "rec30": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/dryrun30_121801_20261127/rec_hs_20261112_121801_std30",
+  "rec60": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/dryrun30_121801_20261127/rec_hs_20261112_121801_std60",
+  "vio30": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/dryrun30_121801_20261127/scan30/vio/B_o0.poses.jsonl.gz",
+  "vio60_desktop": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/dryrun30_121801_20261127/scan60/vio/B_o0.poses.jsonl.gz",
+  "vio60_official": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/laptop/20261112_121801_std60/fix_u8/scan/vio/B_o0.poses.jsonl.gz",
+  "official_plan": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffs_pairs2/plan.json",
+  "official_run": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801",
+  "vio_cfg": "build_livepose/cfg_gen/c4f60 (run_scanner default, track_frequency 60)",
+  "video_check": {
+   "made": "2026-11-27 22:42:37",
+   "src_frames": 3466,
+   "dec_frames": 1733,
+   "max_abs_diff_bgr": {
+    "0": 0,
+    "97": 0,
+    "194": 0,
+    "291": 0,
+    "388": 0,
+    "485": 0,
+    "582": 0,
+    "679": 0,
+    "776": 0,
+    "873": 0,
+    "970": 0,
+    "1067": 0,
+    "1164": 0,
+    "1261": 0,
+    "1358": 0,
+    "1455": 0,
+    "1552": 0,
+    "1649": 0,
+    "1732": 0
+   }
+  }
+ },
+ "vio": {
+  "30": {
+   "fed": 1733,
+   "poses": 1733,
+   "tracked": 1606,
+   "tracked_frac": 0.927,
+   "selection": "30 fps grid from save_fps 30, start_off 0.0",
+   "wall_s": 22.2,
+   "crashed": null,
+   "bridge_cmd_profile": "rec60",
+   "n_tracking_poses": 1606,
+   "path_m": 21.469,
+   "first_tracking_s": 0.1
+  },
+  "60_desktop": {
+   "fed": 3466,
+   "poses": 3466,
+   "tracked": 3218,
+   "tracked_frac": 0.928,
+   "selection": "60 fps grid from save_fps 60, start_off 0.0",
+   "wall_s": 47.6,
+   "crashed": null,
+   "bridge_cmd_profile": "rec60",
+   "n_tracking_poses": 3218,
+   "path_m": 21.911,
+   "first_tracking_s": 0.0
+  },
+  "60_official": {
+   "fed": 3466,
+   "poses": 3466,
+   "tracked": 3218,
+   "tracked_frac": 0.928,
+   "selection": "60 fps grid from save_fps 60, start_off 0.0",
+   "wall_s": 44.3,
+   "crashed": null,
+   "bridge_cmd_profile": "rec60",
+   "n_tracking_poses": 3218,
+   "path_m": 21.911,
+   "first_tracking_s": 0.0
+  }
+ },
+ "ate": [
+  {
+   "name": "30fps vs 60fps official (laptop 11-12)",
+   "n_common": 1606,
+   "n_eval": 1606,
+   "n_ref": 3218,
+   "se3": {
+    "scale": 1.0,
+    "rms_cm": 5.82,
+    "median_cm": 4.18,
+    "max_cm": 12.27,
+    "rot_median_deg": 0.321,
+    "rot_p95_deg": 0.716
+   },
+   "sim3": {
+    "scale": 1.01565,
+    "rms_cm": 4.06,
+    "median_cm": 3.36,
+    "max_cm": 9.21,
+    "rot_median_deg": 0.321,
+    "rot_p95_deg": 0.716
+   }
+  },
+  {
+   "name": "60fps desktop rerun vs 60fps official",
+   "n_common": 3218,
+   "n_eval": 3218,
+   "n_ref": 3218,
+   "se3": {
+    "scale": 1.0,
+    "rms_cm": 0.0,
+    "median_cm": 0.0,
+    "max_cm": 0.0,
+    "rot_median_deg": 0.0,
+    "rot_p95_deg": 0.002
+   },
+   "sim3": {
+    "scale": 1.0,
+    "rms_cm": 0.0,
+    "median_cm": 0.0,
+    "max_cm": 0.0,
+    "rot_median_deg": 0.0,
+    "rot_p95_deg": 0.002
+   }
+  },
+  {
+   "name": "30fps vs 60fps desktop rerun",
+   "n_common": 1606,
+   "n_eval": 1606,
+   "n_ref": 3218,
+   "se3": {
+    "scale": 1.0,
+    "rms_cm": 5.82,
+    "median_cm": 4.18,
+    "max_cm": 12.27,
+    "rot_median_deg": 0.321,
+    "rot_p95_deg": 0.716
+   },
+   "sim3": {
+    "scale": 1.01565,
+    "rms_cm": 4.06,
+    "median_cm": 3.36,
+    "max_cm": 9.21,
+    "rot_median_deg": 0.321,
+    "rot_p95_deg": 0.716
+   }
+  }
+ ],
+ "keyframes": {
+  "30": {
+   "n_kf": 339,
+   "kf_without_vio_pose": 0,
+   "kf_select": {
+    "rule": "motion",
+    "dist_m": 0.03,
+    "rot_deg": 4.0,
+    "win": 4,
+    "blur": "gyro",
+    "max_gyro": 0.0,
+    "n_vio_frames": 1606,
+    "n_scored": 1354,
+    "n_kf": 339,
+    "pos_in_window_hist": [
+     101,
+     79,
+     72,
+     87
+    ],
+    "gyro_kf_median": 0.26580913333552836,
+    "gyro_window_mean_median": 0.3694999542042302,
+    "moved_m_median": 0.06029261648050735,
+    "rot_deg_median": 2.659694598872977,
+    "exposure_ns_median": 2000000.0,
+    "skew_ns_median": 6540750.0
+   },
+   "frames_in_lensonly": 1733
+  },
+  "60_desktop": {
+   "n_kf": 494,
+   "kf_without_vio_pose": 0,
+   "kf_select": {
+    "rule": "motion",
+    "dist_m": 0.03,
+    "rot_deg": 4.0,
+    "win": 4,
+    "blur": "gyro",
+    "max_gyro": 0.0,
+    "n_vio_frames": 3218,
+    "n_scored": 1976,
+    "n_kf": 494,
+    "pos_in_window_hist": [
+     162,
+     86,
+     87,
+     159
+    ],
+    "gyro_kf_median": 0.28215998024661404,
+    "gyro_window_mean_median": 0.3575441512678943,
+    "moved_m_median": 0.04335949644588366,
+    "rot_deg_median": 1.8742277403817638,
+    "exposure_ns_median": 2000000.0,
+    "skew_ns_median": 6540750.0
+   },
+   "frames_in_lensonly": 3466
+  },
+  "60_official": {
+   "n_kf": 494,
+   "kf_select": {
+    "rule": "motion",
+    "dist_m": 0.03,
+    "rot_deg": 4.0,
+    "win": 4,
+    "blur": "gyro",
+    "max_gyro": 0.0,
+    "n_vio_frames": 3218,
+    "n_scored": 1976,
+    "n_kf": 494,
+    "pos_in_window_hist": [
+     162,
+     86,
+     87,
+     159
+    ],
+    "gyro_kf_median": 0.28215998024661404,
+    "gyro_window_mean_median": 0.3575441512678943,
+    "moved_m_median": 0.04335949644588366,
+    "rot_deg_median": 1.8742277403817638,
+    "exposure_ns_median": 2000000.0,
+    "skew_ns_median": 6540750.0
+   }
+  },
+  "same_kf_60_desktop_vs_official": true
+ },
+ "plans": {
+  "60_official (BA poses + covisibility, ffs_pairs2/plan.json)": {
+   "n_kf": 494,
+   "ge1": 411,
+   "ge2": 371,
+   "zero": 83,
+   "ge1_pct": 83.2,
+   "ge2_pct": 75.1,
+   "zero_pct": 16.8,
+   "fallback_kf": 65,
+   "pairs": 1218,
+   "pair_src": {
+    "local": 1076,
+    "fallback": 142
+   },
+   "strict_ge2": 318,
+   "strict_ge2_pct": 64.4,
+   "rate": null,
+   "covis_pts_src": {
+    "ffs": 410,
+    "moge": 84
+   }
+  },
+  "A60_vio_legacy": {
+   "n_kf": 494,
+   "ge1": 411,
+   "ge2": 371,
+   "zero": 83,
+   "ge1_pct": 83.2,
+   "ge2_pct": 75.1,
+   "zero_pct": 16.8,
+   "fallback_kf": 65,
+   "pairs": 1237,
+   "pair_src": {
+    "local": 1095,
+    "fallback": 142
+   },
+   "strict_ge2": 318,
+   "strict_ge2_pct": 64.4,
+   "rate": {
+    "fps": 60.0,
+    "gap_frames": 12,
+    "win_frames": 120,
+    "profile": "legacy"
+   },
+   "covis_pts_src": {
+    "none": 494
+   },
+   "plan_s": 29.5,
+   "notes": [
+    "[rate] 60 fps, min partner gap 12 frames, profile legacy"
+   ]
+  },
+  "A60_vio_new": {
+   "n_kf": 494,
+   "ge1": 346,
+   "ge2": 318,
+   "zero": 148,
+   "ge1_pct": 70.0,
+   "ge2_pct": 64.4,
+   "zero_pct": 30.0,
+   "fallback_kf": 0,
+   "pairs": 1095,
+   "pair_src": {
+    "local": 1095
+   },
+   "strict_ge2": 318,
+   "strict_ge2_pct": 64.4,
+   "rate": {
+    "fps": 60.0,
+    "gap_frames": 12,
+    "win_frames": 120,
+    "profile": "new"
+   },
+   "covis_pts_src": {
+    "none": 494
+   },
+   "plan_s": 29.9,
+   "notes": [
+    "[profile new] --fb-perp 30.0 ignored: low-angle fallback is off (use --profile legacy to keep it)",
+    "[rate] 60 fps, min partner gap 12 frames, profile new"
+   ]
+  },
+  "A30_vio_legacy": {
+   "n_kf": 339,
+   "ge1": 286,
+   "ge2": 259,
+   "zero": 53,
+   "ge1_pct": 84.4,
+   "ge2_pct": 76.4,
+   "zero_pct": 15.6,
+   "fallback_kf": 47,
+   "pairs": 862,
+   "pair_src": {
+    "local": 761,
+    "fallback": 101
+   },
+   "strict_ge2": 222,
+   "strict_ge2_pct": 65.5,
+   "rate": {
+    "fps": 30.0,
+    "gap_frames": 6,
+    "win_frames": 60,
+    "profile": "legacy"
+   },
+   "covis_pts_src": {
+    "none": 339
+   },
+   "plan_s": 10.4,
+   "notes": [
+    "[rate] 30 fps, min partner gap 6 frames, profile legacy"
+   ]
+  },
+  "A30_vio_new": {
+   "n_kf": 339,
+   "ge1": 239,
+   "ge2": 222,
+   "zero": 100,
+   "ge1_pct": 70.5,
+   "ge2_pct": 65.5,
+   "zero_pct": 29.5,
+   "fallback_kf": 0,
+   "pairs": 761,
+   "pair_src": {
+    "local": 761
+   },
+   "strict_ge2": 222,
+   "strict_ge2_pct": 65.5,
+   "rate": {
+    "fps": 30.0,
+    "gap_frames": 6,
+    "win_frames": 60,
+    "profile": "new"
+   },
+   "covis_pts_src": {
+    "none": 339
+   },
+   "plan_s": 10.4,
+   "notes": [
+    "[profile new] --fb-perp 30.0 ignored: low-angle fallback is off (use --profile legacy to keep it)",
+    "[rate] 30 fps, min partner gap 6 frames, profile new"
+   ]
+  },
+  "B60_ba_nocovis_legacy": {
+   "n_kf": 494,
+   "ge1": 411,
+   "ge2": 371,
+   "zero": 83,
+   "ge1_pct": 83.2,
+   "ge2_pct": 75.1,
+   "zero_pct": 16.8,
+   "fallback_kf": 65,
+   "pairs": 1237,
+   "pair_src": {
+    "local": 1095,
+    "fallback": 142
+   },
+   "strict_ge2": 318,
+   "strict_ge2_pct": 64.4,
+   "rate": {
+    "fps": 60.0,
+    "gap_frames": 12,
+    "win_frames": 120,
+    "profile": "legacy"
+   },
+   "covis_pts_src": {
+    "none": 494
+   },
+   "plan_s": 29.6,
+   "notes": [
+    "[rate] 60 fps, min partner gap 12 frames, profile legacy"
+   ]
+  }
+ },
+ "pairs3_low_tier_legacy": {
+  "60_vio": {
+   "n_no_pair_base": 83,
+   "low_kf": 118,
+   "low_pairs": 192,
+   "fwd_total_ge1": 78,
+   "base_plan_matches_p2": true
+  },
+  "30_vio": {
+   "n_no_pair_base": 53,
+   "low_kf": 77,
+   "low_pairs": 125,
+   "fwd_total_ge1": 50,
+   "base_plan_matches_p2": true
+  }
+ },
+ "total_s": 116.1
+}
