@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/unseen/checks.py", line 118, in <module>
+    main()
+  File "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/unseen/checks.py", line 110, in main
+    occlusion_and_gate(res, HERE / "gen.ply")
+  File "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/unseen/checks.py", line 73, in occlusion_and_gate
+    import gsm_ffsgate as FG
+  File "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/gsmap/gsm_ffsgate.py", line 18, in <module>
+    R = Path(os.environ["GSMAP_RUN"])
+             ~~~~~~~~~~^^^^^^^^^^^^^
+  File "<frozen os>", line 714, in __getitem__
+KeyError: 'GSMAP_RUN'

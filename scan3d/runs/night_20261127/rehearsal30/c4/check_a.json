@@ -1,0 +1,129 @@
+{
+ "n_kf": 490,
+ "kf_in_manifest": 490,
+ "duration_s": 57.7,
+ "fps": 30.0,
+ "kf_per_s": 8.49,
+ "strict_ge2_pct": 63.5,
+ "strict_ge1_pct": 69.0,
+ "strict_zero_pct": 31.0,
+ "pairs": 1061,
+ "fallback_pairs": 0,
+ "fallback_pct": 0.0,
+ "zero_ranges": [
+  {
+   "t0_s": 10.2,
+   "t1_s": 14.93,
+   "n_kf": 48
+  },
+  {
+   "t0_s": 16.37,
+   "t1_s": 16.6,
+   "n_kf": 4
+  },
+  {
+   "t0_s": 17.97,
+   "t1_s": 18.2,
+   "n_kf": 3
+  },
+  {
+   "t0_s": 20.33,
+   "t1_s": 20.7,
+   "n_kf": 5
+  },
+  {
+   "t0_s": 28.63,
+   "t1_s": 33.83,
+   "n_kf": 47
+  },
+  {
+   "t0_s": 35.67,
+   "t1_s": 36.63,
+   "n_kf": 7
+  },
+  {
+   "t0_s": 41.17,
+   "t1_s": 44.9,
+   "n_kf": 36
+  },
+  {
+   "t0_s": 51.27,
+   "t1_s": 51.27,
+   "n_kf": 1
+  },
+  {
+   "t0_s": 54.83,
+   "t1_s": 54.83,
+   "n_kf": 1
+  }
+ ],
+ "vio_tracked_frac": 0.927,
+ "rot_speed_med_deg_s": 15.967735656208164,
+ "rot_fast_time_frac": 0.14018691588785046,
+ "kf_select": {
+  "rule": "motion",
+  "dist_m": 0.03,
+  "rot_deg": 4.0,
+  "win": 2,
+  "blur": "gyro",
+  "max_gyro": 0.0,
+  "n_vio_frames": 1606,
+  "n_scored": 980,
+  "n_kf": 490,
+  "pos_in_window_hist": [
+   223,
+   267
+  ],
+  "gyro_kf_median": 0.3009771473314794,
+  "gyro_window_mean_median": 0.3547815515056132,
+  "moved_m_median": 0.0432359474478855,
+  "rot_deg_median": 1.8804366452869288,
+  "exposure_ns_median": 2000000.0,
+  "skew_ns_median": 6540750.0
+ },
+ "kf_win": 2,
+ "kf_win_expected": 2,
+ "vio_cfg": "/home/system/scanner/build_livepose/cfg_gen/c4",
+ "vio_track_hz": 30.0,
+ "profile": "new",
+ "rate": {
+  "fps": 30.0,
+  "gap_frames": 6,
+  "win_frames": 60,
+  "profile": "new"
+ },
+ "covis_pts_src": {
+  "none": 490
+ },
+ "PASS": false,
+ "fails": [
+  "strict >= 2 partners 63.5 % < 90.0 %",
+  "0 strict partners 31.0 % > 5.0 %"
+ ],
+ "warnings": [
+  "rotation > 30.0 deg/s for 14 % of the time",
+  "covisibility check inactive (no prior depth for this run: every partner passes the 60 % covis test)"
+ ],
+ "thresholds": {
+  "when": "right after VIO + keyframes + pair plan (CPU, minutes, before FFS)",
+  "strict_ge2_min_pct": 90.0,
+  "zero_max_pct": 5.0,
+  "vio_tracked_min": 0.9,
+  "fast_rot_deg_s": 30.0,
+  "fast_rot_time_max": 0.1,
+  "on_fail": "do not start FFS / 2DGS; re-record the same day (allowed once, decided in advance)",
+  "source": "fable_next_steps_20261127.md D (proposal). 121801 official plan: >= 2 partners 75 % / 0 partners 17 % when low-angle fallback partners are counted; STRICT only (what this check counts): 64.4 % / 30.0 % -> FAIL (validate121801.json). 30 fps decimated 121801, VIO poses, profile new: 63.5 % / 31.0 % -> FAIL."
+ },
+ "note": "thresholds = proposal, not validated on a good recording",
+ "made": "2026-11-27 23:28:05",
+ "args": {
+  "cmd": "plan",
+  "plan": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4/plan/plan.json",
+  "rec": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/dryrun30_121801_20261127/rec_hs_20261112_121801_std30",
+  "vio": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4/scan/vio/B_o0.poses.jsonl.gz",
+  "scan": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4/scan",
+  "pairs": null,
+  "out": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4/check_a.json"
+ },
+ "criteria_file": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/gsmap/newrec/judge_criteria.json"
+}

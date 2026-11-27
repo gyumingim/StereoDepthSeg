@@ -1,0 +1,74 @@
+[host.env] /home/system/scanner/host.env sourced (SCAN3D_FFS_BACKEND=trt)
+[lens] no GT folder /home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/dryrun30_121801_20261127/rec_hs_20261112_121801_std30/imu_gt_spl -> std 0.5 dpt recording: lens-only fallback /home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json
+== run_scanner 2026-11-27 23:10:13: REC /home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/dryrun30_121801_20261127/rec_hs_20261112_121801_std30 (full recording) -> /home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/fps30/scan
+   gt lensonly, input keyframes 1920 JPEG q90, BA cuda, SIFT cpu, TSDF alloc dense, kf motion 3cm/4deg win 2 gyro, git 6003d2fcdb76
+   gt lensonly, input keyframes 1920 JPEG q90, BA cuda, SIFT cpu, TSDF alloc dense, git 6003d2fcdb76
+   ffs views 2 (fuse auto, partners all)
+   ffs backend trt (from env)
+23:10:13 step vio start (log /home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/fps30/scan/vio.log)
+23:10:35 step vio done 22.2 s (rc 1)
+step vio failed rc 1, tail of /home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/fps30/scan/vio.log:
+  File "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/livepose_20261030/lp_replay.py", line 212, in <module>
+    main()
+  File "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/livepose_20261030/lp_replay.py", line 187, in main
+    bridge_sha=sha(x.bridge), remap_sha=sha(remap), cfg_src=str(src),
+                                        ^^^^^^^^^^
+  File "/home/system/scanner/StereoDepthSeg-fixes/scan3d/runs/livepose_20261030/lp_replay.py", line 39, in sha
+    return hashlib.sha256(Path(p).read_bytes()).hexdigest()[:16]
+                          ^^^^^^^^^^^^^^^^^^^^
+  File "/home/system/.local/share/uv/python/cpython-3.12.15-linux-x86_64-gnu/lib/python3.12/pathlib.py", line 1019, in read_bytes
+    with self.open(mode='rb') as f:
+         ^^^^^^^^^^^^^^^^^^^^
+  File "/home/system/.local/share/uv/python/cpython-3.12.15-linux-x86_64-gnu/lib/python3.12/pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/system/scanner/build_livepose/cfg_gen/fps30/remap_1920x1080.bin'
+{
+ "made": "2026-11-27 23:10:35",
+ "commit": "6003d2fcdb76501c5f8e1bdaea7fa27bee7e4426",
+ "rec": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/dryrun30_121801_20261127/rec_hs_20261112_121801_std30",
+ "input": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/dryrun30_121801_20261127/rec_hs_20261112_121801_std30",
+ "keyframe_only": false,
+ "kf_res": 1920,
+ "kf_quality": 90,
+ "live_poses": "",
+ "gt": "lensonly",
+ "vio_cfg": "/home/system/scanner/build_livepose/cfg_gen/fps30",
+ "tsdf_alloc": "dense",
+ "ffs_views": 2,
+ "ffs_fuse": "auto",
+ "ffs_partners": "all",
+ "reuse": null,
+ "ba_dir": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/fps30/scan/ba",
+ "kfba_device_line": null,
+ "step_s": {
+  "vio": 22.3
+ },
+ "total_s": 22.3,
+ "sent": null,
+ "mesh": null,
+ "board": null,
+ "mesh_board": null,
+ "status": "failed: step vio rc 1",
+ "steps_run": [
+  "vio"
+ ],
+ "vio": null,
+ "vio_crashed": null,
+ "ba_quality": null,
+ "min_mesh_vertices": 1000,
+ "provenance": {
+  "commit": "6003d2fcdb76501c5f8e1bdaea7fa27bee7e4426",
+  "commit_dirty": false,
+  "main_commit": "e89c8da14c79edbb2b285147863fb6dfef0694fa-dirty",
+  "worktree": "/home/system/scanner/StereoDepthSeg-fixes",
+  "lens_file": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json",
+  "lens_sha": "21b5f334c1bc210b",
+  "vio_cfg_sha": {
+   "estimator_config.yaml": "aa1afdbeb96bc421",
+   "kalibr_imu_chain.yaml": "0f8eefa54043fc3e",
+   "kalibr_imucam_chain.yaml": "f6ca8a060ea08887"
+  }
+ },
+ "lens_only": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json"
+}

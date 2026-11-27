@@ -1,0 +1,40 @@
+50 {'base': (179, 0.384), 'relax_wide:wide?': (100, 0.871)} 64s
+100 {'base': (344, 0.302), 'relax_wide:wide?': (197, 0.563)} 130s
+150 {'base': (526, 0.272), 'relax_wide:wide?': (270, 0.52), 'relax_wide:relax': (12, 0.688)} 190s
+200 {'base': (687, 0.294), 'relax_wide:wide?': (345, 0.571), 'relax_wide:relax': (24, 0.657)} 267s
+250 {'base': (840, 0.325), 'relax_wide:wide?': (445, 0.64), 'relax_wide:relax': (24, 0.657)} 347s
+300 {'base': (992, 0.303), 'relax_wide:wide?': (544, 0.601), 'relax_wide:relax': (24, 0.657)} 422s
+{
+ "by": {
+  "base": {
+   "n_pairs": 1048,
+   "med_px": 0.3202480971813202,
+   "p25": 0.20411236956715584,
+   "p75": 0.5475001186132431,
+   "share_over_0p3": 0.5343511450381679
+  },
+  "relax_wide:wide?": {
+   "n_pairs": 579,
+   "med_px": 0.634620726108551,
+   "p25": 0.3594128489494324,
+   "p75": 1.21112060546875,
+   "share_over_0p3": 0.8341968911917098
+  },
+  "relax_wide:relax": {
+   "n_pairs": 24,
+   "med_px": 0.6569470167160034,
+   "p25": 0.5311487168073654,
+   "p75": 1.474205732345581,
+   "share_over_0p3": 1.0
+  }
+ },
+ "stage_a_PASS": false,
+ "fails": [
+  "strict >= 2 partners 64.4 % < 90.0 %",
+  "0 strict partners 30.0 % > 5.0 %"
+ ],
+ "warns": [
+  "pair profile is None (low-angle backdoors ON); new recordings should use --profile new",
+  "rotation > 30.0 deg/s for 14 % of the time"
+ ]
+}

@@ -1,0 +1,59 @@
+{
+ "made": "2026-11-27 23:24:04",
+ "script": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/unseen/checks.py",
+ "mesh": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/gsmap_20261125_121801_v2/ffsonly_ba2/b/e3c.ply",
+ "gen": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/unseen/gen.ply",
+ "occlusion": {
+  "rays": 8002800,
+  "gen_in_front_of_measured_gt2cm": 0,
+  "share_of_rays": 0.0,
+  "rays_hit_both": 1815457,
+  "rays_gen_only": 134479,
+  "note": "every 2nd keyframe, pixel stride 4, measured = ffsonly2 e3c faces < faces_in"
+ },
+ "ffsgate": {
+  "rule": "gsm_ffsgate.seen_through: >= 2 FFS keyframes see > max(3 cm, 1.5 %) beyond the face centroid, |cos| > 0.15",
+  "total_violated_share": 0.0,
+  "per_wall": [
+   {
+    "wall": 0,
+    "off": 1.4470881809632419,
+    "theta_deg": 161.75,
+    "gen_m2": 7.875200000000001,
+    "violated_m2": 0.0,
+    "violated_share": 0.0,
+    "dropped": false
+   },
+   {
+    "wall": 1,
+    "off": 5.156024610951745,
+    "theta_deg": 251.75,
+    "gen_m2": 17.8872,
+    "violated_m2": 0.0,
+    "violated_share": 0.0,
+    "dropped": false
+   }
+  ]
+ },
+ "gen_final": {
+  "path": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/unseen/gen_final.ply",
+  "faces": 32168,
+  "area_m2": 25.734400000000004,
+  "dropped_walls": []
+ },
+ "holdout_wall538": {
+  "held_faces": 5885,
+  "held_area_m2": 0.8240286321636057,
+  "n_struct_walls": 2,
+  "wall_off": 1.437230194698847,
+  "wall_theta": 161.75,
+  "held_vs_regen_plane_med_abs_cm": 2.3724479892351935,
+  "held_vs_regen_plane_rms_cm": 2.987941196870602,
+  "held_vs_regen_signed_med_cm": 1.7605419617225726,
+  "roi_ffs_plane_vs_regen_angle_deg": 0.9964808555800327,
+  "regen_area_in_patch_m2": 0.512,
+  "held_to_nearest_gen_face_med_cm": 3.8613068893796934
+ },
+ "scoring_note": "generated faces live only in gen*.ply; the measured mesh and its P2/P3/coverage/PSNR numbers are unchanged by construction (generated faces excluded)",
+ "runtime_s": 14.7
+}

@@ -1,0 +1,147 @@
+{
+ "made": "2026-11-27 23:22:30",
+ "script": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/gsmap/newrec/postrec_check.py",
+ "n_recordings": 1,
+ "disagreement_by_class": {
+  "base": {
+   "n_pairs": 1048,
+   "med_px": 0.3202480971813202,
+   "p25": 0.20411236956715584,
+   "p75": 0.5475001186132431,
+   "share_over_0p3": 0.5343511450381679
+  },
+  "relax_wide:wide?": {
+   "n_pairs": 579,
+   "med_px": 0.634620726108551,
+   "p25": 0.3594128489494324,
+   "p75": 1.21112060546875,
+   "share_over_0p3": 0.8341968911917098
+  },
+  "relax_wide:relax": {
+   "n_pairs": 24,
+   "med_px": 0.6569470167160034,
+   "p25": 0.5311487168073654,
+   "p75": 1.474205732345581,
+   "share_over_0p3": 1.0
+  }
+ },
+ "n_kf_with_2_strict": 318,
+ "note": "per pair: median |f B sin (1/Z - 1/Z_ref)| px, Z_ref = per-pixel median of the OTHER strict base pairs of the keyframe; strict pairs are compared with the other strict pairs, so their number includes the reference's own error",
+ "stage_a_121801": {
+  "n_kf": 494,
+  "kf_in_manifest": 494,
+  "duration_s": 57.8,
+  "fps": 60.0,
+  "kf_per_s": 8.55,
+  "strict_ge2_pct": 64.4,
+  "strict_ge1_pct": 70.0,
+  "strict_zero_pct": 30.0,
+  "pairs": 1218,
+  "fallback_pairs": 142,
+  "fallback_pct": 11.7,
+  "zero_ranges": [
+   {
+    "t0_s": 10.22,
+    "t1_s": 15.05,
+    "n_kf": 50
+   },
+   {
+    "t0_s": 16.42,
+    "t1_s": 16.53,
+    "n_kf": 2
+   },
+   {
+    "t0_s": 17.95,
+    "t1_s": 18.07,
+    "n_kf": 2
+   },
+   {
+    "t0_s": 20.33,
+    "t1_s": 20.68,
+    "n_kf": 4
+   },
+   {
+    "t0_s": 28.68,
+    "t1_s": 33.82,
+    "n_kf": 45
+   },
+   {
+    "t0_s": 35.78,
+    "t1_s": 36.63,
+    "n_kf": 7
+   },
+   {
+    "t0_s": 41.27,
+    "t1_s": 44.82,
+    "n_kf": 35
+   },
+   {
+    "t0_s": 51.18,
+    "t1_s": 51.28,
+    "n_kf": 2
+   },
+   {
+    "t0_s": 54.75,
+    "t1_s": 54.75,
+    "n_kf": 1
+   }
+  ],
+  "vio_tracked_frac": 0.928,
+  "rot_speed_med_deg_s": 15.929589897250207,
+  "rot_fast_time_frac": 0.14018691588785046,
+  "kf_select": {
+   "rule": "motion",
+   "dist_m": 0.03,
+   "rot_deg": 4.0,
+   "win": 4,
+   "blur": "gyro",
+   "max_gyro": 0.0,
+   "n_vio_frames": 3218,
+   "n_scored": 1976,
+   "n_kf": 494,
+   "pos_in_window_hist": [
+    162,
+    86,
+    87,
+    159
+   ],
+   "gyro_kf_median": 0.28215998024661404,
+   "gyro_window_mean_median": 0.3575441512678943,
+   "moved_m_median": 0.04335949644588366,
+   "rot_deg_median": 1.8742277403817638,
+   "exposure_ns_median": 2000000.0,
+   "skew_ns_median": 6540750.0
+  },
+  "kf_win": 4,
+  "kf_win_expected": 4,
+  "vio_cfg": "/home/system/scanner/build_livepose/cfg_gen/c4f60",
+  "vio_track_hz": 60.0,
+  "profile": null,
+  "rate": null,
+  "covis_pts_src": {
+   "ffs": 410,
+   "moge": 84
+  },
+  "PASS": false,
+  "fails": [
+   "strict >= 2 partners 64.4 % < 90.0 %",
+   "0 strict partners 30.0 % > 5.0 %"
+  ],
+  "warnings": [
+   "pair profile is None (low-angle backdoors ON); new recordings should use --profile new",
+   "rotation > 30.0 deg/s for 14 % of the time"
+  ],
+  "thresholds": {
+   "when": "right after VIO + keyframes + pair plan (CPU, minutes, before FFS)",
+   "strict_ge2_min_pct": 90.0,
+   "zero_max_pct": 5.0,
+   "vio_tracked_min": 0.9,
+   "fast_rot_deg_s": 30.0,
+   "fast_rot_time_max": 0.1,
+   "on_fail": "do not start FFS / 2DGS; re-record the same day (allowed once, decided in advance)",
+   "source": "fable_next_steps_20261127.md D (proposal); 121801: strict >= 2 = 75 %, 0 partners = 17 %"
+  },
+  "note": "thresholds = proposal, not validated on a good recording"
+ },
+ "runtime_s": 451.3
+}

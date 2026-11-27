@@ -1,0 +1,38 @@
+{
+ "made": "2026-11-27 night (item 4), fixed BEFORE any new recording. Change only at a revision boundary, with the date and reason.",
+ "status": "PROPOSAL: thresholds are not validated on a good (new-method) recording. 121801 (old method) must FAIL stage A.",
+ "stage_a": {
+  "when": "right after VIO + keyframes + pair plan (CPU, minutes, before FFS)",
+  "strict_ge2_min_pct": 90.0,
+  "zero_max_pct": 5.0,
+  "vio_tracked_min": 0.9,
+  "fast_rot_deg_s": 30.0,
+  "fast_rot_time_max": 0.1,
+  "on_fail": "do not start FFS / 2DGS; re-record the same day (allowed once, decided in advance)",
+  "source": "fable_next_steps_20261127.md D (proposal). 121801 official plan: >= 2 partners 75 % / 0 partners 17 % when low-angle fallback partners are counted; STRICT only (what this check counts): 64.4 % / 30.0 % -> FAIL (validate121801.json). 30 fps decimated 121801, VIO poses, profile new: 63.5 % / 31.0 % -> FAIL."
+ },
+ "stage_b": {
+  "when": "after FFS (pairs), before 2DGS training",
+  "kf_disagree_px_line": 0.45,
+  "share_kf_over_line_max": 0.2,
+  "on_fail": "do not start 2DGS training (about 25+ min); look at which time ranges fail",
+  "source": "pair diagnostic 11-27: sideways pairs 0.16-0.21 px, low-angle 1.0-1.4 px (ROI plane offsets). Within-keyframe partner disagreement checked on 121801 by validate121801",
+  "line_history": "11-27 night: proposed 0.3 px; validate121801 (rehearsal30/validate121801.json) showed this within-keyframe metric gives strict sideways pairs median 0.32 px (53 % of pairs > 0.3, because the reference pairs' own error is included, ~sqrt(2) x 0.16-0.21) vs wide/relax low-angle 0.63-0.66 px -> 0.3 does NOT separate; line moved to 0.45 px (between the two medians). Still a proposal; low-tier pairs could not be measured (no keyframe with >= 2 strict pairs and a low pair)."
+ },
+ "holdout": {
+  "rule": "keyframe index % 8 == 0 is held out from texture AND 2DGS training (gsm_train --hold 8) in the SCORING build; fixed before the pipeline runs",
+  "final_build": "a final all-views build may be made for viewing, but scores (P4 / held-out PSNR) come only from the scoring build",
+  "source": "progress.md 183: final E8 'P4 not measurable' (all views used)"
+ },
+ "map_judge": {
+  "sentence": "the new recording is better = cabinet-front and wall frame-to-frame plane SD below 1 cm (diag_plane method, new ROIs of the same kind of surface) + FFS depth on the dark aisle objects + the user's eye",
+  "rulers": [
+   "plane residual on wall / floor / cabinet ROIs (frame-to-frame offset SD, combined RMS)",
+   "P2/P3 via gsm_rjudge on the map's own poses",
+   "held-out PSNR + detail gradient (scoring build)",
+   "tape-measure distances (4-5) + ceiling height vs the map, in %"
+  ],
+  "not_a_ruler": "hole % / coverage alone",
+  "caveats": "n = 1 recording vs n = 1; method AND fps change together (mixed variables); ROIs are re-picked so this compares the same KIND of surface, not the same pixels"
+ }
+}
