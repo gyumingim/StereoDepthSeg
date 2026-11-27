@@ -29,6 +29,10 @@ MESH = V2 / "ffsonly_ba2/b/e3c.ply"; E3C = V2 / "ffsonly_ba2/b/e3c.json"
 DUMP = V2 / "ba_partners2/run/dump_ba"; FUSED = V2 / "ffsonly_ba2/fused"
 CEIL_Y = -1.855
 MIN_SUP, CORNER, CELL, NEAR = 0.6, 0.6, 0.04, 0.08
+import os  # noqa: E402
+# v2 (11-27 23:36, after the Fable check, set BEFORE running): fill only 0.48 m wall columns whose MEASURED wall cells (within 8 cm of
+# the plane, before dilation) cover >= UNSEEN_COLMIN of the column; generated cells of other columns go to gen_lowconf.ply (not shown).
+COLMIN = float(os.environ.get("UNSEEN_COLMIN", "0")); COLW = 12
 
 
 def load_mesh():
@@ -147,7 +151,7 @@ def cmd_fill(a):
     ZF = np.zeros((n, Hi, Wi), np.float16)
     for j in range(n):
         d = np.load(FUSED / f"{int(kf[j]):05d}.npz"); ZF[j] = np.where(d["F"] == 1, d["Z"], 0)
-    verts, tris, stats = [], [], []
+    verts, tris, stats = [], [], []; gen_low_cells = []
     for wi, w in enumerate(walls):
         ax, t_ = np.array(w["ax"]), np.array(w["t"]); o = w["off"]
         us = np.arange(w["u"][0], w["u"][1], CELL); ys = np.arange(CEIL_Y, floor_y, CELL)
@@ -155,6 +159,7 @@ def cmd_fill(a):
         near = np.abs(S @ ax - o) < NEAR
         iu = np.floor((S[near] @ t_ - w["u"][0]) / CELL).astype(int); iy = np.floor((S[near][:, 1] - CEIL_Y) / CELL).astype(int)
         ok = (iu >= 0) & (iu < nu) & (iy >= 0) & (iy < ny); meas = np.zeros((ny, nu), bool); meas[iy[ok], iu[ok]] = True
+        meas_raw = meas.copy()
         meas = cv2.dilate(meas.astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool)   # 1-cell tolerance around measured faces
         UU, YY = np.meshgrid(us + CELL / 2, ys + CELL / 2); X = ax[None, None] * o + t_[None, None] * UU[..., None]; X[..., 1] = YY
         Xf = X.reshape(-1, 3); see = np.zeros(len(Xf), np.int32); seen = np.zeros(len(Xf), np.int32)
@@ -171,9 +176,16 @@ def cmd_fill(a):
         gen = (~meas) & (see < 2)
         nl, lab, sts, _ = cv2.connectedComponentsWithStats(gen.astype(np.uint8), connectivity=4)
         small = np.isin(lab, [l for l in range(1, nl) if sts[l, cv2.CC_STAT_AREA] * CELL * CELL < 0.05]); gen &= ~small
+        low = np.zeros_like(gen)
+        if COLMIN > 0:
+            for c0 in range(0, nu, COLW):
+                if meas_raw[:, c0:c0 + COLW].mean() < COLMIN:
+                    low[:, c0:c0 + COLW] = gen[:, c0:c0 + COLW]
+            gen_low_cells.append((w, low.copy(), us)); gen &= ~low
         stats.append(dict(wall=wi, off=o, theta_deg=w["theta_deg"], cells=int(nu * ny), measured_m2=float(meas.sum() * CELL * CELL),
                           generated_m2=float(gen.sum() * CELL * CELL), opening_m2=float(((~meas) & (see >= 2)).sum() * CELL * CELL),
-                          gen_with_1_see_through_m2=float((gen & (see == 1)).sum() * CELL * CELL)))
+                          gen_with_1_see_through_m2=float((gen & (see == 1)).sum() * CELL * CELL), lowconf_m2=float(low.sum() * CELL * CELL),
+                          n_columns=int((nu + COLW - 1) // COLW), n_columns_supported=int(sum(meas_raw[:, c0:c0 + COLW].mean() >= COLMIN for c0 in range(0, nu, COLW)))))
         gy, gx = np.nonzero(gen)
         for y_, x_ in zip(gy, gx):
             u0, y0 = w["u"][0] + x_ * CELL, CEIL_Y + y_ * CELL
@@ -191,7 +203,19 @@ def cmd_fill(a):
     Vg = np.array(verts, np.float64).reshape(-1, 3); Tg = np.array(tris, np.int64).reshape(-1, 3)
     g = o3d.geometry.TriangleMesh(o3d.utility.Vector3dVector(Vg), o3d.utility.Vector3iVector(Tg)); g.merge_close_vertices(1e-6)
     g.paint_uniform_color([0.75, 0.55, 0.85]); g.compute_vertex_normals(); o3d.io.write_triangle_mesh(str(out / "gen.ply"), g)
-    res = dict(made=time.strftime("%F %T"), script=str(Path(__file__).resolve()), mesh=str(MESH), walls_json=str(out / "walls.json"),
+    lv, lt = [], []
+    for w, low, us in gen_low_cells:
+        ax, t_ = np.array(w["ax"]), np.array(w["t"]); o = w["off"]
+        for y_, x_ in zip(*np.nonzero(low)):
+            u0, y0 = w["u"][0] + x_ * CELL, CEIL_Y + y_ * CELL; b0 = len(lv)
+            lv += [ax * o + t_ * u0 + np.array([0, y0, 0]), ax * o + t_ * (u0 + CELL) + np.array([0, y0, 0]),
+                   ax * o + t_ * (u0 + CELL) + np.array([0, y0 + CELL, 0]), ax * o + t_ * u0 + np.array([0, y0 + CELL, 0])]
+            lt += [[b0, b0 + 1, b0 + 2], [b0, b0 + 2, b0 + 3]]
+    if lt:
+        gl = o3d.geometry.TriangleMesh(o3d.utility.Vector3dVector(np.array(lv)), o3d.utility.Vector3iVector(np.array(lt))); gl.merge_close_vertices(1e-6)
+        o3d.io.write_triangle_mesh(str(out / "gen_lowconf.ply"), gl)
+    res = dict(made=time.strftime("%F %T"), script=str(Path(__file__).resolve()), mesh=str(MESH), walls_json=str(out / "walls.json"), colmin=COLMIN,
+               lowconf_m2=float(sum(s_["lowconf_m2"] for s_ in stats)),
                fused=str(FUSED), cams=str(DUMP / "cams.npz"), cell_m=CELL, near_m=NEAR, n_walls=len(walls), walls=stats,
                generated_m2=float(sum(s["generated_m2"] for s in stats)), generated_faces=int(len(np.asarray(g.triangles))),
                measured_faces_altered=0, note="gen.ply holds generated faces only; the measured mesh file is not modified",

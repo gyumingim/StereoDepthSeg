@@ -1,0 +1,14 @@
+[gpu_guard] torch memory cap 0.75 x 15.9 GB = 11.9 GB
+[rate] 30 fps, min partner gap 6 frames, profile new
+plan 20 kf (same partners as PLAN: True), todo 20, BA poses for kf and partner
+W1127 23:52:12.431000 756598 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8] torch._dynamo hit config.recompile_limit (8)
+W1127 23:52:12.431000 756598 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8]    function: 'build_gwc_volume_optimized_pytorch1' (/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:376)
+W1127 23:52:12.431000 756598 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8]    last reason: 0/2: tensor 'refimg_fea' size mismatch at index 3. expected 240, actual 168
+W1127 23:52:12.431000 756598 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1127 23:52:12.431000 756598 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [0/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+W1127 23:52:12.489000 756598 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8] torch._dynamo hit config.recompile_limit (8)
+W1127 23:52:12.489000 756598 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8]    function: 'build_concat_volume_optimized_pytorch1' (/home/system/scanner/StereoDepthSeg/tools/Fast-FoundationStereo/core/submodule.py:492)
+W1127 23:52:12.489000 756598 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8]    last reason: 1/2: tensor 'refimg_fea' size mismatch at index 3. expected 240, actual 168
+W1127 23:52:12.489000 756598 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8] To log all recompilation reasons, use TORCH_LOGS="recompiles".
+W1127 23:52:12.489000 756598 venv_ffs/lib/python3.12/site-packages/torch/_dynamo/convert_frame.py:1743] [1/8] To diagnose recompilation issues, see https://docs.pytorch.org/docs/main/user_guide/torch_compiler/compile/programming_model.recompilation.html
+done 20 kf in 43s

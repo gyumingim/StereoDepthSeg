@@ -231,3 +231,27 @@ Next-steps note: `C:\Users\a3162\scan3d_handoff\ideas\fable_next_steps_20261127.
 - Code/data committed 11-27: `gsm_ffs_pairs2.py` plan4/ffs4/fuse4 (4 m wide extension), diag scripts in `scan3d/gsmap/diag_20261127/`
   (plane, plane_fix, pairs; they were run from the runs/ scripts folders), small result JSONs in the runs/ diag folders
   (plane_fix.json 3.2 MB not committed). Frame-rate aware pair selection + 30 fps dry run: see the next entry.
+
+## 2026-11-27 22:40 -> 11-28 — 30 fps dry run + night items (W-fill, unseen walls, plane-tie, post-recording check)
+
+All n = 1 recording (121801), noise floor unknown (no ffsonly2 seed repeat) -> nothing here is "confirmed"; transfer to a new recording = 추정.
+Night log: `runs/night_20261127/progress.md` (incl. the Fable checks). Report: `report_20261128.html` (splat_demo + scan3d_handoff/pages_20261127).
+
+- **30 fps dry run (other agent, commits 353a7a76 / 6075a56d, `runs/dryrun30_121801_20261127`, page dryrun30.html)**: 121801 decimated losslessly
+  to 30 fps (pixels identical). VIO c4f60 on 30 fps: tracked 92.7 % (same as 60), path 21.47 vs 21.91 m, Sim3 ATE vs 60 fps VIO median 3.36 cm,
+  scale 1.016. Keyframes (3 cm / 4 deg): 339 with the 60 fps window (kf-win 4) -> 490 with kf-win 2 (60 fps: 494). Pair plans (VIO poses):
+  legacy profile >= 2 partners 74.5 %, new profile (low-angle backdoors off) 63.5 % / 0 partners 31.0 % (60 fps new: 64.4 / 30.0 %).
+  Frame-rate aware planners (fps from meta.json, gaps in seconds) reproduce the 121801 60 fps plans exactly.
+- **W-fill (2D planar segment depth fill) NO-GO** by the pre-written gate (`runs/night_20261127/wfill`): hidden-pixel accuracy fine (median 0.09 %),
+  but cabinet gets 0 fill, yield 2.1 % of the image, BA check > 5 % share 11.7 %. 72-80 % of cabinet hole pixels sit in colour segments with ~0 FFS.
+- **Unseen walls (generated, view-only)** `runs/night_20261127/unseen` (v2 = supported 0.48 m columns only): 2 structure walls, 15.3 m2 generated
+  (+ 10.5 m2 low-confidence, not shown), separate file, 0 measured faces changed; hold-out on wall538 2.4 cm median (gap interpolation on a known wall).
+  Viewer: tex.html?m=121801_unseen (G toggles). Not a measurement.
+- **Plane-tie training: closed** "NO-GO by diagnosis, not tested" (training does not add bumps where the defect is; cabinet defect is
+  frame-to-frame offset). Code kept: `runs/night_20261127/ptie`.
+- **New-recording pipeline + post-recording check** `scan3d/gsmap/newrec/` (newrec.sh, mkcams.py, ba_partners_generic.py, postrec_check.py,
+  judge_criteria.json): VIO (cfg by fps: 30 -> c4, identical to c4f60 at 30 fps input) -> keyframes (kf-win = round(4 fps / 60)) -> pair plan
+  (profile new) -> stage A check -> partner-frame BA (generic copy of ba_partners) -> FFS on BA poses -> stage B check -> fuse. No 121801 paths.
+  Same 20 kf: per-keyframe partner disagreement 1.67 px (60 fps) / 1.35 px (30 fps) on VIO-relative partner poses vs 0.41 / 0.33 px with
+  partner BA (official 121801 pairs 0.32 px). 121801 FAILS stage A (strict >= 2 partners 64 %, 0 partners 30 %) and stage B (thresholds are
+  proposals, fail side only verified; the 0.45 px line was set after seeing 121801 = post hoc, n = 1).

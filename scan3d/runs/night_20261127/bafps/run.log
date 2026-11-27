@@ -1,0 +1,46 @@
+2026-11-27 23:36:43 START
+Traceback (most recent call last):
+  File "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/bafps/mk.py", line 54, in <module>
+    main()
+  File "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/bafps/mk.py", line 36, in main
+    for arm, rec, fr, g, (tv, Tv) in (("A60_BA", REC60, f60, g60, None), ("A60_VIO", REC60, f60, g60, (t60, P60)),
+                         ^^^^^^^^
+TypeError: cannot unpack non-iterable NoneType object
+2026-11-27 23:36:43 FAIL mk
+2026-11-27 23:37:32 START
+Traceback (most recent call last):
+  File "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/bafps/mk.py", line 54, in <module>
+    main()
+  File "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/bafps/mk.py", line 43, in main
+    k = int(np.argmin(np.abs(tv - g["t_ns"][f]))); assert abs(tv[k] - g["t_ns"][f]) < 8e6, (arm, f); TT.append(Tv[k])
+                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('A30_VIO', np.int64(124))
+2026-11-27 23:37:33 FAIL mk
+2026-11-27 23:38:40 START
+{"A60_BA": [266, 374, 530, 916, 1072], "A60_VIO": [266, 374, 530, 916, 1072], "A30_BA": [133, 187, 265, 458, 536], "A30_VIO": [133, 187, 265, 458, 536]}
+2026-11-27 23:43:54 control official rc 3
+2026-11-27 23:43:54 ffs A60_BA
+2026-11-27 23:45:06 check_b A60_BA rc 3 kf_med 1.668 over 0.941 n 17
+2026-11-27 23:45:06 ffs A60_VIO
+2026-11-27 23:46:11 check_b A60_VIO rc 3 kf_med 1.668 over 0.941 n 17
+2026-11-27 23:46:12 ffs A30_BA
+2026-11-27 23:47:14 check_b A30_BA rc 3 kf_med 1.353 over 0.941 n 17
+2026-11-27 23:47:14 ffs A30_VIO
+2026-11-27 23:48:16 check_b A30_VIO rc 3 kf_med 1.353 over 0.941 n 17
+2026-11-27 23:48:16 DONE
+2026-11-27 23:48:46 BAG60 frames
+2026-11-27 23:48:47 BAG60 ba
+2026-11-27 23:49:09 BAG60 post
+2026-11-27 23:49:10 BAG60 ffs
+2026-11-27 23:49:12 FAIL BAG60 ffs
+2026-11-27 23:49:13 BAG30 frames
+2026-11-27 23:49:13 BAG30 ba
+2026-11-27 23:49:31 BAG30 post
+2026-11-27 23:49:31 BAG30 ffs
+2026-11-27 23:49:33 FAIL BAG30 ffs
+2026-11-27 23:49:33 DONE BAG
+2026-11-27 23:50:33 BAG60 ffs
+2026-11-27 23:51:41 check_b BAG60 rc 3 kf_med 0.406 over 0.471 n 17 post { "made": "2026-11-27 23:49:10", "n_frames": 77, "registered": 77, "vio_anchor": 0, "sim3_scale": 0.9976432939794638, "centre_vs_vio_med_cm": 2.3297232428326717, "centre_vs_vio_p95_cm": 9.100550569625685, "ba": {  "final_med_px": 0.21060759147606745,  "final_rmse_px": 0.5333495627141122,  "points": 
+2026-11-27 23:51:41 BAG30 ffs
+2026-11-27 23:52:42 check_b BAG30 rc 3 kf_med 0.33 over 0.353 n 17 post { "made": "2026-11-27 23:49:31", "n_frames": 80, "registered": 80, "vio_anchor": 0, "sim3_scale": 0.9979635579447483, "centre_vs_vio_med_cm": 1.6818228105415582, "centre_vs_vio_p95_cm": 8.811060634456283, "ba": {  "final_med_px": 0.21023933604096745,  "final_rmse_px": 0.5485813349930871,  "points": 
+2026-11-27 23:52:42 DONE BAG

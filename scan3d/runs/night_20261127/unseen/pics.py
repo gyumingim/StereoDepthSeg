@@ -34,7 +34,7 @@ def render(scenes, eye, tgt):
 def main():
     V, F, fin, fy = U.load_mesh()
     sm = o3d.t.geometry.RaycastingScene(); sm.add_triangles(o3d.core.Tensor(V.astype(np.float32)), o3d.core.Tensor(F.astype(np.uint32)))
-    g = o3d.io.read_triangle_mesh(str(HERE / "gen_final.ply"))
+    import os; GEN = Path(os.environ.get("UNSEEN_GEN", str(HERE / "gen_final.ply"))); g = o3d.io.read_triangle_mesh(str(GEN))
     sg = o3d.t.geometry.RaycastingScene(); sg.add_triangles(o3d.core.Tensor(np.asarray(g.vertices, np.float32)), o3d.core.Tensor(np.asarray(g.triangles, np.uint32)))
     W_ = [w for w in json.loads((HERE / "walls.json").read_text())["walls"] if w["structure"]]
     kf, T, Kr, _ = U.cams(); P = T[:, :3, 3]; c = P.mean(0)
@@ -48,7 +48,7 @@ def main():
             for im, lab in ((a, "measured only"), (b, "+ generated (purple)")):
                 cv2.putText(im, lab, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2, cv2.LINE_AA)
             rows.append(np.hstack([a, b])[:, :, ::-1])
-    out = np.vstack(rows); cv2.imwrite(str(HERE / "unseen_pics.jpg"), cv2.resize(out, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_AREA), [cv2.IMWRITE_JPEG_QUALITY, 88])
+    out = np.vstack(rows); cv2.imwrite(os.environ.get("UNSEEN_PIC", str(HERE / "unseen_pics.jpg")), cv2.resize(out, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_AREA), [cv2.IMWRITE_JPEG_QUALITY, 88])
     print("ok", out.shape)
 
 

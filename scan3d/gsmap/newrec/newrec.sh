@@ -9,9 +9,10 @@
 #     --ffs-kf N  = FFS only on N keyframes spread over the recording (rehearsal / quick look); 0 = all keyframes (default)
 #     --force     = continue to FFS even if stage A fails
 # Pair profile is always "new" (low-angle backdoors off). kf-win = round(4 * fps / 60) (2 at 30 fps, 4 at 60 fps).
-# Outputs: OUT/scan (run_scanner, VIO + lensonly + reduce), OUT/run/dump_ba/cams.npz (VIO poses, no BA), OUT/plan/plan.json,
-#          OUT/check_a.json, OUT/run_ffs/ (subset cams), OUT/ffs/{pairs,s1,s12}, OUT/check_b.json, OUT/newrec.log
-# Not included yet (next steps after fuse, as for 121801): keyframe BA, 2DGS (gsm_train --hold 8 scoring build), mesh, texture.
+# Outputs: OUT/scan (run_scanner, VIO + lensonly + reduce), OUT/run/dump_ba/cams.npz (VIO poses), OUT/plan/plan.json, OUT/check_a.json,
+#          OUT/bag (partner-frame BA: poses_all.npz, run/dump_ba/cams.npz with BA poses, ffs/{pairs,s1,s12}), OUT/check_b.json, OUT/newrec.log
+#          (--ffs-kf N: OUT/run_ffsN, OUT/plan_ffsN, OUT/bag_ffsN)
+# Not included yet (next steps after fuse, as for 121801): 2DGS (gsm_train --hold 8 scoring build), mesh, texture.
 set -uo pipefail
 REC=$(realpath "$1"); OUT=$(realpath -m "$2"); shift 2
 CFGSEL=auto; FFSKF=0; STOP=fuse; FORCE=0
@@ -60,24 +61,31 @@ $PY "$N/postrec_check.py" plan --plan "$OUT/plan/plan.json" --rec "$REC" --vio "
 if [ $rc = 0 ]; then log "CHECK A PASS"; elif [ $rc = 3 ]; then log "CHECK A FAIL: $(python3 -c "import json; print('; '.join(json.load(open('$OUT/check_a.json'))['fails']))")"
   [ $FORCE = 1 ] || [ $FFSKF -gt 0 ] || { log "STOP: stage A failed (use --force to continue)"; exit 3; }; else log "FAIL check_a crashed rc $rc"; exit 1; fi
 [ "$STOP" = check ] && { log "STOP after check"; exit 0; }
-# 4. FFS (GPU) on all or a subset of keyframes
-FR=$OUT/run
+# 4. BA WITH the partner frames (ba_partners_generic.py; 11-27 night: FFS on VIO-relative partner poses disagrees ~1.4-1.7 px per keyframe,
+#    with partner BA 0.33-0.41 px, runs/night_20261127/bafps) then FFS with BA poses for keyframe AND partner (GPU)
+FR=$OUT/run; PLANF=$OUT/plan/plan.json; BAO=$OUT/bag
 if [ $FFSKF -gt 0 ]; then
-  FR=$OUT/run_ffs$FFSKF
+  [ $rc = 3 ] && log "rehearsal mode (--ffs-kf $FFSKF): stage A FAIL ignored"
+  FR=$OUT/run_ffs$FFSKF; PLANF=$OUT/plan_ffs$FFSKF/plan.json; BAO=$OUT/bag_ffs$FFSKF
   [ -e "$FR/dump_ba/cams.npz" ] || $PY "$N/mkcams.py" "$RED" "$REC" "$VIO" "$FR" --subset $FFSKF --plan "$OUT/plan/plan.json" >> "$L" 2>&1 || { log "FAIL mkcams subset"; exit 1; }
+  [ -e "$PLANF" ] || (cd "$G" && $PY scan3d/gsmap/gsm_ffs_pairs2.py plan "$FR" --vio "$VIO" --rec "$REC" --out "$(dirname $PLANF)" --min-perp 40 --dir-deg 10 --n-pairs 4 --k 2 --profile new > "$OUT/plan_ffs$FFSKF.log" 2>&1) || { log "FAIL subset plan"; exit 1; }
 fi
-A="$FR --vio $VIO --rec $REC --out $OUT/ffs --min-perp 40 --dir-deg 10 --n-pairs 4 --k 2 --profile new"
-if [ ! -e "$OUT/ffs/s1/ffs_info.json" ]; then
-  wait_gpu_free; log "step ffs (GPU)"
-  (cd "$G" && source $HOME/scanner/host.env 2>/dev/null; FFS_ROOT=$HOME/scanner/StereoDepthSeg nice -n 19 $HOME/scanner/StereoDepthSeg/venv_ffs/bin/python -W ignore scan3d/gsmap/gsm_ffs_pairs2.py ffs $A > "$OUT/ffs.log" 2>&1) \
-    || { log "FAIL ffs (see ffs.log)"; exit 1; }
-fi
+X="--run $FR --plan $PLANF --rec $REC --vio $VIO --out $BAO"; mkdir -p "$BAO"
+for st in frames ba post ffs; do
+  case $st in frames) [ -e $BAO/manifest.json ] && continue;; ba) [ -e $BAO/ba/ba_state.npz ] && continue;; post) [ -e $BAO/poses_all.npz ] && continue;; ffs) [ -e $BAO/ffs/s1/ffs_info.json ] && continue;; esac
+  [ $st = ba ] || [ $st = ffs ] && wait_gpu_free
+  log "step $st (partner BA)"
+  (cd "$G" && source $HOME/scanner/host.env 2>/dev/null; FFS_ROOT=$HOME/scanner/StereoDepthSeg nice -n 19 $HOME/scanner/StereoDepthSeg/venv_ffs/bin/python -W ignore "$N/ba_partners_generic.py" $st $X > "$BAO/$st.log" 2>&1)     || { log "FAIL $st (see $BAO/$st.log)"; exit 1; }
+done
+log "partner BA: $(cat $BAO/post.json | tr -d '
+ ' | cut -c1-220)"
 # 5. stage B check (CPU)
-$PY "$N/postrec_check.py" ffs --pairs "$OUT/ffs/pairs" --out "$OUT/check_b.json" > "$OUT/check_b.log" 2>&1; rc=$?
+$PY "$N/postrec_check.py" ffs --pairs "$BAO/ffs/pairs" --out "$OUT/check_b.json" > "$OUT/check_b.log" 2>&1; rc=$?
 if [ $rc = 0 ]; then log "CHECK B PASS"; elif [ $rc = 3 ]; then log "CHECK B FAIL: $(python3 -c "import json; print('; '.join(json.load(open('$OUT/check_b.json'))['fails']))")"; else log "FAIL check_b crashed rc $rc"; exit 1; fi
 [ "$STOP" = ffs ] && { log "STOP after ffs"; exit 0; }
+A="$BAO/run --vio $VIO --rec $REC --out $BAO/ffs --min-perp 40 --dir-deg 10 --n-pairs 4 --k 2 --profile new"
 # 6. fuse (CPU)
-if [ ! -e "$OUT/ffs/s12/fuse_info.json" ]; then
+if [ ! -e "$BAO/ffs/s12/fuse_info.json" ]; then
   log "step fuse"; (cd "$G" && $PY scan3d/gsmap/gsm_ffs_pairs2.py fuse $A > "$OUT/fuse.log" 2>&1) || { log "FAIL fuse (see fuse.log)"; exit 1; }
 fi
-log "DONE newrec (fused FFS: $OUT/ffs/s12)"
+log "DONE newrec (fused FFS: $BAO/ffs/s12, cams with BA poses: $BAO/run/dump_ba/cams.npz)"
