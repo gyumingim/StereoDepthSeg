@@ -1,0 +1,14 @@
+[gpu_guard] torch memory cap 0.75 x 15.9 GB = 11.9 GB
+valid pixel mask: 0.9367 (mask_border=1)
+keyframes 20 (960x540) train 17 test 3; train px FFS 0.363 fill 0.000
+area cap: area_m2 2.673 x 200000/m2 -> max_gs 534645
+init: 47552 points (voxel 0.025 m, fill share 0.000), scene_scale 4.928 m
+depth sigma weights from fused: mean FFS w 1.433
+{"step": 0, "n": 47552, "l1": 0.3498, "dssim": 0.7856, "depth": 0.0445, "aniso": 0.0, "gpu_gb": 0.37, "t": 4.1}
+{"step": 500, "n": 47552, "l1": 0.0842, "dssim": 0.2945, "depth": 0.0141, "aniso": 0.0, "gpu_gb": 0.37, "t": 10.7}
+{"step": 1000, "n": 155621, "l1": 0.1177, "dssim": 0.417, "depth": 0.0105, "aniso": 0.0, "gpu_gb": 0.43, "t": 17.6}
+{"step": 1500, "n": 286859, "l1": 0.0923, "dssim": 0.4, "depth": 0.0106, "aniso": 0.0, "gpu_gb": 0.75, "t": 26.2}
+{"step": 2000, "n": 286859, "l1": 0.0259, "dssim": 0.1445, "depth": 0.0144, "aniso": 0.0, "gpu_gb": 0.75, "t": 34.8}
+{"step": 2500, "n": 286859, "l1": 0.0704, "dssim": 0.2836, "depth": 0.0093, "aniso": 0.0, "gpu_gb": 0.75, "t": 43.4}
+{"step": 2999, "n": 286859, "l1": 0.0145, "dssim": 0.0766, "depth": 0.0152, "aniso": 0.0, "gpu_gb": 0.75, "t": 52.0}
+{"made": "2026-11-28 00:06:38", "dump": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/bag_ffs20/run/dump_ba", "fused": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/bag_ffs20/fused", "args": {"dump": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/bag_ffs20/run/dump_ba", "fused": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/bag_ffs20/fused", "out": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/bag_ffs20/gs", "steps": 3000, "seed": 0, "depth_w": 0.1, "fill_w": 0.1, "depth_sigma": "fused", "sparse_depth": "", "hold": 8, "stride": 3, "voxel": 0.025, "max_gs": 534645, "aniso_max": 5.0, "aniso_w": 1.0, "gs_per_m2": 200000.0, "exposure": 1, "normals": "", "normal_w": 0.05, "surfel": 1, "max_scale": 0.05, "mask_border": 1}, "n_kf": 20, "n_train": 17, "n_test": 3, "n_aniso5_opaque": 255, "n_dark_opaque": 25590, "n_scale_gt5cm": 0, "area_m2": 2.67322723800062, "gs_cap": 534645, "capped_at_step": null, "n_init": 47552, "init_fill_share": 0.0, "n_gauss": 286859, "test_psnr": 9.72469393412272, "test_ssim": 0.3478509585062663, "test_lpips": 0.7283089756965637, "train_psnr": 23.266064026776483, "test_psnr_full": 9.731350580851236, "test_ssim_full": 0.3040793836116791, "test_lpips_full": 0.7801986336708069, "valid_px": 0.9366956018518519, "test_depth_vs_ffs": {"med_cm": 4.4119954109191895, "p90_cm": 25.56493377685547, "frac_gt3cm": 0.5914255209508615, "n_views": 3}, "floaters": {"n_checked": 184364, "n_seen": 153088, "n_floater": 466, "frac_of_seen": 0.0030440008361204015}, "train_s": 52.0, "runtime_s": 53.9, "gpu_max_alloc_gb": 0.75, "gpu_max_reserved_gb": 1.03}

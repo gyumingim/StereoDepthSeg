@@ -1,0 +1,106 @@
+[host.env] /home/system/scanner/host.env sourced (SCAN3D_FFS_BACKEND=trt)
+[lens] no GT folder /home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/dryrun30_121801_20261127/rec_hs_20261112_121801_std30/imu_gt_spl -> std 0.5 dpt recording: lens-only fallback /home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json
+== run_scanner 2026-11-28 00:03:26: REC /home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/dryrun30_121801_20261127/rec_hs_20261112_121801_std30 (full recording) -> /home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/scan
+   gt lensonly, input keyframes 1920 JPEG q90, BA cuda, SIFT cpu, TSDF alloc dense, kf motion 3cm/4deg win 2 gyro, git 6003d2fcdb76
+   gt lensonly, input keyframes 1920 JPEG q90, BA cuda, SIFT cpu, TSDF alloc dense, git 6003d2fcdb76
+   ffs views 2 (fuse auto, partners all)
+   ffs backend trt (from env)
+00:03:26 step vio start (log /home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/scan/vio.log)
+00:03:48 step vio done 22.4 s (rc 0)
+00:03:48 step lensonly start (log /home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/scan/lensonly.log)
+00:03:48 step lensonly done 0.1 s (rc 0)
+00:03:48 step reduce start (log /home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/scan/reduce.log)
+00:03:54 step reduce done 5.7 s (rc 0)
+[input] keyframe-only: /home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/scan/red/rec_hs_20261112_121801_std30_kf/frames_kf (490 jpg, 1920x1080, 247M), cam5.mp4 absent: yes
+{
+ "made": "2026-11-28 00:03:54",
+ "commit": "6003d2fcdb76501c5f8e1bdaea7fa27bee7e4426",
+ "rec": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/dryrun30_121801_20261127/rec_hs_20261112_121801_std30",
+ "input": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/scan/red/rec_hs_20261112_121801_std30_kf",
+ "keyframe_only": true,
+ "kf_res": 1920,
+ "kf_quality": 90,
+ "live_poses": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/scan/red/rec_hs_20261112_121801_std30_kf/phone_live_poses.jsonl.gz",
+ "gt": "lensonly",
+ "vio_cfg": "/home/system/scanner/build_livepose/cfg_gen/c4",
+ "tsdf_alloc": "dense",
+ "ffs_views": 2,
+ "ffs_fuse": "auto",
+ "ffs_partners": "all",
+ "reuse": null,
+ "ba_dir": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/scan/ba",
+ "kfba_device_line": null,
+ "step_s": {
+  "vio": 22.5,
+  "lensonly": 0.1,
+  "reduce": 5.8
+ },
+ "total_s": 28.4,
+ "sent": {
+  "n_keyframes": 490,
+  "image_size": [
+   1920,
+   1080
+  ],
+  "jpeg_bytes": 257883031,
+  "duration_s": 60.940395976000005,
+  "jpeg_MB_per_min": 253.90353331628637,
+  "kf_per_min": 482.438611189506,
+  "kf_select": {
+   "rule": "motion",
+   "dist_m": 0.03,
+   "rot_deg": 4.0,
+   "win": 2,
+   "blur": "gyro",
+   "max_gyro": 0.0,
+   "n_vio_frames": 1606,
+   "n_scored": 980,
+   "n_kf": 490,
+   "pos_in_window_hist": [
+    223,
+    267
+   ],
+   "gyro_kf_median": 0.3009771473314794,
+   "gyro_window_mean_median": 0.3547815515056132,
+   "moved_m_median": 0.0432359474478855,
+   "rot_deg_median": 1.8804366452869288,
+   "exposure_ns_median": 2000000.0,
+   "skew_ns_median": 6540750.0
+  }
+ },
+ "mesh": null,
+ "board": null,
+ "mesh_board": null,
+ "status": "ok",
+ "steps_run": [
+  "lensonly",
+  "reduce",
+  "vio"
+ ],
+ "vio": {
+  "crashed": null,
+  "bridge_rc": 0,
+  "frames_selected": 1733,
+  "frames_fed": 1733,
+  "poses": 1733,
+  "wall_s": 21.6
+ },
+ "vio_crashed": null,
+ "ba_quality": null,
+ "min_mesh_vertices": 1000,
+ "provenance": {
+  "commit": "6003d2fcdb76501c5f8e1bdaea7fa27bee7e4426",
+  "commit_dirty": false,
+  "main_commit": "e89c8da14c79edbb2b285147863fb6dfef0694fa-dirty",
+  "worktree": "/home/system/scanner/StereoDepthSeg-fixes",
+  "lens_file": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json",
+  "lens_sha": "21b5f334c1bc210b",
+  "vio_cfg_sha": {
+   "estimator_config.yaml": "702c8ffd8f73ca06",
+   "kalibr_imu_chain.yaml": "0f8eefa54043fc3e",
+   "kalibr_imucam_chain.yaml": "58b9a1af46461eb3"
+  }
+ },
+ "lens_only": "/home/system/scanner/StereoDepthSeg-fixes/scan3d/config/lens/std_1920x1080_f0.50_calcap20261026.json"
+}
+== run_scanner stop after reduce 00:03:54: /home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/scan/red/rec_hs_20261112_121801_std30_kf

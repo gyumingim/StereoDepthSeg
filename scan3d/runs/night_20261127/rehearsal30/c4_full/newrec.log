@@ -1,0 +1,21 @@
+2026-11-28 00:03:26 START newrec REC /home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/dryrun30_121801_20261127/rec_hs_20261112_121801_std30 fps 30 kf-win 2 vio cfg c4 ffs-kf 20 stop-after tex
+2026-11-28 00:03:26 step scan (VIO + keyframes)
+{"made": "2026-11-28 00:03:54", "red": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/scan/red/rec_hs_20261112_121801_std30_kf", "rec": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/dryrun30_121801_20261127/rec_hs_20261112_121801_std30", "vio": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/scan/vio/B_o0.poses.jsonl.gz", "n_kf": 490, "dropped_no_vio_pose": [], "subset": 0}
+2026-11-28 00:03:54 step plan
+2026-11-28 00:04:10 CHECK A FAIL: strict >= 2 partners 63.5 % < 90.0 %; 0 strict partners 31.0 % > 5.0 %
+2026-11-28 00:04:10 rehearsal mode (--ffs-kf 20): stage A FAIL ignored
+{"made": "2026-11-28 00:04:10", "red": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/scan/red/rec_hs_20261112_121801_std30_kf", "rec": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/dryrun30_121801_20261127/rec_hs_20261112_121801_std30", "vio": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/scan/vio/B_o0.poses.jsonl.gz", "n_kf": 20, "dropped_no_vio_pose": [], "subset": 20}
+2026-11-28 00:04:11 step frames (partner BA)
+2026-11-28 00:04:11 step ba (partner BA)
+2026-11-28 00:04:30 step post (partner BA)
+2026-11-28 00:04:30 step ffs (partner BA)
+2026-11-28 00:05:18 partner BA: {"made":"2026-11-2800:04:30","n_frames":81,"registered":81,"vio_anchor":0,"sim3_scale":1.0032497626834063,"centre_vs_vio_med_cm":2.6610936491565886,"centre_vs_vio_p95_cm":14.82228581953843,"ba":{"final_med_px":0.20908700
+2026-11-28 00:05:34 CHECK B PASS
+2026-11-28 00:05:34 step fuse
+2026-11-28 00:05:37 fused FFS: /home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/bag_ffs20/ffs/s12, cams with BA poses: /home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/bag_ffs20/run/dump_ba/cams.npz
+{"made": "2026-11-28 00:05:42", "run": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/bag_ffs20/run", "rec": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/dryrun30_121801_20261127/rec_hs_20261112_121801_std30", "s12": "/home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/bag_ffs20/ffs/s12", "n_kf": 20, "images": 20, "kf_with_ffs": 20, "note": "F = 1 FFS only (no fill)"}
+2026-11-28 00:05:42 step train (2DGS 3000 steps, hold 8)
+2026-11-28 00:06:39 train: {'n_train': 17, 'n_test': 3, 'n_gauss': 286859, 'test_psnr': 9.72469393412272, 'train_psnr': 23.266064026776483, 'train_s': 52.0}
+2026-11-28 00:06:39 step mesh
+2026-11-28 00:07:02 step texture
+2026-11-28 00:10:10 DONE newrec (textured mesh: /home/system/scanner/StereoDepthSeg-gsmap/scan3d/runs/night_20261127/rehearsal30/c4_full/bag_ffs20/tex.glb)

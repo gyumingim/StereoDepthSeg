@@ -40,7 +40,8 @@ def main():
     keep = [i for i, x in enumerate(T) if x is not None]
     kfl = [kfl[i] for i in keep]; T = np.array([T[i] for i in keep])
     (out / "dump_ba").mkdir(parents=True, exist_ok=True)
-    Kr = K.copy(); Kr[:2] *= 0.5
+    K = K.copy(); K[:2] *= 0.5                       # 960x540 scale (= gsplat dump convention: cams K is the 960 camera, Kr = square-pixel rectified)
+    Kr = np.array([[K[0, 0], 0, K[0, 2]], [0, K[0, 0], K[1, 2]], [0, 0, 1.0]])
     np.savez(out / "dump_ba" / "cams.npz", kf=np.array(kfl), T=T, t_ns=t_ns[kfl], Kr=Kr, K=K, dist=g["dist"], size=np.array([960, 540]),
              made=np.array(time.strftime("%F %T")), poses=np.array(f"VIO {a.vio} (no BA)"))
     info = dict(made=time.strftime("%F %T"), red=str(red), rec=str(rec), vio=str(a.vio), n_kf=len(kfl), dropped_no_vio_pose=miss, subset=a.subset)
