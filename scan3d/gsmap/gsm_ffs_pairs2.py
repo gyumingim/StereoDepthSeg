@@ -169,10 +169,12 @@ def make_plan_all(a, run, kf, Tk, Kr, K, W0, H0, t_ns, Tv):
         elif len(idx):
             cov[idx] = 1.0
         ok &= cov >= 0.6
-        sc = (np.abs(np.log(np.maximum(B, 1e-6) / 0.08)) + 1.5 * (1 - np.sin(np.radians(perp))) + 0.5 * rot / a.max_rot + 0.3 * np.abs(roll) / 90
+        sc = (np.abs(np.log(np.maximum(B, 1e-6) / getattr(a, "b_target", 0.08))) + 1.5 * (1 - np.sin(np.radians(perp))) + 0.5 * rot / a.max_rot + 0.3 * np.abs(roll) / 90
               + 0.2 * np.minimum(dt, 2.0) / 2.0 + 0.3 * (src == "vio_revisit"))
-        chosen = []
+        chosen = []; excl = getattr(a, "exclude", {}).get(ci, set())
         for n_ in np.nonzero(ok)[0][np.argsort(sc[ok])]:
+            if int(fr[n_]) in excl:
+                continue
             gg = dict(B=float(B[n_]), c=c[n_], perp_deg=float(perp[n_]), rot_deg=float(rot[n_]), roll_deg=float(roll[n_]))
             j = int(fr[n_])
             if all((ms.dir_differs(gg, q[2], a.dir_deg) or max(gg["B"], q[2]["B"]) / min(gg["B"], q[2]["B"]) >= 1.5) and abs(j - q[1]) >= 12 for q in chosen):
@@ -351,17 +353,174 @@ def cmd_fuse(a):
     print(f"fuse done {len(info)} kf {time.time() - t0:.0f}s", flush=True)
 
 
+
+# ================================================================ 4 m extension (user 2026-11-26)
+def wide_plan(a, kf, Tk, Kr, K, W0, H0, t_ns, Tv):
+    """up to --n-wide extra wide partners per keyframe: B --wb-min..--wb-max, same pose-only score (target --wb-target), perp >= min_perp,
+    epipole outside, rot <= max_rot, covisibility >= 60 %; frames already used as short partners are excluded."""
+    short, _, _ = new_plan(a, kf, Tk, K, W0, H0, t_ns, Tv, Kr)
+    import copy
+    b = copy.copy(a); b.b_min, b.b_max, b.n_pairs, b.b_target = a.wb_min, a.wb_max, a.n_wide, a.wb_target
+    b.exclude = {ci: {q[1] for q in v} for ci, v in short.items()}
+    wide, info = make_plan_all(b, Path(a.run), kf, Tk, Kr, K, W0, H0, t_ns, Tv)
+    return short, wide, info
+
+
+def cmd_plan4(a):
+    kf, Tk, Kr, W0, H0, t_ns, K, dist, Tv = load_common(a); out = Path(a.out)
+    short, wide, info = wide_plan(a, kf, Tk, Kr, K, W0, H0, t_ns, Tv)
+    c = Counter(len(v) for v in wide.values())
+    res = dict(made=time.strftime("%F %T"), args=vars(a), kf_with_wide=len(wide), hist={int(k): int(v) for k, v in c.items()},
+               n_wide_pairs=int(sum(c_ * v for c_, v in c.items())), wide_on_kf_without_short=len([ci for ci in wide if ci not in short]),
+               src=dict(Counter(q[4] for v in wide.values() for q in v)), B_cm_median=float(np.median([q[2]["B"] * 100 for v in wide.values() for q in v])) if wide else 0,
+               plan={int(kf[ci]): [[int(q[1]), q[4], round(q[2]["B"] * 100, 1), round(q[2]["perp_deg"], 1)] for q in v] for ci, v in wide.items()})
+    (out / "plan_wide.json").write_text(json.dumps(res, indent=1, default=float))
+    print(json.dumps({k: v for k, v in res.items() if k != "plan"}, default=float, indent=1))
+
+
+def cmd_ffs4(a):
+    import lib_ffs
+    t0 = time.time()
+    kf, Tk, Kr, W0, H0, t_ns, K, dist, Tv = load_common(a); out = Path(a.out)
+    _, plan, _ = wide_plan(a, kf, Tk, Kr, K, W0, H0, t_ns, Tv)
+    cfg = ms.MSConfig(); cfg.b_target_m = a.wb_target; cfg.z_max = a.zmax
+    (out / "wide").mkdir(parents=True, exist_ok=True)
+    rp = dict(size=(W0, H0), f=float(K[0, 0]), cx=float(K[0, 2]), cy=float(K[1, 2]), R1=np.eye(3).tolist())
+    need = {}
+    for ci, ch in plan.items():
+        for q in ch:
+            need.setdefault(q[1], []).append(ci)
+        need.setdefault(int(kf[ci]), []).append(ci)
+    print(f"wide plan: {len(plan)} kf, {sum(len(v) for v in plan.values())} pairs, {len(need)} frames", flush=True)
+    model = lib_ffs.load(valid_iters=a.iters)
+    ready = {ci: max([int(kf[ci])] + [q[1] for q in plan[ci]]) for ci in plan}
+    last_use = {f: max(ready[ci] for ci in cis) for f, cis in need.items()}
+    todo = sorted([ci for ci in plan if not (out / "wide" / f"{int(kf[ci]):05d}.npz").exists()], key=lambda ci: ready[ci])
+    cap = cv2.VideoCapture(str(Path(a.rec) / "cam5.mp4")); buf = {}; fidx = -1; ti = 0; stats = {}
+    while ti < len(todo):
+        r_, f = cap.read(); fidx += 1
+        if not r_:
+            break
+        if fidx in need:
+            buf[fidx] = cv2.resize(f, (W0, H0), interpolation=cv2.INTER_AREA) if f.shape[1] != W0 else f
+        while ti < len(todo) and ready[todo[ti]] <= fidx:
+            ci = todo[ti]; ti += 1; fi = int(kf[ci]); res = []
+            for s_, j, gg, Tj, _src in plan[ci]:
+                R, t = ms.rel_pose(Tk[ci], Tj)
+                # far pixels matter: z_near 1 m keeps the FFS input near full resolution (near pixels above d_cap drop out)
+                res.append(ms.pair_depth(model, lib_ffs.infer, buf[fi], buf[j], R, t, K, dist, rp, cfg, z_near=a.wide_znear, iters=a.iters))
+            np.savez_compressed(out / "wide" / f"{fi:05d}.npz", Z=np.stack([np.where(r["valid"], r["Z"], np.nan) for r in res]).astype(np.float16),
+                                B=np.array([r["B"] for r in res]), f=np.array([r["f"] for r in res]), partner=np.array([q[1] for q in plan[ci]]),
+                                src=np.array([q[4] for q in plan[ci]]), perp=np.array([r["perp_deg"] for r in res]), scale=np.array([r["scale"] for r in res]))
+            stats[fi] = dict(pairs=len(res), valid=[round(float(r["valid"].mean()), 3) for r in res], B_cm=[round(r["B"] * 100, 1) for r in res],
+                             scale=[r["scale"] for r in res])
+            if ti % 25 == 0:
+                print(f"{ti}/{len(todo)} kf {fi} t {time.time() - t0:.0f}s", flush=True)
+        for fdel in [k for k in buf if last_use[k] < fidx]:
+            del buf[fdel]
+    cap.release()
+    (out / "wide" / "ffs_info.json").write_text(json.dumps(dict(made=time.strftime("%F %T"), args=vars(a), n_done=len(stats), total_s=round(time.time() - t0, 1),
+                                                                per_kf=stats), indent=1, default=float))
+    print(f"done {len(stats)} kf in {time.time() - t0:.0f}s", flush=True)
+
+
+def cmd_fuse4(a):
+    """s4m = s12 for pixels <= --z-split; beyond it the depth comes from the wide pairs when a wide pair is confirmed by (the other wide
+    pair) or (a short pair, tolerance k*sqrt2*sigma_wide) or (a neighbouring keyframe's wide depth, k*hypot(sigma, sigma_nb)); fused =
+    inverse-variance mean of the confirmed wide pairs. s12 pixels > z-split without a wide estimate are kept (short pairs, <= 2 m saved).
+    Cap --zmax."""
+    t0 = time.time()
+    run, out = Path(a.run), Path(a.out); od = out / "s4m"; od.mkdir(parents=True, exist_ok=True)
+    c = np.load(run / "dump_ba" / "cams.npz"); kf, T, Kr = c["kf"], c["T"], c["Kr"]; W, H = [int(v) for v in c["size"]]; n = len(kf)
+    fx, fy, cx, cy = [float(v) for v in (Kr[0, 0], Kr[1, 1], Kr[0, 2], Kr[1, 2])]
+    hw = [(out / "wide" / f"{int(i):05d}.npz").exists() for i in kf]
+    WC = {}
+
+    def wide_comp(ci):        # neighbour composite: inverse-variance mean of its valid wide pairs, + sigma
+        if ci not in WC:
+            d = np.load(out / "wide" / f"{int(kf[ci]):05d}.npz"); Z = d["Z"].astype(np.float32); sg = np.stack([Z[p] ** 2 / (d["f"][p] * d["B"][p]) for p in range(len(d["B"]))])
+            w = np.where(np.isfinite(Z), 1 / np.nan_to_num(sg, nan=1) ** 2, 0); den = w.sum(0)
+            with np.errstate(invalid="ignore", divide="ignore"):
+                WC[ci] = (np.where(den > 0, (np.nan_to_num(Z) * w).sum(0) / den, np.nan).astype(np.float32), np.where(den > 0, 1 / np.sqrt(den), np.inf).astype(np.float32))
+        return WC[ci]
+    vv, uu = np.mgrid[0:H, 0:W]; info = {}; k = a.k
+    for ci in range(n):
+        f12 = out / "s12" / f"{int(kf[ci]):05d}.npz"
+        Z12 = np.load(f12)["Z"] if f12.exists() else np.full((H, W), np.nan, np.float32)
+        if not hw[ci]:
+            if f12.exists():
+                Zo = np.where(Z12 <= a.zmax, Z12, np.nan).astype(np.float32); V = np.isfinite(Zo)
+                np.savez_compressed(od / f"{int(kf[ci]):05d}.npz", Z=Zo, V=V); info[int(kf[ci])] = dict(wide=0, valid_frac=float(V.mean()))
+            continue
+        d = np.load(out / "wide" / f"{int(kf[ci]):05d}.npz"); Zw = d["Z"].astype(np.float32); m = len(d["B"])
+        sw = np.stack([Zw[p] ** 2 / (d["f"][p] * d["B"][p]) for p in range(m)]); vw = np.isfinite(Zw)
+        fp = out / "pairs" / f"{int(kf[ci]):05d}.npz"
+        if fp.exists():
+            Zs = np.load(fp)["Z"].astype(np.float32)
+        else:
+            Zs = np.zeros((0, H, W), np.float32)
+        conf = np.zeros((m, H, W), bool); why = Counter()
+        for p in range(m):
+            with np.errstate(invalid="ignore"):
+                for q in range(m):
+                    if q != p:
+                        x = vw[p] & vw[q] & (np.abs(Zw[p] - Zw[q]) <= k * np.hypot(sw[p], sw[q])); conf[p] |= x; why["wide"] += int(x.sum())
+                for q in range(len(Zs)):
+                    x = vw[p] & np.isfinite(Zs[q]) & (np.abs(Zw[p] - Zs[q]) <= k * np.sqrt(2) * sw[p]); conf[p] |= x; why["short"] += int(x.sum())
+            rest = vw[p] & ~conf[p]
+            if rest.any():
+                z = Zw[p][rest]; s0 = sw[p][rest]; u = uu[rest]; v = vv[rest]
+                X = np.stack([(u - cx) / fx * z, (v - cy) / fy * z, z], 1) @ T[ci, :3, :3].T + T[ci, :3, 3]
+                nbs = [j for j in range(ci - 1, -1, -1) if hw[j]][:2] + [j for j in range(ci + 1, n) if hw[j]][:2]; okn = np.zeros(len(z), bool)
+                for j in nbs:
+                    Tw_ = np.linalg.inv(T[j]); Xj = X @ Tw_[:3, :3].T + Tw_[:3, 3]; zj = Xj[:, 2]
+                    with np.errstate(invalid="ignore", divide="ignore"):
+                        pu = np.round(fx * Xj[:, 0] / np.maximum(zj, 1e-3) + cx).astype(int); pv = np.round(fy * Xj[:, 1] / np.maximum(zj, 1e-3) + cy).astype(int)
+                    ok = (zj > 0.05) & (pu >= 0) & (pu < W) & (pv >= 0) & (pv < H)
+                    Zn, Sn = wide_comp(j); zr = np.full(len(z), np.nan, np.float32); sr = np.full(len(z), np.inf, np.float32)
+                    zr[ok] = Zn[pv[ok], pu[ok]]; sr[ok] = Sn[pv[ok], pu[ok]]
+                    with np.errstate(invalid="ignore"):
+                        okn |= np.isfinite(zr) & (np.abs(zj - zr) <= k * np.hypot(s0, sr))
+                cp = conf[p].copy(); cp[rest] = okn; conf[p] = cp; why["nb"] += int(okn.sum())
+        w = np.where(conf, 1 / np.maximum(np.nan_to_num(sw, nan=1), 1e-6) ** 2, 0); den = w.sum(0)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            Zf = np.where(den > 0, (np.nan_to_num(Zw) * w).sum(0) / den, np.nan)
+        if m >= 2:      # two confirmed wide pairs that disagree with each other -> drop
+            both = conf[0] & conf[1]
+            with np.errstate(invalid="ignore"):
+                Zf[both & (np.abs(Zw[0] - Zw[1]) > k * np.hypot(sw[0], sw[1]))] = np.nan
+        far = np.isfinite(Zf) & (Zf > a.z_split) & (Zf <= a.zmax)
+        Zo = np.where(np.isfinite(Z12) & (Z12 <= a.z_split), Z12, np.nan)
+        Zo = np.where(far & ~(np.isfinite(Z12) & (Z12 <= a.z_split)), Zf, Zo)
+        keep12 = np.isfinite(Z12) & (Z12 > a.z_split) & ~far
+        Zo = np.where(keep12, Z12, Zo).astype(np.float32); Zo[Zo > a.zmax] = np.nan; V = np.isfinite(Zo)
+        np.savez_compressed(od / f"{int(kf[ci]):05d}.npz", Z=Zo, V=V)
+        info[int(kf[ci])] = dict(wide=m, valid_frac=float(V.mean()), px_wide_valid=int(vw.any(0).sum()), px_wide_conf=int(conf.any(0).sum()),
+                                 px_far_from_wide=int((far & ~(np.isfinite(Z12) & (Z12 <= a.z_split))).sum()), px_s12_far_kept=int(keep12.sum()), conf_by=dict(why))
+        if ci % 50 == 0:
+            print(ci, info[int(kf[ci])], f"{time.time() - t0:.0f}s", flush=True)
+    (od / "fuse_info.json").write_text(json.dumps(dict(made=time.strftime("%F %T"), args=vars(a), per_kf=info), indent=1))
+    print(f"fuse4 done {len(info)} kf {time.time() - t0:.0f}s", flush=True)
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["plan", "ffs", "fuse"]); ap.add_argument("run")
+    ap.add_argument("cmd", choices=["plan", "ffs", "fuse", "plan4", "ffs4", "fuse4"]); ap.add_argument("run")
     ap.add_argument("--vio", required=True); ap.add_argument("--rec", required=True); ap.add_argument("--gt", default="lensonly")
     ap.add_argument("--out", required=True); ap.add_argument("--win-s", type=float, default=2.0); ap.add_argument("--n-pairs", type=int, default=4)
     ap.add_argument("--b-min", type=float, default=0.03); ap.add_argument("--b-max", type=float, default=0.25)
     ap.add_argument("--min-perp", type=float, default=40.0); ap.add_argument("--max-rot", type=float, default=25.0)
     ap.add_argument("--dir-deg", type=float, default=10.0); ap.add_argument("--fb-perp", type=float, default=0.0); ap.add_argument("--zmax", type=float, default=2.0)
     ap.add_argument("--iters", type=int, default=8); ap.add_argument("--k", type=float, default=2.0)
+    ap.add_argument("--n-wide", type=int, default=2); ap.add_argument("--wb-min", type=float, default=0.15); ap.add_argument("--wb-max", type=float, default=0.35)
+    ap.add_argument("--wb-target", type=float, default=0.25); ap.add_argument("--wide-znear", type=float, default=1.0); ap.add_argument("--z-split", type=float, default=1.5)
     a = ap.parse_args()
-    if a.cmd == "plan":
+    if a.cmd in ("plan4", "fuse4"):
+        {"plan4": cmd_plan4, "fuse4": cmd_fuse4}[a.cmd](a)
+    elif a.cmd == "ffs4":
+        import gpu_guard
+        with gpu_guard.job("gsmap ffs_pairs2 wide " + a.out, torch_cap=True):
+            cmd_ffs4(a)
+    elif a.cmd == "plan":
         cmd_plan(a)
     elif a.cmd == "fuse":
         cmd_fuse(a)
