@@ -9,7 +9,7 @@ Why (audit7 an5/an6): 166 of 494 keyframes have no wide (gsm_ffs_4m, perp >= 40)
                  BA pose if the frame is in it, else VIO relative motion anchored on the keyframe BA pose. Score = predicted usable
                  share of the image: pixel rays at Z = 1.5 / 2.5 / 3.5 m with theta (ray vs baseline) >= theta_min (25, the
                  pairs3 epipole cone), sigma_Z/Z = Z/(f B sin theta) <= cap (3 %), point in front of and inside the partner image.
-                 Up to 2 partners per keyframe, greedy by score; diversity: >= 12 frames apart and (direction >= 10 deg or B ratio
+                 Up to 2 partners per keyframe, greedy by score; diversity: >= 0.2 s apart (12 frames @ 60 fps) and (direction >= 10 deg or B ratio
                  >= 1.5 or opposite time side). Min score 0.03. Reasons for keyframes without a partner are counted.
   frames  (CPU)  BA2/manifest.json = ba_partners frames + new partner frames; BA2/extra_pairs.txt = ba_partners pairs + new kf-partner pairs
   ba      (GPU)  gsm_ba_partners.cmd_ba with OUT = BA2 (identical kf_ba settings)
@@ -67,7 +67,11 @@ def cmd_plan(a):
     import motion_stereo as ms
     kf, Tk, Kr, W0, H0, t_ns, K, dist, Tv = common(); n = len(kf)
     P = np.load(BAP / "poses_all.npz"); TmD = {int(f): T for f, T in zip(P["frames"], P["T"])}
-    tg = targets(kf); win = int(round(a.win_s * 60)); f0 = float(Kr[0, 0])
+    import rec_profile as RP
+    if RP.profile(BP.R1 / "rec", a.profile) == "new":
+        raise SystemExit("relax partners are a low-angle backdoor: off in the new profile (use --profile legacy)")
+    fps = RP.rec_fps(BP.R1 / "rec", t_ns, a.fps); gap = RP.gap_frames(a.min_gap_s, fps)        # was 60 fps / 12 frames (2026-11-27)
+    tg = targets(kf); win = RP.frames(a.win_s, fps); f0 = float(Kr[0, 0])
     gu, gv = np.meshgrid(np.linspace(8, W0 - 8, 64), np.linspace(8, H0 - 8, 36))
     ray = np.stack([(gu - Kr[0, 2]) / Kr[0, 0], (gv - Kr[1, 2]) / Kr[1, 1], np.ones_like(gu)], -1).reshape(-1, 3)
     rn = ray / np.linalg.norm(ray, axis=1, keepdims=True); smin = np.sin(np.radians(a.theta_min))
@@ -110,7 +114,7 @@ def cmd_plan(a):
             cands.append(dict(score=sc, s_z=sz, j=j, g=g, dt=round(float((t_ns[j] - t_ns[fi]) * 1e-9), 3), src="ba" if j in TmD else "vio"))
         cands.sort(key=lambda x: -x["score"]); ch = []
         for c_ in cands:
-            if all(abs(c_["j"] - q["j"]) >= 12 and (ms.dir_differs(c_["g"], q["g"], 10.0) or max(c_["g"]["B"], q["g"]["B"]) / min(c_["g"]["B"], q["g"]["B"]) >= 1.5
+            if all(abs(c_["j"] - q["j"]) >= gap and (ms.dir_differs(c_["g"], q["g"], 10.0) or max(c_["g"]["B"], q["g"]["B"]) / min(c_["g"]["B"], q["g"]["B"]) >= 1.5
                                                      or (c_["j"] - fi) * (q["j"] - fi) < 0) for q in ch):
                 ch.append(c_)
             if len(ch) >= a.n_new:
@@ -375,6 +379,7 @@ if __name__ == "__main__":
     ap.add_argument("--min-perp", type=float, default=10.0); ap.add_argument("--max-rot", type=float, default=25.0); ap.add_argument("--theta-min", type=float, default=25.0)
     ap.add_argument("--cap", type=float, default=0.03); ap.add_argument("--n-new", type=int, default=2); ap.add_argument("--min-score", type=float, default=0.03)
     ap.add_argument("--name", default="s4m_r"); ap.add_argument("--drop", default=""); ap.add_argument("--revert-idx", default="")
+    sys.path.insert(0, str(HERE)); import rec_profile as RP; RP.add_args(ap)
     a = ap.parse_args()
     if a.cmd in ("ffs", "measure"):
         import gpu_guard

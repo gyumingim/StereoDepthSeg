@@ -24,10 +24,11 @@ import cv2
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent)); sys.path.insert(0, str(HERE.parent / "gsplat"))
+sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent)); sys.path.insert(0, str(HERE.parent / "gsplat"))
 if os.environ.get("FFS_ROOT"):
     sys.path.insert(0, os.environ["FFS_ROOT"])
 import motion_stereo as ms
+import rec_profile as RP
 
 
 def epi_inside(K, p, W, H):
@@ -51,13 +52,27 @@ def load_common(a):
     idx = np.searchsorted(t_ns, vt).clip(1, len(t_ns) - 1); idx = np.where(np.abs(t_ns[idx - 1] - vt) < np.abs(t_ns[idx] - vt), idx - 1, idx)
     good = np.abs(t_ns[idx] - vt) < 8e6
     Tv = {int(i): T for i, T in zip(idx[good], vT[good])}
+    set_rate(a, t_ns)
     return kf, Tk, Kr, W0, H0, t_ns, K, dist, Tv
 
 
-def make_plan(kf, Tk, K, W0, H0, t_ns, Tv, win_s, b_min, b_max, min_perp, max_rot, n_pairs, new):
+def set_rate(a, t_ns):
+    """2026-11-27: frame rate of the recording (meta.json checked by t_ns) -> a.fps_used, min partner gap in frames -> a.gap_used,
+    profile -> a.profile_used ('new' = low-angle backdoors off: --fb-perp forced to 0 here, pairs3 low tier / relax refuse)."""
+    rec = getattr(a, "rec", None)
+    a.fps_used = RP.rec_fps(rec, t_ns, getattr(a, "fps", 0.0) or 0.0)
+    a.gap_used = RP.gap_frames(getattr(a, "min_gap_s", 0.2), a.fps_used)
+    a.profile_used = RP.profile(rec, getattr(a, "profile", "auto"))
+    if a.profile_used == "new" and getattr(a, "fb_perp", 0) and a.fb_perp > 0:
+        print(f"[profile new] --fb-perp {a.fb_perp} ignored: low-angle fallback is off (use --profile legacy to keep it)", file=sys.stderr)
+        a.fb_perp = 0.0
+    print(f"[rate] {a.fps_used:g} fps, min partner gap {a.gap_used} frames, profile {a.profile_used}", file=sys.stderr)
+
+
+def make_plan(kf, Tk, K, W0, H0, t_ns, Tv, win_s, b_min, b_max, min_perp, max_rot, n_pairs, new, fps, gap):
     cfg = ms.MSConfig(); cfg.b_target_m = 0.08; cfg.dt_max_s = win_s; cfg.b_min_m = b_min; cfg.b_max_m = b_max
     fb = new.get("fb_perp"); cfg.min_perp_deg = min(min_perp, fb) if fb else min_perp; cfg.max_rot_deg = max_rot
-    win = int(round(win_s * 60)); plan, why_all, fbk = {}, Counter(), set()
+    win = RP.frames(win_s, fps); plan, why_all, fbk = {}, Counter(), set()
     for ci, fi in enumerate(kf):
         fi = int(fi)
         if fi not in Tv:
@@ -87,7 +102,7 @@ def make_plan(kf, Tk, K, W0, H0, t_ns, Tv, win_s, b_min, b_max, min_perp, max_ro
                 ok = True
             elif new["relax"]:
                 ok = all((ms.dir_differs(gg, q[2], new["dir_deg"]) or max(gg["B"], q[2]["B"]) / min(gg["B"], q[2]["B"]) >= 1.5)
-                         and abs(j - q[1]) >= 12 for q in chosen)
+                         and abs(j - q[1]) >= gap for q in chosen)
             else:
                 ok = all(ms.dir_differs(gg, q[2], cfg.pair2_min_dir_deg) for q in chosen)
             if ok:
@@ -130,7 +145,7 @@ def make_plan_all(a, run, kf, Tk, Kr, K, W0, H0, t_ns, Tv):
     """whole-video, pose-only, vectorised partner search (user 2026-11-26). Partner pose: within +-win of the keyframe = VIO relative
     motion anchored on the keyframe BA pose (as gsm_ffs_dense); a keyframe = its BA pose ('ba'); else VIO anchored on the nearest
     keyframe in time ('vio_revisit', may carry drift)."""
-    win = int(round(a.win_s * 60)); fr = np.array(sorted(Tv)); TV = np.stack([Tv[j] for j in fr])
+    win = RP.frames(a.win_s, a.fps_used); fr = np.array(sorted(Tv)); TV = np.stack([Tv[j] for j in fr])
     kfi = {int(f): c for c, f in enumerate(kf)}; kfr = np.array([int(f) for f in kf if int(f) in Tv]); kfc = np.array([kfi[f] for f in kfr])
     near = kfc[np.abs(fr[:, None] - kfr[None, :]).argmin(1)]
     Tglob = np.einsum("nij,njk->nik", np.einsum("nij,njk->nik", Tk[near], np.linalg.inv(np.stack([Tv[int(kf[c])] for c in near]))), TV)
@@ -177,7 +192,7 @@ def make_plan_all(a, run, kf, Tk, Kr, K, W0, H0, t_ns, Tv):
                 continue
             gg = dict(B=float(B[n_]), c=c[n_], perp_deg=float(perp[n_]), rot_deg=float(rot[n_]), roll_deg=float(roll[n_]))
             j = int(fr[n_])
-            if all((ms.dir_differs(gg, q[2], a.dir_deg) or max(gg["B"], q[2]["B"]) / min(gg["B"], q[2]["B"]) >= 1.5) and abs(j - q[1]) >= 12 for q in chosen):
+            if all((ms.dir_differs(gg, q[2], a.dir_deg) or max(gg["B"], q[2]["B"]) / min(gg["B"], q[2]["B"]) >= 1.5) and abs(j - q[1]) >= a.gap_used for q in chosen):
                 chosen.append((float(sc[n_]), j, gg, Tq[n_], str(src[n_])))
             if len(chosen) >= a.n_pairs:
                 break
@@ -191,7 +206,7 @@ def new_plan(a, kf, Tk, K, W0, H0, t_ns, Tv, Kr=None):
     """whole-video strict plan; keyframes with no strict partner fall back to the old +-2 s rule (perp >= fb, no epipole test)."""
     p_all, info = make_plan_all(a, Path(a.run), kf, Tk, Kr, K, W0, H0, t_ns, Tv)
     fbp, cfg, _ = make_plan(kf, Tk, K, W0, H0, t_ns, Tv, a.win_s, a.b_min, a.b_max, a.fb_perp or a.min_perp, a.max_rot, a.n_pairs,
-                            dict(epi=False, relax=True, dir_deg=a.dir_deg))
+                            dict(epi=False, relax=True, dir_deg=a.dir_deg), a.fps_used, a.gap_used)
     plan = dict(p_all); fb = []
     for ci, ch in fbp.items():
         if ci not in plan and a.fb_perp > 0:
@@ -202,20 +217,21 @@ def new_plan(a, kf, Tk, K, W0, H0, t_ns, Tv, Kr=None):
 
 def new_plan_window(a, kf, Tk, K, W0, H0, t_ns, Tv):
     return make_plan(kf, Tk, K, W0, H0, t_ns, Tv, a.win_s, a.b_min, a.b_max, a.min_perp, a.max_rot, a.n_pairs,
-                     dict(epi=True, relax=True, dir_deg=a.dir_deg, fb_perp=a.fb_perp))
+                     dict(epi=True, relax=True, dir_deg=a.dir_deg, fb_perp=a.fb_perp), a.fps_used, a.gap_used)
 
 
 def cmd_plan(a):
     kf, Tk, Kr, W0, H0, t_ns, K, dist, Tv = load_common(a); out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
-    old, _, why_o = make_plan(kf, Tk, K, W0, H0, t_ns, Tv, 2.0, 0.03, 0.25, 30.0, 25.0, 3, dict(epi=False, relax=False))
-    res = dict(made=time.strftime("%F %T"), args=vars(a), old_rule=dict(plan_summary(old, len(kf)), why=why_o))
+    old, _, why_o = make_plan(kf, Tk, K, W0, H0, t_ns, Tv, 2.0, 0.03, 0.25, 30.0, 25.0, 3, dict(epi=False, relax=False), a.fps_used, a.gap_used)
+    res = dict(made=time.strftime("%F %T"), args=vars(a), rate=dict(fps=a.fps_used, gap_frames=a.gap_used, win_frames=RP.frames(a.win_s, a.fps_used), profile=a.profile_used),
+               old_rule=dict(plan_summary(old, len(kf)), why=why_o))
     variants = {}
     for dd in (25.0, 10.0):
         for perp, fbp in ((40.0, None), (40.0, 30.0), (40.0, 35.0), (30.0, None)):
-            p, _, why = make_plan(kf, Tk, K, W0, H0, t_ns, Tv, a.win_s, a.b_min, a.b_max, perp, a.max_rot, a.n_pairs, dict(epi=True, relax=True, dir_deg=dd, fb_perp=fbp))
+            p, _, why = make_plan(kf, Tk, K, W0, H0, t_ns, Tv, a.win_s, a.b_min, a.b_max, perp, a.max_rot, a.n_pairs, dict(epi=True, relax=True, dir_deg=dd, fb_perp=fbp), a.fps_used, a.gap_used)
             variants[f"perp{perp:.0f}_fb{fbp}_epi_dir{dd:.0f}"] = dict(plan_summary(p, len(kf)), lost_vs_old=sorted(int(kf[c]) for c in old if c not in p),
                                                               gained_vs_old=len([c for c in p if c not in old]), why=why)
-    p40, _, _ = make_plan(kf, Tk, K, W0, H0, t_ns, Tv, a.win_s, a.b_min, a.b_max, 40.0, a.max_rot, 3, dict(epi=False, relax=False))
+    p40, _, _ = make_plan(kf, Tk, K, W0, H0, t_ns, Tv, a.win_s, a.b_min, a.b_max, 40.0, a.max_rot, 3, dict(epi=False, relax=False), a.fps_used, a.gap_used)
     variants["perp40_only_old_select"] = plan_summary(p40, len(kf))
     res["variants"] = variants
     p, cf, _ = new_plan(a, kf, Tk, K, W0, H0, t_ns, Tv, Kr)
@@ -241,7 +257,7 @@ def cmd_ffs(a):
     plan, cfg, _ = new_plan(a, kf, Tk, K, W0, H0, t_ns, Tv, Kr); cfg.z_max = a.zmax
     (out / "pairs").mkdir(parents=True, exist_ok=True); (out / "s1").mkdir(exist_ok=True)
     rp = dict(size=(W0, H0), f=float(K[0, 0]), cx=float(K[0, 2]), cy=float(K[1, 2]), R1=np.eye(3).tolist())
-    win = int(round(a.win_s * 60)); need = {}
+    win = RP.frames(a.win_s, a.fps_used); need = {}
     for ci, ch in plan.items():
         for q in ch:
             need.setdefault(q[1], []).append(ci)
@@ -513,6 +529,7 @@ if __name__ == "__main__":
     ap.add_argument("--iters", type=int, default=8); ap.add_argument("--k", type=float, default=2.0)
     ap.add_argument("--n-wide", type=int, default=2); ap.add_argument("--wb-min", type=float, default=0.15); ap.add_argument("--wb-max", type=float, default=0.35)
     ap.add_argument("--wb-target", type=float, default=0.25); ap.add_argument("--wide-znear", type=float, default=1.0); ap.add_argument("--z-split", type=float, default=1.5)
+    RP.add_args(ap)
     a = ap.parse_args()
     if a.cmd in ("plan4", "fuse4"):
         {"plan4": cmd_plan4, "fuse4": cmd_fuse4}[a.cmd](a)

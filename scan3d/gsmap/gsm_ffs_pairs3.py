@@ -9,7 +9,7 @@
 Tiers (on top of the adopted pairs2 plan, which is rebuilt with the same args and checked against P2/plan.json):
   low     : keyframes with < 2 partners. +-win s window, VIO relative motion anchored on the keyframe BA pose (as fallback).
             perp >= 10, B 3-25 cm, rot <= 25, dt >= 0.15 s. Rank by B*sin(perp) (desc). Fill to 2 partners.
-  Diversity inside a tier: >= 12 frames from every chosen partner and (baseline direction >= 10 deg apart or B ratio >= 1.5).
+  Diversity inside a tier: >= 0.2 s (--min-gap-s; 12 frames @ 60 fps) from every chosen partner and (baseline direction >= 10 deg apart or B ratio >= 1.5).
 
 Partial rectification (low tier): the rectified pair is a set of virtual cameras whose x axis is the baseline e1 (j at +x) and
 whose z axis is perpendicular to e1, rotated about e1 to one of 4 azimuth sectors (90 deg each, centre 0 = the optical-axis side).
@@ -34,10 +34,12 @@ if os.environ.get("FFS_ROOT"):
     sys.path.insert(0, os.environ["FFS_ROOT"])
 import gsm_ffs_pairs2 as P2
 import motion_stereo as ms
+import rec_profile as RP
 
 
-def dirdiv(gg, q):
-    return (ms.dir_differs(gg, q[2], 10.0) or max(gg["B"], q[2]["B"]) / min(gg["B"], q[2]["B"]) >= 1.5) and abs(gg["j"] - q[1]) >= 12
+def dirdiv(gg, q, gap):
+    """gap = min partner spacing in frames (0.2 s: 12 @ 60 fps, 6 @ 30 fps; a.gap_used from P2.load_common)."""
+    return (ms.dir_differs(gg, q[2], 10.0) or max(gg["B"], q[2]["B"]) / min(gg["B"], q[2]["B"]) >= 1.5) and abs(gg["j"] - q[1]) >= gap
 
 
 def geom(Ti, Tj):
@@ -50,8 +52,11 @@ def build(a):
     ref = json.loads((Path(a.p2) / "plan.json").read_text())["chosen"]["plan"]
     mine = {str(int(kf[c])): [[int(q[1]), q[4], round(q[2]["B"] * 100, 1), round(q[2]["perp_deg"], 1)] for q in v] for c, v in base.items()}
     same = mine == ref
-    win = int(round(a.win_s * 60)); n = len(kf)
+    win = RP.frames(a.win_s, a.fps_used); n = len(kf)
     low, why = {}, Counter()
+    if a.profile_used == "new":          # 2026-11-27: low tier = walking-forward pairs, off for new recordings
+        why["low_tier_off_profile_new"] = 1
+        return dict(kf=kf, Tk=Tk, Kr=Kr, W0=W0, H0=H0, t_ns=t_ns, K=K, dist=dist, Tv=Tv, base=base, low=low, same=same, why=why)
     # ---- low tier
     for ci in range(n):
         fi = int(kf[ci]); have = [(q[0], q[1], q[2]) for q in base.get(ci, [])]
@@ -67,7 +72,7 @@ def build(a):
             g["j"] = j; cands.append((g["B"] * np.sin(np.radians(g["perp_deg"])), j, g, Tj))
         cands.sort(key=lambda x: -x[0]); ch = []
         for c_ in cands:
-            if all(dirdiv(c_[2], q) for q in have + ch):
+            if all(dirdiv(c_[2], q, a.gap_used) for q in have + ch):
                 ch.append(c_)
             if len(have) + len(ch) >= 2:
                 break
@@ -403,6 +408,7 @@ if __name__ == "__main__":
     ap.add_argument("--theta-min", type=float, default=25.0); ap.add_argument("--cap", type=float, default=0.03)
     ap.add_argument("--f-scale", type=float, default=1.0); ap.add_argument("--max-px", type=float, default=1.0e6); ap.add_argument("--z-near", type=float, default=0.4)
     ap.add_argument("--gsmap-run", default=""); ap.add_argument("--fig", default=""); ap.add_argument("--fig-kf", default="762")
+    RP.add_args(ap)
     a = ap.parse_args()
     if a.cmd in ("ffs", "measure"):
         import gpu_guard

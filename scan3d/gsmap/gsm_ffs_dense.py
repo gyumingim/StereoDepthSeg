@@ -19,7 +19,7 @@ import cv2
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent)); sys.path.insert(0, str(HERE.parent / "gsplat"))
+sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent)); sys.path.insert(0, str(HERE.parent / "gsplat"))
 if os.environ.get("FFS_ROOT"):
     sys.path.insert(0, os.environ["FFS_ROOT"])
 
@@ -31,6 +31,7 @@ def main():
     ap.add_argument("--b-min", type=float, default=0.03); ap.add_argument("--b-max", type=float, default=0.25)
     ap.add_argument("--min-perp", type=float, default=30.0); ap.add_argument("--max-rot", type=float, default=25.0)
     ap.add_argument("--zmax", type=float, default=2.0); ap.add_argument("--iters", type=int, default=8)
+    ap.add_argument("--fps", type=float, default=0.0, help="0 = from the recording (meta.json checked by frame timestamps)")
     a = ap.parse_args()
     import motion_stereo as ms, lib_ffs, torch
     t0 = time.time()
@@ -50,7 +51,8 @@ def main():
     cfg = ms.MSConfig(); cfg.b_target_m = 0.08; cfg.z_max = a.zmax
     cfg.dt_max_s = a.win_s; cfg.b_min_m = a.b_min; cfg.b_max_m = a.b_max; cfg.min_perp_deg = a.min_perp; cfg.max_rot_deg = a.max_rot
     rp = dict(size=(W0, H0), f=float(K[0, 0]), cx=float(K[0, 2]), cy=float(K[1, 2]), R1=np.eye(3).tolist())
-    win = int(round(a.win_s * 60))
+    import rec_profile as RP
+    fps = RP.rec_fps(a.rec, t_ns, a.fps); win = RP.frames(a.win_s, fps)       # was win_s * 60 (2026-11-27)
     plan, stats = {}, {}
     for ci, fi in enumerate(kf):
         fi = int(fi); st = dict(kf=fi, idx=ci)

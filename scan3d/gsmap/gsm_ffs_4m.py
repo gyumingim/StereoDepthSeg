@@ -8,7 +8,7 @@
 
 Wide tier: per keyframe up to --n-wide (2) partners in +-win s (VIO relative motion anchored on the keyframe BA pose), B --wb-min..--wb-max
 (15-35 cm), perp >= --min-perp (40), epipole outside the image in both frames, rot <= --max-rot (25), dt >= 0.15 s, partner not already a
-short/low partner; ranked by B*sin(perp) (desc); diversity as pairs3 (direction >= 10 deg or B ratio >= 1.5, >= 12 frames apart).
+short/low partner; ranked by B*sin(perp) (desc); diversity as pairs3 (direction >= 10 deg or B ratio >= 1.5, >= 0.2 s apart = 12 frames @ 60 fps, --min-gap-s).
 FFS: motion_stereo.pair_depth (full rectification, as pairs2) with cfg.z_max = --zmax (4 m), z_near --wide-znear (1 m, keeps far pixels
 near full resolution; pixels nearer than ~1 m fall out).
 Error cut (replaces the 2 m cut) per pair, per pixel: sigma_Z/Z = Z*1px/(f*B*sin theta) <= --cap (3 %), theta = pixel ray vs baseline.
@@ -30,6 +30,7 @@ if os.environ.get("FFS_ROOT"):
     sys.path.insert(0, os.environ["FFS_ROOT"])
 import gsm_ffs_pairs2 as P2
 import gsm_ffs_pairs3 as P3
+import rec_profile as RP
 import motion_stereo as ms
 
 
@@ -42,7 +43,7 @@ def sin_map(K, c, W, H):
 
 def build4(a):
     b = P3.build(a); kf, Tk, K, W0, H0, t_ns, Tv = b["kf"], b["Tk"], b["K"], b["W0"], b["H0"], b["t_ns"], b["Tv"]
-    win = int(round(a.win_s * 60)); wide = {}
+    win = RP.frames(a.win_s, a.fps_used); wide = {}
     for ci in range(len(kf)):
         fi = int(kf[ci])
         if fi not in Tv:
@@ -60,7 +61,7 @@ def build4(a):
             g["j"] = j; cands.append((g["B"] * np.sin(np.radians(g["perp_deg"])), j, g, Tj))
         cands.sort(key=lambda x: -x[0]); ch = []
         for c_ in cands:
-            if all(P3.dirdiv(c_[2], q) for q in ch):
+            if all(P3.dirdiv(c_[2], q, a.gap_used) for q in ch):
                 ch.append(c_)
             if len(ch) >= a.n_wide:
                 break
@@ -418,6 +419,7 @@ if __name__ == "__main__":
     ap.add_argument("--iters", type=int, default=8); ap.add_argument("--k", type=float, default=2.0)
     ap.add_argument("--weight", default="ivw", choices=["ivw", "plain"]); ap.add_argument("--rescale", type=int, default=0); ap.add_argument("--near", default="L", choices=["L", "refuse"]); ap.add_argument("--name", default="s4m"); ap.add_argument("--zcap", type=float, default=0.0); ap.add_argument("--json", default="")
     ap.add_argument("--gsmap-run", default=""); ap.add_argument("--fig", default=""); ap.add_argument("--fig-set", default=""); ap.add_argument("--fig-kf", default="642,649,656")
+    RP.add_args(ap)
     a = ap.parse_args()
     if a.cmd in ("ffs", "measure"):
         import gpu_guard
