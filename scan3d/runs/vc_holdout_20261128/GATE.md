@@ -45,6 +45,12 @@ part of R1 (the corner side, 2.0-2.4 m) and 59 % of R2 (invalid FFS depth on the
 - Region = the **full rectangle**; pixels without valid depth take the depth of the nearest valid rectangle pixel; no ±0.25 m filter.
   S, keyframe removal (same 0.2 % rule), cuts (5 cm + ray cut) and start choice (same rule) are recomputed with this S.
 - Scored pixels H = full rectangle mask AND uncovered in the condition render (unchanged definition).
+- 1b (same sanity check, rerun): R2 still had 28 % of the rectangle covered by locker-coloured points from other keyframes (filled
+  depth too deep where FFS depth is invalid -> ray cut with -5 cm missed them). Nothing occludes either rectangle in the target photo
+  (checked by eye), so the ray cut now removes **every** point that projects into the rectangle (dilated 2 px) in the target view.
+- Start photos checked by eye: R1 starts kf 329 (shelf close-up), 663 (door from the other side); R2 starts 857, 884 (drill press /
+  wall panel). None shows the region. Note: keyframe removal uses the filled depth, so a keyframe seeing only the invalid-depth part of
+  R2 could be kept; only start photos enter the model, and those were checked.
 
 ## Stop rule (Fable, unchanged)
 Per region type: **GO only if B beats A0 by >= 0.05 LPIPS (LPIPS_A0 - LPIPS_B >= 0.05) in >= 3 of 4 clips AND invented-object clips <= 1 of 4.**
