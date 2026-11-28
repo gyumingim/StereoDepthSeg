@@ -1,7 +1,30 @@
-# gsmap 2026-11-25 — photo-like Gaussian-splat map on 165506 (progress / resume notes)
+# gsmap — phone scanner map (progress / resume notes)
+
+## Current state (2026-11-28, replaces the old 11-25 header)
+- **Goal (user, 11-28): the phone as a scanner for a virtual walkthrough of a building** (walk around inside it on a PC).
+  The old 11-25 goal ("Tesla Reality View-like look, not metric accuracy") is no longer the goal.
+- **121801 is FROZEN**: regression test only. No new experiments, fills, rulers or tuning on it.
+- **Next**: (1) a new recording (cam5, 30 fps, side-looking protocol: 2 s still at start, phone turned 30-45 deg off the walking
+  direction, >= 3 s per 90 deg turn, stop right after; tape-measure 4-5 distances) run through `scan3d/gsmap/newrec/newrec.sh`;
+  (2) then a walkthrough viewer prototype on the existing maps.
+- Pages moved out of Temp: `C:\Users\a3162\scan3d_handoff\site\` served by one range server on http://127.0.0.1:8821
+  (restart: `scan3d_handoff\site_tools\start_site.cmd`, see its README).
+- Audit that set these rules: `C:\Users\a3162\scan3d_handoff\ideas\fable_project_audit_20261128.md`.
+
+## Walkthrough acceptance criteria — 초안 — 사용자 확인 필요
+Proposals only, nothing agreed yet. All numbers are 추정 (estimates) to be set with the user before any tuning.
+1. Eye check: N = 8 fixed walkthrough views (추정) along / near the capture path (<= 0.5 m off it, 추정), same views for every map,
+   user judges side by side ("walkable / not"), no new rulers.
+2. Held-out views: LPIPS and PSNR on held-out frames; a difference counts only if it is larger than the seed-to-seed noise floor
+   (`runs/noise_floor_20261128/`).
+3. Tape measure: 4-5 real distances (room width/length, door width, ceiling height); error <= 3 cm or <= 2 % each (추정).
+4. No floaters / black streaks inside the walkable volume in the N views (eye check), floor continuous along the path.
+5. Processing time: recording -> viewable map <= 2 h on this PC (추정), one command.
+
+## History: gsmap 2026-11-25 — photo-like Gaussian-splat map on 165506
 
 Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/StereoDepthSeg-gsmap`. Desktop RTX 5080, one GPU job at a time
-(`~/scanner/gpu.lock` via `scan3d/gsplat/gpu_guard.py`, torch cap 0.75). Phone not touched. Goal: Tesla "Reality View"-like look, not metric accuracy.
+(`~/scanner/gpu.lock` via `scan3d/gsplat/gpu_guard.py`, torch cap 0.75). Phone not touched.
 
 ## Inputs (reused, not recomputed)
 - Dump `scan3d/runs/gsmap_20261125/dump_ba` -> symlink to `~/scanner/StereoDepthSeg-gsplat/scan3d/runs/gsplat_20261105/dump/ba`
