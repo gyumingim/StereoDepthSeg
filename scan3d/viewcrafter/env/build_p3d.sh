@@ -15,4 +15,4 @@ date
 cd pytorch3d && git log -1 --oneline
 uv pip install --python ../venv/bin/python --no-build-isolation -v . > ../logs/p3d_full.log 2>&1
 date
-cd /tmp && /home/system/scanner/viewcrafter_env/venv/bin/python -c "import pytorch3d, pytorch3d._C; print('p3d ok', pytorch3d.__version__)"
+cd /tmp && /home/system/scanner/viewcrafter_env/venv/bin/python -c "import torch, pytorch3d, pytorch3d._C; print('p3d ok', pytorch3d.__version__)"
