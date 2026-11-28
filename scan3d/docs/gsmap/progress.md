@@ -21,6 +21,8 @@ Proposals only, nothing agreed yet. All numbers are 추정 (estimates) to be set
 4. No floaters / black streaks inside the walkable volume in the N views (eye check), floor continuous along the path.
 5. Processing time: recording -> viewable map <= 2 h on this PC (추정), one command.
 
+- **Noise floor (11-28, `runs/noise_floor_20261128/noise_floor.json`)**: ffsonly2 2DGS retrained with only --seed 1 (2 seeds, n = 1 recording), same mesh chain + w9 texture + rulers. Held-out partner PSNR (common px) seed1 - seed0 = -0.068 dB (se 0.027); in the same run ffsonly2 - nC_tex3 = +0.107 dB, but seed1 - nC_tex3 = +0.039 dB -> the +0.109 dB "ffsonly2 beats nC" is inside ~1.6x one seed swing, not confirmed. Other seed swings: P3 +0.03 pt, floaters N3 -0.05 pt, plane_diag mesh offset SD cabinet +0.03 / wall -0.27 / floor -0.01 cm, eval2 ROI rms door +2.35 cm, wall538 +0.48 cm. Rule: differences below these are noise.
+
 ## History: gsmap 2026-11-25 — photo-like Gaussian-splat map on 165506
 
 Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/StereoDepthSeg-gsmap`. Desktop RTX 5080, one GPU job at a time
