@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.scan3d.arlat"
-    android:versionCode="54" android:versionName="0.6.40-phonevio-20261112">
+    android:versionCode="56" android:versionName="0.6.42-recbtn-20261128">
     <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="34" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -20,7 +20,12 @@
         <!-- 0.6.30 appnpu: vendor public library for the NPU (NpuLoop, only loaded with intent npu_loop 1); not required -->
         <uses-native-library android:name="libenn_public_api_cpp.so" android:required="false" />
         <meta-data android:name="com.google.ar.core.min_apk_version" android:value="241930000" />
+        <!-- 0.6.42 (recbtn 2026-11-28): the icon opens RecActivity (start/stop button, std30 recording); MainActivity stays
+             exported for the PC intents (am start -n .../.MainActivity with mode extras) but has no launcher icon any more -->
         <activity android:name=".MainActivity" android:exported="true" android:screenOrientation="portrait">
+        </activity>
+        <activity android:name=".RecActivity" android:exported="true" android:screenOrientation="portrait"
+            android:label="3D 녹화" android:taskAffinity="com.scan3d.arlat.rec" android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

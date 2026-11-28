@@ -57,7 +57,15 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 class HsRecorder implements SensorEventListener {
     interface Status { void show(String s); }
-    static final String VERSION = "hs-20261024-autoiso";        // written to meta.json app_version + status line (nroff: NR/edge OFF requested; ae: AE/ISO/AWB/colour logged)
+    // hs-20261128-button: recording code unchanged from hs-20261024-autoiso; adds RecActivity (icon start/stop button),
+    // onFinished callback, read-only getters and meta "rec_ui" (button | intent)
+    static final String VERSION = "hs-20261128-button";         // written to meta.json app_version + status line (nroff: NR/edge OFF requested; ae: AE/ISO/AWB/colour logged)
+    String recUi = "intent";                     // meta.json rec_ui: "button" when started from RecActivity
+    volatile Runnable onFinished;                // called once at the end of finish() (files closed, meta.json written)
+    int frames() { return nFrames; }
+    int imuCount() { return nImu; }
+    boolean isRecording() { return running; }
+    String folder() { return dir == null ? "" : dir.getName(); }
 
     static boolean has(int[] modes, int m) {
         if (modes == null) return false;
@@ -863,7 +871,7 @@ class HsRecorder implements SensorEventListener {
                     .put("af_mode_request", afMode).put("af_region_request", afRegion == null ? "default" : afRegion).put("active_array", String.valueOf(chars.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE))).put("focus_sweep_dpt", sweepDpt == null ? "none" : floats(sweepDpt))
                     .put("focus_sweep_hold_ms", SWEEP_HOLD_MS)
                     .put("focus_locked_dpt", focusLocked).put("focus_lock_elapsed_ns", focusLockNs)
-                    .put("app_version", VERSION).put("temp_rows", nTemps).put("temp_sources", tempSources)
+                    .put("app_version", VERSION).put("rec_ui", recUi).put("temp_rows", nTemps).put("temp_sources", tempSources)
                     .put("capture", capInfo).put("imu_thread", "dedicated")
                     .put("session", session).put("stream_config", streamCfg)
                     .put("pixel_array", String.valueOf(chars.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)))
@@ -880,5 +888,7 @@ class HsRecorder implements SensorEventListener {
         if (th != null) th.quitSafely();
         if (imuTh != null) imuTh.quitSafely();
         if (tempTh != null) tempTh.quitSafely();
+        Runnable f = onFinished;
+        if (f != null) try { f.run(); } catch (Throwable e) { android.util.Log.w("arlat", "onFinished", e); }
     }
 }
