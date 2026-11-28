@@ -1,0 +1,80 @@
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/home/system/scanner/StereoDepthSeg/venv_ffs/lib/python3.12/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=AlexNet_Weights.IMAGENET1K_V1`. You can also use `weights=AlexNet_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+{
+ "R1": {
+  "A0_choice": "A0m",
+  "A0_mean_lpips": 0.4848,
+  "A0_means": {
+   "A0n": 0.7537,
+   "A0m": 0.4848
+  },
+  "B_mean_lpips": 0.5894,
+  "clips_B_beats_A0_by_005": 0,
+  "positive_control_ok": true,
+  "invented_object_clips": 4,
+  "verdict": "NO-GO (invented objects 4/4)",
+  "consistency_seed_to_seed": [
+   {
+    "start_kf": 329,
+    "lpips": 0.4853
+   },
+   {
+    "start_kf": 663,
+    "lpips": 0.2843
+   }
+  ],
+  "consistency_start_to_start": [
+   {
+    "seed": 7,
+    "lpips": 0.486
+   },
+   {
+    "seed": 123,
+    "lpips": 0.4808
+   }
+  ]
+ },
+ "R2": {
+  "A0_choice": "A0m",
+  "A0_mean_lpips": 0.4618,
+  "A0_means": {
+   "A0n": 0.6815,
+   "A0m": 0.4618
+  },
+  "B_mean_lpips": 0.6753,
+  "clips_B_beats_A0_by_005": 0,
+  "positive_control_ok": false,
+  "invented_object_clips": 4,
+  "verdict": "NO-GO (invented objects 4/4; LPIPS ruler failed its control)",
+  "consistency_seed_to_seed": [
+   {
+    "start_kf": 857,
+    "lpips": 0.3567
+   },
+   {
+    "start_kf": 884,
+    "lpips": 0.5532
+   }
+  ],
+  "consistency_start_to_start": [
+   {
+    "seed": 7,
+    "lpips": 0.5543
+   },
+   {
+    "seed": 123,
+    "lpips": 0.5036
+   }
+  ]
+ }
+}
+R1_s329_seed123 {'H_px': 25576, 'lpips_A0n': 0.7583, 'lpips_A0m': 0.4846, 'lpips_B': 0.6628, 'lpips_B_raw': 0.7431, 'lpips_W_A0n': 0.7218, 'lpips_W_A0m': 0.5824, 'psnr_A0n': 8.4, 'psnr_B': 12.77, 'gain_A0_minus_B': -0.1782, 'covered_change_absdiff': 47.11, 'covered_change_psnr': 11.78}
+R1_s329_seed7 {'H_px': 25576, 'lpips_A0n': 0.7522, 'lpips_A0m': 0.4848, 'lpips_B': 0.6709, 'lpips_B_raw': 0.7253, 'lpips_W_A0n': 0.7367, 'lpips_W_A0m': 0.5873, 'psnr_A0n': 9.01, 'psnr_B': 12.01, 'gain_A0_minus_B': -0.1861, 'covered_change_absdiff': 41.97, 'covered_change_psnr': 12.79}
+R1_s663_seed123 {'H_px': 25576, 'lpips_A0n': 0.7522, 'lpips_A0m': 0.4848, 'lpips_B': 0.5141, 'lpips_B_raw': 0.7005, 'lpips_W_A0n': 0.7367, 'lpips_W_A0m': 0.5873, 'psnr_A0n': 9.01, 'psnr_B': 14.12, 'gain_A0_minus_B': -0.0293, 'covered_change_absdiff': 72.22, 'covered_change_psnr': 9.08}
+R1_s663_seed7 {'H_px': 25576, 'lpips_A0n': 0.7522, 'lpips_A0m': 0.4848, 'lpips_B': 0.5099, 'lpips_B_raw': 0.6366, 'lpips_W_A0n': 0.7367, 'lpips_W_A0m': 0.5873, 'psnr_A0n': 9.01, 'psnr_B': 14.36, 'gain_A0_minus_B': -0.0251, 'covered_change_absdiff': 67.24, 'covered_change_psnr': 9.29}
+R2_s857_seed123 {'H_px': 26774, 'lpips_A0n': 0.6815, 'lpips_A0m': 0.4618, 'lpips_B': 0.7076, 'lpips_B_raw': 0.8008, 'lpips_W_A0n': 0.6678, 'lpips_W_A0m': 0.4765, 'psnr_A0n': 9.06, 'psnr_B': 11.28, 'gain_A0_minus_B': -0.2458, 'covered_change_absdiff': 32.14, 'covered_change_psnr': 14.39}
+R2_s857_seed7 {'H_px': 26774, 'lpips_A0n': 0.6815, 'lpips_A0m': 0.4618, 'lpips_B': 0.6955, 'lpips_B_raw': 0.8044, 'lpips_W_A0n': 0.6678, 'lpips_W_A0m': 0.4765, 'psnr_A0n': 9.06, 'psnr_B': 11.95, 'gain_A0_minus_B': -0.2337, 'covered_change_absdiff': 33.55, 'covered_change_psnr': 14.08}
+R2_s884_seed123 {'H_px': 26774, 'lpips_A0n': 0.6815, 'lpips_A0m': 0.4618, 'lpips_B': 0.6576, 'lpips_B_raw': 0.7355, 'lpips_W_A0n': 0.6678, 'lpips_W_A0m': 0.4765, 'psnr_A0n': 9.06, 'psnr_B': 12.26, 'gain_A0_minus_B': -0.1958, 'covered_change_absdiff': 34.02, 'covered_change_psnr': 14.1}
+R2_s884_seed7 {'H_px': 26774, 'lpips_A0n': 0.6815, 'lpips_A0m': 0.4618, 'lpips_B': 0.6404, 'lpips_B_raw': 0.7377, 'lpips_W_A0n': 0.6678, 'lpips_W_A0m': 0.4765, 'psnr_A0n': 9.06, 'psnr_B': 13.35, 'gain_A0_minus_B': -0.1786, 'covered_change_absdiff': 37.71, 'covered_change_psnr': 13.57}
