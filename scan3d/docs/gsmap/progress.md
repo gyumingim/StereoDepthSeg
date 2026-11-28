@@ -23,6 +23,8 @@ Proposals only, nothing agreed yet. All numbers are 추정 (estimates) to be set
 
 - **Noise floor (11-28, `runs/noise_floor_20261128/noise_floor.json`)**: ffsonly2 2DGS retrained with only --seed 1 (2 seeds, n = 1 recording), same mesh chain + w9 texture + rulers. Held-out partner PSNR (common px) seed1 - seed0 = -0.068 dB (se 0.027); in the same run ffsonly2 - nC_tex3 = +0.107 dB, but seed1 - nC_tex3 = +0.039 dB -> the +0.109 dB "ffsonly2 beats nC" is inside ~1.6x one seed swing, not confirmed. Other seed swings: P3 +0.03 pt, floaters N3 -0.05 pt, plane_diag mesh offset SD cabinet +0.03 / wall -0.27 / floor -0.01 cm, eval2 ROI rms door +2.35 cm, wall538 +0.48 cm. Rule: differences below these are noise.
 
+- **kf_select vendored (11-28)** into `scan3d/gsmap/newrec/kfsel/` (kf_select.py verbatim + make_reduced.py with 1 import line changed, source commit in SOURCE.txt); newrec.sh passes `P=kfsel/py_redirect.sh` to fixes run_scanner.sh. 20-kf rehearsal `runs/night_20261127/rehearsal30/c4_ba_kfvend` vs `c4_ba`: same 490 keyframes, identical kf_select.json and frames_kf JPEG bytes, partner-BA poses equal to 1.3e-10, check B PASS with the same numbers. VIO file differs only in timing fields (ms, remap_ms); run_ffs20 cams.npz K differs because of the later newrec commit a9a197fa (K at 960 scale), not kf_select. Still from fixes: run_scanner.sh (VIO, lensonly), kf_ba.py.
+
 ## History: gsmap 2026-11-25 — photo-like Gaussian-splat map on 165506
 
 Branch `gsmap-20261125` (from `gsplat-20261105` 090c27c), worktree `~/scanner/StereoDepthSeg-gsmap`. Desktop RTX 5080, one GPU job at a time

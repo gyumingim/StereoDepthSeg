@@ -1,0 +1,13 @@
+Vendored 2026-11-28 into the gsmap branch so newrec does not read keyframe-selection code from the StereoDepthSeg-fixes worktree.
+
+kf_select.py    = StereoDepthSeg-fixes scan3d/scanA/kf_select.py, verbatim
+                  (last change in commit 970450213ec01a9f2c8920c5c3db2871d5a4405a "kfsel: motion-based keyframe selection",
+                   copied from branch fixes-20261112 HEAD 6003d2fcdb76501c5f8e1bdaea7fa27bee7e4426, file clean,
+                   sha256 9e78fdcf022c5891152cc194bf0b8db6cfe32c15ed52df800d40623232a06399)
+make_reduced.py = StereoDepthSeg-fixes scan3d/runs/kfonly_20261111/make_reduced.py (same commits, sha256 of the source
+                  25f91c105bd0daa566ec557aa18e553a5a0c6f7d75f90e99a1da86e15185d1ce), ONE line changed: kf_select is imported
+                  from this folder instead of fixes scan3d/scanA.
+py_redirect.sh  = given as P to fixes run_scanner.sh by newrec.sh; swaps only the make_reduced.py path, everything else unchanged.
+
+Still taken from StereoDepthSeg-fixes (not vendored): scanA/run_scanner.sh (VIO + lensonly), lensonly_gt.py, kf_ba.py / ba_torch
+(ba_partners_generic.py). Check: runs/night_20261127/rehearsal30/c4_ba_kfvend (20-kf rehearsal) vs c4_ba -> identical keyframes.

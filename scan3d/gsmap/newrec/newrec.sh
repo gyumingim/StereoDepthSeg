@@ -46,7 +46,9 @@ log "START newrec REC $REC fps $FPS kf-win $KW vio cfg $CFG ffs-kf $FFSKF stop-a
 # 1. VIO + lensonly + keyframes (CPU)
 if [ ! -e "$OUT/scan/scan_summary.json" ]; then
   log "step scan (VIO + keyframes)"
-  nice -n 19 bash "$RS" "$REC" "$OUT/scan" --stop-after reduce --cfg "$CFGD" --kf-win $KW ${VIOARGS:+--vio-args "$VIOARGS"} > "$OUT/scan.log" 2>&1 || { log "FAIL scan (see scan.log)"; exit 1; }
+  # 11-28: keyframe selection from the vendored copy newrec/kfsel (kf_select.py + make_reduced.py, source commit in kfsel/SOURCE.txt);
+  # VIO + lensonly still come from StereoDepthSeg-fixes run_scanner.sh
+  nice -n 19 env P="$N/kfsel/py_redirect.sh" bash "$RS" "$REC" "$OUT/scan" --stop-after reduce --cfg "$CFGD" --kf-win $KW ${VIOARGS:+--vio-args "$VIOARGS"} > "$OUT/scan.log" 2>&1 || { log "FAIL scan (see scan.log)"; exit 1; }
 fi
 VIO=$OUT/scan/vio/B_o0.poses.jsonl.gz; RED=$(ls -d "$OUT"/scan/red/*_kf | head -1)
 [ -e "$VIO" ] && [ -d "$RED" ] || { log "FAIL no VIO poses or keyframe folder"; exit 1; }
