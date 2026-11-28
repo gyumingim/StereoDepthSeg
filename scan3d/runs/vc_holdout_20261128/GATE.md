@@ -36,6 +36,16 @@ Region 3D set S = rectangle pixels back-projected with the target's fused depth,
    Also GT itself on H must give LPIPS 0.
 Free-space check: not used in this test.
 
+## Amendment 1 (2026-11-28 ~12:10, after a render-only sanity check; no diffusion and no metric run yet)
+Render-only check of the rule above: 71-80 % of the target view was black (only the region was meant to be a hole), because removing
+every keyframe that sees the region also removed all points of its surroundings; and the ±0.25 m depth filter dropped the farther wall
+part of R1 (the corner side, 2.0-2.4 m) and 59 % of R2 (invalid FFS depth on the locker). That is not the test Fable described
+("cut the region out of the mesh/point cloud so it's a hole"). Changes (setup only; arms, metrics and stop rule unchanged):
+- Removed keyframes give **no photo** (never frame 0, never CLIP input) but **their points outside the region stay** = measured map minus region.
+- Region = the **full rectangle**; pixels without valid depth take the depth of the nearest valid rectangle pixel; no ±0.25 m filter.
+  S, keyframe removal (same 0.2 % rule), cuts (5 cm + ray cut) and start choice (same rule) are recomputed with this S.
+- Scored pixels H = full rectangle mask AND uncovered in the condition render (unchanged definition).
+
 ## Stop rule (Fable, unchanged)
 Per region type: **GO only if B beats A0 by >= 0.05 LPIPS (LPIPS_A0 - LPIPS_B >= 0.05) in >= 3 of 4 clips AND invented-object clips <= 1 of 4.**
 Else NO-GO. R1 NO-GO -> structure = A (plane UV) only. R2 NO-GO -> behind-object holes stay empty, marked "not seen".
