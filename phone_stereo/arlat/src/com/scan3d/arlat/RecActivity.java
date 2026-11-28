@@ -173,6 +173,9 @@ public class RecActivity extends Activity {
 
     private void onStatus(String s) {
         android.util.Log.i("arlat", "rec status: " + s.replace('\n', ' '));
+        String l = s.toLowerCase(Locale.US);
+        if (l.contains("error") || l.contains("failed") || l.contains("hs session") || l.contains("hs request"))
+            ui.post(() -> { lastMsg = "오류: " + s; render(); });
     }
 
     private final Runnable tick = new Runnable() {
